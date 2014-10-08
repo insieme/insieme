@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -64,6 +64,7 @@
 #include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
+#include "insieme/backend/addons/longlong_type.h"
 #include "insieme/backend/addons/simd_vector.h"
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
@@ -100,9 +101,9 @@ namespace runtime {
 		res->addAddOn<addons::CppMembAddon>();
         res->addAddOn<addons::ComplexType>();
         res->addAddOn<addons::EnumTypes>();
+        res->addAddOn<addons::LongLongType>();
 		res->addAddOn<addons::SIMDVector>();
 		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
 		res->addAddOn<addons::VarArgs>();
 		res->addAddOn<addons::StaticVariables>();
 		return res;
@@ -111,7 +112,7 @@ namespace runtime {
 	Converter RuntimeBackend::buildConverter(core::NodeManager& manager) const {
 
 		// create and set up the converter
-		Converter converter(manager, "RuntimeBackend", config);
+		Converter converter(manager, "RuntimeBackend", getConfiguration());
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
@@ -133,7 +134,7 @@ namespace runtime {
 
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
-		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), config);
+		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
 
 		// done
 		return converter;

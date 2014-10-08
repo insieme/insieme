@@ -51,9 +51,11 @@
 #include "client_app.h"
 #include "irt_all_impls.h"
 #include "instrumentation_events.h"
-#include "irt_maintenance.h"
+#if !defined _GEMS
+	#include "irt_maintenance.h"
+#endif
 
-#ifdef _GEMS
+#if defined _GEMS && !defined _GEMS_TODO
 	#include "include_gems/stdlib.h"
 #endif
 
@@ -78,6 +80,8 @@ irt_mutex_obj irt_g_error_mutex;
 irt_mutex_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
+uint32 irt_g_degree_of_parallelism;
+irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
@@ -100,16 +104,14 @@ void irt_init_globals() {
 		return;
 
 	irt_g_globals_initialization_done = true;
-
 	irt_g_exit_handling_done = false;
-
 	irt_log_init();
 
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
 
 	_irt_hardware_info_init();
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_init();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
@@ -123,6 +125,7 @@ void irt_init_globals() {
 	}
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
+	irt_mutex_init(&irt_g_degree_of_parallelism_mutex);
 	irt_mutex_init(&irt_g_active_worker_mutex);
 	irt_data_item_table_init();
 	irt_context_table_init();
@@ -193,7 +196,7 @@ void irt_exit_handler() {
 
 	_irt_hardware_info_shutdown();
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_cleanup();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
@@ -283,7 +286,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	irt_g_runtime_behaviour = behaviour;
 
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	// TODO [_GEMS]: signal is not supported by gems platform
 	// initialize error and termination signal handlers
 	if(handle_signals) {
@@ -303,9 +306,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_inst_set_all_instrumentation_from_env();
-	#ifdef _GEMS
-		irt_inst_region_select_metrics("rapmi_energy,rapmi_average_power,rapmi_ticks");
-	#endif
 #endif
 
 	irt_log_comment("starting worker threads");
@@ -313,6 +313,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
+	irt_g_degree_of_parallelism = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 
 	// initialize affinity mapping & load affinity policy
@@ -383,7 +384,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
-    #ifdef _GEMS
+    #ifdef _GEMS_SIM
         irt_mutex_init(&print_mutex);
     #endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);

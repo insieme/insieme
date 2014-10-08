@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -451,7 +451,6 @@ namespace backend {
 			if (basic.isInt(ptr)) {
 
 				c_ast::PrimitiveType::CType type;
-
 				if (basic.isUInt1(ptr)) {
 					type = c_ast::PrimitiveType::UInt8;
 				} else if (basic.isUInt2(ptr)) {
@@ -460,6 +459,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::UInt32;
 				} else if (basic.isUInt8(ptr)) {
 					type = c_ast::PrimitiveType::UInt64;
+				} else if (basic.isUInt16(ptr)) {
+					type = c_ast::PrimitiveType::UInt128;
 				} else if (basic.isInt1(ptr)) {
 					type = c_ast::PrimitiveType::Int8;
 				} else if (basic.isInt2(ptr)) {
@@ -468,6 +469,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::Int32;
 				} else if (basic.isInt8(ptr)) {
 					type = c_ast::PrimitiveType::Int64;
+				} else if (basic.isInt16(ptr)) {
+					type = c_ast::PrimitiveType::Int128;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;
 					//assert(false && "Unsupported Integer type encountered!");

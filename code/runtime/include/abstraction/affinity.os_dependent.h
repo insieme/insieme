@@ -48,7 +48,7 @@
 	#include <io.h>
 	#include <Windows.h>
 	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	// TODO: must still find a proper type
 	typedef int irt_native_cpu_set;
 #else

@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #ifdef _WIN32
 	#include <malloc.h>
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	#include <include_gems/alloca.h>
 #else
 	#include <alloca.h>
@@ -159,7 +159,7 @@ void irt_ocl_init_devices() {
 	cl_uint index = 0;
 	
 	if (cl_num_platforms != 0) {
-	#ifdef _GEMS
+	#ifdef _GEMS_SIM
 		if(cl_platforms != NULL) {
 			// alloca is implemented as malloc
 			free(cl_platforms);
@@ -224,7 +224,7 @@ void irt_ocl_init_devices() {
 					ldev->local_buffer = NULL;
 					irt_spin_init(&(ldev->local_buffer_lock));
 				}
-			#ifdef _GEMS
+			#ifdef _GEMS_SIM
 				// alloca is implemented as malloc
 				free(cl_devices);
 			#endif
@@ -247,7 +247,7 @@ void irt_ocl_init_devices() {
 		}
 		//for (int i = 0; i < num_devices; ++i) irt_ocl_print_device_infos(&(devices[i]));
 	}
-#ifdef _GEMS
+#ifdef _GEMS_SIM
 	if(cl_platforms != NULL) {
 		// alloca is implemented as malloc
 		free(cl_platforms);
@@ -821,9 +821,9 @@ void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global
 #ifdef LOCAL_MODE
 	if (node == 0) {
 			irt_ocl_local_kernel* lkernel = (irt_ocl_local_kernel*)(kernel->kernel_add);
-		#ifdef IRT_OCL_DEBUG
+
 			IRT_INFO("Running Opencl Kernel in \"%s\"\n", lkernel->local_dev->name);
-		#endif
+
 			irt_spin_lock(&(lkernel->kernel_lock));
 
 			lkernel->type = IRT_OCL_NDRANGE;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -133,7 +133,7 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32
 	
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64_t)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64)) {
 			base_range.begin = comp;
 			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl, args);
@@ -154,7 +154,7 @@ inline static void irt_schedule_loop_dynamic_chunked_counting(irt_work_item* sel
 	uint64 comp = sched_data->completed;
 	sched_data->part_times[id] = 0;
 	while(comp < final) {
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64_t)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step, uint64)) {
 			base_range.begin = comp;
 			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl, args);
@@ -177,10 +177,10 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
-		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize, uint64_t)) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize, uint64)) {
 			uint64 new_bsize = (uint64)((bsize / base_range.step) * 0.8) * base_range.step;
-			new_bsize = MAX(new_bsize, sched_data->policy.param.chunk_size * base_range.step);
-			irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize, uint64_t);
+			new_bsize = MAX(new_bsize, (uint64)(sched_data->policy.param.chunk_size * base_range.step));
+			irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize, uint64);
 			base_range.begin = comp;
 			base_range.end = MIN(comp+bsize, final);
 			_irt_loop_fragment_run(self, base_range, impl, args);
@@ -390,7 +390,7 @@ inline static void irt_schedule_loop(
 	uint32 part_inc;
 	do {
 		part_inc = sched_data->participants_complete+1;
-	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc, uint32_t));
+	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc, uint32));
 
 	if(part_inc == sched_data->policy.participants) {
 		// sched_data no longer volatile, loop completed
@@ -456,14 +456,14 @@ void irt_loop_sched_policy_init() {
 				}
 			} else {
 				fprintf(stderr, "unknown loop scheduler policy requested: %s\n", policy_env_copy);
-				#ifdef _GEMS
+				#ifdef _GEMS_SIM
 					// alloca is implemented as malloc
 					free(policy_env_copy);
 				#endif
 				exit(-1);
 			}
 		}
-	#ifdef _GEMS
+	#ifdef _GEMS_SIM
 		// alloca is implemented as malloc
 		free(policy_env_copy);
 	#endif

@@ -246,17 +246,17 @@ namespace pattern {
 			return getValues()[index];
 		}
 
-		// only supported for depth = 0
+		/// only supported for depth = 0
 		const value_type& getValue() const {
-			assert(depth == 0 && "Only works on level 0!");
+			assert(depth == 0 && "getValue only works on level 0!");
 			return tree;
 		}
 
-		// only supported for depth = 1
+		/// only supported for depth = 1
 		list_type getList() const {
 			// static const auto extractor = [](const MatchValue& value) { return value.getValue(); };
 
-			assert(depth == 1 && "Only works on level 1!");
+			assert(depth == 1 && "getList only works on level 1!");
 			list_type res;
 			std::for_each(children.begin(), children.end(), [&] (const MatchValue& value) { 
 					auto&& match = value.getValue();
@@ -265,7 +265,7 @@ namespace pattern {
 			return res;
 		}
 
-		// return a flattened list of all (potentially multi-dimensional) results
+		/// return a flattened list of all (potentially multi-dimensional) results
 		list_type getFlattened() const {
 			list_type res;
 			if(depth == 0) {

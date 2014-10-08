@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,6 +45,8 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/config.h"
 
+#include <cstdlib>
+
 namespace insieme {
 namespace utils {
 namespace compiler {
@@ -52,9 +54,12 @@ namespace compiler {
 	namespace fs = boost::filesystem;
 
 	Compiler Compiler::getDefaultC99Compiler() {
-		// create a default version of a C99 compiler
-//		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
-		Compiler res("gcc");
+
+		const char *envVar = std::getenv("CC");
+		if (envVar == nullptr) {
+			envVar = "gcc";
+		}
+		Compiler res(envVar);
 		res.addFlag("-x c");
 		res.addFlag("-Wall");
 		res.addFlag("--std=gnu99");
@@ -63,7 +68,13 @@ namespace compiler {
 	}
 
 	Compiler Compiler::getDefaultCppCompiler() {
-		Compiler res("gcc");
+
+		const char *envVar = std::getenv("CC");
+		if (envVar == nullptr) {
+			envVar = "gcc";
+		}
+
+		Compiler res(envVar);
 		res.addFlag("-x c++");
 		res.addFlag("-lstdc++");
 		res.addFlag("-Wall");

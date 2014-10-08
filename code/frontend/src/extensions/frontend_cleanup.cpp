@@ -56,6 +56,8 @@
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
+
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/utils/assert.h"
@@ -73,100 +75,17 @@
 
 	namespace {
 
-		core::NodePtr applyCleanup(const core::NodePtr& node, std::function<core::NodePtr(const core::NodePtr&)>  pass){
+		/**
+		 * here the little trick, the translation unit is converted into a single expression to guarantee the
+		 * the visiting of every single little node
+		 */
+		insieme::frontend::tu::IRTranslationUnit applyCleanup(insieme::frontend::tu::IRTranslationUnit& tu, std::function<core::NodePtr(const core::NodePtr&)>  pass){
 
-			core::NodePtr res;
+			core::ExpressionPtr singlenode = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
+			assert_true(singlenode) << "empty tu?";
+			singlenode = pass(singlenode).as<core::ExpressionPtr>();
 
-			if (!node.isa<core::TypePtr>())
-				res = pass(node);
-
-			//NOTE: careful! 
-			//metainfo is only added to the Types after generating the IRProgram out of the //IRTu
-			core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
-				if (core::hasMetaInfo(type)){
-					auto meta = core::getMetaInfo(type);
-
-					vector<core::ExpressionPtr> ctors = meta.getConstructors();
-					for (auto& ctor : ctors){
-						ctor = pass(ctor).as<core::ExpressionPtr>();
-					}
-					if (!ctors.empty()) meta.setConstructors(ctors);
-
-					if (meta.hasDestructor()){
-						auto dtor = meta.getDestructor();
-						dtor = pass(dtor).as<core::ExpressionPtr>();
-						meta.setDestructor(dtor);
-					}
-
-					vector<core::MemberFunction> members = meta.getMemberFunctions();
-					for (core::MemberFunction& member : members){
-						member = core::MemberFunction(member.getName(), pass(member.getImplementation()).as<core::ExpressionPtr>(),
-													  member.isVirtual(), member.isConst());
-					}
-					if(!members.empty()) meta.setMemberFunctions(members);
-					core::setMetaInfo(type, meta);
-
-				}
-			});
-			return res;
-		}
-
-
-		//////////////////////////////////////////////////////////////////////
-		//  Long long cleanup
-		//  =================
-		//
-		//  during the translation, long long behaves like a built in type, but in the backend it is mapped into the same bitwith as a long
-		//  the problem comes when we pass it as parameter to functions, because it produces overload, even when in the backend both functions
-		//  are going to have the same parameter type
-		//
-		//  after all translation units have being merged, we can safely remove this type, all the function calls are already mapped and statically
-		//  resolved, so we wont find any problem related with typing.
-		//
-		//  The only unresolved issue is 3rd party compatibility, now we wont have long long variables in the generated code, so we can not exploit
-		//  overloads in 3rd party libraries (they do not make much sense anyway, do they? )
-		insieme::core::NodePtr longLongCleanup (const insieme::core::NodePtr& prog){
-
-			core::NodePtr res;
-
-			// remove all superfluous casts
-			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node)-> core::NodePtr{
-						if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
-							core::IRBuilder builder (node->getNodeManager());
-							const auto& ext = node->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-
-							// TO
-							if (core::analysis::isCallOf(call, ext.getLongToLongLong()))  return call[0];
-							if (core::analysis::isCallOf(call, ext.getULongToULongLong())) return call[0];
-
-							// From
-							if (core::analysis::isCallOf(call, ext.getLongLongToLong()))  return call[0];
-							if (core::analysis::isCallOf(call, ext.getULongLongToULong())) return call[0];
-
-							// between
-							if (core::analysis::isCallOf(call, ext.getLongLongToULongLong()))
-								return builder.callExpr(builder.getLangBasic().getUInt8(),
-														builder.getLangBasic().getSignedToUnsigned(),
-														toVector (call[0], builder.getIntParamLiteral(8)));
-							if (core::analysis::isCallOf(call, ext.getULongLongToLongLong()))
-								return builder.callExpr(builder.getLangBasic().getInt8(),
-														builder.getLangBasic().getUnsignedToInt(),
-														toVector (call[0], builder.getIntParamLiteral(8)));
-						}
-						return node;
-					});
-			res = castRemover.map(prog);
-
-			// finaly, substitute any usage of the long long types
-			core::IRBuilder builder (prog->getNodeManager());
-			core::TypePtr longlongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getInt8())));
-			core::TypePtr ulonglongTy = builder.structType(toVector( builder.namedType("longlong_val", builder.getLangBasic().getUInt8())));
-			core::NodeMap replacements;
-			replacements [ longlongTy ] = builder.getLangBasic().getInt8();
-			replacements [ ulonglongTy ] = builder.getLangBasic().getUInt8();
-			res = core::transform::replaceAllGen (prog->getNodeManager(), res, replacements, false);
-
-			return res;
+			return insieme::frontend::tu::fromIR(singlenode);
 		}
 
 		//////////////////////////////////////////////////////////////////////
@@ -277,13 +196,6 @@
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
-
-		prog = applyCleanup(prog, longLongCleanup).as<core::ProgramPtr>();
-		prog = applyCleanup(prog, refDerefCleanup).as<core::ProgramPtr>();
-		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
-		prog = applyCleanup(prog, superfluousCode).as<core::ProgramPtr>();
-
-
 		/////////////////////////////////////////////////////////////////////////////////////
 		//		DEBUG
 		//			some code to fish bugs
@@ -319,11 +231,17 @@
 //
 
 
+
 		return prog;
 	}
 
 
     insieme::frontend::tu::IRTranslationUnit FrontendCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+
+		tu = applyCleanup(tu, refDerefCleanup);
+		tu = applyCleanup(tu, castCleanup);
+		tu = applyCleanup(tu, superfluousCode);
+
 
 		//////////////////////////////////////////////////////////////////////
 		// Malloc

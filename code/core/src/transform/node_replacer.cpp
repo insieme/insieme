@@ -582,13 +582,13 @@ class TypeFixer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	IRBuilder builder;
-	const VariableMap& replacements;
+	const ExpressionMap& replacements;
 	bool limitScope;
 	const TypeHandler& typeHandler;
 
 public:
 
-	TypeFixer(NodeManager& manager, const VariableMap& replacements, bool limitScope,
+	TypeFixer(NodeManager& manager, const ExpressionMap& replacements, bool limitScope,
 			const TypeHandler& typeHandler)
 		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), typeHandler(typeHandler) {}
 
@@ -598,8 +598,8 @@ private:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
-		if (ptr->getNodeType() == NT_Variable) {
-			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
+		if (ptr.isa<ExpressionPtr>()) {
+			auto pos = replacements.find(ptr.as<ExpressionPtr>());
 			if(pos != replacements.end()) {
 				NodePtr res = pos->second;
 				utils::migrateAnnotations(ptr, res);
@@ -684,9 +684,9 @@ private:
 		if(pos != replacements.end()) {
 			ExpressionPtr newInit = static_pointer_cast<const Expression>(this->resolveElement(decl->getInitialization()));
 			if(pos->second->getType() != newInit->getType())
-				return typeHandler(builder.declarationStmt(pos->second, newInit));
+				return typeHandler(builder.declarationStmt(pos->second.as<VariablePtr>(), newInit));
 
-			return builder.declarationStmt(pos->second, newInit);
+			return builder.declarationStmt(pos->second.as<VariablePtr>(), newInit);
 		}
 
 		// continue replacement recursively
@@ -809,7 +809,7 @@ private:
 		// create replacement map
 		VariableList newParams;
 		TypeMap tyMap;
-		VariableMap map = replacements;
+		ExpressionMap map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 /*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
@@ -1372,12 +1372,20 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const Expres
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr fixTypes(NodeManager& mgr, NodePtr root, const VariableMap& replacements, bool limitScope,
+NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacements, bool limitScope,
 		const TypeHandler& typeHandler) {
 	// conduct actual substitutions
 	auto mapper = ::TypeFixer(mgr, replacements, limitScope, typeHandler);
 	return applyReplacer(mgr, root, mapper);
 }
+
+NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
+		const TypeHandler& typeHandler ) {
+	ExpressionMap replacements;
+	replacements[toReplace] = replacement;
+	return fixTypes(mgr, root, replacements, limitScope, typeHandler);
+}
+
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
 	assert(root && "Root must not be a null pointer!");

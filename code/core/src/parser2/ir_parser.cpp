@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -985,51 +985,40 @@ namespace parser {
 			// -- arithmetic expressions --
 
 			g.addRule("E", rule(
-					seq(E, "+", E),
+					seq(E, cap(lit("+") | lit("-")) , E),
 					[](Context& cur)->NodePtr {
+						// get elements
 						ExpressionPtr a = getOperand(cur, 0);
 						ExpressionPtr b = getOperand(cur, 1);
+
+						const auto& op = cur.getSubRanges().back()[0];
+						cur.popRange();		// consume operator
+
+						// Interpret operator
+						if (op == "+") return cur.add(a,b);
+						if (op == "-") return cur.sub(a,b);
+						assert_fail() << "Unsupported operator: " << op << "\n";
 						return cur.add(a,b);
 					},
 					-12
 			));
 
 			g.addRule("E", rule(
-					seq(E, "-", E),
+					seq(E, cap(lit("*") | lit("/") | lit("%")), E),
 					[](Context& cur)->NodePtr {
+						// get elements
 						ExpressionPtr a = getOperand(cur, 0);
 						ExpressionPtr b = getOperand(cur, 1);
-						return cur.sub(a,b);
-					},
-					-12
-			));
 
-			g.addRule("E", rule(
-					seq(E, "*", E),
-					[](Context& cur)->NodePtr {
-						ExpressionPtr a = getOperand(cur, 0);
-						ExpressionPtr b = getOperand(cur, 1);
-						return cur.mul(a,b);
-					},
-					-13
-			));
+						const auto& op = cur.getSubRanges().back()[0];
+						cur.popRange();		// consume operator
 
-			g.addRule("E", rule(
-					seq(E, "/", E),
-					[](Context& cur)->NodePtr {
-						ExpressionPtr a = getOperand(cur, 0);
-						ExpressionPtr b = getOperand(cur, 1);
-						return cur.div(a,b);
-					},
-					-13
-			));
-
-			g.addRule("E", rule(
-					seq(E, "%", E),
-					[](Context& cur)->NodePtr {
-						ExpressionPtr a = getOperand(cur, 0);
-						ExpressionPtr b = getOperand(cur, 1);
-						return cur.mod(a,b);
+						// Interpret operator
+						if (op == "*") return cur.mul(a,b);
+						if (op == "/") return cur.div(a,b);
+						if (op == "%") return cur.mod(a,b);
+						assert_fail() << "Unsupported operator: " << op << "\n";
+						return cur.add(a,b);
 					},
 					-13
 			));
@@ -1299,16 +1288,25 @@ namespace parser {
 							structType = a->getType().as<StructTypePtr>();
 						} else if (a->getType()->getNodeType() == NT_RefType) {
 							TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+
+							if ( type->getNodeType() == core::NT_RecType ) {
+								type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+							}
+
 							structType = type.isa<StructTypePtr>();
 							if (!structType) {
+								std::cout << "Accessing element of non-struct type!" << std::endl;
+								std::cout << *type << std::endl;
 								return fail(cur, "Accessing element of non-struct type!");
 							}
 						} else {
+								std::cout << "Accessing element of non-struct type!" << std::endl;
 							return fail(cur, "Accessing element of non-struct type!");
 						}
 
 						// check field
 						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							std::cout << "unknown field" << std::endl;
 							return fail(cur, "Accessing unknown field!");
 						}
 
@@ -1329,17 +1327,24 @@ namespace parser {
 
 						// check whether target is a reference
 						if (a->getType()->getNodeType() != NT_RefType) {
+								std::cout << "Accessing non-pointer elemet!" << std::endl;
 							return fail(cur, "Accessing non-pointer element!");
 						}
 
 						// extract struct type
-						StructTypePtr structType = a->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>();
+						TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+						if ( type->getNodeType() == core::NT_RecType ) {
+							type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+						}
+						StructTypePtr structType = type.isa<StructTypePtr>();
 						if (!structType) {
+								std::cout << "Accessing element of non-struct type!" << std::endl;
 							return fail(cur, "Accessing non-struct element!");
 						}
 
 						// check field
 						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							std::cout << "unknown field" << std::endl;
 							return fail(cur, "Accessing unknown field!");
 						}
 

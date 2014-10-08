@@ -39,7 +39,7 @@
  */
 #if defined(__GNUC__)
 	#define __irt_unused __attribute__((unused))
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	// TODO [_GEMS]: what's the purpose of this? 
 	#define __irt_unused
 #endif

@@ -156,7 +156,7 @@ int ungetc(int c, FILE *stream) {
 /* WRITING FUNCTIONS */
 
 int vfprintf(FILE *stream, const char *format, va_list ap);
-int gemfprintf(FILE *stream, const char *format, ...) {
+int gemfprintf(FILE *stream, char *format, ...) {
         if(stream == stdout || stream == stderr) {
             int ret;
             va_list args;

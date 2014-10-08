@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -477,6 +477,7 @@ namespace parser {
 		auto one = builder.intLit(1);
 		auto two = builder.intLit(2);
 		auto tre = builder.intLit(3);
+		auto fou = builder.intLit(4);
 		auto half = builder.doubleLit(0.5);
 
 		EXPECT_EQ(one, parse_expr(manager, "1"));
@@ -498,11 +499,21 @@ namespace parser {
 		);
 
 		// known bug: same precedence, different operator
-//		EXPECT_EQ(
-//				builder.sub(builder.add(one, two), tre),
-//				parse(manager, "1+2-3")
-//		);
+		EXPECT_EQ(
+				builder.sub(builder.add(one, two), tre),
+				parse(manager, "1+2-3")
+		);
 
+		EXPECT_EQ(builder.add(builder.mul(one,two),builder.mul(tre,fou)), parse(manager, "1*2+3*4"));
+		EXPECT_EQ(builder.add(builder.add(one,builder.mul(two,tre)),fou), parse(manager, "1+2*3+4"));
+		EXPECT_EQ(builder.sub(builder.sub(one,builder.mul(two,tre)),fou), parse(manager, "1-2*3-4"));
+		EXPECT_EQ(builder.add(builder.sub(one,builder.mul(two,tre)),fou), parse(manager, "1-2*3+4"));
+		EXPECT_EQ(builder.sub(builder.add(one,builder.mul(two,tre)),fou), parse(manager, "1+2*3-4"));
+
+		EXPECT_EQ(
+				builder.add(builder.sub(one, two), tre),
+				parse(manager, "1-2+3")
+		);
 
 		// TODO: fix this one
 //		EXPECT_EQ(
@@ -1017,6 +1028,16 @@ namespace parser {
 		EXPECT_EQ(builder.intLit(2), parse_expr(manager, "-(-2)"));
 
 		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
+	}
+
+	TEST(IR_Parser2, Cast) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto expr = builder.parseExpr("(int<4>) 8 ");
+
+		EXPECT_EQ("cast<int<4>>(8)", toString(*expr));
+
 	}
 
 	TEST(IR_Parser2, Bind) {

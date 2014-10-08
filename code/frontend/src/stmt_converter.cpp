@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,8 +39,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
@@ -54,6 +53,7 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
@@ -138,11 +138,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 		if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
 						(!clangTy.getUnqualifiedType()->isVectorType())) { // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
 			retTy = builder.refType(retTy);
-			retExpr = utils::cast(retExpr, retTy);
+			retExpr = core::types::smartCast(retTy, retExpr);
 		}
 		else if ( builder.getLangBasic().isBool( retExpr->getType())){
 			// attention with this, bools cast not handled in AST in C
-			retExpr = utils::castScalar(retTy, retExpr);
+			retExpr = core::types::castScalar(retTy, retExpr);
 		}
 
 		if (retExpr->getType()->getNodeType() == core::NT_RefType) {
@@ -150,7 +150,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 			// Obviously vectors are an exception and must be handled like scalars
 			// no reference returned
 			if (clangTy->isVectorType()) { // this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-				retExpr = utils::cast(retExpr, retTy);
+				retExpr = core::types::smartCast(retTy, retExpr);
 			}
 
 			// vector to array
@@ -159,7 +159,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 				core::TypePtr currentTy = core::analysis::getReferencedType(retExpr->getType()) ;
 				if (expectedTy->getNodeType() == core::NT_ArrayType &&
 					currentTy->getNodeType()  == core::NT_VectorType){
-					retExpr = utils::cast(retExpr, retTy);
+					retExpr = core::types::smartCast(retTy, retExpr);
 				}
 			}
 		}
@@ -338,7 +338,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::ExpressionPtr condition;
 		if (forStmt->getCond()){
-			condition = utils::cast( convFact.convertExpr(forStmt->getCond()), builder.getLangBasic().getBool());
+			condition = core::types::smartCast( builder.getLangBasic().getBool(), convFact.convertExpr(forStmt->getCond()) );
 		}else {
 			// we might not have condition, this is an infinite loop
 			//    for (;;)
@@ -418,7 +418,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitIfStmt(clang::IfStmt* ifSt
 
 	if (!gen.isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
-		condExpr = utils::cast(condExpr, gen.getBool());
+		condExpr = core::types::smartCast(gen.getBool(), condExpr);
 	}
 
 	core::StatementPtr elseBody = builder.compoundStmt();
@@ -495,7 +495,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitWhileStmt(clang::WhileStmt
 
 	if (!gen.isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
-		condExpr = utils::cast(condExpr, gen.getBool());
+		condExpr = core::types::smartCast(gen.getBool(), condExpr);
 	}
 
 	retStmt.push_back( builder.whileStmt(condExpr, body) );
@@ -528,7 +528,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDoStmt(clang::DoStmt* doSt
 
 	if (!gen.isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
-		condExpr = utils::cast(condExpr, gen.getBool());
+		condExpr = core::types::smartCast(gen.getBool(), condExpr);
 	}
 	condExpr = convFact.tryDeref(condExpr);
 

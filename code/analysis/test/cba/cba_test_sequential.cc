@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -149,31 +149,31 @@ namespace cba {
 
 		// check within CBA context
 		CBA context(root);
-		auto varX = context.getVariable(paramX);
-		EXPECT_EQ(varX, context.getVariable(paramX));
-		EXPECT_EQ(varX, context.getVariable(vars[0]));
+		auto varX = context.getVariableLabel(paramX);
+		EXPECT_EQ(varX, context.getVariableLabel(paramX));
+		EXPECT_EQ(varX, context.getVariableLabel(vars[0]));
 
-		auto varY = context.getVariable(vars[1]);
-		EXPECT_EQ(varY, context.getVariable(paramY));
+		auto varY = context.getVariableLabel(vars[1]);
+		EXPECT_EQ(varY, context.getVariableLabel(paramY));
 		EXPECT_NE(varX, varY);
 
-		auto varW = context.getVariable(freeW);
-		EXPECT_EQ(varW, context.getVariable(vars[2]));
+		auto varW = context.getVariableLabel(freeW);
+		EXPECT_EQ(varW, context.getVariableLabel(vars[2]));
 
-		auto varW1 = context.getVariable(localW1);
-		EXPECT_EQ(varW1, context.getVariable(vars[7]));
+		auto varW1 = context.getVariableLabel(localW1);
+		EXPECT_EQ(varW1, context.getVariableLabel(vars[7]));
 
-		auto varW2 = context.getVariable(vars[8]);
-		EXPECT_EQ(varW2, context.getVariable(localW2));
+		auto varW2 = context.getVariableLabel(vars[8]);
+		EXPECT_EQ(varW2, context.getVariableLabel(localW2));
 
-		auto varZ1 = context.getVariable(localZ1);
-		auto varZ2 = context.getVariable(localZ2);
+		auto varZ1 = context.getVariableLabel(localZ1);
+		auto varZ2 = context.getVariableLabel(localZ2);
 
 		EXPECT_NE(varZ1, varZ2);
-		EXPECT_EQ(varZ1, context.getVariable(vars[3]));
-		EXPECT_EQ(varZ1, context.getVariable(vars[4]));
-		EXPECT_EQ(varZ2, context.getVariable(vars[5]));
-		EXPECT_EQ(varZ1, context.getVariable(vars[6]));
+		EXPECT_EQ(varZ1, context.getVariableLabel(vars[3]));
+		EXPECT_EQ(varZ1, context.getVariableLabel(vars[4]));
+		EXPECT_EQ(varZ2, context.getVariableLabel(vars[5]));
+		EXPECT_EQ(varZ1, context.getVariableLabel(vars[6]));
 
 		// check that all variables are distinct
 		std::set<Variable> allVars = { varX, varY, varZ1, varZ2, varW, varW1, varW2 };
@@ -1148,6 +1148,41 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+	TEST(CBA, Arithmetic_103) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto in = builder.parseStmt(
+			"{"
+			"	let int = int<4>;"
+			"	let f = lit(\"xyz\": () -> int);"
+			"	f();"
+			"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		// check values
+//		EXPECT_EQ("{-unknown-}", toString(analysis.getValuesOf(code[0].as<ExpressionAddress>(), A)));
+
+//		createDotDump(analysis);
+	}
+
+	TEST(CBA, Arithmetic_Cast) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		auto& base = builder.getLangBasic();
+
+		ExpressionAddress expr(builder.castExpr(base.getInt4(), builder.intLit(12)));
+
+		EXPECT_EQ("cast<int<4>>(12)", toString(*expr));
+
+		EXPECT_EQ("{12}", toString(getValues(expr, A)));
+	}
 
 	TEST(CBA, Boolean_101) {
 		NodeManager mgr;

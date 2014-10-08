@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -176,8 +176,8 @@ namespace analysis {
 	ExpressionPtr unwrapCppRef (const ExpressionPtr& expr);
 
 	// --------------------------- data member pointer -----------------------------------
-	
-	/** 
+
+	/**
 	 * queries whenever this is or not a member pointer type
 	 */
 	bool isMemberPointer (const TypePtr& type);
@@ -185,13 +185,13 @@ namespace analysis {
 	/**
 	 * constructs a member pointer type
 	 * @param the class of the owner object
-	 * @param the identifier for the 
+	 * @param the identifier for the
 	 */
 	TypePtr getMemberPointer (const TypePtr& classType, const TypePtr& membTy);
 
 	/**
 	 * initializes a value of type member pointer
-	 * @param 
+	 * @param
 	 * @param
 	 * @param
 	 */
@@ -203,6 +203,12 @@ namespace analysis {
 	 * @param
 	 */
 	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& parent, const ExpressionPtr& expr);
+
+	/**
+	 * check if member pointer is not null
+	 * @param pointer var
+     */
+	ExpressionPtr getMemberPointerCheck (const ExpressionPtr& expr);
 
 	// ---------------------------- Constructors --------------------------------------
 
@@ -229,25 +235,6 @@ namespace analysis {
 	 */
 	bool isDefaultConstructor(const LambdaExprPtr& lambda);
 
-	// ------------------------------- Long Long ---------------------------------------
-
-	/**
-	 * checks whenever the inner implementation of the type represents a long long
-	 */
-	bool isLongLong(const TypePtr& type);
-	bool isSignedLongLong(const TypePtr& type);
-
-	/**
-	 * cast to long long
-	 */
-	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed = false);
-
-	/**
-	 * cast from long long
-	 */
-	ExpressionPtr castFromLongLong( const ExpressionPtr& expr);
-
-	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr);
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,6 +46,12 @@ typedef enum {
 	IRT_ID_wg_event_register, IRT_ID_work_group, IRT_ID_work_item, IRT_ID_worker,
 } irt_id_type;
 
+#ifdef _GEMS_SIM
+    #define ID_TYPE_BIT_FIELD uint8 id_type 
+#else 
+    #define ID_TYPE_BIT_FIELD irt_id_type id_type : 8
+#endif
+
 #define IRT_DECLARE_ID_TYPE(__type) \
 struct _irt_##__type; \
 struct _irt_##__type##_id { \
@@ -55,7 +61,7 @@ struct _irt_##__type##_id { \
 			uint32 index; \
 			uint16 thread; \
 			uint8 node; \
-			irt_id_type id_type : 8; \
+			ID_TYPE_BIT_FIELD; \
 		}; \
 	}; \
 	struct _irt_##__type* cached; \
@@ -75,6 +81,7 @@ static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_pt
 } \
 static inline irt_##__type##_id irt_##__type##_null_id() { \
 	irt_##__type##_id null_id = { { 0 }, NULL }; \
+	/* Note: not setting the id_type here, since the null_id is generic for any id */ \
 	return null_id; \
 }
 

@@ -73,16 +73,12 @@ struct Transformation : public transform::Transformation {
 
 };
 
-/*************************************************************************************************
- * LoopInterchange: this is the implementation of loop interchange based on the polyhedral model. 
- * The transformation is applyied from a determined loop level. The transformation will search for
- * the induction variable of the first N perfectly nested loops and will apply interchange between
- * index src and dest under the assumption that depth of this loop nest is greater than dest ( or
- * src). 
- *
- * In the case the assumption is not satisfied, an exception is thrown. 
- *
- */
+/** LoopInterchange: this is the implementation of loop interchange based on the polyhedral model. The transformation
+is applyied from a determined loop level. The transformation will search for the induction variable of the first N
+perfectly nested loops and will apply interchange between index src and dest under the assumption that depth of this
+loop nest is greater than dest (or src).
+
+In the case the assumption is not satisfied, an exception is thrown. */
 class LoopInterchange : public Transformation<LoopInterchange> {
 
 	unsigned srcIdx, destIdx;
@@ -164,11 +160,7 @@ TRANSFORMATION_TYPE(
  */
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 
-/**************************************************************************************************
- * LoopTiling: the loop tiling is obtained by appliend strip mining consecutevely and then
- * interchange the loops
- */
-
+/** LoopTiling: Loop tiling is obtained by applying strip mining consecutively and then interchanging the loops */
 struct LoopTiling: public Transformation<LoopTiling> {
 
 	typedef std::vector<unsigned> TileVect;

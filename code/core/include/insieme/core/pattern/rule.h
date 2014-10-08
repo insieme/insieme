@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -68,6 +68,14 @@ namespace pattern {
 		core::NodePtr applyTo(const core::NodePtr& tree) const;
 
 		/**
+		 * Applies this rule to one of the sub-nodes of the given input node.
+		 * If the rule does not fit a null pointer will be returned.
+		 */
+		core::NodePtr applyToNested(const core::NodePtr& tree) const {
+			return getNestedRule().applyTo(tree);
+		}
+
+		/**
 		 * Applies this rule to the given input node.
 		 * If the rule does not fit a null pointer will be returned.
 		 */
@@ -79,6 +87,18 @@ namespace pattern {
 		 * Applies this rule until a fixpoint is reached.
 		 */
 		core::NodePtr fixpoint(const core::NodePtr& tree) const;
+
+		/**
+		 * Applies this rule to all nested sub-structures until a fixpoint is reached.
+		 */
+		core::NodePtr fixpointNested(const core::NodePtr& tree) const {
+			return getNestedRule().fixpoint(tree);
+		}
+
+		/**
+		 * Obtains a rule equivalent to this rule, yet targeting an arbitrarily nested sub-structure.
+		 */
+		Rule getNestedRule() const;
 
 		std::ostream& printTo(std::ostream& out) const {
 			return out << pattern << " -> " << generator;

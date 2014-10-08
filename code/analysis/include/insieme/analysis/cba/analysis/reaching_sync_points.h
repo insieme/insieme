@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -98,7 +98,7 @@ namespace cba {
 			if (auto stmt = node.isa<StatementInstance>()) {
 				if (isThreadBody(stmt, ctxt)) {
 					auto l = cba.getLabel(stmt);
-					auto R = cba.getSet(RSPin, l, ctxt);
+					auto R = cba.getVar(RSPin, l, ctxt);
 					constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::In, node.as<StatementInstance>(), ctxt), R));
 					return;
 				}
@@ -128,7 +128,7 @@ namespace cba {
 			auto fun = call->getFunctionExpr();
 			if (isSynchronizingFunction(fun)) {
 				auto l = cba.getLabel(call);
-				auto R = cba.getSet(RSPout, l, ctxt);
+				auto R = cba.getVar(RSPout, l, ctxt);
 				constraints.add(elem(ProgramPoint<Context>(ProgramPoint<Context>::Tmp, call, ctxt), R));
 				return;
 			}
@@ -137,8 +137,8 @@ namespace cba {
 			if (detail::isSyncPointFree(call)) {
 
 				// just connect in and out
-				auto In  = cba.getSet(this->Ain, call, ctxt);
-				auto Out = cba.getSet(this->Aout, call, ctxt);
+				auto In  = cba.getVar(this->Ain, call, ctxt);
+				auto Out = cba.getVar(this->Aout, call, ctxt);
 
 				constraints.add(subset(In,Out));
 				return;
@@ -155,8 +155,8 @@ namespace cba {
 			if (detail::isSyncPointFree(expr)) {
 
 				// just connect in and out
-				auto In  = cba.getSet(this->Ain, expr, ctxt);
-				auto Out = cba.getSet(this->Aout, expr, ctxt);
+				auto In  = cba.getVar(this->Ain, expr, ctxt);
+				auto Out = cba.getVar(this->Aout, expr, ctxt);
 
 				constraints.add(subset(In,Out));
 				return;

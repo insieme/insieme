@@ -99,7 +99,7 @@ typedef struct __irt_worker_func_arg {
 /** wait until all worker threads are created (signal->init_count == irt_g_worker_count) */
 void _irt_await_all_workers_init(irt_worker_init_signal *signal){
 	#if defined(WINVER) && (WINVER < 0x0600)
-		irt_atomic_inc(&(signal->init_count, uint32_t));
+		irt_atomic_inc(&(signal->init_count, uint32));
 		HANDLE ev = OpenEvent(SYNCHRONIZE, FALSE, "AllWorkersInitialized");
 		// wait until master thread signals ev
 		WaitForSingleObject(ev, INFINITE);
@@ -142,6 +142,7 @@ void* _irt_worker_func(void *argvp) {
 	irt_cond_var_init(&self->wait_cond);
 	self->wake_signal = true;
 #endif
+	irt_cond_var_init(&self->dop_wait_cond);
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
@@ -180,7 +181,7 @@ void* _irt_worker_func(void *argvp) {
 
 	irt_worker_late_init(self);
 
-	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32_t)) {
+	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
 		irt_scheduling_loop(self);
 	}

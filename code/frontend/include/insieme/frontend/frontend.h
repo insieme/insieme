@@ -96,7 +96,7 @@ namespace frontend {
 		 * A list of supported standards.
 		 */
 		enum Standard {
-			Auto, C99, Cxx03, Cxx11
+			Auto, C99, Cxx98, Cxx03, Cxx11
 		};
 
 		/**

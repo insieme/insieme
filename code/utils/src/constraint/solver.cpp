@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,9 +54,9 @@ namespace constraint {
 	namespace {
 
 		// the data structure representing the graph this algorithm is based on
-		typedef std::unordered_map<ValueID, set<const Constraint*>> Edges;
+		typedef std::unordered_map<Variable, set<const Constraint*>> Edges;
 
-		void collectDependentValues(const ValueID& id, const Edges& edges, set<ValueID>& res) {
+		void collectDependentValues(const Variable& id, const Edges& edges, set<Variable>& res) {
 			// get dependent values of current step
 			auto pos = edges.find(id);
 			if (pos == edges.end()) return;
@@ -71,8 +71,8 @@ namespace constraint {
 			}
 		}
 
-		set<ValueID> getDependentValues(const vector<ValueID>& ids, const Edges& edges) {
-			set<ValueID> res;
+		set<Variable> getDependentValues(const vector<Variable>& ids, const Edges& edges) {
+			set<Variable> res;
 			for(auto id : ids) {
 				collectDependentValues(id, edges, res);
 			}
@@ -86,7 +86,7 @@ namespace constraint {
 	Assignment solve(const Constraints& constraints, Assignment initial) {
 
 		// the work-list
-		vector<ValueID> workList;
+		vector<Variable> workList;
 
 		// build data structures for the graph
 		Assignment res = initial;
@@ -115,7 +115,7 @@ namespace constraint {
 		// 2. solve constraints
 		while(!workList.empty()) {
 			// retrieve first element
-			ValueID head = workList.back();
+			Variable head = workList.back();
 			workList.pop_back();
 
 			// process outgoing edges
@@ -146,7 +146,7 @@ namespace constraint {
 					auto outputs = cc.getOutputs();
 
 					// get all depending sets
-					set<ValueID> dependent = getDependentValues(outputs, edges);
+					set<Variable> dependent = getDependentValues(outputs, edges);
 
 					// check for cycles
 //					if (dependent.contains(head)) { /* TODO: implement recovery */ }
@@ -164,24 +164,24 @@ namespace constraint {
 	};
 
 
-	const Assignment& LazySolver::solve(const ValueID& set) {
-		std::set<ValueID> sets; sets.insert(set);
+	const Assignment& LazySolver::solve(const Variable& set) {
+		std::set<Variable> sets; sets.insert(set);
 		return solve(sets);
 	}
 
-	const Assignment& LazySolver::solve(const std::set<ValueID>& sets) {
+	const Assignment& LazySolver::solve(const std::set<Variable>& sets) {
 
 		// create the work-list for this resolution
-		vector<ValueID> worklist;
+		vector<Variable> worklist;
 
 		// 1. start by resolving requested sets
-		resolveConstraints(std::vector<ValueID>(sets.begin(), sets.end()), worklist);
+		resolveConstraints(std::vector<Variable>(sets.begin(), sets.end()), worklist);
 
 		// 2. solve constraints
 		while(!worklist.empty()) {
 
 			// retrieve first element
-			ValueID head = worklist.back();
+			Variable head = worklist.back();
 			worklist.pop_back();
 
 			// process outgoing edges
@@ -215,7 +215,7 @@ namespace constraint {
 					auto outputs = cc.getOutputs();
 
 					// get all depending sets
-					set<ValueID> dependent = getDependentValues(outputs, edges);
+					set<Variable> dependent = getDependentValues(outputs, edges);
 
 					// check for cycles
 //					if (dependent.contains(head)) { /* TODO: implement recovery */ }
@@ -254,12 +254,12 @@ namespace constraint {
 		}
 
 		// check dependencies
-		bool hasUnresolvedInputs = any(cur.getInputs(), [&](const ValueID& cur) { return resolved.find(cur) == resolved.end(); });
+		bool hasUnresolvedInputs = any(cur.getInputs(), [&](const Variable& cur) { return resolved.find(cur) == resolved.end(); });
 		if (!hasUnresolvedInputs) resolvedConstraints.insert(&cur);
 		return hasUnresolvedInputs;
 	}
 
-	void LazySolver::resolveConstraints(const Constraint& cur, vector<ValueID>& worklist) {
+	void LazySolver::resolveConstraints(const Constraint& cur, vector<Variable>& worklist) {
 
 		// check whether there is anything to do
 		if (!hasUnresolvedInput(cur)) return;
@@ -268,13 +268,13 @@ namespace constraint {
 		resolveConstraints(cur.getUsedInputs(ass), worklist);
 	}
 
-	void LazySolver::resolveConstraints(const std::vector<ValueID>& values, vector<ValueID>& worklist) {
+	void LazySolver::resolveConstraints(const std::vector<Variable>& values, vector<Variable>& worklist) {
 
 		// if there is nothing to do => done
 		if (values.empty()) return;
 
 		// filter out sets already resolved
-		std::set<ValueID> missing;
+		std::set<Variable> missing;
 		for(auto cur : values) {
 			if (!contains(resolved, cur)) missing.insert(cur);
 		}
@@ -288,7 +288,7 @@ namespace constraint {
 		}
 
 		// obtain and integrate new constraints
-		std::set<ValueID> nextGeneration;
+		std::set<Variable> nextGeneration;
 		for(auto cur : resolver(missing)) {
 
 			// copy constraint to internal list of constraints
@@ -327,18 +327,18 @@ namespace constraint {
 		}
 
 		// resolve next generation
-		resolveConstraints(std::vector<ValueID>(nextGeneration.begin(), nextGeneration.end()), worklist);
+		resolveConstraints(std::vector<Variable>(nextGeneration.begin(), nextGeneration.end()), worklist);
 	}
 
 
-	Assignment solve(const ValueID& set, const ConstraintResolver& resolver, Assignment initial) {
+	Assignment solve(const Variable& set, const ConstraintResolver& resolver, Assignment initial) {
 		// use set-based interface
-		std::set<ValueID> sets; sets.insert(set);
+		std::set<Variable> sets; sets.insert(set);
 		return solve(sets, resolver, initial);
 	}
 
 	// a lazy solver implementation
-	Assignment solve(const std::set<ValueID>& sets, const ConstraintResolver& resolver, Assignment initial) {
+	Assignment solve(const std::set<Variable>& sets, const ConstraintResolver& resolver, Assignment initial) {
 		//create resulting assignment
 		return LazySolver(resolver, initial).solve(sets);
 	}

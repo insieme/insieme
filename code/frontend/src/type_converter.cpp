@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -161,9 +161,8 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	case BuiltinType::ULong:		return gen.getUInt8();
 	case BuiltinType::Long:			return gen.getInt8();
 
-									// long long is packed in a struct to avoid aliases with just long
-	case BuiltinType::LongLong:		return builder.structType(toVector( builder.namedType("longlong_val", gen.getInt8())));
-	case BuiltinType::ULongLong:	return builder.structType(toVector( builder.namedType("longlong_val", gen.getUInt8())));
+	case BuiltinType::LongLong:		return gen.getInt16();
+	case BuiltinType::ULongLong:	return gen.getUInt16();
 
 	// real types
 	case BuiltinType::Float:		return gen.getFloat();
@@ -644,7 +643,7 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 
 		// create a (temporary) type variable for this type
 		core::GenericTypePtr symbol = builder.genericType(name);
-		if (!name.empty()) {
+		if (!recDecl->getNameAsString().empty()) {
 			core::annotations::attachName(symbol,name);
 		}
 

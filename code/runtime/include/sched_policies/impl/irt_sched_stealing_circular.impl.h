@@ -46,7 +46,7 @@
 
 #ifdef _WIN32
 	#include "../../include_win32/rand_r.h"
-#elif defined(_GEMS)
+#elif defined(_GEMS_SIM)
 	#include "include_gems/rand_r.h"
 #endif
 

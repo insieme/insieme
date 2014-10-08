@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,6 +62,27 @@
 namespace insieme {
 namespace core {
 namespace printer {
+
+
+namespace detail {
+
+	/**
+	 * A factory for a empty plug-in.
+	 */
+	const PrinterPlugin& getEmptyPlugin() {
+		static const struct EmptyPlugin : public PrinterPlugin {
+			virtual bool covers(const NodePtr&) const {
+				return false;
+			}
+			virtual std::ostream& print(std::ostream& out,const NodePtr&, const std::function<void(const NodePtr&)>&) const {
+				assert_fail() << "Should not be reached!";
+				return out;
+			}
+		} empty;
+		return empty;
+	}
+
+}
 
 
 // set up default formats for pretty printer
@@ -185,7 +206,7 @@ namespace {
 	/**
 	 * The main visitor used by the pretty printer process.
 	 */
-	class InspirePrinter : private IRVisitor<> {
+	class InspirePrinter : public IRVisitor<> {
 
 		/**
 		 * A table containing special formatting rules for particular functions.
@@ -303,6 +324,12 @@ namespace {
 		 * Wrapper for general tasks
 		 */
 		virtual void visit(const NodePtr& element) {
+
+			// check whether this one is covered by the plug-in
+			if (printer.plugin.covers(element)) {
+				printer.plugin.print(out, element, *this);
+				return;
+			}
 
 			// check whether this one has been substituted
 			auto pos = letBindings.find(element);
@@ -924,7 +951,7 @@ namespace {
 			// print a new line
 			out << std::endl;
 			for (unsigned i=0; i<indent; i++) {
-				out << std::string(printer.tabSep.second, printer.tabSep.first);
+				out << printer.tabSep;
 			}
 		}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -50,6 +50,8 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_program.h"
+
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -362,12 +364,12 @@ ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt)
 	core::ExpressionPtr finalVal = add( // start + ceil((end-start)/step) * step
 			loopStmt->getStart(),
 			mul( // ceil((end-start)/step) * step
-				castExpr(iterType,// ( cast )
+				types::smartCast(iterType,// ( cast )
 						callExpr(
 								getLangBasic().getDouble(),
 								literal(ceilTy, "ceil"),// ceil()
 								div(// (end-start)/step
-										castExpr(
+										types::smartCast(
 												getLangBasic().getDouble(),
 												sub(
 													sub(
@@ -377,11 +379,11 @@ ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt)
 													loopStmt->getStart()
 												)// end - start
 										),
-										castExpr(getLangBasic().getDouble(), loopStmt->getStep())
+										types::smartCast(getLangBasic().getDouble(), loopStmt->getStep())
 								)
 						)
 				),
-				castExpr(loopStmt->getStart()->getType(), loopStmt->getStep())
+				types::smartCast(loopStmt->getStart()->getType(), loopStmt->getStep())
 			)
 	);
 
@@ -732,7 +734,7 @@ ExpressionPtr IRBuilder::toRef(const ExpressionPtr& srcSinkExpr) const {
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
     // add a vector init expression if subExpr is of vector type
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
-	    scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
+	    scalarToVector(subExpr->getType(), intLit(0)) : types::smartCast(subExpr->getType(), intLit(0));
 
 	//we have to check if it is a literal. if
 	//it is a literal we need to create a new
@@ -1043,11 +1045,11 @@ CallExprPtr IRBuilder::getThreadNumRange(unsigned min, unsigned max) const {
 
 CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min) const {
 	TypePtr type = manager.getLangBasic().getUInt8();
-	return callExpr(manager.getLangBasic().getCreateMinRange(), castExpr(type, min));
+	return callExpr(manager.getLangBasic().getCreateMinRange(), types::smartCast(type, min));
 }
 CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
 	TypePtr type = manager.getLangBasic().getUInt8();
-	return callExpr(manager.getLangBasic().getCreateBoundRange(), castExpr(type, min), castExpr(type, max));
+	return callExpr(manager.getLangBasic().getCreateBoundRange(), types::smartCast(type, min), types::smartCast(type, max));
 }
 
 
@@ -1171,6 +1173,14 @@ CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const strin
 
 CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
+	if ( type->getNodeType() == core::NT_RecType ) {
+		type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+	}
+
+	// if it is a ref type, use refMember function
+	if(type->getNodeType() == core::NT_RefType)
+		return refMember(structExpr, member);
+
 	assert((type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(type);
@@ -1190,6 +1200,11 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringVa
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
+
+	if ( elementType->getNodeType() == core::NT_RecType ) {
+		elementType = core::static_pointer_cast<const core::RecType>(elementType)->unroll(elementType.getNodeManager());
+	}
+
 	//assert((elementType->getNodeType() == core::NT_StructType || elementType->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(elementType);
@@ -1315,7 +1330,7 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 			//dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
 	core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-		castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+		types::smartCast(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
 
 	core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
 		(elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
@@ -1418,7 +1433,7 @@ ExpressionPtr IRBuilder::minus(const ExpressionPtr& a) const {
 
 	ExpressionPtr value = a;
 	if (value->getType() != type) {
-		value = castExpr(type, value);
+		value = types::smartCast(type, value);
 	}
 
 	// return 0 - a

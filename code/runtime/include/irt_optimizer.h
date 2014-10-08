@@ -98,6 +98,13 @@ typedef struct _irt_optimizer_wi_data_id {
             uint16 frequency;
             uint16 thread_count;
         };
+        // Useless struct to satisfy debug printfs in table_lookups.h
+        struct {
+            uint32 index;
+            uint16 thread;
+            uint8 node;
+            uint8 id_type;
+        };
     };
     struct _irt_optimizer_wi_data* cached;
 } irt_optimizer_wi_data_id;
@@ -120,7 +127,7 @@ uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
 }
 
 typedef struct _irt_optimizer_runtime_data {
-    IRT_CREATE_LOCKFREE_LOOKUP_TABLE(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS);
+    IRT_CREATE_LOCKFREE_LOOKUP_TABLE(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS)
     irt_optimizer_wi_data_id best;
     irt_optimizer_resources best_resources;
     irt_optimizer_wi_data_id cur;

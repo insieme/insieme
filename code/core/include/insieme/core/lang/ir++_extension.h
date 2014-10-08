@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -63,7 +63,7 @@ namespace lang {
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// virtuals handling
-	
+
 		/**
 		 * A literal to be used to represent pure virtual functions.
 		 */
@@ -72,7 +72,7 @@ namespace lang {
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// constructor behaviour
-	
+
 		/**
 		 * A construct supporting the construction and initialization of an array
 		 * of objects.
@@ -223,17 +223,17 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(StaticCast, "static_cast", "(ref<'a>, type<'b>)->ref<'b>");
 
-		LANG_EXT_LITERAL(StaticCastRefCppToRefCpp, "static_cast", 
+		LANG_EXT_LITERAL(StaticCastRefCppToRefCpp, "static_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref } in "
 				"let cppRefB = struct { ref<'b> _cpp_ref } in "
 				"(cppRefA, type<cppRefB>)->cppRefB");
-		
-		LANG_EXT_LITERAL(StaticCastConstCppToConstCpp, "static_cast", 
+
+		LANG_EXT_LITERAL(StaticCastConstCppToConstCpp, "static_cast",
 				"let constCppRefA = struct { src<'a> _const_cpp_ref } in "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref } in "
 				"(constCppRefA, type<constCppRefB>)->constCppRefB");
 
-		LANG_EXT_LITERAL(StaticCastRefCppToConstCpp, "static_cast", 
+		LANG_EXT_LITERAL(StaticCastRefCppToConstCpp, "static_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref } in "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref } in "
 				"(cppRefA, type<constCppRefB>)->constCppRefB");
@@ -244,17 +244,17 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(DynamicCast, "dynamic_cast", "(ref<'a>, type<'b>)->ref<'b>")
 
-		LANG_EXT_LITERAL(DynamicCastRefCppToRefCpp, "dynamic_cast", 
+		LANG_EXT_LITERAL(DynamicCastRefCppToRefCpp, "dynamic_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref } in "
 				"let cppRefB = struct { ref<'b> _cpp_ref } in "
 				"(cppRefA, type<cppRefB>)->cppRefB");
-		
-		LANG_EXT_LITERAL(DynamicCastConstCppToConstCpp, "dynamic_cast", 
+
+		LANG_EXT_LITERAL(DynamicCastConstCppToConstCpp, "dynamic_cast",
 				"let constCppRefA = struct { src<'a> _const_cpp_ref } in "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref } in "
 				"(constCppRefA, type<constCppRefB>)->constCppRefB");
 
-		LANG_EXT_LITERAL(DynamicCastRefCppToConstCpp, "dynamic_cast", 
+		LANG_EXT_LITERAL(DynamicCastRefCppToConstCpp, "dynamic_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref } in "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref } in "
 				"(cppRefA, type<constCppRefB>)->constCppRefB");
@@ -269,7 +269,7 @@ namespace lang {
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//	member pointer (only for data member pointers)
-		
+
 		/**
 		 * the access is done by narrowing the given object to the defined element
 		 */
@@ -286,49 +286,16 @@ namespace lang {
 											  " return ref.narrow(obj, dp.member(dp.root, m.id), m.membType );"
 											  "}");
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//   long long
-
 		/**
-		 * cast from long to long long
+		 * this is a special handling to check if a member pointer is null
 		 */
-		LANG_EXT_DERIVED(LongToLongLong,
-				"let longlong = struct { int<8> longlong_val } in "
-				"(int<8> x)->longlong { return (longlong) { x }; }"
-		);
-		LANG_EXT_DERIVED(ULongToULongLong,
-				"let longlong = struct { uint<8> longlong_val } in "
-				"(uint<8> x)->longlong { return (longlong) { x }; }"
-		);
-
-		/**
-		 * cast from long long to long
-		 */
-		LANG_EXT_DERIVED(LongLongToLong,
-				"let longlong = struct { int<8> longlong_val } in "
-				"(longlong x)->int<8> { return x.longlong_val; }"
-		);
-		LANG_EXT_DERIVED(ULongLongToULong,
-				"let longlong = struct { uint<8> longlong_val } in "
-				"(longlong x)->uint<8> { return x.longlong_val; }"
-		);
-		LANG_EXT_DERIVED(ULongLongToLongLong,
-				"let longlong  = struct { int<8>  longlong_val } in "
-				"let ulonglong = struct { uint<8> longlong_val } in "
-				"(ulonglong x)->longlong { return (longlong) { (int<8>) x.longlong_val }; }"
-		);
-		LANG_EXT_DERIVED(LongLongToULongLong,
-				"let longlong  = struct { int<8>  longlong_val } in "
-				"let ulonglong = struct { uint<8> longlong_val } in "
-				"(longlong x)->ulonglong { return (ulonglong) { (uint<8>) x.longlong_val }; }"
-		);
-
+        LANG_EXT_LITERAL(MemberPointerCheck, "MemberPointerNotNull",
+		                                     "(struct { type<'a> objType; identifier id; type<'b> membType; }) -> bool");
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
-	//   long long
-	
+	//   alignof c++11 keyword
+
 	LANG_EXT_LITERAL(Alignof, "alignof", "('a)->uint<8>");
 
 	}; // extension class

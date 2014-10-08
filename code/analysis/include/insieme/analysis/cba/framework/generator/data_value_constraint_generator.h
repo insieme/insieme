@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -69,7 +69,7 @@ namespace cba {
 		/**
 		 * The base-implementation is preventing the same arguments to be processed multiple times.
 		 */
-		std::set<ValueID> processed;
+		std::set<Variable> processed;
 
 	protected:
 
@@ -118,10 +118,10 @@ namespace cba {
 		 * @param value the value for which constraints shell be generated
 		 * @param constraints the set to which the resulting constraints should be added
 		 */
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 
 			// resolve the targeted node address, program context string and extra values
-			auto& data = cba.getValueParameters<int, Context, ExtraParams...>(value);
+			auto& data = cba.getVariableParameters<int, Context, ExtraParams...>(value);
 
 			// resolve node address (need to convert label to stmt)
 			const core::NodeInstance& node = cba.getStmt(std::get<1>(data));
@@ -133,9 +133,9 @@ namespace cba {
 		/**
 		 * Produces a human-readable representation of the value represented by the given value ID.
 		 */
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 
-			auto& data = cba.getValueParameters<int,Context,ExtraParams...>(value);
+			auto& data = cba.getVariableParameters<int,Context,ExtraParams...>(value);
 			int label = std::get<1>(data);
 			const core::NodeInstance& node = cba.getStmt(label);
 

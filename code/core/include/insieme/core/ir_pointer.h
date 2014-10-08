@@ -177,7 +177,7 @@ public:
 		return static_pointer_cast<R>(*this);
 	}
 	/**
-	 * Returns if a class is an instance of R
+	 * Returns if a class is an instance of R, otherwise throws a runtime error.
 	 */
 	template<typename R>
 	typename boost::enable_if<is_ir_pointer<R>, R>::type isa() const {

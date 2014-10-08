@@ -73,11 +73,11 @@ namespace addons {
 
 			// get information regarding base type
 			//const TypeInfo& baseInfo = typeManager.getTypeInfo();
-			std::cout << "name of 0 " << structType[0]->getName().getValue() << std::endl;
-			std::cout << "type of 0 " << structType[0]->getType() << std::endl;
+			//std::cout << "name of 0 " << structType[0]->getName().getValue() << std::endl;
+			//std::cout << "type of 0 " << structType[0]->getType() << std::endl;
 
-			std::cout << "name of 2 " << structType[2]->getName().getValue() << std::endl;
-			std::cout << "type of 2 " << structType[2]->getType() << std::endl;
+			//std::cout << "name of 2 " << structType[2]->getName().getValue() << std::endl;
+			//std::cout << "type of 2 " << structType[2]->getType() << std::endl;
 
 		 	TypeInfo baseInfo  = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[0]->getType()));
 		 	TypeInfo fieldType = typeManager.getTypeInfo(core::analysis::getRepresentedType(structType[2]->getType()));

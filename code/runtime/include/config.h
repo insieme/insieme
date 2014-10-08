@@ -95,6 +95,7 @@
 #define IRT_INST_WORKER_PD_BLOCKSIZE	512
 #define IRT_INST_REGION_INSTRUMENTATION_ENV "IRT_INST_REGION_INSTRUMENTATION"
 #define IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV "IRT_INST_REGION_INSTRUMENTATION_TYPES"
+#define IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE 256
 
 // standalone
 #define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
@@ -134,9 +135,19 @@
 #define IRT_MAX_WORK_GROUPS 4
 #endif
 
-// gemsclaim
-#ifdef _GEMS
+// gemsclaim simulator
+#if defined(_GEMS)
+#ifdef __arm__
+    #define _GEMS_TODO
+    #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
+        "cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
+        "a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
+#else
+    #define _GEMS_SIM
 	#define	GEMS_CORE_FREQ_MHZ 100
+    #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
+        "energy,average_power,ticks"
+#endif
 #endif
 
 //optimizer

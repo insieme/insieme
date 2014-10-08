@@ -58,14 +58,11 @@ class Formula;
 
 namespace analysis { namespace polyhedral { namespace scop {
 
-/**************************************************************************************************
- * Expection which is thrown when a particular tree is defined to be not a static control part. This
- * exception has to be forwarded until the root containing this node which has to be defined as a
- * non ScopRegion
- * 
- * Because this exception is only used within the implementation of the ScopRegion visitor, it is
- * defined in the anonymous namespace and therefore not visible outside this translation unit.
- *************************************************************************************************/
+/** Expection which is thrown when a particular tree is defined to be not a static control part. This exception has to
+be forwarded until the root containing this node which has to be defined as a non ScopRegion
+
+Because this exception is only used within the implementation of the ScopRegion visitor, it is defined in the anonymous
+namespace and therefore not visible outside this translation unit. */
 class NotASCoP : public insieme::utils::TraceableException {
 	core::NodePtr root;
 	std::string msg;
@@ -98,27 +95,23 @@ typedef std::vector<core::NodeAddress> 					AddressList;
 typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
 typedef std::list<SubScop> 								SubScopList;
 
-/************************************************************************************************** 
- * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
- * The IterationVector which is valid within the SCoP body and the set of constraints which define
- * the entry point for this SCoP.
- *
- * This annotation is attached to every node introducing changes to the iteration domain. Nodes
- * which carries ScopAnnotations are: ForLoops, IfStmt and LambdaExpr. 
- *
- * Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present)
- * and the list of ref accesses directly present in this region. Accesses in the sub region are not
- * directly listed in the current region but retrieval is possible via the aforementioned pointer to
- * the sub scops. 
- *************************************************************************************************/
+/** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
+which is valid within the SCoP body and the set of constraints which define the entry point for this SCoP.
+
+This annotation is attached to every node introducing changes to the iteration domain. Nodes which carries
+ScopAnnotations are: ForLoops, IfStmt and LambdaExpr.
+
+Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present) and the list of ref
+accesses directly present in this region. Accesses in the sub region are not directly listed in the current region but
+retrieval is possible via the aforementioned pointer to the sub scops. */
 struct ScopRegion: public core::NodeAnnotation {
 
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> 	KEY;
 
-	// This class keeps the information on how a particular reference is accessed.  This is slightly
-	// different from the DefUse::Ref class as this one also include information related to the
-	// conversion of the reference into the polyhedral model 
+	/** This class keeps the information on how a particular reference is accessed. This is slightly different from the
+	DefUse::Ref class as this one also include information related to the conversion of the reference into the polyhedral
+	model */
 	struct Reference : public boost::noncopyable {
 		core::ExpressionAddress 	 		refExpr;
 		Ref::UseType						usage;
@@ -144,20 +137,16 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	typedef std::shared_ptr<Reference> ReferencePtr;
 
-	/**************************************************************************************************
-	 * ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both
-	 * direct and contained in sub-scops). 
-	 *
-	 * A statement into a SCoP has 3 piece of information associated:
-	 * 	- Iteration domain:    which define the domain on which this statement is valid
-	 * 	- Scattering function: which define the order of execution with respect of other statements in
-	 * 						   the SCoP region
-	 *  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within 
-	 *              the statement. 
-	 *
-	 * This is information is not computed when the the SCoP region is first build but instead on demand
-	 * (lazy) and cached for future requests. 
-	 *************************************************************************************************/
+	/** ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both direct and
+	contained in sub-scops).
+
+	A statement into a SCoP has 3 piece of information associated:
+	  - Iteration domain:    which define the domain on which this statement is valid
+	  - Scattering function: which define the order of execution with respect of other statements in the SCoP region
+	  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within the statement.
+
+	This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
+	for future requests. */
 	struct Stmt { 
 
 		// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
@@ -216,41 +205,33 @@ struct ScopRegion: public core::NodeAnnotation {
 	
 	inline bool isResolved() const { return static_cast<bool>(scopInfo); }
 
-	/**
-	 * Return the iteration vector which is spawned by this region, and on which the associated
-	 * constraints are based on.
-	 */
+	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
 	inline const IterationVector& getIterationVector() const {  return iterVec; }
+	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
 	inline IterationVector& getIterationVector() {  return iterVec; }
 	
-	/** 
-	 * Retrieves the constraint combiner associated to this ScopRegion.
-	 */
+	/// Retrieves the constraint combiner associated to this ScopRegion.
 	inline const IterationDomain& getDomainConstraints() const { return domain; }
 
 	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
 
-	/**
-	 * Returns the iterator through the statements and sub statements on this SCoP. 
-	 * For each statements the infromation of its iteration domain, scattering matrix 
-	 * and access functions are listed. 
-	 */
+	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
+	of its iteration domain, scattering matrix and access functions are listed. */
 	inline const Scop& getScop() const {
 		assert(isValid() && "SCoP is not valid");
 		if (!isResolved()) { resolve(); }
 		return *scopInfo;
 	}
 
+	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
+	of its iteration domain, scattering matrix and access functions are listed. */
 	inline Scop& getScop() {
 		assert(isValid() && "SCoP is not valid");
 		if (!isResolved()) { resolve(); }
 		return *scopInfo;		
 	}
 
-	/** 
-	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
-	 * current iteration domain
-	 */
+	/// Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the current iteration domain
 	const SubScopList& getSubScops() const { return subScops; }
 
 	bool containsLoopNest() const;
@@ -262,30 +243,24 @@ struct ScopRegion: public core::NodeAnnotation {
 
 private:
 
-	/**
-	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
-	 * and cache all the scattering info at this level
-	 */
 	void resolve() const;
 
 
 	const core::NodePtr annNode;
 
-	// Iteration Vector on which constraints of this region are defined 
+	/// Iteration Vector on which constraints of this region are defined
 	IterationVector iterVec;
 
-	// List of statements direclty contained in this region (but not in nested sub-regions)
+	/// List of statements direclty contained in this region (but not in nested sub-regions)
 	StmtVect stmts;
 
-	// List of constraints which this SCoP defines 
+	/// List of constraints which this SCoP defines
 	IterationDomain domain;
 
-	/**
-	 * Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their
-	 * relative position inside the current SCoP
-	 *  
-	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
-	 */
+	/** Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their relative position
+	inside the current SCoP
+
+	In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty */
 	SubScopList subScops;
 
 	mutable std::shared_ptr<Scop> scopInfo;
@@ -293,13 +268,9 @@ private:
 	bool valid;
 };
 
-/**************************************************************************************************
- * AccessFunction : this annotation is used to annotate array subscript expressions with the
- * equality constraint resulting from the access function. 
- *
- * for example the subscript operation A[i+j-N] will generate an equality constraint of the type
- * i+j-N==0. Constraint which is used to annotate the expression.
- *************************************************************************************************/
+/** AccessFunction : this annotation is used to annotate array subscript expressions with the equality constraint
+resulting from the access function. For example the subscript operation A[i+j-N] will generate an equality constraint
+of the type i+j-N==0. Constraint which is used to annotate the expression. */
 class AccessFunction: public core::NodeAnnotation {
 	IterationVector 	iterVec;
 	AffineFunction 	access;
@@ -330,10 +301,6 @@ public:
 	}
 };
 
-/**************************************************************************************************
- * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
- * empty list in the case no SCoP was found). 
- *************************************************************************************************/ 
 AddressList mark(const core::NodePtr& root);
 
 inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {

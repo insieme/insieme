@@ -225,7 +225,23 @@ Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T
  * @param limitScope a flag determining if also variables in inner scopes should be considered
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
-NodePtr fixTypes(NodeManager& mgr, NodePtr root, const VariableMap& replacements, bool limitScope,
+NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacements, bool limitScope,
+		const TypeHandler& typeHandler = id<StatementPtr>() );
+
+/**
+ * Replaces all variables within the given map within the current scope by the associated elements. If
+ * variables are passed to functions accepting different types, a new version of the function accepting
+ * the correct type will be generated. Furthermore it executes recoveryHandler on every call to a lambda.
+ * By default this will try to fix type inconsistencies in tuple/struct accesses and deref operations
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param toReplace variable to be replaced
+ * @param replacement replacement for variable toReplace
+ * @param limitScope a flag determining if also variables in inner scopes should be considered
+ * @param typeHandler a function to be called if the correct return type cannot be determined by default
+ */
+NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
 		const TypeHandler& typeHandler = id<StatementPtr>() );
 
 /**
@@ -241,9 +257,30 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root, const VariableMap& replacements
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
 template<typename T>
-Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const VariableMap& replacements, bool limitScope,
+Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const ExpressionMap& replacements, bool limitScope,
 		const TypeHandler& typeHandler = id<StatementPtr>()) {
 	return static_pointer_cast<const T>(fixTypes(mgr, root, replacements, limitScope, typeHandler));
+}
+
+/**
+ * Replaces all variables within the given map within the current scope by the associated elements. If
+ * variables are passed to functions accepting different types, a new version of the function accepting
+ * the correct type will be generated. Furthermore it executes recoveryHandler on every call to a lambda.
+ * By default this will try to fix type inconsistencies in tuple/struct accesses and deref operations
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param toReplace variable to be replaced
+ * @param replacement replacement for variable toReplace
+ * @param limitScope a flag determining if also variables in inner scopes should be considered
+ * @param typeHandler a function to be called if the correct return type cannot be determined by default
+ */
+template<typename T>
+Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
+		const TypeHandler& typeHandler = id<StatementPtr>()) {
+	ExpressionMap replacements;
+	replacements[toReplace] = replacement;
+	return fixTypesGen(mgr, root, replacements, limitScope, typeHandler);
 }
 
 /**

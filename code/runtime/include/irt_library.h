@@ -58,6 +58,7 @@ void irt_lib_critical_init();
 ////////////////////////////////////////////////////////////////// Definitions
 
 typedef void(*voidfp)(void*);
+typedef void(*contextfp)(irt_context *);
 
 // Lightweight DI used by RT library
 typedef struct {
@@ -130,6 +131,11 @@ irt_context* irt_lib_g_context;
 void irt_lib_init(uint32 worker_count) {
 	irt_lib_critical_init();
 	irt_lib_g_context = irt_runtime_start_in_context(worker_count, &_irt_lib_context_fun, &_irt_lib_context_fun, true);
+}
+
+void irt_lib_init_in_context(uint32 worker_count, contextfp context_init, contextfp context_destroy) {
+	irt_lib_critical_init();
+	irt_lib_g_context = irt_runtime_start_in_context(worker_count, context_init, context_destroy, true);
 }
 
 // Run function as a work item within the (already inited) runtime, from a non-runtime thread
@@ -231,6 +237,43 @@ void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, s
 	irt_work_item *wi = irt_wi_get_current();
 	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, range, &impl, (irt_lw_data_item*)lwdi);
 }
+
+// optimized (sliced) loops
+
+typedef void (*loopsfp)(int64 start, int64 end, int64 step, void* data);
+
+// Lightweight DI used by RT library for sliced pfors
+typedef struct {
+	int32 size;
+	loopsfp function;
+	uint8 data[];
+} _irt_lib_pfor_s_lwdi;
+
+// Trampoline function for dynamically generated sliced loops
+void _irt_lib_wi_pfor_s_func(irt_work_item* wi) {
+	_irt_lib_pfor_s_lwdi* lwdi = (_irt_lib_pfor_s_lwdi*)wi->parameters;
+	lwdi->function(wi->range.begin, wi->range.end, wi->range.step, (void*)lwdi->data);	
+}
+
+void irt_lib_pfor_s(int64 begin, int64 end, int64 step, loopsfp body, void* data, size_t data_size) {
+
+	// static wi implementation (immutable)
+	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_s_func, 0, NULL, 0, NULL, NULL, NULL };
+	static irt_wi_implementation impl = { -2, 1, &impl_var };
+
+	// build lightweight data item
+	int32 lwdi_size = data_size + sizeof(_irt_lib_pfor_lwdi);
+	_irt_lib_pfor_s_lwdi *lwdi = (_irt_lib_pfor_s_lwdi*)alloca(lwdi_size);
+	*lwdi = (_irt_lib_pfor_s_lwdi){ -lwdi_size /* negative == direct size, no data item table entry */, body };
+	memcpy(lwdi->data, data, data_size);
+
+	// start it
+	irt_work_item_range range = { begin, end, step };
+	irt_work_item *wi = irt_wi_get_current();
+	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, range, &impl, (irt_lw_data_item*)lwdi);
+}
+
+/////////////////////////////////////////////////////////////////////////////// Synchronization
 
 void irt_lib_barrier() {
 	irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(),0));

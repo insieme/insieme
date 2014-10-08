@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,7 +39,6 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
 
@@ -98,7 +97,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	}
 
 	// return by value ALWAYS, will fix this in a second pass (check cpp_ref plugin)
-	//   - var(undefined (Obj))    
+	//   - var(undefined (Obj))
 	//   - ctor(undefined(Obj))
 	//   - vx (where type is ref<Obj<..>>)
 	//   		all this casses, by value!
@@ -147,15 +146,21 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
 			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType());
 
+            if(convFact.varDeclMap.find(exceptionVarDecl) != convFact.varDeclMap.end()) {
+                //static cast allowed here, because the insertion of
+                //exceptionVarDecls is exclusively done here
+                var = (convFact.varDeclMap[exceptionVarDecl]).as<core::VariablePtr>();
+                VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+            } else {
+                var = builder.variable(exceptionTy);
 
-			var = builder.variable(exceptionTy);
-
-			//we assume that exceptionVarDecl is not in the varDeclMap
-			frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
-							&& "excepionVarDecl already in vardeclmap");
-			//insert var to be used in conversion of handlerBlock
-			convFact.varDeclMap.insert( { exceptionVarDecl, var } );
-			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+                //we assume that exceptionVarDecl is not in the varDeclMap
+                frontend_assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
+                                && "excepionVarDecl already in vardeclmap");
+                //insert var to be used in conversion of handlerBlock
+                convFact.varDeclMap.insert( { exceptionVarDecl, var } );
+                VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+            }
 		}
 		else {
 			//no exceptiondecl indicates a catch-all (...)

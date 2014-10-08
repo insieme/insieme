@@ -227,7 +227,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		return core::visitPathBottomUpInterruptible(yAddr, visitor);
 	}
 };
-typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, core::ExpressionPtr> ClmemTable;
 typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target_specialized, equal_variables> KernelArgsOld;
 typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target_specialized, equal_variables> KernelArgs;
 //typedef std::map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, equal_variables> KernelArgs;

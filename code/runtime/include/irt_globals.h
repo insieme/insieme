@@ -48,11 +48,8 @@ extern irt_mutex_obj irt_g_error_mutex;
 
 extern irt_tls_key irt_g_worker_key;
 extern uint32 irt_g_worker_count;
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-extern uint32 irt_g_enabled_worker_count;
-extern uint32 irt_g_worker_to_enable_count;
-extern irt_cond_bundle irt_g_enable_worker_cond;
-#endif
+extern uint32 irt_g_degree_of_parallelism;
+extern irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 extern uint32 irt_g_active_worker_count;
 extern irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker;

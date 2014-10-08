@@ -38,7 +38,7 @@
 #ifndef __GUARD_HWINFO_H
 #define __GUARD_HWINFO_H
 
-#ifndef _GEMS
+#ifndef _GEMS_SIM
 	#include <unistd.h>
 #endif
 

@@ -34,14 +34,13 @@
 * regarding third party software licenses.
 */
 
-
-//__attribute__ ((noinline))
+__attribute__ ((noinline,optimize(0)))
 void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) { 
 
     __asm (
         "push {r4-r7, lr};"     // save LR, R7, R4-R6
         "add r7, sp, #12;"      // adjust R7 to point to saved R7 (frame pointer)
-        "push {r8, r10, r11};"  // save remaining GPRs (R8, R10, R11)
+        "push {r8, r9, r10, r11};"  // save remaining GPRs (R8, R9, R10, R11)
         
         /* swap stacks */
         
@@ -50,12 +49,14 @@ void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*
         
         /* call function if func != NULL */
         
-        "cbz r1, endlab;"
+        /* "cbz r1, endlab;" */ // cbz is not always supported
+        "cmp r1, #0;"
+        "beq endlab;"
         "bl _irt_wi_trampoline;" /* r0 still has wi, r1 still has func, so just call */
         
         /* restore registers for other coroutine */
         "endlab:"
-        "pop {r8, r10, r11};"   // restore R8-R11
+        "pop {r8, r9, r10, r11};"   // restore R8-R11
         "pop {r4-r7, lr};"      // restore R4-R6, saved R7, return to saved LR
     );
 }

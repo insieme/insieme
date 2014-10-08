@@ -62,6 +62,10 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/transform/transformation.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -290,54 +294,57 @@ namespace {
 		closeBox();
 	}
 
-	//***************************************************************************************
-	// 		Polyhedral Model Extraction: analysis for SCoPs and prints out stats
-	//***************************************************************************************
+	/// Polyhedral Model Extraction: Start analysis for SCoPs and prints out stats
 	void markSCoPs(ProgramPtr& program, MessageList& errors, const CommandLineOptions& options) {
-		if (!options.MarkScop) { return; }
+		if (!options.MarkScop && !options.UsePM) return;
 		using namespace anal::polyhedral::scop;
 
+		// find SCoPs in our current program
 		AddressList sl = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ",
 			[&]() -> AddressList { return mark(program); });
 
-		openBoxTitle("SCoP Analysis");
-		size_t numStmtsInScops = 0, loopNests = 0, maxLoopNest=0;
+		size_t numStmtsInScops=0, loopNests=0, maxLoopNest=0;
 
+		// loop over all SCoP annotations we have discovered
 		std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 
-			// Avoid to print scops with no stmts
-			if (reg.getScop().size() == 0) { return; }
+			// only print SCoPs which contain statement, at the user's request
+			if (reg.getScop().size()==0) return;
+			else { if (options.MarkScop) { std::cout << reg.getScop(); } }
 
-			LOG(INFO) << reg.getScop();
-
+			// count number of statements covered by SCoPs
 			numStmtsInScops += reg.getScop().size();
-			size_t loopNest = reg.getScop().nestingLevel();
 
-			if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
+			// count maximum and average loop nesting level
+			size_t loopNest = reg.getScop().nestingLevel();
+			if (loopNest>maxLoopNest) maxLoopNest=loopNest;
 			loopNests += loopNest;
 		});
 
 		LOG(INFO) << std::setfill(' ') << std::endl
-			  << "=========================================" << std::endl
-			  << "=             SCoP COVERAGE             =" << std::endl
-			  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
-			  << "= Tot # of SCoPs                :" << std::setw(6)
-					<< std::right << sl.size() << " =" << std::endl
-			  << "= Tot # of stms covered by SCoPs:" << std::setw(6)
-					<< std::right << numStmtsInScops << " =" << std::endl
-			  << "= Avg stmt per SCoP             :" << std::setw(6)
-					<< std::setprecision(4) << std::right
-					<< (double)numStmtsInScops/sl.size() << " =" << std::endl
-			  << "= Avg loop nests per SCoP       :" << std::setw(6)
-					<< std::setprecision(4) << std::right
-					<< (double)loopNests/sl.size() << " =" << std::endl
-			  << "= Max loop nests per SCoP       :" << std::setw(6)
-					<< std::setprecision(4) << std::right
-					<< maxLoopNest << " =" << std::endl
-			  << "=========================================";
+				  << "SCoP Analysis" << std::endl
+				  << "\t# of SCoPs: " << sl.size() << std::endl
+				  << "\t# of stmts within SCoPs: " << numStmtsInScops << std::endl
+				  << "\tavg stmts per SCoP: " << std::setprecision(2) << (double)numStmtsInScops/sl.size() << std::endl
+				  << "\tavg loop nests per SCoP: " << std::setprecision(2) << (double)loopNests/sl.size() << std::endl
+				  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
+	}
 
-		closeBox();
+	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
+	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
+		if (!options.UsePM) return program;
+		std::cout << "### We will be using the backend: " << options.Backend << std::endl;
+
+		// filter SCoPs and build up the polyhedral transformation pipeline
+		using namespace insieme::transform;
+		std::vector<TransformationPtr> tr;
+		tr.push_back(std::make_shared<insieme::transform::polyhedral::LoopParallelize>());
+		auto transform=makePipeline(makeForAll(insieme::transform::filter::outermostSCoPs(), makePipeline(tr)));
+
+		// apply transformation and return resulting program
+		program = transform->apply(program);
+		return program;
 	}
 
 	//***************************************************************************************
@@ -435,14 +442,18 @@ namespace {
  */
 int main(int argc, char** argv) {
 
-	const CommandLineOptions options = CommandLineOptions::parse(argc, argv);
+	CommandLineOptions options = CommandLineOptions::parse(argc, argv);
 	if (!options.valid) return 0;		// it was a help or about request
+	string backendName; // needed now so that we can sanitize user input early (string given to --backend option)
+	be::BackendPtr backend;
 
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.LogLevel), options.Verbosity);
 	LOG(INFO) << "Insieme compiler - Version: " << utils::getVersion();
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
+
+	// try to read the input sources and do some benchmarking
 	try {
 		if(!options.InputFiles.empty()) {
 
@@ -459,6 +470,12 @@ int main(int argc, char** argv) {
 			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
 					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
 
+			// after reading in the source files, we need to do backend selection
+			if (!options.Backend.empty()) {
+				std::tie(backendName, backend) = selectBackend(program, options);
+				options.Backend=backendName; // sanitize user input
+			}
+
 			printIR(program, options);
 
 			// perform checks
@@ -473,6 +490,7 @@ int main(int argc, char** argv) {
 
 			// Perform SCoP region analysis
 			markSCoPs(program, errors, options);
+			program=SCoPTransformation(program, options);
 
 			// IR statistics
 			showStatistics(program, options);
@@ -482,38 +500,28 @@ int main(int argc, char** argv) {
 
 		}
 
-		{
-			// see whether a backend has been selected
-			if (!options.Backend.empty()) {
+		// write program output only if a backend has been selected
+		if (!backendName.empty()) {
+			openBoxTitle("Converting to TargetCode");
 
-				openBoxTitle("Converting to TargetCode");
+			utils::measureTimeFor<INFO>( backendName, [&](){
+				// convert code
+				be::TargetCodePtr targetCode = backend->convert(program);
+				LOG(INFO) << "\n" << *targetCode; // do logger output before writing to a file
 
-				string backendName;
-				be::BackendPtr backend;
+				// select output target
+				if(!options.Output.empty()) {
+					// write result to file ...
+					std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
+					outFile << *targetCode;
+					outFile.close();
 
-				std::tie(backendName, backend) = selectBackend(program, options);
+					// TODO: reinstate rewriter when fractions of programs are supported as entry points
+					return;
+				}
+			});
 
-				utils::measureTimeFor<INFO>( backendName, [&](){
-					// convert code
-					be::TargetCodePtr targetCode = backend->convert(program);
-
-					// select output target
-					if(!options.Output.empty()) {
-						// write result to file ...
-						std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
-						outFile << *targetCode;
-						outFile.close();
-
-						// TODO: reinstate rewriter when fractions of programs are supported as entry points
-	//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), options.Output);
-						return;
-					}
-					// just write result to logger
-					LOG(INFO) << "\n" << *targetCode;
-				});
-
-				closeBox();
-			}
+			closeBox();
 		}
 
 	} catch (fe::ClangParsingError& e) {

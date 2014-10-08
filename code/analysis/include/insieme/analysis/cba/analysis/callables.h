@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,7 +86,7 @@ namespace cba {
 			auto value = Callable<Context>(literal);
 			auto l_lit = cba.getLabel(literal);
 
-			auto C_lit = cba.getSet(C, l_lit, ctxt);
+			auto C_lit = cba.getVar(C, l_lit, ctxt);
 			constraints.add(elem(value, C_lit));
 
 		}
@@ -100,7 +100,7 @@ namespace cba {
 			auto value = Callable<Context>(lambda);
 			auto label = cba.getLabel(lambda);
 
-			constraints.add(elem(value, cba.getSet(C, label, ctxt)));
+			constraints.add(elem(value, cba.getVar(C, label, ctxt)));
 
 			// TODO: handle recursions
 
@@ -115,7 +115,7 @@ namespace cba {
 			auto value = Callable<Context>(bind, ctxt);
 			auto label = cba.getLabel(bind);
 
-			auto C_bind = cba.getSet(C, label, ctxt);
+			auto C_bind = cba.getVar(C, label, ctxt);
 			constraints.add(elem(value, C_bind));
 
 		}

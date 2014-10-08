@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,8 +40,6 @@
 
 #include "insieme/analysis/cba/utils/cba_utils.h"
 #include "insieme/core/ir_visitor.h"
-
-#include "insieme/utils/functional_chain.h"
 
 namespace insieme {
 namespace analysis {
@@ -63,7 +61,7 @@ namespace cba {
 
 		// collect free callers and callees
 		visitDepthFirst(root,
-			insieme::utils::chain(
+			[&](const ExpressionInstance& expr) {
 				[&](const ExpressionInstance& cur) {
 
 					// only interested in lambdas, bind and literals
@@ -92,7 +90,7 @@ namespace cba {
 					Callee callee = (kind == NT_LambdaExpr) ? Callee(cur.as<LambdaExprInstance>()->getLambda()) :
 									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprInstance>()) : Callee(cur.as<LiteralInstance>());
 					freeCallees[type->getParameterTypes()->size()].push_back(callee);
-				},
+				}(expr);
 				[&](const ExpressionInstance& cur) {
 
 					auto call = cur.isa<CallExprInstance>();
@@ -116,8 +114,8 @@ namespace cba {
 
 					// this is one
 					freeCallers[call->size()].push_back(call);
-				}
-			)
+				}(expr);
+			}
 		);
 	}
 

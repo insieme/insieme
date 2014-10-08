@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -67,8 +67,8 @@ namespace cba {
 	namespace {
 
 		template<typename A, typename B>
-		vector<ValueID> combine(const A& a, const vector<B>& b) {
-			vector<ValueID> res;
+		vector<Variable> combine(const A& a, const vector<B>& b) {
+			vector<Variable> res;
 			res.push_back(a);
 			for(auto& cur : b) res.push_back(cur);
 			return res;
@@ -85,9 +85,9 @@ namespace cba {
 			typedef typename Symbols::value_type value_type;
 			typedef typename Symbols::manager_type manager_type;
 
-			const TypedValueID<Functions> funs;
-			const vector<TypedValueID<Symbols>> args;
-			const TypedValueID<Symbols> out;
+			const TypedVariable<Functions> funs;
+			const vector<TypedVariable<Symbols>> args;
+			const TypedVariable<Symbols> out;
 
 			core::NodeManager& nodeMgr;
 			manager_type& mgr;
@@ -96,12 +96,12 @@ namespace cba {
 
 			CallConstraint(
 					core::NodeManager& nodeMgr,
-					const TypedValueID<Functions>& funs,
-					const vector<TypedValueID<Symbols>>& args,
-					const TypedValueID<Symbols>& out,
+					const TypedVariable<Functions>& funs,
+					const vector<TypedVariable<Symbols>>& args,
+					const TypedVariable<Symbols>& out,
 					manager_type& mgr
 			)
-				: Constraint(combine(funs, args), toVector<ValueID>(out), false),
+				: Constraint(combine(funs, args), toVector<Variable>(out), false),
 				  funs(funs), args(args), out(out), nodeMgr(nodeMgr), mgr(mgr) {}
 
 			virtual Constraint::UpdateResult update(Assignment& ass) const {
@@ -203,7 +203,7 @@ namespace cba {
 
 
 		template<typename Functions, typename Symbols>
-		ConstraintPtr callConstraint(core::NodeManager& nodeMgr, const TypedValueID<Functions> funs, const vector<TypedValueID<Symbols>> args, const TypedValueID<Symbols> out, typename Symbols::manager_type& mgr) {
+		ConstraintPtr callConstraint(core::NodeManager& nodeMgr, const TypedVariable<Functions> funs, const vector<TypedVariable<Symbols>> args, const TypedVariable<Symbols> out, typename Symbols::manager_type& mgr) {
 			return std::make_shared<CallConstraint<Functions, Symbols>>(nodeMgr, funs, args, out, mgr);
 		}
 
@@ -222,7 +222,7 @@ namespace cba {
 	public:
 
 		UninterpretedSymbolsConstraintGenerator(CBA& cba)
-			: super(cba, cba::U, cba::u, cba.getDataManager<lattice<uninterpreted_symbols_analysis_data>::type>().atomic(utils::set::toSet<set<ExpressionPtr>>(ExpressionPtr()))),
+			: super(cba, cba::U, cba::u, cba.getDataManager<lattice<uninterpreted_symbols_analysis_data>::type>().atomic(utils::set::toSet<set<ExpressionPtr>>())),
 			  base(cba.getRoot()->getNodeManager().getLangBasic()),
 			  cba(cba)
 		{ };
@@ -234,7 +234,7 @@ namespace cba {
 		void visitLiteral(const LiteralInstance& literal, const Context& ctxt, Constraints& constraints) {
 
 			// a literal is interpreted as itself
-			constraints.add(elem(literal.as<LiteralPtr>(), cba.getSet(U, literal, ctxt)));
+			constraints.add(elem(literal.as<LiteralPtr>(), cba.getVar(U, literal, ctxt)));
 
 		}
 
@@ -245,12 +245,12 @@ namespace cba {
 			super::visitCallExpr(call, ctxt, constraints);
 
 			// collect targeted functions and arguments
-			auto funs = cba.getSet(F, call.getFunctionExpr(), ctxt);
-			auto res = cba.getSet(U, call, ctxt);
+			auto funs = cba.getVar(F, call.getFunctionExpr(), ctxt);
+			auto res = cba.getVar(U, call, ctxt);
 
 			vector<decltype(res)> args;
 			for (auto& arg : call) {
-				args.push_back(cba.getSet(U, arg, ctxt));
+				args.push_back(cba.getVar(U, arg, ctxt));
 			}
 
 			// special case if target is a literal

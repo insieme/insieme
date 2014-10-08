@@ -1,13 +1,13 @@
-GROUP(rapmi_group, rapmi_t rapmi_data, {}, { rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0); }, \
-      {}, \
-      { rapmi_start(); rapmi_read(&(context->inst_region_metric_group_support_data.rapmi_data)); }, \
-      { rapmi_stop(); rapmi_read(&(context->inst_region_metric_group_support_data.rapmi_data)); }, {}, {})
+GROUP(rapmi_group, int eg_dummy, rapmi_t rapmi_data, { rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0); }, \
+      {}, {}, {}, {}, {}, \
+      { rapmi_start(); rapmi_read(&rapmi_data); }, \
+      { rapmi_stop(); rapmi_read(&rapmi_data); })
 
 /*TODO [_GEMS]: check the sampling rate*/
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_RAPMI_AVERAGE_POWER)
 METRIC(rapmi_average_power,                 50,   mW,      uint32,      "%u",        IRT_HW_SCOPE_CORE,     IRT_METRIC_AGGREGATOR_AVG,   rapmi_group, \
     {}, \
-    { wi->inst_region_data->aggregated_rapmi_average_power = (wi->inst_region_data->aggregated_rapmi_average_power + ((context->inst_region_metric_group_support_data.rapmi_data.cpu_power * 100) / (context->inst_region_metric_group_support_data.rapmi_data.ts - wi->inst_region_data->last_rapmi_ticks)) / 2); }, \
+    { wi->inst_region_data->aggregated_rapmi_average_power = (wi->inst_region_data->aggregated_rapmi_average_power + ((rapmi_data.cpu_power * 100) / (rapmi_data.ts - wi->inst_region_data->last_rapmi_ticks)) / 2); }, \
     {}, \
     {}, \
     1 \
@@ -18,7 +18,7 @@ METRIC(rapmi_average_power,                 50,   mW,      uint32,      "%u",   
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_RAPMI_ENERGY)
 METRIC(rapmi_energy,                 51,   j,      uint32,      "%u",        IRT_HW_SCOPE_CORE,     IRT_METRIC_AGGREGATOR_SUM,   rapmi_group, \
     {}, \
-    { wi->inst_region_data->aggregated_rapmi_energy += context->inst_region_metric_group_support_data.rapmi_data.cpu_power; }, \
+    { wi->inst_region_data->aggregated_rapmi_energy += rapmi_data.cpu_power; }, \
     {}, \
     {}, \
     1 \
@@ -27,8 +27,8 @@ METRIC(rapmi_energy,                 51,   j,      uint32,      "%u",        IRT
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_RAPMI_TICKS)
 METRIC(rapmi_ticks,                 52,   us,      uint32,      "%u",        IRT_HW_SCOPE_CORE,     IRT_METRIC_AGGREGATOR_SUM,   rapmi_group, \
-    { wi->inst_region_data->last_rapmi_ticks = context->inst_region_metric_group_support_data.rapmi_data.ts; }, \
-    { wi->inst_region_data->aggregated_rapmi_ticks += context->inst_region_metric_group_support_data.rapmi_data.ts - wi->inst_region_data->last_rapmi_ticks; }, \
+    { wi->inst_region_data->last_rapmi_ticks = rapmi_data.ts; }, \
+    { wi->inst_region_data->aggregated_rapmi_ticks += rapmi_data.ts - wi->inst_region_data->last_rapmi_ticks; }, \
     {}, \
     {}, \
     1 \

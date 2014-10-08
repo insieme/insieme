@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -204,7 +204,7 @@ namespace analysis {
 	}
 
 	// --------------------------- data member pointer -----------------------------------
-	
+
 	bool isMemberPointer (const TypePtr& type){
 
 		// filter out null-pointer
@@ -254,11 +254,22 @@ namespace analysis {
 	ExpressionPtr getMemberPointerAccess (const ExpressionPtr& base, const ExpressionPtr& expr){
 		NodeManager& manager = base.getNodeManager();
 		IRBuilder builder(manager);
-		
+
 		// retrieve the name and the field type to build the desired access
 		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerAccess();
 		return builder.callExpr(access,  toVector(base, expr));
 	}
+
+	ExpressionPtr getMemberPointerCheck (const ExpressionPtr& expr){
+		NodeManager& manager = expr.getNodeManager();
+		IRBuilder builder(manager);
+
+		// retrieve the name and the field type to build the desired access
+		core::ExpressionPtr access = manager.getLangExtension<lang::IRppExtensions>().getMemberPointerCheck();
+		return builder.callExpr(access, expr);
+	}
+
+
 
 	// --------------------------- C++ calls ---------------------------------------------
 
@@ -303,84 +314,6 @@ namespace analysis {
 		return lambda->getBody() == IRBuilder(lambda->getNodeManager()).compoundStmt();
 	}
 
-	// ------------------------------- Long Long ---------------------------------------
-	//
-	bool isLongLong(const TypePtr& type){
-
-		// filter out null-pointer
-		if (!type) return false;
-
-		// must be a struct type
-		StructTypePtr structType = type.isa<StructTypePtr>();
-		if (!structType) return false;
-
-		// only one member
-		if (structType.size() != 1u) return false;
-
-		// check the one member element
-		IRBuilder builder(type->getNodeManager());
-		NamedTypePtr element = structType[0];
-
-		if ((element->getName().getValue() != "longlong_val") &&
-			!(element->getType() == builder.getLangBasic().getInt8() || element->getType() == builder.getLangBasic().getUInt8()))
-			return false;
-
-		return true;
-	}
-	
-	bool isSignedLongLong(const TypePtr& type){
-		assert(isLongLong(type));
-		IRBuilder builder(type->getNodeManager());
-		NamedTypePtr element = type.as<StructTypePtr>()[0];
-		return element->getType() == builder.getLangBasic().getInt8();
-	}
-
-	ExpressionPtr castToLongLong( const ExpressionPtr& expr, bool _signed){
-		NodeManager& manager = expr.getNodeManager();
-		IRBuilder builder(manager);
-
-		core::ExpressionPtr cast;
-		if (_signed)
-			cast = manager.getLangExtension<lang::IRppExtensions>().getLongToLongLong();
-		else
-			cast = manager.getLangExtension<lang::IRppExtensions>().getULongToULongLong();
-
-		return builder.callExpr(cast, expr);
-	}
-
-	ExpressionPtr castFromLongLong( const ExpressionPtr& expr){
-		assert(isLongLong(expr->getType()));
-		NodeManager& manager = expr.getNodeManager();
-		IRBuilder builder(manager);
-		
-		core::ExpressionPtr cast;
-		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
-		if (element->getType() == builder.getLangBasic().getInt8())
-			cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToLong();
-		else if (element->getType() == builder.getLangBasic().getUInt8())
-			cast = manager.getLangExtension<lang::IRppExtensions>().getULongLongToULong();
-		else
-			assert(false && "not a long long");
-
-		return builder.callExpr(cast, expr);
-	}
-	ExpressionPtr castBetweenLongLong( const ExpressionPtr& expr){
-		assert(isLongLong(expr->getType()));
-		NodeManager& manager = expr.getNodeManager();
-		IRBuilder builder(manager);
-		
-		core::ExpressionPtr cast;
-		NamedTypePtr element = expr->getType().as<core::StructTypePtr>()[0];
-		if (element->getType() == builder.getLangBasic().getInt8()){
-			cast = manager.getLangExtension<lang::IRppExtensions>().getLongLongToULongLong();
-		}else if (element->getType() == builder.getLangBasic().getUInt8()){
-			cast = manager.getLangExtension<lang::IRppExtensions>().getULongLongToLongLong();
-		}else{
-			assert(false && "not a long long");
-		}
-
-		return builder.callExpr(cast, expr);
-	}
 
 } // end namespace analysis
 } // end namespace core

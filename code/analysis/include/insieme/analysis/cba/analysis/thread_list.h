@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,10 +86,10 @@ namespace cba {
 
 		ThreadListConstraintGenerator(CBA& cba) {}
 
-		virtual void addConstraints(CBA& cba, const sc::ValueID& value, Constraints& constraints) {
+		virtual void addConstraints(CBA& cba, const sc::Variable& value, Constraints& constraints) {
 
 			// compute the type of the produced value (=variable) id
-			typedef sc::TypedValueID<typename thread_list_analysis::lattice<analysis_config<Context>>::type> value_id_type;
+			typedef sc::TypedVariable<typename thread_list_analysis::lattice<analysis_config<Context>>::type> value_id_type;
 
 			// This is a recursive definition:
 			value_id_type TL(value);
@@ -98,7 +98,7 @@ namespace cba {
 			constraints.add(createThreadCollectorConstraint<Context>(cba, TL));
 		}
 
-		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::ValueID& value) const {
+		virtual void printValueInfo(std::ostream& out, const CBA& cba, const sc::Variable& value) const {
 			out << "ThreadList = " << value;
 		}
 
@@ -110,7 +110,7 @@ namespace cba {
 		class ThreadCollector : public utils::constraint::Constraint {
 
 			typedef typename Context::thread_context value_type;
-			typedef TypedValueID<typename lattice<thread_body_analysis,analysis_config<Context>>::type> thread_body_var_type;
+			typedef TypedVariable<typename lattice<thread_body_analysis,analysis_config<Context>>::type> thread_body_var_type;
 
 			CBA& cba;
 
@@ -118,14 +118,14 @@ namespace cba {
 
 			mutable std::vector<thread_body_var_type> thread_body_variables;
 
-			mutable std::vector<ValueID> inputs;
+			mutable std::vector<Variable> inputs;
 
 		public:
 
 			ThreadCollector(CBA& cba, const ThreadListVarType& tl) :
-				Constraint(toVector<ValueID>(),toVector<ValueID>(tl), true, true), cba(cba), TL(tl)
+				Constraint(toVector<Variable>(),toVector<Variable>(tl), true, true), cba(cba), TL(tl)
 			{
-					inputs.push_back(cba.getValueID<sync_points_analysis,analysis_config<Context>>());
+					inputs.push_back(cba.getVariable<sync_points_analysis,analysis_config<Context>>());
 			}
 
 			virtual UpdateResult update(Assignment& ass) const {
@@ -149,7 +149,7 @@ namespace cba {
 				bool changed = false;
 
 				// get current set of sync points
-				auto SPs = cba.getValueID<sync_points_analysis,analysis_config<Context>>();
+				auto SPs = cba.getVariable<sync_points_analysis,analysis_config<Context>>();
 				const set<ProgramPoint<Context>>& all_sync_points = ass[SPs];
 
 				// check all spawn points in the sync points set
@@ -158,7 +158,7 @@ namespace cba {
 					if (isSpawnPoint(cur.getStatement().template isa<ExpressionPtr>())) {
 
 						// add variable describing bodies to dependencies
-						auto tb_var = cba.getSet(ThreadBodies, cur.getStatement(), cur.getContext());
+						auto tb_var = cba.getVar(ThreadBodies, cur.getStatement(), cur.getContext());
 						if (::contains(thread_body_variables, tb_var)) continue;
 
 						// add current variable to list of dependencies
@@ -172,7 +172,7 @@ namespace cba {
 				return changed;
 			}
 
-			virtual const std::vector<ValueID>& getUsedInputs(const Assignment& ass) const {
+			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const {
 				return inputs;
 			}
 
