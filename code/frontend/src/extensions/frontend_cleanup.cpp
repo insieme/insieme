@@ -56,6 +56,8 @@
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
+
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/utils/assert.h"
@@ -73,42 +75,17 @@
 
 	namespace {
 
-		core::NodePtr applyCleanup(const core::NodePtr& node, std::function<core::NodePtr(const core::NodePtr&)>  pass){
+		/**
+		 * here the little trick, the translation unit is converted into a single expression to guarantee the
+		 * the visiting of every single little node
+		 */
+		insieme::frontend::tu::IRTranslationUnit applyCleanup(insieme::frontend::tu::IRTranslationUnit& tu, std::function<core::NodePtr(const core::NodePtr&)>  pass){
 
-			core::NodePtr res;
+			core::ExpressionPtr singlenode = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
+			assert_true(singlenode) << "empty tu?";
+			singlenode = pass(singlenode).as<core::ExpressionPtr>();
 
-			if (!node.isa<core::TypePtr>())
-				res = pass(node);
-
-			//NOTE: careful! 
-			//metainfo is only added to the Types after generating the IRProgram out of the //IRTu
-			core::visitDepthFirstOnce(res, [&] (const core::TypePtr& type){
-				if (core::hasMetaInfo(type)){
-					auto meta = core::getMetaInfo(type);
-
-					vector<core::ExpressionPtr> ctors = meta.getConstructors();
-					for (auto& ctor : ctors){
-						ctor = pass(ctor).as<core::ExpressionPtr>();
-					}
-					if (!ctors.empty()) meta.setConstructors(ctors);
-
-					if (meta.hasDestructor()){
-						auto dtor = meta.getDestructor();
-						dtor = pass(dtor).as<core::ExpressionPtr>();
-						meta.setDestructor(dtor);
-					}
-
-					vector<core::MemberFunction> members = meta.getMemberFunctions();
-					for (core::MemberFunction& member : members){
-						member = core::MemberFunction(member.getName(), pass(member.getImplementation()).as<core::ExpressionPtr>(),
-													  member.isVirtual(), member.isConst());
-					}
-					if(!members.empty()) meta.setMemberFunctions(members);
-					core::setMetaInfo(type, meta);
-
-				}
-			});
-			return res;
+			return insieme::frontend::tu::fromIR(singlenode);
 		}
 
 		//////////////////////////////////////////////////////////////////////
@@ -219,12 +196,6 @@
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
-
-		prog = applyCleanup(prog, refDerefCleanup).as<core::ProgramPtr>();
-		prog = applyCleanup(prog, castCleanup).as<core::ProgramPtr>();
-		prog = applyCleanup(prog, superfluousCode).as<core::ProgramPtr>();
-
-
 		/////////////////////////////////////////////////////////////////////////////////////
 		//		DEBUG
 		//			some code to fish bugs
@@ -260,11 +231,17 @@
 //
 
 
+
 		return prog;
 	}
 
 
     insieme::frontend::tu::IRTranslationUnit FrontendCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+
+		tu = applyCleanup(tu, refDerefCleanup);
+		tu = applyCleanup(tu, castCleanup);
+		tu = applyCleanup(tu, superfluousCode);
+
 
 		//////////////////////////////////////////////////////////////////////
 		// Malloc

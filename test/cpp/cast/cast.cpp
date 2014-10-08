@@ -61,6 +61,27 @@ int main() {
 		printf("%f\n", aDouble);
 	}
 
+    //volatile
+    {
+        volatile int aInt = 1;
+        bool aBool;
+        double aDouble;
+        
+        aBool = aInt;
+		printf("%d\n", aBool);
+        aBool = (bool)aInt;
+		printf("%d\n", aBool);
+        aBool = bool(aInt);
+		printf("%d\n", aBool);
+
+        aDouble = aInt;
+		printf("%f\n", aDouble);
+        aDouble = (double)aInt;
+		printf("%f\n", aDouble);
+        aDouble = double(aInt);
+		printf("%f\n", aDouble);
+    }
+
 	//pointers cast
 	{
 		{

@@ -870,15 +870,15 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
 
 	if(VLOG_IS_ON(2)){
-		std::cout << " =============== Materialize! =================" << std::endl;
+		VLOG(2) << " =============== Materialize! =================" << std::endl;
 		materTempExpr->dump();
-		std::cout << "inner: " << std::endl;
+		VLOG(2) << "inner: ";
 		dumpPretty(retIr);
-		std::cout << "type: " << std::endl;
+		VLOG(2) << "type: ";
 		dumpPretty(retIr->getType());
-		std::cout << "expected: " << std::endl;
+		VLOG(2) << "expected: ";
 		core::TypePtr t = convFact.convertType(materTempExpr->getType());
-		dumpPretty(t);
+		VLOG(2) << dumpPretty(t);
 	}
 
 	//if (! t.isa<core::RefTypePtr>())

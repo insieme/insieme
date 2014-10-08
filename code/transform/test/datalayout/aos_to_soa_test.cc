@@ -156,7 +156,7 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(96, numberOfCompoundStmts(code));
+	EXPECT_EQ(100, numberOfCompoundStmts(code));
 	EXPECT_EQ(10, countMarshalledAccesses(code));
 	EXPECT_EQ(4, countMarshalledAssigns(code));
 }
@@ -226,7 +226,7 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(50, numberOfCompoundStmts(code));
+	EXPECT_EQ(56, numberOfCompoundStmts(code));
 	EXPECT_EQ(7, countMarshalledAccesses(code));
 	EXPECT_EQ(3, countMarshalledAssigns(code));
 }

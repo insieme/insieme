@@ -180,7 +180,7 @@ void AosToSoa::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
+		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
 		if(!replacements.empty())
 			toTransform = core::transform::replaceAll(mgr, replacements);
@@ -358,7 +358,7 @@ StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, ExpressionPtr init, TypePtr oldType, TypePtr newType, StringValuePtr fieldName) {
+ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, ExpressionPtr init, NodeMap& backupReplacements, StringValuePtr fieldName) {
 	// check for marshalled variables in init expression
 	std::pair<ExpressionPtr, ExpressionPtr> varInInit;
 	visitBreadthFirstInterruptible(init, [&](const ExpressionPtr& currVar) {
@@ -382,12 +382,12 @@ ExpressionPtr AosToSoa::updateInit(const ExpressionMap& varReplacements, Express
 	}
 
 	// backup, works for e.g. memory allocation
-	return core::transform::replaceAll(mgr, init, oldType, newType).as<ExpressionPtr>();
+	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
 }
 
 
 StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
-		const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
+		const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
 	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
@@ -403,9 +403,12 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 //std::cout << "\ninitType: " << *decl->getInitialization()->getType() << std::endl;
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
+
+			NodeMap inInitReplacementsInCaseOfNovarInInit;
+			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(memberType->getType(), memberType->getName());
+
 			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
-					updateInit(varReplacements, removeRefVar(decl->getInitialization()), oldStructType,
-							getBaseType(memberType->getType(), memberType->getName()), memberType->getName())));
+					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 //			allDecls.push_back(removeRefVar(decl->getInitialization()));
 		}
 //			} else { // keep old initialization and hope it is a variable which will be replaced by one with the same type as the new one
@@ -433,12 +436,14 @@ void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTyp
 
 			// check if the declaration does an allocation and try to extract the number of elements in that case
 			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
+			ExpressionPtr nElem;
 			if(match) {
-				nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
+				nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
+				nElems[newVar] = nElem;
 			}
 
 			IRBuilder builder(mgr);
-			StatementList allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType);
+			StatementList allDecls = generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType, nElem);
 			CompoundStmtPtr cmpDecls = builder.compoundStmt(allDecls);
 			cmpDecls.addAnnotation<RemoveMeAnnotation>();
 
@@ -448,16 +453,18 @@ void AosToSoa::addNewDecls(const ExpressionMap& varReplacements, const StructTyp
 }
 
 StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
 
 	for(NamedTypePtr memberType : newStructType->getElements()) {
+		NodeMap inInitReplacementsInCaseOfNovarInInit;
+		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
+
 		allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
-				updateInit(varReplacements, call[1], oldStructType, removeRefArray(memberType->getType()),
-						memberType->getName())));
+				updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 	}
 
 	return allAssigns;
@@ -476,11 +483,13 @@ void AosToSoa::replaceAssignments(const ExpressionMap& varReplacements, const St
 				if(*oldVar == *call[0]) {
 					// check if the assignment does an allocation and try to extract the number of elements in that case
 					pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
+					ExpressionPtr nElem;
 					if(match) {
-						nElems[newVar] = match.get()["nElems"].getValue().as<ExpressionPtr>();
+						nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
+						nElems[newVar] = nElem;
 					}
 
-					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType);
+					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType, nElem);
 
 					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
 					cmpAssigns.addAnnotation<RemoveMeAnnotation>();
@@ -518,7 +527,7 @@ StatementPtr AosToSoa::generateMarshalling(const ExpressionPtr& oldVar, const Ex
 
 	for(NamedTypePtr memberType : structType->getElements()) {
 
-		ExpressionPtr aosAccess = valueAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		ExpressionPtr aosAccess = builder.deref(refAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName()));
 		ExpressionPtr soaAccess = refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
 		loopBody.push_back(builder.assign(soaAccess, aosAccess));
 	}
@@ -609,7 +618,7 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionPtr& oldVar, const 
 	for(NamedTypePtr memberType : structType->getElements()) {
 
 		ExpressionPtr aosAccess = refAccess(oldVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
-		ExpressionPtr soaAccess = valueAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName());
+		ExpressionPtr soaAccess = builder.deref(refAccess(newVar, builder.castExpr(builder.getLangBasic().getUInt8(), iterator), memberType->getName()));
 		loopBody.push_back(builder.assign(aosAccess, soaAccess));
 	}
 
@@ -710,7 +719,7 @@ ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionPtr& oldVar, const E
 	IRBuilder builder(mgr);
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, structAccess,
 			oldVar, newVar, false).as<ExpressionPtr>();
-	ExpressionPtr replacement = builder.arrayRefElem(builder.deref(builder.refMember(newStructAccess, member)), index);
+	ExpressionPtr replacement = refAccess(newStructAccess, index, member);
 
 	return replacement;
 }
@@ -806,8 +815,7 @@ ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, con
 	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 	for(NamedTypePtr memberType : newStructType->getElements()) {
 		StringValuePtr memberName = memberType->getName();
-		ExpressionPtr structAccess = builder.deref(builder.refMember(newStructAccess, memberName));
-		ExpressionPtr arrayAccess = builder.deref(builder.arrayAccess(structAccess, index));
+		ExpressionPtr arrayAccess = builder.deref(refAccess(newStructAccess, index, memberName));
 		values.push_back(std::make_pair(memberName, arrayAccess));
 	}
 
@@ -910,7 +918,7 @@ void AosToSoa::addNewDel(const ExpressionMap& varReplacements, const NodeAddress
 	}
 }
 
-void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::RefTypePtr& oldStructType,
+void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
@@ -919,7 +927,7 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 		const ExpressionPtr& newVar = vr.second;
 
 		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)));
-		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar")),
+		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar", pirp::variable())),
 				pattern::var("idx"), pattern::var("type")));
 		pattern::TreePattern tupleAssign = pirp::assignment(tupleAccess, structAccess);
 
@@ -932,33 +940,44 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 
 			TypePtr newTupleType = core::transform::replaceAllGen(mgr, oldTupleVarType, oldStructType, newStructType, true);
 
-			// check if local or global variable
-			LiteralPtr globalTuple = oldTupleVar.isa<LiteralPtr>();
-			ExpressionPtr newTupleVar = globalTuple ?
-					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
-					builder.variable(newTupleType).as<ExpressionPtr>();
-std::cout << "\nntv: \n";
-dumpPretty(oldTupleVar);
-dumpPretty(getRootVariable(node >> oldTupleVar, node));
+			ExpressionPtr newTupleVar;
+
+			if(structures.find(oldTupleVar) == structures.end()) {
+				// check if local or global variable
+				LiteralPtr globalTuple = oldTupleVar.isa<LiteralPtr>();
+				newTupleVar = globalTuple ?
+						builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
+						builder.variable(newTupleType).as<ExpressionPtr>();
+				structures[oldTupleVar] = newTupleVar;
+			} else {
+				newTupleVar = structures[oldTupleVar];
+			}
 
 			ExpressionPtr oldRootVar = getRootVariable(node >> oldTupleVar, node).as<ExpressionPtr>();
-			TypePtr newRootType = core::transform::replaceAllGen(mgr, oldRootVar->getType(), oldStructType, newStructType, true);
-			LiteralPtr globalRoot = oldRootVar.isa<LiteralPtr>();
-			ExpressionPtr newRootVar = globalRoot ?
-					builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
-					builder.variable(newTupleType).as<ExpressionPtr>();
 
-			structures[oldTupleVar] = newTupleVar;
-			structures[oldRootVar] = newRootVar;
+			if(structures.find(oldRootVar) == structures.end()) {
+				TypePtr newRootType = core::transform::replaceAllGen(mgr, oldRootVar->getType(), oldStructType, newStructType, true);
+				LiteralPtr globalRoot = oldRootVar.isa<LiteralPtr>();
+				ExpressionPtr newRootVar = globalRoot ?
+						builder.literal(globalRoot->getStringValue() + "_soa", newRootType).as<ExpressionPtr>() :
+						builder.variable(newRootType).as<ExpressionPtr>();
+
+				structures[oldRootVar] = newRootVar;
+			}
 
 			ExpressionPtr newTupleAccess = core::transform::fixTypesGen(mgr, oldTupleAccess.as<ExpressionPtr>(), oldTupleVar.as<ExpressionPtr>(),
 					newTupleVar, true);
 
 			ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, match["structAccess"].getValue().getAddressedNode(),
 					oldVar, newVar, true).as<ExpressionPtr>();
+std::cout << "\nntv: \n";
+dumpPretty(oldStructType);
+dumpPretty(newStructAccess);
+			newStructAccess = core::transform::replaceAllGen(mgr, newStructAccess, oldTupleVarType, newTupleType, false);
 
 			replacements[node] = builder.assign(newTupleAccess, newStructAccess);
 		});
+
 	}
 }
 

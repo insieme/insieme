@@ -1633,8 +1633,13 @@ core::ExpressionPtr Converter::ExprConverter::VisitStmtExpr(const clang::StmtExp
 	core::ExpressionPtr exprToReturn = (innerIr->getStatements().end()-1)->as<core::ExpressionPtr>();
 
 	// fix type
-	if(exprToReturn->getType() != lambdaRetType) {
-		exprToReturn = core::types::smartCast(exprToReturn, lambdaRetType);
+	if(exprToReturn->getType() != lambdaRetType){
+		if (auto refty = exprToReturn->getType().isa<core::RefTypePtr>()){
+			if (convFact.lookupTypeDetails(refty->getElementType()) == convFact.lookupTypeDetails(lambdaRetType))
+				exprToReturn = builder.deref(exprToReturn);
+		}
+		else if (convFact.lookupTypeDetails(exprToReturn->getType()) != convFact.lookupTypeDetails(lambdaRetType))
+			exprToReturn = core::types::smartCast(exprToReturn, lambdaRetType);
 	}
 	core::StatementPtr retExpr = convFact.builder.returnStmt(exprToReturn);
     newBody.push_back(retExpr);

@@ -63,23 +63,19 @@ using insieme::core::pattern::any;
 
 namespace {
 
+/** Run the SCoP analysis on this node in order to determine whether is possible to apply polyhedral transformations to
+it */
 const Scop& extractScopFrom(const core::NodePtr& target) {
-	// Run the SCoP analysis on this node in order to determine whether is possible to apply
-	// polyhedral transformations to it
 	scop::mark(target);
 
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
-		throw InvalidTargetException(
-			"Polyhedral transformation applyied to a non Static Control Region"
-		);
+		throw InvalidTargetException("Polyhedral transformation wanted but no SCoP found");
 	}
 	
 	// FIXME: We need to find the larger SCoP which contains this SCoP
 	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
 	if ( !region.isValid() ) {
-		throw InvalidTargetException(
-			"Polyhedral transformation applyied to a non Static Control Region"
-		);
+		throw InvalidTargetException("Polyhedral transformation wanted but region is invalid");
 	}
 	return region.getScop();
 }
@@ -126,9 +122,9 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 		);
 	auto&& match = pattern.matchPointer( target );
 
-	if (!match || !match->isVarBound("iter")) {
-		throw InvalidTargetException("Invalid application point for loop strip mining");
-	}
+	if (!match) throw InvalidTargetException("Loop interchange cannot find pattern for PM application");
+	if (!match->isVarBound("iter"))
+		throw InvalidTargetException("Loop interchange cannot use PM as variable \"iter\" is not bound");
 	auto&& matchList = match->getVarBinding("iter").getList();
 
 	// check whether the indexes refers to loops 
