@@ -475,10 +475,17 @@ namespace {
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
-		//							anything -> Boolean
+		//                          [ volatile<'a> -> 'a ]
 		///////////////////////////////////////////////////////////////////////////////////////
-		if( gen.isBool(trgTy) ) {
-			return castToBool(expr);
+		if ( core::analysis::isVolatileType(argTy) ) {
+			return smartCast(trgTy, builder.callExpr( core::analysis::getVolatileType(argTy), gen.getVolatileRead(), expr));
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////
+		//                          [ 'a -> volatile<'a> ]
+		///////////////////////////////////////////////////////////////////////////////////////
+		if ( core::analysis::isVolatileType(trgTy) ) {
+			return builder.callExpr( trgTy, gen.getVolatileRead(), smartCast(core::analysis::getVolatileType(trgTy), expr) );
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -495,6 +502,13 @@ namespace {
 		// cast a boolean value to an integer
 		if ( gen.isInt(trgTy) && gen.isBool(argTy) ) {
 			return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBoolToInt(), toVector(expr) ) );
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////
+		//							anything -> Boolean
+		///////////////////////////////////////////////////////////////////////////////////////
+		if( gen.isBool(trgTy) ) {
+			return castToBool(expr);
 		}
 
 
@@ -819,16 +833,6 @@ namespace {
 					expr, 
 					builder.getTypeLiteral(nonRefTrgTy)
 				);
-		}
-
-		// [ volatile<'a> -> 'a ]
-		if ( core::analysis::isVolatileType(argTy) ) {
-			return smartCast(trgTy, builder.callExpr( trgTy, gen.getVolatileRead(), expr));
-		}
-
-		// [ 'a -> volatile<'a> ]
-		if ( core::analysis::isVolatileType(trgTy) ) {
-			return builder.callExpr( trgTy, gen.getVolatileRead(), smartCast(core::analysis::getVolatileType(trgTy), expr) );
 		}
 
 

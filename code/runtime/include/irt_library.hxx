@@ -84,6 +84,10 @@ namespace irt {
 		irt_lib_init(num_workers);
 	}
 
+	inline void init_in_context(uint32 num_workers = irt_lib_get_default_worker_count(), contextfp context_init = _irt_lib_context_fun, contextfp context_destroy = _irt_lib_context_fun) {
+		irt_lib_init_in_context(num_workers, context_init, context_destroy);
+	}
+
 	// Shutdown (only required if not using "main" replacement)
 	inline void shutdown() {
 		irt_lib_shutdown();

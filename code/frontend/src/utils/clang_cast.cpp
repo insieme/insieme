@@ -190,10 +190,11 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		// Casting between floating types of different size. (double) f (float) ld
 		{
 		    assert(builder.getLangBasic().isPrimitive(expr->getType())
+		        || (core::analysis::isVolatileType(expr->getType()) && builder.getLangBasic().isPrimitive(core::analysis::getVolatileType(expr->getType())))
                 || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(expr->getType()));
 			assert(builder.getLangBasic().isPrimitive(targetTy)
                 || mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(targetTy));
-			return core::types::castScalar( targetTy, expr);
+			return core::types::smartCast( targetTy, expr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
