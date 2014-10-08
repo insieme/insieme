@@ -335,6 +335,10 @@ namespace {
 	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.UsePM) return program;
 		std::cout << "### We will be using the backend: " << options.Backend << std::endl;
+		if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL)) {
+			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl;
+			return program;
+		}
 
 		// filter SCoPs and build up the polyhedral transformation pipeline
 		using namespace insieme::transform;
