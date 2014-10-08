@@ -58,6 +58,7 @@ void irt_lib_critical_init();
 ////////////////////////////////////////////////////////////////// Definitions
 
 typedef void(*voidfp)(void*);
+typedef void(*contextfp)(irt_context *);
 
 // Lightweight DI used by RT library
 typedef struct {
@@ -130,6 +131,11 @@ irt_context* irt_lib_g_context;
 void irt_lib_init(uint32 worker_count) {
 	irt_lib_critical_init();
 	irt_lib_g_context = irt_runtime_start_in_context(worker_count, &_irt_lib_context_fun, &_irt_lib_context_fun, true);
+}
+
+void irt_lib_init_in_context(uint32 worker_count, contextfp context_init, contextfp context_destroy) {
+	irt_lib_critical_init();
+	irt_lib_g_context = irt_runtime_start_in_context(worker_count, context_init, context_destroy, true);
 }
 
 // Run function as a work item within the (already inited) runtime, from a non-runtime thread

@@ -86,8 +86,6 @@ typedef enum {
 typedef struct {
 	uint64 id;
 	uint64 num_executions;
-	uint64 num_participants;
-	irt_spinlock participants_lock;
 	irt_spinlock lock;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ last_##_name__; \
@@ -96,6 +94,8 @@ typedef struct {
 } irt_inst_region_context_data;
 
 typedef struct {
+	volatile uint64 region_entries;
+	volatile uint64 region_exits;
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	_data_type__ last_##_name__; \
 	_data_type__ aggregated_##_name__;
@@ -119,6 +119,10 @@ void irt_inst_region_list_copy(irt_work_item* destination, irt_work_item* source
 void irt_inst_region_wi_init(irt_work_item* wi);
 
 void irt_inst_region_wi_finalize(irt_work_item* wi);
+
+void irt_inst_region_wg_init(irt_work_group* wg);
+
+void irt_inst_region_wg_finalize(irt_work_group* wg);
 
 void irt_inst_region_init(irt_context* context);
 
