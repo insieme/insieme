@@ -241,6 +241,51 @@ TEST(region_instrumentation, repeated_execution) {
 	irt::shutdown();
 }
 
+TEST(region_instrumentation, parallel) {
+	irt::init_in_context(8, insieme_init_context_nested_multiple, insieme_cleanup_context);
+	irt::run([]() {
+		irt_inst_region_select_metrics("cpu_time,wall_time");
+
+		irt_inst_region_context_data* reg0 = &(irt_context_get_current()->inst_region_data[0]);
+
+		EXPECT_EQ(reg0->num_executions, 0);
+		EXPECT_EQ(reg0->last_cpu_time, 0);
+		EXPECT_EQ(reg0->last_wall_time, 0);
+		EXPECT_EQ(reg0->aggregated_cpu_time, 0);
+		EXPECT_EQ(reg0->aggregated_wall_time, 0);
+
+		auto workload = [&]() {
+			int32 sum = 0;
+			ir_inst_region_start(0);
+			irt_nanosleep(1e7);
+			ir_inst_region_end(0);
+			ir_inst_region_start(1);
+			irt_nanosleep(1e7);
+			ir_inst_region_end(1);
+			ir_inst_region_start(2);
+			irt_nanosleep(1e8);
+			ir_inst_region_end(2);
+		};
+
+		irt::merge(irt::parallel(workload));
+
+		irt_inst_region_context_data* region[3];
+
+		for(int i = 0; i < 3; ++i) {
+			region[i] = &(irt_context_get_current()->inst_region_data[i]);
+
+			EXPECT_GT(region[i]->aggregated_cpu_time, 0) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_cpu_time, 1e11) << " for region id " << i;
+			EXPECT_GT(region[i]->aggregated_wall_time, 0) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_wall_time, 1e11) << " for region id " << i;
+			EXPECT_EQ(region[i]->last_cpu_time, 0) << " for region id " << i;
+			EXPECT_EQ(region[i]->last_wall_time, 0) << " for region id " << i;
+		}
+
+	});
+	irt::shutdown();
+}
+
 TEST(region_instrumentation, rapl) {
 
 #ifndef IRT_USE_PAPI
