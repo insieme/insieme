@@ -65,6 +65,21 @@ namespace region {
 		return res;
 	}
 
+	RegionList PForSelector::getRegions(const core::NodePtr& node) const {
+
+		RegionList res;
+		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
+			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
+				return false;
+			}
+			res.push_back(cur);
+			return true;
+		}, false);
+
+		return res;
+	}
+
 } // end namespace region
 } // end namespace analysis
 } // end namespace insieme

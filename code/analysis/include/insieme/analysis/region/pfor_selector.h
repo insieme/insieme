@@ -58,6 +58,17 @@ namespace region {
 
 	};
 
+	class PForSelector : public RegionSelector {
+
+	public:
+
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+
+	};
+
 
 } // end namespace region
 } // end namespace analysis
