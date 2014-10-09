@@ -272,7 +272,6 @@ std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::createCandidateLists
 
 	}
 
-	// TODO clean lists to remove duplicates
 	toReplaceLists = mergeLists(toReplaceLists);
 
 	//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
@@ -306,6 +305,9 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 		ExpressionPtr structVar = nm["structVar"].getValue().as<ExpressionPtr>();
 		TypePtr varType = structVar->getType();
 		RefTypePtr structType = nm["structType"].getValue().as<RefTypePtr>();
+
+		if(match.getParentAddress(1)->getNodeType() == NT_DeclarationStmts) // do not consider variables which are part of declaration statements
+			return;
 
 		if(tupleType.match(varType)) {
 			return; // tuples are not candidates since only one field needs to be altered. They will only be changed if the field is an alias to some other candidate
@@ -1029,6 +1031,35 @@ dumpPretty(newStructAccess);
 			replacements[node] = builder.assign(newTupleAccess, newStructAccess);
 		});
 
+	}
+}
+
+void AosToSoa::updateCopyDeclarations(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
+	IRBuilder builder(mgr);
+
+	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
+
+		const ExpressionPtr& oldVar = vr.first;
+		const ExpressionPtr& newVar = vr.second;
+
+		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
+
+		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
+			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
+			VariablePtr var = match["access"].getValue().as<VariablePtr>();
+
+			TypePtr oldType = var->getType();
+			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
+
+			if(oldType == newType) // check if the type depends on the tranformation
+				return;
+			VariablePtr updatedVar = builder.variable(newType);
+
+			DeclarationStmtPtr updatedDecl = builder.declarationStmt(updatedVar, decl->getInitialization());
+
+			replacements[decl] = updatedDecl;
+		});
 	}
 }
 
