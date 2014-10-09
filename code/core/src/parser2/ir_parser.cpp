@@ -677,14 +677,6 @@ namespace parser {
 					}
 			));
 
-			g.addRule("T", rule(
-					seq("(", list(E, ","), ")"),
-					[](Context& cur)->NodePtr {
-						auto& terms = cur.getTerms();
-						auto elements = convertList<ExpressionPtr>(terms);
-						return cur.tupleExpr(elements);
-					}
-			));
 
 			// add array, vector, ref and channel types
 			g.addRule("T", rule(
@@ -903,6 +895,16 @@ namespace parser {
 						auto name = cur.stringValue(cur.getSubRange(0).front().getLexeme());
 						auto value = cur.getTerm(1).as<ExpressionPtr>();
 						return cur.unionExpr(unionType, name, value);
+					}
+			));
+
+			// tuple expression
+			g.addRule("E", rule(
+					seq("(", list(E, ","), ")"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						auto elements = convertList<ExpressionPtr>(terms);
+						return cur.tupleExpr(elements);
 					}
 			));
 

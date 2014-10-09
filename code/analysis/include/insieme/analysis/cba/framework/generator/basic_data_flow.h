@@ -74,9 +74,9 @@ namespace cba {
 
 	namespace {
 
-		template<typename Lattice>
-		struct StructBuilder : public utils::constraint::detail::Executor {
-			typedef std::map<FieldIndex, TypedVariable<Lattice>> element_map;
+		template<typename Lattice, typename Index>
+		struct CompoundBuilder : public utils::constraint::detail::Executor {
+			typedef std::map<Index, TypedVariable<Lattice>> element_map;
 			typedef typename Lattice::manager_type manager_type;
 			typedef typename Lattice::value_type value_type;
 
@@ -84,7 +84,7 @@ namespace cba {
 			element_map elements;
 			TypedVariable<Lattice> res;
 		public:
-			StructBuilder(manager_type& mgr, const element_map& elements, const TypedVariable<Lattice>& res)
+			CompoundBuilder(manager_type& mgr, const element_map& elements, const TypedVariable<Lattice>& res)
 				: mgr(mgr), elements(elements), res(res) {}
 			utils::constraint::detail::Variables getInputs() const {
 				utils::constraint::detail::Variables res;
@@ -95,12 +95,12 @@ namespace cba {
 				return toVector<Variable>(res);
 			}
 			void print(std::ostream& out) const {
-				out << "struct {" << join(",", elements, [](std::ostream& out, const typename element_map::value_type& cur) {
-					out << *cur.first.getName() << "=" << cur.second;
+				out << "compound {" << join(",", elements, [](std::ostream& out, const typename element_map::value_type& cur) {
+					out << cur.first << "=" << cur.second;
 				}) << "} in " << res;
 			}
 			value_type extract(const Assignment& ass) const {
-				std::map<FieldIndex, value_type> data;
+				std::map<Index, value_type> data;
 				for (const auto& cur : elements) {
 					data[cur.first] = ass[cur.second];
 				}
@@ -124,17 +124,17 @@ namespace cba {
 			}
 		};
 
-		template<typename Lattice>
-		struct StructProject : public utils::constraint::detail::Executor {
-			typedef std::map<FieldIndex, TypedVariable<Lattice>> element_map;
+		template<typename Lattice, typename Index>
+		struct CompoundProject : public utils::constraint::detail::Executor {
+			typedef std::map<Index, TypedVariable<Lattice>> element_map;
 			typedef typename Lattice::manager_type manager_type;
 			typedef typename Lattice::value_type value_type;
 
 			TypedVariable<Lattice> in;
-			FieldIndex field;
+			Index field;
 			TypedVariable<Lattice> res;
 		public:
-			StructProject(const TypedVariable<Lattice>& in, const FieldIndex& field, const TypedVariable<Lattice>& res)
+			CompoundProject(const TypedVariable<Lattice>& in, const Index& field, const TypedVariable<Lattice>& res)
 				: in(in), field(field), res(res) {}
 			utils::constraint::detail::Variables getInputs() const {
 				return toVector<Variable>(in);
@@ -162,6 +162,7 @@ namespace cba {
 				used.push_back(in);
 			}
 		};
+
 
 		/**
 		 * A custom constraint for the data flow equation solver obtaining the value
@@ -1116,7 +1117,26 @@ namespace cba {
 			// combine it
 			constraints.add(
 					utils::constraint::build(
-							StructBuilder<lattice_type>(this->getValueManager(), elements, cba.getVar(A, expr, ctxt))
+							CompoundBuilder<lattice_type, FieldIndex>(this->getValueManager(), elements, cba.getVar(A, expr, ctxt))
+					)
+			);
+
+		}
+
+		void visitTupleExpr(const TupleExprInstance& expr, const Context& ctxt, Constraints& constraints) {
+
+			// collect values of all fields
+			std::map<ElementIndex, TypedVariable<lattice_type>> elements;
+			int cnt = 0;
+			for(const core::ExpressionInstance& cur : expr->getExpressions()) {
+				elements[cnt] = cba.getVar(A, cur, ctxt);
+				++cnt;
+			}
+
+			// combine it
+			constraints.add(
+					utils::constraint::build(
+							CompoundBuilder<lattice_type, ElementIndex>(this->getValueManager(), elements, cba.getVar(A, expr, ctxt))
 					)
 			);
 
@@ -1184,7 +1204,25 @@ namespace cba {
 						// project value of field from input struct to output struct
 						constraints.add(
 								utils::constraint::build(
-									StructProject<lattice_type>(A_in, field, A_call)
+									CompoundProject<lattice_type, FieldIndex>(A_in, field, A_call)
+								)
+						);
+						return;
+					}
+
+					// another case: accessing struct members
+					if (base.isTupleMemberAccess(op)) {
+
+						// get input struct value
+						auto A_in = this->cba.getVar(A, call[0], ctxt);
+
+						// get member index
+						auto field = utils::numeric_cast<unsigned>(call[1].as<core::LiteralPtr>()->getStringValue());
+
+						// project value of field from input struct to output struct
+						constraints.add(
+								utils::constraint::build(
+									CompoundProject<lattice_type, ElementIndex>(A_in, field, A_call)
 								)
 						);
 						return;
