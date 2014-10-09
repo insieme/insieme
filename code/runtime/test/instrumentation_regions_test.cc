@@ -242,7 +242,7 @@ TEST(region_instrumentation, repeated_execution) {
 }
 
 TEST(region_instrumentation, parallel) {
-	irt::init_in_context(8, insieme_init_context_nested_multiple, insieme_cleanup_context);
+	irt::init_in_context(MAX_PARA, insieme_init_context_nested_multiple, insieme_cleanup_context);
 	irt::run([]() {
 		irt_inst_region_select_metrics("cpu_time,wall_time");
 

@@ -49,12 +49,8 @@ namespace insieme {
 namespace transform {
 
 	/**
-	 * Within this header file the transformation catalog infrastructure is defined. The catalog
-	 * provides a list of transformations annotated with additional information enabling users / code
-	 * to instantiated them. The corresponding factory mechanisms are as well offered.
-	 *
-	 * The catalog should be the main interface for an optimizer when interacting with the transformation
-	 * environment of the Insieme Compiler core. It should shield the optimizer from the underlying details.
+	 * Within this header file the transformation catalog infrastructure is defined.
+	 * The corresponding factory mechanisms are as well offered.
 	 */
 
 	using std::string;
@@ -68,6 +64,11 @@ namespace transform {
 	Catalog getStandardCatalog();
 
 	/**
+	 * The catalog provides a list of transformations annotated with additional information enabling users / code to
+	 * instantiated them. The catalog should be the main interface for an optimizer when interacting with the
+	 * transformation environment of the Insieme Compiler core. It should shield the optimizer from the underlying
+	 * details.
+	 *
 	 * The Transformation catalog is an aggregation of Transformation-Meta-Information and the main
 	 * utility to be used by the optimizer when selecting, instantiating and composing transformations
 	 * to be applied on code within the Insieme Compiler.

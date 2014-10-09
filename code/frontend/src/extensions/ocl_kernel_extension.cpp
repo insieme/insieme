@@ -270,8 +270,15 @@ insieme::core::TypePtr OclKernelPlugin::Visit(const clang::QualType& type, insie
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////
-//               adding OpenCL kernel annotation
+/** FuncDeclPostVisit will add the OpenCL kernel annotation.
+    User provided post clang function decl visitor. Will be called after clang decl
+    was visted by the insieme function decl visitor and returns a modified IR expression.
+    See FrontendPlugin FuncDeclPostVisit
+
+    @param decl clang function decl
+    @param type IR ExpressionPtr
+    @param convFact insieme conversion factory
+    @return modified version of IR ExpressionPtr */
 insieme::core::ExpressionPtr OclKernelPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
 
 	if(!symbolic) {
