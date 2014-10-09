@@ -459,7 +459,7 @@ void irt_inst_region_select_metrics(const char* selection) {
 #ifdef _GEMS_SIM
 		char selection_copy[512];
 #else
-		char selection_copy[strlen(selection)];
+		char selection_copy[strlen(selection) +1];
 #endif
 		strcpy(selection_copy, selection);
 		// tokenize

@@ -198,7 +198,6 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
         if(force_computation || variant->rt_data.completed_wi_count == irt_g_worker_count) {
 #endif
             variant->rt_data.completed_wi_count = 0;
-            irt_optimizer_wi_data* new_element = calloc(1, sizeof(irt_optimizer_wi_data)); 
 
             // collecting data                          
                                                         
@@ -235,10 +234,10 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             if(variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy) {
                 irt_g_dvfs_eval_energy[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
                 irt_g_dvfs_eval_time[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.wall_time - variant->rt_data.optimizer_rt_data.cur_resources.wall_time;
-                if(irt_g_dvfs_eval_count[irt_g_available_freq_count -1] >= IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
+                if(irt_g_dvfs_eval_count[irt_g_available_freq_count -1] == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
                     printf("frequency: energy - time - power (num of executions)\n");
                     for(int k=0; k<irt_g_available_freq_count; k++)
-                        printf("%d: %f - %f - %f (%d) ", k, irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k], (irt_g_dvfs_eval_energy[k] ) / (irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);
+                        printf("%d: %f - %f - %f (%d) ", k, irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k] / irt_g_dvfs_eval_count[k], (irt_g_dvfs_eval_energy[k] ) / (irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);
                     printf("\n");
                 }
             }
@@ -260,12 +259,14 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             variant->rt_data.optimizer_rt_data.cur_resources = cur_resources;
 
 #ifndef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
-            if(regions[variant->meta_info->ompp_objective.region_id].num_executions > IRT_OMPP_OPTIMIZER_BEST) { // let's just stick to the best after some iterations
+            // let's just stick to the best after some iterations
+            if(regions[variant->meta_info->ompp_objective.region_id].num_executions > IRT_OMPP_OPTIMIZER_BEST) {
                 variant->rt_data.optimizer_rt_data.cur.full = variant->rt_data.optimizer_rt_data.best.full;
             }
             else
 #endif
             {
+                irt_optimizer_wi_data* new_element = calloc(1, sizeof(irt_optimizer_wi_data)); 
                 new_element->id.frequency = rand() % irt_g_available_freq_count;                                                                                                                                                                                                                                      
 
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
@@ -289,9 +290,8 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                 //new_element->id.param_value     = rand() % irt_g_available_freq_count;
 
                 variant->rt_data.optimizer_rt_data.cur.full = new_element->id.full;
+                free(new_element);
             }
-
-            free(new_element);
         }
     }
 
