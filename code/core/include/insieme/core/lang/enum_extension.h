@@ -68,6 +68,9 @@ namespace lang {
 
         LANG_EXT_DERIVED(EnumElementAsBool,      "('a i) -> bool { return lit(\"enum.to.int\":('a)->int<4>)(i) != 0; }");
 
+		LANG_EXT_LITERAL(IntAsEnum,   "int.to.enum",    "(int<4>, type<'a> ) -> 'a");
+		LANG_EXT_LITERAL(UIntAsEnum,  "uint.to.enum",   "(uint<4>, type<'a> ) -> 'a");
+
 
         /**
          * Creates an enum type out a literal. 

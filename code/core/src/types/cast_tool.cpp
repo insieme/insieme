@@ -355,6 +355,8 @@ namespace {
 				return builder.callExpr(targetTy, op, expr);
 		};
 		core::ExpressionPtr resIr;
+		
+		const core::lang::EnumExtension& enumExt = mgr.getLangExtension<core::lang::EnumExtension>();
 
 		std::size_t bytes    = getPrecission(targetTy, gen);
 		switch(code){
@@ -364,7 +366,7 @@ namespace {
 				else resIr = expr;
 				break;
 			case 17:
-				resIr = builder.callExpr(gen.getInt4(), mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsInt(), expr);
+				resIr = builder.callExpr(gen.getInt4(), enumExt.getEnumElementAsInt(), expr);
 				if (bytes != getPrecission(resIr->getType(), gen)) resIr = doCast(gen.getIntPrecisionFix(), resIr, bytes);
 				break;
 			case 22:
@@ -372,7 +374,7 @@ namespace {
 				else resIr = expr;
 				break;
 			case 27:
-				resIr = builder.callExpr(gen.getUInt4(), mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsUInt(), expr);
+				resIr = builder.callExpr(gen.getUInt4(), enumExt.getEnumElementAsUInt(), expr);
 				if (bytes != getPrecission(resIr->getType(), gen)) resIr = doCast(gen.getUintPrecisionFix(), resIr, bytes);
 				break;
 			case 33:
@@ -418,7 +420,7 @@ namespace {
 			case 53: resIr = doCast(gen.getRealToBool(), expr, 0);     break;
 			case 54: resIr = doCast(gen.getCharToBool(), expr, 0);     break;
 
-			case 57: resIr = doCast(mgr.getLangExtension<core::lang::EnumExtension>().getEnumElementAsBool(), expr, 0); break;
+			case 57: resIr = doCast(enumExt.getEnumElementAsBool(), expr, 0); break;
 
 			case 61: resIr = doCast(gen.getSignedToWChar(), expr, bytes); break;
 			case 62: resIr = doCast(gen.getUnsignedToWChar(), expr, bytes); break;
@@ -426,10 +428,9 @@ namespace {
 			case 64: resIr = doCast(gen.getCharToWChar(), expr, bytes); break;
 			case 65: resIr = doCast(gen.getBoolToWChar(), expr, bytes); break;
 
-			case 71: resIr = builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
-										 builder.refVar(expr), builder.getTypeLiteral(targetTy))); break;
-			case 72: resIr = builder.deref(builder.callExpr(builder.refType(targetTy), gen.getRefReinterpret(),
-										 builder.refVar(expr), builder.getTypeLiteral(targetTy))); break;
+
+			case 71: resIr = builder.callExpr(enumExt.getIntAsEnum(), expr, builder.getTypeLiteral(targetTy)); break;
+			case 72: resIr = builder.callExpr(enumExt.getUIntAsEnum(), expr, builder.getTypeLiteral(targetTy)); break;
 
 			case 77: resIr = expr; break;
 
@@ -479,13 +480,6 @@ namespace {
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( core::analysis::isVolatileType(argTy) ) {
 			return smartCast(trgTy, builder.callExpr( core::analysis::getVolatileType(argTy), gen.getVolatileRead(), expr));
-		}
-
-		///////////////////////////////////////////////////////////////////////////////////////
-		//                          [ 'a -> volatile<'a> ]
-		///////////////////////////////////////////////////////////////////////////////////////
-		if ( core::analysis::isVolatileType(trgTy) ) {
-			return builder.callExpr( trgTy, gen.getVolatileRead(), smartCast(core::analysis::getVolatileType(trgTy), expr) );
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////
@@ -834,7 +828,6 @@ namespace {
 					builder.getTypeLiteral(nonRefTrgTy)
 				);
 		}
-
 
 		///////////////////////////////////////////////////////////////////////////////////////
 		// 									FunctionType -> FunctionType
