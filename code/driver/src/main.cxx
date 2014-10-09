@@ -64,6 +64,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/polyhedral/scoppar.h"
 #include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/transformation.h"
 
@@ -340,15 +341,7 @@ namespace {
 			return program;
 		}
 
-		// filter SCoPs and build up the polyhedral transformation pipeline
-		using namespace insieme::transform;
-		std::vector<TransformationPtr> tr;
-		tr.push_back(std::make_shared<insieme::transform::polyhedral::LoopParallelize>());
-		auto transform=makePipeline(makeForAll(insieme::transform::filter::outermostSCoPs(), makePipeline(tr)));
-
-		// apply transformation and return resulting program
-		program = transform->apply(program);
-		return program;
+		return insieme::transform::polyhedral::SCoPPar(program).apply();
 	}
 
 	//***************************************************************************************
@@ -392,7 +385,8 @@ namespace {
 
 		switch(selection) {
 			case 'o': {
-				// check if the host is in the entrypoints, otherwise use the kernel backend
+				// use the OCL kernel backend if a KernelFctAnnotation can be found in the program,
+				// otherwise use the OCL host backend
 				bool host = [&]() {
 					const auto& ep = program->getEntryPoints();
 					for (auto& e : ep) {
