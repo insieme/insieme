@@ -1041,7 +1041,7 @@ void AosToSoa::updateCopyDeclarations(ExpressionMap& varReplacements, const core
 	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
 
 		const ExpressionPtr& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+//		const ExpressionPtr& newVar = vr.second;
 
 		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
 
