@@ -42,6 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
@@ -83,6 +84,60 @@ public:
 
 const string RemoveMeAnnotation::NAME = "RemoveMeAnnotation";
 const utils::StringKey<RemoveMeAnnotation> RemoveMeAnnotation::KEY("RemoveMe");
+
+StatementPtr allocTypeUpdate(const StatementPtr& stmt) {
+	TypePtr oldType, newType;
+	NodeManager& mgr = stmt->getNodeManager();
+
+	pattern::TreePattern structTypePattern = pattern::aT(pattern::var("structType", pirp::structType(*pattern::any)));
+
+	if(const DeclarationStmtPtr& decl = stmt.isa<DeclarationStmtPtr>()) {
+		const VariablePtr& var = decl->getVariable();
+		const CallExprPtr& init = decl->getInitialization().isa<CallExprPtr>();
+
+		// check if init is a call and its type fits the variable
+		if(!init | types::isSubTypeOf(var->getType(), init->getType()))
+			return stmt;
+
+		// if init is a call with wrong, try to fix the type
+		pattern::MatchOpt initMatch = structTypePattern.matchPointer(init[0]->getType());
+		pattern::MatchOpt varMatch = structTypePattern.matchPointer(var->getType());
+		ExpressionPtr nElem;
+		if(initMatch && varMatch) {
+			oldType = initMatch.get()["structType"].getValue().as<TypePtr>();
+			newType = varMatch.get()["structType"].getValue().as<TypePtr>();
+		}
+	}
+
+	if(const CallExprPtr& assign = stmt.isa<CallExprPtr>()) {
+		if(!core::analysis::isCallOf(assign, mgr.getLangBasic().getRefAssign()))
+			return stmt;
+
+		const ExpressionPtr& lhs = assign[0];
+		const ExpressionPtr& rhs = assign[1];
+
+		const RefTypePtr& lhsTy = lhs->getType().as<RefTypePtr>();
+
+		// check if type is consistent
+		if(lhsTy->getElementType() == rhs->getType())
+			return stmt;
+
+		// if type is not consistent, try to update the type
+		pattern::MatchOpt rhsMatch = structTypePattern.matchPointer(rhs->getType());
+		pattern::MatchOpt lhsMatch = structTypePattern.matchPointer(lhsTy->getElementType());
+		ExpressionPtr nElem;
+		if(rhsMatch && lhsMatch) {
+			oldType = rhsMatch.get()["structType"].getValue().as<TypePtr>();
+			newType = lhsMatch.get()["structType"].getValue().as<TypePtr>();
+		}
+	}
+
+	if(oldType)
+		return core::transform::replaceAllGen(mgr, stmt, oldType, newType, false);
+
+	return stmt;
+}
+
 
 }
 
@@ -182,11 +237,7 @@ void AosToSoa::transform() {
 //}
 		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
-		if(!replacements.empty())
-			toTransform = core::transform::replaceAll(mgr, replacements);
-
-		if(!structures.empty())
-			toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
+		doReplacements(replacements, structures);
 
 //		replacements.clear();
 //		tta = NodeAddress(toTransform);
@@ -980,6 +1031,18 @@ dumpPretty(newStructAccess);
 
 	}
 }
+
+void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements, const ExpressionMap& structures) {
+	if(!replacements.empty())
+		toTransform = core::transform::replaceAll(mgr, replacements);
+
+//	if(!structures.empty())
+//		toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
+	if(!structures.empty())
+		toTransform = core::transform::fixTypes(mgr, toTransform, structures, false, allocTypeUpdate);
+
+}
+
 
 VariableAdder::VariableAdder(NodeManager& mgr, ExpressionMap& varReplacements)
 		: mgr(mgr), varsToReplace(varReplacements),

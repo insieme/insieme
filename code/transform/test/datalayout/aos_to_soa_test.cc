@@ -285,7 +285,7 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(56, numberOfCompoundStmts(code));
+	EXPECT_EQ(60, numberOfCompoundStmts(code));
 	EXPECT_EQ(11, countMarshalledAccesses(code));
 	EXPECT_EQ(5, countMarshalledAssigns(code));
 }
