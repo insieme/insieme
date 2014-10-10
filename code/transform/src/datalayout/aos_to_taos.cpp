@@ -130,6 +130,8 @@ void AosToTaos::transform() {
 //}
 		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+
 		doReplacements(replacements, structures);
 
 		NodeMap tilesize;
