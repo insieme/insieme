@@ -51,8 +51,8 @@ namespace checks {
 		#define FLAGS (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript)
 
 		// some static regex expressions to be utilized by literal format checks
-		boost::regex floatRegex		(R"(-?((0)|((([1-9][0-9]*)|0)\.[0-9]+[fF])|(0x0\.[0-9]*p-[0-9]+)))", FLAGS);
-		boost::regex doubleRegex	(R"(-?((0)|((([1-9][0-9]*)|0)\.[0-9]+)|(0x0\.[0-9]*p-[0-9]+)))", FLAGS);
+		boost::regex floatRegex		(R"(-?[0-9]+((\.[0-9]+)(((E|e)(\+|-)[0-9]+)|f)?)?)", FLAGS);
+		boost::regex doubleRegex	(R"(-?[0-9]+((\.[0-9]+)(((E|e)(\+|-)[0-9]+))?)?)", FLAGS);
 
 		boost::regex charRegex		(R"('\\?.')", FLAGS);
 		boost::regex stringRegex	(R"("(\\.|[^\\"])*")", FLAGS);
@@ -112,7 +112,7 @@ namespace checks {
 
 		// check pattern
 		if (pattern && !boost::regex_match(value, *pattern)) {
-			addError("type does not match format");
+			addError(format ("value %s does not match type %s format", value, toString(*type)));
 			return res;
 		}
 
@@ -146,14 +146,22 @@ namespace checks {
 				return res;
 			}
 
-			int64_t num = utils::numeric_cast<int64_t>(value);
-			if (!(min <= num && num <= max)) {
+			try{
+				int64_t num = utils::numeric_cast<int64_t>(value);
+				if (!(min <= num && num <= max)) {
+					add(res, Message(address,
+							EC_FORMAT_INVALID_LITERAL,
+							format("Literal out of range for type %s literal: %s", toString(*type), value),
+							Message::ERROR)
+					);
+					return res;
+				}
+			}catch(...) {
 				add(res, Message(address,
 						EC_FORMAT_INVALID_LITERAL,
-						format("Literal out of range for type %s literal: %s", toString(*type), value),
+						format("Malformed Literal %s literal: %s", toString(*type), value),
 						Message::ERROR)
 				);
-				return res;
 			}
 
 		} else if (basic.isUnsignedInt(type)) {
@@ -177,11 +185,19 @@ namespace checks {
 				addError("long modifier (l) with no long type");
 				return res;
 			}
-
-			if (!(utils::numeric_cast<uint64_t>(value) <= max)) {
+			
+			try{
+				if (!(utils::numeric_cast<uint64_t>(value) <= max)) {
+					add(res, Message(address,
+							EC_FORMAT_INVALID_LITERAL,
+							format("Literal out of range for type %s literal: %s", toString(*type), value),
+							Message::ERROR)
+					);
+				}
+			}catch(...) {
 				add(res, Message(address,
 						EC_FORMAT_INVALID_LITERAL,
-						format("Literal out of range for type %s literal: %s", toString(*type), value),
+						format("Malformed Literal %s literal: %s", toString(*type), value),
 						Message::ERROR)
 				);
 			}

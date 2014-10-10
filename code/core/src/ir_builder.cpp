@@ -499,17 +499,8 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
-
-	// special handling for de-normalized values
-	if (std::fpclassify(value) == FP_SUBNORMAL) {
-		return doubleLit(format("%a", value));
-	}
-
 	std::stringstream out;
-	out << std::scientific
-		<< std::fixed
-		<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
-		<< value;
+	out << value;
 	return doubleLit(out.str());
 }
 
