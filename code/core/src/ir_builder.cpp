@@ -500,7 +500,7 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
 	std::stringstream out;
-	out << value;
+	out << std::setprecision(std::numeric_limits<double>::digits10 + 1) << value;
 	return doubleLit(out.str());
 }
 

@@ -202,6 +202,7 @@ namespace checks {
 		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(FLT_MAX))).size() );
 		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(FLT_MIN))).size() );
 
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal8(), toString(-1e-10))).size() 	);
 		EXPECT_EQ(0 ,check(builder.literal(basic.getReal8(), toString(DBL_MAX))).size() );
 		EXPECT_EQ(0 ,check(builder.literal(basic.getReal8(), toString(DBL_MIN))).size() );
 
