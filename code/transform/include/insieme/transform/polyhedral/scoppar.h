@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,47 +29,28 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once
 
-#include "insieme/analysis/region/region_selector.h"
+#ifndef SCOPPAR_H
+#define SCOPPAR_H
 
-namespace insieme {
-namespace analysis {
-namespace region {
+#include "insieme/core/ir_pointer.h"
 
-	/**
-	 * This region selector is picking outermost parallel for loop bodies. This
-	 * selector is only focusing on the work-sharing pfor construct, not potentially
-	 * parallel for loops.
-	 */
-	class PForBodySelector : public RegionSelector {
+namespace insieme { namespace transform { namespace polyhedral {
 
-	public:
+class SCoPPar {
+    insieme::core::ProgramPtr& program;
 
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
+public:
+    SCoPPar(insieme::core::ProgramPtr& program);
 
-	};
+    insieme::core::ProgramPtr& apply();
+};
 
-	class PForSelector : public RegionSelector {
+}}}
 
-	public:
-
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
-
-	};
-
-
-} // end namespace region
-} // end namespace analysis
-} // end namespace insieme
+#endif // SCOPPAR_H

@@ -159,6 +159,41 @@ TEST(DataLayout, Tuple) {
 	NodePtr code = builder.normalize(builder.parseStmt(
 			"{"
 			"	let twoElem = struct{int<4> int; real<4> float;};"
+			"	let tuple = (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>);"
+			""
+			"	let actualWork = (ref<array<ref<array<twoElem,1>>,1>> a, ref<array<ref<array<real<4>,1>>,1>> b, uint<8> c, "
+			"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+//			"		ref<array<ref<array<twoElem,1>>,1>> d = var(*a);"
+			"		b;"
+			"		c;"
+			"	};"
+			""
+			"	let local = (ref<array<ref<array<twoElem,1>>,1>> a, ref<array<ref<array<real<4>,1>>,1>> b, uint<8> c, "
+			"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+			"		parallel(job([vector.reduction(local_size, 1u, uint.mul)-vector.reduction(local_size, 1u, uint.mul)]"
+//			"				[ref<array<twoElem,1>> a1 = a, ref<array<real<4>,1>> b1 = b] "
+			"		,	actualWork(a, b, c, local_size, global_size)"
+			"		));"
+			"	};"
+			""
+			"	let global = (ref<array<ref<array<twoElem,1>>,1>> a, ref<array<ref<array<real<4>,1>>,1>> b, uint<8> c, "
+			"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+			"		vector<uint<8>,3> groups = vector.pointwise(uint.div)(global_size, local_size);"
+			"		parallel(job([vector.reduction(groups, 1u, uint.mul)-vector.reduction(groups, 1u, uint.mul)]"
+//			"				[ref<array<ref<array<twoElem,1>>,1>> a1 = a, ref<array<real<4>,1>> b1 = b] "
+			"		,	local(a, b, c, local_size, global_size)"
+			"		));"
+			"	};"
+			""
+			"	let kernelFct = (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {"
+			"		global("
+			"			tuple.member.access(kernel, 0u, lit(ref<array<ref<array<twoElem,1>>,1>>)),"
+			"			tuple.member.access(kernel, 1u, lit(ref<array<ref<array<real<4>,1>>,1>>)),"
+			"			*(tuple.member.access(kernel, 2u, lit(ref<array<uint<8>,1>>))[0]),"
+			"			local_size, global_size);"
+			""
+			"		return 0;"
+			"	};"
 			""
 			"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
 			"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
@@ -169,13 +204,18 @@ TEST(DataLayout, Tuple) {
 			"	ref<ref<array<twoElem,1>>> a;"
 			"	ref<ref<array<real<4>,1>>> b;"
 			"	ref<uint<8>> c;"
-			"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
-//			"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
+			"	ref<ref<tuple>> t;"
+			"	t = new(undefined(lit( tuple )));"
 			""
-			"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
-			"	tuple.ref.elem(*t,1u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(b);"
-			"	tuple.ref.elem(*t,2u, lit(ref<array<uint<8>,1>>)) = scalar.to.array(c);"
+			"	tuple.ref.elem(*t, 0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
+			"	tuple.ref.elem(*t, 1u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(b);"
+			"	tuple.ref.elem(*t, 2u, lit(ref<array<uint<8>,1>>)) = scalar.to.array(c);"
 //			"	writeToTuple(*t, scalar.to.array(a));"
+			""
+			"	vector<uint<8>,3> ls;"
+			"	vector<uint<8>,3> gs;"
+			""
+			"	kernelFct(**t, ls, gs);"
 			""
 			"	ref.delete(*t);"
 			"}"
@@ -183,9 +223,9 @@ TEST(DataLayout, Tuple) {
 
 
 	datalayout::AosToTaos att(code);
-	att.transform();
+//	att.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();

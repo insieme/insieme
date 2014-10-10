@@ -64,6 +64,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/polyhedral/scoppar.h"
 #include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/transformation.h"
 
@@ -335,16 +336,12 @@ namespace {
 	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.UsePM) return program;
 		std::cout << "### We will be using the backend: " << options.Backend << std::endl;
+		if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL)) {
+			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl;
+			return program;
+		}
 
-		// filter SCoPs and build up the polyhedral transformation pipeline
-		using namespace insieme::transform;
-		std::vector<TransformationPtr> tr;
-		tr.push_back(std::make_shared<insieme::transform::polyhedral::LoopParallelize>());
-		auto transform=makePipeline(makeForAll(insieme::transform::filter::outermostSCoPs(), makePipeline(tr)));
-
-		// apply transformation and return resulting program
-		program = transform->apply(program);
-		return program;
+		return insieme::transform::polyhedral::SCoPPar(program).apply();
 	}
 
 	//***************************************************************************************
@@ -388,7 +385,8 @@ namespace {
 
 		switch(selection) {
 			case 'o': {
-				// check if the host is in the entrypoints, otherwise use the kernel backend
+				// use the OCL kernel backend if a KernelFctAnnotation can be found in the program,
+				// otherwise use the OCL host backend
 				bool host = [&]() {
 					const auto& ep = program->getEntryPoints();
 					for (auto& e : ep) {

@@ -110,7 +110,7 @@ void irt_init_globals() {
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
 
-	_irt_hardware_info_init();
+	_irt_hw_info_init();
 #if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_init();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
@@ -194,7 +194,7 @@ void irt_exit_handler() {
 		irt_cpu_freq_reset_frequencies();
 #endif
 
-	_irt_hardware_info_shutdown();
+	_irt_hw_info_shutdown();
 
 #if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_cleanup();
@@ -417,6 +417,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	if(getenv(IRT_REPORT_ENV)) {
 		irt_dbg_print_context(context);
+		irt_hw_dump_info();
 		exit(0);
 	}
 
