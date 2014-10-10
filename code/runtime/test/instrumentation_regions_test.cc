@@ -323,7 +323,7 @@ TEST(region_instrumentation, rapl) {
 			policy.fixed_map[coreid] = 0;
 
 		// set affinity map to use all cores of the current socket
-		for(uint32 coreid = 0; coreid < irt_get_num_sockets() * irt_get_num_cores_per_socket(); ++coreid) {
+		for(uint32 coreid = 0; coreid < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++coreid) {
 			policy.fixed_map[workerid++] = coreid;
 			//printf("%d\n", policy.fixed_map[coreid]);
 		}
