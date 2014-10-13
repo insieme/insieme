@@ -95,7 +95,7 @@ void AosToTaos::transform() {
 		for(ExpressionPtr oldVar : toReplaceList.first) {
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
 					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
-std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+//std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();

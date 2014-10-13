@@ -121,7 +121,7 @@ protected:
 	void updateCopyDeclarations(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 
-	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, const core::ExpressionMap& structures,
+	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures,
 			const core::transform::TypeHandler& typeOfMemAllocHandler);
 public:
 	AosToSoa(core::NodePtr& toTransform);

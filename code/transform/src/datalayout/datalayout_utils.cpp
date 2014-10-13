@@ -322,6 +322,16 @@ bool validVar(ExpressionPtr toTest) {
 	return toTest && (toTest.isa<VariablePtr>() || (toTest.isa<LiteralPtr>() && toTest->getType().isa<RefTypePtr>()));
 }
 
+bool isInsideJob(NodeAddress toTest) {
+	if(toTest.getNodeType() == NT_JobExpr)
+		return true;
+
+	if(toTest.isRoot())
+		return false;
+
+	return isInsideJob(toTest.getParentAddress());
+}
+
 StatementPtr allocTypeUpdate(const StatementPtr& stmt, pattern::TreePattern& oldStructTypePattern, pattern::TreePattern& newStructTypePattern) {
 	TypePtr oldType, newType;
 	NodeManager& mgr = stmt->getNodeManager();

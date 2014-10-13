@@ -258,12 +258,17 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 		TypePtr varType = structVar->getType();
 		RefTypePtr structType = nm["structType"].getValue().as<RefTypePtr>();
 
-		if(match.getParentAddress(1)->getNodeType() == NT_DeclarationStmts) // do not consider variables which are part of declaration statements
-			return;
+		if(match.getParentAddress(1)->getNodeType() == NT_DeclarationStmts)
+			return; // do not consider variables which are part of declaration statements
 
 		if(tupleType.match(varType)) {
 			return; // tuples are not candidates since only one field needs to be altered. They will only be changed if the field is an alias to some other candidate
 		}
+
+		if(isInsideJob(match)) {
+			return; // variable in parallel regions are replaced with new variables of updated type. We don't keep the old version inside parallel regions.
+		}
+
 		structs[structVar] = structType;
 //std::cout << "Adding: " << *structVar << " as a candidate" << std::endl;
 	});
@@ -301,6 +306,7 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 						if(varToAdd->getNodeType() == NT_Variable ||
 								(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
 //dumpPretty(expr );
+//dumpPretty(potentialAlias );
 //std::cout << potentialAlias << " ------------------------------- \n";
 							if(ia::cba::mayAlias(expr, potentialAlias)) {
 								/*auto newly = */toReplaceList.insert(varToAdd);
@@ -1000,7 +1006,7 @@ void AosToSoa::updateCopyDeclarations(ExpressionMap& varReplacements, const core
 
 		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
 			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
-			VariablePtr var = match["access"].getValue().as<VariablePtr>();
+			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
 
 			TypePtr oldType = var->getType();
 			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
@@ -1016,16 +1022,33 @@ void AosToSoa::updateCopyDeclarations(ExpressionMap& varReplacements, const core
 	}
 }
 
-void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements, const ExpressionMap& structures,
+void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures,
 		const core::transform::TypeHandler& typeOfMemAllocHandler) {
+	IRBuilder builder(mgr);
+
 	if(!replacements.empty())
 		toTransform = core::transform::replaceAll(mgr, replacements);
 
 //	if(!structures.empty())
 //		toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
-	if(!structures.empty())
+	while(!structures.empty()) {
 		toTransform = core::transform::fixTypes(mgr, toTransform, structures, false, typeOfMemAllocHandler);
 
+		structures.clear();
+		visitDepthFirst(toTransform, [&](const StatementPtr& stmt) {
+			if(DeclarationStmtPtr decl = stmt.isa<DeclarationStmtPtr>()) {
+				ExpressionPtr var = decl->getVariable();
+				ExpressionPtr init = decl->getInitialization();
+
+				if(structures.find(var) != structures.end()) // already there
+					return;
+
+				if(var->getType() != init->getType())
+					structures[var] = builder.variable(init->getType());
+			}
+
+		});
+	}
 }
 
 
