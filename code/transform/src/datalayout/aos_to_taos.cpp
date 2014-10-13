@@ -60,6 +60,17 @@ using namespace core;
 namespace pirp = pattern::irp;
 namespace ia = insieme::analysis;
 
+namespace {
+
+StatementPtr aosToTaosAllocTypeUpdate(const StatementPtr& stmt) {
+	pattern::TreePattern oldStructTypePattern = pattern::aT(pattern::var("structType", pirp::structType(*pattern::any)));
+	pattern::TreePattern newStructTypePattern = pattern::aT(pattern::var("structType", pirp::structType(*pattern::any)));
+
+	return allocTypeUpdate(stmt, oldStructTypePattern, newStructTypePattern);
+}
+
+}
+
 AosToTaos::AosToTaos(core::NodePtr& toTransform) : AosToSoa(toTransform) {
 	IRBuilder builder(mgr);
 	genericTileSize = builder.variableIntTypeParam('t');
@@ -73,7 +84,6 @@ void AosToTaos::transform() {
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-
 	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
@@ -85,7 +95,7 @@ void AosToTaos::transform() {
 		for(ExpressionPtr oldVar : toReplaceList.first) {
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
 					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
-//std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -132,7 +142,7 @@ void AosToTaos::transform() {
 
 		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
-		doReplacements(replacements, structures);
+		doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
 		NodeMap tilesize;
 		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);

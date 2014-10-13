@@ -36,6 +36,7 @@
 
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
@@ -319,6 +320,58 @@ StatementAddress getStatementReplacableParent(NodeAddress toBeReplacedByAStateme
 
 bool validVar(ExpressionPtr toTest) {
 	return toTest && (toTest.isa<VariablePtr>() || (toTest.isa<LiteralPtr>() && toTest->getType().isa<RefTypePtr>()));
+}
+
+StatementPtr allocTypeUpdate(const StatementPtr& stmt, pattern::TreePattern& oldStructTypePattern, pattern::TreePattern& newStructTypePattern) {
+	TypePtr oldType, newType;
+	NodeManager& mgr = stmt->getNodeManager();
+
+
+	if(const DeclarationStmtPtr& decl = stmt.isa<DeclarationStmtPtr>()) {
+		const VariablePtr& var = decl->getVariable();
+		const CallExprPtr& init = decl->getInitialization().isa<CallExprPtr>();
+
+		// check if init is a call and its type fits the variable
+		if(!init | types::isSubTypeOf(var->getType(), init->getType()))
+			return stmt;
+
+		// if init is a call with wrong, try to fix the type
+		pattern::MatchOpt initMatch = oldStructTypePattern.matchPointer(init[0]->getType());
+		pattern::MatchOpt varMatch = newStructTypePattern.matchPointer(var->getType());
+		ExpressionPtr nElem;
+		if(initMatch && varMatch) {
+			oldType = initMatch.get()["structType"].getValue().as<TypePtr>();
+			newType = varMatch.get()["structType"].getValue().as<TypePtr>();
+		}
+	}
+
+	if(const CallExprPtr& assign = stmt.isa<CallExprPtr>()) {
+		if(!core::analysis::isCallOf(assign, mgr.getLangBasic().getRefAssign()))
+			return stmt;
+
+		const ExpressionPtr& lhs = assign[0];
+		const ExpressionPtr& rhs = assign[1];
+
+		const RefTypePtr& lhsTy = lhs->getType().as<RefTypePtr>();
+
+		// check if type is consistent
+		if(lhsTy->getElementType() == rhs->getType())
+			return stmt;
+
+		// if type is not consistent, try to update the type
+		pattern::MatchOpt rhsMatch = oldStructTypePattern.matchPointer(rhs->getType());
+		pattern::MatchOpt lhsMatch = newStructTypePattern.matchPointer(lhsTy->getElementType());
+		ExpressionPtr nElem;
+		if(rhsMatch && lhsMatch) {
+			oldType = rhsMatch.get()["structType"].getValue().as<TypePtr>();
+			newType = lhsMatch.get()["structType"].getValue().as<TypePtr>();
+		}
+	}
+
+	if(oldType)
+		return core::transform::replaceAllGen(mgr, stmt, oldType, newType, false);
+
+	return stmt;
 }
 
 

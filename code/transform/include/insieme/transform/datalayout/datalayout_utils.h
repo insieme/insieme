@@ -73,6 +73,9 @@ core::StatementAddress getStatementReplacableParent(core::NodeAddress toBeReplac
 
 bool validVar(core::ExpressionPtr toTest);
 
+core::StatementPtr allocTypeUpdate(const core::StatementPtr& stmt, core::pattern::TreePattern& oldStructTypePattern,
+		core::pattern::TreePattern& newStructTypePattern);
+
 
 } // datalayout
 } // transform
