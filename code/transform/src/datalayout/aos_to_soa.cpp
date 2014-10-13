@@ -997,29 +997,34 @@ void AosToSoa::updateCopyDeclarations(ExpressionMap& varReplacements, const core
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 
-	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
+//	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
+//
+//		const ExpressionPtr& oldVar = vr.first;
+////		const ExpressionPtr& newVar = vr.second;
+//
+//		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
+//
+//		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
+//			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
+//
+//			if(replacements.find(decl) != replacements.end()) {
+//				return; // already handled
+//			}
 
-		const ExpressionPtr& oldVar = vr.first;
-//		const ExpressionPtr& newVar = vr.second;
-
-		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
-
-		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
-			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
-			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
-
-			TypePtr oldType = var->getType();
-			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
-
-			if(oldType == newType) // check if the type depends on the tranformation
-				return;
-			VariablePtr updatedVar = builder.variable(newType);
-
-			DeclarationStmtPtr updatedDecl = builder.declarationStmt(updatedVar, decl->getInitialization());
-
-			replacements[decl] = updatedDecl;
-		});
-	}
+//			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
+//
+//			TypePtr oldType = var->getType();
+//			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
+//
+//			if(oldType == newType) // check if the type depends on the tranformation
+//				return;
+//			VariablePtr updatedVar = builder.variable(newType);
+//
+//			DeclarationStmtPtr updatedDecl = builder.declarationStmt(updatedVar, decl->getInitialization());
+//
+//			replacements[decl] = updatedDecl;
+//		});
+//	}
 }
 
 void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures,
