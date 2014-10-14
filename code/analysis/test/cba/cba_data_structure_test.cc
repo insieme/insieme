@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -471,6 +471,50 @@ namespace cba {
 //		createDotDump(analysis);
 	}
 
+
+	TEST(CBA, Tuples) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let pair = (int,int);"
+				"	"
+				"	ref<pair> a = var((1,2));"
+				"	"
+				"	*a;"
+				"	a.0 = 3;"
+				"	*a;"
+				"	a.1 = 4;"
+				"	*a;"
+				"	a = (5,6);"
+				"	*a;"
+				"	*a.0;"
+				"	*a.1;"
+				"	(*a).0;"
+				"	(*a).1;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("[0={1},1={2}]", toString(analysis.getValuesOf(code[1], A)));
+		EXPECT_EQ("[0={3},1={2}]", toString(analysis.getValuesOf(code[3], A)));
+		EXPECT_EQ("[0={3},1={4}]", toString(analysis.getValuesOf(code[5], A)));
+		EXPECT_EQ("[0={5},1={6}]", toString(analysis.getValuesOf(code[7], A)));
+
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[8], A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[9], A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[10], A)));
+		EXPECT_EQ("{6}", toString(analysis.getValuesOf(code[11], A)));
+
+	}
 
 } // end namespace cba
 } // end namespace analysis

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -455,12 +455,13 @@ namespace cba {
 				"	};"
 				""
 				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( lit(real<4>), 100u ) ));"
-				"	ref<ref<tuple>> t;"
+//				"	ref<ref<tuple>> t;"
+				"	ref<ref<tuple>> t = var(new(tuple));"
 				"	tuple.ref.elem(*t, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(a);"
 				"	"
 				"	accessTuple(**t);"
 				"	accessTuple2(**t);"
-				"	delete(a);"
+				"	delete(*a);"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -497,9 +498,9 @@ namespace cba {
 		auto c = varVec[2];
 		auto d = varVec[3];
 
-//		EXPECT_TRUE(mayAlias(a, b));
-//		EXPECT_TRUE(mayAlias(a, c));
-//		EXPECT_TRUE(mayAlias(a, d));
+		EXPECT_FALSE(mayAlias(a, b));
+		EXPECT_FALSE(mayAlias(a, c));
+		EXPECT_FALSE(mayAlias(a, d));
 	}
 
 	TEST(CBA_Analysis, UninterpretedSymbols) {
