@@ -46,6 +46,12 @@ namespace analysis {
 typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScopeMap;
 }
 
+namespace core {
+namespace transform {
+typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
+}
+}
+
 namespace transform {
 namespace datalayout {
 
@@ -109,10 +115,14 @@ protected:
 	void addNewDel(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform,
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	void updateTuples(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+	void updateTuples(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 
-	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, const core::ExpressionMap& structures);
+	void updateCopyDeclarations(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+
+	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures,
+			const core::transform::TypeHandler& typeOfMemAllocHandler);
 public:
 	AosToSoa(core::NodePtr& toTransform);
 	virtual ~AosToSoa() {}

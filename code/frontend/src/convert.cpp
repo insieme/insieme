@@ -471,28 +471,31 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 					}
 				};
 
+			// This is a materialize case, the materialize expression is implicit in C++
+			// NOT to use a custom materialize node, turns into the need of distinguish 
+			// the cases to explicitly write refVar or not to do so, in the backend
 			if (isUsedToCreateConstRef(body, wrap)){
-				//auto access = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), currParam);
 				auto access = builder.refVar(currParam);
 				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
 				core::visitDepthFirstOnce (newBody, transferAnnotations);
 				wrapRefMap.erase(currParam);
 			}
-			else if (core::analysis::isReadOnly(body, wrap)){
+			// we only consider the usage of this variable in the local scope,
+			// there is no need to materialize the variable with a ref.var when 
+			// we can do that more clean by using a scope declared variable
+			else if (core::analysis::isReadOnlyWithinScope(body, wrap)){
 				// replace read uses
 				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
-				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
+
 				// this variables might apear in annotations inside:
 				core::visitDepthFirstOnce (newBody, transferAnnotations);
-				//cleanup the wrap cache to avoid future uses, this var does not exist anymore
+
+				// cleanup the wrap cache to avoid future uses, this var does not exist anymore
+				// at this point, no use of wrap should exist in the code;
 				wrapRefMap.erase(currParam);
 			}
 			else{
-				//   if i have a READ operation on a struct:   v= x->a;
-				//   it wont be recognized as read only as the base is pased by reference
-				//	this turns into an extra copy at the begining of every function
-
-				// other case materialize a var, declare it before body
+				// other case materialize a var, declare it at the begining of the body
 				decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
 			}
 		}

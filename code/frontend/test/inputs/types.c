@@ -83,7 +83,7 @@ void basic_type_test() {
 	#pragma test "v100 := ref.reinterpret(ref.null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
 	c1 = 0;
 
-	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931)"
+	#pragma test "decl ref<real<8>> v0 =  var(3.1415927)"
 	double pi = 3.14159265358979323846;
 
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"

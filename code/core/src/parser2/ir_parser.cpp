@@ -51,6 +51,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/utils/numeric_cast.h"
+
 namespace insieme {
 namespace core {
 namespace parser {
@@ -1297,12 +1299,9 @@ namespace parser {
 
 							structType = type.isa<StructTypePtr>();
 							if (!structType) {
-								std::cout << "Accessing element of non-struct type!" << std::endl;
-								std::cout << *type << std::endl;
 								return fail(cur, "Accessing element of non-struct type!");
 							}
 						} else {
-								std::cout << "Accessing element of non-struct type!" << std::endl;
 							return fail(cur, "Accessing element of non-struct type!");
 						}
 
@@ -1321,6 +1320,49 @@ namespace parser {
 					-15
 			));
 
+			// tuple field access
+			g.addRule("E", rule(
+					seq(E, ".", cap(any(Token::Int_Literal))),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+
+						// check whether access is valid
+						TupleTypePtr tupleType;
+						if (a->getType()->getNodeType() == NT_TupleType) {
+							tupleType = a->getType().as<TupleTypePtr>();
+						} else if (a->getType()->getNodeType() == NT_RefType) {
+							TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+
+							if ( type->getNodeType() == core::NT_RecType ) {
+								type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+							}
+
+							tupleType = type.isa<TupleTypePtr>();
+							if (!tupleType) {
+								return fail(cur, "Accessing element of non-tuple type!");
+							}
+						} else {
+							return fail(cur, "Accessing element of non-tuple type!");
+						}
+
+						// get index
+						int index = utils::numeric_cast<int>(cur.getSubRange(0)[0]);
+
+						// check field
+						if (index < 0 || index >= (int)tupleType.size()) {
+							std::cout << "unknown field" << std::endl;
+							return fail(cur, "Accessing unknown field!");
+						}
+
+						// create access
+						if (a->getType()->getNodeType() == NT_RefType) {
+							return cur.refComponent(a, index);
+						}
+						return cur.accessComponent(a, index);
+					},
+					-15
+			));
+
 			// member access based on the -> operator
 			g.addRule("E", rule(
 					seq(E, "->", cap(id)),
@@ -1329,7 +1371,6 @@ namespace parser {
 
 						// check whether target is a reference
 						if (a->getType()->getNodeType() != NT_RefType) {
-								std::cout << "Accessing non-pointer elemet!" << std::endl;
 							return fail(cur, "Accessing non-pointer element!");
 						}
 
@@ -1340,7 +1381,6 @@ namespace parser {
 						}
 						StructTypePtr structType = type.isa<StructTypePtr>();
 						if (!structType) {
-								std::cout << "Accessing element of non-struct type!" << std::endl;
 							return fail(cur, "Accessing non-struct element!");
 						}
 

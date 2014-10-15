@@ -491,6 +491,7 @@ LiteralPtr IRBuilder::floatLit(float value) const {
 		<< std::fixed
 		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
 		<< value << "f";
+	assert(!out.str().empty() && "empty string? ");
 	return floatLit(out.str());
 }
 
@@ -499,17 +500,17 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
-
 	// special handling for de-normalized values
 	if (std::fpclassify(value) == FP_SUBNORMAL) {
-		return doubleLit(format("%a", value));
+		return floatLit(format("%a", value));
 	}
 
 	std::stringstream out;
 	out << std::scientific
 		<< std::fixed
-		<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
 		<< value;
+	assert(!out.str().empty() && "empty string? ");
 	return doubleLit(out.str());
 }
 

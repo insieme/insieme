@@ -94,11 +94,11 @@ uint64 _irt_read_rapl_register(void* user_data) {
 	uint64 result = 0;
 	double energy_units = -1.0;
 
-	uint32 num_sockets = irt_get_num_sockets();
+	uint32 num_sockets = irt_hw_get_num_sockets();
 
 	// read RAPL register, fix overflow problem, store in global counter variable to be read by the instrumentation system
 	for(uint32 socket_id = 0; socket_id < num_sockets; ++socket_id) {
-		if((file = _irt_open_msr(socket_id * irt_get_num_cores_per_socket())) > 0) {
+		if((file = _irt_open_msr(socket_id * irt_hw_get_num_cores_per_socket())) > 0) {
 			if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
 				energy_units = pow(0.5, (double) ((result >> 8) & 0x1F));
 				if ((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
@@ -134,9 +134,9 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 	data->cores = 0.0;
 
 	// mark sockets that should be measured (i.e. that have cores which have workers running on them)
-	uint32 num_sockets = irt_get_num_sockets();
-	uint32 num_cpus = irt_get_num_cpus();
-	bool hyperthreading_enabled = irt_get_hyperthreading_enabled();
+	uint32 num_sockets = irt_hw_get_num_sockets();
+	uint32 num_cpus = irt_hw_get_num_cpus();
+	bool hyperthreading_enabled = irt_hw_get_hyperthreading_enabled();
 	bool socket_mask[num_sockets];
 
 	for(uint32 i = 0; i < num_sockets; ++i)
@@ -147,7 +147,7 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 		if(coreid != (uint32)-1) {
 			if(hyperthreading_enabled && coreid >= (num_cpus/2))
 				coreid -= num_cpus/2;
-			socket_mask[coreid / irt_get_num_cores_per_socket()] = true;
+			socket_mask[coreid / irt_hw_get_num_cores_per_socket()] = true;
 		}
 	}
 
@@ -162,35 +162,29 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 }
 
 bool irt_rapl_is_supported() {
-	volatile unsigned a, b, c, d;
-
-	const unsigned vendor_string_ebx = 0x756E6547; // Genu
-	const unsigned vendor_string_ecx = 0x6C65746E; // ineI
-	const unsigned vendor_string_edx = 0x49656E69; // ntel
-
-	__asm__ __volatile__("cpuid" : "=b" (b), "=c" (c), "=d" (d) : "a" (0x0));
-
-	// if not an intel cpu
-	if(b != vendor_string_ebx || c != vendor_string_ecx || d != vendor_string_edx)
+	// if not Intel CPU
+	if(strncmp(irt_hw_get_vendor_string(), "GenuineIntel", 12) != 0)
 		return false;
 
-	__asm__ __volatile__("cpuid" : "=a" (a) : "a" (0x00000001) : "ebx", "ecx", "edx");
+	irt_hw_cpuid_info cpuid_info = irt_hw_get_cpuid_info();
 
-	const unsigned model_number = (a>>4)&0xF; // bits 4-7
-	const unsigned family_code = (a>>8)&0xF; // bits 8-11
-	const unsigned extended_model = (a>>16)&0xF; // bits 16-19
-
-	if(family_code == 0x6) {
-		if(model_number == 0xA && extended_model == 0x2) // SandyBridge 32nm
-			return true;
-		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EN 32nm
-			return true;
-		if(model_number == 0xE && extended_model == 0x3) // IvyBridge EN 22nm
-			return true;
-		if(model_number == 0xD && extended_model == 0x2) // dx1 = E5-2660
-			return true;
-		if(model_number == 0xA && extended_model == 0x3) // IvyBridge 22nm
-			return true;
+	// a whitelist of known RAPL-supporting microarchitectures
+	if(cpuid_info.family == 6) {
+		switch(cpuid_info.model) {
+			case 42: // SandyBridge 32nm
+			case 45: // dx1 = E5-2660
+			case 46: // SandyBridge EN 32nm
+			case 58: // IvyBridge 22nm
+			case 60: // Haswell, e.g. i7-4770k
+			case 62: // SandyBridge EP, e.g. E5-1620, E5-2680, Ivy Bridge-E, e.g. i7-4820K
+			case 63: // Haswell-E, e.g. i7-5930K
+			case 69: // Haswell-ULT, e.g. i5-4310
+			case 70: // Haswell-H, e.g. i7-4770HQ
+				return true;
+				break;
+			default:
+				return false;
+		}
 	}
 
 	return false;

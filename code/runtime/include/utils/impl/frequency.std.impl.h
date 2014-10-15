@@ -168,11 +168,11 @@ bool _irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, const char* 
 	ret_a = _irt_cpu_freq_write(path_to_cpufreq, frequency);
 	if(ret_a)
 		irt_affinity_mask_set(&irt_g_frequency_setting_modified_mask, coreid, true);
-	if(irt_get_hyperthreading_enabled()) {
-		sprintf(path_to_cpufreq, FREQ_PATH_STRING, irt_get_sibling_hyperthread(coreid), entry);
+	if(irt_hw_get_hyperthreading_enabled()) {
+		sprintf(path_to_cpufreq, FREQ_PATH_STRING, irt_hw_get_sibling_hyperthread(coreid), entry);
 		ret_b = _irt_cpu_freq_write(path_to_cpufreq, frequency);
 		if(ret_b)
-			irt_affinity_mask_set(&irt_g_frequency_setting_modified_mask, irt_get_sibling_hyperthread(coreid), true);
+			irt_affinity_mask_set(&irt_g_frequency_setting_modified_mask, irt_hw_get_sibling_hyperthread(coreid), true);
 	}
 
 	// will show failure if hyperthreading is active but setting the freq for either logical CPU in the OS failed
@@ -252,7 +252,7 @@ int32 irt_cpu_freq_get_min_frequency_core(const uint32 coreid) {
 bool irt_cpu_freq_reset_frequencies() {
 	bool retval = true;
 	uint32 frequency = 0;
-	uint32 total_cores = irt_get_num_cpus();
+	uint32 total_cores = irt_hw_get_num_cpus();
 
 	for(uint32 coreid = 0; coreid < total_cores; ++coreid) {
 		if(irt_affinity_mask_is_set(irt_g_frequency_setting_modified_mask, coreid)) {
@@ -308,8 +308,8 @@ int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 f
 
 bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequency) {
 	bool retval = 0;
-	uint32 core_start = socket * irt_get_num_cores_per_socket();
-	uint32 core_end = (socket + 1) * irt_get_num_cores_per_socket();
+	uint32 core_start = socket * irt_hw_get_num_cores_per_socket();
+	uint32 core_end = (socket + 1) * irt_hw_get_num_cores_per_socket();
 
 	// first HT unit
 	for(uint32 coreid = core_start; coreid < core_end; ++coreid) {
@@ -352,8 +352,8 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	uint32 cpu_freq_list[IRT_HW_MAX_NUM_SOCKETS];
 
-	for(uint32 socketid = 0; socketid < irt_get_num_sockets(); ++socketid)
-		cpu_freq_list[socketid] = _irt_cpu_freq_get(socketid*irt_get_num_cores_per_socket(), "scaling_cur_freq");
+	for(uint32 socketid = 0; socketid < irt_hw_get_num_sockets(); ++socketid)
+		cpu_freq_list[socketid] = _irt_cpu_freq_get(socketid*irt_hw_get_num_cores_per_socket(), "scaling_cur_freq");
 
 	char cpu_freq_output[1024] = { 0 };
 	char* cur = cpu_freq_output;
@@ -362,7 +362,7 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	else
 		cur += sprintf(cur, "not set, ");
 
-	for(uint32 i = 0; i < irt_get_num_sockets(); ++i)
+	for(uint32 i = 0; i < irt_hw_get_num_sockets(); ++i)
 		cur += sprintf(cur, "%u, ", cpu_freq_list[i]);
 	// cutting off the last comma and whitespace
 	*(cur-2) = '\0';

@@ -444,6 +444,16 @@ bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
  */
 bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
 
+/**
+ * 	Test if the parameter is read or written in the scope, if passed by reference 
+ * 	to any other scope it will be asumed to be non readonly, 
+ * 	no matters what happens inside of that lambda
+ *
+ * @param lambda the lambda expression to be tested
+ * @param param the parameter to be tested, must be a parameter of the given lambda
+ * @return true if the parameter is only read, false if it might be written
+ */
+bool isReadOnlyWithinScope(const StatementPtr& context, const VariablePtr& param);
 
 /**
  * test if the expression is the usage of an static variable ( local visibility, global storage)
