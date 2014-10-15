@@ -50,6 +50,7 @@
 #include "insieme/analysis/cba/analysis/data_paths.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/test/test_utils.h"
@@ -516,6 +517,98 @@ namespace cba {
 
 	}
 
+	TEST(CBA, SimpleTuple) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let tuple = (int<4>, int<4>);"
+				"	"
+				""
+				"	tuple t1 = (1, 2);"
+				"	tuple t2 = (3, 4);"
+				""
+				""
+				"	"
+				"	t1;"
+				"	t2;"
+				"	tuple.member.access(t1,0u, lit(int<4>));"
+				"	tuple.member.access(t1,1u, lit(int<4>));"
+				"	tuple.member.access(t2,0u, lit(int<4>));"
+				"	tuple.member.access(t2,1u, lit(int<4>));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		EXPECT_EQ("[0={1},1={2}]", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[0={3},1={4}]", toString(analysis.getValuesOf(code[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[5].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
+	}
+
+	TEST(CBA, RefTuple) {
+
+		// a simple test cases checking the handling of simple value structs
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	let int = int<4>;"
+				"	let tuple = (int<4>, int<4>);"
+				"	"
+				"	let writeToTuple = (ref<tuple> lt, int<4> x)->unit {"
+				"		tuple.ref.elem(lt,0u, lit(int<4>)) = x;"
+				"	};"
+				""
+				"	ref<tuple> t1;"
+				"	ref<tuple> t2;"
+				""
+				"	tuple.ref.elem(t1,0u, lit(int<4>)) = 1;"
+				"	tuple.ref.elem(t1,1u, lit(int<4>)) = 2;"
+				"	tuple.ref.elem(t2,0u, lit(int<4>)) = 3;"
+				"	tuple.ref.elem(t2,1u, lit(int<4>)) = 4;"
+				""
+				"	"
+				"	*t1;"
+				"	*t2;"
+				"	tuple.member.access(*t1,0u, lit(int<4>));"
+				"	tuple.member.access(*t1,1u, lit(int<4>));"
+				"	tuple.member.access(*t2,0u, lit(int<4>));"
+				"	tuple.member.access(*t2,1u, lit(int<4>));"
+				""
+				"	ref<int<4>> s = var(5);"
+				"	writeToTuple(t1, *s);"
+				"	tuple.member.access(*t1,0u, lit(int<4>));"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		std::cout << core::checks::check(code) << std::endl;
+
+		CBA analysis(code);
+
+		EXPECT_EQ("[0={1},1={2}]", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("[0={3},1={4}]", toString(analysis.getValuesOf(code[7].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(analysis.getValuesOf(code[8].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(analysis.getValuesOf(code[9].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[10].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[11].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[14].as<ExpressionAddress>(), A)));
+
+	}
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
