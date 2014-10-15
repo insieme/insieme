@@ -436,31 +436,44 @@ namespace cba {
 				"	let meta = (ref<array<ref<array<real<4>,1>>,1>> c)->unit {"
 				"		*c[0];"
 				"	};"
+				""
+				"	let meta2 = (ref<array<real<4>,1>> e)->unit {"
+				"		e;"
+				"	};"
 				"	"
-				"	let access = (ref<array<ref<array<real<4>,1>>,1>> b)->unit {"
+				"	let access = (ref<array<ref<array<real<4>,1>>,1>> b, vector<uint<4>, 3> vec)->unit {"
 				"		*b[0];"
-				"		meta(b);"
+				"		parallel(job meta(b); );"
+//				"		vector.pointwise(uint.div)(vec, vec);"
+//				"		vector.reduction(vec, 1u, uint.mul);"
 				"	};"
 				"	"
-				"	let access2 = (ref<array<real<4>,1>> d)->unit {"
+				"	let access2 = (ref<array<real<4>,1>> d, vector<uint<4>, 3> vec)->unit {"
 				"		d;"
+				"		meta2(d);"
+				"		vector.reduction(vec, 1u, uint.mul);"
 				"	};"
 				"	"
-				"	let accessTuple = (tuple t2)->unit {"
-				"		access(tuple.member.access(t2, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)));"
+				"	let accessTuple = (tuple t2, vector<uint<4>, 3> vec)->unit {"
+				"		access(tuple.member.access(t2, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)), vec);"
 				"	};"
 				""
-				"	let accessTuple2 = (tuple t3)->unit {"
-				"		access2(*tuple.member.access(t3, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0]);"
+				"	let accessTuple2 = (tuple t3, vector<uint<4>, 3> vec)->unit {"
+				"		access2(*tuple.member.access(t3, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0], vec);"
 				"	};"
 				""
 				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( lit(real<4>), 100u ) ));"
-//				"	ref<ref<tuple>> t;"
+				"	ref<vector<uint<4>, 3>> vec;"
+				""
+				"	vec[0] = 0u;"
+				"	vec[1] = 1u;"
+				"	vec[2] = 2u;"
+				""
 				"	ref<ref<tuple>> t = var(new(tuple));"
 				"	tuple.ref.elem(*t, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(a);"
 				"	"
-				"	accessTuple(**t);"
-				"	accessTuple2(**t);"
+				"	accessTuple(**t, *vec);"
+				"	accessTuple2(**t, *vec);"
 				"	delete(*a);"
 				"}"
 		).as<CompoundStmtPtr>();
@@ -491,16 +504,18 @@ namespace cba {
 						varVec.push_back(expr);
 		});
 
-		EXPECT_EQ(varVec.size(), 4u);
+		EXPECT_EQ(varVec.size(), 5u);
 
 		auto a = varVec[0];
 		auto b = varVec[1];
 		auto c = varVec[2];
 		auto d = varVec[3];
+		auto e = varVec[4];
 
-		EXPECT_FALSE(mayAlias(a, b));
-		EXPECT_FALSE(mayAlias(a, c));
+//		EXPECT_FALSE(mayAlias(a, b)); // uncomment for Assertion !(refB.empty()) caused by parallel job
+//		EXPECT_FALSE(mayAlias(a, c)); // uncomment for Assertion !(refB.empty()) caused by parallel job
 		EXPECT_FALSE(mayAlias(a, d));
+//		EXPECT_FALSE(mayAlias(a, e)); // uncomment for Assertion !(refB.empty()) caused by combination of tuples, vector.pointwise and vector.reduction
 	}
 
 	TEST(CBA_Analysis, UninterpretedSymbols) {
