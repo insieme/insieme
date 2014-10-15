@@ -269,22 +269,30 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
 }
 
 void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
-	   insieme::core::NodeAnnotationPtr annot;
+	insieme::core::NodeAnnotationPtr annot;
 
-	    // check if there is a datarange annotation
-	    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-	    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+	// check if there is a datarange annotation
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
-	   std::for_each(iter.first, iter.second,
-	        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+	std::for_each(iter.first, iter.second,
+			[ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+		const frontend::InsiemeDataTransform* dt = dynamic_cast<const frontend::InsiemeDataTransform*>( &*(curr.second) );
+		if(dt) {
+			pragma::MatchMap mmap = dt->getMatchMap();
 
-		   annotations::DataTransformAnnotation dataTransform;
+			assert(mmap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
+			std::string datalayout = *mmap.begin()->second.front()->get<std::string*>();
 
-		   annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);
-	    });
+			unsigned tilesize = 0;
 
-	    if(annot)
-	        irNode->addAnnotation(annot);
+			annotations::DataTransformAnnotation dataTransform(tilesize);
+			annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);
+		}
+	});
+
+	if(annot)
+		irNode->addAnnotation(annot);
 
 
 }
