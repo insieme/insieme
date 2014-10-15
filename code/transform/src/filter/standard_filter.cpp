@@ -124,6 +124,8 @@ namespace filter {
 		return TargetFilter(name.str(), [=](const core::NodePtr& root) { return innermostFor(root, level); });
 	}
 
+/** Returns polyhedral::scop::mark as a filter. So, if you just need SCoP detection without the filter ability,
+	just run analysis::polyhedral::scop::mark itself. */
 	TargetFilter outermostSCoPs() {
 		return TargetFilter("outermost SCoP", &analysis::polyhedral::scop::mark);
 	}

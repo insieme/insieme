@@ -472,8 +472,9 @@ using insieme::core::pattern::anyList;
 
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
 		// Semantic check on code
-		LOG(INFO) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		LOG(INFO) << "Errors: " << core::checks::check(code, core::checks::getFullCheck());
+		LOG(DEBUG) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		core::checks::MessageList msgl=core::checks::check(code, core::checks::getFullCheck());
+		if (!msgl.empty()) { LOG(ERROR) << "OCL host pp errors: " << msgl; }
 
 		auto& manager = converter.getNodeManager();
 
@@ -878,8 +879,8 @@ using insieme::core::pattern::anyList;
 			});
 		}
 
-		std::cout << "\nFinal Code Before Splitting" << std::endl;
-		std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		LOG(DEBUG) << "\nFinal Code Before Splitting" << std::endl
+				   << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 		// Semantic check on code2
 		auto sem = core::checks::check(code2, insieme::core::checks::getFullCheck());
@@ -891,12 +892,14 @@ using insieme::core::pattern::anyList;
 
 		auto errs = sem.getErrors();
 		std::sort(errs.begin(), errs.end());
-		std::cout << "\n\nError in the final code before splitting: " << std::endl;
-		std::cout << "==========================================" << std::endl;
-		for_each(errs, [](const core::checks::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-		std::cout << "==========================================" << std::endl;
+		if (errs.begin()!=errs.end()) {
+			LOG(ERROR) << "\n\nError in the final code before splitting:" << std::endl
+					   <<     "=========================================" << std::endl;
+			for_each(errs, [](const core::checks::Message& cur) {
+				LOG(ERROR) << cur << std::endl;
+			});
+			LOG(ERROR) <<     "=========================================" << std::endl;
+		}
 
 		// UNCOMMENT TO AVOID THE SPLITTING
 		return code2;

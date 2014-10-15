@@ -1206,10 +1206,13 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	}
 };
 
-/** After the entry level of a SCoP has been found (using the bottom-up technique) we start the top-down pass to detect
-conditions which would invalidate the SCoP. For example assignment to parameters of the iteration vector is invalid, in
-order to detect this we have to consider the top-level iteration vector and visit all the statements inside the scop
-looking for assignment statements where the left side is one of the parameters of iter vec. */
+/** After the outermost for-loop has been found in a SCoP (using the bottom-up technique) we start the top-down pass to
+    detect conditions which would invalidate the SCoP. For example, an assignment to parameters of the iteration vector
+    makes a SCoP invalid. In order to detect this, we have to consider the top-level iteration vector and visit all the
+    statements inside the SCoP looking for assignment statements where the left side is one of the parameters of iteration
+    vector.
+    Is called from postProcessSCoP, as well as recursively.
+*/
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
@@ -1267,25 +1270,28 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 }
 
 /** postProcessSCoP makes sure that within a SCoP no parameter value is modified and that iterators are only modified
-within loop statements. */
+    within loop statements.
+    @param scop NodeAddress representing the SCoP that will be tested
+    @scopList vector<NodeAddress> representing the SCoPs that are valid (if everything goes well, this list has 1 elem which is the input parameter "scop")
+    TODO: scopList should be made as a return value.
+*/
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
+	// first, make sure that the node has been marked as SCoP
 	if (!scop->hasAnnotation(ScopRegion::KEY)) return;
-
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	if (!region.isValid()) { return; }
+	if (!region.isValid()) return;
 
 	const IterationVector& iterVec = region.getIterationVector();
 
 	try {
-
-		detectInvalidSCoPs(iterVec, scop);
-		scopList.push_back( scop );
-
+		detectInvalidSCoPs(iterVec, scop); // this will throw an exception if the SCoP is deemed invalid
+		// add the current SCoP (which has been confirmed valid) to the list of valid SCoPs
+		scopList.push_back(scop);          // this will execute only if the SCoP is deemed valid
 	} catch(const DiscardSCoPException& e ) {
 		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
 				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
-		// Recur on every subscop to identify minimal SCoPs
+		// recursively call ourselves: our SCoP is invalid, but perhaps one of our nested for-loop is a proper SCoP
 		std::for_each(region.getSubScops().begin(), region.getSubScops().end(), 
 				[&](const SubScop& subScop) { postProcessSCoP(subScop.first, scopList); });
 
@@ -1760,32 +1766,25 @@ std::ostream& AccessFunction::printTo(std::ostream& out) const {
 	return out << "IV: " << iterVec << ", Access: " << access;
 }
 
-/** mark is the main entry point for SCoP analysis: It finds and marks the SCoPs contained in the root subtree and
+/** mark is the main entry point for SCoP analysis: It finds and marks the SCoPs contained in the root program tree and
 returns a list of found SCoPs (an empty list in the case no SCoP was found). */
 AddressList mark(const core::NodePtr& root) {
-	AddressList ret;
-	VLOG(1) << std::setfill('=') << std::setw(80) << std::left << "# Starting SCoP analysis";
-	ScopVisitor sv(ret);
-	try {
-		sv.visit( NodeAddress(root) );
+	AddressList allscops, validscops;
+	ScopVisitor sv(allscops);
 
-		if (root->hasAnnotation(ScopRegion::KEY)) {
-			ret.push_back( NodeAddress(root) );
-		}
+	try {
+		sv.visit(NodeAddress(root));
+		if (root->hasAnnotation(ScopRegion::KEY)) allscops.push_back(NodeAddress(root));
 	} catch (const NotASCoP& e) {
 		LOG(WARNING) << e.what();
 	}
 
-	AddressList final;
-	for(const auto& scop : ret) {
-		postProcessSCoP(scop, final);
-	}
+	// remove SCoP from our list of SCoPs if the SCoP does not satisfy the needs of the polyhedral model
+	// initially, the second argument "validscops" is empty and will be filled by postProcessSCoP
+	for(const auto& scop: allscops) postProcessSCoP(scop, validscops);
 
-	LOG(DEBUG) << "%%%% mark END\n" << final << "\n//%%\n";
-	return final;
+	LOG(WARNING) << "SCoPs found: " << validscops << std::endl;
+	return validscops;
 }
 
-} } } } // end namespace insimee::analysis::polyhedral::scop
-
-
-
+} } } }
