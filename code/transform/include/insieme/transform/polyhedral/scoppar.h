@@ -39,6 +39,7 @@
 #define SCOPPAR_H
 
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_program.h"
 
 namespace insieme { namespace transform { namespace polyhedral {
 
@@ -49,6 +50,7 @@ public:
     SCoPPar(insieme::core::ProgramPtr& program);
 
     insieme::core::ProgramPtr& apply();
+    unsigned int size(insieme::core::NodePtr n);
 };
 
 }}}
