@@ -104,6 +104,10 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode,
 	});
 }
 
+
+const string DataTransformAnnotation::NAME = "DataTransformAnnotation";
+const utils::StringKey<DataTransformAnnotation> DataTransformAnnotation::KEY("Transform");
+
 } // namespace annotations
 } // namespace insieme
 
@@ -130,6 +134,13 @@ namespace std {
 		for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
 			out << "\t" << *I  << std::endl;
 		}
+
+		return out;
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& tAnnot) {
+		out << "DataTransformAnnotation:\n";
+			out << "\tfancy" << std::endl;
 
 		return out;
 	}

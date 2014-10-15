@@ -120,6 +120,12 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
             pp.getIdentifierInfo("datarange"), range_list["ranges"] >> eod, "insieme")
         );
 
+    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDataTransform>(
+            pp.getIdentifierInfo("transfrom"), string_literal >> eod, "insieme")
+        );
+
+
+
 //*************************************************************************************************
 // Insieme Pragmas for Feature estimations
 //************************************************************************************************/
@@ -262,6 +268,26 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
 
 }
 
+void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
+	   insieme::core::NodeAnnotationPtr annot;
+
+	    // check if there is a datarange annotation
+	    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+	    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+	   std::for_each(iter.first, iter.second,
+	        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+
+		   annotations::DataTransformAnnotation dataTransform;
+
+		   annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);
+	    });
+
+	    if(annot)
+	        irNode->addAnnotation(annot);
+
+
+}
 
 void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
     insieme::core::NodeAnnotationPtr annot;

@@ -90,7 +90,9 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 		if (core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()){
 			// check if there is a kernelFile annotation
 			ocl::attatchOclAnnotation(decl->getInitialization(), declStmt, convFact);
-			// handle eventual OpenMP pragmas attached to the Clang node
+			// handle eventual Data Transformation pragmas attached to the Clang node
+			attatchDataTransformAnnotation(decl, declStmt, convFact);
+
 			retList.push_back( decl );
 		}
 		else{
@@ -106,8 +108,10 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 //
 //try {
-			auto retStmt = convFact.convertVarDecl(varDecl);
-			// handle eventual OpenMP pragmas attached to the Clang node
+			auto retStmt = convFact.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
+			// handle eventual Data Transformation pragmas attached to the Clang node
+			attatchDataTransformAnnotation(retStmt, declStmt, convFact);
+
 			retList.push_back( retStmt );
 
 //		} catch ( const GlobalVariableDeclarationException& err ) {}
