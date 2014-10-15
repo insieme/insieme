@@ -102,8 +102,8 @@ TEST(region_instrumentation, simple) {
 		double elapsed = end-start;
 
 		// expect to be within 3% of the expected result
-		EXPECT_GT(reg0->aggregated_cpu_time/elapsed, 0.97);
-		EXPECT_LT(reg0->aggregated_cpu_time/elapsed, 1.03);
+		EXPECT_GT(reg0->aggregated_cpu_time/elapsed, 0.90);
+		EXPECT_LT(reg0->aggregated_cpu_time/elapsed, 1.10);
 		EXPECT_EQ(reg0->last_cpu_time, 0);
 		EXPECT_EQ(reg0->num_executions, 1);
 	});
@@ -131,10 +131,10 @@ TEST(region_instrumentation, multiple_metrics) {
 		double elapsed = end-start;
 
 
-		EXPECT_GT(reg0->aggregated_cpu_time/elapsed, 0.97);
-		EXPECT_LT(reg0->aggregated_cpu_time/elapsed, 1.03);
-		EXPECT_GT(reg0->aggregated_wall_time/elapsed, 0.97);
-		EXPECT_LT(reg0->aggregated_wall_time/elapsed, 1.03);
+		EXPECT_GT(reg0->aggregated_cpu_time/elapsed, 0.90);
+		EXPECT_LT(reg0->aggregated_cpu_time/elapsed, 1.10);
+		EXPECT_GT(reg0->aggregated_wall_time/elapsed, 0.90);
+		EXPECT_LT(reg0->aggregated_wall_time/elapsed, 1.10);
 	
 		EXPECT_EQ(reg0->last_cpu_time, 0);
 		EXPECT_EQ(reg0->last_wall_time, 0);
@@ -174,9 +174,9 @@ TEST(region_instrumentation, nested) {
 			region[i] = &(irt_context_get_current()->inst_region_data[i]);
 
 			EXPECT_GT(region[i]->aggregated_cpu_time, 8e6) << " for region id " << i;
-			EXPECT_LT(region[i]->aggregated_cpu_time/elapsed, 1.03) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_cpu_time/elapsed, 1.10) << " for region id " << i;
 			EXPECT_GT(region[i]->aggregated_wall_time, 8e6) << " for region id " << i;
-			EXPECT_LT(region[i]->aggregated_wall_time/elapsed, 1.03) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_wall_time/elapsed, 1.10) << " for region id " << i;
 			EXPECT_EQ(region[i]->last_cpu_time, 0) << " for region id " << i;
 			EXPECT_EQ(region[i]->last_wall_time, 0) << " for region id " << i;
 			EXPECT_GT(region[i]->aggregated_cpu_time/(double)region[i]->aggregated_wall_time, 0.97) << " for region id " << i;
@@ -380,9 +380,9 @@ TEST(region_instrumentation, pfor) {
 			irt_inst_region_context_data* region = &(irt_context_get_current()->inst_region_data[i]);
 
 			EXPECT_GT(region->aggregated_cpu_time, 0)  << " for region id " << i;
-			EXPECT_LT(region->aggregated_cpu_time/(elapsed*MAX_PARA), 1.03)  << " for region id " << i;
-			EXPECT_GT(region->aggregated_wall_time/elapsed, 0.97)  << " for region id " << i;
-			EXPECT_LT(region->aggregated_wall_time/elapsed, 1.03)  << " for region id " << i;
+			EXPECT_LT(region->aggregated_cpu_time/(elapsed*MAX_PARA), 1.10)  << " for region id " << i;
+			EXPECT_GT(region->aggregated_wall_time/elapsed, 0.90)  << " for region id " << i;
+			EXPECT_LT(region->aggregated_wall_time/elapsed, 1.10)  << " for region id " << i;
 			EXPECT_EQ(region->last_cpu_time, 0)  << " for region id " << i;
 			EXPECT_EQ(region->last_wall_time, 0)  << " for region id " << i;
 			EXPECT_EQ(region->num_executions, 1)  << " for region id " << i;
@@ -498,9 +498,9 @@ TEST(region_instrumentation, pfor_nested) {
 			region[i] = &(irt_context_get_current()->inst_region_data[i]);
 
 			EXPECT_GT(region[i]->aggregated_cpu_time, 0) << " for region id " << i;
-			EXPECT_LT(region[i]->aggregated_cpu_time/(elapsed*MAX_PARA), 1.03) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_cpu_time/(elapsed*MAX_PARA), 1.10) << " for region id " << i;
 			EXPECT_GT(region[i]->aggregated_wall_time, 0) << " for region id " << i;
-			EXPECT_LT(region[i]->aggregated_wall_time/(elapsed*IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE), 1.03) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_wall_time/(elapsed*IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE), 1.10) << " for region id " << i;
 			EXPECT_EQ(region[i]->last_cpu_time, 0) << " for region id " << i;
 			EXPECT_EQ(region[i]->last_wall_time, 0) << " for region id " << i;
 		}
