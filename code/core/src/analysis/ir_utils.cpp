@@ -824,6 +824,8 @@ namespace {
 	 * in a recursive context.
 	 */
 	struct ReadOnlyCheck {
+		bool VisitScopes;
+		ReadOnlyCheck(bool v =true) : VisitScopes(v){ }
 
 		/**
 		 * A map mapping recursive variables and parameter positions to a flag
@@ -858,6 +860,7 @@ namespace {
 
 
 		bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
+			if (!VisitScopes) return true;
 
 			// check the parameter
 			assert(::contains(lambda->getParameterList(), param) && "Asking for non-existing parameter.");
@@ -875,7 +878,6 @@ namespace {
 
 				// add body
 				bodyMap[cur->getVariable()] = cur->getLambda();
-
 			}
 
 			// assume parameter is save (co-induction)
@@ -921,24 +923,28 @@ namespace {
 				if (cur.getParentNode()->getNodeType() == NT_CompoundStmt) return true;
 
 				// if it is a call to a lambda, check the lambda
-				if (CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
+				if (VisitScopes){
+					if (CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
 
-					// check calls to nested functions
-					if (LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
-						if (!isReadOnly(fun, fun->getParameterList()[cur.getIndex()-2])) {		// -1 for type, -1 for function expr
-							readOnly = false;		// it is no longer read-only
-						}
-						// we can stop the decent here
-						return true;
-					}
+						// check calls to nested functions
+						if (LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
 
-					// check calls to recursive functions
-					if (VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
-						if (!isReadOnly(var, cur.getIndex()-2)) {		// -1 for type, -1 for function expr
-							readOnly = false;		// it is no longer read-only
+							if (!isReadOnly(fun, fun->getParameterList()[cur.getIndex()-2])) {		// -1 for type, -1 for function expr
+								readOnly = false;		// it is no longer read-only
+							}
+
+							// we can stop the decent here
+							return true;
 						}
-						// we can stop the decent here
-						return true;
+
+						// check calls to recursive functions
+						if (VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
+							if (!isReadOnly(var, cur.getIndex()-2)) {		// -1 for type, -1 for function expr
+								readOnly = false;		// it is no longer read-only
+							}
+							// we can stop the decent here
+							return true;
+						}
 					}
 				}
 
@@ -967,6 +973,10 @@ bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
 
 bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 	return ReadOnlyCheck().isReadOnly(stmt, var);
+}
+
+bool isReadOnlyWithinScope(const StatementPtr& stmt, const VariablePtr& var) {
+	return ReadOnlyCheck(false).isReadOnly(stmt, var);
 }
 
 bool isStaticVar (const ExpressionPtr& var){

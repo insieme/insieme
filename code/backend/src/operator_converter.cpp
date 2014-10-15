@@ -61,10 +61,20 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
 
+#include "insieme/core/ir_class_info.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
+
+namespace {
+
+	bool isPrimitiveType(const core::TypePtr& type) {
+		auto& basic = type->getNodeManager().getLangBasic();
+		return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
+	}
+} //anon
 
     namespace operators {
         
@@ -561,7 +571,6 @@ namespace backend {
 			// fix dependency
 			context.getDependencies().insert(valueTypeInfo.definition);
 
-
 			// special handling for arrays
 			if (type->getNodeType() == core::NT_ArrayType) {
 				// no out allocation required!
@@ -583,6 +592,17 @@ namespace backend {
 			if (res->getNodeType() == c_ast::NT_Initializer) {
 				return c_ast::ref(res);
 			}
+
+			// moderm C++ does not allow the usage of the syntax (int[1]{x})
+			// the value of a class instance is implicity materialized to 
+			// be used as reference paramenter in function calls,
+			// lets try just to write the expression and let the backend compiler 
+			// materialize it
+			// 	Classes && generic types (which are intercepted objects)
+			if(type.isa<core::StructTypePtr>() || (type.isa<core::GenericTypePtr>() && !isPrimitiveType(type))){
+				return c_ast::ref(res);
+			}
+
 			// creates a something of the format "(int[1]){x}"
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		});

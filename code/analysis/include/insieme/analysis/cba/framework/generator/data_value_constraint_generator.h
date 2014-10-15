@@ -222,6 +222,15 @@ namespace cba {
 			}
 			return valueMgr.compound(data);
 
+		} else if (auto tuple = type.isa<TupleTypePtr>()) {
+
+			// built up the value representing an undefined tuple type
+			std::map<ElementIndex,value_type> data;
+			for(unsigned i = 0; i<tuple.size(); ++i) {
+				data[i] = getUniformValue(valueMgr, tuple[i], value);
+			}
+			return valueMgr.compound(data);
+
 		}
 
 		// in all other cases it is just the unknown value (default)
