@@ -301,13 +301,13 @@ namespace {
 		using namespace anal::polyhedral::scop;
 
 		// find SCoPs in our current program
-		AddressList sl = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ",
+		AddressList scoplist = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ",
 			[&]() -> AddressList { return mark(program); });
 
 		size_t numStmtsInScops=0, loopNests=0, maxLoopNest=0;
 
 		// loop over all SCoP annotations we have discovered
-		std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){
+		std::for_each(scoplist.begin(), scoplist.end(),	[&](AddressList::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 
 			// only print SCoPs which contain statement, at the user's request

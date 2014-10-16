@@ -69,6 +69,7 @@ unsigned int SCoPPar::size(NodePtr n) {
 /// will transform the sequential program to an OpenCL program
 ProgramPtr& SCoPPar::apply() {
 	// filter SCoPs and save them for later processing
+	// TODO: here, program itself does not have an annotation — instead, we have to visit the nodes
 	if (program->hasAnnotation(ScopRegion::KEY)) {
 		LOG(WARNING) << "Program is already annotated, doing superfluous work.";
 	}
