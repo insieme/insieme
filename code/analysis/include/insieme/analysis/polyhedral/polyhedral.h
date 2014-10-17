@@ -130,49 +130,36 @@ public:
 typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
 typedef std::vector<AccessInfoPtr> 	AccessList;
 
-/**
- * Stmt: this class contains all necessary information which are together representing a
- * statement in the polyhedral model.
- *
- * A statement is represented by:
- * 	- an **iteration domain** (with an associated iteration vector)
- * 	- a **scheduling** (or scattering) matrix (which defines the schedule for the statement to be
- * 	  executed)
- *  - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
- */
-class Stmt : public utils::Printable {
+/** Stmt: this class contains all necessary information which are together representing a
+    statement in the polyhedral model.
 
-	size_t	 				id;
-	core::StatementAddress 	addr;		///< the root of the address is the entry point of the SCoP
-	IterationDomain 		dom;		///< according to the literature
-	AffineSystem 			schedule;	///< according to the literature
-	AccessList				access;		///< list of access functions in matrix form, additionally with
-										///< reference address, type of usage (USE/DEF/UNKNOWN) -
-										///< also cf class AccessInfo
+    A statement is represented by:
+    - an **iteration domain** (with an associated iteration vector)
+    - a **scheduling** (or scattering) matrix (which defines the schedule for the statement to be
+      executed)
+    - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
+*/
+class Stmt: public utils::Printable {
+	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
+	core::StatementAddress addr; ///< the root of the address is the entry point of the SCoP
+	IterationDomain dom;         ///< iteration domain, according to the literature
+	AffineSystem schedule;       ///< scheduling matrix, according to the literature
+	AccessList access;           ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
+								 ///< (see also class AccessInfo)
 
 	typedef AccessList::iterator AccessIterator;
 	typedef AccessList::const_iterator ConstAccessIterator;
+
 public:
+    Stmt(size_t id, const core::StatementAddress &addr, const IterationDomain &dom, const AffineSystem &schedule,
+         const AccessList &access = AccessList()): id(id), addr(addr), dom(dom), schedule(schedule), access(access) {}
 
-	Stmt(
-		  size_t 						id, 
-		  const core::StatementAddress& addr,
-		  const IterationDomain& 		dom, 
-		  const AffineSystem& 			schedule, 
-		  const AccessList& 			access = AccessList() 
-		) 
-	: id(id), addr(addr), dom(dom), schedule(schedule), access(access) { }
-
-	Stmt( const IterationVector& iterVec, size_t id, const Stmt& other ) 
-	: 	id(id), 
-		addr(other.addr), 
-		dom(iterVec, other.dom), 
-		schedule(iterVec, other.schedule) 
-	{
-		for_each(other.access, [&](const AccessInfoPtr& cur) { 
-				access.push_back( std::make_shared<AccessInfo>(iterVec, *cur) ); 
-			});
-	}
+    Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
+        id(id), addr(other.addr), dom(iterVec, other.dom), schedule(iterVec, other.schedule) {
+        for_each(other.access, [&](const AccessInfoPtr &cur) {
+            access.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
+        });
+    }
 
 	// Getter for the ID
 	inline size_t getId() const { return id; }

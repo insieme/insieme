@@ -307,6 +307,7 @@ namespace {
 		size_t numStmtsInScops=0, loopNests=0, maxLoopNest=0;
 
 		// loop over all SCoP annotations we have discovered
+		// TODO: use class SCoPMetric (not yet introduced)
 		std::for_each(scoplist.begin(), scoplist.end(),	[&](AddressList::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 

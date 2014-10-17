@@ -348,7 +348,7 @@ std::vector<core::VariablePtr> Stmt::loopNest() const {
  * @return returns the ostream out stream (same as input)
  */
 std::ostream& Stmt::printTo(std::ostream& out) const {
-
+	// TODO: introduce class SCoPMetric
 	out << "stmt S_" << id << ": " << std::endl;
 	core::annotations::LocationOpt loc=core::annotations::getLocation(addr);
 	if (loc) out << "\tlocation   \t" << *loc << std::endl;
@@ -617,7 +617,7 @@ MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
 
-	// We only deal with must dependencies for now : FIXME
+	// FIXME: We only deal with must dependencies for now
 	auto&& mustDeps = makeEmptyMap(ctx, iterVec);
 
 	if ((type & dep::RAW) == dep::RAW) {
