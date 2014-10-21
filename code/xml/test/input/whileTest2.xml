@@ -1,0 +1,42 @@
+<IWIR version="1.1" wfname="whileTask" xmlns="http://shiwa-workflow.eu/IWIR">
+  <while name="whileTask1">
+    <inputPorts>
+      <inputPort name="in1" type="integer"/>
+      <loopPorts>
+        <loopPort name="loop1" type="integer"/>
+      </loopPorts>
+    </inputPorts>
+    <condition>True</condition>
+    <body>
+      <task name="atomic1" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+	 <task name="atomic2" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+    </body>
+    <outputPorts>
+      <outputPort name="out1" type="integer"/>
+      <unionPorts>
+        <unionPort name="union1" type="collection/integer"/>
+      </unionPorts>
+    </outputPorts>
+    <links>
+      <link from="whileTask1/in1" to="atomic1/in1"/>
+      <link from="atomic1/out1" to="atomic2/in1"/>
+      <link from="atomic2/out1" to="whileTask1/loop1"/>
+      <link from="whileTask1/loop1" to="whileTask1/union1"/>
+      <link from="whileTask1/loop1" to="whileTask1/out1"/>
+    </links>
+  </while>
+</IWIR>

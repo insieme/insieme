@@ -1,0 +1,259 @@
+<IWIR version="1.1" wfname="wien2knowhile" xmlns="http://shiwa-workflow.eu/IWIR">
+  <blockScope name="WIEN2K">
+    <inputPorts>
+      <inputPort name="integerFraction" type="integer"/>
+      <inputPort name="experimentName" type="string"/>
+      <inputPort name="decimalFraction" type="integer"/>
+      <inputPort name="startInput" type="file"/>
+      <inputPort name="fIn0" type="file"/>
+      <inputPort name="fIn1" type="file"/>
+      <inputPort name="fClmsum" type="file"/>
+      <inputPort name="fStruct" type="file"/>
+      <inputPort name="fIn2" type="file"/>
+      <inputPort name="fVspdn" type="file"/>
+      <inputPort name="testvalue" type="integer"/>
+      <inputPort name="fInc" type="file"/>
+      <inputPort name="fInm" type="file"/>
+    </inputPorts>
+    <body>
+      <task name="first" tasktype="wien:first">
+        <inputPorts>
+          <inputPort name="integerFraction" type="integer"/>
+          <inputPort name="atype" type="string"/>
+          <inputPort name="decimalFraction" type="integer"/>
+          <inputPort name="startInput" type="file"/>
+          <inputPort name="fIn0" type="file"/>
+          <inputPort name="fIn1" type="file"/>
+          <inputPort name="fClmsum" type="file"/>
+          <inputPort name="fStruct" type="file"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="fVsp" type="file"/>
+          <outputPort name="fScf0" type="file"/>
+          <outputPort name="fVns" type="file"/>
+          <outputPort name="fKlist" type="file"/>
+          <outputPort name="lapw1Def" type="file"/>
+          <outputPort name="kpoints" type="integer"/>
+          <outputPort name="fKGen" type="file"/>
+          <outputPort name="newfIn1" type="file"/>
+        </outputPorts>
+      </task>
+      <parallelFor name="pforLAPW1">
+        <inputPorts>
+          <inputPort name="tmpAtype" type="string"/>
+          <inputPort name="tmpFKlist" type="file"/>
+          <inputPort name="tmpNewfIn1" type="file"/>
+          <inputPort name="tmpFStruct" type="file"/>
+          <inputPort name="tmpFVsp" type="file"/>
+          <inputPort name="tmpFVns" type="file"/>
+          <inputPort name="tmpLapw1Def" type="file"/>
+          <loopCounter name="lapw1Index" from="1" to="" step="1"/>
+        </inputPorts>
+        <body>
+          <task name="second" tasktype="wine:second">
+            <inputPorts>
+              <inputPort name="lapw1Def" type="file"/>
+              <inputPort name="lapw1Index" type="integer"/>
+              <inputPort name="atype" type="string"/>
+              <inputPort name="fKlist" type="file"/>
+              <inputPort name="newfIn1" type="file"/>
+              <inputPort name="fStruct" type="file"/>
+              <inputPort name="fVsp" type="file"/>
+              <inputPort name="fVns" type="file"/>
+            </inputPorts>
+            <outputPorts>
+              <outputPort name="fEnergy_i" type="file"/>
+              <outputPort name="fVector_i" type="file"/>
+              <outputPort name="fScf1_i" type="file"/>
+            </outputPorts>
+          </task>
+        </body>
+        <outputPorts>
+          <outputPort name="fEnergy_collection" type="collection/file"/>
+          <outputPort name="fVector_collection" type="collection/file"/>
+          <outputPort name="fScf1_collection" type="collection/file"/>
+        </outputPorts>
+        <links>
+          <link from="pforLAPW1/tmpLapw1Def" to="second/lapw1Def"/>
+          <link from="pforLAPW1/lapw1Index" to="second/lapw1Index"/>
+          <link from="pforLAPW1/tmpAtype" to="second/atype"/>
+          <link from="pforLAPW1/tmpFKlist" to="second/fKlist"/>
+          <link from="pforLAPW1/tmpNewfIn1" to="second/newfIn1"/>
+          <link from="pforLAPW1/tmpFStruct" to="second/fStruct"/>
+          <link from="pforLAPW1/tmpFVsp" to="second/fVsp"/>
+          <link from="pforLAPW1/tmpFVns" to="second/fVns"/>
+          <link from="second/fEnergy_i" to="pforLAPW1/fEnergy_collection"/>
+          <link from="second/fVector_i" to="pforLAPW1/fVector_collection"/>
+          <link from="second/fScf1_i" to="pforLAPW1/fScf1_collection"/>
+        </links>
+      </parallelFor>
+      <task name="third" tasktype="wien:third">
+        <inputPorts>
+          <inputPort name="kpoints" type="integer"/>
+          <inputPort name="atype" type="string"/>
+          <inputPort name="fIn2" type="file"/>
+          <inputPort name="fStruct" type="file"/>
+          <inputPort name="fVsp" type="file"/>
+          <inputPort name="fKGen" type="file"/>
+          <inputPort name="fEnergy_collection" type="collection/file"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="fScf2" type="file"/>
+          <outputPort name="fRecprlist" type="file"/>
+          <outputPort name="lapw2Def" type="file"/>
+          <outputPort name="fWeight_collection" type="collection/file"/>
+        </outputPorts>
+      </task>
+      <parallelFor name="pforLAPW2">
+        <inputPorts>
+          <inputPort name="tmpLapw2Def" type="file"/>
+          <inputPort name="tmpAtype" type="string"/>
+          <inputPort name="tmpFIn2" type="file"/>
+          <inputPort name="tmpFStruct" type="file"/>
+          <inputPort name="tmpFVsp" type="file"/>
+          <inputPort name="tmpFKGen" type="file"/>
+          <inputPort name="tmpFEnergy_i" type="collection/file"/>
+          <inputPort name="tmpFVector_i" type="collection/file"/>
+          <inputPort name="tmpFWeight_i" type="collection/file"/>
+          <inputPort name="tmpFRecplist" type="file"/>
+          <inputPort name="tmpFVspdn" type="file"/>
+          <loopCounter name="lapw2TOTIndex" from="1" to="" step="1"/>
+        </inputPorts>
+        <body>
+          <task name="fourth" tasktype="wine:fourth">
+            <inputPorts>
+              <inputPort name="lapw2Def" type="file"/>
+              <inputPort name="lapw2TOTIndex" type="integer"/>
+              <inputPort name="atype" type="string"/>
+              <inputPort name="fIn2" type="file"/>
+              <inputPort name="fStruct" type="file"/>
+              <inputPort name="fVsp" type="file"/>
+              <inputPort name="fKGen" type="file"/>
+              <inputPort name="fEnergy_i" type="collection/file"/>
+              <inputPort name="fVector_i" type="collection/file"/>
+              <inputPort name="fWeight_i" type="collection/file"/>
+              <inputPort name="fRecplist" type="file"/>
+              <inputPort name="fVspdn" type="file"/>
+            </inputPorts>
+            <outputPorts>
+              <outputPort name="fClmval_i" type="file"/>
+              <outputPort name="fScf2_i" type="file"/>
+            </outputPorts>
+          </task>
+        </body>
+        <outputPorts>
+          <outputPort name="fClmval_collection" type="collection/file"/>
+          <outputPort name="fScf2_collection" type="collection/file"/>
+        </outputPorts>
+        <links>
+          <link from="pforLAPW2/lapw2TOTIndex" to="fourth/lapw2TOTIndex"/>
+          <link from="pforLAPW2/tmpLapw2Def" to="fourth/lapw2Def"/>
+          <link from="pforLAPW2/tmpAtype" to="fourth/atype"/>
+          <link from="pforLAPW2/tmpFIn2" to="fourth/fIn2"/>
+          <link from="pforLAPW2/tmpFStruct" to="fourth/fStruct"/>
+          <link from="pforLAPW2/tmpFVsp" to="fourth/fVsp"/>
+          <link from="pforLAPW2/tmpFKGen" to="fourth/fKGen"/>
+          <link from="pforLAPW2/tmpFEnergy_i" to="fourth/fEnergy_i"/>
+          <link from="pforLAPW2/tmpFVector_i" to="fourth/fVector_i"/>
+          <link from="pforLAPW2/tmpFWeight_i" to="fourth/fWeight_i"/>
+          <link from="pforLAPW2/tmpFRecplist" to="fourth/fRecplist"/>
+          <link from="pforLAPW2/tmpFVspdn" to="fourth/fVspdn"/>
+          <link from="fourth/fClmval_i" to="pforLAPW2/fClmval_collection"/>
+          <link from="fourth/fScf2_i" to="pforLAPW2/fScf2_collection"/>
+        </links>
+      </parallelFor>
+      <task name="last" tasktype="wien:last">
+        <inputPorts>
+          <inputPort name="kpoints" type="integer"/>
+          <inputPort name="atype" type="string"/>
+          <inputPort name="testvalue" type="integer"/>
+          <inputPort name="fStruct" type="file"/>
+          <inputPort name="fScf2_collection" type="collection/file"/>
+          <inputPort name="fClmval_collection" type="collection/file"/>
+          <inputPort name="fInc" type="file"/>
+          <inputPort name="fScf2" type="file"/>
+          <inputPort name="fVsp" type="file"/>
+          <inputPort name="fVns" type="file"/>
+          <inputPort name="fScf0" type="file"/>
+          <inputPort name="fScf1_collection" type="collection/file"/>
+          <inputPort name="fInm" type="file"/>
+          <inputPort name="fClmsum" type="file"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="fScf" type="file"/>
+          <outputPort name="fBroyd1" type="file"/>
+          <outputPort name="fBroyd2" type="file"/>
+          <outputPort name="fClmsum2" type="file"/>
+          <outputPort name="fClmsum_old" type="file"/>
+          <outputPort name="overflag" type="boolean"/>
+        </outputPorts>
+      </task>
+    </body>
+    <outputPorts>
+      <outputPort name="fScf" type="file"/>
+      <outputPort name="fBroyd1" type="file"/>
+      <outputPort name="fBroyd2" type="file"/>
+      <outputPort name="fClmsum2" type="file"/>
+      <outputPort name="fClmsum_old" type="file"/>
+      <outputPort name="overflag" type="boolean"/>
+    </outputPorts>
+    <links>
+      <link from="WIEN2K/integerFraction" to="first/integerFraction"/>
+      <link from="WIEN2K/experimentName" to="first/atype"/>
+      <link from="WIEN2K/decimalFraction" to="first/decimalFraction"/>
+      <link from="WIEN2K/startInput" to="first/startInput"/>
+      <link from="WIEN2K/fIn0" to="first/fIn0"/>
+      <link from="WIEN2K/fIn1" to="first/fIn1"/>
+      <link from="WIEN2K/fClmsum" to="first/fClmsum"/>
+      <link from="WIEN2K/fStruct" to="first/fStruct"/>
+      <link from="first/kpoints" to="pforLAPW1/lapw1Index/to"/>
+      <link from="first/lapw1Def" to="pforLAPW1/tmpLapw1Def"/>
+      <link from="first/fKlist" to="pforLAPW1/tmpFKlist"/>
+      <link from="first/newfIn1" to="pforLAPW1/tmpNewfIn1"/>
+      <link from="WIEN2K/experimentName" to="pforLAPW1/tmpAtype"/>
+      <link from="WIEN2K/fStruct" to="pforLAPW1/tmpFStruct"/>
+      <link from="first/fVsp" to="pforLAPW1/tmpFVsp"/>
+      <link from="first/fVns" to="pforLAPW1/tmpFVns"/>
+      <link from="first/kpoints" to="third/kpoints"/>
+      <link from="WIEN2K/experimentName" to="third/atype"/>
+      <link from="WIEN2K/fIn2" to="third/fIn2"/>
+      <link from="WIEN2K/fStruct" to="third/fStruct"/>
+      <link from="first/fVsp" to="third/fVsp"/>
+      <link from="first/fKGen" to="third/fKGen"/>
+      <link from="pforLAPW1/fEnergy_collection" to="third/fEnergy_collection"/>
+      <link from="first/kpoints" to="pforLAPW2/lapw2TOTIndex/to"/>
+      <link from="third/lapw2Def" to="pforLAPW2/tmpLapw2Def"/>
+      <link from="WIEN2K/experimentName" to="pforLAPW2/tmpAtype"/>
+      <link from="WIEN2K/fIn2" to="pforLAPW2/tmpFIn2"/>
+      <link from="WIEN2K/fStruct" to="pforLAPW2/tmpFStruct"/>
+      <link from="first/fVsp" to="pforLAPW2/tmpFVsp"/>
+      <link from="first/fKGen" to="pforLAPW2/tmpFKGen"/>
+      <link from="pforLAPW1/fEnergy_collection" to="pforLAPW2/tmpFEnergy_i"/>
+      <link from="pforLAPW1/fVector_collection" to="pforLAPW2/tmpFVector_i"/>
+      <link from="third/fWeight_collection" to="pforLAPW2/tmpFWeight_i"/>
+      <link from="third/fRecprlist" to="pforLAPW2/tmpFRecplist"/>
+      <link from="WIEN2K/fVspdn" to="pforLAPW2/tmpFVspdn"/>
+      <link from="first/kpoints" to="last/kpoints"/>
+      <link from="WIEN2K/experimentName" to="last/atype"/>
+      <link from="WIEN2K/testvalue" to="last/testvalue"/>
+      <link from="WIEN2K/fStruct" to="last/fStruct"/>
+      <link from="pforLAPW2/fScf2_collection" to="last/fScf2_collection"/>
+      <link from="pforLAPW2/fClmval_collection" to="last/fClmval_collection"/>
+      <link from="third/fScf2" to="last/fScf2"/>
+      <link from="WIEN2K/fInc" to="last/fInc"/>
+      <link from="first/fVsp" to="last/fVsp"/>
+      <link from="first/fVns" to="last/fVns"/>
+      <link from="first/fScf0" to="last/fScf0"/>
+      <link from="pforLAPW1/fScf1_collection" to="last/fScf1_collection"/>
+      <link from="WIEN2K/fInm" to="last/fInm"/>
+      <link from="WIEN2K/fClmsum" to="last/fClmsum"/>
+      <link from="last/fScf" to="WIEN2K/fScf"/>
+      <link from="last/fBroyd1" to="WIEN2K/fBroyd1"/>
+      <link from="last/fBroyd2" to="WIEN2K/fBroyd2"/>
+      <link from="last/fClmsum2" to="WIEN2K/fClmsum2"/>
+      <link from="last/fClmsum_old" to="WIEN2K/fClmsum_old"/>
+      <link from="last/overflag" to="WIEN2K/overflag"/>
+    </links>
+  </blockScope>
+</IWIR>
+
