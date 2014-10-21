@@ -40,7 +40,7 @@
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/normalize.h"

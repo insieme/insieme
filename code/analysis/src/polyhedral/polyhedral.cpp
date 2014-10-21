@@ -44,7 +44,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/analysis/polyhedral/backend.h"

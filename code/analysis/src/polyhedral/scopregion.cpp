@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/func_sema.h"
 

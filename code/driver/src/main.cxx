@@ -86,7 +86,7 @@
 
 #include "insieme/analysis/cfg.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/func_sema.h"
 
 using namespace std;

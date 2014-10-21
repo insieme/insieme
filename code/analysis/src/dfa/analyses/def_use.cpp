@@ -41,7 +41,7 @@
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/solver.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 using namespace insieme::analysis::access;
 

@@ -46,7 +46,7 @@
 #include "insieme/transform/filter/standard_filter.h"
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/unused.h"

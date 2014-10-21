@@ -39,7 +39,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/analysis/features/code_feature_catalog.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 namespace insieme {
 namespace analysis {

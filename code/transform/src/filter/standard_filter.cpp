@@ -36,7 +36,7 @@
 
 #include "insieme/transform/filter/standard_filter.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 

@@ -55,7 +55,7 @@
 
 #include "insieme/analysis/features/code_features.h"
 #include "insieme/analysis/features/code_feature_catalog.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/omp/omp_utils.h"
 

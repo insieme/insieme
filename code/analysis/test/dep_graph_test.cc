@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/dep_graph.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/core/ir_builder.h"
 

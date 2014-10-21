@@ -51,7 +51,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/features/type_features.h"
 

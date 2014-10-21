@@ -45,7 +45,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 

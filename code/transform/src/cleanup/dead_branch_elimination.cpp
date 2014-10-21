@@ -41,7 +41,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/iter_dom.h"
 #include "insieme/analysis/polyhedral/iter_vec.h"
 

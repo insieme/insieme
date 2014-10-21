@@ -39,7 +39,7 @@
 #include <memory>
 #include <vector>
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
