@@ -38,6 +38,9 @@
 #ifndef __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H
 #define __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H
 
+#ifndef _GEM_SIM
+    #include "platforms/odroid/rapmi.h"
+#endif
 
 /*
  * These functions provide an interface to get and set CPU frequency settings.
