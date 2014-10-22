@@ -41,7 +41,7 @@
 #include "insieme/core/ir_node.h"
 
 #include "insieme/core/ir_address.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/analysis/defuse_collect.h"
 

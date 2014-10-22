@@ -39,7 +39,7 @@
 #include "insieme/core/forward_decls.h"
 
 #include "insieme/utils/matrix.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 namespace insieme { namespace transform { namespace polyhedral {
 

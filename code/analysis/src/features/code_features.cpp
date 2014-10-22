@@ -52,7 +52,7 @@
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/features/type_features.h"
 
 #include "insieme/annotations/loop_annotations.h"
