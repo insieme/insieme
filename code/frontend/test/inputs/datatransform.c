@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,25 +34,22 @@
  * regarding third party software licenses.
  */
 
+#include <stdlib.h>
 
-#ifndef SCOPPAR_H
-#define SCOPPAR_H
-
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_program.h"
-
-namespace insieme { namespace transform { namespace polyhedral {
-
-class SCoPPar {
-    insieme::core::ProgramPtr& program;
-
-public:
-    SCoPPar(insieme::core::ProgramPtr& program);
-
-    insieme::core::ProgramPtr& apply();
-    unsigned int size(insieme::core::NodePtr n);
+struct Aos {
+	int a;
+	float b;
+	double c;
 };
 
-}}}
+int main() {
+#pragma insieme transfrom "transform_that_thing"
+	struct Aos* aos = (struct Aos*)malloc(sizeof(struct Aos) * 100);
 
-#endif // SCOPPAR_H
+	for(int i = 0; i < 100; ++i) {
+		int a1 = aos[i].a;
+		double c1 = aos[i].c;
+	}
+
+	free(aos);
+}

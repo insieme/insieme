@@ -49,7 +49,7 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/transform/connectors.h"
 

@@ -42,7 +42,7 @@
 
 #include "insieme/core/transform/simplify.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 namespace insieme {
 namespace transform {

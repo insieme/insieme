@@ -141,10 +141,22 @@ private:
 	pragma::MatchMap mmap;
 };
 
-void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::Converter& convFact);
+struct InsiemeDataTransform: public InsiemePragma {
+	InsiemeDataTransform(const clang::SourceLocation& 	startLoc,
+			  const clang::SourceLocation& 	endLoc,
+			  const std::string& 			type,
+			  const pragma::MatchMap& 		mmap)
+: InsiemePragma(startLoc, endLoc, type, mmap), mmap(mmap) { }
 
+    const pragma::MatchMap& getMatchMap() const { return mmap; }
 
+private:
+	pragma::MatchMap mmap;
+};
+
+void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact);
+
+void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact);
 
 struct InsiemeLoop: public InsiemePragma {
 
