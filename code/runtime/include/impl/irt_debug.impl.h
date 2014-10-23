@@ -55,8 +55,8 @@ void irt_dbg_print_context(irt_context* c) {
 		printf("  WI %3u -- #variants: %3u\n", i, impl->num_variants);
 		for(uint32 j = 0; j<impl->num_variants; ++j) {
 			irt_wi_implementation_variant *v = &impl->variants[j];
-			printf("    Variant %2u -- requirements (DIs/channels): %3u/%3u, meta info index: %3d\n",
-				   j, v->num_required_data_items, v->num_required_channels, v->meta_info ? v->meta_info - c->info_table : 0);
+			printf("    Variant %2u -- requirements (DIs/channels): %3u/%3u, meta info index: %3ld\n",
+				   j, v->num_required_data_items, v->num_required_channels, v->meta_info ? (long signed)(v->meta_info - c->info_table) : 0l);
 		}
 	}
 	printf("----\nMeta Info table (%u entries):\n", c->info_table_size);
