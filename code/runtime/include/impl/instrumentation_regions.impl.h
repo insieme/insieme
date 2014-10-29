@@ -144,7 +144,9 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 			case IRT_METRIC_AGGREGATOR_AVG: \
 				current_region->aggregated_##_name__ = (current_region->aggregated_##_name__ * current_region->num_executions + rg->aggregated_##_name__) / (current_region->num_executions + 1); \
 				break; \
-			case IRT_METRIC_AGGREGATOR_NONE: /* none doesn't make sense here, because we always need to update the global region structure with the measurements of the work group -> same action as SUM case */\
+			case IRT_METRIC_AGGREGATOR_NONE: \
+				current_region->aggregated_##_name__ = rg->aggregated_##_name__; \
+                break; \
 			case IRT_METRIC_AGGREGATOR_SUM: \
 			default: \
 				current_region->aggregated_##_name__ += rg->aggregated_##_name__; \
