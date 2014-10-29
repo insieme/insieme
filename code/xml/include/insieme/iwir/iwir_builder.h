@@ -755,9 +755,9 @@ class IWIRBuilder {
 
 		Port* counterPort = nullptr;
 		Type* type = mgr->create<Type>("integer");
-		counterPort = mgr->create<Port>(nameStr, type, ctx.getParentTask());
+		counterPort = mgr->create<Port>(nameStr, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 		portCache.insert({ { counterPort->parentTask->name, counterPort->name}, counterPort} );
-		counter = mgr->create<LoopCounter>(counterPort);
+		counter = mgr->create<LoopCounter>(ctx.getParentTask(), counterPort);
 
 		//emptyString --> needs a port
 		auto fromStr = e.getAttr("from");
@@ -766,14 +766,14 @@ class IWIRBuilder {
 			//fromPort = = namestr+from:integer;
 			string name = nameStr + "_from";
 			Type* type = mgr->create<Type>("integer");
-			fromPort = mgr->create<Port>(name, type, ctx.getParentTask());
+			fromPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 			portCache.insert({ { fromPort->parentTask->name, fromPort->name}, fromPort} );
 
-			from = mgr->create<LoopCounter>(fromPort);
+			from = mgr->create<LoopCounter>(ctx.getParentTask(), fromPort);
 		} else {
 			int fromVal = std::stoi(fromStr,nullptr); //fromStr.toInteger
 			VLOG(2) << "fromvalue: " <<  fromVal;
-			from = mgr->create<LoopCounter>(fromVal);
+			from = mgr->create<LoopCounter>(ctx.getParentTask(), fromVal);
 		}
 
 		//emptyString --> needs a port
@@ -783,13 +783,13 @@ class IWIRBuilder {
 			//toPort = = namestr+to:integer;
 			string name = nameStr + "_to";
 			Type* type = mgr->create<Type>("integer");
-			toPort = mgr->create<Port>(name, type, ctx.getParentTask());
+			toPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 			portCache.insert({ { toPort->parentTask->name, toPort->name}, toPort} );
-			to = mgr->create<LoopCounter>(toPort);
+			to = mgr->create<LoopCounter>(ctx.getParentTask(), toPort);
 		} else {
 			int toVal = std::stoi(toStr,nullptr); //toStr.toInteger
 			VLOG(2) << "tovalue: " << toVal;
-			to = mgr->create<LoopCounter>(toVal);
+			to = mgr->create<LoopCounter>(ctx.getParentTask(), toVal);
 		}	
 
 		//step is optional --> no stepAttr -> step==1
@@ -801,7 +801,7 @@ class IWIRBuilder {
 			stepVal = std::stoi(stepStr,nullptr); //stepStr.toInteger;
 		}
 		VLOG(2) << "stepvalue: " << stepVal;
-		step = mgr->create<LoopCounter>(stepVal);
+		step = mgr->create<LoopCounter>(ctx.getParentTask(), stepVal);
 
 assert(counter);
 assert(from);

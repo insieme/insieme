@@ -148,7 +148,7 @@ struct Condition : public Node {
 		Node(NT_Condition), condition(condition), parentTask(parentTask) {}
 };
 
-enum PortKind {PK_Basic=0, PK_LoopPort, PK_LoopElement, PK_UnionPort};
+enum PortKind {PK_Basic=0, PK_LoopPort, PK_LoopElement, PK_UnionPort, PK_LoopCounter};
 
 struct Port : public Node {
 	string name;
@@ -239,15 +239,16 @@ struct IfTask : public Task {
 };
 
 struct LoopCounter : public Node {
+	Task* parentTask;
 	Port* port;
 	int value;
 	bool hasValue;
 
-	LoopCounter(Port* port) : 
-		Node(NT_LoopCounter), port(port), value(0), hasValue(false) {}
+	LoopCounter(Task* parentTask, Port* port) : 
+		Node(NT_LoopCounter), parentTask(parentTask), port(port), value(0), hasValue(false) {}
 
-	LoopCounter(int value) : 
-		Node(NT_LoopCounter), port(nullptr), value(value), hasValue(true) {}
+	LoopCounter(Task* parentTask, int value) : 
+		Node(NT_LoopCounter), parentTask(parentTask), port(nullptr), value(value), hasValue(true) {}
 
 };
 
