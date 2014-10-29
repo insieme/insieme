@@ -36,12 +36,16 @@
 
 #pragma once
 #include "insieme/utils/logging.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/iwir/iwir_ast.h"
 #include "insieme/iwir/iwir_builder.h"
 
 #include "insieme/utils/graph_utils.h"
+//Semantic checks
+#include "insieme/core/checks/full_check.h"
+
 //#include "boost/config.hpp"
 //#include <boost/utility.hpp>
 //#include <boost/graph/adjacency_list.hpp>
@@ -63,10 +67,12 @@
 namespace iwir {
 
 using namespace iwir::ast;
+using namespace insieme;
 using namespace std;
 
 class IWIRConverter {
-	insieme::core::NodeManager& irMgr;
+	core::NodeManager& irMgr;
+	const core::IRBuilder irBuilder;
 
 	//per task with links
 	struct ConversionContext : public boost::noncopyable , insieme::utils::Printable {
@@ -79,7 +85,7 @@ class IWIRConverter {
 		//TODO Task var map				-- ((Task*, Port*) : IR_Variable)
 		//typedef map<pair<Task*, Port*>, IR_VariableType> TaskVarMap;
 		//map of used variable per task/port
-		typedef map<pair<Task*, Port*>, string> TaskVarMap;
+		typedef map<pair<Task*, Port*>, core::VariablePtr> TaskVarMap;
 		TaskVarMap taskVarMap;
 		
 		//TODO Decl var map				-- ( (Parent)Task* : IR_DeclStmt)
@@ -88,12 +94,12 @@ class IWIRConverter {
 		//typedef map<Task*, list<pair<Task*, Port*>>> DeclVarMap;
 		
 		//map of declared variable per task
-		//TODO string should be IRVariable
-		typedef map<Task*, list<string>> DeclVarMap;
+		typedef map<Task*, list<core::StatementPtr>> DeclVarMap;
 		DeclVarMap declMap;
 
 		//TODO map of links and the linking ir stmt
-		map<Link*, string> linkStmtMap;
+		map<Link*, core::StatementPtr> linkStmtMap;
+
 
 		std::ostream& printTo(std::ostream& out) const { 
 			out << "ConversionContext( \n";
@@ -105,15 +111,20 @@ class IWIRConverter {
 		}
 	};
 
-	typedef map<pair<Task*, Port*>, string> VarMap;
+	typedef map<pair<Task*, Port*>, core::VariablePtr> VarMap;
 	VarMap varMap;
+
+	//mapping ir-expr to task
+	typedef map<Task*, core::ExpressionPtr> TaskCache;
+	TaskCache taskCache;
+
 
 	//Graph 
 	//	-- Vertex { Task* , Enum { begin, end, atomic} }
 	//	-- Edge { Task*, Task*, Property <Port* from, Port* to> }
 
 public:
-	IWIRConverter(insieme::core::NodeManager& irMgr) : irMgr(irMgr) {}
+	IWIRConverter(insieme::core::NodeManager& irMgr) : irMgr(irMgr), irBuilder(irMgr) {}
 
 	void buildTaskGraphInsieme(const IWIRBuilder& ib) {
 		auto tasks =  ib.getTaskCache();
@@ -433,8 +444,28 @@ public:
 		VLOG(2) << "ports: " << ports;
 	
 		ConversionContext context;
-		convert(ib.getTopLevel(), context);
+		Task* topLevel = ib.getTopLevel();
+		convert(topLevel, context);
+
+		//decls
+		//task()
+
+		core::StatementList decls;
+		auto declMap = context.declMap[topLevel];
+		VLOG(2) << declMap;
+		decls.insert(decls.begin(), declMap.begin(), declMap.end());
+		
+		core::ExpressionPtr topLevelTask = taskCache[topLevel];
+		assert(topLevelTask);
+		decls.push_back(topLevelTask);
+
+		core::ExpressionPtr topLevelTaskExpr = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(decls), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
 		VLOG(2) << context;
+
+		dumpPretty(topLevelTaskExpr);
+
+		auto semantic = core::checks::check(topLevelTaskExpr);
+		VLOG(2) << semantic;
 
 		buildTaskGraph(ib);
 		return insieme::core::NodePtr();
@@ -490,16 +521,10 @@ private:
 		}
 		
 		vector<Task*> getTaskOrder() {
-			if(taskOrder.empty()) {
-				topoSort(); 
-			} 
 			return taskOrder; 
 		} 
 
 		map<Task*, vector<Link*>> getTaskLinkMap() {
-			if(taskLinkMap.empty()) {
-				topoSort(); 
-			}
 			return taskLinkMap; 
 		} 
 
@@ -580,6 +605,11 @@ private:
 
 		VertexID addVertex(Task* cur, Graph& g) {
 			//check if task already inserted
+			auto fit = insertedTasks.find(cur);
+			if(fit != insertedTasks.end()) {
+				return fit->second;
+			}
+			
 			auto res = insertedTasks.insert( { cur, VertexID() } ) ;
 			if(!res.second) {
 				return res.first->second;
@@ -604,8 +634,17 @@ private:
 		}
 
 		void fillGraph() {
-			for(auto l : linksInBody) {
-				addEdge(l, graph);
+
+			if(linksInBody.empty()) {
+				//we only have one task in body -> just add one vertex
+				//in and out links do the rest
+				//all links to body should have same target task
+				//all links from body should have same origin task
+				for(auto l : linksToBody) { addVertex(l->toTask, graph); }
+				for(auto l : linksFromBody) { addVertex(l->fromTask, graph); }
+			}
+			else {
+				for(auto l : linksInBody) { addEdge(l, graph); }
 			}
 		}
 
@@ -674,6 +713,12 @@ private:
 	//
 	#define CONVERT(name) void convert ## name( name* node)
 	#define CONVERTER(name) void convert ## name( name* node, ConversionContext& context)
+	
+	#define LOOPCOUNTER_CONVERTER(name) core::ExpressionPtr convert ## name( name* node, ConversionContext& context)
+	#define CONVERT_LOOPCOUNTER(loopcounter, context) convertLoopCounter(loopcounter, context);
+
+	#define TYPE_CONVERTER(name) core::TypePtr convert ## name( name* node, ConversionContext& context)
+	#define CONVERT_TYPE(type, context) convertType(type, context);
 
 	CONVERTER(Links) {
 		VLOG(2) << "links ";
@@ -684,23 +729,44 @@ private:
 	
 	CONVERTER(Link) { 
 		VLOG(2) << "link";
-		//TODO lookup port-variable
-		auto vFrom = varMap.find( {node->fromTask, node->from} );
-		auto vTo = varMap.find( {node->toTask, node->to} );
-
 		VLOG(2) << node->fromTask->name << " " << node->from->name;
 		VLOG(2) << node->toTask->name << " " << node->to->name;
-		
+				
+		//lookup port-variable
+		auto vFrom = varMap.find( {node->fromTask, node->from} );
+		auto vTo = varMap.find( {node->toTask, node->to} );
 		assert(vFrom != varMap.end());
 		assert(vTo != varMap.end());
 
 		convert(node->from, context);
 		convert(node->to, context);
 
+		bool isUnion = (node->to->kind == PK_UnionPort);
+
 		//TODO generate linking statment in IR
-		string link = "link " + vFrom->second + " to " + vTo->second;
-		VLOG(2) << link;
-		context.linkStmtMap[node] = link;
+
+		auto var1 = vFrom->second;
+		auto var2 = vTo->second;
+
+		//link(var1,var2) link(from:var1, to:var2);
+		core::StatementPtr linkStmt;
+		map<string, core::NodePtr> symbols;
+		symbols["var1"] = var1;
+		symbols["var2"] = var2;
+		if(isUnion) {
+			symbols["link"] = irBuilder.parse("lit(\"linkUnion\":('a,'b) -> unit)");
+		} else {
+			symbols["link"] = irBuilder.parse("lit(\"link\":('a,'b) -> unit)");
+			//auto linkStmt1 = irBuilder.parseStmt("var2 = var1;", symbols);
+			//VLOG(2) << linkStmt1;
+		}
+		VLOG(2) << symbols;
+
+		linkStmt = irBuilder.parseStmt("link(var1,var2);", symbols);
+		VLOG(2) << linkStmt;
+		
+		assert(linkStmt);
+		context.linkStmtMap[node] = linkStmt;
 	}
 
 	CONVERTER(Ports) {
@@ -736,8 +802,8 @@ private:
 
 	CONVERTER(Port) {
 		VLOG(2) << "port: " << node->parentTask->name << "\\" << node->name;
-		convert(node->type, context);
 
+		bool isUnion = false;
 		switch(node->kind) {
 			case PK_Basic:
 				VLOG(2) << "basic";
@@ -750,6 +816,10 @@ private:
 				break;
 			case PK_UnionPort:
 				VLOG(2) << "unionPort";
+				isUnion = true;
+				break;
+			case PK_LoopCounter:
+				VLOG(2) << "loopCounter";
 				break;
 			default: 
 				assert(false && "Wrong PortKind");
@@ -760,14 +830,21 @@ private:
 		if(varMap.find({node->parentTask, node}) == varMap.end()) {
 			pair<Task*,Port*> key = { node->parentTask, node };
 			string value = "port_" + node->parentTask->name + "\\" + node->name;
+
+			core::TypePtr varType = CONVERT_TYPE(node->type, context);
+			assert(varType);
+
+			core::VariablePtr var = irBuilder.variable(irBuilder.refType(varType));
 			
-			context.taskVarMap.insert( {key, value});
+			context.taskVarMap.insert( {key, var});
 			
 			//IRVariable for Task/Port
-			varMap.insert( {key, value} ) ;
+			varMap.insert( {key, var} ) ;
 
+			core::DeclarationStmtPtr decl = irBuilder.declarationStmt(var, irBuilder.getZero(var->getType()));
+			VLOG(2) << decl;
 			//DeclStmt for IRVariable per Port
-			context.declMap[node->parentTask].push_back(value);
+			context.declMap[node->parentTask].push_back(decl);
 		}
 	}
 
@@ -801,6 +878,10 @@ private:
 		// task(taskType, taskLiteral, ip..., op...);
 		//}
 		//links-out
+		//symbols["link"] = irBuilder.parse("lit(\"link\":('a,'b) -> unit)");
+		core::ExpressionPtr taskExpr = irBuilder.parseExpr("lit(\""+node->name+"\":() -> unit)");
+		dumpPretty(taskExpr);
+		taskCache[node] = taskExpr;
 	}
 
 	CONVERTER(BlockScope) { 
@@ -840,6 +921,15 @@ private:
 		//	readChannels
 		//}
 		//links-out
+
+		VLOG(2) << "Declarations:";
+		for_each(node->body->begin(),node->body->end(), 
+			[&](Task* task){
+				for(auto d : innerContext.declMap[task]) {
+					VLOG(2) << "\t" << d;
+				}
+			}
+		);
 	
 		LinkCollector linkCollector(node->body,node->links); 
 
@@ -867,6 +957,11 @@ private:
 		}
 
 		linkCollector.printToDotFile(node->name+".dot");
+
+		//TODO FILL WITH CORRECT STMTS
+		core::ExpressionPtr bs = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(bs);
+		taskCache[node] = bs;
 	}
 
 	CONVERTER(IfTask) { 
@@ -916,12 +1011,14 @@ private:
 		//
 
 		//DECLS
+		core::StatementList decls;
 		VLOG(2) << "Declarations:"; 
 		if(node->hasElse) {
 			for_each(node->thenBody->begin(),node->thenBody->end(), 
 				[&](Task* task){
 					for(auto d : thenContext.declMap[task]) {
 						VLOG(2) << "\t" << d;
+						decls.push_back(d);
 					}
 				}
 			);
@@ -930,6 +1027,7 @@ private:
 				[&](Task* task){
 					for(auto d : elseContext.declMap[task]) {
 						VLOG(2) << "\t" << d;
+						decls.push_back(d);
 					}
 				}
 			);
@@ -938,118 +1036,166 @@ private:
 				[&](Task* task){
 					for(auto d : thenContext.declMap[task]) {
 						VLOG(2) << "\t" << d;
+						decls.push_back(d);
 					}
 				}
 			);		
 		}
 
 		//LINKS
+		core::StatementList thenStmts;
+		core::StatementList elseStmts;
+
 		if(node->hasElse) {
 			//Then Body
 			{
 				LinkCollector linkCollector(node->thenBody,node->links); 
 
-				VLOG(2) << "To thenBody";
+				VLOG(2) << "Links to thenBody:";
 				for(auto l : linkCollector.getLinksToBody()) { 
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
 					VLOG(2) << "\t" << *l; 
-					VLOG(2) << "\t" << context.linkStmtMap[l];
+					VLOG(2) << "\t" << linkStmt; 
+					thenStmts.push_back(linkStmt);
 				}
 
-				VLOG(2) << "From thenBody";
+				VLOG(2) << "Body (Links and Tasks):";
+				auto taskLinkMap = linkCollector.getTaskLinkMap();
+				for(auto t : linkCollector.getTaskOrder()) { 
+					VLOG(2) << "\t" << *t << "(" << t << ")";
+
+					//TODO get call to task
+					auto taskStmt = taskCache[t];
+					VLOG(2) << "\t" << taskStmt;
+					thenStmts.push_back(taskStmt);
+				
+					//Links between tasks (if only one task in body -> empty taskLinkMap)
+					for(auto link : taskLinkMap[t]) {
+						VLOG(2) << "\t " << *link;
+						auto linkStmt = context.linkStmtMap[link];
+						thenStmts.push_back(linkStmt);
+					}
+				}
+				
+				VLOG(2) << "Links from thenBody:";
 				for(auto l : linkCollector.getLinksFromBody()) {
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
 					VLOG(2) << "\t" << *l; 
-					VLOG(2) << "\t" << context.linkStmtMap[l];
+					VLOG(2) << "\t" << linkStmt;
+					thenStmts.push_back(linkStmt);
 				}
 
-				VLOG(2) << "In thenBody";
-				for(auto l : linkCollector.getLinksInBody()) {
-					VLOG(2) << "\t" << *l; 
-					VLOG(2) << "\t" << context.linkStmtMap[l];
-				}
-
-				VLOG(2) << "Outside thenBody";
+				VLOG(2) << "Links outside thenBody:";
 				for(auto l : linkCollector.getLinksOutsideBody()) {
 					VLOG(2) << "\t" << *l; 
 					VLOG(2) << "\t" << context.linkStmtMap[l];
 				}
 
-				VLOG(2) << "TaskOrder";
-				for(auto t : linkCollector.getTaskOrder()) { 
-					VLOG(2) << "\t" << *t;
-				}
-				
-				VLOG(2) << "TaskLinkMap";
-				for(auto tl : linkCollector.getTaskLinkMap()) { 
-					VLOG(2) << "\tTask: " << *(tl.first);
-					for(auto l : (tl.second)) {
-						VLOG(2) << "\t " << *l;
-					}
-				}
-
 				linkCollector.printToDotFile(node->name+"_then.dot");
-
 			}
 			//Else Body
 			{
 				LinkCollector linkCollector(node->elseBody,node->links); 
 
-				VLOG(2) << "To elseBody";
-				for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-				VLOG(2) << "From elseBody";
-				for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-				VLOG(2) << "In elseBody";
-				for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
+				VLOG(2) << "Links to elseBody:";
+				for(auto l : linkCollector.getLinksToBody()) { 
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << linkStmt; 
+					elseStmts.push_back(linkStmt);
+				}
 
-				VLOG(2) << "Outside elseBody";
-				for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
+				VLOG(2) << "Links in elseBody:";
+				for(auto l : linkCollector.getLinksInBody()) {
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << context.linkStmtMap[l];
+				}
 
-				VLOG(2) << "TaskOrder";
+				VLOG(2) << "Body (Links and Tasks):";
+				auto taskLinkMap = linkCollector.getTaskLinkMap();
 				for(auto t : linkCollector.getTaskOrder()) { 
-					VLOG(2) << "\t" << *t;
+					VLOG(2) << "\t" << *t << "(" << t << ")";
+
+					//TODO get call to task
+					auto taskStmt = taskCache[t];
+					VLOG(2) << "\t" << taskStmt;
+					elseStmts.push_back(taskStmt);
+				
+					//Links between tasks (if only one task in body -> empty taskLinkMap)
+					for(auto link : taskLinkMap[t]) {
+						VLOG(2) << "\t " << *link;
+						auto linkStmt = context.linkStmtMap[link];
+						elseStmts.push_back(linkStmt);
+					}
 				}
 				
-				VLOG(2) << "TaskLinkMap";
-				for(auto tl : linkCollector.getTaskLinkMap()) { 
-					VLOG(2) << "\tTask: " << *(tl.first);
-					for(auto l : (tl.second)) {
-						VLOG(2) << "\t " << *l;
-					}
+				VLOG(2) << "Links from elseBody:";
+				for(auto l : linkCollector.getLinksFromBody()) {
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << linkStmt;
+					elseStmts.push_back(linkStmt);
+				}
+
+				VLOG(2) << "Links outside elseBody:";
+				for(auto l : linkCollector.getLinksOutsideBody()) {
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << context.linkStmtMap[l];
 				}
 
 				linkCollector.printToDotFile(node->name+"_else.dot");
 			}
-		} else {
+		}
+		else 
+		{
 			//then body
 			{
 				LinkCollector linkCollector(node->thenBody,node->links); 
 
-				VLOG(2) << "To thenBody";
-				for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-				VLOG(2) << "From thenBody";
-				for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-				VLOG(2) << "In thenBody";
-				for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
+				VLOG(2) << "Links to thenBody:";
+				for(auto l : linkCollector.getLinksToBody()) { 
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << linkStmt; 
+					thenStmts.push_back(linkStmt);
+				}
 
-				VLOG(2) << "Outside thenBody";
-				for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
-
-				VLOG(2) << "TaskOrder";
+				VLOG(2) << "Body (Links and Tasks):";
+				auto taskLinkMap = linkCollector.getTaskLinkMap();
 				for(auto t : linkCollector.getTaskOrder()) { 
-					VLOG(2) << "\t" << *t;
+					VLOG(2) << "\t" << *t << "(" << t << ")";
+
+					//TODO get call to task
+					auto taskStmt = taskCache[t];
+					VLOG(2) << "\t" << taskStmt;
+					thenStmts.push_back(taskStmt);
+				
+					//Links between tasks (if only one task in body -> empty taskLinkMap)
+					for(auto link : taskLinkMap[t]) {
+						auto linkStmt = context.linkStmtMap[link];
+						VLOG(2) << "\t" << *link; 
+						thenStmts.push_back(linkStmt);
+					}
 				}
 				
-				VLOG(2) << "TaskLinkMap";
-				for(auto tl : linkCollector.getTaskLinkMap()) { 
-					VLOG(2) << "\tTask: " << *(tl.first);
-					for(auto l : (tl.second)) {
-						VLOG(2) << "\t " << *l;
-					}
+				VLOG(2) << "Links from thenBody:";
+				for(auto l : linkCollector.getLinksFromBody()) {
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << linkStmt;
+					thenStmts.push_back(linkStmt);
+				}
+
+				VLOG(2) << "Links outside thenBody:";
+				for(auto l : linkCollector.getLinksOutsideBody()) {
+					VLOG(2) << "\t" << *l; 
+					VLOG(2) << "\t" << context.linkStmtMap[l];
 				}
 
 				linkCollector.printToDotFile(node->name+"_then.dot");
 			}
 			{
-				//some links need because of no-else-body
+				//some links are outside of thenBody, are needed because there is no elseBody
 				// no else body -> link[ifTask/in->ifTask/out] 
 				//				-> link.fromTask==parentTask &&link.toTask==parentTask
 				vector<Link*> noElseLinks;
@@ -1065,10 +1211,30 @@ private:
 
 				VLOG(2) << "noElseLinks:";
 				for(auto l : noElseLinks) {
+					core::StatementPtr linkStmt = context.linkStmtMap[l];
 					VLOG(2) << "\t" << *l;
+					VLOG(2) << "\t" << linkStmt;
+					elseStmts.push_back(linkStmt);
 				}
 			}
 		}
+		
+		//TODO condition expression
+		core::ExpressionPtr condition;
+		condition = irBuilder.boolLit(true);
+
+		core::CompoundStmtPtr thenBody = irBuilder.compoundStmt(thenStmts);
+		core::CompoundStmtPtr elseBody = irBuilder.compoundStmt(elseStmts);
+		VLOG(2) << thenBody;
+		VLOG(2) << elseBody;
+		VLOG(2) << condition;
+
+		core::IfStmtPtr ifStmt = irBuilder.ifStmt(condition, thenBody, elseBody );
+		VLOG(2) << ifStmt;
+
+		core::ExpressionPtr ifTaskExpr =  irBuilder.createCallExprFromBody(ifStmt, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(ifTaskExpr);
+		taskCache[node] = ifTaskExpr;
 	}
 
 	CONVERTER(WhileTask) {
@@ -1106,36 +1272,102 @@ private:
 		//	}
 		//}
 
-		LinkCollector linkCollector(node->body,node->links); 
-
-		VLOG(2) << "To body";
-		for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "From body";
-		for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "In body";
-		for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "Outside body";
-		for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "TaskOrder";
-		for(auto t : linkCollector.getTaskOrder()) { 
-			VLOG(2) << "\t" << *t;
-		}
-		
-		VLOG(2) << "TaskLinkMap";
-		for(auto tl : linkCollector.getTaskLinkMap()) { 
-			VLOG(2) << "\tTask: " << *(tl.first);
-			for(auto l : (tl.second)) {
-				VLOG(2) << "\t " << *l;
+		VLOG(2) << "Declarations:";
+		core::StatementList decls;
+		for_each(node->body->begin(),node->body->end(), 
+			[&](Task* task){
+				for(auto d : innerContext.declMap[task]) {
+					VLOG(2) << "\t" << d;
+					decls.push_back(d);
+				}
 			}
+		);
+
+		core::StatementList whileBody;
+		core::StatementList unionLinks;
+		core::StatementList loopLinks;
+		{
+			LinkCollector linkCollector(node->body,node->links); 
+
+			VLOG(2) << "Links to body:";
+			for(auto l : linkCollector.getLinksToBody()) { 
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt; 
+				whileBody.push_back(linkStmt);
+			}
+			
+			VLOG(2) << "Body (Links and Tasks):";
+			auto taskLinkMap = linkCollector.getTaskLinkMap();
+			for(auto t : linkCollector.getTaskOrder()) { 
+				VLOG(2) << "\t" << *t;
+
+				//TODO get call to task
+				auto taskStmt = taskCache[t];
+				VLOG(2) << "\t" << taskStmt;
+				whileBody.push_back(taskStmt);
+			
+				//Links between tasks (if body contains only one task -> empty taskLinkMap)
+				for(auto link : taskLinkMap[t]) {
+					auto linkStmt = context.linkStmtMap[link];
+					VLOG(2) << "\t " << *link;
+					whileBody.push_back(linkStmt);
+				}
+			}
+		
+			VLOG(2) << "Links from body:";
+			for(auto l : linkCollector.getLinksFromBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt;
+				whileBody.push_back(linkStmt);
+			}
+
+			VLOG(2) << "Links outside body:";
+			for(auto l : linkCollector.getLinksOutsideBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt;
+				if(l->to->kind == PK_UnionPort) {
+					//from == * && to == union
+					unionLinks.push_back(linkStmt);
+				} else if(l->from->kind == PK_LoopPort) { 
+					//from == loop && to == * 
+					loopLinks.push_back(linkStmt);
+				} else {
+					assert(false);
+				}
+			}
+
+			//append union and loop links to whilebody
+			VLOG(2) << "Links to UnionPorts:";
+			for(auto l : unionLinks) { VLOG(2) << "\t" << *l;}
+			VLOG(2) << "Links from LoopPorts:";
+			for(auto l : loopLinks) { VLOG(2) << "\t" << *l;}
+
+			whileBody.insert(whileBody.end(), unionLinks.begin(), unionLinks.end());
+			whileBody.insert(whileBody.end(), loopLinks.begin(), loopLinks.end());
+
+			linkCollector.printToDotFile(node->name+".dot");
 		}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		//TODO convert condition Expression
+		core::ExpressionPtr condition = irBuilder.boolLit("true");
 
+		core::WhileStmtPtr whileStmt = irBuilder.whileStmt( condition, irBuilder.compoundStmt(whileBody));
+
+		core::StatementList bodyStmts;
+		bodyStmts.insert(bodyStmts.end(), decls.begin(), decls.end()); 
+		bodyStmts.push_back(whileStmt);
+		core::StatementPtr body = irBuilder.compoundStmt(bodyStmts);
+		VLOG(2) << body;
+
+		core::ExpressionPtr bind = irBuilder.createCallExprFromBody( body, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(bind);
+		taskCache[node] = bind;
 	}
 
-	CONVERTER(ForTask) { 
+	CONVERTER(ForTask) {
 		VLOG(2) << "ForTask " << node->name;
 
 		ConversionContext innerContext;
@@ -1148,18 +1380,19 @@ private:
 		convert(node->loopPorts, context);	
 		convert(node->unionPorts, context);	
 		
+		//LoopCounter declarations are only needed locally
 		VLOG(2) << "Counter";
-		convert(node->counter, context);	
+		CONVERT_LOOPCOUNTER(node->counter, context);	
 
-		VLOG(2) << "FromCounter";
-		convert(node->fromCounter, context);	
+		auto fromCounter = CONVERT_LOOPCOUNTER(node->fromCounter, context);	
+		VLOG(2) << "FromCounter " << fromCounter;
 
-		VLOG(2) << "ToCounter";
 		assert(node->toCounter);	
-		convert(node->toCounter, context);	
+		auto toCounter = CONVERT_LOOPCOUNTER(node->toCounter, context);
+		VLOG(2) << "ToCounter " << toCounter;
 
-		VLOG(2) << "StepCounter";
-		convert(node->stepCounter, context);	
+		auto stepCounter = CONVERT_LOOPCOUNTER(node->stepCounter, context);	
+		VLOG(2) << "StepCounter " << stepCounter;
 		
 		convert(node->links, context);
 
@@ -1168,11 +1401,102 @@ private:
 		//TODO turn into annotations
 		convert(node->constraints, context);
 
+		core::StatementList decls;
+		VLOG(2) << "Declarations:";
+		for_each(node->body->begin(),node->body->end(), 
+			[&](Task* task){
+				for(auto d : innerContext.declMap[task]) {
+					VLOG(2) << "\t" << d;
+					decls.push_back(d);
+				}
+			}
+		);
+
+		core::StatementList forBody;
+		core::StatementList unionLinks;
+		core::StatementList loopLinks;
+		core::StatementList loopCounterLinks;
+		{
+			LinkCollector linkCollector(node->body,node->links); 
+
+			VLOG(2) << "Links to body:";
+			for(auto l : linkCollector.getLinksToBody()) { 
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt; 
+				forBody.push_back(linkStmt);
+			}
+			
+			VLOG(2) << "Body (Links and Tasks):";
+			auto taskLinkMap = linkCollector.getTaskLinkMap();
+			for(auto t : linkCollector.getTaskOrder()) { 
+				VLOG(2) << "\t" << *t;
+
+				//TODO get call to task
+				auto taskStmt = taskCache[t];
+				VLOG(2) << "\t" << taskStmt;
+				forBody.push_back(taskStmt);
+			
+				//Links between tasks (if body contains only one task -> empty taskLinkMap)
+				for(auto link : taskLinkMap[t]) {
+					auto linkStmt = context.linkStmtMap[link];
+					VLOG(2) << "\t " << *link;
+					forBody.push_back(linkStmt);
+				}
+			}
 		
+			VLOG(2) << "Links from body:";
+			for(auto l : linkCollector.getLinksFromBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt;
+				forBody.push_back(linkStmt);
+			}
+
+			VLOG(2) << "Links outside body:";
+			for(auto l : linkCollector.getLinksOutsideBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt;
+				if(l->to->kind == PK_UnionPort) {
+					//from == * && to == union
+					unionLinks.push_back(linkStmt);
+				} else if(l->from->kind == PK_LoopPort) { 
+					//from == loop && to == * 
+					loopLinks.push_back(linkStmt);
+				} else if(l->to->kind == PK_LoopCounter) { 
+					loopCounterLinks.push_back(linkStmt);
+				} else {
+					assert(false);
+				}
+			}
+
+			//append union and loop links to forbody
+			VLOG(2) << "Links to UnionPorts:";
+			for(auto l : unionLinks) { VLOG(2) << "\t" << *l;}
+			VLOG(2) << "Links from LoopPorts:";
+			for(auto l : loopLinks) { VLOG(2) << "\t" << *l;}
+
+			forBody.insert(forBody.end(), unionLinks.begin(), unionLinks.end());
+			forBody.insert(forBody.end(), loopLinks.begin(), loopLinks.end());
+
+			linkCollector.printToDotFile(node->name+".dot");
+		}
+
+		core::ExpressionPtr startVal = fromCounter;
+		core::ExpressionPtr endVal = toCounter; 
+		core::ExpressionPtr step = stepCounter;
+		core::VariablePtr iterVar = irBuilder.variable(irBuilder.getLangBasic().getInt4());
+		VLOG(2) << iterVar << " " << startVal << " " << endVal << " " << step;
+
+		core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, irBuilder.compoundStmt(forBody));
+		VLOG(2) << forStmt;
+	
 		//decls
 		//
 		//() => {
 		//	decls-body -- decls in innerContext
+		//	loop-links[loopCounters]
 		//	for(var it = from ... to : step) {
 		//		links-to-body
 		//		body
@@ -1182,35 +1506,20 @@ private:
 		//	}
 		//}
 
-		LinkCollector linkCollector(node->body,node->links); 
+		core::StatementList forTaskStmts;
+		forTaskStmts.insert(forTaskStmts.end(), decls.begin(), decls.end());
+		forTaskStmts.insert(forTaskStmts.end(), loopCounterLinks.begin(), loopCounterLinks.end());
+		forTaskStmts.push_back(forStmt);
 
-		VLOG(2) << "To body";
-		for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "From body";
-		for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "In body";
-		for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
+		core::CompoundStmtPtr forTaskBody = irBuilder.compoundStmt(forTaskStmts);
+		VLOG(2) << forTaskBody;
 
-		VLOG(2) << "Outside body";
-		for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "TaskOrder";
-		for(auto t : linkCollector.getTaskOrder()) { 
-			VLOG(2) << "\t" << *t;
-		}
-		
-		VLOG(2) << "TaskLinkMap";
-		for(auto tl : linkCollector.getTaskLinkMap()) { 
-			VLOG(2) << "\tTask: " << *(tl.first);
-			for(auto l : (tl.second)) {
-				VLOG(2) << "\t " << *l;
-			}
-		}
-
-		linkCollector.printToDotFile(node->name+".dot");
+		core::ExpressionPtr bind = irBuilder.createCallExprFromBody(forTaskBody,irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(bind);
+		taskCache[node] = bind;
 	}
 
-	CONVERTER(ParallelForTask) { 
+	CONVERTER(ParallelForTask) {
 		VLOG(2) << "ParallelForTask " << node->name;
 
 		ConversionContext innerContext;
@@ -1255,35 +1564,105 @@ private:
 		//		}
 		//	}
 
-		LinkCollector linkCollector(node->body,node->links); 
-
-		VLOG(2) << "To body";
-		for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "From body";
-		for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "In body";
-		for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "Outside body";
-		for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "TaskOrder";
-		for(auto t : linkCollector.getTaskOrder()) { 
-			VLOG(2) << "\t" << *t;
-		}
-		
-		VLOG(2) << "TaskLinkMap";
-		for(auto tl : linkCollector.getTaskLinkMap()) { 
-			VLOG(2) << "\tTask: " << *(tl.first);
-			for(auto l : (tl.second)) {
-				VLOG(2) << "\t " << *l;
+		core::StatementList decls;
+		VLOG(2) << "Declarations:";
+		for_each(node->body->begin(),node->body->end(), 
+			[&](Task* task){
+				for(auto d : innerContext.declMap[task]) {
+					VLOG(2) << "\t" << d;
+					decls.push_back(d);
+				}
 			}
+		);	
+
+		core::StatementList stmts;
+		{
+			LinkCollector linkCollector(node->body,node->links); 
+
+			VLOG(2) << "To body";
+			for(auto l : linkCollector.getLinksToBody()) { 
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt; 
+				stmts.push_back(linkStmt);
+			}
+			
+			VLOG(2) << "In body";
+			for(auto l : linkCollector.getLinksInBody()) {
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << context.linkStmtMap[l];
+			}
+
+			VLOG(2) << "TaskOrder";
+			auto taskLinkMap = linkCollector.getTaskLinkMap();
+			for(auto t : linkCollector.getTaskOrder()) { 
+				VLOG(2) << "\t" << *t << "(" << t << ")";
+
+				//TODO get call to task
+				auto taskStmt = taskCache[t];
+				VLOG(2) << taskStmt;
+				stmts.push_back(taskStmt);
+			
+				//Links between tasks (if only one task in body -> empty taskLinkMap)
+				for(auto link : taskLinkMap[t]) {
+					auto linkStmt = context.linkStmtMap[link];
+					stmts.push_back(linkStmt);
+				}
+			}
+			
+			VLOG(2) << "TaskLinkMap";
+			for(auto tl : linkCollector.getTaskLinkMap()) { 
+				VLOG(2) << "\tTask: " << *(tl.first);
+				for(auto l : (tl.second)) {
+					VLOG(2) << "\t " << *l;
+				}
+			}
+
+			VLOG(2) << "From body";
+			for(auto l : linkCollector.getLinksFromBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt;
+				stmts.push_back(linkStmt);
+			}
+
+			VLOG(2) << "Outside body";
+			for(auto l : linkCollector.getLinksOutsideBody()) {
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << context.linkStmtMap[l];
+			}
+
+			linkCollector.printToDotFile(node->name+".dot");
 		}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		core::ExpressionPtr startVal = irBuilder.intLit(0);
+		core::ExpressionPtr endVal = irBuilder.intLit(1);
+		core::ExpressionPtr step = irBuilder.intLit(1); 
+		core::VariablePtr iterVar = irBuilder.variable(irBuilder.getLangBasic().getInt4());
+		VLOG(2) << iterVar << " " << startVal << " " << endVal << " " << step;
+
+		core::CompoundStmtPtr forBody = irBuilder.compoundStmt(stmts);
+		assert(forBody);
+
+		core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, irBuilder.compoundStmt(forBody));
+		VLOG(2) << forStmt;
+		
+		core::ExpressionPtr pFor = irBuilder.pfor(forStmt);	
+	
+		core::StatementList forTaskStmts;
+		forTaskStmts.insert(forTaskStmts.end(), decls.begin(), decls.end());
+		forTaskStmts.push_back(pFor);
+
+		core::CompoundStmtPtr forTaskBody = irBuilder.compoundStmt(forTaskStmts);
+		VLOG(2) << forTaskBody;
+
+		//TODO FILL WITH CORRECT STMTS
+		core::ExpressionPtr parallelForTask = irBuilder.createCallExprFromBody(forTaskBody, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(parallelForTask);
+		taskCache[node] = parallelForTask;
 	}
 
-	CONVERTER(ForEachTask) { 
+	CONVERTER(ForEachTask) {
 		VLOG(2) << "ForEachTask" << node->name;
 		
 		ConversionContext innerContext;
@@ -1321,6 +1700,15 @@ private:
 		//	}
 		//}
 
+		VLOG(2) << "Declarations:";
+		for_each(node->body->begin(),node->body->end(), 
+			[&](Task* task){
+				for(auto d : innerContext.declMap[task]) {
+					VLOG(2) << "\t" << d;
+				}
+			}
+		);
+
 		LinkCollector linkCollector(node->body,node->links); 
 
 		VLOG(2) << "To body";
@@ -1347,9 +1735,14 @@ private:
 		}
 
 		linkCollector.printToDotFile(node->name+".dot");
+
+		//TODO FILL WITH CORRECT STMTS
+		core::ExpressionPtr forEachTask = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(forEachTask);
+		taskCache[node] = forEachTask;
 	}
 
-	CONVERTER(ParallelForEachTask) { 
+	CONVERTER(ParallelForEachTask) {
 		VLOG(2) << "ParallelForEachTask" << node->name;
 		
 		ConversionContext innerContext;
@@ -1387,6 +1780,15 @@ private:
 		//	}
 		//}
 
+		VLOG(2) << "Declarations:";
+		for_each(node->body->begin(),node->body->end(), 
+			[&](Task* task){
+				for(auto d : innerContext.declMap[task]) {
+					VLOG(2) << "\t" << d;
+				}
+			}
+		);
+
 		LinkCollector linkCollector(node->body,node->links); 
 
 		VLOG(2) << "To body";
@@ -1414,26 +1816,103 @@ private:
 
 		linkCollector.printToDotFile(node->name+".dot");
 
+		//TODO FILL WITH CORRECT STMTS
+		core::ExpressionPtr parallelForEachTask = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		dumpPretty(parallelForEachTask);
+		taskCache[node] = parallelForEachTask;
 	}
 
-	CONVERTER(LoopCounter) { 
+	LOOPCOUNTER_CONVERTER(LoopCounter) { 
+		core::ExpressionPtr ret;
 		VLOG(2) << "loopCounter " ;
 		VLOG(2) << "hasvalue: " << node->hasValue;
 		if(node->hasValue) {
 			VLOG(2) << "value: " << node->value;
+			ret = irBuilder.intLit(node->value); 
 		} else {
 			VLOG(2) << "port";
 			convert(node->port, context);
+
+			auto c = varMap.find( {node->parentTask, node->port} );
+			assert(c != varMap.end());
+			if(c != varMap.end()) {
+				ret = c->second;
+			}
 		}
+		return ret;
 	}
 
 	CONVERTER(TaskType) { 
 		VLOG(2) << "TaskType : " << node->type;
 	}
 
-	CONVERTER(Type) { 
+	TYPE_CONVERTER(Type) { 
 		VLOG(2) << "type";
 		VLOG(2) << node->type;
+		core::TypePtr retType;
+	
+		//TODO move to iwirBuilder?
+		enum IWIRType { Integer, String, File, Bool };
+		static map<string, IWIRType> typeMap = { {"integer", Integer}, {"string", String}, {"file", File}, {"boolean", Bool} };
+
+		auto convertToIRType = [&](string type) {
+			core::TypePtr ret;
+			auto fit = typeMap.find(type);
+			assert(fit != typeMap.end());
+
+			switch(fit->second) {
+				case IWIRType::Integer: 
+					ret = irBuilder.getLangBasic().getInt4();
+					break;
+				case IWIRType::String:
+					//TODO proper implementation
+					ret = irBuilder.genericType("stringDummy");
+					break;
+				case IWIRType::File:
+					//TODO proper implementation
+					ret = irBuilder.genericType("fileDummy");
+					break;
+				case IWIRType::Bool:
+					ret = irBuilder.getLangBasic().getBool();
+					break;
+				default:
+					assert(false && "how did you get here?");
+					ret = core::TypePtr();
+			}
+			return ret;
+		};
+
+		vector<string> typeSubs;
+		boost::split(typeSubs, node->type, boost::is_any_of("/"));
+
+		if(typeSubs.size() == 1) {
+			//no collection
+			retType = convertToIRType(typeSubs[0]);
+		} else {
+			//collection
+			core::TypePtr elemTy;
+			//iterate reverse
+			auto it = typeSubs.rbegin();
+			//last element in vector is the elementType
+			string elemTypeString = *(it++);
+			elemTy = convertToIRType(elemTypeString);
+			assert(elemTy);
+
+			//rest of vector have to be of collection type
+			core::TypePtr arrayTy;
+			for(auto end = typeSubs.rend(); it!=end;it++) {
+				//TODO proper implementation
+				//TODO use array or list?
+				arrayTy = irBuilder.arrayType( elemTy );
+				elemTy = arrayTy;
+			}
+
+			retType = arrayTy;
+		}
+
+		assert(retType);
+		VLOG(2) << retType;
+		return retType;
 	}
 
 	CONVERTER(Condition) {
