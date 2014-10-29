@@ -226,6 +226,17 @@ TEST(XmlTest, ReadIWIR_For2) {
 	std::cout << "---" << std::endl;
 }
 
+TEST(XmlTest, ReadIWIR_For3) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/forTest3.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
 TEST(XmlTest, ReadIWIR_ForEach1) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
