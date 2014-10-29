@@ -140,7 +140,16 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	/* only propagate metrics that were touched by late exit measurements (i.e. only EE/LE metrics) */ \
 	if(rg->aggregated_##_name__ != old_aggregated_##_name__) {	\
-		current_region->aggregated_##_name__ += rg->aggregated_##_name__; /* current_region->aggregated_##_name__ += rg->aggregated_##_name__ - old_aggregated_##_name__;*/ \
+		switch(_aggregation__) { \
+			case IRT_METRIC_AGGREGATOR_AVG: \
+				current_region->aggregated_##_name__ = (current_region->aggregated_##_name__ * current_region->num_executions + rg->aggregated_##_name__) / (current_region->num_executions + 1); \
+				break; \
+			case IRT_METRIC_AGGREGATOR_NONE: /* none doesn't make sense here, because we always need to update the global region structure with the measurements of the work group -> same action as SUM case */\
+			case IRT_METRIC_AGGREGATOR_SUM: \
+			default: \
+				current_region->aggregated_##_name__ += rg->aggregated_##_name__; \
+		} \
+		/*current_region->aggregated_##_name__ += rg->aggregated_##_name__;*/ /* current_region->aggregated_##_name__ += rg->aggregated_##_name__ - old_aggregated_##_name__;*/ \
 		rg->aggregated_##_name__ = 0; \
 	}
 #include "irt_metrics.def"
