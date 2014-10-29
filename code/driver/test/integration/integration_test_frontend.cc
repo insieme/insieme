@@ -44,6 +44,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
@@ -105,6 +106,27 @@ namespace insieme {
 	}
 
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+	//INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+	TEST(FrontendIntegrationTest, CountStructArrays) {
+
+		for(auto curCase : getAllCases()) {
+			core::NodeManager manager;
+			core::ProgramPtr code = curCase.load(manager);
+			unsigned count = 0;
+			core::visitDepthFirstOnce(code, [&](const core::ExpressionPtr& exp) {
+				if(auto atp = exp->getType().isa<core::ArrayTypePtr>()) {
+					if(atp->getElementType().isa<core::StructTypePtr>()) {
+						if(exp.isa<core::LiteralPtr>() || core::analysis::isCallOf(exp, manager.getLangBasic().getArrayCreate1D())) count++;
+					}
+				}
+			} );
+
+			std::cerr << curCase.getName() << " : " << count << std::endl;
+		}
+
+
+
+	}
 
 }

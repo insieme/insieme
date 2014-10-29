@@ -165,7 +165,7 @@ void set_map_flooding(map_t _map, cell_t _point, float  _water_quantity)
 		4
 	*/
 
-	#pragma omp atomic	
+	#pragma omp critical	
 	_map.flooding_map[_point.x + _point.y * _map.size] += _water_quantity;
 
 	return;

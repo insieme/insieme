@@ -73,10 +73,7 @@ void irt_thread_cancel(irt_thread *t){
 }
 
 int irt_thread_join(irt_thread *t){
-	int32 return_val;
-	int32 *p_ret_val = &return_val;
-	pthread_join(*t, (void**)&p_ret_val);
-	return return_val;
+	return pthread_join(*t, NULL);
 }
 
 void irt_thread_exit(int exit_code){

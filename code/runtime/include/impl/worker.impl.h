@@ -142,6 +142,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wake_signal = true;
 #endif
 	irt_cond_var_init(&self->dop_wait_cond);
+	irt_spin_init(&self->shutdown_lock);
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
@@ -327,23 +328,27 @@ void _irt_worker_end_all() {
 	irt_thread calling_thread;
 	irt_thread_get_current(&calling_thread);
 
+	irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
-		if(cur->state != IRT_WORKER_STATE_STOP) {
-            irt_worker_state old_state = cur->state; 
+		irt_spin_lock(&cur->shutdown_lock);
+		if(cur->state == IRT_WORKER_STATE_JOINED) continue;
+		do {
 			cur->state = IRT_WORKER_STATE_STOP;
-			// workers stopped by dop setting should be waked up
-			if(old_state == IRT_WORKER_STATE_DISABLED)
-				irt_cond_wake_one(&cur->dop_wait_cond);
-			else
-				irt_signal_worker(cur);
-
-			// avoid calling thread awaiting its own termination
-			if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
-				irt_thread_join(&(cur->thread));
-			}
+			irt_signal_worker(cur);
+			// workers stopped by dop setting should be woken up
+			irt_cond_wake_one(&cur->dop_wait_cond);
+		} while(cur->state != IRT_WORKER_STATE_STOP);
+		// don't join calling thread
+		if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
+			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
+			if(cur->state != IRT_WORKER_STATE_JOINED) irt_thread_join(&(cur->thread));
+			irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
+			cur->state = IRT_WORKER_STATE_JOINED;
 		}
+		irt_spin_unlock(&cur->shutdown_lock);
 	}
+	irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 
 	// clean up after all workers have finished running
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -353,6 +358,7 @@ void _irt_worker_end_all() {
 
 
 void irt_worker_cleanup(irt_worker* self) {
+	irt_spin_destroy(&self->shutdown_lock);
 	// clean up event register reuse stacks
 	{ // wi registers
 		irt_wi_event_register *cur, *next;
