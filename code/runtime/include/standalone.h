@@ -422,13 +422,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	irt_runtime_run_wi(impl, startup_params);
 
-	_irt_worker_end_all();
-
-	// shut-down context
-	irt_context_destroy(context);
-
-	IRT_DEBUG("Exiting ...\n");
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 
