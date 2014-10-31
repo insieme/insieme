@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,30 +55,24 @@ static inline irt_context* irt_context_get_current() {
 	return irt_context_table_lookup(irt_worker_get_current()->cur_context);
 }
 
-irt_context* irt_context_create_standalone(cleanup_context_fun* cleanup_fun) {
+irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
+	return irt_context_create(NULL, init_fun, cleanup_fun);
+}
+
+irt_context* irt_context_create(irt_client_app* app, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->id.cached = context;
-	context->client_app = NULL;
-	irt_context_table_insert(context);
-	return context;
-}
-
-void irt_context_initialize(irt_context* context, init_context_fun* init_fun) {
-	init_fun(context);
-	irt_optimizer_context_startup(context);
-	irt_inst_region_init(context);
-}
-
-irt_context* irt_context_create(irt_client_app* app) {
-	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
-	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->client_app = app;
-	context->client_app->init_context(context);
+	context->init_fun = init_fun;
+	context->cleanup_fun = cleanup_fun;
+	irt_context_table_insert(context);
+	if (init_fun) {
+		init_fun(context);
+	}
 	irt_log_comment("starting new context");
 	irt_optimizer_context_startup(context);
 	irt_inst_region_init(context);
-	irt_context_table_insert(context);
 	return context;
 }
 
@@ -93,8 +87,8 @@ void irt_context_destroy(irt_context* context) {
 
 	irt_optimizer_context_destroy(context);
 
-	if (context->client_app && context->client_app->cleanup_context) {
-		context->client_app->cleanup_context(context);
+	if (context->cleanup_fun) {
+		context->cleanup_fun(context);
 	}
 	irt_context_table_remove(context->id);
 	free(context);
