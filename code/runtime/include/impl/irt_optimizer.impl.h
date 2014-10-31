@@ -113,7 +113,7 @@ uint32 irt_g_available_freqs[128];
 uint32 irt_g_available_freq_count = UINT_MAX;
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
 float irt_g_dvfs_eval_energy[128];
-float irt_g_dvfs_eval_time[128];
+uint64 irt_g_dvfs_eval_time[128];
 int irt_g_dvfs_eval_count[128];
 #endif
 
@@ -157,6 +157,9 @@ void irt_optimizer_objective_init(irt_context *context) {
 }
 
 void irt_optimizer_objective_destroy(irt_context *context) {
+    // restore highest frequency
+    irt_cpu_freq_set_frequency_worker(NULL, irt_g_available_freqs[IRT_OPTIMIZER_RT_FREQ]);
+
     for(int i=0; i<context->impl_table_size; i++) { 
         for(int j=0; j<context->impl_table[i].num_variants; j++) { 
             irt_spin_destroy(&context->impl_table[i].variants[j].rt_data.optimizer_rt_data.spinlock);
@@ -200,7 +203,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             variant->rt_data.completed_wi_count = 0;
 
             // collecting data                          
-                                                        
+
             irt_optimizer_resources cur_resources;
  
             #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
@@ -222,12 +225,12 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             //#include "irt_metrics.def"
 
 
-            //#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-	        //if(irt_g_inst_region_metric_measure_wall_time) { \
-            //    cur_resources.wall_time = (_data_type__)((double)regions[variant->meta_info->ompp_objective.region_id].aggregated_wall_time * _output_conversion_code__); \
-	        //}
-            //#define ISOLATE_METRIC
-            //#define ISOLATE_WALL_TIME
+            #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+	        if(irt_g_inst_region_metric_measure_wall_time) { \
+                cur_resources.wall_time = (_data_type__)((double)regions[variant->meta_info->ompp_objective.region_id].aggregated_wall_time * _output_conversion_code__); \
+	        }
+            #define ISOLATE_METRIC
+            #define ISOLATE_WALL_TIME
             #include "irt_metrics.def"
 
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
@@ -235,9 +238,10 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                 irt_g_dvfs_eval_energy[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
                 irt_g_dvfs_eval_time[variant->rt_data.optimizer_rt_data.cur.frequency] += cur_resources.wall_time - variant->rt_data.optimizer_rt_data.cur_resources.wall_time;
                 if(irt_g_dvfs_eval_count[irt_g_available_freq_count -1] == IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS) {
-                    printf("frequency: energy - time - power (num of executions)\n");
-                    for(int k=0; k<irt_g_available_freq_count; k++)
-                        printf("%d: %f - %f - %f (%d) ", k, irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k] / irt_g_dvfs_eval_count[k], (irt_g_dvfs_eval_energy[k] ) / (irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);
+                    printf("%10s %10s %10s %20s %10s %s\n", "frequency", "energytot", "energy", "time", "power", "(num of executions)");
+                    for(int k=0; k<irt_g_available_freq_count; k++) {
+                        printf("%10d %10f %10f %20" PRIu64 " %10f (%d)\n", irt_g_available_freqs[k], irt_g_dvfs_eval_energy[k], irt_g_dvfs_eval_energy[k] / irt_g_dvfs_eval_count[k], irt_g_dvfs_eval_time[k] / irt_g_dvfs_eval_count[k], (irt_g_dvfs_eval_energy[k] ) / ((float)irt_g_dvfs_eval_time[k] / 1000000000), irt_g_dvfs_eval_count[k]);
+                    }
                     printf("\n");
                 }
             }
@@ -327,6 +331,9 @@ void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant) {
 }
 
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant) {
+#if defined(_GEMS_ODROID)
+    // Resetting the frequency takes too long
+#else
     if(variant->meta_info->ompp_objective.region_id == UINT_MAX && !variant->rt_data.wrapping_optimizer_rt_data)
         return;
     
@@ -334,6 +341,7 @@ void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant) {
     irt_cpu_freq_set_frequency_worker(self, irt_g_available_freqs[IRT_OPTIMIZER_RT_FREQ]);
 
     //printf("%s: %d\n", __func__, irt_g_available_freqs[IRT_OPTIMIZER_RT_FREQ]);
+#endif
 
     return;
 }
