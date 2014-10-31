@@ -56,23 +56,29 @@ static inline irt_context* irt_context_get_current() {
 }
 
 irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
-	return irt_context_create(NULL, init_fun, cleanup_fun);
-}
-
-irt_context* irt_context_create(irt_client_app* app, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->id.cached = context;
-	context->client_app = app;
+	context->client_app = NULL;
 	context->init_fun = init_fun;
 	context->cleanup_fun = cleanup_fun;
 	irt_context_table_insert(context);
-	if (init_fun) {
-		init_fun(context);
+	return context;
+}
+
+void irt_context_initialize(irt_context* context) {
+	if (context->init_fun) {
+		context->init_fun(context);
 	}
-	irt_log_comment("starting new context");
 	irt_optimizer_context_startup(context);
 	irt_inst_region_init(context);
+}
+
+irt_context* irt_context_create(irt_client_app* app, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
+	context->client_app = app;
+	irt_log_comment("starting new context");
+	irt_context_initialize(context);
 	return context;
 }
 
