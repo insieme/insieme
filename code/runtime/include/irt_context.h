@@ -88,6 +88,7 @@ static inline irt_context* irt_context_get_current();
 
 irt_context* irt_context_create(irt_client_app*, init_context_fun*, cleanup_context_fun*);
 irt_context* irt_context_create_standalone(init_context_fun*, cleanup_context_fun*);
+void irt_context_initialize(irt_context* context);
 void irt_context_destroy(irt_context* context);
 
 
