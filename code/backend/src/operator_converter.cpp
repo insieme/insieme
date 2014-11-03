@@ -141,8 +141,8 @@ namespace {
 			// use core functionality
 			auto res = core::transform::evalLazy(manager, exprPtr);
 
-			// simplify evaluated lazy expression
-			return core::transform::simplify(manager, res, false);
+			// return evaluated lazy expression
+			return res;
 		}
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
