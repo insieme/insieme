@@ -38,6 +38,9 @@
 #ifndef __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H
 #define __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H
 
+#ifndef _GEM_SIM
+    #include "platforms/odroid/rapmi.h"
+#endif
 
 /*
  * These functions provide an interface to get and set CPU frequency settings.
@@ -62,6 +65,8 @@ int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length
 #else
     for(*length=0; *length<9; (*length)++)
         frequencies[*length] = freq_table_a15[*length];
+    for(int j=0; j<8; j++)
+        frequencies[(*length)++] = freq_table_a07[j]/2;
 #endif
 
     return 0;
@@ -95,7 +100,12 @@ int32 irt_cpu_freq_get_cur_frequency_worker(const irt_worker* worker){
     IRT_ASSERT(irt_worker_get_current() == worker,
         IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
 
+#ifdef _GEM_SIM
     return rapmi_get_freq();
+#else
+    unsigned char cluster = rapmi_get_cluster();
+    return (cluster == A15_CLUSTER) ? rapmi_get_freq() : rapmi_get_freq() / 2;
+#endif
 }  
 
 /*
@@ -106,6 +116,19 @@ int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 f
     IRT_ASSERT(irt_worker_get_current() == worker,
         IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
 
+#ifdef _GEM_SIM
+#else
+    // Cluster switching involved
+    unsigned char cluster = rapmi_get_cluster();
+    if(cluster == A15_CLUSTER && frequency <= freq_table_a07[0]/2) {
+        return rapmi_set_cluster(A07_CLUSTER, frequency*2);
+    }
+    else if(cluster == A07_CLUSTER && frequency > freq_table_a07[0]/2) {
+        return rapmi_set_cluster(A15_CLUSTER, frequency);
+    }
+
+    // No cluster switching involved
+#endif
     return rapmi_set_freq(frequency);
 }
 

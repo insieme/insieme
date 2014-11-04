@@ -46,7 +46,7 @@ namespace core {
 namespace types {
 
 
-	TEST(TypeCast, literals) {
+	TEST(typecast, literals) {
 	
 
 		NodeManager manager;
@@ -75,6 +75,49 @@ namespace types {
 				
 				EXPECT_EQ(lit.getType(), type_a);
 				EXPECT_EQ(smartCast(lit, type_b).getType(), type_b);
+			}
+		}	
+	}
+
+	template <typename T>
+	std::string toString(const T& val){
+		std::stringstream ss;
+		ss << val;
+		return ss.str();
+	}
+
+
+	TEST(typecast, limitsMax) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
+		std::vector< std::pair<TypePtr,std::string> > types;
+
+		types.push_back({basic.getInt1(),  toString(INT8_MAX)});
+		types.push_back({basic.getInt2(),  toString(INT16_MAX)});
+		types.push_back({basic.getInt4(),  toString(INT32_MAX)});
+		types.push_back({basic.getInt8(),  toString(INT64_MAX)});
+		types.push_back({basic.getInt16(), toString(INT64_MAX)});
+
+		types.push_back({basic.getReal4(), toString(1)});
+		types.push_back({basic.getReal8(), toString(1)});
+
+		types.push_back({basic.getUInt1(), toString(UINT8_MAX)});
+		types.push_back({basic.getUInt2(), toString(UINT16_MAX)});
+		types.push_back({basic.getUInt4(), toString(UINT32_MAX)});
+		types.push_back({basic.getUInt8(), toString(UINT64_MAX)});
+		types.push_back({basic.getUInt16(), toString(UINT64_MAX)});
+
+		for (auto type_a : types){
+			for (auto type_b : types){
+				auto lit = builder.literal(type_a.first, type_a.second);
+				
+				EXPECT_EQ(lit.getType(), type_a.first);
+
+				auto x = smartCast(lit, type_b.first);
+				std::cout << lit << " -> " << x << std::endl;
+				EXPECT_EQ(x.getType(), type_b.first);
 			}
 		}	
 	}

@@ -649,15 +649,18 @@ private:
 			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
 				std::cout << "ARRR " << call << std::endl;
 			}*/
+
+			res = call;
+
 			TypeList argumentTypes;
 			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 			try {
+				// check if function type is consistent
 				tryDeduceReturnType(funType, argumentTypes);
 			} catch(ReturnTypeDeductionException& rtde) {
-				typeHandler(call);
+				// use type handler if function type is inconsistent
+				res = typeHandler(call);
 			}
-
-			res = call;
 		} else if (res->getNodeType() == NT_DeclarationStmt) {
 			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
 

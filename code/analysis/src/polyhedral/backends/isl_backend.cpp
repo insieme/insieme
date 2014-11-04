@@ -35,7 +35,7 @@
  */
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"

@@ -400,44 +400,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitIntegerLiteral(const clang::I
 		value = toString(intLit->getValue().getSExtValue());
 	}
 
-	core::TypePtr type;
-	int width = intLit->getValue().getBitWidth()/8;
-	switch(width){
-		case 1: {
-		    if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType())
-                type = builder.getLangBasic().getUInt1();
-            else
-                type = builder.getLangBasic().getInt1();
-			break;
-		}
-		case 2: {
-			if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType())
-                type = builder.getLangBasic().getUInt2();
-            else
-                type = builder.getLangBasic().getInt2();
-			break;
-		}
-		case 4: {
-		    if(intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType())
-                type = builder.getLangBasic().getUInt4();
-            else
-                type = builder.getLangBasic().getInt4();
-			break;
-		}
-		case 8:
-	//		type = builder.getLangBasic().getInt8();
-			type = convFact.convertType(intLit->getType());
-			break;
-
-	//	case 16:
-	//		type = builder.getLangBasic().getInt16();
-	//		break;
-		default:
-			frontend_assert(false ) << "unknow integer literal width: " << width << "\n";
-	}
-
+	core::TypePtr type = convFact.convertType(intLit->getType());
+	if (intLit->getType().getTypePtr()->isUnsignedIntegerOrEnumerationType()) value.append("u");
 	frontend_assert(!value.empty()) << "literal con not be an empty string";
-    retExpr =  builder.literal(type, toString(value));
+	retExpr =  builder.literal(type, value);
+
 	return retExpr;
 
 }
@@ -451,10 +418,14 @@ core::ExpressionPtr Converter::ExprConverter::VisitFloatingLiteral(const clang::
 
 	const llvm::fltSemantics& sema = floatLit->getValue().getSemantics();
 
+	llvm::SmallVector< char, 24 > buff ;
+	floatLit->getValue().toString(buff, 0,0);
+	std::string strVal(buff.begin(), buff.end());
+
 	if (llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEsingle))
-		retExpr = builder.floatLit (floatLit->getValue().convertToFloat());
+		retExpr = builder.literal(strVal, gen.getReal4());
 	else if (llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble))
-		retExpr = builder.doubleLit (floatLit->getValue().convertToDouble());
+		retExpr = builder.literal(strVal, gen.getReal8());
 	else
 		frontend_assert (false ) <<"no idea how you got here, but only single/double precission literals are allowed in insieme\n";
 

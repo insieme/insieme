@@ -103,7 +103,7 @@ static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
 }
 
 static inline void _irt_print_work_item_range(const irt_work_item_range* r) { 
-	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
+	IRT_INFO("%" PRId64 "..%" PRId64 " : %" PRId64, r->begin, r->end, r->step);
 }
 
 static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range, 

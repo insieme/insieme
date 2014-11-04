@@ -1287,6 +1287,21 @@ SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::
 
 namespace std {
 
+namespace{		
+
+	const std::string RED	="\033[31m";
+	const std::string GREEN	="\033[32m";
+	const std::string BLUE	="\033[34m";
+	const std::string BLACK	="\033[30m";
+	const std::string CYAN	="\033[96m";
+	const std::string YELLOW="\033[33m";
+	const std::string GREY	="\033[37m";
+
+	const std::string RESET	="\033[0m";
+	const std::string BOLD	="\033[1m";
+
+} // annon
+
 /**
  * Prints the given pretty print to the given output stream.
  *
@@ -1316,23 +1331,23 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 		// select formating of current token
 		// color codes - see: http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
 		switch(cur.getType()) {
-		case Token::Type::Symbol: 			out << "\033[0m"; break;
-		case Token::Type::Keyword: 			out << "\033[1m"; break;
-		case Token::Type::Comment: 			out << "\033[2m"; break;
-		case Token::Type::Identifier: 		out << "\033[0m"; break;
-		case Token::Type::Bool_Literal:		out << "\033[1m"; break;
-		case Token::Type::Char_Literal:		out << "\033[2m"; break;
-		case Token::Type::Int_Literal:		out << "\033[1m"; break;
-		case Token::Type::Float_Literal:	out << "\033[1m"; break;
-		case Token::Type::Double_Literal:	out << "\033[1m"; break;
-		case Token::Type::String_Literal:	out << "\033[2m"; break;
-		case Token::Type::WhiteSpace:		out << "\033[0m"; break;
+		case Token::Type::Symbol: 			out << YELLOW; break;
+		case Token::Type::Keyword: 			out << CYAN; break;
+		case Token::Type::Comment: 			out << GREY; break;
+		case Token::Type::Identifier: 		out << RESET; break;
+		case Token::Type::Bool_Literal:		out << RED; break;
+		case Token::Type::Char_Literal:		out << RED; break;
+		case Token::Type::Int_Literal:		out << RED; break;
+		case Token::Type::Float_Literal:	out << RED; break;
+		case Token::Type::Double_Literal:	out << RED; break;
+		case Token::Type::String_Literal:	out << GREEN; break;
+		case Token::Type::WhiteSpace:		out << BOLD; break;
 		}
-
+		
 		// special cases (differences between parser and printer)
-		if (cur.getLexeme() == "fun") out << "\033[1m";
-		if (cur.getLexeme() == "job") out << "\033[1m";
-		if (cur.getLexeme() == "bind") out << "\033[1m";
+		if (cur.getLexeme() == "fun") out << CYAN;
+		if (cur.getLexeme() == "job") out << CYAN;
+		if (cur.getLexeme() == "bind") out<< CYAN;
 
 		// print token
 		out << cur.getLexeme();

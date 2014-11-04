@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -110,7 +110,7 @@ void irt_init_globals() {
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
 
-	_irt_hardware_info_init();
+	_irt_hw_info_init();
 #if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_init();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
@@ -183,7 +183,7 @@ void irt_exit_handler() {
 	// every other thread which comes after simply exits
 	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
 		if (irt_g_exit_handling_done)
-			irt_thread_exit(0);
+			return;
 
 	if (irt_g_exit_handling_done)
 		return;
@@ -194,7 +194,7 @@ void irt_exit_handler() {
 		irt_cpu_freq_reset_frequencies();
 #endif
 
-	_irt_hardware_info_shutdown();
+	_irt_hw_info_shutdown();
 
 #if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_cleanup();
@@ -417,6 +417,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	if(getenv(IRT_REPORT_ENV)) {
 		irt_dbg_print_context(context);
+		irt_hw_dump_info();
 		exit(0);
 	}
 

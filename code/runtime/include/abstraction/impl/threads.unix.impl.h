@@ -91,7 +91,7 @@ bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 	#ifdef _WIN32
 		return t1->p == t2->p;
 	#else
-		return t1 == t2;
+		return pthread_equal(*t1, *t2);
 	#endif
 }
 

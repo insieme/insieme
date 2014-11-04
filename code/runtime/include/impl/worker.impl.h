@@ -331,8 +331,13 @@ void _irt_worker_end_all() {
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
 		if(cur->state != IRT_WORKER_STATE_STOP) {
+            irt_worker_state old_state = cur->state; 
 			cur->state = IRT_WORKER_STATE_STOP;
-			irt_signal_worker(cur);
+			// workers stopped by dop setting should be waked up
+			if(old_state == IRT_WORKER_STATE_DISABLED)
+				irt_cond_wake_one(&cur->dop_wait_cond);
+			else
+				irt_signal_worker(cur);
 
 			// avoid calling thread awaiting its own termination
 			if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {

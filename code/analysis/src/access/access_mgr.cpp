@@ -41,7 +41,7 @@
 
 #include "insieme/analysis/polyhedral/iter_dom.h"
 #include "insieme/analysis/polyhedral/backend.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/utils/logging.h"

@@ -44,7 +44,7 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/polyhedral/transform.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"

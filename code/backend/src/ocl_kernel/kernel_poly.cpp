@@ -48,7 +48,7 @@
 
 /*
 #include "insieme/transform/polyhedral/transform.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 */
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 //#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"

@@ -51,7 +51,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/normalize.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/analysis/cfg.h"
 

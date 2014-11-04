@@ -36,291 +36,272 @@
 
 #pragma once 
 
-#include <vector>
+#include <iterator>
+#include <stdexcept>
+#include <memory>
+#include <set>
+#include <list>
+
+#include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/affine_sys.h"
+
+#include "insieme/analysis/polyhedral/backend.h"
+
+#include "insieme/analysis/defuse_collect.h"
+#include "insieme/analysis/dep_graph.h"
 
 #include "insieme/core/ir_node.h"
 
-#include "insieme/core/ir_address.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/utils/matrix.h"
+#include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
-#include "insieme/analysis/defuse_collect.h"
+#include "boost/operators.hpp"
+#include "boost/optional.hpp"
+#include "boost/mpl/or.hpp"
 
-#include "boost/optional/optional.hpp"
+namespace insieme { namespace core { namespace arithmetic {
 
-#include "insieme/utils/exception_utils.h"
-#include "insieme/core/printer/pretty_printer.h"
-
-namespace insieme {
-
-namespace core { namespace arithmetic {
 class Formula;
-} } // end core::arithmetic namespace
 
-namespace analysis { namespace polyhedral { namespace scop {
+} } // end core::arithmetic
 
-/** Expection which is thrown when a particular tree is defined to be not a static control part. This exception has to
-be forwarded until the root containing this node which has to be defined as a non ScopRegion
+namespace analysis { namespace polyhedral {
 
-Because this exception is only used within the implementation of the ScopRegion visitor, it is defined in the anonymous
-namespace and therefore not visible outside this translation unit. */
-class NotASCoP : public insieme::utils::TraceableException {
-	core::NodePtr root;
-	std::string msg;
+/**
+ * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
+ * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
+ * type of access (DEF or USE). The iteration domain which defines the domain on which this
+ * access is defined and the access functions for each dimensions.
+ */
+class AccessInfo : public utils::Printable {
 
+	core::ExpressionAddress	  expr;
+	Ref::RefType			  type;
+	Ref::UseType			  usage;
+	AffineSystemPtr	  		  access;
+	IterationDomain	  		  domain;
 public:
-	template <class SubExTy>
-	NotASCoP(const std::string& 	     msg, 
-			 const char*		 	 ex_type,
-			 const char*	 	   file_name, 
-			 int 					 line_no, 
-			 const SubExTy*			  sub_ex,
-			 const core::NodePtr& 	    root) 
-	: TraceableException(msg, ex_type, file_name, line_no, sub_ex), 
-	  root(root) 
-	{ 
-		if (!sub_ex) {
-			std::ostringstream ss;
-			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) 
-			   << "\nNot a Static Control Part:\n" << msg;
-			setMessage(ss.str());
-		}
-	}
-	
-	const core::NodePtr& node() const { return root; }
+	AccessInfo(
+		const core::ExpressionAddress&	expr, 
+		const Ref::RefType& 			type, 
+		const Ref::UseType& 			usage, 
+		const AffineSystem&				access,
+		const IterationDomain&	   		domain
+	) : expr(expr), 
+		type(type), 
+		usage(usage), 
+		access( std::make_shared<AffineSystem>(access) ),
+		domain(domain) { }
 
-	virtual ~NotASCoP() throw() { }
+	AccessInfo(const AccessInfo& other) : 
+		expr(other.expr), 
+		type(other.type), 
+		usage(other.usage), 
+		access( std::make_shared<AffineSystem>(*other.access) ),
+		domain( other.domain ) { }
+
+	/// Copy constructor with base (iterator vector) change
+	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
+		expr(other.expr), type(other.type), usage(other.usage), 
+		access( std::make_shared<AffineSystem>(iterVec, *other.access) ),
+		domain( IterationDomain(iterVec, other.domain) ) { } 
+
+	// Getters for expr/type and usage
+	inline const core::ExpressionAddress& getExpr() const { return expr; }
+	inline const Ref::RefType& getRefType() const { return type; }
+	inline const Ref::UseType& getUsage() const { return usage; }
+
+	// Getters/Setters for access functions 
+	inline AffineSystem& getAccess() { return *access; }
+	inline const AffineSystem& getAccess() const { return *access; }
+
+	inline const IterationDomain& getDomain() const { return domain; }
+
+	inline bool hasDomainInfo() const { return !domain.universe(); }
+
+	// implementing the printable interface
+	std::ostream& printTo(std::ostream& out) const;
 };
 
-typedef std::vector<core::NodeAddress> 					AddressList;
-typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
-typedef std::list<SubScop> 								SubScopList;
+typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
+typedef std::vector<AccessInfoPtr> 	AccessList;
 
-/** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
-which is valid within the SCoP body and the set of constraints which define the entry point for this SCoP.
+/** Stmt: this class contains all necessary information which are together representing a
+    statement in the polyhedral model.
 
-This annotation is attached to every node introducing changes to the iteration domain. Nodes which carries
-ScopAnnotations are: ForLoops, IfStmt and LambdaExpr.
+    A statement is represented by:
+    - an **iteration domain** (with an associated iteration vector)
+    - a **scheduling** (or scattering) matrix (which defines the schedule for the statement to be
+      executed)
+    - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
+*/
+class Stmt: public utils::Printable {
+	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
+	core::StatementAddress addr; ///< the root of the address is the entry point of the SCoP
+	IterationDomain dom;         ///< iteration domain, according to the literature
+	AffineSystem schedule;       ///< scheduling matrix, according to the literature
+	AccessList access;           ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
+								 ///< (see also class AccessInfo)
 
-Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present) and the list of ref
-accesses directly present in this region. Accesses in the sub region are not directly listed in the current region but
-retrieval is possible via the aforementioned pointer to the sub scops. */
-struct ScopRegion: public core::NodeAnnotation {
+	typedef AccessList::iterator AccessIterator;
+	typedef AccessList::const_iterator ConstAccessIterator;
 
-	static const string NAME;
-	static const utils::StringKey<ScopRegion> 	KEY;
+public:
+    Stmt(size_t id, const core::StatementAddress &addr, const IterationDomain &dom, const AffineSystem &schedule,
+         const AccessList &access = AccessList()): id(id), addr(addr), dom(dom), schedule(schedule), access(access) {}
 
-	/** This class keeps the information on how a particular reference is accessed. This is slightly different from the
-	DefUse::Ref class as this one also include information related to the conversion of the reference into the polyhedral
-	model */
-	struct Reference : public boost::noncopyable {
-		core::ExpressionAddress 	 		refExpr;
-		Ref::UseType						usage;
-		Ref::RefType						type;
-		std::vector<core::ExpressionPtr> 	indecesExpr;
-		IterationVector						iterVec;
-		AffineConstraintPtr			 		range;
+    Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
+        id(id), addr(other.addr), dom(iterVec, other.dom), schedule(iterVec, other.schedule) {
+        for_each(other.access, [&](const AccessInfoPtr &cur) {
+            access.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
+        });
+    }
 
-		Reference(const core::ExpressionAddress& 		refExpr, 
-				const Ref::UseType& 					usage, 
-				const Ref::RefType& 					type,
-				const std::vector<core::ExpressionPtr>& indecesExpr,
-				const IterationVector&					iv = IterationVector(),
-				const AffineConstraintPtr& 				range = AffineConstraintPtr())
-		: refExpr(refExpr), 
-		  usage(usage), 
-		  type(type), 
-		  indecesExpr(indecesExpr), 
-		  iterVec(iv), 
-		  range( cloneConstraint(iterVec,range) ) 
-		{  }
-	};
+	// Getter for the ID
+	inline size_t getId() const { return id; }
 
-	typedef std::shared_ptr<Reference> ReferencePtr;
+	// Getter for StmtAddress
+	inline const core::StatementAddress& getAddr() const { return addr; }
 
-	/** ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both direct and
-	contained in sub-scops).
+	// Getters/Setters for the iteration domain
+	inline const IterationDomain& getDomain() const { return dom; }
+	inline IterationDomain& getDomain() { return dom; }
 
-	A statement into a SCoP has 3 piece of information associated:
-	  - Iteration domain:    which define the domain on which this statement is valid
-	  - Scattering function: which define the order of execution with respect of other statements in the SCoP region
-	  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within the statement.
+	// Getters/Setters for scheduling / scattering 
+	inline AffineSystem& getSchedule() { return schedule; }
+	inline const AffineSystem& getSchedule() const { return schedule; }
 
-	This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
-	for future requests. */
-	struct Stmt { 
+	// Getters/Setters for access list
+	inline const AccessList& getAccess() const { return access; }
+	inline AccessList& getAccess() { return access; }
 
-		// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
-		// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
-		typedef std::vector<ReferencePtr> RefAccessList;
+	// Accessories for iterating through accesses of this statement (read/write)
+	inline AccessIterator access_begin() { return access.begin(); }
+	inline AccessIterator access_end() { return access.end(); }
 
-		Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
-			address(addr), accesses(accesses) { }
+	// Accessories for iterating through accesses of this statement (write only)
+	inline ConstAccessIterator access_begin() const { return access.cbegin(); }
+	inline ConstAccessIterator access_end() const { return access.cend(); }
 
-		inline const core::StatementAddress& getAddr() const { return address; }
-		
-		inline const core::StatementAddress& operator->() const { return address; }
+	std::vector<core::VariablePtr> loopNest() const;
+	unsigned getSubRangeNum() const;
 
-		inline bool operator<(const Stmt& other) const { return address < other.address; }
+	std::ostream& printTo(std::ostream& out) const;
+};
 
-		virtual RefAccessList getRefAccesses() const { return accesses; } 
+/**
+ * Given an IR statement, return the its polyhedral representation starting from the outermost SCoP
+ *
+ * If the statement is not inside a SCoP, the returned optional object will be not initialized
+ */
+boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
 
-	private:
-		core::StatementAddress 		address;
-		RefAccessList 				accesses;
-	};
-	
-	typedef std::vector<Stmt> 			StmtVect;
+typedef std::shared_ptr<Stmt> StmtPtr;
 
-	typedef std::vector<Iterator> 		IteratorOrder;
-	
-	ScopRegion( const core::NodePtr& 	annNode,
-				const IterationVector& 	iv, 
-				const IterationDomain& 	comb,
-				const StmtVect&		 	stmts = StmtVect(),
-				const SubScopList& 		subScops_ = SubScopList() 
-			  ) :
-		annNode(annNode),
-		iterVec(iv), 
-		stmts(stmts),
-		domain( iterVec, comb ), // Switch the base to the this->iterVec 
-		valid(true)
-	{ 
-		
-		for_each(subScops_.begin(), subScops_.end(), 
-			[&] (const SubScop& cur) { 
-				subScops.push_back( SubScop(cur.first, IterationDomain(iterVec, cur.second)) ); 
-			});	
-	} 
+/**
+ * Scop: This class is the entry point for any polyhedral model analysis / transformations. The
+ * purpose is to fully represent all the information of a polyhedral static control region (SCOP).
+ * Copies of this class can be created so that transformations to the model can be applied without
+ * changing other instances of this SCop.
+ *
+ * By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
+ * When a transformation needs to be performed a deep copy of the Scop object is created and
+ * transformations are applied to it.
+ */
+struct Scop : public utils::Printable {
+
+	typedef std::vector<StmtPtr> StmtVect;
+	typedef StmtVect::iterator iterator;
+	typedef StmtVect::const_iterator const_iterator;
+
+	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
+		iterVec(iterVec), sched_dim(0) 
+	{
+		// rewrite all the access functions in terms of the new iteration vector
+		for_each(stmts, [&] (const StmtPtr& stmt) { 
+				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
+			});
+	}
+
+	/// Copy constructor builds a deep copy of this SCoP.
+	explicit Scop(const Scop& other) : iterVec(other.iterVec), sched_dim(other.sched_dim) {
+		for_each(other.stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
+	}
+
+	/**
+	 * Move constructor
+	 */
+	Scop(Scop&& other) : 
+		iterVec( std::move(other.iterVec) ) ,
+		stmts( std::move( other.stmts ) ),
+		sched_dim( other.sched_dim ) { }
+
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	inline const std::string& getAnnotationName() const { return NAME; }
+	/// push_back adds a stmt to this SCoP
+	void push_back( const Stmt& stmt );
 
-	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
+	inline const IterationVector& getIterationVector() const { return iterVec; }
+	inline IterationVector& getIterationVector() { return iterVec; }
 
-	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
-						const core::NodePtr& before, 
-						const core::NodePtr& after) const { return false; }
+	inline const StmtVect& getStmts() const { return stmts; }
+
+	// Get iterators thorugh the statements contained in this SCoP
+	inline iterator begin() { return stmts.begin(); }
+	inline iterator end() { return stmts.end(); }
+
+	inline const_iterator begin() const { return stmts.begin(); }
+	inline const_iterator end() const { return stmts.end(); }
+
+	// Access statements based on their ID
+	inline const Stmt& operator[](size_t pos) const { return *stmts[pos]; }
+	inline Stmt& operator[](size_t pos) { return *stmts[pos]; }
+
+	inline size_t size() const { return stmts.size(); }
+	inline const size_t& schedDim() const { return sched_dim; }
+	inline size_t& schedDim() { return sched_dim; }
+
+	size_t nestingLevel() const;
+
+	/**
+	 * Produces IR code from this SCoP. 
+	 */
+	core::NodePtr toIR(core::NodeManager& mgr, const CloogOpts& opts = CloogOpts()) const;
 	
-	
-	inline bool isResolved() const { return static_cast<bool>(scopInfo); }
+	MapPtr<> getSchedule(CtxPtr<>& ctx) const;
 
-	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
-	inline const IterationVector& getIterationVector() const {  return iterVec; }
-	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
-	inline IterationVector& getIterationVector() {  return iterVec; }
-	
-	/// Retrieves the constraint combiner associated to this ScopRegion.
-	inline const IterationDomain& getDomainConstraints() const { return domain; }
+	SetPtr<> getDomain(CtxPtr<>& ctx) const;
 
-	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
+	/**
+	 * Computes analysis information for this SCoP
+	 */
+	MapPtr<> computeDeps(CtxPtr<>& ctx, const unsigned& d = 
+			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
-	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
-	of its iteration domain, scattering matrix and access functions are listed. */
-	inline const Scop& getScop() const {
-		assert(isValid() && "SCoP is not valid");
-		if (!isResolved()) { resolve(); }
-		return *scopInfo;
-	}
 
-	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
-	of its iteration domain, scattering matrix and access functions are listed. */
-	inline Scop& getScop() {
-		assert(isValid() && "SCoP is not valid");
-		if (!isResolved()) { resolve(); }
-		return *scopInfo;		
-	}
+	bool isParallel(core::NodeManager& mgr) const;
 
-	/// Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the current iteration domain
-	const SubScopList& getSubScops() const { return subScops; }
-
-	bool containsLoopNest() const;
-
-	inline bool isValid() const { return valid; }
-	inline void setValid(bool value) { valid = value; }
-
-	static boost::optional<Scop> toScop(const core::NodePtr& root);
+	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
 
 private:
 
-	void resolve() const;
-
-
-	const core::NodePtr annNode;
-
-	/// Iteration Vector on which constraints of this region are defined
-	IterationVector iterVec;
-
-	/// List of statements direclty contained in this region (but not in nested sub-regions)
-	StmtVect stmts;
-
-	/// List of constraints which this SCoP defines
-	IterationDomain domain;
-
-	/** Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their relative position
-	inside the current SCoP
-
-	In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty */
-	SubScopList subScops;
-
-	mutable std::shared_ptr<Scop> scopInfo;
-
-	bool valid;
-};
-
-/** AccessFunction : this annotation is used to annotate array subscript expressions with the equality constraint
-resulting from the access function. For example the subscript operation A[i+j-N] will generate an equality constraint
-of the type i+j-N==0. Constraint which is used to annotate the expression. */
-class AccessFunction: public core::NodeAnnotation {
 	IterationVector 	iterVec;
-	AffineFunction 	access;
-public:
-	static const string NAME;
-	static const utils::StringKey<AccessFunction> KEY;
-
-	AccessFunction(const IterationVector& iv, const AffineFunction& access) : 
-		core::NodeAnnotation(), 
-		iterVec(iv), 
-		access( access.toBase(iterVec) ) { }
-
-	inline const std::string& getAnnotationName() const { return NAME; }
-
-	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
-
-	std::ostream& printTo(std::ostream& out) const;
-
-	inline const AffineFunction& getAccessFunction() const { return access; }
-	
-	inline const IterationVector& getIterationVector() const { return iterVec; }
-
-	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
-						const core::NodePtr& before, 
-						const core::NodePtr& after) const 
-	{ 
-		return false; 
-	}
+	StmtVect 			stmts;
+	size_t				sched_dim;
 };
 
-AddressList mark(const core::NodePtr& root);
-
-inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
-	AddressList&& al = insieme::analysis::polyhedral::scop::mark(root);
-	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1) { 
-		// If there are not scops or the number of scops is greater than 2 
-		// or the the extracted scop is not the top level node 
-		return boost::optional<Scop>();
-	}
-	assert(root->hasAnnotation(ScopRegion::KEY));
-	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
-
-	ann.resolve();
-
-	if (!ann.isValid()) { 
-		return boost::optional<Scop>(); 
-	}
-	return boost::optional<Scop>( ann.getScop() );
-}
+/**
+ * Converts a SCoP based on a specific iteration vector to a different base which is compatible 
+ * i.e. it contains at least the same elements as the original iteration vector but it can contain
+ * new parameters or iterators which will be automatically set to 0
+ */
+// Scop toBase(const Scop& s, const IterationVector& iterVec);
 
 
-} } } } // end insieme::analysis::polyhedral::scop namespace
+} } } // end insieme::analysis::polyhedral namespace
 
