@@ -38,7 +38,7 @@
 #ifndef __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H
 #define __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H
 
-#ifndef _GEM_SIM
+#ifdef _GEMS_ODROID
     #include "platforms/odroid/rapmi.h"
 #endif
 
@@ -50,9 +50,13 @@
 #define IRT_GEM_MAX_FREQ    (101 * 1000)    // 101 MHz
 #define IRT_GEM_STEP_FREQ   (5 * 1000)      // 5 MHz
 
+#ifdef _GEMS_ODROID
+int irt_cpu_freq_a07_max_freq;
+unsigned char irt_cpu_freq_cluster;
+#endif
 
 int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length){
-#ifdef _GEM_SIM
+#ifdef _GEMS_SIM
     uint32 freq = IRT_GEM_MIN_FREQ;
     uint32 j = 0;
 
@@ -62,11 +66,16 @@ int32 irt_cpu_freq_get_available_frequencies(uint32* frequencies, uint32* length
     }
 
     *length = j;
-#else
-    for(*length=0; *length<9; (*length)++)
-        frequencies[*length] = freq_table_a15[*length];
-    for(int j=0; j<8; j++)
+#elif defined(_GEMS_ODROID)
+    *length = 0;
+    for(int j=8; j>=0; j--)
+        frequencies[(*length)++] = freq_table_a15[j];
+    for(int j=7; j>=0; j--)
         frequencies[(*length)++] = freq_table_a07[j]/2;
+
+    irt_cpu_freq_a07_max_freq = freq_table_a07[7]/2;
+   
+    irt_cpu_freq_cluster = rapmi_get_cluster();
 #endif
 
     return 0;
@@ -100,11 +109,10 @@ int32 irt_cpu_freq_get_cur_frequency_worker(const irt_worker* worker){
     IRT_ASSERT(irt_worker_get_current() == worker,
         IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
 
-#ifdef _GEM_SIM
+#ifdef _GEMS_SIM
     return rapmi_get_freq();
-#else
-    unsigned char cluster = rapmi_get_cluster();
-    return (cluster == A15_CLUSTER) ? rapmi_get_freq() : rapmi_get_freq() / 2;
+#elif defined(_GEMS_ODROID)
+    return (irt_cpu_freq_cluster == A15_CLUSTER) ? rapmi_get_freq() : rapmi_get_freq() / 2;
 #endif
 }  
 
@@ -113,23 +121,21 @@ int32 irt_cpu_freq_get_cur_frequency_worker(const irt_worker* worker){
  */
 
 int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency){
-    IRT_ASSERT(irt_worker_get_current() == worker,
-        IRT_ERR_INVALIDARGUMENT, "DVFS of non-current worker is unsupported");
-
-#ifdef _GEM_SIM
-#else
+#ifdef _GEMS_SIM
+#elif defined(_GEMS_ODROID)
     // Cluster switching involved
-    unsigned char cluster = rapmi_get_cluster();
-    if(cluster == A15_CLUSTER && frequency <= freq_table_a07[0]/2) {
+    if(irt_cpu_freq_cluster == A15_CLUSTER && frequency <= irt_cpu_freq_a07_max_freq) {
+        irt_cpu_freq_cluster = A07_CLUSTER;
         return rapmi_set_cluster(A07_CLUSTER, frequency*2);
     }
-    else if(cluster == A07_CLUSTER && frequency > freq_table_a07[0]/2) {
+    else if(irt_cpu_freq_cluster == A07_CLUSTER && frequency > irt_cpu_freq_a07_max_freq) {
+        irt_cpu_freq_cluster = A15_CLUSTER;
         return rapmi_set_cluster(A15_CLUSTER, frequency);
     }
 
     // No cluster switching involved
+    return rapmi_set_freq((irt_cpu_freq_cluster == A07_CLUSTER) ? frequency*2 : frequency);
 #endif
-    return rapmi_set_freq(frequency);
 }
 
 /*

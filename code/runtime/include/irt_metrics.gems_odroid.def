@@ -11,7 +11,7 @@ GROUP(energy_group, rapmi_t global_rapmi_data, rapmi_t rapmi_data,
     { rapmi_stop(); rapmi_read(&rapmi_data); context->inst_region_metric_group_support_data.global_rapmi_data.n += rapmi_data.n; })
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_A15_AVGPOW)
-METRIC(a15_avgpow,  50,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_AVG,   energy_group, \
+METRIC(a15_avgpow,  50,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
     {}, \
     {}, \
     {}, \
@@ -24,7 +24,7 @@ METRIC(a15_avgpow,  50,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKE
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_A7_AVGPOW)
-METRIC(a07_avgpow,   51,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_AVG,   energy_group, \
+METRIC(a07_avgpow,   51,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
     {}, \
     {}, \
     {}, \
@@ -37,7 +37,7 @@ METRIC(a07_avgpow,   51,      W,      float,      "%f",        IRT_HW_SCOPE_SOCK
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_MEM_AVGPOW)
-METRIC(mem_avgpow,  52,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_AVG,   energy_group, \
+METRIC(mem_avgpow,  52,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
     {}, \
     {}, \
     {}, \
@@ -50,7 +50,7 @@ METRIC(mem_avgpow,  52,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKE
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_GPU_AVGPOW)
-METRIC(gpu_avgpow,  53,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_AVG,   energy_group, \
+METRIC(gpu_avgpow,  53,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
     {}, \
     {}, \
     {}, \
@@ -63,7 +63,7 @@ METRIC(gpu_avgpow,  53,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKE
 #endif
 
 #if !defined(ISOLATE_METRIC) || defined(ISOLATE_CPU_AVGPOW)
-METRIC(cpu_avgpow,  54,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_AVG,   energy_group, \
+METRIC(cpu_avgpow,  54,      W,      float,      "%f",        IRT_HW_SCOPE_SOCKET,     IRT_METRIC_AGGREGATOR_NONE,   energy_group, \
     {}, \
     {}, \
     {}, \

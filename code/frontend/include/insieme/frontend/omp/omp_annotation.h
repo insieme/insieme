@@ -652,7 +652,7 @@ public:
 	bool hasPrivate() const { return static_cast<bool>(privateClause); }
 	const VarList& getPrivate() const { assert(hasPrivate()); return *privateClause; }
 
-	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause); }
+	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause) && firstPrivateClause->size() > 0; }
 	const VarList& getFirstPrivate() const { assert(hasFirstPrivate()); return *firstPrivateClause; }
 
 	bool hasLocal() const { return static_cast<bool>(localClause); }

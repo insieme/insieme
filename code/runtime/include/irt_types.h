@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -63,7 +63,11 @@ struct _irt_type {
 /* ------------------------------ operations ----- */
 
 static inline uint32 irt_type_get_bytes(irt_context* context, irt_type_id type_id) {
-	return context->type_table[type_id].bytes;
+	if(type_id < 0) { // if <0, it's not an id but -(size)
+		return - type_id;
+	} else {
+		return context->type_table[type_id].bytes;
+	}
 }
 
 static inline const char* irt_type_kind_get_name(irt_type_kind kind) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -118,12 +118,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->num_active_children = &(wi->_num_active_children);
 	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
 	if(params != NULL) {
-		uint32 size = 0;
-		if(params->type_id < 0) { // if <0, it's not an id but -(size)
-			size = - params->type_id;
-		} else {
-			size = self->cur_context.cached->type_table[params->type_id].bytes;
-		}
+		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
 		} else { 

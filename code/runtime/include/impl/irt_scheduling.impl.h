@@ -88,6 +88,10 @@ void irt_scheduling_loop(irt_worker* self) {
 			#endif //IRT_ASTEROIDEA_STACKS
 			if(self->id.thread >= irt_g_degree_of_parallelism) {
 				irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
+				if(self->state == IRT_WORKER_STATE_STOP) {
+					irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
+					break;
+				}
 				if(self->id.thread >= irt_g_degree_of_parallelism) {
 					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_DISABLED, uint32);
 					// TODO: migrate queued wis if not a stealing policy

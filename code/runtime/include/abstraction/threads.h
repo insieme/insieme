@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -124,6 +124,9 @@ inline void irt_cond_wake_all(irt_cond_var*);
 /** initialize the condition variable */
 inline void irt_cond_var_init(irt_cond_var*);
 
+/** destroy the condition variable */
+inline void irt_cond_var_destroy(irt_cond_var*);
+
 /** releases the mutex and sleeps the thread on the condition variable */
 inline int irt_cond_wait(irt_cond_var*, irt_mutex_obj*);
 
@@ -138,6 +141,9 @@ inline void irt_cond_bundle_init(irt_cond_bundle*);
 
 /** releases the mutex and sleeps the thread on the condition variable */
 inline int irt_cond_bundle_wait(irt_cond_bundle*);
+
+/** destroys the condition variable and associated mutex */
+inline void irt_cond_bundle_destroy(irt_cond_bundle*);
 
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 
