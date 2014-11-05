@@ -309,7 +309,8 @@ AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
 
 	if ( stride.isOne() ) { return domain; }
 
-	assert(stride.isConstant() && "Stride value of for loop is not constant.");
+	// commenting this does not break any tests, so it is unclear whether it is really necessary (Philipp Gschwandtner, Thomas Prokosch, 05.11.2014)
+	//assert(stride.isConstant() && "Stride value of for loop is not constant.");
 
 	int stride_size = stride.getTerms().front().second.getNumerator();
 
@@ -885,11 +886,13 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// Check the lower bound of the loop
 		
 				Formula&& step = arithmetic::toFormula(forPtr->getStep());
-				if (!step.isConstant()) {
-					THROW_EXCEPTION(NotASCoP, "Non constant stride in for statement not supported", 
-						forStmt.getAddressedNode()
-					);
-				}
+
+				// commenting this does not break any tests, so it is unclear whether it is really necessary (Philipp Gschwandtner, Thomas Prokosch, 05.11.2014)
+//				if (!step.isConstant()) {
+//					THROW_EXCEPTION(NotASCoP, "Non constant stride in for statement not supported",
+//						forStmt.getAddressedNode()
+//					);
+//				}
 
 				AffineConstraintPtr bounds = 
 					buildStridedDomain<ExpressionPtr>(mgr, ret, forStmt->getIterator(), 

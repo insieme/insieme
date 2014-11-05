@@ -316,6 +316,7 @@ inline static void irt_schedule_loop(
 		//print_effort_estimation(impl, base_range, impl->variants[0].effort_estimator);
 
 		#ifdef IRT_ENABLE_AUTOTUNING
+			assert(variant.meta_info->autotuning.number_of_workers > 0 && "Number of workers must be set!");
 			group->cur_sched.participants = variant.meta_info->autotuning.number_of_workers;
 			group->cur_sched.type = variant.meta_info->autotuning.loop_scheduling;
 			group->cur_sched.param.chunk_size = variant.meta_info->autotuning.loop_scheduling_chunk_size;

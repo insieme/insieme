@@ -1113,17 +1113,25 @@ namespace measure {
 
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
-		// instrument individual regions
 		core::NodePtr root = regions.begin()->first.getRootNode();
 
 		// sort addresses in descending order
+		typedef std::pair<core::StatementAddress, region_id> region_pair;
 		vector<pair<core::StatementAddress, region_id>> sorted_regions(regions.begin(), regions.end());
-		std::sort(sorted_regions.rbegin(), sorted_regions.rend());
+		std::sort(sorted_regions.begin(), sorted_regions.end(), [](const region_pair& first, const region_pair& second) {
+			return first.second < second.second;
+		});
 
+		// replace all regions with instrumented and optimized versions
 		std::set<region_id> regionIDs;
 		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+			// obtain address with current root
 			core::StatementAddress tmp = cur.first.switchRoot(root);
-			root = core::transform::replaceNode(manager, tmp, instrument(tmp, cur.second));
+			// instrument the new region
+			core::StatementPtr instrumentedTmp = instrument(cur.first, cur.second);
+			// replace region
+			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
+
 			regionIDs.insert(cur.second);
 		});
 
