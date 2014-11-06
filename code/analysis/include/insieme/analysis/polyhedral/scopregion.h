@@ -217,14 +217,6 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
 	of its iteration domain, scattering matrix and access functions are listed. */
-	inline const Scop& getScop() const {
-		assert(isValid() && "SCoP is not valid");
-		if (!isResolved()) { resolve(); }
-		return *scopInfo;
-	}
-
-	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
-	of its iteration domain, scattering matrix and access functions are listed. */
 	inline Scop& getScop() {
 		assert(isValid() && "SCoP is not valid");
 		if (!isResolved()) { resolve(); }
@@ -302,25 +294,6 @@ public:
 };
 
 AddressList mark(const core::NodePtr& root);
-
-inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
-	AddressList&& al = insieme::analysis::polyhedral::scop::mark(root);
-	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1) { 
-		// If there are not scops or the number of scops is greater than 2 
-		// or the the extracted scop is not the top level node 
-		return boost::optional<Scop>();
-	}
-	assert(root->hasAnnotation(ScopRegion::KEY));
-	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
-
-	ann.resolve();
-
-	if (!ann.isValid()) { 
-		return boost::optional<Scop>(); 
-	}
-	return boost::optional<Scop>( ann.getScop() );
-}
-
 
 } } } } // end insieme::analysis::polyhedral::scop namespace
 

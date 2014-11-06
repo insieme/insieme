@@ -37,31 +37,30 @@
 #pragma once 
 
 #include <iterator>
-#include <stdexcept>
+#include <list>
 #include <memory>
 #include <set>
-#include <list>
+#include <stdexcept>
+#include <vector>
 
-#include "insieme/analysis/polyhedral/iter_vec.h"
-#include "insieme/analysis/polyhedral/affine_func.h"
-#include "insieme/analysis/polyhedral/constraint.h"
-#include "insieme/analysis/polyhedral/iter_dom.h"
-#include "insieme/analysis/polyhedral/affine_sys.h"
-
-#include "insieme/analysis/polyhedral/backend.h"
+#include "boost/mpl/or.hpp"
+#include "boost/operators.hpp"
+#include "boost/optional.hpp"
 
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/dep_graph.h"
-
+#include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/affine_sys.h"
+#include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/core/ir_node.h"
-
+#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/utils/constraint.h"
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
-#include "insieme/utils/constraint.h"
-
-#include "boost/operators.hpp"
-#include "boost/optional.hpp"
-#include "boost/mpl/or.hpp"
 
 namespace insieme { namespace core { namespace arithmetic {
 
@@ -219,8 +218,7 @@ struct Scop : public utils::Printable {
 	typedef StmtVect::const_iterator const_iterator;
 
 	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
-		iterVec(iterVec), sched_dim(0) 
-	{
+		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector
 		for_each(stmts, [&] (const StmtPtr& stmt) { 
 				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
@@ -232,15 +230,14 @@ struct Scop : public utils::Printable {
 		for_each(other.stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
 	}
 
-	/**
-	 * Move constructor
-	 */
-	Scop(Scop&& other) : 
-		iterVec( std::move(other.iterVec) ) ,
-		stmts( std::move( other.stmts ) ),
-		sched_dim( other.sched_dim ) { }
+	/// Move constructor
+	Scop(Scop&& that): iterVec(std::move(that.iterVec)), stmts(std::move(that.stmts)), sched_dim(that.sched_dim) {}
 
-
+	static bool hasScopAnnotation(insieme::core::NodePtr p);
+	static insieme::core::NodePtr outermostScopAnnotation(insieme::core::NodePtr p);
+	static bool isScop(insieme::core::NodePtr p);
+	static Scop& getScop(insieme::core::NodePtr p);
+	static std::vector<insieme::core::NodeAddress> getScops(insieme::core::NodePtr n);
 	std::ostream& printTo(std::ostream& out) const;
 
 	/// push_back adds a stmt to this SCoP

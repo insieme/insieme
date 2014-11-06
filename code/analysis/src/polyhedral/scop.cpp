@@ -34,28 +34,23 @@
  * regarding third party software licenses.
  */
 
-#include <set>
 #include <iomanip>
-
-#include "insieme/utils/logging.h"
-
-#include "insieme/core/annotations/source_location.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/ir_builder.h"
-
-#include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/analysis/polyhedral/scop.h"
-
-#include "insieme/analysis/polyhedral/backend.h"
-#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include <isl/schedule.h>
+#include <memory>
+#include <set>
 
 #include "insieme/analysis/dep_graph.h"
-#include <memory>
+#include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/utils/logging.h"
 
-#define MSG_WIDTH 100
-
-namespace insieme { namespace analysis { namespace polyhedral { 
+namespace insieme { namespace analysis { namespace polyhedral {
 
 using namespace insieme::core;
 
@@ -153,7 +148,7 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 
 } // end anonymous namespace 
 
-
+// TODO: this function needs to be simplified, use common infrastructure functions to build up scop from address
 std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::ExpressionAddress& addr) {
 	
 	// Find the enclosing SCoP (if any)
@@ -436,6 +431,59 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 
 //==== Scop ====================================================================================
 
+/// Returns true if the given NodePtr has a SCoP annotation, false otherwise. Can be called directly,
+/// with explicit scoping.
+bool Scop::hasScopAnnotation(insieme::core::NodePtr p) {
+    if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
+    auto annot=p->getAnnotation(scop::ScopRegion::KEY);
+    return annot->isValid();
+}
+
+/// Returns the outermost node with a Scop annotation, starting from the given node p. Can be called directly, with
+/// explicit scoping.
+insieme::core::NodePtr Scop::outermostScopAnnotation(insieme::core::NodePtr p) {
+
+	LOG(WARNING) << "Got SCoP " << p << " - checking maximality" << std::endl;
+	unsigned int lvl=0;
+
+	insieme::core::NodePtr annotated;
+	if (hasScopAnnotation(p)) annotated=p;
+	while (!insieme::core::StatementAddress(p).isRoot()) {
+		p=insieme::core::StatementAddress(p).getParentNode(1); lvl++;
+		if (hasScopAnnotation(p)) annotated=p;
+	}
+
+	LOG(WARNING) << "Moved " << lvl << " levels up, outermost SCoP is at " << annotated << ".\n" << std::endl;
+	return annotated;
+}
+
+/// Returns true if the given NodePtr is a (maximal) SCoP, false if there is no SCoP annotation, and also false
+/// if the SCoP is not maximal. Can be called directly, with explicit scoping.
+bool Scop::isScop(insieme::core::NodePtr p) {
+    if (!hasScopAnnotation(p)) return false;
+    //FIXME: outermostScopAnnotation(p);
+    return false;
+}
+
+/// Return SCoP data from an existing annotation, using a NodePtr. Can be called directly, with explicit scoping.
+Scop& Scop::getScop(insieme::core::NodePtr p) {
+    if (!isScop(p)) { THROW_EXCEPTION(scop::NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
+    return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+}
+
+/// Return all SCoPs below an existing NodePtr as a vector of NodeAddress'es, just like scop::mark does.
+std::vector<insieme::core::NodeAddress> Scop::getScops(insieme::core::NodePtr n) {
+
+	// visit all nodes and save those which are SCoPs (have annotations, and are maximal)
+	std::vector<insieme::core::NodeAddress> scops;
+	insieme::core::visitDepthFirst(n, [&](const insieme::core::NodePtr &x) {
+		if (isScop(x)) scops.push_back(insieme::core::StatementAddress(x));
+	});
+
+	// return the saved scops
+	return scops;
+}
+
 /**
  * @brief Scop::printTo prints a SCoP in human-readable format to out
  * @param out
@@ -617,7 +665,7 @@ MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
 
-	// FIXME: We only deal with must dependencies for now
+	// NOTE: We only deal with must dependencies for now
 	auto&& mustDeps = makeEmptyMap(ctx, iterVec);
 
 	if ((type & dep::RAW) == dep::RAW) {
@@ -642,7 +690,6 @@ MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 	return mustDeps;
 }
 
-#include <isl/schedule.h>
 
 core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	auto&& ctx = makeCtx();
@@ -684,5 +731,4 @@ bool Scop::isParallel(core::NodeManager& mgr) const {
 	return parallelizable;
 }
 
-} } } // end insimee::ananlsyis::polyhedral namesapce 
-
+}}}
