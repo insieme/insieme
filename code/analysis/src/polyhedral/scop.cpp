@@ -158,7 +158,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) || !parent->getAnnotation( scop::ScopRegion::KEY )->isValid()) { 
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) || !parent->getAnnotation( scop::ScopRegion::KEY )->valid) {
 		return std::make_pair(NodeAddress(), AffineConstraintPtr()); 
 	}
 
@@ -167,10 +167,8 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 	prev = parent;
 	// Iterate throgh the stateemnts until we find the entry point of the SCoP
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) &&
-			parent->getAnnotation( scop::ScopRegion::KEY )->isValid() ) 
-	{ 
+			parent->getAnnotation( scop::ScopRegion::KEY )->valid)
 		prev=parent;
-	} 
 
 	assert(parent && "Scop entry not found");
 
@@ -436,7 +434,7 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 bool Scop::hasScopAnnotation(insieme::core::NodePtr p) {
     if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
     auto annot=p->getAnnotation(scop::ScopRegion::KEY);
-    return annot->isValid();
+    return annot->valid;
 }
 
 /// Returns the outermost node with a Scop annotation, starting from the given node p. Can be called directly, with

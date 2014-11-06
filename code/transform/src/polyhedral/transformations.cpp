@@ -74,7 +74,7 @@ const Scop& extractScopFrom(const core::NodePtr& target) {
 	
 	// FIXME: We need to find the larger SCoP which contains this SCoP
 	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
-	if ( !region.isValid() ) {
+	if ( !region.valid ) {
 		throw InvalidTargetException("Polyhedral transformation wanted but region is invalid");
 	}
 	return region.getScop();

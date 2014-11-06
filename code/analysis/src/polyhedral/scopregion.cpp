@@ -622,7 +622,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( ifStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *ifStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
@@ -734,7 +734,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( switchStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *switchStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
@@ -853,7 +853,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// if we already visited this forStmt, just return the precomputed iteration vector 
 		if (forStmt->hasAnnotation(ScopRegion::KEY)) {
 			ScopRegion& ann = *forStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", forStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", forStmt.getAddressedNode()); }
 
 			// return the cached value
 			subScops.push_back(forStmt);
@@ -961,7 +961,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		if ( compStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *compStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", compStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", compStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
@@ -1278,7 +1278,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	// first, make sure that the node has been marked as SCoP
 	if (!scop->hasAnnotation(ScopRegion::KEY)) return;
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	if (!region.isValid()) return;
+	if (!region.valid) return;
 
 	const IterationVector& iterVec = region.getIterationVector();
 
@@ -1296,7 +1296,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 
 		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
 		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
-		region.setValid(false);
+		region.valid=false;
 	}
 }
 
@@ -1454,10 +1454,8 @@ boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
 
 	ann.resolve();
 
-	if (!ann.isValid()) {
-		return boost::optional<Scop>();
-	}
-	return boost::optional<Scop>( ann.getScop() );
+	if (!ann.valid) return boost::optional<Scop>();
+	return boost::optional<Scop>(ann.getScop());
 }
 
 /** Recursively process ScopRegions caching the information related to access functions and
@@ -1691,7 +1689,7 @@ namespace {
 /** Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level and cache all the
 scattering info at this level */
 void ScopRegion::resolve() const {
-	assert( isValid() && "Error Try to resolve an invalid SCoP");
+	assert(valid && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result
 	if ( isResolved() ) { return; }
