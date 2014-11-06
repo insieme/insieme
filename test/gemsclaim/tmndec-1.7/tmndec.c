@@ -330,6 +330,9 @@ char **argvp[];
       case 'L':
         loopflag = 1;
         break;
+      case 'D':
+        deposterize = 1;
+        break;
       case 'X':
         expand = 1;
         break;
@@ -394,6 +397,7 @@ Options: -vn  verbose output (n: level)\n\
               You have to choose one output format!\n\
          -q   disable warnings to stderr\n\
          -r   use double precision reference IDCT\n\
+         -d   apply deposterization\n\
          -t   enable low level tracing\n");
 #ifdef DISPLAY
     printf("\

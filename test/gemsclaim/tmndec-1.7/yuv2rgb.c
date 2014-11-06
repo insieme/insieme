@@ -504,6 +504,76 @@ unsigned char *out;
  *--------------------------------------------------------------
  */
 
+#include <inttypes.h>
+// deposterization: smoothes posterized gradients from low-color-depth (e.g. 444, 565, compressed) sources
+void deposterizeH(uint32_t* data, uint32_t* out, int w, int l, int u) {
+    static const int T = 8;
+    #pragma omp for
+    for(int y = l; y < u; ++y) {
+        for(int x = 0; x < w; ++x) {
+            int inpos = y*w + x;
+            uint32_t center = data[inpos];
+            if(x==0 || x==w-1) {
+                out[y*w + x] = center;
+                continue;
+            }
+            uint32_t left = data[inpos - 1];
+            uint32_t right = data[inpos + 1];
+            out[y*w + x] = 0;
+            for(int c=0; c<4; ++c) {
+                uint8_t lc = (( left>>c*8)&0xFF);
+                uint8_t cc = ((center>>c*8)&0xFF);
+                uint8_t rc = (( right>>c*8)&0xFF);
+                if((lc != rc) && ((lc == cc && abs((int)((int)rc)-cc) <= T) || (rc == cc && abs((int)((int)lc)-cc) <= T))) {
+                    // blend this component
+                    out[y*w + x] |= ((rc+lc)/2) << (c*8);
+                } else {
+                    // no change for this component
+                    out[y*w + x] |= cc << (c*8);
+                }
+            }
+        }
+    }
+}
+
+void deposterizeV(uint32_t* data, uint32_t* out, int w, int h, int l, int u) {
+    static const int T = 8;
+    #pragma omp for
+    for(int y = l; y < u; ++y) {
+        for(int x = 0; x < w; ++x) {
+            uint32_t center = data[ y * w + x];
+            if(y==0 || y==h-1) {
+                out[y*w + x] = center;
+                continue;
+            }
+            uint32_t upper = data[(y-1) * w + x];
+            uint32_t lower = data[(y+1) * w + x];
+            out[y*w + x] = 0;
+            for(int c=0; c<4; ++c) {
+                uint8_t uc = (( upper>>c*8)&0xFF);
+                uint8_t cc = ((center>>c*8)&0xFF);
+                uint8_t lc = (( lower>>c*8)&0xFF);
+                if((uc != lc) && ((uc == cc && abs((int)((int)lc)-cc) <= T) || (lc == cc && abs((int)((int)uc)-cc) <= T))) {
+                    // blend this component
+                    out[y*w + x] |= ((lc+uc)/2) << (c*8);
+                } else {
+                    // no change for this component
+                    out[y*w + x] |= cc << (c*8);
+                }
+            }
+        }
+    }
+}
+
+static inline void scale(unsigned int *out, unsigned pos, int xs, int ys, int scaling) {
+    for(int j=0; j<scaling; j++) 
+        for(int i=0; i<scaling; i++) {
+            if(pos + xs*i +ys*j > 0 && pos + xs*i +ys*j < coded_picture_width*coded_picture_height)
+            out[pos + xs*i +ys*j] = out[pos];
+        }
+
+}
+
 /*
  * This is a copysoft version of the function above with ints instead
  * of shorts to cause a 4-byte pixel size
@@ -517,7 +587,6 @@ unsigned char *out;
     int cols;
     int rows;
 
-    int y;
     int cols_2;
 
     cols = coded_picture_width;
@@ -528,10 +597,24 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
-    //#pragma omp parallel for objective(0*E+1*P+0*T)
-    #pragma omp parallel for schedule(dynamic) 
-    for (y=0; y<rows; y+=2) {
-        for (int x=0; x<cols_2; x++) {
+    int scaling = 1;
+    // irt_merge( irt_parallel ( wi_5 ) )
+    //
+    // wi_5 () + meta {
+    //  region start
+    //  irt_pfor( func )
+    //  region end
+    // }
+   
+    unsigned char * tmp_out = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
+
+    #pragma omp parallel //objective(0*E+1*P+0*T) param(scaling, range(1: 8: 1))
+    {
+    #pragma omp for schedule(dynamic)
+    //for (int yt=0; yt<rows*8; yt+=2)
+    //    int y = yt % rows;
+    for (int y=0; y<rows; y+=2*scaling) {
+        for (int x=0; x<cols_2; x+=scaling) {
             int R, G, B;
 
             int L, CR, CB;
@@ -545,8 +628,8 @@ unsigned char *out;
             unsigned char *cr = src[2] + offset;
             unsigned char *lum = src[0] + 2*(offset + (y/2) * cols_2);
             unsigned char *lum2 = src[0] + (offset + (y/2) * cols_2 + cols_2)*2;
-            unsigned int *row1 = (unsigned int*)out + 2*(offset + (y/2) * cols_2); 
-            unsigned int *row2 = (unsigned int*)out + (cols_2 + offset + (y/2) * cols_2)*2; 
+            unsigned int *row1 = (unsigned int*)tmp_out + 2*(offset + (y/2) * cols_2); 
+            unsigned int *row2 = (unsigned int*)tmp_out + (cols_2 + offset + (y/2) * cols_2)*2; 
 
             CR = *cr++;
             CB = *cb++;
@@ -563,6 +646,8 @@ unsigned char *out;
             B = L + cb_b;
 
             *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            if(scaling != 1)
+                scale((unsigned int*)tmp_out, row1 -(unsigned int*)tmp_out -1, -1, -cols, scaling);
 
 #ifdef INTERPOLATE
             if(x != cols_2 - 1) {
@@ -582,6 +667,8 @@ unsigned char *out;
             B = L + cb_b;
 
             *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            if(scaling != 1)
+                scale((unsigned int*)tmp_out, row1 -(unsigned int*)tmp_out -1, +1, -cols, scaling);
 
             /*
              * Now, do second row.
@@ -604,6 +691,8 @@ unsigned char *out;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            if(scaling != 1)
+                scale((unsigned int*)tmp_out, row2 -(unsigned int*)tmp_out -1, -1, +cols, scaling);
 
             L = *lum2++;
             R = L + cr_r;
@@ -611,13 +700,26 @@ unsigned char *out;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            if(scaling != 1)
+                scale((unsigned int*)tmp_out, row2 -(unsigned int*)tmp_out -1, +1, +cols, scaling);
         }
     }
+    
+    if(deposterize) {
+        // deposterization
+        deposterizeH((uint32_t*)tmp_out, (uint32_t*)out, cols, 0, rows);
+        deposterizeV((uint32_t*)tmp_out, (uint32_t*)out, cols, rows, 0, rows);
+    }
+    else {
+        #pragma omp single
+        memcpy(out, tmp_out, coded_picture_width*coded_picture_height*sizeof (int));
+    }
+
+    } // parallel
+
+
+    free(tmp_out);
 }
-
-
-
-
 
 #endif
 
