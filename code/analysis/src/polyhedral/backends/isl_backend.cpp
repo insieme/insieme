@@ -561,20 +561,14 @@ PiecewisePtr<ISL> IslSet::getCard() const {
     return PiecewisePtr<ISL>(ctx, isl_union_set_card( isl_union_set_copy(set) ) );
 }
 
-
-
-/**********************************************************************************************
- * IslMap: 
- * 	contains the implementation code of IslMaps.
- *
- *********************************************************************************************/
-
 IslMap::IslMap(IslCtx& ctx, const std::string& map_str) : IslObj(ctx, NULL) {
 	map = isl_union_map_read_from_str(ctx.getRawContext(), map_str.c_str());
 	assert(map && "Error while reading map from input string");
 	space = isl_union_map_get_space(map);
 }
 
+/// FIXME: This code is slow, and it is most probably wrong. Understand, simplify, and refactor this constructor
+/// so that it uses several newly created (static) methods.
 IslMap::IslMap(IslCtx& 				ctx, 
 			   const AffineSystem& 	affSys, 
 			   const TupleName&	 	in_tuple, 
@@ -795,9 +789,8 @@ DependenceInfo<ISL> buildDependencies(
 		);
 }
 
-// FIXME: what the hell is this?
-template <>
-std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
+/// Print "must" and "may" dependences for debugging purposes
+template <> std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	mustDep->simplify();
 	out << std::endl << "* MUST dependencies: " << std::endl;
 	mustDep->printTo(out);
@@ -920,7 +913,7 @@ int visit_isl_term(isl_term *term, void *user) {
 		// free the affine expression
 		isl_aff_free(aff);
 
-		// Apply the denominator. FIXME: The operation should contain a floor which is not supported by the Formulas
+		// Apply the denominator. TODO: The operation should contain a floor which is not supported by the Formulas
 		tmp = tmp / denominator;
 
 		// because we cannot perform the exponentiation of a formula, we multiply with itself for N times 
@@ -1092,7 +1085,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 
 int visit_fold_piece(isl_set* dom, isl_qpolynomial_fold* fold, void* user) {
 	int ret = isl_qpolynomial_fold_foreach_qpolynomial(fold, visit_qpolynomial, user);
-	// FIXME: Visit the domain in order to perform a complete conversion
+	// TODO: Visit the domain in order to perform a complete conversion
 	isl_set_free(dom);
 	isl_qpolynomial_fold_free(fold);
 	return ret;

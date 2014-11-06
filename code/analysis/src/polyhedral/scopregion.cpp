@@ -1272,7 +1272,11 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
     within loop statements.
     @param scop NodeAddress representing the SCoP that will be tested
     @scopList vector<NodeAddress> representing the SCoPs that are valid (if everything goes well, this list has 1 elem which is the input parameter "scop")
-    TODO: scopList should be made as a return value.
+
+    TODO: postProcessSCoP should only look at the current SCoP annotation only, not looking at child nodes. Child SCoPs
+    should be handled independently in some other (to-be-written wrapper) code. There should not be a scopList, merging
+    valid SCoPs together should also be done centrally, instead of recursively. So, postProcessSCop should return
+    a boolean value: true, if the SCoP can be handled, false otherwise (same as region.invalid).
 */
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	// first, make sure that the node has been marked as SCoP
@@ -1794,16 +1798,17 @@ AddressList mark(const core::NodePtr& root) {
 
 	// remove SCoP from our list of SCoPs if the SCoP does not satisfy the needs of the polyhedral model
 	// initially, the second argument "validscops" is empty and will be filled by postProcessSCoP
-	// Additionally, there seems to be a bug in the SCoP detection: empty SCoPs are returned as well.
-	// We filter these first before determining the validity of the SCoP.
-	for (const auto& scop: allscops) {
-		annotations::LocationOpt loc=annotations::getLocation(scop);
-		if (loc) {// FIXME: && scop.size()>1) {
-			LOG(WARNING) << "Found SCoP " << scop << " at location " << *loc << "." << std::endl;
-			postProcessSCoP(scop, validscops);
-		} else if (loc) {
-			LOG(WARNING) << "Bug in SCoP detection, not considering SCoP " << scop
-						 << " at address " << *loc << "." << std::endl;
+	// FIXME: Bug in the SCoP detection: Empty SCoPs are returned as well. We filter these before determining
+	// the validity of the SCoP.
+	for (const auto& scopnode: allscops) {
+		//Scop& scop=Scop::getScop(scopnode);
+		if (true /*scop.size()>0*/) {
+			postProcessSCoP(scopnode, validscops);
+		} else {
+			annotations::LocationOpt loc=annotations::getLocation(scopnode);
+			LOG(WARNING) << "Found SCoP " << scopnode //<< " of size " << scop.size()
+						 //<< " and nestinglvl " << scop.nestingLevel()
+						 << " at address " << *loc << ", ignoring" << std::endl;
 		}
 	}
 

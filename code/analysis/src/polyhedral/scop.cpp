@@ -459,6 +459,11 @@ insieme::core::NodePtr Scop::outermostScopAnnotation(insieme::core::NodePtr p) {
 /// if the SCoP is not maximal. Can be called directly, with explicit scoping.
 bool Scop::isScop(insieme::core::NodePtr p) {
     if (!hasScopAnnotation(p)) return false;
+    Scop& scop=p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+    LOG(WARNING) << "SCOP statement vector size: " << scop.stmts.size() << std::endl;
+    for (auto s: scop.stmts) {
+        //if (p == s.) return true;
+    }
     //FIXME: outermostScopAnnotation(p);
     return false;
 }

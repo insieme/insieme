@@ -201,23 +201,25 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 
 typedef std::shared_ptr<Stmt> StmtPtr;
 
-/**
- * Scop: This class is the entry point for any polyhedral model analysis / transformations. The
- * purpose is to fully represent all the information of a polyhedral static control region (SCOP).
- * Copies of this class can be created so that transformations to the model can be applied without
- * changing other instances of this SCop.
- *
- * By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
- * When a transformation needs to be performed a deep copy of the Scop object is created and
- * transformations are applied to it.
- */
+/** The Scop class is the entry point for all polyhedral model analyses and transformations. The
+ purpose is to fully represent all the information of a polyhedral Static Control Part (SCoP).
+ Copies of this class can be created so that transformations to the model can be applied without
+ changing other instances of this SCoP.
+
+ By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
+ When a transformation needs to be performed a deep copy of the Scop object is created and
+ transformations are applied to it. */
 struct Scop : public utils::Printable {
 
+public:
+	IterationVector iterVec;
 	typedef std::vector<StmtPtr> StmtVect;
 	typedef StmtVect::iterator iterator;
 	typedef StmtVect::const_iterator const_iterator;
+	StmtVect stmts; /// <- all statements in the SCoP, root address is the entry point of SCoP
+	size_t sched_dim;
 
-	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
+	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) :
 		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector
 		for_each(stmts, [&] (const StmtPtr& stmt) { 
@@ -284,21 +286,6 @@ struct Scop : public utils::Printable {
 	bool isParallel(core::NodeManager& mgr) const;
 
 	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
-
-private:
-
-	IterationVector 	iterVec;
-	StmtVect 			stmts;
-	size_t				sched_dim;
 };
 
-/**
- * Converts a SCoP based on a specific iteration vector to a different base which is compatible 
- * i.e. it contains at least the same elements as the original iteration vector but it can contain
- * new parameters or iterators which will be automatically set to 0
- */
-// Scop toBase(const Scop& s, const IterationVector& iterVec);
-
-
-} } } // end insieme::analysis::polyhedral namespace
-
+}}}
