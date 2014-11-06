@@ -216,14 +216,14 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             #define ISOLATE_CPU_ENERGY
             #include "irt_metrics.def"
 
-            //#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-	        //if(irt_g_inst_region_metric_measure_cpu_time) { \
-            //    cur_resources.cpu_time = (_data_type__)((double)regions[variant->meta_info->ompp_objective.region_id].aggregated_cpu_time * _output_conversion_code__); \
-	        //}
-            //#define ISOLATE_METRIC
-            //#define ISOLATE_CPU_TIME
-            //#include "irt_metrics.def"
-
+            /*#define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
+	        if(irt_g_inst_region_metric_measure_cpu_time) { \
+                cur_resources.cpu_time = (_data_type__)((double)regions[variant->meta_info->ompp_objective.region_id].aggregated_cpu_time * _output_conversion_code__); \
+	        }
+            #define ISOLATE_METRIC
+            #define ISOLATE_CPU_TIME
+            #include "irt_metrics.def"
+            */
 
             #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	        if(irt_g_inst_region_metric_measure_wall_time) { \

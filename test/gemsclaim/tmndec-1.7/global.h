@@ -225,7 +225,7 @@ EXTERN int chrom_width,chrom_height,blk_cnt;
 EXTERN int pict_type,newgob;
 EXTERN int mv_outside_frame,syntax_arith_coding,adv_pred_mode,pb_frame;
 EXTERN int long_vectors;
-EXTERN int fault,expand;
+EXTERN int fault,expand, deposterize;
 EXTERN int verbose;
 EXTERN int refidct;
 EXTERN int matrix_coefficients;
