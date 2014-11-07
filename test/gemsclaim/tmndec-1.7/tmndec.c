@@ -331,7 +331,13 @@ char **argvp[];
         loopflag = 1;
         break;
       case 'D':
-        deposterize = 1;
+        deposterizeH = 1;
+        deposterizeV = 1;
+        int val = getval(*argvp);
+        if(val == 1)
+            deposterizeV = 0;
+        else if(val == 2)
+            deposterizeH = 0;
         break;
       case 'X':
         expand = 1;
@@ -397,7 +403,10 @@ Options: -vn  verbose output (n: level)\n\
               You have to choose one output format!\n\
          -q   disable warnings to stderr\n\
          -r   use double precision reference IDCT\n\
-         -d   apply deposterization\n\
+         -dn  apply deposterization\n\
+              n=  : horizontal and vertical\n\
+              n=1 : horizontal only\n\
+              n=2 : vertical only\n\
          -t   enable low level tracing\n");
 #ifdef DISPLAY
     printf("\

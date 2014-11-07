@@ -506,7 +506,7 @@ unsigned char *out;
 
 #include <inttypes.h>
 // deposterization: smoothes posterized gradients from low-color-depth (e.g. 444, 565, compressed) sources
-void deposterizeH(uint32_t* data, uint32_t* out, int w, int l, int u) {
+void deposterizeHfunc(uint32_t* data, uint32_t* out, int w, int l, int u) {
     static const int T = 8;
     #pragma omp for
     for(int y = l; y < u; ++y) {
@@ -520,7 +520,7 @@ void deposterizeH(uint32_t* data, uint32_t* out, int w, int l, int u) {
             uint32_t left = data[inpos - 1];
             uint32_t right = data[inpos + 1];
             out[y*w + x] = 0;
-            for(int c=0; c<4; ++c) {
+            for(int c=0; c<3; ++c) {
                 uint8_t lc = (( left>>c*8)&0xFF);
                 uint8_t cc = ((center>>c*8)&0xFF);
                 uint8_t rc = (( right>>c*8)&0xFF);
@@ -536,7 +536,7 @@ void deposterizeH(uint32_t* data, uint32_t* out, int w, int l, int u) {
     }
 }
 
-void deposterizeV(uint32_t* data, uint32_t* out, int w, int h, int l, int u) {
+void deposterizeVfunc(uint32_t* data, uint32_t* out, int w, int h, int l, int u) {
     static const int T = 8;
     #pragma omp for
     for(int y = l; y < u; ++y) {
@@ -549,7 +549,7 @@ void deposterizeV(uint32_t* data, uint32_t* out, int w, int h, int l, int u) {
             uint32_t upper = data[(y-1) * w + x];
             uint32_t lower = data[(y+1) * w + x];
             out[y*w + x] = 0;
-            for(int c=0; c<4; ++c) {
+            for(int c=0; c<3; ++c) {
                 uint8_t uc = (( upper>>c*8)&0xFF);
                 uint8_t cc = ((center>>c*8)&0xFF);
                 uint8_t lc = (( lower>>c*8)&0xFF);
@@ -607,6 +607,7 @@ unsigned char *out;
     // }
    
     unsigned char * tmp_out = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
+    unsigned char * tmp_out2 = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
 
     #pragma omp parallel //objective(0*E+1*P+0*T) param(scaling, range(1: 8: 1))
     {
@@ -705,10 +706,15 @@ unsigned char *out;
         }
     }
     
-    if(deposterize) {
-        // deposterization
-        deposterizeH((uint32_t*)tmp_out, (uint32_t*)out, cols, 0, rows);
-        deposterizeV((uint32_t*)tmp_out, (uint32_t*)out, cols, rows, 0, rows);
+    if(deposterizeH && deposterizeV) {
+        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)tmp_out2, cols, 0, rows);
+        deposterizeVfunc((uint32_t*)tmp_out2, (uint32_t*)out, cols, rows, 0, rows);
+    }
+    else if(deposterizeH && !deposterizeV) {
+        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, 0, rows);
+    }
+    else if(!deposterizeH && deposterizeV) {
+        deposterizeVfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, rows, 0, rows);
     }
     else {
         #pragma omp single
@@ -719,6 +725,7 @@ unsigned char *out;
 
 
     free(tmp_out);
+    free(tmp_out2);
 }
 
 #endif
