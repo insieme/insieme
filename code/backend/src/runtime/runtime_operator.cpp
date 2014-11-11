@@ -345,7 +345,7 @@ namespace runtime {
         // param clause
 
 		table[basic.getPickInRange()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0));
+			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0), CONVERT_ARG(1));
 		});
 		
 		table[basic.getRefDelete()] = OP_CONVERTER({

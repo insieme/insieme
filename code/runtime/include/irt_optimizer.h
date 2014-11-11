@@ -139,7 +139,7 @@ typedef struct _irt_optimizer_runtime_data {
 IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS, 0);
 #endif
 
-uint64_t irt_optimizer_pick_in_range(uint64_t max);
+uint64_t irt_optimizer_pick_in_range(int id, uint64_t max);
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation);
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);

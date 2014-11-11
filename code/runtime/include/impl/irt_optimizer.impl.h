@@ -101,7 +101,7 @@ void irt_optimizer_completed_pfor(irt_wi_implementation *impl, irt_work_item_ran
 
 #endif // ifndef IRT_RUNTIME_TUNING
 
-uint64_t irt_optimizer_pick_in_range(uint64_t max) {
+uint64_t irt_optimizer_pick_in_range(int id, uint64_t max) {
     /* according to enclosing region goals, pick a value */
 
     return max -1;

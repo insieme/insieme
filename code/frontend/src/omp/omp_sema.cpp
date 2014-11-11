@@ -106,13 +106,16 @@ class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	// literal markers for "ordered" implementation
 	const LiteralPtr orderedCountLit, orderedItLit, orderedIncLit;
 
+    // To generate per-objective-clause param id (OMP+)
+    unsigned int paramCounter;
+
 public:
 	OMPSemaMapper(NodeManager& nodeMan)
 			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(),
 			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses(),
 			  orderedCountLit(build.literal("ordered_counter", build.volatileType(build.refType(basic.getInt8())))),
 			  orderedItLit(build.literal("ordered_loop_it", basic.getInt8())),
-			  orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())) {
+			  orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())), paramCounter(0) {
 	}
 
 	StructTypePtr getAdjustStruct() { return adjustStruct; }
@@ -771,18 +774,18 @@ protected:
 
 		if(param.hasRange()) {
 			auto max 	= build.div( build.sub(param.getRangeUBound(), param.getRangeLBound()), param.getRangeStep());
-			auto pick 	= build.pickInRange(max);
+			auto pick 	= build.pickInRange(build.intLit(paramCounter++), max);
 			auto exp = build.add( build.mul(pick, param.getRangeStep()), param.getRangeLBound() );
 			assign = build.assign(param.getVar(), exp);
 		}
 		else if(param.hasEnum()) {
-			auto pick = build.pickInRange( core::types::castScalar(basic.getUInt8(), param.getEnumSize()) );
+			auto pick = build.pickInRange( build.intLit(paramCounter++), core::types::castScalar(basic.getUInt8(), param.getEnumSize()) );
 			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
 			assign = build.assign( param.getVar(), build.deref( arrVal ) );
 		}
 		else {
 			/* Boolean */
-			auto pick = build.pickInRange( build.intLit(1) );
+			auto pick = build.pickInRange( build.intLit(paramCounter++), build.intLit(1) );
 			assign = build.assign( param.getVar(), pick );
 		}
 
@@ -853,6 +856,10 @@ protected:
         objective.power_max  = constraints[Objective::POWER].second.as<core::LiteralPtr>()->getValueAs<float>();
         objective.time_min   = constraints[Objective::TIME].first.as<core::LiteralPtr>()->getValueAs<float>();
         objective.time_max   = constraints[Objective::TIME].second.as<core::LiteralPtr>()->getValueAs<float>();
+
+        // Set up param counter 
+        objective.param_count = paramCounter;
+        paramCounter = 0;
 
         // regionId 0 is reserved for main work item
         static unsigned regionId = 1;
