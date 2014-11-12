@@ -444,7 +444,7 @@ namespace core {
 
 		// Variants
 		CallExprPtr pickVariant(const ExpressionList& variants) const;
-		CallExprPtr pickInRange(const ExpressionPtr& max) const;
+		CallExprPtr pickInRange(const ExpressionPtr& id, const ExpressionPtr& max) const;
 
 
 		/**
