@@ -876,8 +876,11 @@ CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
 }
 
-CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& max) const {
-	return callExpr(manager.getLangBasic().getPickInRange(), max);
+CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max) const {
+	vector<ExpressionPtr> args;
+    args.push_back(id);
+    args.push_back(max);
+	return callExpr(manager.getLangBasic().getPickInRange(), args);
 }
 
 

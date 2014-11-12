@@ -108,6 +108,7 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> 	KEY;
+	bool valid;
 
 	/** This class keeps the information on how a particular reference is accessed. This is slightly different from the
 	DefUse::Ref class as this one also include information related to the conversion of the reference into the polyhedral
@@ -137,7 +138,7 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	typedef std::shared_ptr<Reference> ReferencePtr;
 
-	/** ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both direct and
+	/** Stmt:Class which contains all the information of statements inside a SCoP (both direct and
 	contained in sub-scops).
 
 	A statement into a SCoP has 3 piece of information associated:
@@ -155,13 +156,9 @@ struct ScopRegion: public core::NodeAnnotation {
 
 		Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
 			address(addr), accesses(accesses) { }
-
 		inline const core::StatementAddress& getAddr() const { return address; }
-		
 		inline const core::StatementAddress& operator->() const { return address; }
-
 		inline bool operator<(const Stmt& other) const { return address < other.address; }
-
 		virtual RefAccessList getRefAccesses() const { return accesses; } 
 
 	private:
@@ -170,7 +167,6 @@ struct ScopRegion: public core::NodeAnnotation {
 	};
 	
 	typedef std::vector<Stmt> 			StmtVect;
-
 	typedef std::vector<Iterator> 		IteratorOrder;
 	
 	ScopRegion( const core::NodePtr& 	annNode,
@@ -179,12 +175,8 @@ struct ScopRegion: public core::NodeAnnotation {
 				const StmtVect&		 	stmts = StmtVect(),
 				const SubScopList& 		subScops_ = SubScopList() 
 			  ) :
-		annNode(annNode),
-		iterVec(iv), 
-		stmts(stmts),
-		domain( iterVec, comb ), // Switch the base to the this->iterVec 
-		valid(true)
-	{ 
+		valid(true), annNode(annNode), iterVec(iv), stmts(stmts),
+		domain( iterVec, comb ) { // Switch the base to the this->iterVec
 		
 		for_each(subScops_.begin(), subScops_.end(), 
 			[&] (const SubScop& cur) { 
@@ -217,16 +209,8 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
 	of its iteration domain, scattering matrix and access functions are listed. */
-	inline const Scop& getScop() const {
-		assert(isValid() && "SCoP is not valid");
-		if (!isResolved()) { resolve(); }
-		return *scopInfo;
-	}
-
-	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
-	of its iteration domain, scattering matrix and access functions are listed. */
 	inline Scop& getScop() {
-		assert(isValid() && "SCoP is not valid");
+		assert(valid && "SCoP is not valid");
 		if (!isResolved()) { resolve(); }
 		return *scopInfo;		
 	}
@@ -235,9 +219,6 @@ struct ScopRegion: public core::NodeAnnotation {
 	const SubScopList& getSubScops() const { return subScops; }
 
 	bool containsLoopNest() const;
-
-	inline bool isValid() const { return valid; }
-	inline void setValid(bool value) { valid = value; }
 
 	static boost::optional<Scop> toScop(const core::NodePtr& root);
 
@@ -264,8 +245,6 @@ private:
 	SubScopList subScops;
 
 	mutable std::shared_ptr<Scop> scopInfo;
-
-	bool valid;
 };
 
 /** AccessFunction : this annotation is used to annotate array subscript expressions with the equality constraint
@@ -302,25 +281,6 @@ public:
 };
 
 AddressList mark(const core::NodePtr& root);
-
-inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
-	AddressList&& al = insieme::analysis::polyhedral::scop::mark(root);
-	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1) { 
-		// If there are not scops or the number of scops is greater than 2 
-		// or the the extracted scop is not the top level node 
-		return boost::optional<Scop>();
-	}
-	assert(root->hasAnnotation(ScopRegion::KEY));
-	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
-
-	ann.resolve();
-
-	if (!ann.isValid()) { 
-		return boost::optional<Scop>(); 
-	}
-	return boost::optional<Scop>( ann.getScop() );
-}
-
 
 } } } } // end insieme::analysis::polyhedral::scop namespace
 
