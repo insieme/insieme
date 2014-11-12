@@ -70,6 +70,13 @@ class Formula;
 
 namespace analysis { namespace polyhedral {
 
+typedef std::vector<core::NodeAddress> 					AddressList;
+typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
+typedef std::list<SubScop> 								SubScopList;
+
+// TODO: integrate SubScop infrastructure into Scop infrastructure
+std::list<SubScop> toSubScopList(const IterationVector& iterVec, const AddressList& scops);
+
 /**
  * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
  * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
