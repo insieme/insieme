@@ -80,15 +80,15 @@ typedef struct _irt_optimizer_resources {
 
 // Data types for runtime collected data 
 
-#define IRT_OPTIMIZER_PARAMS_MAX 16
+#define IRT_OPTIMIZER_PARAM_COUNT 8
 // An id is needed because of hashmap (lookup_table) implementations
 typedef struct _irt_optimizer_wi_data_id {
     struct {
-        uint16 frequency;
-        uint16 thread_count;
-        uint16 param_value[IRT_OPTIMIZER_PARAMS_MAX];
+        uint64 frequency;
+        uint64 thread_count;
+        uint64 param_value[IRT_OPTIMIZER_PARAM_COUNT];
     };
-    uint16 eos;
+    uint64 eos;
 } irt_optimizer_wi_data_id;
 
 //uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
@@ -108,7 +108,8 @@ typedef struct _irt_optimizer_runtime_data {
     irt_optimizer_resources best_resources;
     irt_optimizer_wi_data_id cur;
     irt_optimizer_resources cur_resources;
-    bool hc_end;
+    irt_optimizer_wi_data_id max;
+    bool hc_end;        // true if hill climbing completed
     int16 hc_elem;      // element in irt_optimizer_wi_data_id currently hill climbed 
     int8 hc_dir;        // current hill climbing direction
     irt_spinlock spinlock;

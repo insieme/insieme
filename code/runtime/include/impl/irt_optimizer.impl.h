@@ -129,13 +129,18 @@ void get_available_freqs() {
 
 
 void irt_optimizer_objective_init(irt_context *context) {
+    get_available_freqs();
+
     for(int i=0; i<context->impl_table_size; i++) { 
         for(int j=0; j<context->impl_table[i].num_variants; j++) { 
             irt_spin_init(&context->impl_table[i].variants[j].rt_data.optimizer_rt_data.spinlock);
-            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.best.frequency = USHRT_MAX;
+            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.best.frequency = UINT64_MAX;
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.hc_elem = -1;
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.hc_dir = 0;
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.hc_end = false;
+            memset(&(context->impl_table[i].variants[j].rt_data.optimizer_rt_data.max), UINT8_MAX, sizeof(context->impl_table[i].variants[j].rt_data.optimizer_rt_data.max));
+            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.max.thread_count = irt_g_worker_count;
+            context->impl_table[i].variants[j].rt_data.optimizer_rt_data.max.frequency = irt_g_available_freq_count;
 
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur.frequency = 1; // let's skip freq 0 (turbo boost (?));
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur.thread_count = irt_g_worker_count -1; // 0 based as the rest
@@ -143,8 +148,6 @@ void irt_optimizer_objective_init(irt_context *context) {
             context->impl_table[i].variants[j].rt_data.optimizer_rt_data.cur_resources.cpu_energy = 0;
         }
     }
-
-    get_available_freqs();
 }
 
 void irt_optimizer_objective_destroy(irt_context *context) {
@@ -172,10 +175,14 @@ uint64 irt_optimizer_pick_in_range(int id, uint64 max) {
     if(!variant->meta_info || variant->meta_info->ompp_objective.region_id == UINT_MAX)
         return 0;
 
+    // communicate max value to hill climbing algorithm
+    variant->rt_data.optimizer_rt_data.max.param_value[id] = max +1;
+
     uint64 res;
-    if(variant->rt_data.optimizer_rt_data.cur.param_value[id] == -1) {
+    if(variant->rt_data.optimizer_rt_data.cur.param_value[id] == UINT64_MAX) {
         // random value
         res = rand() % (max +1);
+        //printf("%s: rand res %" PRIu64 "\n", res);
     }
     else if(variant->rt_data.optimizer_rt_data.cur.param_value[id] > max)
         res = max;
@@ -187,12 +194,10 @@ uint64 irt_optimizer_pick_in_range(int id, uint64 max) {
     return res;
 }
 
-// It does not take into account maximum values for the elements
-// If a greater value than max should be picked, it will result in max (safety checks elsewhere)
-// in that case resources usage will eventually get worse and the algorithm will move on
 irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objective_info obj) {
-    irt_optimizer_wi_data_id next = data->best;
     bool move_on = false;
+
+    //printf("%s: elem %d dir %d val %d\n", __func__, data->hc_elem, data->hc_dir, (*((uint64*)&data->best + data->hc_elem)));
 
     if(data->hc_elem == -1) {
         // first call
@@ -209,39 +214,58 @@ irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objec
     else {
         // keep climbing current element in solution
         data->best = data->cur;
-        next = data->cur;
-        printf("BEST: next freq %d next thread count %d time %" PRIu64 "\n", data->best.frequency, data->best.thread_count +1, data->cur_resources.wall_time);
+        //printf("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", data->best.frequency, data->best.thread_count +1, data->best.param_value[0], data->cur_resources.wall_time);
     }
 
-    // hill climb
-    if(data->hc_dir >= 0) {
-        (*((uint16*)&next + data->hc_elem)) ++;
-        data->hc_dir ++;
-    }
-    else {
-        (*((uint16*)&next + data->hc_elem)) --;
-    }
- 
-    if(move_on || (*((uint16*)&next + data->hc_elem)) == -1) {
-        // move to next element in solution
-        data->hc_dir = 0;
-        data->hc_elem ++;
-        if(data->hc_elem >= (uint16*)&(data->best.param_value) + obj.param_count - (uint16*)&(data->best))
-            data->hc_elem = (uint16*)&(data->best.param_value) + IRT_OPTIMIZER_PARAMS_MAX - (uint16*)&(data->best);
+    do {
+        irt_optimizer_wi_data_id next = data->best;
 
-        // if last element in solution, stop
-        if(data->hc_elem == (uint16*)&(data->best.eos) - (uint16*)&(data->best)) {
-            data->hc_end = true;
-            return data->best;
+        // hill climb
+        if(data->hc_dir >= 0) {
+            // go towards upper bound
+            (*((uint64*)&next + data->hc_elem)) ++;
+            data->hc_dir ++;
+
+            // if upper bound is reached
+            if((*((uint64*)&next + data->hc_elem)) >= (*((uint64*)&(data->max) + data->hc_elem))) {
+                if(data->hc_dir < 2) {
+                    // let's try to go towards lower bound
+                    data->hc_dir = -1;
+                    continue;
+                }
+                else {
+                    move_on = true;
+                }
+            }
         }
         else {
-            next = data->best;
-            (*((uint16*)&next + data->hc_elem)) ++;
-            data->hc_dir ++;
+            // go towards lower bound
+            (*((uint64*)&next + data->hc_elem)) --;
+            data->hc_dir --;
+        
+            // if lower bound is reached
+            if((*((uint64*)&next + data->hc_elem)) == UINT64_MAX) {
+                move_on = true;
+            }
         }
-    }
+    
+        if(move_on) {
+            move_on = false;
+            // move to next element in solution
+            data->hc_dir = 0;
+            data->hc_elem ++;
+            if(data->hc_elem >= (uint64*)&(data->best.param_value) + obj.param_count - (uint64*)&(data->best))
+                data->hc_elem = (uint64*)&(data->best.param_value) + IRT_OPTIMIZER_PARAM_COUNT - (uint64*)&(data->best);
 
-    return next;
+            // if last element in solution, stop
+            if(data->hc_elem == (uint64*)&(data->best.eos) - (uint64*)&(data->best)) {
+                data->hc_end = true;
+                return data->best;
+            }
+        }
+        else
+            return next;
+    } while(true);
 }
 
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item * wi, bool force_computation) {
@@ -336,17 +360,17 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
             else
             {
                 irt_optimizer_wi_data_id new_element; 
-                memset(&new_element, -1, sizeof(new_element));
+                memset(&new_element, UINT8_MAX, sizeof(new_element));
 
-                if(regions[variant->meta_info->ompp_objective.region_id].num_executions < 20 ){ //IRT_OMPP_OPTIMIZER_BEST) {
+                if(regions[variant->meta_info->ompp_objective.region_id].num_executions < IRT_OMPP_OPTIMIZER_BEST) {
                     // first step: random search
 
                     // Update best
-                    if(variant->rt_data.optimizer_rt_data.best.frequency == USHRT_MAX || 
+                    if(variant->rt_data.optimizer_rt_data.best.frequency == UINT64_MAX || 
                        is_objective_satisfied(variant->meta_info->ompp_objective, variant->rt_data.optimizer_rt_data.best_resources, variant->rt_data.optimizer_rt_data.cur_resources) == 1) {
                         variant->rt_data.optimizer_rt_data.best_resources = variant->rt_data.optimizer_rt_data.cur_resources;
                         variant->rt_data.optimizer_rt_data.best = variant->rt_data.optimizer_rt_data.cur;
-                        printf("BEST: next freq %d next thread count %d time %" PRIu64 "\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count +1, variant->rt_data.optimizer_rt_data.cur_resources.wall_time);
+                        //printf("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count +1, variant->rt_data.optimizer_rt_data.best.param_value[0], variant->rt_data.optimizer_rt_data.cur_resources.wall_time);
                     }
 
                     // Computing new settings
@@ -354,9 +378,6 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                     new_element.frequency = rand() % irt_g_available_freq_count;
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
                     new_element.thread_count = rand() % irt_g_worker_count;
-#else
-                    // fix the value to avoid different hashes
-                    new_element.thread_count = irt_g_worker_count;
 #endif
                     // param_value = -1 random (memset)
                 }
@@ -365,7 +386,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                     new_element = hill_climb(&(variant->rt_data.optimizer_rt_data), variant->meta_info->ompp_objective);
                 }
 
-                printf("NEXT: next freq %d next thread count %d\n", new_element.frequency, new_element.thread_count +1);
+                //printf("NEXT: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 "\n", new_element.frequency, new_element.thread_count +1, new_element.param_value[0]);
 
                 variant->rt_data.optimizer_rt_data.cur_resources = cur_resources;
                 variant->rt_data.optimizer_rt_data.cur = new_element;
