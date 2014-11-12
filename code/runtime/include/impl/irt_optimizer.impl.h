@@ -103,6 +103,8 @@ void irt_optimizer_completed_pfor(irt_wi_implementation *impl, irt_work_item_ran
 
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER
 
+#define IRT_OMPP_OPTIMIZER_PRINT(...)   //printf(__VA_ARGS__)
+
 uint32 irt_g_available_freqs[128];
 uint32 irt_g_available_freq_count = UINT_MAX;
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
@@ -182,7 +184,7 @@ uint64 irt_optimizer_pick_in_range(int id, uint64 max) {
     if(variant->rt_data.optimizer_rt_data.cur.param_value[id] == UINT64_MAX) {
         // random value
         res = rand() % (max +1);
-        //printf("%s: rand res %" PRIu64 "\n", res);
+        IRT_OMPP_OPTIMIZER_PRINT("%s: rand res %" PRIu64 "\n", __func__, res);
     }
     else if(variant->rt_data.optimizer_rt_data.cur.param_value[id] > max)
         res = max;
@@ -197,7 +199,7 @@ uint64 irt_optimizer_pick_in_range(int id, uint64 max) {
 irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objective_info obj) {
     bool move_on = false;
 
-    //printf("%s: elem %d dir %d val %d\n", __func__, data->hc_elem, data->hc_dir, (*((uint64*)&data->best + data->hc_elem)));
+    IRT_OMPP_OPTIMIZER_PRINT("%s: elem %d dir %d val %d\n", __func__, data->hc_elem, data->hc_dir, (*((uint64*)&data->best + data->hc_elem)));
 
     if(data->hc_elem == -1) {
         // first call
@@ -214,7 +216,7 @@ irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objec
     else {
         // keep climbing current element in solution
         data->best = data->cur;
-        //printf("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", data->best.frequency, data->best.thread_count +1, data->best.param_value[0], data->cur_resources.wall_time);
+        IRT_OMPP_OPTIMIZER_PRINT("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", data->best.frequency, data->best.thread_count +1, data->best.param_value[0], data->cur_resources.wall_time);
     }
 
     do {
@@ -370,7 +372,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                        is_objective_satisfied(variant->meta_info->ompp_objective, variant->rt_data.optimizer_rt_data.best_resources, variant->rt_data.optimizer_rt_data.cur_resources) == 1) {
                         variant->rt_data.optimizer_rt_data.best_resources = variant->rt_data.optimizer_rt_data.cur_resources;
                         variant->rt_data.optimizer_rt_data.best = variant->rt_data.optimizer_rt_data.cur;
-                        //printf("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count +1, variant->rt_data.optimizer_rt_data.best.param_value[0], variant->rt_data.optimizer_rt_data.cur_resources.wall_time);
+                        IRT_OMPP_OPTIMIZER_PRINT("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count +1, variant->rt_data.optimizer_rt_data.best.param_value[0], variant->rt_data.optimizer_rt_data.cur_resources.wall_time);
                     }
 
                     // Computing new settings
@@ -386,7 +388,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                     new_element = hill_climb(&(variant->rt_data.optimizer_rt_data), variant->meta_info->ompp_objective);
                 }
 
-                //printf("NEXT: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 "\n", new_element.frequency, new_element.thread_count +1, new_element.param_value[0]);
+                IRT_OMPP_OPTIMIZER_PRINT("NEXT: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 "\n", new_element.frequency, new_element.thread_count +1, new_element.param_value[0]);
 
                 variant->rt_data.optimizer_rt_data.cur_resources = cur_resources;
                 variant->rt_data.optimizer_rt_data.cur = new_element;
