@@ -43,10 +43,11 @@
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/transform/polyhedral/scoppar.h"
 #include "insieme/utils/logging.h"
 
-using namespace insieme::analysis::polyhedral::scop;
+using namespace insieme::analysis::polyhedral;
 using namespace insieme::core;
 using namespace insieme::transform::polyhedral;
 
@@ -56,7 +57,7 @@ SCoPPar::SCoPPar(ProgramPtr& program): program(program) {}
 
 /** Return the size of the SCoP, given as n. The number itself is irrelevant, only relative sizes matter. Currently,
 this function will return the number of statements but future implementation may return the number of loop instances,
-or some similar metric. */
+or some similar metric. TODO: move this method to the SCoP class. */
 unsigned int SCoPPar::size(NodePtr n) {
 	unsigned int count=0;
 	// here, we could also use NodePtr with if-statements; however, using a StatementPtr type simplifies the code
@@ -68,20 +69,19 @@ unsigned int SCoPPar::size(NodePtr n) {
 
 /// will transform the sequential program to an OpenCL program
 ProgramPtr& SCoPPar::apply() {
-	// filter SCoPs and save them for later processing
-	// TODO: here, program itself does not have an annotation — instead, we have to visit the nodes
-	if (program->hasAnnotation(ScopRegion::KEY)) {
-		LOG(WARNING) << "Program is already annotated, doing superfluous work.";
-	}
-	std::vector<NodeAddress> scops=insieme::analysis::polyhedral::scop::mark(program);
+	// gather SCoPs and save them for later processing
+	std::vector<NodeAddress> scops=Scop::getScops(program);
+	if (scops.empty()) scops=insieme::analysis::polyhedral::scop::mark(program);
+	else LOG(WARNING) << "Program is already annotated, using existing annotations.";
 
 	LOG(WARNING) << "We found " << scops.size() << " SCoPs in the program." << std::endl;
 	for (NodeAddress scop: scops) {
 		annotations::LocationOpt loc=annotations::getLocation(scop);
 		if (loc) std::cout << "Found a SCoP at location " << *loc << "." << std::endl;
 		unsigned int s=size(scop.getAddressedNode());
-		std::cout << "\tscop # " << scop << " (size " << s << ")" << std::endl
-				  << printer::PrettyPrinter(scop) << std::endl;
+		std::cout << "\tscop # " << scop
+				  << " (size " << s << "; " << scop->getAnnotation(scop::ScopRegion::KEY)->getScop().size() << ")"
+				  << std::endl << printer::PrettyPrinter(scop) << std::endl;
 		if (s<=4) std::cout << "parent: " << printer::PrettyPrinter(scop.getParentAddress()) << std::endl;
 
 	}

@@ -71,12 +71,8 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 	}
 }
 
-/** 
- * toIslSpace 
- *
- * Converts an IterationVector to an isl_space which is the equivalent representation used in ISL to
- * represent iteration vectors.
- */
+/// toIslSpace converts an IterationVector to an isl_space which is the equivalent representation used in ISL to
+/// represent iteration vectors.
 isl_space* toIslSpace(
 		IslCtx&						islCtx,
 		const IterationVector&		iterVec,
@@ -103,7 +99,7 @@ isl_space* toIslSpace(
 }
 
 
-// Utility function used to print to a stream the ISL internal representation of a set
+/// Utility function used to print to a stream the ISL internal representation of a set
 inline void print(std::ostream& out, isl_ctx* ctx, isl_aff* aff) {
 	isl_printer* printer = isl_printer_to_str(ctx);
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
@@ -116,12 +112,7 @@ inline void print(std::ostream& out, isl_ctx* ctx, isl_aff* aff) {
 	isl_printer_free(printer);
 }
 
-/** 
- * toIslAff
- *
- * Converts an AffineFunction to an isl_aff object which can be used to create sets and
- * relationships in ISL
- */
+/// toIslAff converts an AffineFunction to an isl_aff object which can be used to create sets and relationships in ISL
 inline isl_aff* toIslAff (
 		isl_space*					islSpace,
 		const AffineFunction&		func,
@@ -211,7 +202,7 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_space* dim, const AffineCo
 	return isl_basic_set_add_constraint( bset, cons );
 }
 
-// Visits the Constraint combiner and builds the corresponding ISL set 
+/// Visits the Constraint combiner and builds the corresponding ISL set
 struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction, isl_set*> {
 
 	isl_ctx* ctx;
@@ -248,9 +239,9 @@ struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<Affine
 };
 
 
-// Utility which converts and isl_space to an IterationVector. They both represent the same concept. The main 
-// issue of the translation is on retrieving the pointer to the variable to which an isl paramer is refering 
-// to from the user data pointer which ISL provides. 
+/// Utility which converts and isl_space to an IterationVector. They both represent the same concept. The main
+/// issue of the translation is on retrieving the pointer to the variable to which an isl paramer is refering
+/// to from the user data pointer which ISL provides.
 void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iterVec) {
 	unsigned iter_num = isl_space_dim( space, isl_dim_set );
 	unsigned param_num = isl_space_dim( space, isl_dim_param );
@@ -292,12 +283,7 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 
 
 
-/**********************************************************************************************
- * IslObj: 
- * 	contains the implementation code of IslObjs.
- *
- *********************************************************************************************/
-
+/// IslObj: contains the implementation code of IslObjs.
 IterationVector IslObj::getIterationVector(core::NodeManager& mgr) const {
 	IterationVector ret;
 	visit_space(space, mgr, ret);
@@ -305,12 +291,7 @@ IterationVector IslObj::getIterationVector(core::NodeManager& mgr) const {
 }
 
 
-/**********************************************************************************************
- * IslSet: 
- * 	contains the implementation code of IslSets.
- *
- *********************************************************************************************/
-
+/// IslSet: contains the implementation code of IslSets.
 IslSet::~IslSet() { 
 	isl_union_set_free(set);
 }
@@ -382,7 +363,7 @@ void IslSet::simplify() {
 
 namespace {
 
-	// Utility function used to print to a stream the ISL internal representation of a set
+	/// Utility function used to print to a stream the ISL internal representation of a set
 	void print(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
 		isl_printer* printer = isl_printer_to_str(ctx);
 		isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
@@ -561,20 +542,13 @@ PiecewisePtr<ISL> IslSet::getCard() const {
     return PiecewisePtr<ISL>(ctx, isl_union_set_card( isl_union_set_copy(set) ) );
 }
 
-
-
-/**********************************************************************************************
- * IslMap: 
- * 	contains the implementation code of IslMaps.
- *
- *********************************************************************************************/
-
 IslMap::IslMap(IslCtx& ctx, const std::string& map_str) : IslObj(ctx, NULL) {
 	map = isl_union_map_read_from_str(ctx.getRawContext(), map_str.c_str());
 	assert(map && "Error while reading map from input string");
 	space = isl_union_map_get_space(map);
 }
 
+/// TODO: Understand, simplify, and refactor this constructor so that it uses several newly created (static) methods.
 IslMap::IslMap(IslCtx& 				ctx, 
 			   const AffineSystem& 	affSys, 
 			   const TupleName&	 	in_tuple, 
@@ -754,12 +728,7 @@ MapPtr<ISL> domain_map(IslMap& map) {
 
 
 
-/**********************************************************************************************
- * Dependency Resolution:
- * 	contains the code which is utilized to perform dependency analysis in the polyhedral model
- *
- *********************************************************************************************/
-
+/// Dependency Resolution: contains the code which is utilized to perform dependency analysis in the polyhedral model
 DependenceInfo<ISL> buildDependencies( 
 		IslCtx&		ctx,
 		IslSet& 	domain, 
@@ -795,9 +764,8 @@ DependenceInfo<ISL> buildDependencies(
 		);
 }
 
-// FIXME: what the hell is this?
-template <>
-std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
+/// Print "must" and "may" dependences for debugging purposes
+template <> std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	mustDep->simplify();
 	out << std::endl << "* MUST dependencies: " << std::endl;
 	mustDep->printTo(out);
@@ -813,33 +781,6 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	//mayNoSource->printTo(out);
 	return out << std::endl;
 }
-
-
-
-
-/**********************************************************************************************
- * IslPiecewise: 
- * 	contains the implementation code of IslPiecewise.
- *
- *********************************************************************************************/
-
-
-// IslPiecewise::IslPiecewise(IslCtx& ctx, const utils::Piecewise<AffineFunction>& pw) {
-// 
-// 
-// 	for_each(pw.begin(), pw.end(), [&](const utils::Piecewise<AffineFunction>::Piece& cur) {
-// 				IslSet dom(ctx, IterationDomain(cur.first));
-// 				isl_union_set* set = dom.getIslObj();
-// 				
-// 
-// 				setFromConstraint(ctx.getRawContext(),dom.getSpace(), AffineConstraint());
-// 
-// 				isl_set_from_union_set(set)
-// 			});
-// 
-// 
-// }
-
 
 namespace {
 
@@ -920,7 +861,7 @@ int visit_isl_term(isl_term *term, void *user) {
 		// free the affine expression
 		isl_aff_free(aff);
 
-		// Apply the denominator. FIXME: The operation should contain a floor which is not supported by the Formulas
+		// Apply the denominator. TODO: The operation should contain a floor which is not supported by the Formulas
 		tmp = tmp / denominator;
 
 		// because we cannot perform the exponentiation of a formula, we multiply with itself for N times 
@@ -1092,7 +1033,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 
 int visit_fold_piece(isl_set* dom, isl_qpolynomial_fold* fold, void* user) {
 	int ret = isl_qpolynomial_fold_foreach_qpolynomial(fold, visit_qpolynomial, user);
-	// FIXME: Visit the domain in order to perform a complete conversion
+	// TODO: Visit the domain in order to perform a complete conversion
 	isl_set_free(dom);
 	isl_qpolynomial_fold_free(fold);
 	return ret;

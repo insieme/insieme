@@ -34,26 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/analysis/polyhedral/backend.h"
+#include <stack>
+
 #include "insieme/analysis/func_sema.h"
-
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/printer/pretty_printer.h"
-
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
-#include "insieme/utils/set_utils.h"
 #include "insieme/utils/numeric_cast.h"
-#include <stack>
+#include "insieme/utils/set_utils.h"
 
 #define AS_STMT_ADDR(addr) static_address_cast<const Statement>(addr)
 #define AS_EXPR_ADDR(addr) static_address_cast<const Expression>(addr)
@@ -263,7 +262,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 			// set the stride
 			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
 
-			// FIXME for ceil and mod 
+			// TODO: add code for ceil and mod
 			//-----------------------
 			// exist -DEN < 0
 			AffineFunction af2( iterVec);
@@ -456,7 +455,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		// For now we only consider array access. 
 		//
-		// FIXME: In the future also scalars should be properly handled using technique like scalar
+		// TODO: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
 		for_each(refs, [&](const RefPtr& cur) { 
 			try {
@@ -624,7 +623,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( ifStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *ifStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
@@ -736,7 +735,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( switchStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *switchStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
@@ -750,7 +749,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		IRBuilder builder( switchStmt->getNodeManager() );
 			
 		SubScopList scops;
-		IterationDomain defaultCons(ret); // FIXME: replace with universe constraint
+		IterationDomain defaultCons(ret); // TODO: replace with universe constraint
 	
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
@@ -855,7 +854,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// if we already visited this forStmt, just return the precomputed iteration vector 
 		if (forStmt->hasAnnotation(ScopRegion::KEY)) {
 			ScopRegion& ann = *forStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", forStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", forStmt.getAddressedNode()); }
 
 			// return the cached value
 			subScops.push_back(forStmt);
@@ -965,7 +964,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		if ( compStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *compStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", compStmt.getAddressedNode()); }
+			if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", compStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
@@ -1004,7 +1003,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 			subScops.clear();
 
-			// FIXME: Use the subScops 
+			// TODO: Use the subScops
 			// one of the statements in this compound statement broke a ScopRegion therefore we add
 			// to the scop list the roots for valid ScopRegions inside this compound statement 
 			for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
@@ -1144,7 +1143,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			// check if called function has multiple returns
 			LambdaExprPtr lex = static_pointer_cast<const LambdaExpr>(func.getAddressedNode());
 			bool outlineAble = transform::isOutlineAble(lex->getBody());
-			if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode() ); // FIXME:
+			if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode() );
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
@@ -1173,7 +1172,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			);
 	}
 
-	// FIXME: for now we force to break a SCoP anytime a RetStmt is encountred. This infact would
+	// TODO: for now we force to break a SCoP anytime a RetStmt is encountred. This infact would
 	// mean a function is returning from anypoint and makes it complex to be supported in the
 	// polyhedral model. However function which returns as last operation of the body can be
 	// supported. A solution for have better support for function would be inlining. 
@@ -1276,13 +1275,17 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
     within loop statements.
     @param scop NodeAddress representing the SCoP that will be tested
     @scopList vector<NodeAddress> representing the SCoPs that are valid (if everything goes well, this list has 1 elem which is the input parameter "scop")
-    TODO: scopList should be made as a return value.
+
+    TODO: postProcessSCoP should only look at the current SCoP annotation only, not looking at child nodes. Child SCoPs
+    should be handled independently in some other (to-be-written wrapper) code. There should not be a scopList, merging
+    valid SCoPs together should also be done centrally, instead of recursively. So, postProcessSCop should return
+    a boolean value: true, if the SCoP can be handled, false otherwise (same as region.invalid).
 */
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	// first, make sure that the node has been marked as SCoP
 	if (!scop->hasAnnotation(ScopRegion::KEY)) return;
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	if (!region.isValid()) return;
+	if (!region.valid) return;
 
 	const IterationVector& iterVec = region.getIterationVector();
 
@@ -1300,7 +1303,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 
 		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
 		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
-		region.setValid(false);
+		region.valid=false;
 	}
 }
 
@@ -1446,10 +1449,24 @@ bool ScopRegion::containsLoopNest() const {
 	return iterVec.getIteratorNum() > 0;
 }
 
-/** ***********************************************************************************************
- * Recursively process ScopRegions caching the information related to access functions and
- * scattering matrices for the statements contained in this Scop region
- *************************************************************************************************/
+boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
+	AddressList&& al = insieme::analysis::polyhedral::scop::mark(root);
+	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1) {
+		// If there are not scops or the number of scops is greater than 2
+		// or the the extracted scop is not the top level node
+		return boost::optional<Scop>();
+	}
+	assert(root->hasAnnotation(ScopRegion::KEY));
+	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
+
+	ann.resolve();
+
+	if (!ann.valid) return boost::optional<Scop>();
+	return boost::optional<Scop>(ann.getScop());
+}
+
+/** Recursively process ScopRegions caching the information related to access functions and
+scattering matrices for the statements contained in this Scop region */
 void resolveScop(const IterationVector& 		iterVec, 
 				 IterationDomain			 	parentDomain, 
 	   		   	 const ScopRegion& 				region,
@@ -1679,7 +1696,7 @@ namespace {
 /** Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level and cache all the
 scattering info at this level */
 void ScopRegion::resolve() const {
-	assert( isValid() && "Error Try to resolve an invalid SCoP");
+	assert(valid && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result
 	if ( isResolved() ) { return; }
@@ -1784,9 +1801,20 @@ AddressList mark(const core::NodePtr& root) {
 
 	// remove SCoP from our list of SCoPs if the SCoP does not satisfy the needs of the polyhedral model
 	// initially, the second argument "validscops" is empty and will be filled by postProcessSCoP
-	for(const auto& scop: allscops) postProcessSCoP(scop, validscops);
+	// FIXME: Bug in the SCoP detection: Empty SCoPs are returned as well. We filter these before determining
+	// the validity of the SCoP.
+	for (const auto& scopnode: allscops) {
+		//Scop& scop=Scop::getScop(scopnode);
+		if (true /*scop.size()>0*/) {
+			postProcessSCoP(scopnode, validscops);
+		} else {
+			annotations::LocationOpt loc=annotations::getLocation(scopnode);
+			LOG(WARNING) << "Found SCoP " << scopnode //<< " of size " << scop.size()
+						 //<< " and nestinglvl " << scop.nestingLevel()
+						 << " at address " << *loc << ", ignoring" << std::endl;
+		}
+	}
 
-	LOG(WARNING) << "SCoPs found: " << validscops << std::endl;
 	return validscops;
 }
 

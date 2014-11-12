@@ -84,6 +84,7 @@ INFO_STRUCT_BEGIN(ompp_objective)
     INFO_FIELD(time_weight,     float,      0)
     INFO_FIELD(time_min,        float,      -1)
     INFO_FIELD(time_max,        float,      -1)
+    INFO_FIELD(param_count,     unsigned,   UINT_MAX)
     INFO_FIELD(region_id,       unsigned,   UINT_MAX)
 INFO_STRUCT_END()
 

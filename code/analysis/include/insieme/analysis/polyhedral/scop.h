@@ -37,31 +37,30 @@
 #pragma once 
 
 #include <iterator>
-#include <stdexcept>
+#include <list>
 #include <memory>
 #include <set>
-#include <list>
+#include <stdexcept>
+#include <vector>
 
-#include "insieme/analysis/polyhedral/iter_vec.h"
-#include "insieme/analysis/polyhedral/affine_func.h"
-#include "insieme/analysis/polyhedral/constraint.h"
-#include "insieme/analysis/polyhedral/iter_dom.h"
-#include "insieme/analysis/polyhedral/affine_sys.h"
-
-#include "insieme/analysis/polyhedral/backend.h"
+#include "boost/mpl/or.hpp"
+#include "boost/operators.hpp"
+#include "boost/optional.hpp"
 
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/dep_graph.h"
-
+#include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/affine_sys.h"
+#include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/core/ir_node.h"
-
+#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/utils/constraint.h"
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
-#include "insieme/utils/constraint.h"
-
-#include "boost/operators.hpp"
-#include "boost/optional.hpp"
-#include "boost/mpl/or.hpp"
 
 namespace insieme { namespace core { namespace arithmetic {
 
@@ -202,25 +201,26 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 
 typedef std::shared_ptr<Stmt> StmtPtr;
 
-/**
- * Scop: This class is the entry point for any polyhedral model analysis / transformations. The
- * purpose is to fully represent all the information of a polyhedral static control region (SCOP).
- * Copies of this class can be created so that transformations to the model can be applied without
- * changing other instances of this SCop.
- *
- * By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
- * When a transformation needs to be performed a deep copy of the Scop object is created and
- * transformations are applied to it.
- */
+/** The Scop class is the entry point for all polyhedral model analyses and transformations. The
+ purpose is to fully represent all the information of a polyhedral Static Control Part (SCoP).
+ Copies of this class can be created so that transformations to the model can be applied without
+ changing other instances of this SCoP.
+
+ By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
+ When a transformation needs to be performed a deep copy of the Scop object is created and
+ transformations are applied to it. */
 struct Scop : public utils::Printable {
 
+public:
+	IterationVector iterVec;
 	typedef std::vector<StmtPtr> StmtVect;
 	typedef StmtVect::iterator iterator;
 	typedef StmtVect::const_iterator const_iterator;
+	StmtVect stmts; /// <- all statements in the SCoP, root address is the entry point of SCoP
+	size_t sched_dim;
 
-	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
-		iterVec(iterVec), sched_dim(0) 
-	{
+	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) :
+		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector
 		for_each(stmts, [&] (const StmtPtr& stmt) { 
 				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
@@ -232,15 +232,14 @@ struct Scop : public utils::Printable {
 		for_each(other.stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
 	}
 
-	/**
-	 * Move constructor
-	 */
-	Scop(Scop&& other) : 
-		iterVec( std::move(other.iterVec) ) ,
-		stmts( std::move( other.stmts ) ),
-		sched_dim( other.sched_dim ) { }
+	/// Move constructor
+	Scop(Scop&& that): iterVec(std::move(that.iterVec)), stmts(std::move(that.stmts)), sched_dim(that.sched_dim) {}
 
-
+	static bool hasScopAnnotation(insieme::core::NodePtr p);
+	static insieme::core::NodePtr outermostScopAnnotation(insieme::core::NodePtr p);
+	static bool isScop(insieme::core::NodePtr p);
+	static Scop& getScop(insieme::core::NodePtr p);
+	static std::vector<insieme::core::NodeAddress> getScops(insieme::core::NodePtr n);
 	std::ostream& printTo(std::ostream& out) const;
 
 	/// push_back adds a stmt to this SCoP
@@ -287,21 +286,6 @@ struct Scop : public utils::Printable {
 	bool isParallel(core::NodeManager& mgr) const;
 
 	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
-
-private:
-
-	IterationVector 	iterVec;
-	StmtVect 			stmts;
-	size_t				sched_dim;
 };
 
-/**
- * Converts a SCoP based on a specific iteration vector to a different base which is compatible 
- * i.e. it contains at least the same elements as the original iteration vector but it can contain
- * new parameters or iterators which will be automatically set to 0
- */
-// Scop toBase(const Scop& s, const IterationVector& iterVec);
-
-
-} } } // end insieme::analysis::polyhedral namespace
-
+}}}
