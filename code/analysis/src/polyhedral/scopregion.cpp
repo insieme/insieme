@@ -110,13 +110,13 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	const ScopRegion::StmtVect& stmts = region.getDirectRegionStmts();
+	const StmtVect& stmts = region.getDirectRegionStmts();
 
-	std::for_each(stmts.begin(), stmts.end(), [&](const ScopRegion::Stmt& curStmt) {
+	std::for_each(stmts.begin(), stmts.end(), [&](const scop::Stmt& curStmt) {
 		
-		const ScopRegion::Stmt::RefAccessList& ail = curStmt.getRefAccesses();
+		const scop::Stmt::RefAccessList& ail = curStmt.getRefAccesses();
 
-		std::for_each(ail.begin(), ail.end(), [&] (const ScopRegion::ReferencePtr& cur) {
+		std::for_each(ail.begin(), ail.end(), [&] (const ReferencePtr& cur) {
 
 				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
 
@@ -253,10 +253,10 @@ void resolveScop(const IterationVector& 		iterVec,
 	typedef std::set<Iterator> IteratorSet;
 	// assert( parentDomain->getIterationVector() == iterVec );
 	IterationDomain currDomain = parentDomain && IterationDomain(iterVec, region.getDomainConstraints());
-	const ScopRegion::StmtVect& scopStmts = region.getDirectRegionStmts();
+	const StmtVect& scopStmts = region.getDirectRegionStmts();
 	
 	// for every access in this region, convert the affine constraint to the new iteration vector 
-	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopRegion::Stmt& cur) { 
+	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const Stmt& cur) {
 			
 		StatementPtr&& curPtr = cur.getAddr().getAddressedNode();
 		assert(curPtr->getNodeType() != core::NT_MarkerExpr && curPtr->getNodeType() != core::NT_MarkerStmt);
@@ -335,9 +335,9 @@ void resolveScop(const IterationVector& 		iterVec,
 		std::set<VariablePtr> fakeIterators;
 
 		// Access expressions 
-		const ScopRegion::Stmt::RefAccessList& refs = cur.getRefAccesses();
+		const Stmt::RefAccessList& refs = cur.getRefAccesses();
 		AccessList accInfo;
-		std::for_each(refs.begin(), refs.end(), [&] (const ScopRegion::ReferencePtr& curRef) {
+		std::for_each(refs.begin(), refs.end(), [&] (const ReferencePtr& curRef) {
 				AffineSystem idx(iterVec);
 
 				std::shared_ptr<IterationDomain> domain = std::make_shared<IterationDomain>(iterVec);
@@ -424,7 +424,7 @@ void resolveScop(const IterationVector& 		iterVec,
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
 
-		scat.push_back( Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
+		scat.push_back(insieme::analysis::polyhedral::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
 	} ); 
 }

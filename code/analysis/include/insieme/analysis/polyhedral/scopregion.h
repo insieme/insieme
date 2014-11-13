@@ -46,14 +46,64 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-namespace insieme {
+namespace insieme { namespace analysis { namespace polyhedral { namespace scop {
 
-// FIXME: can we remove Formula?
-namespace core { namespace arithmetic {
-class Formula;
-} } // end core::arithmetic namespace
+/** This class keeps the information on how a particular reference is accessed. This is slightly different from the
+DefUse::Ref class as this one also include information related to the conversion of the reference into the polyhedral
+model */
+struct Reference : public boost::noncopyable {
+	core::ExpressionAddress 	 		refExpr;
+	Ref::UseType						usage;
+	Ref::RefType						type;
+	std::vector<core::ExpressionPtr> 	indecesExpr;
+	IterationVector						iterVec;
+	AffineConstraintPtr			 		range;
 
-namespace analysis { namespace polyhedral { namespace scop {
+	Reference(const core::ExpressionAddress& 		refExpr,
+			const Ref::UseType& 					usage,
+			const Ref::RefType& 					type,
+			const std::vector<core::ExpressionPtr>& indecesExpr,
+			const IterationVector&					iv = IterationVector(),
+			const AffineConstraintPtr& 				range = AffineConstraintPtr())
+	: refExpr(refExpr),
+	  usage(usage),
+	  type(type),
+	  indecesExpr(indecesExpr),
+	  iterVec(iv),
+	  range( cloneConstraint(iterVec,range) )
+	{  }
+};
+
+typedef std::shared_ptr<Reference> ReferencePtr;
+
+/** Stmt:Class which contains all the information of statements inside a SCoP (both direct and
+contained in sub-scops).
+
+A statement into a SCoP has 3 piece of information associated:
+  - Iteration domain:    which define the domain on which this statement is valid
+  - Scattering function: which define the order of execution with respect of other statements in the SCoP region
+  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within the statement.
+
+This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
+for future requests. */
+struct Stmt {
+
+	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
+	// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
+	typedef std::vector<ReferencePtr> RefAccessList;
+
+	Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) :
+		address(addr), accesses(accesses) { }
+	inline const core::StatementAddress& getAddr() const { return address; }
+	inline const core::StatementAddress& operator->() const { return address; }
+	inline bool operator<(const Stmt& other) const { return address < other.address; }
+	virtual RefAccessList getRefAccesses() const { return accesses; }
+
+private:
+	core::StatementAddress 		address;
+	RefAccessList 				accesses;
+};
+typedef std::vector<Stmt> 			StmtVect;
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
 which is valid within the SCoP body and the set of constraints which define the entry point for this SCoP.
@@ -70,63 +120,6 @@ struct ScopRegion: public core::NodeAnnotation {
 	static const utils::StringKey<ScopRegion> 	KEY;
 	bool valid;
 
-	/** This class keeps the information on how a particular reference is accessed. This is slightly different from the
-	DefUse::Ref class as this one also include information related to the conversion of the reference into the polyhedral
-	model */
-	struct Reference : public boost::noncopyable {
-		core::ExpressionAddress 	 		refExpr;
-		Ref::UseType						usage;
-		Ref::RefType						type;
-		std::vector<core::ExpressionPtr> 	indecesExpr;
-		IterationVector						iterVec;
-		AffineConstraintPtr			 		range;
-
-		Reference(const core::ExpressionAddress& 		refExpr, 
-				const Ref::UseType& 					usage, 
-				const Ref::RefType& 					type,
-				const std::vector<core::ExpressionPtr>& indecesExpr,
-				const IterationVector&					iv = IterationVector(),
-				const AffineConstraintPtr& 				range = AffineConstraintPtr())
-		: refExpr(refExpr), 
-		  usage(usage), 
-		  type(type), 
-		  indecesExpr(indecesExpr), 
-		  iterVec(iv), 
-		  range( cloneConstraint(iterVec,range) ) 
-		{  }
-	};
-
-	typedef std::shared_ptr<Reference> ReferencePtr;
-
-	/** Stmt:Class which contains all the information of statements inside a SCoP (both direct and
-	contained in sub-scops).
-
-	A statement into a SCoP has 3 piece of information associated:
-	  - Iteration domain:    which define the domain on which this statement is valid
-	  - Scattering function: which define the order of execution with respect of other statements in the SCoP region
-	  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within the statement.
-
-	This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
-	for future requests. */
-	struct Stmt { 
-
-		// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
-		// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
-		typedef std::vector<ReferencePtr> RefAccessList;
-
-		Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
-			address(addr), accesses(accesses) { }
-		inline const core::StatementAddress& getAddr() const { return address; }
-		inline const core::StatementAddress& operator->() const { return address; }
-		inline bool operator<(const Stmt& other) const { return address < other.address; }
-		virtual RefAccessList getRefAccesses() const { return accesses; } 
-
-	private:
-		core::StatementAddress 		address;
-		RefAccessList 				accesses;
-	};
-	
-	typedef std::vector<Stmt> 			StmtVect;
 	typedef std::vector<Iterator> 		IteratorOrder;
 	
 	ScopRegion( const core::NodePtr& 	annNode,
@@ -223,19 +216,14 @@ public:
 		access( access.toBase(iterVec) ) { }
 
 	inline const std::string& getAnnotationName() const { return NAME; }
-
 	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	std::ostream& printTo(std::ostream& out) const;
-
 	inline const AffineFunction& getAccessFunction() const { return access; }
-	
 	inline const IterationVector& getIterationVector() const { return iterVec; }
-
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
-						const core::NodePtr& after) const 
-	{ 
+						const core::NodePtr& after) const { 
 		return false; 
 	}
 };

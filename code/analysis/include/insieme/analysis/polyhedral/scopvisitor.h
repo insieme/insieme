@@ -69,10 +69,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	std::vector<NodeAddress>& scopList;
 	std::vector<NodeAddress>  subScops;
 
-	/** Stack utilized to keep track of statements which are inside a SCoP.
-	because not all the compound statements of the IR are annotated by a SCoPRegion annotation,
-	we need to have a way to collect statements which can be inside nested scopes. **/
-	typedef std::stack<scop::ScopRegion::StmtVect> RegionStmtStack;
+	typedef std::stack<scop::StmtVect> RegionStmtStack;
 	RegionStmtStack regionStmts;
 
 	ScopVisitor(std::vector<NodeAddress>& scopList);

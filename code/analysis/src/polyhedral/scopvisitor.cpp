@@ -78,7 +78,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 /** Stack utilized to keep track of statements which are inside a SCoP.
 	because not all the compound statements of the IR are annotated by a SCoPRegion annotation,
 	we need to have a way to collect statements which can be inside nested scopes. **/
-typedef std::stack<scop::ScopRegion::StmtVect> RegionStmtStack;
+typedef std::stack<scop::StmtVect> RegionStmtStack;
 RegionStmtStack regionStmts;
 
 ScopVisitor::ScopVisitor(std::vector<NodeAddress> &scopList): IRVisitor<IterationVector, Address>(false), scopList(scopList) {
@@ -445,7 +445,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 				NodeManager& mgr = callExpr->getNodeManager();
 
 				// We have semantics information we can build up
-				scop::ScopRegion::Stmt::RefAccessList accesses;
+				scop::Stmt::RefAccessList accesses;
 
 				for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) {
 
@@ -466,7 +466,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 
 						ret = merge(ret, iv);
 
-						accesses.push_back(std::make_shared<scop::ScopRegion::Reference>(
+						accesses.push_back(std::make_shared<scop::Reference>(
 												ref,
 												std::get<0>(cur.second),
 												cur.first.getType(),
@@ -484,7 +484,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 
 					ret = merge(ret, iv);
 
-					accesses.push_back(std::make_shared<scop::ScopRegion::Reference>(
+					accesses.push_back(std::make_shared<scop::Reference>(
 											ref,
 											std::get<0>(cur.second),
 											cur.first.getType(),
@@ -494,7 +494,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 											));
 				});
 
-				regionStmts.top().push_back(scop::ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses));
+				regionStmts.top().push_back(scop::Stmt(AS_STMT_ADDR(addr), accesses));
 				return ret;
 			}
 		}
@@ -504,7 +504,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 		// this is a single stmt, therefore we can collect the references inside
 		RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 
-		scop::ScopRegion::Stmt::RefAccessList refList;
+		scop::Stmt::RefAccessList refList;
 		for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) {
 			std::vector<ExpressionPtr> indeces;
 			if (cur->getType() == Ref::ARRAY) {
@@ -512,15 +512,15 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 				for_each(arrRef.getIndexExpressions(),
 						 [&](const ExpressionAddress& cur) { indeces.push_back(cur.getAddressedNode()); });
 			}
-			refList.push_back(std::make_shared<scop::ScopRegion::Reference>(
+			refList.push_back(std::make_shared<scop::Reference>(
 								  cur->getBaseExpression(), cur->getUsage(), cur->getType(), indeces)
 							 );
 		});
 		// Add this statement to the scope for the parent node
-		regionStmts.top().push_back(scop::ScopRegion::Stmt(AS_STMT_ADDR(addr), refList));
+		regionStmts.top().push_back(scop::Stmt(AS_STMT_ADDR(addr), refList));
 	} else {
 		// the substatement is a
-		regionStmts.top().push_back(scop::ScopRegion::Stmt(AS_STMT_ADDR(addr), scop::ScopRegion::Stmt::RefAccessList()));
+		regionStmts.top().push_back(scop::Stmt(AS_STMT_ADDR(addr), scop::Stmt::RefAccessList()));
 	}
 	return ret;
 }
@@ -713,7 +713,7 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 	// this If statement is also an affine linear function.
 	ret = merge(ret, merge(saveThen, saveElse));
 
-	scop::ScopRegion::StmtVect ifScopStmts;
+	scop::StmtVect ifScopStmts;
 
 	assert(regionStmts.top().size() == 1);
 	ifScopStmts.push_back(regionStmts.top().front());
@@ -734,7 +734,7 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 					ifStmt.getAddressedNode(),
 					ret,
 					IterationDomain(ret),
-					scop::ScopRegion::StmtVect(ifScopStmts.rbegin(),ifScopStmts.rend()),
+					scop::StmtVect(ifScopStmts.rbegin(),ifScopStmts.rend()),
 					std::list<SubScop>({SubScop(thenAddr, cond), SubScop(elseAddr, !cond) })
 					)
 				);
@@ -1156,7 +1156,7 @@ IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 		if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode());
 
 		const scop::ScopRegion& lambda = *lambdaScop->getAnnotation(scop::ScopRegion::KEY);
-		const scop::ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
+		const scop::StmtVect& stmts = lambda.getDirectRegionStmts();
 
 		std::copy(stmts.begin(), stmts.end(), std::back_inserter(regionStmts.top()));
 
