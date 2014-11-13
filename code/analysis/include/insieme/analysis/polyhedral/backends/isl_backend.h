@@ -223,7 +223,9 @@ public:
 	IslMap( IslCtx& ctx, isl_union_map* rawMap ) : 
 		IslObj(ctx, isl_union_map_get_space(rawMap) ), map(rawMap) 
 	{ 
-		simplify();
+		// this call seems to be responsible for up to 90% of the time spend by the polyhedral interface
+		// and has therefore been commented out for now
+		// simplify();
 	}
 
 	/**
