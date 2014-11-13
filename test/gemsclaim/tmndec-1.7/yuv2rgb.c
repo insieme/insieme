@@ -506,11 +506,11 @@ unsigned char *out;
 
 #include <inttypes.h>
 // deposterization: smoothes posterized gradients from low-color-depth (e.g. 444, 565, compressed) sources
-void deposterizeHfunc(uint32_t* data, uint32_t* out, int w, int l, int u) {
+void deposterizeHfunc(uint32_t* data, uint32_t* out, int w, int l, int u, int scaling) {
     static const int T = 8;
     #pragma omp for
-    for(int y = l; y < u; ++y) {
-        for(int x = 0; x < w; ++x) {
+    for(int y = l; y < u; y+=scaling) {
+        for(int x = 0; x < w; x+=scaling) {
             int inpos = y*w + x;
             uint32_t center = data[inpos];
             if(x==0 || x==w-1) {
@@ -532,15 +532,28 @@ void deposterizeHfunc(uint32_t* data, uint32_t* out, int w, int l, int u) {
                     out[y*w + x] |= cc << (c*8);
                 }
             }
+
+            if(scaling > 1) {
+                int yy = y -scaling +1;
+                int xx = x -scaling +1;
+                int pos = yy*w + xx;
+
+                for(int j=0; j<2*scaling -1; j++) {
+                    for(int i=0; i<2*scaling -1; i++) {
+                        if(xx >= 0 && xx < coded_picture_width && yy >= 0 && yy < coded_picture_height)
+                            out[pos + i + j*w] = out[y*w +x];
+                    }
+                }
+            }
         }
     }
 }
 
-void deposterizeVfunc(uint32_t* data, uint32_t* out, int w, int h, int l, int u) {
+void deposterizeVfunc(uint32_t* data, uint32_t* out, int w, int h, int l, int u, int scaling) {
     static const int T = 8;
     #pragma omp for
-    for(int y = l; y < u; ++y) {
-        for(int x = 0; x < w; ++x) {
+    for(int y = l; y < u; y+=scaling) {
+        for(int x = 0; x < w; x+=scaling) {
             uint32_t center = data[ y * w + x];
             if(y==0 || y==h-1) {
                 out[y*w + x] = center;
@@ -561,17 +574,21 @@ void deposterizeVfunc(uint32_t* data, uint32_t* out, int w, int h, int l, int u)
                     out[y*w + x] |= cc << (c*8);
                 }
             }
+
+            if(scaling > 1) {
+                int yy = y -scaling +1;
+                int xx = x -scaling +1;
+                int pos = yy*w + xx;
+
+                for(int j=0; j<2*scaling -1; j++) {
+                    for(int i=0; i<2*scaling -1; i++) {
+                        if(xx >= 0 && xx < coded_picture_width && yy >= 0 && yy < coded_picture_height)
+                            out[pos + i + j*w] = out[y*w +x];
+                    }
+                }
+            }
         }
     }
-}
-
-static inline void scale(unsigned int *out, unsigned pos, int xs, int ys, int scaling) {
-    for(int j=0; j<scaling; j++) 
-        for(int i=0; i<scaling; i++) {
-            if(pos + xs*i +ys*j > 0 && pos + xs*i +ys*j < coded_picture_width*coded_picture_height)
-            out[pos + xs*i +ys*j] = out[pos];
-        }
-
 }
 
 /*
@@ -597,7 +614,7 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
-    int scaling = 1;
+    int scaling = 4;
     // irt_merge( irt_parallel ( wi_5 ) )
     //
     // wi_5 () + meta {
@@ -609,7 +626,7 @@ unsigned char *out;
     unsigned char * tmp_out = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
     unsigned char * tmp_out2 = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
 
-    #pragma omp parallel //objective(0*E+1*P+0*T) param(scaling, range(1: 8: 1))
+    #pragma omp parallel //objective(0*E+1*P+0*T:T<0.041) //param(scaling, range(1: 8: 1))
     {
     #pragma omp for schedule(dynamic)
     //for (int yt=0; yt<rows*8; yt+=2)
@@ -647,8 +664,6 @@ unsigned char *out;
             B = L + cb_b;
 
             *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            if(scaling != 1)
-                scale((unsigned int*)tmp_out, row1 -(unsigned int*)tmp_out -1, -1, -cols, scaling);
 
 #ifdef INTERPOLATE
             if(x != cols_2 - 1) {
@@ -668,8 +683,6 @@ unsigned char *out;
             B = L + cb_b;
 
             *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            if(scaling != 1)
-                scale((unsigned int*)tmp_out, row1 -(unsigned int*)tmp_out -1, +1, -cols, scaling);
 
             /*
              * Now, do second row.
@@ -692,8 +705,6 @@ unsigned char *out;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            if(scaling != 1)
-                scale((unsigned int*)tmp_out, row2 -(unsigned int*)tmp_out -1, -1, +cols, scaling);
 
             L = *lum2++;
             R = L + cr_r;
@@ -701,20 +712,56 @@ unsigned char *out;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            if(scaling != 1)
-                scale((unsigned int*)tmp_out, row2 -(unsigned int*)tmp_out -1, +1, +cols, scaling);
+
+            if(scaling > 1) {
+                int pos = row1 -1 -(unsigned int*)tmp_out;
+                int yy = pos / cols - scaling +1;
+                int xx = pos % cols - scaling;
+
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row1-2);
+                    }
+                }
+
+                xx += scaling;
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row1-1);
+                    }
+                }
+
+                xx -= scaling;
+                yy += scaling;
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row2-2);
+                    }
+                }
+
+                xx += scaling;
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row2-1);
+                    }
+                }
+            }
         }
     }
     
     if(deposterizeH && deposterizeV) {
-        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)tmp_out2, cols, 0, rows);
-        deposterizeVfunc((uint32_t*)tmp_out2, (uint32_t*)out, cols, rows, 0, rows);
+        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)tmp_out2, cols, 0, rows, scaling);
+        deposterizeVfunc((uint32_t*)tmp_out2, (uint32_t*)out, cols, rows, 0, rows, scaling);
     }
     else if(deposterizeH && !deposterizeV) {
-        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, 0, rows);
+        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, 0, rows, scaling);
     }
     else if(!deposterizeH && deposterizeV) {
-        deposterizeVfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, rows, 0, rows);
+        deposterizeVfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, rows, 0, rows, scaling);
     }
     else {
         #pragma omp single

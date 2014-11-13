@@ -311,6 +311,7 @@ char **argvp[];
   {
     while ((*argvp)[1][1])
     {
+      int val;
       switch (toupper((*argvp)[1][1]))
       {
 #ifdef USE_TIME
@@ -333,7 +334,7 @@ char **argvp[];
       case 'D':
         deposterizeH = 1;
         deposterizeV = 1;
-        int val = getval(*argvp);
+        val = getval(*argvp);
         if(val == 1)
             deposterizeV = 0;
         else if(val == 2)
