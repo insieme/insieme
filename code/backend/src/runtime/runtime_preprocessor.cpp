@@ -659,7 +659,7 @@ namespace runtime {
 				for_each(*scop, [&](const analysis::polyhedral::StmtPtr& cur) {
 
 					// obtain cardinality of the current statement
-					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->getDomain());
+					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->iterdomain);
 
 					// fix parameters (except the boundary parameters)
 					core::arithmetic::ValueReplacementMap replacements;

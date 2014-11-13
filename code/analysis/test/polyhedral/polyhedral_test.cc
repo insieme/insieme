@@ -866,7 +866,8 @@ TEST(Scop, BuildScop) {
 							      {0, 1, 0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
+	Stmt s=Stmt(0, StatementAddress(stmt), domain, sched);
+	scop.push_back(s);
 
 	std::vector<insieme::core::VariablePtr> nest = scop[0].loopNest();
 	EXPECT_EQ( 2u, nest.size() );
@@ -915,7 +916,8 @@ TEST(Transformations, Interchange) {
 							      {0, 1, 0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
+	Stmt s=Stmt(0, StatementAddress(stmt), domain, sched);
+	scop.push_back(s);
 
 	NodePtr ir = scop.toIR(mgr);
 	
@@ -977,7 +979,8 @@ TEST(Transformations, Tiling) {
 	AffineSystem sched( iterVec, { { 1,0,0 }, { 0,1,0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
+	Stmt s=Stmt(0, StatementAddress(stmt), domain, sched);
+	scop.push_back(s);
 
 	NodePtr ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
@@ -998,14 +1001,14 @@ TEST(Transformations, Tiling) {
 	// update the domain
 	// v3 >= 0 && v3 <= 100
 	// v1 >= v3 && v1 <= v3+T
-	scop[0].getDomain() &= IterationDomain(scop.getIterationVector(),
+	scop[0].iterdomain &= IterationDomain(scop.getIterationVector(),
 			{ { 0, 0,  1, 0,   0 }, 
 		      { 0, 0, -1, 0, 100 }, 
 		      { 1, 0, -1, 0,   0 },
 			  {-1, 0,  1, 0,  25 } } );
 	
 	// exist e0: e0*T == v3
-	scop[0].getDomain() &= IterationDomain( 
+	scop[0].iterdomain &= IterationDomain(
 		AffineConstraint( 
 			AffineFunction( scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), 
 			ConstraintType::EQ 
@@ -1101,7 +1104,8 @@ TEST(Transformations, Fusion) {
 								   {0, 0, 0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt1), domain1, sched1 ) );
+	Stmt s0= Stmt(0, StatementAddress(stmt1), domain1, sched1);
+	scop.push_back(s0);
 
 	// STMT2
 	AffineSystem sched2(iterVec, { {0, 0, 1}, 
@@ -1119,7 +1123,8 @@ TEST(Transformations, Fusion) {
 		)  
 	);
 
-	scop.push_back( Stmt( 1, StatementAddress(stmt2), domain2, sched2 ) );
+	Stmt s1= Stmt(1, StatementAddress(stmt2), domain2, sched2);
+	scop.push_back(s1);
 
 	NodePtr ir = scop.toIR(mgr);
 

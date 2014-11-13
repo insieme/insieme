@@ -36,15 +36,14 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
-
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
+#include "insieme/analysis/polyhedral/except.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/analysis/normalize.h"
-
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
@@ -420,7 +419,7 @@ TEST(ScopRegion, WhileStmt) {
 	VariablePtr cond = IRBuilder(mgr).variable( mgr.getLangBasic().getBool() );
 	WhileStmtPtr whileStmt = builder.whileStmt(cond, forStmt);
 
-	scop::AddressList scops = scop::mark(whileStmt);
+	AddressList scops = scop::mark(whileStmt);
 
 	EXPECT_FALSE(whileStmt->hasAnnotation(scop::ScopRegion::KEY));
 	EXPECT_EQ(1u, scops.size());
@@ -446,7 +445,7 @@ TEST(ScopRegion, NotAScopForStmt) {
 
 	EXPECT_TRUE(compStmt);
 
-	scop::AddressList scops = scop::mark(compStmt);
+	AddressList scops = scop::mark(compStmt);
 
 	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 	EXPECT_EQ(0u, scops.size());

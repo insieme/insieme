@@ -710,7 +710,7 @@ public:
 		assert(cloogStmt->name);
 
 		// get the stmt object 
-		const Stmt& stmt = *ctx.getAs<StmtPtr>( cloogStmt->name );
+		Stmt& stmt = *ctx.getAs<StmtPtr>( cloogStmt->name );
 		core::StatementPtr irStmt = stmt.getAddr().getAddressedNode();
 		
 		stmtStack.top().push_back(irStmt); 
@@ -723,7 +723,7 @@ public:
 			if (callExpr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
 
 				RangedFunction::VarVect ranges;
-				for_each(stmt.access_begin(), stmt.access_end(), [&](const AccessInfoPtr& cur) {
+				for_each(stmt.access_begin(), stmt.access_end(), [&](AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
 						assert( !iters.empty() && iters.size() == 1 );
