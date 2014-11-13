@@ -37,63 +37,23 @@
 #pragma once 
 
 #include <vector>
-
-#include "insieme/core/ir_node.h"
-
-#include "insieme/core/ir_address.h"
-#include "insieme/analysis/polyhedral/scop.h"
-
-#include "insieme/analysis/defuse_collect.h"
-
 #include "boost/optional/optional.hpp"
 
-#include "insieme/utils/exception_utils.h"
+#include "insieme/analysis/defuse_collect.h"
+#include "insieme/analysis/polyhedral/except.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 
+// FIXME: can we remove Formula?
 namespace core { namespace arithmetic {
 class Formula;
 } } // end core::arithmetic namespace
 
 namespace analysis { namespace polyhedral { namespace scop {
-
-/** Expection which is thrown when a particular tree is defined to be not a static control part. This exception has to
-be forwarded until the root containing this node which has to be defined as a non ScopRegion
-
-Because this exception is only used within the implementation of the ScopRegion visitor, it is defined in the anonymous
-namespace and therefore not visible outside this translation unit. */
-class NotASCoP : public insieme::utils::TraceableException {
-	core::NodePtr root;
-	std::string msg;
-
-public:
-	template <class SubExTy>
-	NotASCoP(const std::string& 	     msg, 
-			 const char*		 	 ex_type,
-			 const char*	 	   file_name, 
-			 int 					 line_no, 
-			 const SubExTy*			  sub_ex,
-			 const core::NodePtr& 	    root) 
-	: TraceableException(msg, ex_type, file_name, line_no, sub_ex), 
-	  root(root) 
-	{ 
-		if (!sub_ex) {
-			std::ostringstream ss;
-			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) 
-			   << "\nNot a Static Control Part:\n" << msg;
-			setMessage(ss.str());
-		}
-	}
-	
-	const core::NodePtr& node() const { return root; }
-
-	virtual ~NotASCoP() throw() { }
-};
-
-typedef std::vector<core::NodeAddress> 					AddressList;
-typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
-typedef std::list<SubScop> 								SubScopList;
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
 which is valid within the SCoP body and the set of constraints which define the entry point for this SCoP.

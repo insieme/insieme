@@ -362,7 +362,7 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt) {
 
 	NodePtr root = stmt.getRootNode();
-	scop::AddressList&& addrs = scop::mark( root );
+	std::vector<core::NodeAddress>&& addrs = scop::mark( root );
 
 	// we have to fing whether the top level of this scop contains stmt
 	auto fit = find_if(addrs.begin(), addrs.end(), [&](const NodeAddress& cur) { 
@@ -470,7 +470,7 @@ bool Scop::isScop(insieme::core::NodePtr p) {
 
 /// Return SCoP data from an existing annotation, using a NodePtr. Can be called directly, with explicit scoping.
 Scop& Scop::getScop(insieme::core::NodePtr p) {
-    if (!isScop(p)) { THROW_EXCEPTION(scop::NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
+    if (!isScop(p)) { THROW_EXCEPTION(NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
     return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
 }
 
@@ -623,6 +623,14 @@ void buildScheduling(
 }
 
 } // end anonymous namespace
+
+std::list<SubScop> toSubScopList(const IterationVector& iterVec, const AddressList& scops) {
+	std::list<SubScop> subScops;
+	for_each(scops.begin(), scops.end(), [&](const NodeAddress& cur) {
+			subScops.push_back( SubScop(cur, IterationDomain(iterVec)) );
+	});
+	return subScops;
+}
 
 core::NodePtr Scop::toIR(core::NodeManager& mgr, const CloogOpts& opts) const {
 
