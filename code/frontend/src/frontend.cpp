@@ -239,10 +239,10 @@ namespace frontend {
 		return cppFile || cppLibs;
 	}
 
-	void ConversionJob::printConversionJob() const {
-        std::cout << "~~~~~~CONVERSION SETUP~~~~~~\n";
-        std::cout << "input files: \n" << this->files << std::endl;
-        std::cout << "flags: \n" <<
+	std::ostream& ConversionJob::printTo(std::ostream& out) const {
+        out << "~~~~~~CONVERSION SETUP~~~~~~\n";
+        out << "input files: \n" << files << std::endl;
+        out << "flags: \n" <<
 			"PrintDiag " << hasOption(ConversionSetup::PrintDiag) << "\n" <<
 			"OpenMP " << hasOption(ConversionSetup::OpenMP) << "\n" <<
 			"OpenCL " << hasOption(ConversionSetup::OpenCL) << "\n" <<
@@ -253,11 +253,13 @@ namespace frontend {
 			"ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n" <<
 			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<
 			"StrictSemanticChecks " << hasOption(ConversionSetup::StrictSemanticChecks) << "\n" << std::endl;
-        std::cout << "interceptions: \n" << this->getInterceptedNameSpacePatterns() << std::endl;
-        std::cout << "include dirs: \n" << this->getIncludeDirectories() << std::endl;
-        std::cout << "libraries: \n" << this->libs << std::endl;
-        std::cout << "standard: \n" << this->getStandard() << std::endl;
-        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+        out << "interceptions: \n" << getInterceptedNameSpacePatterns() << std::endl;
+        out << "include dirs: \n" << getIncludeDirectories() << std::endl;
+        out << "definitions: \n" << getDefinitions() << std::endl;
+        out << "libraries: \n" << libs << std::endl;
+        out << "standard: \n" << getStandard() << std::endl;
+        out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+        return out;
 	}
 
 } // end namespace frontend
