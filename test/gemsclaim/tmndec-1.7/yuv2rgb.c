@@ -614,7 +614,7 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
-    int scaling = 4;
+    int scaling = 1;
     // irt_merge( irt_parallel ( wi_5 ) )
     //
     // wi_5 () + meta {
@@ -626,7 +626,7 @@ unsigned char *out;
     unsigned char * tmp_out = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
     unsigned char * tmp_out2 = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
 
-    #pragma omp parallel //objective(0*E+1*P+0*T:T<0.041) //param(scaling, range(1: 8: 1))
+    #pragma omp parallel //objective(0*E+1*P+0*T:T<0.041) param(scaling, range(1: 8: 1))
     {
     #pragma omp for schedule(dynamic)
     //for (int yt=0; yt<rows*8; yt+=2)
