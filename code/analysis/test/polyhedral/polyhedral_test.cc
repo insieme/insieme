@@ -998,14 +998,14 @@ TEST(Transformations, Tiling) {
 	// update the domain
 	// v3 >= 0 && v3 <= 100
 	// v1 >= v3 && v1 <= v3+T
-	scop[0].getDomain() &= IterationDomain(scop.getIterationVector(),
+	scop[0].iterdomain &= IterationDomain(scop.getIterationVector(),
 			{ { 0, 0,  1, 0,   0 }, 
 		      { 0, 0, -1, 0, 100 }, 
 		      { 1, 0, -1, 0,   0 },
 			  {-1, 0,  1, 0,  25 } } );
 	
 	// exist e0: e0*T == v3
-	scop[0].getDomain() &= IterationDomain( 
+	scop[0].iterdomain &= IterationDomain(
 		AffineConstraint( 
 			AffineFunction( scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), 
 			ConstraintType::EQ 

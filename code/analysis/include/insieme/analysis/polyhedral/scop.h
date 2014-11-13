@@ -146,9 +146,7 @@ typedef std::vector<AccessInfoPtr> 	AccessList;
     - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
 */
 class Stmt: public utils::Printable {
-	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
 	core::StatementAddress addr; ///< the root of the address is the entry point of the SCoP
-	IterationDomain dom;         ///< iteration domain, according to the literature
 	AffineSystem schedule;       ///< scheduling matrix, according to the literature
 	AccessList access;           ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
 								 ///< (see also class AccessInfo)
@@ -157,25 +155,21 @@ class Stmt: public utils::Printable {
 	typedef AccessList::const_iterator ConstAccessIterator;
 
 public:
-    Stmt(size_t id, const core::StatementAddress &addr, const IterationDomain &dom, const AffineSystem &schedule,
-         const AccessList &access = AccessList()): id(id), addr(addr), dom(dom), schedule(schedule), access(access) {}
+	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
+	IterationDomain iterdomain;     ///< iteration domain, according to the literature
+
+	Stmt(unsigned int id, const core::StatementAddress &addr, const IterationDomain &iterdomain, const AffineSystem &schedule,
+		 const AccessList &access = AccessList()): addr(addr), schedule(schedule), access(access), id(id), iterdomain(iterdomain) {}
 
     Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
-        id(id), addr(other.addr), dom(iterVec, other.dom), schedule(iterVec, other.schedule) {
+		addr(other.addr), schedule(iterVec, other.schedule), id(id), iterdomain(iterVec, other.iterdomain) {
         for_each(other.access, [&](const AccessInfoPtr &cur) {
             access.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
         });
     }
 
-	// Getter for the ID
-	inline size_t getId() const { return id; }
-
 	// Getter for StmtAddress
 	inline const core::StatementAddress& getAddr() const { return addr; }
-
-	// Getters/Setters for the iteration domain
-	inline const IterationDomain& getDomain() const { return dom; }
-	inline IterationDomain& getDomain() { return dom; }
 
 	// Getters/Setters for scheduling / scattering 
 	inline AffineSystem& getSchedule() { return schedule; }
@@ -230,7 +224,7 @@ public:
 		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector
 		for_each(stmts, [&] (const StmtPtr& stmt) { 
-				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
+				this->push_back( Stmt(this->iterVec, stmt->id, *stmt) );
 			});
 	}
 

@@ -185,7 +185,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 		if (fit != scop.end()) {
 			// found stmt containing the requested expression 
-			return (*fit)->getDomain();
+			return (*fit)->iterdomain;
 		}
 
 		IterationDomain domain( scop.getIterationVector(), 
@@ -346,7 +346,7 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	core::annotations::LocationOpt loc=core::annotations::getLocation(addr);
 	if (loc) out << "\tlocation   \t" << *loc << std::endl;
 	out << "\tnode       \t" << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
-	out << "\titer domain\t" << dom << std::endl;
+	out << "\titer domain\t" << iterdomain << std::endl;
 	out << "\tschedule   \t" << std::endl << schedule;
 
 	// Prints the list of accesses for this statement 
@@ -354,7 +354,7 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	for_each(access_begin(), access_end(), [&](const AccessInfoPtr& cur){ out << *cur; });
 
 	auto&& ctx = makeCtx();
-	out << "\tcardinality\t" << *makeSet(ctx, dom)->getCard() << std::endl;
+	out << "\tcardinality\t" << *makeSet(ctx, iterdomain)->getCard() << std::endl;
 
 	return out;
 }
@@ -432,9 +432,9 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 /// Returns true if the given NodePtr has a SCoP annotation, false otherwise. Can be called directly,
 /// with explicit scoping.
 bool Scop::hasScopAnnotation(insieme::core::NodePtr p) {
-    if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
-    auto annot=p->getAnnotation(scop::ScopRegion::KEY);
-    return annot->valid;
+	if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
+	auto annot=p->getAnnotation(scop::ScopRegion::KEY);
+	return annot->valid;
 }
 
 /// Returns the outermost node with a Scop annotation, starting from the given node p. Can be called directly, with
@@ -458,20 +458,20 @@ insieme::core::NodePtr Scop::outermostScopAnnotation(insieme::core::NodePtr p) {
 /// Returns true if the given NodePtr is a (maximal) SCoP, false if there is no SCoP annotation, and also false
 /// if the SCoP is not maximal. Can be called directly, with explicit scoping.
 bool Scop::isScop(insieme::core::NodePtr p) {
-    if (!hasScopAnnotation(p)) return false;
-    Scop& scop=p->getAnnotation(scop::ScopRegion::KEY)->getScop();
-    LOG(WARNING) << "SCOP statement vector size: " << scop.stmts.size() << std::endl;
-    for (auto s: scop.stmts) {
-        //if (p == s.) return true;
-    }
-    //FIXME: outermostScopAnnotation(p);
-    return false;
+	if (!hasScopAnnotation(p)) return false;
+	Scop& scop=p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+	LOG(WARNING) << "SCOP statement vector size: " << scop.stmts.size() << std::endl;
+	for (auto s: scop.stmts) {
+		//if (p == s.) return true;
+	}
+	//FIXME: outermostScopAnnotation(p);
+	return false;
 }
 
 /// Return SCoP data from an existing annotation, using a NodePtr. Can be called directly, with explicit scoping.
 Scop& Scop::getScop(insieme::core::NodePtr p) {
-    if (!isScop(p)) { THROW_EXCEPTION(NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
-    return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+	if (!isScop(p)) { THROW_EXCEPTION(NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
+	return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
 }
 
 /// Return all SCoPs below an existing NodePtr as a vector of NodeAddress'es, just like scop::mark does.
@@ -512,9 +512,9 @@ void Scop::push_back( const Stmt& stmt ) {
 
 	stmts.emplace_back( std::unique_ptr<Stmt>(
 			new Stmt(
-				stmt.getId(), 
+				stmt.id,
 				stmt.getAddr(), 
-				IterationDomain(iterVec, stmt.getDomain()),
+				IterationDomain(iterVec, stmt.iterdomain),
 				AffineSystem(iterVec, stmt.getSchedule()), 
 				access
 			)
@@ -553,7 +553,7 @@ MapPtr<> createScatteringMap(CtxPtr<>&    					ctx,
 									size_t 							scat_size)
 {
 	
-	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
+	auto&& domainSet = makeSet(ctx, cur.iterdomain, tn);
 	assert( domainSet && "Invalid domain" );
 
 	// Also the accesses can define restriction on the domain (e.g. MPI calls)
@@ -589,7 +589,7 @@ void buildScheduling(
 	std::for_each(begin, end, [ & ] (const StmtPtr& cur) { 
 		// Creates a name mapping which maps an entity of the IR (StmtAddress) 
 		// to a name utilied by the framework as a placeholder 
-		TupleName tn(cur, "S" + utils::numeric_cast<std::string>(cur->getId()));
+		TupleName tn(cur, "S" + utils::numeric_cast<std::string>(cur->id));
 
 		schedule = schedule + createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim);
 

@@ -162,7 +162,7 @@ SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::Expr
 			sched.append( func );
 
 			// compute the domain for this stmt
-			SetPtr<> stmtDom = makeSet(ctx, stmt->getDomain(), tn) * makeSet(ctx, cur->getDomain(), tn);
+			SetPtr<> stmtDom = makeSet(ctx, stmt->iterdomain, tn) * makeSet(ctx, cur->getDomain(), tn);
 
 			schedMap += makeMap(ctx, sched, tn) * stmtDom;
 			accessMap += makeMap(ctx, accessInfo, tn, TupleName(cur->getExpr(), "MEM")) * stmtDom;

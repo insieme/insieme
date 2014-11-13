@@ -332,7 +332,7 @@ namespace {
 				for_each(*scop, [&](const StmtPtr& cur) {
 
 					// obtain cardinality of the current statement
-					core::arithmetic::Piecewise cardinality = polyhedral::cardinality(ptr->getNodeManager(), cur->getDomain());
+					core::arithmetic::Piecewise cardinality = polyhedral::cardinality(ptr->getNodeManager(), cur->iterdomain);
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;
