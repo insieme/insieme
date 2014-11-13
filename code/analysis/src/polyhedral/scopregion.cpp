@@ -423,9 +423,8 @@ void resolveScop(const IterationVector& 		iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
-
-		scat.push_back(insieme::analysis::polyhedral::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
-	
+		auto s=insieme::analysis::polyhedral::Stmt(id++, cur.getAddr(), iterDom, newScat, accInfo);
+		scat.push_back(s);
 	} ); 
 }
 

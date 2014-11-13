@@ -176,19 +176,14 @@ public:
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
 	// Getters/Setters for access list
-	inline const AccessList& getAccess() const { return access; }
 	inline AccessList& getAccess() { return access; }
 
 	// Accessories for iterating through accesses of this statement (read/write)
 	inline AccessIterator access_begin() { return access.begin(); }
 	inline AccessIterator access_end() { return access.end(); }
 
-	// Accessories for iterating through accesses of this statement (write only)
-	inline ConstAccessIterator access_begin() const { return access.cbegin(); }
-	inline ConstAccessIterator access_end() const { return access.cend(); }
-
 	std::vector<core::VariablePtr> loopNest() const;
-	unsigned getSubRangeNum() const;
+	unsigned getSubRangeNum();
 
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -223,9 +218,10 @@ public:
 	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) :
 		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector
-		for_each(stmts, [&] (const StmtPtr& stmt) { 
-				this->push_back( Stmt(this->iterVec, stmt->id, *stmt) );
-			});
+		for (auto s: stmts) {
+			insieme::analysis::polyhedral::Stmt poly_stmt=Stmt(this->iterVec, s->id, *s);
+			this->push_back(poly_stmt);
+		};
 	}
 
 	/// Copy constructor builds a deep copy of this SCoP.
@@ -244,7 +240,7 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	/// push_back adds a stmt to this SCoP
-	void push_back( const Stmt& stmt );
+	void push_back(Stmt &stmt);
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline IterationVector& getIterationVector() { return iterVec; }

@@ -351,7 +351,7 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 
 	// Prints the list of accesses for this statement 
 	out << "\taccess     \t" << std::endl;
-	for_each(access_begin(), access_end(), [&](const AccessInfoPtr& cur){ out << *cur; });
+	for (auto it=access.begin(); it!=access.end(); ++it) out << *it;
 
 	auto&& ctx = makeCtx();
 	out << "\tcardinality\t" << *makeSet(ctx, iterdomain)->getCard() << std::endl;
@@ -391,9 +391,9 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 	return boost::optional<const Stmt&>(**fit2);
 }
 
-unsigned Stmt::getSubRangeNum() const {
+unsigned Stmt::getSubRangeNum() {
 	bool ranges = 0;
-	for_each(access_begin(), access_end(), [&] (const AccessInfoPtr& cur) { 
+	for_each(access.begin(), access.end(), [&] (AccessInfoPtr& cur) {
 			if (!cur->getDomain().universe()) { ++ranges; }
 		});
 	return ranges;
@@ -501,11 +501,11 @@ std::ostream& Scop::printTo(std::ostream& out) const {
 }
 
 // Adds a stmt to this scop. 
-void Scop::push_back( const Stmt& stmt ) {
+void Scop::push_back(Stmt& stmt ) {
 	
 	AccessList access;
 	for_each(stmt.access_begin(), stmt.access_end(), 
-			[&] (const AccessInfoPtr& cur) { 
+			[&] (AccessInfoPtr& cur) {
 				access.push_back( std::make_shared<AccessInfo>( iterVec, *cur ) ); 
 			}
 		);
@@ -545,46 +545,39 @@ namespace {
 /** Creates the scattering map for a statement inside the SCoP. This is done by building the domain for such statement
 (adding it to the outer domain). Then the scattering map which maps this statement to a logical execution date is
 transformed into a corresponding Map. */
-MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
-									const IterationVector&	iterVec,
-									SetPtr<>& 				outer_domain, 
-									const Stmt& 				cur, 
-									TupleName						tn,
-									size_t 							scat_size)
-{
-	
-	auto&& domainSet = makeSet(ctx, cur.iterdomain, tn);
-	assert( domainSet && "Invalid domain" );
+MapPtr<> createScatteringMap(
+	CtxPtr<> &ctx, const IterationVector &iterVec, SetPtr<> &outer_domain, Stmt &cur, TupleName tn, size_t scat_size) {
+	auto &&domainSet= makeSet(ctx, cur.iterdomain, tn);
+	assert(domainSet && "Invalid domain");
 
 	// Also the accesses can define restriction on the domain (e.g. MPI calls)
-	std::for_each(cur.access_begin(), cur.access_end(), [&](const AccessInfoPtr& cur){
-			domainSet *= makeSet(ctx, cur->getDomain(), tn);
-		});
-	outer_domain = outer_domain + domainSet;
-	
-	AffineSystem sf = cur.getSchedule();
+	std::for_each(cur.access_begin(), cur.access_end(), [&](AccessInfoPtr &cur) {
+		domainSet*= makeSet(ctx, cur->getDomain(), tn);
+	});
+	outer_domain= outer_domain + domainSet;
+
+	AffineSystem sf= cur.getSchedule();
 
 	// Because the scheduling of every statement has to have the same number of elements
-	// (same dimensions) we append zeros until the size of the affine system is equal to 
-	// the number of dimensions used inside this SCoP for the scheduling functions 
-	for ( size_t s = sf.size(); s < scat_size; ++s ) {
-		sf.append( AffineFunction(iterVec) );
+	// (same dimensions) we append zeros until the size of the affine system is equal to
+	// the number of dimensions used inside this SCoP for the scheduling functions
+	for (size_t s= sf.size(); s < scat_size; ++s) {
+		sf.append(AffineFunction(iterVec));
 	}
 
 	return makeMap(ctx, sf, tn);
 }
 
-void buildScheduling(
-		CtxPtr<>& 						ctx, 
-		const IterationVector& 			iterVec,
-		SetPtr<>& 						domain,
-		MapPtr<>& 						schedule,
-		MapPtr<>& 						reads,
-		MapPtr<>& 						writes,
-		const Scop::const_iterator& 	begin, 
-		const Scop::const_iterator& 	end,
-		size_t							schedDim)
-		
+void buildScheduling(CtxPtr<> &ctx,
+					 const IterationVector &iterVec,
+					 SetPtr<> &domain,
+					 MapPtr<> &schedule,
+					 MapPtr<> &reads,
+					 MapPtr<> &writes,
+					 const Scop::const_iterator &begin,
+					 const Scop::const_iterator &end,
+					 size_t schedDim)
+
 {
 	std::for_each(begin, end, [ & ] (const StmtPtr& cur) { 
 		// Creates a name mapping which maps an entity of the IR (StmtAddress) 
