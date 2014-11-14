@@ -504,7 +504,7 @@ std::ostream& Scop::printTo(std::ostream& out) const {
 void Scop::push_back(Stmt& stmt ) {
 	
 	std::vector<AccessInfoPtr> access;
-	for_each(stmt.access_begin(), stmt.access_end(), 
+	for_each(stmt.accessmtx.begin(), stmt.accessmtx.end(),
 			[&] (AccessInfoPtr& cur) {
 				access.push_back( std::make_shared<AccessInfo>( iterVec, *cur ) ); 
 			}
@@ -551,7 +551,7 @@ MapPtr<> createScatteringMap(
 	assert(domainSet && "Invalid domain");
 
 	// Also the accesses can define restriction on the domain (e.g. MPI calls)
-	std::for_each(cur.access_begin(), cur.access_end(), [&](AccessInfoPtr &cur) {
+	std::for_each(cur.accessmtx.begin(), cur.accessmtx.end(), [&](AccessInfoPtr &cur) {
 		domainSet*= makeSet(ctx, cur->getDomain(), tn);
 	});
 	outer_domain= outer_domain + domainSet;
@@ -587,7 +587,7 @@ void buildScheduling(CtxPtr<> &ctx,
 		schedule = schedule + createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim);
 
 		// Access Functions 
-		std::for_each(cur->access_begin(), cur->access_end(), [&](const AccessInfoPtr& cur){
+		std::for_each(cur->accessmtx.begin(), cur->accessmtx.end(), [&](const AccessInfoPtr& cur){
 			const AffineSystem& accessInfo = cur->getAccess();
 
 			if (accessInfo.empty())  return;

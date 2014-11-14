@@ -723,7 +723,7 @@ public:
 			if (callExpr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
 
 				RangedFunction::VarVect ranges;
-				for_each(stmt.access_begin(), stmt.access_end(), [&](AccessInfoPtr& cur) {
+				for_each(stmt.accessmtx.begin(), stmt.accessmtx.end(), [&](AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
 						assert( !iters.empty() && iters.size() == 1 );

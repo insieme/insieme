@@ -730,7 +730,7 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 		
 			// Extract the variable which should be stripped 
 			core::VariablePtr var;
-			for_each(curStmt->access_begin(), curStmt->access_end(), [&](const AccessInfoPtr& cur) {
+			for_each(curStmt->accessmtx.begin(), curStmt->accessmtx.end(), [&](const AccessInfoPtr& cur) {
 				if ( cur->hasDomainInfo() ) {
 					assert(!var && "Variable already set");
 					var = getOrderedIteratorsFor(cur->getAccess()).front();

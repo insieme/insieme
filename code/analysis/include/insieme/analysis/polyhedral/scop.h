@@ -175,10 +175,6 @@ public:
 	inline AffineSystem& getSchedule() { return schedule; }
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
-	// Accessories for iterating through accesses of this statement (read/write)
-	inline std::vector<AccessInfoPtr>::iterator access_begin() { return accessmtx.begin(); }
-	inline std::vector<AccessInfoPtr>::iterator access_end()   { return accessmtx.end();   }
-
 	std::vector<core::VariablePtr> loopNest() const;
 	unsigned getSubRangeNum();
 
