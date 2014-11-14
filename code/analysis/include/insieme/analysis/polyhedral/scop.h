@@ -134,7 +134,6 @@ public:
 };
 
 typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
-typedef std::vector<AccessInfoPtr> 	AccessList;
 
 /** Stmt: this class contains all necessary information which are together representing a
     statement in the polyhedral model.
@@ -160,7 +159,7 @@ public:
 		 const core::StatementAddress &addr,
 		 const IterationDomain &iterdomain,
 		 const AffineSystem &schedule,
-		 const AccessList &access= AccessList())
+		 const std::vector<AccessInfoPtr> &accessmtx=std::vector<AccessInfoPtr>())
 		: addr(addr), schedule(schedule), accessmtx(accessmtx), id(id), iterdomain(iterdomain) {}
 
 	Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
@@ -178,7 +177,7 @@ public:
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
 	// Getters/Setters for access list
-	inline AccessList& getAccess() { return accessmtx; }
+	inline std::vector<AccessInfoPtr>& getAccess() { return accessmtx; }
 
 	// Accessories for iterating through accesses of this statement (read/write)
 	inline std::vector<AccessInfoPtr>::iterator access_begin() { return accessmtx.begin(); }

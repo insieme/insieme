@@ -336,7 +336,7 @@ void resolveScop(const IterationVector& 		iterVec,
 
 		// Access expressions 
 		const Stmt::RefAccessList& refs = cur.getRefAccesses();
-		AccessList accInfo;
+		std::vector<AccessInfoPtr> accInfo;
 		std::for_each(refs.begin(), refs.end(), [&] (const ReferencePtr& curRef) {
 				AffineSystem idx(iterVec);
 

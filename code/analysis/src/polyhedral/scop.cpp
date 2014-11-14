@@ -503,7 +503,7 @@ std::ostream& Scop::printTo(std::ostream& out) const {
 // Adds a stmt to this scop. 
 void Scop::push_back(Stmt& stmt ) {
 	
-	AccessList access;
+	std::vector<AccessInfoPtr> access;
 	for_each(stmt.access_begin(), stmt.access_end(), 
 			[&] (AccessInfoPtr& cur) {
 				access.push_back( std::make_shared<AccessInfo>( iterVec, *cur ) ); 
