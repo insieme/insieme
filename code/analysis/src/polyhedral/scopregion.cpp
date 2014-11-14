@@ -515,7 +515,7 @@ void ScopRegion::resolve() const {
 	for_each(*scopInfo, [&](StmtPtr& stmt) {
 
 		// search accesses
-		for_each(stmt->getAccess(), [&](AccessInfoPtr& access) {
+		for_each(stmt->accessmtx, [&](AccessInfoPtr& access) {
 
 			// extract variable (if there is one)
 			core::ExpressionPtr expr = access->getExpr().getAddressedNode();

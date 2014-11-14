@@ -191,7 +191,7 @@ void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatri
 template <>
 void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
 	for_each(scop, [&](StmtPtr& cur) { 
-		for_each( cur->getAccess(), [&](AccessInfoPtr& cur) { 
+		for_each( cur->accessmtx, [&](AccessInfoPtr& cur) {
 			IntMatrix&& access = extractFrom( cur->getAccess() );
 			IntMatrix&& newAccess = access * trans;
 			cur->getAccess().set( newAccess ) ;

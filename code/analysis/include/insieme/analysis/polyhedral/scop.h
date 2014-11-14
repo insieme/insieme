@@ -149,11 +149,10 @@ class Stmt: public utils::Printable {
 	AffineSystem schedule;       ///< scheduling matrix, according to the literature
 
 public:
-	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
-	IterationDomain iterdomain;     ///< iteration domain, according to the literature
-	std::vector<AccessInfoPtr>
-		accessmtx;   ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
-					 ///< (see also class AccessInfo)
+ unsigned int id;			   ///< a statement number, according to the index x in the term S_x from the literature
+ IterationDomain iterdomain;   ///< iteration domain, according to the literature
+ std::vector<AccessInfoPtr>    ///  access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
+	 accessmtx;                ///< (see also class AccessInfo)
 
 	Stmt(unsigned int id,
 		 const core::StatementAddress &addr,
@@ -175,9 +174,6 @@ public:
 	// Getters/Setters for scheduling / scattering 
 	inline AffineSystem& getSchedule() { return schedule; }
 	inline const AffineSystem& getSchedule() const { return schedule; }
-
-	// Getters/Setters for access list
-	inline std::vector<AccessInfoPtr>& getAccess() { return accessmtx; }
 
 	// Accessories for iterating through accesses of this statement (read/write)
 	inline std::vector<AccessInfoPtr>::iterator access_begin() { return accessmtx.begin(); }
