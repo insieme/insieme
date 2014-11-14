@@ -148,23 +148,25 @@ typedef std::vector<AccessInfoPtr> 	AccessList;
 class Stmt: public utils::Printable {
 	core::StatementAddress addr; ///< the root of the address is the entry point of the SCoP
 	AffineSystem schedule;       ///< scheduling matrix, according to the literature
-	AccessList access;           ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
-								 ///< (see also class AccessInfo)
-
-	typedef AccessList::iterator AccessIterator;
-	typedef AccessList::const_iterator ConstAccessIterator;
+	std::vector<AccessInfoPtr>
+		accessmtx;   ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
+					 ///< (see also class AccessInfo)
 
 public:
 	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
 	IterationDomain iterdomain;     ///< iteration domain, according to the literature
 
-	Stmt(unsigned int id, const core::StatementAddress &addr, const IterationDomain &iterdomain, const AffineSystem &schedule,
-		 const AccessList &access = AccessList()): addr(addr), schedule(schedule), access(access), id(id), iterdomain(iterdomain) {}
+	Stmt(unsigned int id,
+		 const core::StatementAddress &addr,
+		 const IterationDomain &iterdomain,
+		 const AffineSystem &schedule,
+		 const AccessList &access= AccessList())
+		: addr(addr), schedule(schedule), accessmtx(accessmtx), id(id), iterdomain(iterdomain) {}
 
-    Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
+	Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
 		addr(other.addr), schedule(iterVec, other.schedule), id(id), iterdomain(iterVec, other.iterdomain) {
-        for_each(other.access, [&](const AccessInfoPtr &cur) {
-            access.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
+		for_each(other.accessmtx, [&](const AccessInfoPtr &cur) {
+			accessmtx.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
         });
     }
 
@@ -176,11 +178,11 @@ public:
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
 	// Getters/Setters for access list
-	inline AccessList& getAccess() { return access; }
+	inline AccessList& getAccess() { return accessmtx; }
 
 	// Accessories for iterating through accesses of this statement (read/write)
-	inline AccessIterator access_begin() { return access.begin(); }
-	inline AccessIterator access_end() { return access.end(); }
+	inline std::vector<AccessInfoPtr>::iterator access_begin() { return accessmtx.begin(); }
+	inline std::vector<AccessInfoPtr>::iterator access_end()   { return accessmtx.end();   }
 
 	std::vector<core::VariablePtr> loopNest() const;
 	unsigned getSubRangeNum();

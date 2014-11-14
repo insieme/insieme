@@ -351,7 +351,7 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 
 	// Prints the list of accesses for this statement 
 	out << "\taccess     \t" << std::endl;
-	for (auto it=access.begin(); it!=access.end(); ++it) out << *it;
+	for (auto it=accessmtx.begin(); it!=accessmtx.end(); ++it) out << *it;
 
 	auto&& ctx = makeCtx();
 	out << "\tcardinality\t" << *makeSet(ctx, iterdomain)->getCard() << std::endl;
@@ -393,7 +393,7 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 
 unsigned Stmt::getSubRangeNum() {
 	bool ranges = 0;
-	for_each(access.begin(), access.end(), [&] (AccessInfoPtr& cur) {
+	for_each(accessmtx.begin(), accessmtx.end(), [&] (AccessInfoPtr& cur) {
 			if (!cur->getDomain().universe()) { ++ranges; }
 		});
 	return ranges;
