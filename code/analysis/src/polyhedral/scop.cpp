@@ -42,6 +42,7 @@
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/annotations/source_location.h"
@@ -319,8 +320,15 @@ std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched)
 
 //==== Stmt ==================================================================================
 
+/// Stmt copy constructor
+Stmt::Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
+	addr(other.addr), schedule(iterVec, other.schedule), id(id), iterdomain(iterVec, other.iterdomain) {
+	for_each(other.accessmtx, [&](const AccessInfoPtr &cur) {
+		accessmtx.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
+	});
+}
+
 std::vector<core::VariablePtr> Stmt::loopNest() const {
-	
 	std::vector<core::VariablePtr> nest;
 	for_each(getSchedule(),	[&](const AffineFunction& cur) { 
 		const IterationVector& iv = cur.getIterationVector();
@@ -357,38 +365,6 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	out << "\tcardinality\t" << *makeSet(ctx, iterdomain)->getCard() << std::endl;
 
 	return out;
-}
-
-boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt) {
-
-	NodePtr root = stmt.getRootNode();
-	std::vector<core::NodeAddress>&& addrs = scop::mark( root );
-
-	// we have to fing whether the top level of this scop contains stmt
-	auto fit = find_if(addrs.begin(), addrs.end(), [&](const NodeAddress& cur) { 
-			if ( core::isChildOf(cur, core::static_address_cast<const Node>(stmt)) ) { 
-				return true; 
-			}
-			return false;
-		});
-	
-	if (fit == addrs.end()) {
-		// the address is not inside any of the top level scops for this region
-		return boost::optional<const Stmt&>();
-	}
-	
-	assert( fit->getAddressedNode()->hasAnnotation(scop::ScopRegion::KEY) );
-	scop::ScopRegion& reg = *fit->getAddressedNode()->getAnnotation(scop::ScopRegion::KEY);
-
-	// find the statement inside this region 
-	Scop& scop = reg.getScop();
-
-	auto fit2 = find_if(scop.begin(), scop.end(), 
-			[&](const StmtPtr& cur) { return cur->getAddr() == stmt; });
-
-	assert(fit2 != scop.end());
-
-	return boost::optional<const Stmt&>(**fit2);
 }
 
 unsigned Stmt::getSubRangeNum() {

@@ -77,12 +77,12 @@ typedef std::list<SubScop> 								SubScopList;
 // TODO: integrate SubScop infrastructure into Scop infrastructure
 std::list<SubScop> toSubScopList(const IterationVector& iterVec, const AddressList& scops);
 
-/**
- * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
- * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
- * type of access (DEF or USE). The iteration domain which defines the domain on which this
- * access is defined and the access functions for each dimensions.
- */
+/** AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
+the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
+type of access (DEF or USE). The iteration domain which defines the domain on which this
+access is defined and the access functions for each dimensions.
+
+**Access functions** identify the read (USE) and writes (DEF) happening inside a statement */
 class AccessInfo : public utils::Printable {
 
 	core::ExpressionAddress	  expr;
@@ -142,7 +142,7 @@ typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
     - an **iteration domain** (with an associated iteration vector)
     - a **scheduling** (or scattering) matrix (which defines the schedule for the statement to be
       executed)
-    - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
+	- an **access matrix** defining the access (DEF/USE) of elements within a statement
 */
 class Stmt: public utils::Printable {
 	core::StatementAddress addr; ///< the root of the address is the entry point of the SCoP
@@ -160,34 +160,16 @@ public:
 		 const AffineSystem &schedule,
 		 const std::vector<AccessInfoPtr> &accessmtx=std::vector<AccessInfoPtr>())
 		: addr(addr), schedule(schedule), id(id), iterdomain(iterdomain), accessmtx(accessmtx) {}
+	Stmt(const IterationVector &iterVec, size_t id, const Stmt &other);
 
-	Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
-		addr(other.addr), schedule(iterVec, other.schedule), id(id), iterdomain(iterVec, other.iterdomain) {
-		for_each(other.accessmtx, [&](const AccessInfoPtr &cur) {
-			accessmtx.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
-        });
-    }
-
-	// Getter for StmtAddress
+	std::ostream& printTo(std::ostream& out) const;
 	inline const core::StatementAddress& getAddr() const { return addr; }
-
-	// Getters/Setters for scheduling / scattering 
 	inline AffineSystem& getSchedule() { return schedule; }
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
 	std::vector<core::VariablePtr> loopNest() const;
 	unsigned getSubRangeNum();
-
-	std::ostream& printTo(std::ostream& out) const;
 };
-
-/**
- * Given an IR statement, return the its polyhedral representation starting from the outermost SCoP
- *
- * If the statement is not inside a SCoP, the returned optional object will be not initialized
- */
-boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
-
 typedef std::shared_ptr<Stmt> StmtPtr;
 
 /** The Scop class is the entry point for all polyhedral model analyses and transformations. The
