@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,9 +55,8 @@ static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
 			if(received->type == IRT_MQ_NEW_APP) {
 				irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
 				irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
-				irt_context* prog_context = irt_context_create(client_app);
+				irt_context* prog_context = irt_context_create(client_app, NULL, NULL);
 				self->cur_context = prog_context->id;
-				irt_context_table_insert(prog_context);
 				_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
 				retval = 1;
 			}

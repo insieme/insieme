@@ -53,7 +53,7 @@ void basic_type_test() {
 	#pragma test "decl ref<ref<any>> v0 =  var(undefined(type<ref<any>>))"
 	void* e;
 
-	#pragma test "decl ref<real<4>> v0 =  var(0.0000000f)"
+	#pragma test "decl ref<real<4>> v0 =  var(0.0E+0)"
 	float f = 0.00f;
 
 	#pragma test "decl ref<real<8>> v0 =  var(undefined(type<real<8>>))"
@@ -83,11 +83,11 @@ void basic_type_test() {
 	#pragma test "v100 := ref.reinterpret(ref.null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
 	c1 = 0;
 
-	#pragma test "decl ref<real<8>> v0 =  var(3.1415927)"
+	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931E+0)"
 	double pi = 3.14159265358979323846;
 
-	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
-	//char str[10] = "Hello Mum";
+//	#pragma test "decl ref<vector<char,10>> v0 =  var("Hello Mum")"
+//	char str[10] = "Hello Mum";
 }
 
 // Simple struct

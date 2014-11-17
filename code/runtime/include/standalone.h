@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -183,7 +183,7 @@ void irt_exit_handler() {
 	// every other thread which comes after simply exits
 	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
 		if (irt_g_exit_handling_done)
-			irt_thread_exit(0);
+			return;
 
 	if (irt_g_exit_handling_done)
 		return;
@@ -380,7 +380,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	irt_mutex_lock(&condbundle.mutex);
 	irt_cond_bundle_wait(&condbundle);
 	irt_mutex_unlock(&condbundle.mutex);
-	irt_mutex_destroy(&condbundle.mutex);
+	irt_cond_bundle_destroy(&condbundle);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -394,9 +394,9 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	tempw.generator_id = 0;
 	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
 
-	irt_context* context = irt_context_create_standalone(cleanup_fun);
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
-	irt_context_initialize(context, init_fun);
+	irt_context_initialize(context);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -423,13 +423,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	irt_runtime_run_wi(impl, startup_params);
 
-	_irt_worker_end_all();
-
-	// shut-down context
-	irt_context_destroy(context);
-
-	IRT_DEBUG("Exiting ...\n");
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 

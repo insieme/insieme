@@ -39,7 +39,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -98,9 +98,11 @@ Scop getScop(NodeManager& mgr) {
 
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress( nop ), domain, sched1 ) );
-	scop.push_back( Stmt( 1, StatementAddress( nop ), domain, sched3 ) );
-	scop.push_back( Stmt( 2, StatementAddress( nop ), domain2, sched2 ) );
+	Stmt s0= Stmt(0, StatementAddress(nop), domain, sched1), s1= Stmt(1, StatementAddress(nop), domain, sched3),
+		 s2= Stmt(2, StatementAddress(nop), domain2, sched2);
+	scop.push_back(s0);
+	scop.push_back(s1);
+	scop.push_back(s2);
 
 	return scop;
 }

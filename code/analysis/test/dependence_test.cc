@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/analysis/dep_graph.h"
@@ -287,26 +287,32 @@ TEST(DependenceAnalysis, TrueDep3) {
 	// Compute Dependence Analysis Read After Writes
 	Scop scop(iterVec);
 
-	scop.push_back( Stmt( 0, StatementAddress(lit1), domain, sched, 
-				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access, IterationDomain(iterVec)) } ) 
-			);
-	scop.push_back( Stmt( 1, StatementAddress(lit2), domain, sched, 
-				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access, IterationDomain(iterVec))}) );
+	AffineSystem sched1(iterVec, { {1, 0, 0} } );          /// < scheduling function
+	AffineSystem write_access1(iterVec, { {1, 0,  1 },
+										  {0, 0, -1 } } ); /// < access function
+	insieme::analysis::polyhedral::Stmt
+		s0= Stmt(0,
+				 StatementAddress(lit1),
+				 domain,
+				 sched,
+				 {std::make_shared<AccessInfo>(
+					 ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access, IterationDomain(iterVec))}),
+		s1= Stmt(1,
+				 StatementAddress(lit2),
+				 domain,
+				 sched,
+				 {std::make_shared<AccessInfo>(
+					 ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access, IterationDomain(iterVec))}),
+		s2= Stmt(2,
+				 StatementAddress(lit3),
+				 domain,
+				 sched1,
+				 {std::make_shared<AccessInfo>(
+					 ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1, IterationDomain(iterVec))});
+	scop.push_back(s0);
+	scop.push_back(s1);
+	scop.push_back(s2);
 
-	//~~~~~~~~~~~~
-	// Scheduling 
-	//~~~~~~~~~~~~
-	AffineSystem sched1(iterVec, { {1, 0, 0} } );
-
-	//~~~~~~~~~~~~~~~~~
-	// ACCESS FUNCTIONS 
-	//~~~~~~~~~~~~~~~~~
-	AffineSystem write_access1(iterVec, { {1, 0,  1 }, 
-										  {0, 0, -1 } } );
-
-	scop.push_back( Stmt( 2, StatementAddress(lit3), domain, sched1,
-				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1, IterationDomain(iterVec))}) );
-	
 	{
 		dep::DependenceGraph depGraph(mgr, scop, dep::ALL);
 	

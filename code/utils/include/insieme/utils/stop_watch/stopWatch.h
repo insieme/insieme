@@ -143,7 +143,6 @@ class StopWatch{
 			thread::id thid;
 			string name;
 			double mem;
-			tDuration time;
 
 			tTime start;
 			tTime end;
@@ -152,17 +151,20 @@ class StopWatch{
 			tRecord(thread::id pid, const string& n, double m, tTime t)
 			: thid(pid), name(n), mem(m), start(t)
 			{ }
+			tRecord(const tRecord& o)
+			: thid(o.thid), name(o.name), mem(o.mem), start(o.start)
+			{ }
+
 
 			void update(double m, tTime t){
 				end = t;
 				mem = m-mem;
-
- 				time = chrono::duration_cast<tDuration>(t - start);
 			}
 
 			void dump(ostream& os, tTime globalStart)const{
 				tDuration st = chrono::duration_cast<tDuration>(start-globalStart);
 				tDuration nd = chrono::duration_cast<tDuration>(end-globalStart);
+				tDuration time = chrono::duration_cast<tDuration>(nd-st);
 				os << thid << "\t" << st.count() << "\t" << nd.count() << "\t" << name << "\t"<< time.count() << endl;
 			}
 		};
@@ -173,12 +175,22 @@ class StopWatch{
 
 		public:
 
+
+
+
+
+
 		swImpl()
-		:	globalStart (getTime())
+		:	measures(),
+			staticLock(),
+			globalStart (getTime())
 		{
 			tRecord record(getThid(), "GlobalScope", getMemUsage(), globalStart);
 			measures.insert(measures.end(), record);
 		}
+
+
+
 
 		~swImpl(){
 			// update global scope record
@@ -258,7 +270,7 @@ class StopWatch{
 		return singleton;
 	}
 
-	StopWatch(){};
+	StopWatch(): sw(){};
 	~StopWatch(){};
 };
 

@@ -55,8 +55,8 @@
 
 #include "insieme/analysis/features/code_features.h"
 #include "insieme/analysis/features/code_feature_catalog.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/omp/omp_utils.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
@@ -659,7 +659,7 @@ namespace runtime {
 				for_each(*scop, [&](const analysis::polyhedral::StmtPtr& cur) {
 
 					// obtain cardinality of the current statement
-					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->getDomain());
+					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->iterdomain);
 
 					// fix parameters (except the boundary parameters)
 					core::arithmetic::ValueReplacementMap replacements;

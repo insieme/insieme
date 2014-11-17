@@ -39,28 +39,52 @@
 #include <memory>
 #include <vector>
 
-#include "insieme/transform/connectors.h"
-#include "insieme/transform/filter/standard_filter.h"
-#include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/transform/polyhedral/scoppar.h"
-#include "insieme/transform/transformation.h"
-#include "insieme/utils/func_pipeline.h"
+#include "insieme/utils/logging.h"
 
+using namespace insieme::analysis::polyhedral;
 using namespace insieme::core;
 using namespace insieme::transform::polyhedral;
+
 
 // constructor
 SCoPPar::SCoPPar(ProgramPtr& program): program(program) {}
 
+/** Return the size of the SCoP, given as n. The number itself is irrelevant, only relative sizes matter. Currently,
+this function will return the number of statements but future implementation may return the number of loop instances,
+or some similar metric. TODO: move this method to the SCoP class. */
+unsigned int SCoPPar::size(NodePtr n) {
+	unsigned int count=0;
+	// here, we could also use NodePtr with if-statements; however, using a StatementPtr type simplifies the code
+	visitDepthFirst(n, [&](const StatementPtr &x) {
+		count++;
+	});
+	return count;
+}
+
 /// will transform the sequential program to an OpenCL program
 ProgramPtr& SCoPPar::apply() {
-	// filter SCoPs and build up the polyhedral transformation pipeline
-	using namespace insieme::transform;
-	std::vector<TransformationPtr> tr;
-	tr.push_back(std::make_shared<LoopParallelize>());
-	auto transform=makePipeline(makeForAll(insieme::transform::filter::outermostSCoPs(), makePipeline(tr)));
+	// gather SCoPs and save them for later processing
+	std::vector<NodeAddress> scops=Scop::getScops(program);
+	if (scops.empty()) scops=insieme::analysis::polyhedral::scop::mark(program);
+	else LOG(WARNING) << "Program is already annotated, using existing annotations.";
 
-	// apply transformation and return resulting program
-	//program = transform->apply(program);
+	LOG(WARNING) << "We found " << scops.size() << " SCoPs in the program." << std::endl;
+	for (NodeAddress scop: scops) {
+		annotations::LocationOpt loc=annotations::getLocation(scop);
+		if (loc) std::cout << "Found a SCoP at location " << *loc << "." << std::endl;
+		unsigned int s=size(scop.getAddressedNode());
+		std::cout << "\tscop # " << scop
+				  << " (size " << s << "; " << scop->getAnnotation(scop::ScopRegion::KEY)->getScop().size() << ")"
+				  << std::endl << printer::PrettyPrinter(scop) << std::endl;
+		if (s<=4) std::cout << "parent: " << printer::PrettyPrinter(scop.getParentAddress()) << std::endl;
+
+	}
+
 	return program;
 }

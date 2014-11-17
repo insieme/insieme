@@ -41,7 +41,7 @@
 #include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"

@@ -472,7 +472,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				};
 
 			// This is a materialize case, the materialize expression is implicit in C++
-			// NOT to use a custom materialize node, turns into the need of distinguish 
+			// NOT to use a custom materialize node, turns into the need of distinguish
 			// the cases to explicitly write refVar or not to do so, in the backend
 			if (isUsedToCreateConstRef(body, wrap)){
 				auto access = builder.refVar(currParam);
@@ -481,7 +481,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				wrapRefMap.erase(currParam);
 			}
 			// we only consider the usage of this variable in the local scope,
-			// there is no need to materialize the variable with a ref.var when 
+			// there is no need to materialize the variable with a ref.var when
 			// we can do that more clean by using a scope declared variable
 			else if (core::analysis::isReadOnlyWithinScope(body, wrap)){
 				// replace read uses
@@ -974,7 +974,10 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 // check for overloaded operator "function" (normal function has kind OO_None)
 	if (funcDecl->isOverloadedOperator()) {
 		clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
-		string operatorAsString = boost::lexical_cast<string>(operatorKind);
+		//in order to get a real name we have to use the getOperatorSpelling method
+		//otherwise we get names like operator30 and this is for instance not
+		//suitable when using STL containers (e.g., map needs < operator)...
+		string operatorAsString = clang::getOperatorSpelling(operatorKind);
 		core::annotations::attachName(node,("operator" + operatorAsString));
 	} else if( !funcDecl->getNameAsString().empty() ) {
 		// annotate with the C name of the function
@@ -1145,10 +1148,10 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 						builder.getIntTypeParamLiteral(elementType.isa<core::VectorTypePtr>()->getSize())
 					);
 			}
-			
+
 			assert_true(elementType.isa<core::VectorTypePtr>() ) << "not a vector";
 			assert_true(retIr->getType().isa<core::VectorTypePtr>() ) << "not a vector";
-			assert_eq( retIr->getType().as<core::VectorTypePtr>()->getSize() , elementType.isa<core::VectorTypePtr>()->getSize()) << 
+			assert_eq( retIr->getType().as<core::VectorTypePtr>()->getSize() , elementType.isa<core::VectorTypePtr>()->getSize()) <<
 						"vectors do not have same size";
 
 			return retIr;
@@ -1582,7 +1585,7 @@ namespace {
 		if (initList.empty()) return body;
 
 
-		if(body.isa<core::CompoundStmtPtr>()){  
+		if(body.isa<core::CompoundStmtPtr>()){
 			for(auto x : body.as<core::CompoundStmtPtr>()) {
 				initList.push_back(x);
 			}

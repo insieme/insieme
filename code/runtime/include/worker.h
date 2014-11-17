@@ -40,6 +40,7 @@
 
 #include "declarations.h"
 #include "abstraction/threads.h"
+#include "abstraction/spin_locks.h"
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
@@ -55,7 +56,8 @@
 IRT_MAKE_ID_TYPE(worker);
 
 typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_SLEEPING, IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
+	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_SLEEPING, 
+	IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP, IRT_WORKER_STATE_JOINED
 } irt_worker_state;
 
 struct _irt_worker {
@@ -76,6 +78,7 @@ struct _irt_worker {
 	irt_cond_var wait_cond;
 #endif
 	irt_cond_var dop_wait_cond;
+	irt_spinlock shutdown_lock;
 
 	uint32 default_variant;
 	unsigned int rand_seed;

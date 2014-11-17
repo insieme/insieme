@@ -51,7 +51,7 @@ void decl_stmt_test() {
 	float d;
 
 	#pragma test \
-	"decl ref<real<4>> v0 = ( var(1.0000000f))"
+	"decl ref<real<4>> v0 = ( var(1.0E+0))"
 	float e = 1.0f;
 	// ...
 }

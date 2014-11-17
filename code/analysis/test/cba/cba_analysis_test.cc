@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,6 +42,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "cba_test.inc.h"
 
@@ -425,6 +426,97 @@ namespace cba {
 		EXPECT_TRUE(mayAlias(c, d));
 	}
 
+	TEST(CBA_Analysis, RefArrayRefArray) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		StatementPtr code = builder.parseStmt(
+				"{"
+				"	let tuple = (ref<array<ref<array<real<4>,1>>,1>>);"
+				"	let meta = (ref<array<ref<array<real<4>,1>>,1>> c)->unit {"
+				"		*c[0];"
+				"	};"
+				""
+				"	let meta2 = (ref<array<real<4>,1>> e)->unit {"
+				"		e;"
+				"	};"
+				"	"
+				"	let access = (ref<array<ref<array<real<4>,1>>,1>> b, vector<uint<4>, 3> vec)->unit {"
+				"		*b[0];"
+				"		parallel(job meta(b); );"
+//				"		vector.pointwise(uint.div)(vec, vec);"
+//				"		vector.reduction(vec, 1u, uint.mul);"
+				"	};"
+				"	"
+				"	let access2 = (ref<array<real<4>,1>> d, vector<uint<4>, 3> vec)->unit {"
+				"		d;"
+				"		meta2(d);"
+				"		vector.reduction(vec, 1u, uint.mul);"
+				"	};"
+				"	"
+				"	let accessTuple = (tuple t2, vector<uint<4>, 3> vec)->unit {"
+				"		access(tuple.member.access(t2, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)), vec);"
+				"	};"
+				""
+				"	let accessTuple2 = (tuple t3, vector<uint<4>, 3> vec)->unit {"
+				"		access2(*tuple.member.access(t3, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0], vec);"
+				"	};"
+				""
+				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( lit(real<4>), 100u ) ));"
+				"	ref<vector<uint<4>, 3>> vec;"
+				""
+				"	vec[0] = 0u;"
+				"	vec[1] = 1u;"
+				"	vec[2] = 2u;"
+				""
+				"	ref<ref<tuple>> t = var(new(tuple));"
+				"	tuple.ref.elem(*t, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(a);"
+				"	"
+				"	accessTuple(**t, *vec);"
+				"	accessTuple2(**t, *vec);"
+				"	delete(*a);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		auto semCheck = core::checks::check(code);
+		EXPECT_TRUE (semCheck.empty()) << semCheck;
+
+		TypePtr refRefArrayReal4 = builder.parseType(
+				"ref<ref<array<real<4>,1>>>"
+		).as<TypePtr>();
+
+		StatementAddress sa(code);
+		std::vector<ExpressionAddress> varVec;
+
+		visitDepthFirst(sa, [&](const DeclarationStmtAddress& decl) {
+			VariableAddress var = decl->getVariable();
+			if(types::isSubTypeOf(refRefArrayReal4, var->getType())) {
+				varVec.push_back(var);
+			}
+		});
+
+		TypePtr refArrayReal4 = builder.refType(builder.arrayType(mgr.getLangBasic().getReal4()));
+		visitDepthFirst(sa, [&](const CompoundStmtAddress& compound) {
+			auto stmtVec = compound->getStatements();
+//			if(stmtVec.size() > 1)
+				if(ExpressionAddress expr = stmtVec[0].isa<ExpressionAddress>())
+					if(*expr->getType() == *refArrayReal4)
+						varVec.push_back(expr);
+		});
+
+		EXPECT_EQ(varVec.size(), 5u);
+
+		auto a = varVec[0];
+		auto b = varVec[1];
+		auto c = varVec[2];
+		auto d = varVec[3];
+		auto e = varVec[4];
+
+//		EXPECT_FALSE(mayAlias(a, b)); // uncomment for Assertion !(refB.empty()) caused by parallel job
+//		EXPECT_FALSE(mayAlias(a, c)); // uncomment for Assertion !(refB.empty()) caused by parallel job
+		EXPECT_FALSE(mayAlias(a, d));
+//		EXPECT_FALSE(mayAlias(a, e)); // uncomment for Assertion !(refB.empty()) caused by combination of tuples, vector.pointwise and vector.reduction
+	}
 
 	TEST(CBA_Analysis, UninterpretedSymbols) {
 

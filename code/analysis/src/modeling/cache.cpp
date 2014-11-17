@@ -38,8 +38,8 @@
 
 #include <iomanip>
 
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/analysis/features/type_features.h"
 
@@ -69,7 +69,7 @@ ReferenceMap extractReferenceInfo(const Scop& scop) {
 	// go thorugh the statements of this scop and collect all the variables being accessed in the scop
 
 	for_each(scop, [&] (const StmtPtr& stmt) { 
-		for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) { 
+		for_each(stmt->accessmtx.begin(), stmt->accessmtx.end(), [&](const AccessInfoPtr& cur) {
 			if (cur->getRefType() != Ref::ARRAY) return;
 			// Add this reference to the list of references
 			refMap.insert( std::make_pair(
@@ -139,7 +139,7 @@ SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::Expr
 	for_each(scop, [&] (const StmtPtr& stmt) {
 	
 		// Access Functions 
-		std::for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
+		std::for_each(stmt->accessmtx.begin(), stmt->accessmtx.end(), [&](const AccessInfoPtr& cur) {
 			// make a copy as we are going to modify this to add typing informations
 			AffineSystem accessInfo = cur->getAccess();
 			
@@ -162,7 +162,7 @@ SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::Expr
 			sched.append( func );
 
 			// compute the domain for this stmt
-			SetPtr<> stmtDom = makeSet(ctx, stmt->getDomain(), tn) * makeSet(ctx, cur->getDomain(), tn);
+			SetPtr<> stmtDom = makeSet(ctx, stmt->iterdomain, tn) * makeSet(ctx, cur->getDomain(), tn);
 
 			schedMap += makeMap(ctx, sched, tn) * stmtDom;
 			accessMap += makeMap(ctx, accessInfo, tn, TupleName(cur->getExpr(), "MEM")) * stmtDom;

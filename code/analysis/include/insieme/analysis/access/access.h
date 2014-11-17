@@ -48,7 +48,7 @@
 #include "insieme/utils/constraint.h"
 
 #include "insieme/analysis/tmp_var_map.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 namespace insieme { 
 namespace analysis { 

@@ -206,9 +206,7 @@ SetPtr<ISL> operator-(IslSet& lhs, const IslSet& rhs);
 
 SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs);
 
-/**************************************************************************************************
- * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
- *************************************************************************************************/
+/// IslMap: is the abstraction used to represent relations (or maps) in the ISL library.
 class IslMap : public IslObj, public boost::noncopyable, public utils::Printable {
 	isl_union_map* 	map;
 

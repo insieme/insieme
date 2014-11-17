@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -162,11 +162,11 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 
 		if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
 			functionname.append("_c");
-        
+
         utils::removeSymbols(functionname);
 
         return functionname;
-	} 
+	}
 	*/
 
     //if we have non type template specialization args,
@@ -189,11 +189,22 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
 	// also other*symbols
+	boost::algorithm::replace_last(name, "operator()","PARENdummy");
+	boost::algorithm::replace_last(name, "operator/=","DIVEQdummy");
+	boost::algorithm::replace_last(name, "operator-=","MINEQdummy");
+	boost::algorithm::replace_last(name, "operator+=","PLUEQdummy");
+	boost::algorithm::replace_last(name, "operator*=","TIMEQdummy");
+	boost::algorithm::replace_last(name, "operator==","EQEQdummy");
+
 	boost::algorithm::replace_last(name, "operator*","ASTdummy");
 	boost::algorithm::replace_last(name, "operator,","COMdummy");
-	boost::algorithm::replace_last(name, "operator()","PARENdummy");
+	boost::algorithm::replace_last(name, "operator+","PLUSdummy");
+	boost::algorithm::replace_last(name, "operator-","MINUSdummy");
+	boost::algorithm::replace_last(name, "operator/","DIVIDEdummy");
+	boost::algorithm::replace_last(name, "operator=","EQUALSdummy");
 
-	//if(!funcDecl->isOverloadedOperator()) 
+
+	//if(!funcDecl->isOverloadedOperator())
 	{
 		// beware of spetialized functions, the type does not show off
 		// check if we have template spec args otherwise seg faults may occur
@@ -250,7 +261,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 			name.append(returnType);
 		}
 	}
-	
+
 	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) {
 		name.append("_c");
 	}
@@ -265,8 +276,20 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
 	// and the asterisc symbol
 	boost::algorithm::replace_last(name, "ASTdummy","operator*");
-	boost::algorithm::replace_last(name, "COMdummy","operator-");
+	boost::algorithm::replace_last(name, "COMdummy","operator,");
+	boost::algorithm::replace_last(name, "MINUSdummy","operator-");
 	boost::algorithm::replace_last(name, "PARENdummy", "operator()");
+
+	boost::algorithm::replace_last(name, "PLUSdummy", "operator+");
+	boost::algorithm::replace_last(name, "DIVIDEdummy", "operator/");
+	boost::algorithm::replace_last(name, "EQUALSdummy", "operator=");
+
+	boost::algorithm::replace_last(name, "DIVEQdummy", "operator/=");
+	boost::algorithm::replace_last(name, "MINEQdummy", "operator-=");
+	boost::algorithm::replace_last(name, "PLUEQdummy", "operator+=");
+	boost::algorithm::replace_last(name, "TIMEQdummy", "operator*=");
+	boost::algorithm::replace_last(name, "EQEQdummy", "operator==");
+
 
 	// all done
 	return name;
@@ -303,7 +326,7 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 	std::stringstream ss;
 	ss << "_enum";
 
-    // A canonical path is needed to avoid different names for 
+    // A canonical path is needed to avoid different names for
     // differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
     char path[PATH_MAX];
     realpath(sm.getFilename(enumDecl->getLocStart()).str().c_str(), path);
@@ -327,8 +350,8 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm){
 	std::stringstream ss;
 	ss << "_enumCtnt";
-    
-    // A canonical path is needed to avoid different names for 
+
+    // A canonical path is needed to avoid different names for
     // differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
     char path[PATH_MAX];
     realpath(sm.getFilename(ecd->getLocStart()).str().c_str(), path);

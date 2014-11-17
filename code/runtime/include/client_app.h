@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,15 +47,10 @@ IRT_MAKE_ID_TYPE(client_app);
 #define IRT_APP_INIT_CONTEXT_NAME "insieme_init_context"
 #define IRT_APP_CLEANUP_CONTEXT_NAME "insieme_cleanup_context"
 
-typedef void (init_context_fun)(irt_context* context);
-typedef void (cleanup_context_fun)(irt_context* context);
-
 struct _irt_client_app {
 	irt_client_app_id id;
 	size_t pid;
 	void *library;
-	init_context_fun *init_context;
-	cleanup_context_fun *cleanup_context;
 };
 
 /* ------------------------------ operations ----- */
