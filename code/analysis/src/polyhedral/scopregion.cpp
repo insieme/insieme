@@ -102,7 +102,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 
 	std::for_each(stmts.begin(), stmts.end(), [&](const scop::Stmt& curStmt) {
 		
-		const scop::Stmt::RefAccessList& ail = curStmt.getRefAccesses();
+		const std::vector<scop::ReferencePtr>& ail = curStmt.getRefAccesses();
 
 		std::for_each(ail.begin(), ail.end(), [&] (const scop::ReferencePtr& cur) {
 
@@ -321,7 +321,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 		std::set<VariablePtr> fakeIterators;
 
 		// Access expressions 
-		const Stmt::RefAccessList& refs = cur.getRefAccesses();
+		const std::vector<ReferencePtr>& refs = cur.getRefAccesses();
 		std::vector<AccessInfoPtr> accInfo;
 		std::for_each(refs.begin(), refs.end(), [&] (const ReferencePtr& curRef) {
 				AffineSystem idx(iterVec);

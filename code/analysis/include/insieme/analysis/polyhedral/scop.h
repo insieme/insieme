@@ -55,6 +55,7 @@
 #include "insieme/analysis/polyhedral/constraint.h"
 #include "insieme/analysis/polyhedral/iter_dom.h"
 #include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_visitor.h"
@@ -62,13 +63,7 @@
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
 
-namespace insieme { namespace core { namespace arithmetic {
-
-class Formula;
-
-} } // end core::arithmetic
-
-namespace analysis { namespace polyhedral {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 typedef std::vector<core::NodeAddress> 					AddressList;
 typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;

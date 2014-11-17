@@ -86,22 +86,17 @@ A statement into a SCoP has 3 piece of information associated:
 
 This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
 for future requests. */
-struct Stmt {
+class Stmt {
+	core::StatementAddress addr;
+	std::vector<ReferencePtr> accesses;
 
-	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
-	// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
-	typedef std::vector<ReferencePtr> RefAccessList;
-
-	Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) :
-		address(addr), accesses(accesses) { }
-	inline const core::StatementAddress& getAddr() const { return address; }
-	inline const core::StatementAddress& operator->() const { return address; }
-	inline bool operator<(const Stmt& other) const { return address < other.address; }
-	virtual RefAccessList getRefAccesses() const { return accesses; }
-
-private:
-	core::StatementAddress 		address;
-	RefAccessList 				accesses;
+public:
+	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr>& accesses) :
+		addr(addr), accesses(accesses) { }
+	inline const core::StatementAddress& getAddr() const { return addr; }
+	inline const core::StatementAddress& operator->() const { return addr; }
+	inline bool operator<(const Stmt& other) const { return addr < other.addr; }
+	virtual std::vector<ReferencePtr> getRefAccesses() const { return accesses; }
 };
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector

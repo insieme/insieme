@@ -445,7 +445,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 				NodeManager& mgr = callExpr->getNodeManager();
 
 				// We have semantics information we can build up
-				scop::Stmt::RefAccessList accesses;
+				std::vector<scop::ReferencePtr> accesses;
 
 				for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) {
 
@@ -504,7 +504,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 		// this is a single stmt, therefore we can collect the references inside
 		RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 
-		scop::Stmt::RefAccessList refList;
+		std::vector<scop::ReferencePtr> refList;
 		for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) {
 			std::vector<ExpressionPtr> indeces;
 			if (cur->getType() == Ref::ARRAY) {
@@ -520,7 +520,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 		regionStmts.top().push_back(scop::Stmt(AS_STMT_ADDR(addr), refList));
 	} else {
 		// the substatement is a
-		regionStmts.top().push_back(scop::Stmt(AS_STMT_ADDR(addr), scop::Stmt::RefAccessList()));
+		regionStmts.top().push_back(scop::Stmt(AS_STMT_ADDR(addr), std::vector<scop::ReferencePtr>()));
 	}
 	return ret;
 }
