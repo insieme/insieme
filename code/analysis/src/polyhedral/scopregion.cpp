@@ -105,34 +105,20 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 		const std::vector<scop::ReferencePtr>& ail = curStmt.getRefAccesses();
 
 		std::for_each(ail.begin(), ail.end(), [&] (const scop::ReferencePtr& cur) {
-
-				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
-
 				ExpressionPtr addr = cur->refExpr;
-				switch ( cur->usage ) {
-				case Ref::DEF:
-				case Ref::UNKNOWN:
-				{
-					if ( iterVec.getIdx( addr ) != -1 ) {
-						// This SCoP has to be discarded because one of the iterators or parameters
-						// of the iteration domain has been overwritten within the body of the SCoP
+
+				// SCoP needs to be discarded because one of the iterators or parameters
+				// of the iteration domain has been overwritten within the body of the SCoP
+				if ((cur->usage == Ref::DEF || cur->usage == Ref::UNKNOWN) && iterVec.getIdx(addr)!=-1)
 						THROW_EXCEPTION(DiscardSCoPException, "Assignment to element of the iteration vector detected",  
 							curStmt.addr.getAddressedNode(), addr
 						);
-					}
-				}
-				default:
-					break;
-				}
 			});
 
 		// otherwise if one of the parameters of the SCoP is being defined in the body of the SCoP,
 		// then this region must be invalided as well
 		if (curStmt.addr->getNodeType() == NT_DeclarationStmt) {
 			
-			// std::cout << iterVec << std::endl;
-			// std::cout << *curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode() << std::endl;
-
 			// make sure the declared variable is not one of the parameters of the SCoP
 			if ( iterVec.contains( curStmt.addr.as<DeclarationStmtAddress>()->getVariable().getAddressedNode() ) ) {
 				THROW_EXCEPTION(DiscardSCoPException, "Declaration for one of the parameters of the SCoP is within the SCoP",  
