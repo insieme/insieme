@@ -93,9 +93,7 @@ public:
 	core::StatementAddress addr;
 
 	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr>& accesses): accesses(accesses), addr(addr) {}
-	inline const core::StatementAddress& operator->() const { return addr; }
-	inline bool operator<(const Stmt& other) const { return addr < other.addr; }
-	virtual std::vector<ReferencePtr> getRefAccesses() const { return accesses; }
+	std::vector<ReferencePtr> getRefAccesses() const { return accesses; }
 };
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
