@@ -117,7 +117,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
 						THROW_EXCEPTION(DiscardSCoPException, "Assignment to element of the iteration vector detected",  
-							curStmt.getAddr().getAddressedNode(), addr 
+							curStmt.addr.getAddressedNode(), addr
 						);
 					}
 				}
@@ -128,15 +128,15 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 
 		// otherwise if one of the parameters of the SCoP is being defined in the body of the SCoP,
 		// then this region must be invalided as well
-		if (curStmt.getAddr()->getNodeType() == NT_DeclarationStmt) {
+		if (curStmt.addr->getNodeType() == NT_DeclarationStmt) {
 			
 			// std::cout << iterVec << std::endl;
 			// std::cout << *curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode() << std::endl;
 
 			// make sure the declared variable is not one of the parameters of the SCoP
-			if ( iterVec.contains( curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode() ) ) {
+			if ( iterVec.contains( curStmt.addr.as<DeclarationStmtAddress>()->getVariable().getAddressedNode() ) ) {
 				THROW_EXCEPTION(DiscardSCoPException, "Declaration for one of the parameters of the SCoP is within the SCoP",  
-						curStmt.getAddr().getAddressedNode(), curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode()
+						curStmt.addr.getAddressedNode(), curStmt.addr.as<DeclarationStmtAddress>()->getVariable().getAddressedNode()
 					);
 			}
 		}
@@ -244,7 +244,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 	// for every access in this region, convert the affine constraint to the new iteration vector 
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const Stmt& cur) {
 			
-		StatementPtr&& curPtr = cur.getAddr().getAddressedNode();
+		StatementPtr&& curPtr = cur.addr.getAddressedNode();
 		assert(curPtr->getNodeType() != core::NT_MarkerExpr && curPtr->getNodeType() != core::NT_MarkerStmt);
 	
 		IterationDomain thisDomain = currDomain;
@@ -257,7 +257,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 		// check wheather the statement is a SCoP
 		auto fit = std::find_if(region.getSubScops().begin(), region.getSubScops().end(), 
 			[&](const SubScop& subScop) -> bool { 
-				return subScop.first.getAddressedNode() == cur.getAddr().getAddressedNode(); 
+				return subScop.first.getAddressedNode() == cur.addr.getAddressedNode();
 			} 
 		);
 
@@ -370,7 +370,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 
 				accInfo.push_back( 
 					std::make_shared<AccessInfo>( 
-							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->refExpr ) ), 
+							AS_EXPR_ADDR( concat<Node>(cur.addr, curRef->refExpr ) ),
 							curRef->type, 
 							curRef->usage, 
 							idx,
@@ -409,7 +409,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
-		auto s=insieme::analysis::polyhedral::Stmt(id++, cur.getAddr(), iterDom, newScat, accInfo);
+		auto s=insieme::analysis::polyhedral::Stmt(id++, cur.addr, iterDom, newScat, accInfo);
 		scat.push_back(s);
 	} ); 
 }

@@ -87,13 +87,12 @@ A statement into a SCoP has 3 piece of information associated:
 This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
 for future requests. */
 class Stmt {
-	core::StatementAddress addr;
 	std::vector<ReferencePtr> accesses;
 
 public:
-	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr>& accesses) :
-		addr(addr), accesses(accesses) { }
-	inline const core::StatementAddress& getAddr() const { return addr; }
+	core::StatementAddress addr;
+
+	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr>& accesses): accesses(accesses), addr(addr) {}
 	inline const core::StatementAddress& operator->() const { return addr; }
 	inline bool operator<(const Stmt& other) const { return addr < other.addr; }
 	virtual std::vector<ReferencePtr> getRefAccesses() const { return accesses; }
