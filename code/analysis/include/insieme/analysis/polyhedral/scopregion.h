@@ -103,7 +103,6 @@ private:
 	core::StatementAddress 		address;
 	RefAccessList 				accesses;
 };
-typedef std::vector<Stmt> 			StmtVect;
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
 which is valid within the SCoP body and the set of constraints which define the entry point for this SCoP.
@@ -125,7 +124,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	ScopRegion( const core::NodePtr& 	annNode,
 				const IterationVector& 	iv, 
 				const IterationDomain& 	comb,
-				const StmtVect&		 	stmts = StmtVect(),
+				const std::vector<Stmt>& stmts = std::vector<Stmt>(),
 				const SubScopList& 		subScops_ = SubScopList() 
 			  ) :
 		valid(true), annNode(annNode), iterVec(iv), stmts(stmts),
@@ -158,7 +157,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	/// Retrieves the constraint combiner associated to this ScopRegion.
 	inline const IterationDomain& getDomainConstraints() const { return domain; }
 
-	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
+	inline const std::vector<Stmt>& getDirectRegionStmts() const { return stmts; }
 
 	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
 	of its iteration domain, scattering matrix and access functions are listed. */
@@ -176,8 +175,10 @@ struct ScopRegion: public core::NodeAnnotation {
 	static boost::optional<Scop> toScop(const core::NodePtr& root);
 
 private:
-
-	void resolve() const;
+ void resolveScop(const IterationVector &iterVec, IterationDomain parentDomain, const ScopRegion &region,
+				  size_t &pos, size_t &id, const AffineSystem &curScat, ScopRegion::IteratorOrder &iterators, Scop &scat);
+ std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr &cur);
+	void resolve();
 
 
 	const core::NodePtr annNode;
@@ -186,7 +187,7 @@ private:
 	IterationVector iterVec;
 
 	/// List of statements direclty contained in this region (but not in nested sub-regions)
-	StmtVect stmts;
+	std::vector<Stmt> stmts;
 
 	/// List of constraints which this SCoP defines
 	IterationDomain domain;

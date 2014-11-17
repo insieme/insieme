@@ -78,7 +78,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 /** Stack utilized to keep track of statements which are inside a SCoP.
 	because not all the compound statements of the IR are annotated by a SCoPRegion annotation,
 	we need to have a way to collect statements which can be inside nested scopes. **/
-typedef std::stack<scop::StmtVect> RegionStmtStack;
+typedef std::stack<std::vector<scop::Stmt> > RegionStmtStack;
 RegionStmtStack regionStmts;
 
 ScopVisitor::ScopVisitor(std::vector<NodeAddress> &scopList): IRVisitor<IterationVector, Address>(false), scopList(scopList) {
@@ -713,7 +713,7 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 	// this If statement is also an affine linear function.
 	ret = merge(ret, merge(saveThen, saveElse));
 
-	scop::StmtVect ifScopStmts;
+	std::vector<scop::Stmt> ifScopStmts;
 
 	assert(regionStmts.top().size() == 1);
 	ifScopStmts.push_back(regionStmts.top().front());
@@ -734,7 +734,7 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 					ifStmt.getAddressedNode(),
 					ret,
 					IterationDomain(ret),
-					scop::StmtVect(ifScopStmts.rbegin(),ifScopStmts.rend()),
+					std::vector<scop::Stmt>(ifScopStmts.rbegin(),ifScopStmts.rend()),
 					std::list<SubScop>({SubScop(thenAddr, cond), SubScop(elseAddr, !cond) })
 					)
 				);
@@ -1156,7 +1156,7 @@ IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 		if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode());
 
 		const scop::ScopRegion& lambda = *lambdaScop->getAnnotation(scop::ScopRegion::KEY);
-		const scop::StmtVect& stmts = lambda.getDirectRegionStmts();
+		const std::vector<scop::Stmt>& stmts = lambda.getDirectRegionStmts();
 
 		std::copy(stmts.begin(), stmts.end(), std::back_inserter(regionStmts.top()));
 

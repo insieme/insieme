@@ -60,17 +60,8 @@
 namespace insieme { namespace analysis { namespace polyhedral {
 
 using namespace insieme::core;
-using namespace insieme::core::lang;
-
 using namespace insieme::analysis;
 using namespace insieme::analysis::polyhedral;
-using namespace insieme::analysis::polyhedral::scop;
-
-using arithmetic::Piecewise;
-using arithmetic::Formula;
-
-// FIXME: can we remove that forward decl?
-void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
 /// Determines the maximum node path depth given node n as the root node. This procedure is most likely be
 /// used before or during a PrintNodes invocation.
@@ -96,9 +87,6 @@ void printNodes(const insieme::core::Address<const insieme::core::Node> n,
 		if (depth<(unsigned int)max) printNodes(c, prefix, max, depth+1);
 }
 
-// FIXME: can we remove that namespace usage?
-using namespace insieme::utils;
-
 /** After the outermost for-loop has been found in a SCoP (using the bottom-up technique) we start the top-down pass to
     detect conditions which would invalidate the SCoP. For example, an assignment to parameters of the iteration vector
     makes a SCoP invalid. In order to detect this, we have to consider the top-level iteration vector and visit all the
@@ -107,16 +95,16 @@ using namespace insieme::utils;
     Is called from postProcessSCoP, as well as recursively.
 */
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
-	assert ( scop->hasAnnotation(ScopRegion::KEY) );
+	assert ( scop->hasAnnotation(scop::ScopRegion::KEY) );
 
-	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	const StmtVect& stmts = region.getDirectRegionStmts();
+	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY );
+	const std::vector<scop::Stmt>& stmts = region.getDirectRegionStmts();
 
 	std::for_each(stmts.begin(), stmts.end(), [&](const scop::Stmt& curStmt) {
 		
 		const scop::Stmt::RefAccessList& ail = curStmt.getRefAccesses();
 
-		std::for_each(ail.begin(), ail.end(), [&] (const ReferencePtr& cur) {
+		std::for_each(ail.begin(), ail.end(), [&] (const scop::ReferencePtr& cur) {
 
 				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
 
@@ -174,8 +162,8 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 */
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	// first, make sure that the node has been marked as SCoP
-	if (!scop->hasAnnotation(ScopRegion::KEY)) return;
-	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
+	if (!scop->hasAnnotation(scop::ScopRegion::KEY)) return;
+	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY);
 	if (!region.valid) return;
 
 	const IterationVector& iterVec = region.getIterationVector();
@@ -199,8 +187,6 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 }
 
 namespace scop {
-
-using namespace core;
 
 //===== ScopRegion =================================================================================
 const string ScopRegion::NAME = "SCoPAnnotation";
@@ -241,7 +227,7 @@ boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
 
 /** Recursively process ScopRegions caching the information related to access functions and
 scattering matrices for the statements contained in this Scop region */
-void resolveScop(const IterationVector& 		iterVec, 
+void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 				 IterationDomain			 	parentDomain, 
 	   		   	 const ScopRegion& 				region,
 				 size_t&						pos,
@@ -253,7 +239,7 @@ void resolveScop(const IterationVector& 		iterVec,
 	typedef std::set<Iterator> IteratorSet;
 	// assert( parentDomain->getIterationVector() == iterVec );
 	IterationDomain currDomain = parentDomain && IterationDomain(iterVec, region.getDomainConstraints());
-	const StmtVect& scopStmts = region.getDirectRegionStmts();
+	const std::vector<Stmt>& scopStmts = region.getDirectRegionStmts();
 	
 	// for every access in this region, convert the affine constraint to the new iteration vector 
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const Stmt& cur) {
@@ -428,47 +414,42 @@ void resolveScop(const IterationVector& 		iterVec,
 	} ); 
 }
 
-namespace {
+/** This utility function is collecting all locally declared variables within the given
+code fragment and maps it to the list of enclosing iterator variables (in the corresponding order).
 
-	/**
-	 * This utility function is collecting all locally declared variables within the given
-	 * code fragment and maps it to the list of enclosing iterator variables (in the corresponding order).
-	 *
-	 * @param cur the code fragment to be searched
-	 * @return a map mapping all locally declared variables to the surrounding iterator variables
-	 */
-	std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr& cur) {
+@param cur the code fragment to be searched
+@return a map mapping all locally declared variables to the surrounding iterator variables */
+std::map<core::VariablePtr, core::VariableList> ScopRegion::collectLocalVars(const core::NodePtr& cur) {
 
-		// collect all local declarations
-		std::vector<core::DeclarationStmtAddress> decls;
-		core::visitDepthFirst(core::NodeAddress(cur), [&](const core::DeclarationStmtAddress& cur) {
-			// we only collect declaration statements outside for loops
-			if (!cur.isRoot() && cur.getParentNode()->getNodeType() != core::NT_ForStmt) {
-				decls.push_back(cur);
-			}
+	// collect all local declarations
+	std::vector<core::DeclarationStmtAddress> decls;
+	core::visitDepthFirst(core::NodeAddress(cur), [&](const core::DeclarationStmtAddress& cur) {
+		// we only collect declaration statements outside for loops
+		if (!cur.isRoot() && cur.getParentNode()->getNodeType() != core::NT_ForStmt) {
+			decls.push_back(cur);
+		}
+	});
+
+	// compute list of enclosing iterator variables
+	std::map<core::VariablePtr, core::VariableList> res;
+	for_each(decls, [&](const core::DeclarationStmtAddress& cur) {
+
+		core::VariablePtr var = cur->getVariable();
+
+		// collect iterator variables
+		auto collector = core::makeLambdaVisitor([&](const ForStmtPtr& cur) {
+			res[var].push_back(cur->getIterator());
 		});
 
-		// compute list of enclosing iterator variables
-		std::map<core::VariablePtr, core::VariableList> res;
-		for_each(decls, [&](const core::DeclarationStmtAddress& cur) {
+		core::visitPathTopDown(cur, collector);
+	});
 
-			core::VariablePtr var = cur->getVariable();
-
-			// collect iterator variables
-			auto collector = core::makeLambdaVisitor([&](const ForStmtPtr& cur) {
-				res[var].push_back(cur->getIterator());
-			});
-
-			core::visitPathTopDown(cur, collector);
-		});
-
-		return res;
-	}
+	return res;
 }
 
 /** Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level and cache all the
 scattering info at this level */
-void ScopRegion::resolve() const {
+void ScopRegion::resolve() {
 	assert(valid && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result

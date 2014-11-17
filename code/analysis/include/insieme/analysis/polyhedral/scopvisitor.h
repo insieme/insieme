@@ -69,7 +69,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	std::vector<NodeAddress>& scopList;
 	std::vector<NodeAddress>  subScops;
 
-	typedef std::stack<scop::StmtVect> RegionStmtStack;
+	typedef std::stack<std::vector<scop::Stmt> > RegionStmtStack;
 	RegionStmtStack regionStmts;
 
 	ScopVisitor(std::vector<NodeAddress>& scopList);
