@@ -124,7 +124,9 @@
 // TODO : better configurability, maybe per-wi stack size set by compiler?
 // updated to 8MB due to failing test cases (quicksort, jacobi)
 // don't misalign!
+#ifndef IRT_WI_STACK_SIZE
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
+#endif
 
 #ifndef IRT_DEF_WORKERS
 #define IRT_DEF_WORKERS 1
@@ -140,6 +142,7 @@
 #if defined(_GEMS)
 #ifdef __arm__
     #define _GEMS_TODO
+    #define _GEMS_ODROID
     #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
         "cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
         "a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
