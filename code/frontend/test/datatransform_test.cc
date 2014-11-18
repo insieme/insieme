@@ -52,7 +52,7 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(DatatransformTest, SimplePragma) {
-	Logger::get(std::cerr, ERROR);
+	Logger::get(std::cerr, INFO);
 
 	core::NodeManager manager;
 
@@ -86,6 +86,9 @@ TEST(DatatransformTest, SimplePragma) {
 
 	core::visitDepthFirst(program, [&](const core::DeclarationStmtPtr& decl) {
 		if(decl->hasAnnotation(annot::DataTransformAnnotation::KEY)) {
+			annot::DataTransformAnnotationPtr dta = decl->getAnnotation(annot::DataTransformAnnotation::KEY);
+
+			EXPECT_EQ(32u, dta->getTilesize());
 			foundAnnot = true;
 		}
 	});
