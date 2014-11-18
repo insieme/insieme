@@ -152,19 +152,18 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY);
 	if (!region.valid) return;
 
-	const IterationVector& iterVec = region.getIterationVector();
-
 	try {
-		detectInvalidSCoPs(iterVec, scop); // this will throw an exception if the SCoP is deemed invalid
+		detectInvalidSCoPs(region.getIterationVector(), scop); // this will throw an exception if the SCoP is deemed invalid
 		// add the current SCoP (which has been confirmed valid) to the list of valid SCoPs
 		scopList.push_back(scop);          // this will execute only if the SCoP is deemed valid
-	} catch(const DiscardSCoPException& e ) {
+
+	} catch(const DiscardSCoPException& e) {
 		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
 				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
 		// recursively call ourselves: our SCoP is invalid, but perhaps one of our nested for-loop is a proper SCoP
-		std::for_each(region.getSubScops().begin(), region.getSubScops().end(), 
-				[&](const SubScop& subScop) { postProcessSCoP(subScop.first, scopList); });
+		for (auto subScop: region.getSubScops())
+			postProcessSCoP(subScop.first, scopList);
 
 		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
 		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
@@ -543,7 +542,7 @@ AddressList mark(const core::NodePtr& root) {
 	// initially, the second argument "validscops" is empty and will be filled by postProcessSCoP
 	// FIXME: Bug in the SCoP detection: Empty SCoPs are returned as well. We filter these before determining
 	// the validity of the SCoP.
-	for (const auto& scopnode: allscops) {
+	for (auto& scopnode: allscops) {
 		//Scop& scop=Scop::getScop(scopnode);
 		if (true /*scop.size()>0*/) {
 			postProcessSCoP(scopnode, validscops);

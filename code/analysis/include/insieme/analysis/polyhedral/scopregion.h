@@ -74,7 +74,7 @@ struct Reference : public boost::noncopyable {
 	{  }
 };
 
-typedef std::shared_ptr<Reference> ReferencePtr;
+typedef std::shared_ptr<Reference> ReferencePtr/*DELETED*/;
 
 /** Stmt:Class which contains all the information of statements inside a SCoP (both direct and
 contained in sub-scops).
@@ -87,13 +87,13 @@ A statement into a SCoP has 3 piece of information associated:
 This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
 for future requests. */
 class Stmt {
-	std::vector<ReferencePtr> accesses;
+	std::vector<ReferencePtr/*DELETED*/> accesses;
 
 public:
 	core::StatementAddress addr;
 
-	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr>& accesses): accesses(accesses), addr(addr) {}
-	std::vector<ReferencePtr> getRefAccesses() const { return accesses; }
+	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr/*DELETED*/>& accesses): accesses(accesses), addr(addr) {}
+	std::vector<ReferencePtr/*DELETED*/> getRefAccesses() const { return accesses; }
 };
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
