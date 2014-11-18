@@ -813,7 +813,7 @@ private:
 		VariableList newParams;
 		TypeMap tyMap;
 		ExpressionMap map = replacements;
-		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
+		for_range(make_paired_range(args, params), [&](const std::pair<ExpressionPtr, VariablePtr>& cur) {
 /*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
 						std::cerr << param->getType() << " - " << type << std::endl;
@@ -828,10 +828,12 @@ private:
 					}
 				}*/
 
-			VariablePtr param = cur.first;
-			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
-				param = this->builder.variable(cur.second->getType());
-				map[cur.first] = param;
+			auto hasReplacement = replacements.find(cur.second);
+			VariablePtr param = (hasReplacement == replacements.end()) ? cur.second : (*hasReplacement).second.as<VariablePtr>();
+			if (!isSubTypeOf(cur.first->getType(), param->getType())) {
+				param = this->builder.variable(cur.first->getType());
+
+				map[cur.second] = param;
 			}
 
 			newParams.push_back(param);
