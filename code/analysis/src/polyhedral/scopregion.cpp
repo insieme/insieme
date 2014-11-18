@@ -55,8 +55,6 @@
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/set_utils.h"
 
-#define AS_EXPR_ADDR(addr) static_address_cast<const Expression>(addr)
-
 namespace insieme { namespace analysis { namespace polyhedral {
 
 using namespace insieme::core;
@@ -305,64 +303,57 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 		// This array will store all the fake iterators introduced by the current statement 
 		std::set<VariablePtr> fakeIterators;
 
-		// Access expressions 
-		const std::vector<ReferencePtr>& refs = cur.getRefAccesses();
+		// Access expressions
 		std::vector<AccessInfoPtr> accInfo;
-		std::for_each(refs.begin(), refs.end(), [&] (const ReferencePtr& curRef) {
-				AffineSystem idx(iterVec);
+		for (auto curRef : cur.getRefAccesses()) {
+			AffineSystem idx(iterVec);
 
-				std::shared_ptr<IterationDomain> domain = std::make_shared<IterationDomain>(iterVec);
+			std::shared_ptr<IterationDomain> domain= std::make_shared<IterationDomain>(iterVec);
 
-				switch (curRef->type) {
-				case Ref::SCALAR:
-				case Ref::MEMBER:
-					// A scalar is treated as a zero dimensional array 
-					idx.append( AffineFunction(iterVec) );
-					break;
-				case Ref::ARRAY:
-				{
-					assert ((!curRef->indecesExpr.empty() || curRef->range) && "Array access without index specifier");
+			switch (curRef->type) {
+			case Ref::SCALAR:
+			case Ref::MEMBER:
+				// A scalar is treated as a zero dimensional array
+				idx.append(AffineFunction(iterVec));
+				break;
+			case Ref::ARRAY: {
+				assert((!curRef->indecesExpr.empty() || curRef->range) && "Array access without index specifier");
 
-					if (curRef->range) {
-						// This is a range access
-						assert(curRef->indecesExpr.size() == 1);
-						domain = std::make_shared<IterationDomain>( cloneConstraint(iterVec, curRef->range) );	
+				if (curRef->range) {
+					// This is a range access
+					assert(curRef->indecesExpr.size() == 1);
+					domain= std::make_shared<IterationDomain>(cloneConstraint(iterVec, curRef->range));
 
-						// This statements introduced an iterator, therefore we have to make sure we do not set it zero
-						// afterwards
-						fakeIterators.insert( curRef->indecesExpr.front().as<VariablePtr>() );
-						
-						// create the affine function 1*fakeIter
-						AffineFunction af(iterVec);
-						af.setCoeff(curRef->indecesExpr.front().as<VariablePtr>(), 1);
-						idx.append( af );
-						break;
-					}
+					// This statements introduced an iterator, therefore we have to make sure we do not set it zero
+					// afterwards
+					fakeIterators.insert(curRef->indecesExpr.front().as<VariablePtr>());
 
-					for_each(curRef->indecesExpr, [&](const ExpressionPtr& cur) { 
-							assert(cur->hasAnnotation(scop::AccessFunction::KEY));
-							scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
-							idx.append( ann.getAccessFunction().toBase(iterVec) );
-						}
-					);
+					// create the affine function 1*fakeIter
+					AffineFunction af(iterVec);
+					af.setCoeff(curRef->indecesExpr.front().as<VariablePtr>(), 1);
+					idx.append(af);
 					break;
 				}
-				default:
-					VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->type) << " not handled!";
-				}
 
-				assert(domain);
+				for_each(curRef->indecesExpr, [&](const ExpressionPtr &cur) {
+					assert(cur->hasAnnotation(scop::AccessFunction::KEY));
+					scop::AccessFunction &ann= *cur->getAnnotation(scop::AccessFunction::KEY);
+					idx.append(ann.getAccessFunction().toBase(iterVec));
+				});
+				break;
+			}
+			default:
+				VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->type) << " not handled!";
+			}
+			assert(domain);
 
-				accInfo.push_back( 
-					std::make_shared<AccessInfo>( 
-							AS_EXPR_ADDR( concat<Node>(cur.addr, curRef->refExpr ) ),
-							curRef->type, 
-							curRef->usage, 
-							idx,
-							*domain
-						)
-					);
-		});
+			accInfo.push_back(std::make_shared<AccessInfo>(
+				static_address_cast<const Expression>(concat<Node>(cur.addr, curRef->refExpr)),
+				curRef->type,
+				curRef->usage,
+				idx,
+				*domain));
+		}
 
 		// save the domain 
 		AffineConstraintPtr saveDomain = currDomain.getConstraint();
