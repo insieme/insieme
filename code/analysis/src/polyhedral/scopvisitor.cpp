@@ -73,6 +73,8 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 		assert(regionStmts.size() == stackInitialSize);				 \
 	};																 \
 	FinalActions __check_stack_size( std::bind(checkPostCond, regionStmts.size()) );
+
+//FIXME: we need to remove this macro, we want Stmt to contain a pointer to NodeAddress instead StatementAddress
 #define AS_STMT_ADDR(addr) static_address_cast<const Statement>(addr)
 
 /** Stack utilized to keep track of statements which are inside a SCoP.

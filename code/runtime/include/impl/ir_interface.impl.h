@@ -83,6 +83,9 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	// Parallel
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+    irt_optimizer_apply_dct(&job->impl->variants[0]);
+#endif
 	irt_work_group* retwg = irt_wg_create();
 	irt_joinable ret;
 	ret.wg_id = retwg->id;
@@ -92,12 +95,6 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	if(num_threads<job->min) num_threads = job->min;
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
     irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0], &(irt_worker_get_current()->cur_wi->impl->variants[0]));
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-    uint32 dct_num_threads = irt_optimizer_apply_dct(&job->impl->variants[0]);
-    // job->max == UINT_MAX means not num_thread() clause was specified so
-    // we can safely pick whatever value we want
-    num_threads = (dct_num_threads && job->max == UINT_MAX) ? dct_num_threads : num_threads;
-#endif
 	irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
 	for(uint32 i=0; i<num_threads; ++i) {
 		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);

@@ -284,7 +284,7 @@ void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clan
 			assert(mmap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
 			std::string datalayout = *mmap.begin()->second.front()->get<std::string*>();
 
-			unsigned tilesize = 0;
+			unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
 
 			annotations::DataTransformAnnotation dataTransform(tilesize);
 			annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);

@@ -694,6 +694,7 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	return polyhedral::toIR(mgr, iterVec, ctx, domain, map);
 }
 
+/// isParallel returns true if there are no dependences; false otherwise
 bool Scop::isParallel(core::NodeManager& mgr) const {
 
 	dep::DependenceGraph&& depGraph = 
