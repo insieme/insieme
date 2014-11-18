@@ -163,7 +163,7 @@ void irt_optimizer_objective_destroy(irt_context *context) {
 
 /* return 1 if res2 satisfies objective clause and it's better than res1, 0 otherwise */
 int is_objective_satisfied(ompp_objective_info obj, irt_optimizer_resources res1, irt_optimizer_resources res2) {
-    if(res2.cpu_energy < res1.cpu_energy && res2.wall_time < obj.time_max*1e9*5)
+    if(res2.cpu_energy < res1.cpu_energy && res2.wall_time < obj.time_max*1e9)
         return 1;
     else
         return 0;
@@ -204,9 +204,10 @@ irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objec
     if(data->hc_elem == -1) {
         // first call
         data->hc_elem = 0; // frequency
+        data->hc_dir = 1; // go towards upper bound
     }
     else if(!is_objective_satisfied(obj, data->best_resources, data->cur_resources)){
-        if(data->hc_dir == 1) {
+        if(data->hc_dir == 2) {
             // changhe hill climbing direction
             data->hc_dir = -1;
         }
@@ -214,23 +215,24 @@ irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objec
             move_on = true;
     }
     else {
-        // keep climbing current element in solution
+        // keep climbing current element in solution (update best)
         data->best = data->cur;
-        IRT_OMPP_OPTIMIZER_PRINT("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", data->best.frequency, data->best.thread_count +1, data->best.param_value[0], data->cur_resources.wall_time);
+        data->best_resources = data->cur_resources;
+        IRT_OMPP_OPTIMIZER_PRINT("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 " energy %f\n", data->best.frequency, data->best.thread_count +1, data->best.param_value[0], data->cur_resources.wall_time, data->best_resources.cpu_energy);
     }
 
     do {
         irt_optimizer_wi_data_id next = data->best;
 
         // hill climb
-        if(data->hc_dir >= 0) {
+        if(data->hc_dir > 0) {
             // go towards upper bound
             (*((uint64*)&next + data->hc_elem)) ++;
             data->hc_dir ++;
 
             // if upper bound is reached
             if((*((uint64*)&next + data->hc_elem)) >= (*((uint64*)&(data->max) + data->hc_elem))) {
-                if(data->hc_dir < 2) {
+                if(data->hc_dir < 3) {
                     // let's try to go towards lower bound
                     data->hc_dir = -1;
                     continue;
@@ -252,10 +254,18 @@ irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objec
         }
     
         if(move_on) {
+            IRT_OMPP_OPTIMIZER_PRINT("%s: moving to next tunable knob\n\n", __func__);
             move_on = false;
             // move to next element in solution
-            data->hc_dir = 0;
+            data->hc_dir = 1;
             data->hc_elem ++;
+
+#ifndef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+            if(data->hc_elem == (uint64*)&(data->best.thread_count) - (uint64*)&(data->best)) {
+                data->hc_elem ++;
+            }
+#endif
+
             if(data->hc_elem >= (uint64*)&(data->best.param_value) + obj.param_count - (uint64*)&(data->best))
                 data->hc_elem = (uint64*)&(data->best.param_value) + IRT_OPTIMIZER_PARAM_COUNT - (uint64*)&(data->best);
 
@@ -289,7 +299,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
     variant->rt_data.completed_wi_count ++;
     if(variant->meta_info->ompp_objective.region_id != UINT_MAX) {
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-        if(force_computation || variant->rt_data.completed_wi_count == irt_g_active_worker_count) {
+        if(force_computation || variant->rt_data.completed_wi_count == variant->rt_data.optimizer_rt_data.cur.thread_count +1) {
 #else
         if(force_computation || variant->rt_data.completed_wi_count == irt_g_worker_count) {
 #endif
@@ -299,12 +309,13 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                 irt_spin_unlock(&variant->rt_data.optimizer_rt_data.spinlock);
                 return;
             }
-            variant->rt_data.optimizer_rt_data.cur_resources.samplings = context->inst_region_metric_group_support_data.global_rapmi_data.n;
 
             // collecting data                          
 
             irt_optimizer_resources cur_resources;
  
+            cur_resources.samplings = context->inst_region_metric_group_support_data.global_rapmi_data.n;
+
             #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
 	        if(irt_g_inst_region_metric_measure_cpu_energy) { \
                 cur_resources.cpu_energy = (_data_type__)((double)regions[variant->meta_info->ompp_objective.region_id].aggregated_cpu_energy * _output_conversion_code__); \
@@ -372,7 +383,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                        is_objective_satisfied(variant->meta_info->ompp_objective, variant->rt_data.optimizer_rt_data.best_resources, variant->rt_data.optimizer_rt_data.cur_resources) == 1) {
                         variant->rt_data.optimizer_rt_data.best_resources = variant->rt_data.optimizer_rt_data.cur_resources;
                         variant->rt_data.optimizer_rt_data.best = variant->rt_data.optimizer_rt_data.cur;
-                        IRT_OMPP_OPTIMIZER_PRINT("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 "\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count +1, variant->rt_data.optimizer_rt_data.best.param_value[0], variant->rt_data.optimizer_rt_data.cur_resources.wall_time);
+                        IRT_OMPP_OPTIMIZER_PRINT("BEST: next freq %" PRIu64 " next thread count %" PRIu64 " next param %" PRIu64 " time %" PRIu64 " energy %f\n", variant->rt_data.optimizer_rt_data.best.frequency, variant->rt_data.optimizer_rt_data.best.thread_count +1, variant->rt_data.optimizer_rt_data.best.param_value[0], variant->rt_data.optimizer_rt_data.cur_resources.wall_time, variant->rt_data.optimizer_rt_data.best_resources.cpu_energy);
                     }
 
                     // Computing new settings
@@ -380,6 +391,8 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
                     new_element.frequency = rand() % irt_g_available_freq_count;
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
                     new_element.thread_count = rand() % irt_g_worker_count;
+#else
+                    new_element.thread_count = irt_g_worker_count -1;
 #endif
                     // param_value = -1 random (memset)
                 }
@@ -449,10 +462,10 @@ uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant) {
         return 0;
 
     if(variant->meta_info->ompp_objective.region_id != UINT_MAX)
-        return (irt_g_worker_count < variant->rt_data.optimizer_rt_data.cur.thread_count +1) ? irt_g_worker_count : variant->rt_data.optimizer_rt_data.cur.thread_count +1; 
+        irt_scheduling_set_dop((irt_g_worker_count < variant->rt_data.optimizer_rt_data.cur.thread_count +1) ? irt_g_worker_count : variant->rt_data.optimizer_rt_data.cur.thread_count +1);
 
     if(variant->rt_data.wrapping_optimizer_rt_data)
-        return (irt_g_worker_count < variant->rt_data.wrapping_optimizer_rt_data->cur.thread_count +1) ? irt_g_worker_count : variant->rt_data.wrapping_optimizer_rt_data->cur.thread_count +1; 
+        irt_scheduling_set_dop((irt_g_worker_count < variant->rt_data.wrapping_optimizer_rt_data->cur.thread_count +1) ? irt_g_worker_count : variant->rt_data.wrapping_optimizer_rt_data->cur.thread_count +1);
 
     return 0;
 }
