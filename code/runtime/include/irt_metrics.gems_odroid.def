@@ -5,8 +5,10 @@
 */
 
 GROUP(energy_group, rapmi_t global_rapmi_data, rapmi_t rapmi_data, 
-    { memset(&(context->inst_region_metric_group_support_data.global_rapmi_data), 0, sizeof(rapmi_t)); /*rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0);*/ }, \
-    {}, {}, {}, {}, {}, \
+    { memset(&(context->inst_region_metric_group_support_data.global_rapmi_data), 0, sizeof(rapmi_t)); init_rapmi(); /*rapmi_ctrl(LEM_SENS_MODE_ACC, 0, 0);*/ }, \
+    {}, \
+    { shutdown_rapmi(); }, \
+    {}, {}, {}, \
     { rapmi_start(); }, \
     { rapmi_stop(); rapmi_read(&rapmi_data); context->inst_region_metric_group_support_data.global_rapmi_data.n += rapmi_data.n; })
 
