@@ -290,6 +290,7 @@ class IWIRBuilder {
 		auto loopPortsChild = inputPortsChild->getFirstChildByName("loopPorts");
 		auto loopPorts = handle_loopPorts(innerCtx, *loopPortsChild);
 		whileTask->loopPorts = loopPorts;
+		//TODO loopPorts are inputports - add them to the inputports?
 
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");
@@ -300,6 +301,7 @@ class IWIRBuilder {
 		auto unionPortsChild = outputPortsChild->getFirstChildByName("unionPorts");
 		auto unionPorts = handle_unionPorts(innerCtx, *unionPortsChild);
 		whileTask->unionPorts = unionPorts;
+		//TODO unionports are outpuports - add them to outputPorts?
 
 		//Links
 		auto linksChild = e.getFirstChildByName("links");
@@ -341,10 +343,16 @@ class IWIRBuilder {
 		auto loopPortsChild = inputPortsChild->getFirstChildByName("loopPorts");
 		auto loopPorts = handle_loopPorts(innerCtx, *loopPortsChild);
 		forTask->loopPorts = loopPorts;
+		//TODO loopPorts are inputports - add them to the inputports?
 
 		//TODO LOOPCOUNTERS are within <inputports>
 		auto loopCounterChild = inputPortsChild->getFirstChildByName("loopCounter");
 		std::tie(forTask->counter, forTask->fromCounter, forTask->toCounter, forTask->stepCounter) = handle_loopCounter(innerCtx, *loopCounterChild);
+		//NOTE: some loopcounters are inputports - add them to the inputports
+		if(forTask->counter->port){ inputPorts->elements.push_back(forTask->counter->port); }
+		if(forTask->fromCounter->port) { inputPorts->elements.push_back(forTask->fromCounter->port); }
+		if(forTask->toCounter->port) {inputPorts->elements.push_back(forTask->toCounter->port); }
+		if(forTask->stepCounter->port) {inputPorts->elements.push_back(forTask->stepCounter->port); }
 
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");
@@ -355,6 +363,7 @@ class IWIRBuilder {
 		auto unionPortsChild = outputPortsChild->getFirstChildByName("unionPorts");
 		auto unionPorts = handle_unionPorts(innerCtx, *unionPortsChild);
 		forTask->unionPorts = unionPorts;
+		//TODO unionports are outpuports - add them to outputPorts?
 
 		//Links
 		auto linksChild = e.getFirstChildByName("links");
@@ -396,6 +405,11 @@ class IWIRBuilder {
 		//TODO LOOPCOUNTERS are within <inputports>
 		auto loopCounterChild = inputPortsChild->getFirstChildByName("loopCounter");
 		std::tie(parFor->counter, parFor->fromCounter, parFor->toCounter, parFor->stepCounter) = handle_loopCounter(innerCtx, *loopCounterChild);
+		//NOTE: some loopcounters are inputports - add them to the inputports
+		if(parFor->counter->port){ inputPorts->elements.push_back(parFor->counter->port); }
+		if(parFor->fromCounter->port) { inputPorts->elements.push_back(parFor->fromCounter->port); }
+		if(parFor->toCounter->port) {inputPorts->elements.push_back(parFor->toCounter->port); }
+		if(parFor->stepCounter->port) {inputPorts->elements.push_back(parFor->stepCounter->port); }
 
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");
@@ -443,11 +457,13 @@ class IWIRBuilder {
 		auto loopPortsChild = inputPortsChild->getFirstChildByName("loopPorts");
 		auto loopPorts = handle_loopPorts(innerCtx, *loopPortsChild);
 		forEach->loopPorts = loopPorts;
+		//TODO loopPorts are inputports - add them to the inputports?
 
 		//TODO LoopElements are within <inputports>
 		auto loopElementsChild = inputPortsChild->getFirstChildByName("loopElements");
 		auto loopElements = handle_loopElements(innerCtx, *loopElementsChild);
 		forEach->loopElements = loopElements;
+		//TODO loopElements are inputports - add them to inputPorts?
 		
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");
@@ -458,6 +474,7 @@ class IWIRBuilder {
 		auto unionPortsChild = outputPortsChild->getFirstChildByName("unionPorts");
 		auto unionPorts = handle_unionPorts(innerCtx, *unionPortsChild);
 		forEach->unionPorts = unionPorts;
+		//TODO unionports are outpuports - add them to outputPorts?
 
 		//Links
 		auto linksChild = e.getFirstChildByName("links");
@@ -500,6 +517,9 @@ class IWIRBuilder {
 		auto loopElementsChild = inputPortsChild->getFirstChildByName("loopElements");
 		auto loopElements = handle_loopElements(innerCtx, *loopElementsChild);
 		parForEach->loopElements = loopElements;
+		//TODO loopElements are inputports - add them to inputPorts?
+		//inputPorts->elements.insert(inputPorts->elements.end(),
+		//parForEach->inputPorts->elements.insert(parForEach->inputPorts->elements.end(), loopElements.begin(), loopElements.begin());
 		
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");
@@ -753,9 +773,14 @@ class IWIRBuilder {
 		LoopCounter* to = nullptr; 
 		LoopCounter* step = nullptr;	
 
+		//special port... loopcounter is always integer
+		//the loopcounter itself is output port (for other tasks)
+		//loopcoutner_from, loopcoutner_step, loopcoutner_to are input ports 
 		Port* counterPort = nullptr;
 		Type* type = mgr->create<Type>("integer");
 		counterPort = mgr->create<Port>(nameStr, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
+		counterPort->isInput = false;
+		counterPort->isOutput = true;
 		portCache.insert({ { counterPort->parentTask->name, counterPort->name}, counterPort} );
 		counter = mgr->create<LoopCounter>(ctx.getParentTask(), counterPort);
 
@@ -767,6 +792,8 @@ class IWIRBuilder {
 			string name = nameStr + "_from";
 			Type* type = mgr->create<Type>("integer");
 			fromPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
+			fromPort->isInput = true;
+			fromPort->isOutput = false;
 			portCache.insert({ { fromPort->parentTask->name, fromPort->name}, fromPort} );
 
 			from = mgr->create<LoopCounter>(ctx.getParentTask(), fromPort);
@@ -784,6 +811,8 @@ class IWIRBuilder {
 			string name = nameStr + "_to";
 			Type* type = mgr->create<Type>("integer");
 			toPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
+			toPort->isInput = true;
+			toPort->isOutput = false;
 			portCache.insert({ { toPort->parentTask->name, toPort->name}, toPort} );
 			to = mgr->create<LoopCounter>(ctx.getParentTask(), toPort);
 		} else {
@@ -792,21 +821,40 @@ class IWIRBuilder {
 			to = mgr->create<LoopCounter>(ctx.getParentTask(), toVal);
 		}	
 
-		//step is optional --> no stepAttr -> step==1
 		int stepVal;
-		auto stepStr = e.getAttr("step");
-		if(stepStr.empty()) {
-			stepVal = 1;
-		} else {
-			stepVal = std::stoi(stepStr,nullptr); //stepStr.toInteger;
-		}
-		VLOG(2) << "stepvalue: " << stepVal;
-		step = mgr->create<LoopCounter>(ctx.getParentTask(), stepVal);
+		bool hasStep = e.hasAttr("step");
 
-assert(counter);
-assert(from);
-assert(to);
-assert(step);
+		//step is optional --> no stepAttr -> step==1
+		if(hasStep) {
+			auto stepStr = e.getAttr("step");
+			if(stepStr.empty()) {
+				//step = "" --> results in port
+				Port* stepPort = nullptr;
+				//stepPort = namestr+step:integer;
+				string name = nameStr + "_step";
+				Type* type = mgr->create<Type>("integer");
+				stepPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
+				stepPort->isInput = true;
+				stepPort->isOutput = false;
+				portCache.insert({ { stepPort->parentTask->name, stepPort->name}, stepPort} );
+				step = mgr->create<LoopCounter>(ctx.getParentTask(), stepPort); 
+			} else {
+				//step = "val" --> stoi(val)
+				stepVal = std::stoi(stepStr,nullptr); //stepStr.toInteger;
+				VLOG(2) << "stepvalue: " << stepVal;
+				step = mgr->create<LoopCounter>(ctx.getParentTask(), stepVal);
+			}
+		} else {
+			//no step attribute -> steVal = 1
+			stepVal = 1;
+			VLOG(2) << "stepvalue: " << stepVal;
+			step = mgr->create<LoopCounter>(ctx.getParentTask(), stepVal);
+		}
+		
+		assert(counter);
+		assert(from);
+		assert(to);
+		assert(step);
 
 		return std::make_tuple(counter, from, to, step); 
 	}
