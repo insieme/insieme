@@ -136,7 +136,7 @@ TEST(DataLayout, AosToSoa) {
 //
 //	return;
 
-	datalayout::AosToSoa ats(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
 //	dumpPretty(code);
@@ -206,7 +206,7 @@ TEST(DataLayout, AosToSoa2) {
 //		});
 //
 
-	datalayout::AosToSoa ats(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
 //	dumpPretty(code);
@@ -265,7 +265,7 @@ TEST(DataLayout, Globals) {
 	));
 
 	return;
-	datalayout::AosToSoa ats(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
 //	dumpPretty(code);
@@ -304,11 +304,11 @@ TEST(DataLayout, Tuple) {
 		"		}"
 		"	};"
 		""
-//		"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
-//		"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
-//		"(*x[0])[3].int = 7;"
-//		"	tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
-//		"	};"
+		"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
+		"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
+		"(*x[0])[3].int = 7;"
+		"	tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
+		"	};"
 		""
 		"	ref<ref<array<twoElem,1>>> a;"
 		"	ref<ref<array<real<4>,1>>> b;"
@@ -316,15 +316,15 @@ TEST(DataLayout, Tuple) {
 		"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
 		"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
 		"ref.deref(a);"
-//		"	access(scalar.to.array(a));"
+		"	access(scalar.to.array(a));"
 		"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
-//		"	writeToTuple(*t, scalar.to.array(a));"
+		"	writeToTuple(*t, scalar.to.array(a));"
 		""
 		"	ref.delete(*t);"
 		"}"
 	));
 
-	datalayout::AosToSoa ats(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
 	dumpPretty(code);

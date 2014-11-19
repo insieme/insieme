@@ -554,7 +554,7 @@ TEST(IterationDomain, FromVariable) {
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	auto iAddr = addresses[1].as<ExpressionAddress>();
 	auto dom = getVariableDomain(iAddr);
@@ -581,7 +581,7 @@ TEST(IterationDomain, FromVariable2) {
 	EXPECT_EQ(3u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	{ 
 		// get the iterator i used in the if condition 
@@ -620,7 +620,7 @@ TEST(IterationDomain, NotAScop) {
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_FALSE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_FALSE(scop::ScopRegion::isMarked(addresses[0]));
 
 	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 
@@ -644,7 +644,7 @@ TEST(IterationDomain, FromVariable3) {
 	EXPECT_EQ(3u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	{ 
 		// get the iterator i used in the if condition 
@@ -680,7 +680,7 @@ TEST(IterationDomain, FromVariable4) {
 	EXPECT_EQ(3u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	{ 
 		// get the iterator i used in the if condition 
@@ -731,7 +731,7 @@ TEST(IterationDomain, FromVariableStrided) {
 
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	{ 
 		// get the iterator i used in the if condition 
@@ -778,7 +778,7 @@ TEST(IterationDomain, FromVariable5) {
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	// Get the iterator i inside the if stmt
 	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
@@ -814,7 +814,7 @@ TEST(IterationDomain, FromVariable6) {
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
 
-	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	{ 
 		// Get the iterator i inside the if stmt

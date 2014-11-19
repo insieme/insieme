@@ -55,10 +55,16 @@ typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
 namespace transform {
 namespace datalayout {
 
+typedef std::function<utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr>(core::NodeAddress toTransform)> CandidateFinder;
+
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findAllSuited(core::NodeAddress toTransform);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findPragma(core::NodeAddress toTransform);
+
 class AosToSoa {
 protected:
 	core::NodeManager& mgr;
 	core::NodePtr& toTransform;
+	CandidateFinder candidateFinder;
 
 	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
 	void collectVariables(const std::pair<core::ExpressionPtr, core::RefTypePtr>& transformRoot, core::ExpressionSet& toReplaceList,
@@ -124,7 +130,7 @@ protected:
 	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures,
 			const core::transform::TypeHandler& typeOfMemAllocHandler);
 public:
-	AosToSoa(core::NodePtr& toTransform);
+	AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder);
 	virtual ~AosToSoa() {}
 
 	virtual void transform();

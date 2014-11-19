@@ -36,11 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/frontend.h"
 
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/annotations/data_annotations.h"
+
+#include "insieme/transform/datalayout/aos_to_soa.h"
 
 #include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
@@ -48,15 +50,16 @@
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace annot = insieme::annotations;
+namespace dl = insieme::transform::datalayout;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(DatatransformTest, SimplePragma) {
-	Logger::get(std::cerr, INFO);
+	Logger::get(std::cerr, ERROR);
 
 	core::NodeManager manager;
 
-	std::string srcDir = CLANG_SRC_DIR "inputs/datatransform.c";
+	std::string srcDir = SRC_ROOT_DIR "driver/test/inputs/datatransform.c";
 
 	// create and customize conversion job
 	fe::ConversionJob job(srcDir);
@@ -88,10 +91,18 @@ TEST(DatatransformTest, SimplePragma) {
 		if(decl->hasAnnotation(annot::DataTransformAnnotation::KEY)) {
 			annot::DataTransformAnnotationPtr dta = decl->getAnnotation(annot::DataTransformAnnotation::KEY);
 
-			EXPECT_EQ(32u, dta->getTilesize());
+			EXPECT_EQ(0u, dta->getTilesize());
+			EXPECT_TRUE(dta->isSoa());
 			foundAnnot = true;
 		}
 	});
 
 	EXPECT_TRUE(foundAnnot);
+	core::NodePtr p(program);
+
+	// do the transformation
+	dl::AosToSoa ats(p, dl::findPragma);
+	ats.transform();
+
+	dumpPretty(p);
 }

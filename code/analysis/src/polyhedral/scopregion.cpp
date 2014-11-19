@@ -93,10 +93,10 @@ void printNodes(const insieme::core::Address<const insieme::core::Node> n,
     Is called from postProcessSCoP, as well as recursively.
 */
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
-	assert ( scop->hasAnnotation(scop::ScopRegion::KEY) );
+	boost::optional<scop::ScopRegion> region=scop::ScopRegion::toScopRegion(scop);
+	if (!region) return;
 
-	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY );
-	const std::vector<scop::Stmt>& stmts = region.getDirectRegionStmts();
+	const std::vector<scop::Stmt>& stmts = region->getDirectRegionStmts();
 
 	std::for_each(stmts.begin(), stmts.end(), [&](const scop::Stmt& curStmt) {
 		
@@ -128,7 +128,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 		});
 
 	// now check stmts of the subScops
-	const SubScopList& subScops = region.getSubScops();
+	const SubScopList& subScops = region->getSubScops();
 	std::for_each(subScops.begin(), subScops.end(), [&](const SubScop& cur) { 
 		detectInvalidSCoPs(iterVec, cur.first); 
 	} );
@@ -146,12 +146,11 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 */
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	// first, make sure that the node has been marked as SCoP
-	if (!scop->hasAnnotation(scop::ScopRegion::KEY)) return;
-	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY);
-	if (!region.valid) return;
+	boost::optional<scop::ScopRegion> region=scop::ScopRegion::toScopRegion(scop);
+	if (!region || !region->valid) return;
 
 	try {
-		detectInvalidSCoPs(region.getIterationVector(), scop); // this will throw an exception if the SCoP is deemed invalid
+		detectInvalidSCoPs(region->getIterationVector(), scop); // this will throw an exception if the SCoP is deemed invalid
 		// add the current SCoP (which has been confirmed valid) to the list of valid SCoPs
 		scopList.push_back(scop);          // this will execute only if the SCoP is deemed valid
 
@@ -160,20 +159,31 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
 		// recursively call ourselves: our SCoP is invalid, but perhaps one of our nested for-loop is a proper SCoP
-		for (auto subScop: region.getSubScops())
+		for (auto subScop: region->getSubScops())
 			postProcessSCoP(subScop.first, scopList);
 
 		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
 		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
-		region.valid=false;
+		region->valid=false;
 	}
 }
 
 namespace scop {
 
 //===== ScopRegion =================================================================================
-const string ScopRegion::NAME = "SCoPAnnotation";
-const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotation");
+
+ScopRegion::ScopRegion(const core::NodePtr &annNode,
+					   const IterationVector &iv,
+					   const IterationDomain &comb,
+					   const std::vector<Stmt> &stmts= std::vector<Stmt>(),
+					   const SubScopList &subScops_= SubScopList())
+	: valid(true), NAME("SCoPAnnotation"), KEY(annotationKey()), annNode(annNode), iterVec(iv), stmts(stmts),
+	  domain(iterVec, comb) {   // Switch the base to the this->iterVec
+
+	for (auto cur : subScops_) {
+		subScops.push_back(SubScop(cur.first, IterationDomain(iterVec, cur.second)));
+	}
+}
 
 std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	out << "IterVec: " << iterVec;
@@ -192,20 +202,30 @@ bool ScopRegion::containsLoopNest() const {
 	return iterVec.getIteratorNum() > 0;
 }
 
-boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
-	AddressList&& al = insieme::analysis::polyhedral::scop::mark(root);
-	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1) {
-		// If there are not scops or the number of scops is greater than 2
-		// or the the extracted scop is not the top level node
-		return boost::optional<Scop>();
-	}
-	assert(root->hasAnnotation(ScopRegion::KEY));
-	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
+/** toScop resolves a NodePtr to a SCoP, that is a ScopRegion that is valid. For getting intermediate results, see
+method toScopRegion. */
+boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& p) {
+	boost::optional<ScopRegion> region=scop::ScopRegion::toScopRegion(p);
+	if (region && region->valid) return boost::optional<Scop>(region->getScop());
+	else return boost::optional<Scop>();
+}
 
-	ann.resolve();
+/** toScopRegion resolves a NodePtr to a ScopRegion: first, we try to detect a SCoP by calling mark,
+then we check whether the NodePtr p itself is the start of a (possible) SCoP. Note that we did not yet check
+whether the SCoP is a valid SCoP, as we are just targeting a SCoPRegion. To get a valid SCoP, refer to method toScop. */
+boost::optional<ScopRegion> ScopRegion::toScopRegion(const core::NodePtr &p) {
+	// we expect the NodePtr to resolve to exactly one SCoP: if we could not detect a valid SCoP, or there is more
+	// than one SCoP in p (eg when the outer loop is non-affine, but two inner loops are valid sub-SCoPs), then
+	// we are not interested in the result — hence, we return an empty value
+	AddressList&& al = insieme::analysis::polyhedral::scop::mark(p);
+	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1 || !p->hasAnnotation(annotationKey()))
+		return boost::optional<ScopRegion>();
 
-	if (!ann.valid) return boost::optional<Scop>();
-	return boost::optional<Scop>(ann.getScop());
+	// after we made sure that there is a SCoP annotation, return it after some housekeeping
+	std::shared_ptr<ScopRegion> sr=p->getAnnotation(annotationKey());
+	if (!(bool)sr) return boost::optional<ScopRegion>(); // < shared ptr has no value, hence we return an empty optional
+	if (!sr->isResolved()) sr->resolve();
+	return boost::optional<ScopRegion>(*sr);
 }
 
 /** Recursively process ScopRegions caching the information related to access functions and
@@ -524,7 +544,7 @@ AddressList mark(const core::NodePtr& root) {
 
 	try {
 		sv.visit(NodeAddress(root));
-		if (root->hasAnnotation(ScopRegion::KEY)) allscops.push_back(NodeAddress(root));
+		if (scop::ScopRegion::isMarked(root)) allscops.push_back(NodeAddress(root));
 	} catch (const NotASCoP& e) {
 		LOG(WARNING) << e.what();
 	}
