@@ -76,7 +76,7 @@ class AosToTaos : public AosToSoa {
 			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 
 public:
-	AosToTaos(core::NodePtr& toTransform);
+	AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
 
 	virtual void transform();
 };

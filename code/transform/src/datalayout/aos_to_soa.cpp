@@ -119,8 +119,50 @@ ExpressionPtr expressionContainsMarshallingCandidate(const utils::map::PointerMa
 	return ExpressionPtr();
 }
 
+utils::map::PointerMap<ExpressionPtr, RefTypePtr>findAllSuited(NodeAddress toTransform) {
+	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
-AosToSoa::AosToSoa(core::NodePtr& toTransform) : mgr(toTransform->getNodeManager()), toTransform(toTransform) {}
+	pattern::TreePattern structType = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
+
+	pattern::TreePattern structVar = var("structVar", pirp::variable(structType));
+	pattern::TreePattern structVarDecl = pirp::declarationStmt(structVar, var("init", pattern::any));
+
+	pattern::TreePattern tupleType = pattern::aT(var("tupleType", pirp::tupleType(*pattern::any)));
+
+	pattern::TreePattern globalStruct = var("structVar", pirp::literal(structType, pattern::any));
+
+	pirp::matchAllPairs(structVarDecl | globalStruct, toTransform, [&](const NodeAddress& match, pattern::AddressMatch nm) {
+//std::cout << "Checking: " << *nm["structVar"].getValue() << std::endl;
+
+		// check if marshalling is needed. It is not needed e.g. when the variable is initialized with an already marshalled one
+		if(nm.isVarBound("init") && expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), toTransform))
+			return;
+
+		ExpressionPtr structVar = nm["structVar"].getValue().as<ExpressionPtr>();
+		TypePtr varType = structVar->getType();
+		RefTypePtr structType = nm["structType"].getValue().as<RefTypePtr>();
+
+		if(match.getParentAddress(1)->getNodeType() == NT_DeclarationStmts)
+			return; // do not consider variables which are part of declaration statements
+
+		if(tupleType.match(varType)) {
+			return; // tuples are not candidates since only one field needs to be altered.
+					// They will only be changed if the field is an alias to some other candidate
+		}
+
+		if(isInsideJob(match)) {
+			return; // variable in parallel regions are replaced with new variables of updated type. We don't keep the old version inside parallel regions.
+		}
+
+		structs[structVar] = structType;
+//std::cout << "Adding: " << *structVar << " as a candidate" << std::endl;
+	});
+	return structs;
+}
+
+
+AosToSoa::AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder)
+		: mgr(toTransform->getNodeManager()), toTransform(toTransform), candidateFinder(candidateFinder) {}
 
 void AosToSoa::transform() {
 	IRBuilder builder(mgr);
@@ -236,43 +278,8 @@ std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::createCandidateLists
 }
 
 utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeAddress toTransform) {
-	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
-	pattern::TreePattern structType = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
-
-	pattern::TreePattern structVar = var("structVar", pirp::variable(structType));
-	pattern::TreePattern structVarDecl = pirp::declarationStmt(structVar, var("init", pattern::any));
-
-	pattern::TreePattern tupleType = pattern::aT(var("tupleType", pirp::tupleType(*pattern::any)));
-
-	pattern::TreePattern globalStruct = var("structVar", pirp::literal(structType, pattern::any));
-
-	pirp::matchAllPairs(structVarDecl | globalStruct, toTransform, [&](const NodeAddress& match, pattern::AddressMatch nm) {
-//std::cout << "Checking: " << *nm["structVar"].getValue() << std::endl;
-
-		// check if marshalling is needed. It is not needed e.g. when the variable is initialized with an already marshalled one
-		if(nm.isVarBound("init") && expressionContainsMarshallingCandidate(structs, nm["init"].getValue().as<ExpressionAddress>(), toTransform))
-			return;
-
-		ExpressionPtr structVar = nm["structVar"].getValue().as<ExpressionPtr>();
-		TypePtr varType = structVar->getType();
-		RefTypePtr structType = nm["structType"].getValue().as<RefTypePtr>();
-
-		if(match.getParentAddress(1)->getNodeType() == NT_DeclarationStmts)
-			return; // do not consider variables which are part of declaration statements
-
-		if(tupleType.match(varType)) {
-			return; // tuples are not candidates since only one field needs to be altered. They will only be changed if the field is an alias to some other candidate
-		}
-
-		if(isInsideJob(match)) {
-			return; // variable in parallel regions are replaced with new variables of updated type. We don't keep the old version inside parallel regions.
-		}
-
-		structs[structVar] = structType;
-//std::cout << "Adding: " << *structVar << " as a candidate" << std::endl;
-	});
-	return structs;
+	return candidateFinder(toTransform);
 }
 
 void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& transformRoot, ExpressionSet& toReplaceList,
@@ -307,7 +314,7 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 								(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
 //dumpPretty(expr );
 //dumpPretty(potentialAlias );
-//std::cout << potentialAlias << " ------------------------------- \n";
+//std::cout << expr << " ------------------------------- \n";
 							if(ia::cba::mayAlias(expr, potentialAlias)) {
 								/*auto newly = */toReplaceList.insert(varToAdd);
 //if(newly.second) {
@@ -816,8 +823,8 @@ ExpressionMap AosToSoa::replaceAccesses(const ExpressionMap& varReplacements, co
 	return structures;
 }
 
-ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StructTypePtr& newStructType, const ExpressionPtr& index,
-		const ExpressionPtr& oldStructAccess) {
+ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StructTypePtr& newStructType,
+		const ExpressionPtr& index, const ExpressionPtr& oldStructAccess) {
 	IRBuilder builder(mgr);
 
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, oldStructAccess,
@@ -959,6 +966,7 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 				newTupleVar = globalTuple ?
 						builder.literal(globalTuple->getStringValue() + "_soa", newTupleType).as<ExpressionPtr>() :
 						builder.variable(newTupleType).as<ExpressionPtr>();
+
 				structures[oldTupleVar] = newTupleVar;
 			} else {
 				newTupleVar = structures[oldTupleVar];
@@ -1048,8 +1056,9 @@ void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements
 				if(structures.find(var) != structures.end()) // already there
 					return;
 
-				if(var->getType() != init->getType())
+				if(var->getType() != init->getType()) {
 					structures[var] = builder.variable(init->getType());
+				}
 			}
 
 		});
@@ -1126,7 +1135,7 @@ const NodePtr VariableAdder::resolveElement(const core::NodePtr& element) {
 			return element;
 
 //dumpPretty(call);
-//std::cout << "is builtin " << mgr.getLangBasic().isBuiltIn(lambdaExpr) << std::endl << "-----------------------------------------------------------------\n\n";
+//std::cout << "is builtin " << mgr.getLangBasic().isBuiltIn(lambdaExpr) << std::endl << "----------------------------------------------------------------\n\n";
 		// do the substitution to take care of body and function calls inside the argument list
 		CallExprPtr newCall = call->substitute(mgr, *this);
 
