@@ -67,6 +67,7 @@ int argc;
 char *argv[];
 {
   int first, framenum;
+  int loop_framenum;
 #ifdef USE_TIME
   int runtime;
 #ifndef WIN32
@@ -100,6 +101,7 @@ char *argv[];
   }
 
   first = 1;
+  loop_framenum = 0;
 
   do {
     if (base.infile!=0)
@@ -128,6 +130,7 @@ char *argv[];
       getpicture(&framenum);
       
       framenum++;
+      loop_framenum++;
     }
 
   } while (loopflag--);
@@ -146,8 +149,8 @@ char *argv[];
   if (!quiet && runtime!=0)
     printf("%d.%02d seconds, %d frames, %d.%02d fps\n",
            runtime/100, runtime%100,
-           framenum, ((10000*framenum+runtime/2)/runtime)/100,
-           ((10000*framenum+runtime/2)/runtime)%100);
+           loop_framenum, ((10000*loop_framenum+runtime/2)/runtime)/100,
+           ((10000*loop_framenum+runtime/2)/runtime)%100);
 #endif
 
 #ifdef DISPLAY
