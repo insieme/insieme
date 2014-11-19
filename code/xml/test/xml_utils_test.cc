@@ -171,10 +171,43 @@ TEST(XmlTest, ReadIWIR_If5) {
 	std::cout << "---" << std::endl;
 }
 
-TEST(XmlTest, ReadIWIR_BS) {
+TEST(XmlTest, ReadIWIR_BS1) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
 	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest1.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_BS2) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest2.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_BS3) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest3.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_BS4) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest4.xml";
 
 	NodeManager mgr;
 	std::cout << "---" << std::endl;
@@ -237,10 +270,43 @@ TEST(XmlTest, ReadIWIR_For3) {
 	std::cout << "---" << std::endl;
 }
 
+TEST(XmlTest, ReadIWIR_For4) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/forTest4.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_For5) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/forTest5.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
 TEST(XmlTest, ReadIWIR_ForEach1) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
 	auto iwirInput = XML_TEST_DIR + "input/forEachTest1.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_ForEach2) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/forEachTest2.xml";
 
 	NodeManager mgr;
 	std::cout << "---" << std::endl;
@@ -264,6 +330,17 @@ TEST(XmlTest, ReadIWIR_ParallelFor1) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
 	auto iwirInput = XML_TEST_DIR + "input/parallelForTest1.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_ParallelFor2) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/parallelForTest2.xml";
 
 	NodeManager mgr;
 	std::cout << "---" << std::endl;
