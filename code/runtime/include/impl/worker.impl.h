@@ -222,12 +222,12 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
-		irt_wi_implementation *wimpl = wi->impl;
 		//determine and store the implementation variant to use
 		wi->selected_impl_variant = _irt_worker_select_implementation_variant(self, wi);
+		irt_wi_implementation_variant* impl_variant = &(wi->impl->variants[wi->selected_impl_variant]);
 		//and start that variant
-		irt_optimizer_apply_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
-		lwt_start(wi, &self->basestack, wimpl->variants[wi->selected_impl_variant].implementation);
+		irt_optimizer_apply_dvfs(impl_variant);
+		lwt_start(wi, &self->basestack, impl_variant->implementation);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
