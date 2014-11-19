@@ -151,6 +151,11 @@ void XmlElement::setText(const string& text) {
 	}
 }
 
+bool XmlElement::hasAttr(const string& id) const { // return the true if attribute exists
+	bool ret (base->hasAttribute(toUnicode(id)));
+	return ret;
+}
+
 string XmlElement::getAttr(const string& id) const { // return the empty string if there is not attribute
 	char* ctype (XMLString::transcode (base->getAttribute(toUnicode(id))));
 	string type(ctype);

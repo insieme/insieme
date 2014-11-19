@@ -110,6 +110,7 @@ public:
 	void setText(const std::string& text);
 	std::string getText() const;
 	
+	bool hasAttr(const std::string& id) const;
 	std::string getAttr(const std::string& id) const;
 
 	std::string getName() const;
