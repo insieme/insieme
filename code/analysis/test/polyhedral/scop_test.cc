@@ -68,7 +68,7 @@ TEST(ScopRegion, CompoundStmt) {
 	// Mark scops in this code snippet
 	scop::mark(compStmt);
 
-	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(scop::ScopRegion::isMarked(compStmt));
 }
 
 TEST(ScopRegion, IfStmt) {
@@ -94,40 +94,34 @@ TEST(ScopRegion, IfStmt) {
 
 	// Mark scops in this code snippet
 	scop::mark(ifStmt);
-	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& annIf = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
-	IterationVector iterVec = annIf.getIterationVector();
+
+	boost::optional<scop::ScopRegion> annIf = scop::ScopRegion::toScopRegion(ifStmt);
+	EXPECT_TRUE(annIf);
+	IterationVector iterVec = annIf->getIterationVector();
 	EXPECT_EQ(5u, iterVec.size());
 
 	EXPECT_EQ(0u, iterVec.getIteratorNum());
 	EXPECT_EQ(4u, iterVec.getParameterNum());
 	EXPECT_EQ("(|v4,v5,v2,v3|1)", toString(iterVec));
+	EXPECT_FALSE( annIf->getDomainConstraints().empty());
 
-	EXPECT_FALSE( annIf.getDomainConstraints().empty() );
-
-
-	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& annThen = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
-	iterVec = annThen.getIterationVector();
+	boost::optional<scop::ScopRegion> annThen = scop::ScopRegion::toScopRegion(ifStmt->getThenBody());
+	EXPECT_TRUE(annThen);
+	iterVec = annThen->getIterationVector();
 	EXPECT_EQ(3u, iterVec.size());
-
 	EXPECT_EQ(0u, iterVec.getIteratorNum());
 	EXPECT_EQ(2u, iterVec.getParameterNum());
 	EXPECT_EQ("(|v2,v3|1)", toString(iterVec));
+	EXPECT_FALSE(annThen->getDomainConstraints().empty());
 
-	EXPECT_FALSE( annThen.getDomainConstraints().empty() );
-
-	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& annElse = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
-	iterVec = annElse.getIterationVector();
-
+	boost::optional<scop::ScopRegion> annElse = scop::ScopRegion::toScopRegion(ifStmt->getElseBody());
+	EXPECT_TRUE(annElse);
+	iterVec = annElse->getIterationVector();
 	EXPECT_EQ(3u, iterVec.size());
-
 	EXPECT_EQ(0u, iterVec.getIteratorNum());
 	EXPECT_EQ(2u, iterVec.getParameterNum());
 	EXPECT_EQ("(|v2,v3|1)", toString(iterVec));
-
-	EXPECT_FALSE( annElse.getDomainConstraints().empty() );
+	EXPECT_FALSE(annElse->getDomainConstraints().empty());
 }
 
 TEST(ScopRegion, SimpleForStmt) {
@@ -148,18 +142,16 @@ TEST(ScopRegion, SimpleForStmt) {
 	
 	scop::mark(forStmt);
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-
-	EXPECT_EQ(1u, ann.getDirectRegionStmts().size());
-	IterationVector iterVec = ann.getIterationVector();
+	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(forStmt);
+	EXPECT_TRUE(sr);
+	EXPECT_EQ(1u, sr->getDirectRegionStmts().size());
+	IterationVector iterVec = sr->getIterationVector();
 	EXPECT_EQ(3u, iterVec.size()) << iterVec;
 	EXPECT_EQ(1u, iterVec.getIteratorNum()) << iterVec;
 	EXPECT_EQ(1u, iterVec.getParameterNum()) << iterVec;
-
 	EXPECT_EQ("(v0|v2|1)", toString(iterVec));
-	EXPECT_EQ("((v0 + -10 >= 0) ^ (v0 + -50 < 0))", toString(ann.getDomainConstraints()));
-	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_EQ("((v0 + -10 >= 0) ^ (v0 + -50 < 0))", toString(sr->getDomainConstraints()));
+	EXPECT_TRUE(scop::ScopRegion::isMarked(forStmt->getBody()));
 }
 
 TEST(ScopRegion, ForStmt) {
@@ -184,17 +176,15 @@ TEST(ScopRegion, ForStmt) {
 	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
-
-	EXPECT_FALSE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_FALSE(scop::ScopRegion::isMarked(forStmt));
 	IfStmtPtr ifStmt = forStmt->getBody().as<CompoundStmtPtr>()->getStatements().back().as<IfStmtPtr>();
 
-	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
-	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
+	boost::optional<scop::ScopRegion> ifRegion=scop::ScopRegion::toScopRegion(ifStmt);
+	EXPECT_TRUE(ifRegion);
+	EXPECT_TRUE(scop::ScopRegion::isMarked(ifStmt->getThenBody()));
 
-	// check the then body
-	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
-	const IterationVector& iterVec = ann.getIterationVector();
-
+	// then, check the "then" body
+	const IterationVector& iterVec = ifRegion->getIterationVector();
 	EXPECT_EQ(3u, iterVec.size());
 	EXPECT_EQ(0u, iterVec.getIteratorNum());
 	EXPECT_EQ(2u, iterVec.getParameterNum());
@@ -221,18 +211,16 @@ TEST(ScopRegion, ForStmt2) {
 	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
+	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(forStmt);
+	EXPECT_TRUE(sr);
 
-	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
-
-	// check the then body
-	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-	const IterationVector& iterVec = ann.getIterationVector();
-
+	// check the iteration vector
+	const IterationVector& iterVec = sr->getIterationVector();
 	EXPECT_EQ(5u, iterVec.size());
 	EXPECT_EQ(1u, iterVec.getIteratorNum());
 	EXPECT_EQ(3u, iterVec.getParameterNum());
 	EXPECT_EQ("(v0|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("((v0 + -v3 >= 0) ^ (v0 + -v4 < 0))",  toString(ann.getDomainConstraints()));
+	EXPECT_EQ("((v0 + -v3 >= 0) ^ (v0 + -v4 < 0))",  toString(sr->getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt3) {
@@ -254,21 +242,18 @@ TEST(ScopRegion, ForStmt3) {
 	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
+	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(forStmt);
+	EXPECT_TRUE(sr);
 
-	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
-
-	// check the then body
-	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-	const IterationVector& iterVec = ann.getIterationVector();
-
+	// check the iteration vector
+	const IterationVector& iterVec = sr->getIterationVector();
 	EXPECT_EQ(6u, iterVec.size());
 	EXPECT_EQ(2u, iterVec.getIteratorNum());
 	EXPECT_EQ(3u, iterVec.getParameterNum());
-	
 	EXPECT_EQ(Element::ITER, iterVec[1].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
 	EXPECT_EQ("(v0,v10000|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v10000 + -v3 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v10000 + -v3 == 0))", toString(sr->getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt4) {
@@ -289,13 +274,10 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
+	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(forStmt);
+	EXPECT_TRUE(sr);
 
-	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
-
-	// check the then body
-	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-	const IterationVector& iterVec = ann.getIterationVector();
-
+	const IterationVector& iterVec = sr->getIterationVector();
 	EXPECT_EQ(6u, iterVec.size());
 	EXPECT_EQ(4u, iterVec.getIteratorNum());
 	EXPECT_EQ(1u, iterVec.getParameterNum());
@@ -308,10 +290,10 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
 	EXPECT_EQ("(v0,v10000,v10001,v10002|v2|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v10000 + -v10001 + 5 == 0) ^ (v10001 + -2 < 0)) ^ (v10001 >= 0)) ^ (v0 + -v10000 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v10000 + -5*v10002 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("((((((-2*v10000 + -v10001 + 5 == 0) ^ (v10001 + -2 < 0)) ^ (v10001 >= 0)) ^ (v0 + -v10000 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v10000 + -5*v10002 == 0))", toString(sr->getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
-	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
+	Piecewise pw = cardinality(mgr,  sr->getDomainConstraints());
 	EXPECT_TRUE(pw.isFormula());
 	EXPECT_EQ(Formula(4), pw.toFormula());
 	EXPECT_EQ("4 -> if true", toString(pw));
@@ -337,13 +319,10 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
+	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(forStmt);
+	EXPECT_TRUE(sr);
 
-	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
-
-	// check the then body
-	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-	const IterationVector& iterVec = ann.getIterationVector();
-
+	const IterationVector& iterVec = sr->getIterationVector();
 	EXPECT_EQ(8u, iterVec.size());
 	EXPECT_EQ(4u, iterVec.getIteratorNum());
 	EXPECT_EQ(3u, iterVec.getParameterNum());
@@ -356,7 +335,7 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
 	EXPECT_EQ("(v0,v10000,v10001,v10002|v2,v4,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v10000 + v10001 + v4 == 0) ^ (v10001 + -3 < 0)) ^ (v10001 >= 0)) ^ (v0 + -v10000 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v10000 + -5*v10002 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("((((((-3*v10000 + v10001 + v4 == 0) ^ (v10001 + -3 < 0)) ^ (v10001 >= 0)) ^ (v0 + -v10000 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v10000 + -5*v10002 == 0))", toString(sr->getDomainConstraints()));
 }
 
 /*
@@ -419,11 +398,11 @@ TEST(ScopRegion, WhileStmt) {
 	VariablePtr cond = IRBuilder(mgr).variable( mgr.getLangBasic().getBool() );
 	WhileStmtPtr whileStmt = builder.whileStmt(cond, forStmt);
 
-	AddressList scops = scop::mark(whileStmt);
+	AddressList scoplist = scop::mark(whileStmt);
 
-	EXPECT_FALSE(whileStmt->hasAnnotation(scop::ScopRegion::KEY));
-	EXPECT_EQ(1u, scops.size());
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_FALSE(scop::ScopRegion::isMarked(whileStmt));
+	EXPECT_EQ(1u, scoplist.size());
+	EXPECT_TRUE(scop::ScopRegion::isMarked(forStmt));
 }
 
 TEST(ScopRegion, NotAScopForStmt) {
@@ -445,10 +424,10 @@ TEST(ScopRegion, NotAScopForStmt) {
 
 	EXPECT_TRUE(compStmt);
 
-	AddressList scops = scop::mark(compStmt);
+	AddressList scoplist = scop::mark(compStmt);
 
-	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
-	EXPECT_EQ(0u, scops.size());
+	EXPECT_FALSE(scop::ScopRegion::isMarked(compStmt));
+	EXPECT_EQ(0u, scoplist.size());
 }
 
 

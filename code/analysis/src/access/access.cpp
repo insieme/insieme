@@ -171,7 +171,7 @@ namespace access {
 				if (dom.first) {
 
 					const polyhedral::IterationVector& oldIter =
-						dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
+						polyhedral::scop::ScopRegion::toScop(dom.first)->getIterationVector();
 
 
 					polyhedral::IterationVector iterVec;

@@ -61,28 +61,6 @@ using insieme::core::pattern::any;
 
 #define AS_EXPR(node) core::static_pointer_cast<const core::Expression>(node)
 
-namespace {
-
-/** Run the SCoP analysis on this node in order to determine whether is possible to apply polyhedral transformations to
-it */
-const Scop& extractScopFrom(const core::NodePtr& target) {
-	scop::mark(target);
-
-	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
-		throw InvalidTargetException("Polyhedral transformation wanted but no SCoP found");
-	}
-	
-	// FIXME: We need to find the larger SCoP which contains this SCoP
-	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
-	if ( !region.valid ) {
-		throw InvalidTargetException("Polyhedral transformation wanted but region is invalid");
-	}
-	return region.getScop();
-}
-
-} // end anonymous namespace 
-
-
 //=================================================================================================
 // Loop Interchange
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -138,7 +116,7 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 	// the extraction of the SCoP information from this target point make a copy of the polyhedral
 	// model associated to this node so that transformations are only applied to the copy and not
 	// reflected into the original region 
-	const Scop& origScop = extractScopFrom(target);
+	const Scop& origScop = *scop::ScopRegion::toScop(target);
 
 	Scop transfScop(origScop.getIterationVector(), origScop.getStmts());
 
@@ -216,7 +194,7 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
-	Scop scop( extractScopFrom(target) );
+	Scop &scop=*scop::ScopRegion::toScop(target);
 
 	core::VariablePtr idx = matchList[loopIdx].as<core::VariablePtr>();
 
@@ -230,7 +208,7 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.stripmining'";
 	utils::Timer t("transform.polyhedral.loop.stripmining");
 	
-	doStripMine(mgr, scop, idx, forStmt->getAnnotation(scop::ScopRegion::KEY)->getDomainConstraints(), tileSize);
+	doStripMine(mgr, scop, idx, scop::ScopRegion::toScopRegion(forStmt)->getDomainConstraints(), tileSize);
 
 	core::NodePtr&& transformedIR = scop.toIR( target->getNodeManager() );	
 	t.stop();
@@ -244,62 +222,6 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 	return std::make_shared<LoopStripMining>(idx, tileSize);
 }
-
-//=================================================================================================
-// Loop Tiling
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
-
-	//// make a copy of the polyhedral model associated to this node so that transformations are only
-	//// applied to the copy and not reflected into the original region 
-	//Scop scop = extractScopFrom(target);
-
-	//// Match non-perfectly nested loops
-	//TreePattern pattern =
-		//rT ( 
-			//irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
-		//);
-	//LOG(DEBUG) << pattern;
-
-	//auto&& match = pattern.matchPointer( target );
-	//if (!match || !match->isVarBound("iter")) {
-		//throw InvalidTargetException("Invalid application point for loop  tiling");
-	//}
-
-	//auto&& matchList = match->getVarBinding("iter").getList();
-	//LOG(DEBUG) << matchList.size();
-	
-	//if (matchList.size() < tileSizes.size()) 
-		//throw InvalidTargetException("Detected nested loop contains less loops than the provided tiling sizes");
-
-	//VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
-	//utils::Timer t("transform.polyhedral.loop.tiling");
-
-	//// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
-	//std::vector<TransformationPtr> transList;
-	//size_t pos=0;
-	//for_each(tileSizes, [&] (const unsigned& cur) { 
-		//transList.push_back( makeLoopStripMining( pos, cur ) );
-		 //// every time we strip mine, a new loop is inserted, therefore we skip to the next one with a step 2
-		//for (size_t idx=pos; idx>pos/2; --idx) {
-			//transList.push_back( makeLoopInterchange( idx-1, idx ) );
-		//}
-		//pos+=2;
-	//});
-
-	//TransformationPtr p = makePipeline(transList);
-	//VLOG(1) << "Built transformtion for tiling: " << std::endl << p;
-
-	//core::NodePtr&& transformedIR = p->apply(target);	
-	
-	//t.stop();
-	//VLOG(1) << t;
-	//VLOG(1) << "//@~ polyhedral.loop.tiling Done";
-
-	//assert( transformedIR && "Generated code for loop fusion not valid" );
-	//// std::cout << *transformedIR << std::endl;
-	//return transformedIR;
-//}
 
 namespace {
 
@@ -374,7 +296,7 @@ core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) cons
 	
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
-	const Scop& oScop = extractScopFrom(target);
+	const Scop& oScop = *scop::ScopRegion::toScop(target);
 
 	Scop tScop(oScop.getIterationVector(), oScop.getStmts());
 
@@ -392,7 +314,7 @@ core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) cons
 		loopIters.push_back( forStmt->getDeclaration()->getVariable() );
 
 		tileIters.push_back(
-			doStripMine(mgr, tScop, loopIters.back(), forStmt->getAnnotation(scop::ScopRegion::KEY)->getDomainConstraints(), cur)
+			doStripMine(mgr, tScop, loopIters.back(), scop::ScopRegion::toScopRegion(forStmt)->getDomainConstraints(), cur)
 		);
 	});
 
@@ -483,7 +405,7 @@ core::NodeAddress LoopFusion::apply(const core::NodeAddress& targetAddress) cons
 	assert( !iters.empty() );
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop(extractScopFrom(target));
+	Scop &scop=*scop::ScopRegion::toScop(target);
 
 	// save the SCoP in order to check for validity of the transformation
 	Scop saveScop = Scop(scop);
@@ -530,7 +452,7 @@ core::NodeAddress LoopFission::apply(const core::NodeAddress& targetAddress) con
 	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
 
 	// The application point of this transformation satisfies the preconditions, continue
-	const Scop& saveScop = extractScopFrom( forStmt );
+	const Scop& saveScop = *scop::ScopRegion::toScop(forStmt);
 
 	// Save a copy of the scop for later check the validity of the transformation
 	Scop scop(saveScop);
@@ -570,7 +492,7 @@ core::NodeAddress LoopReschedule::apply(const core::NodeAddress& targetAddress) 
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop(extractScopFrom( target ));
+	Scop &scop=*scop::ScopRegion::toScop(target);
 
 	// We add a compound statement in order to avoid wrong composition of transformations 
 	core::CompoundStmtPtr&& transformedIR = 
@@ -605,7 +527,7 @@ core::NodeAddress LoopStamping::apply(const core::NodeAddress& targetAddress) co
 	core::ForStmtPtr outerStmt = target.as<core::ForStmtPtr>();
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop( extractScopFrom( target ) );
+	Scop &scop=*scop::ScopRegion::toScop(target);
 	
 	core::ForStmtPtr forStmt = outerStmt;
 
@@ -669,7 +591,7 @@ core::NodeAddress LoopParallelize::apply(const core::NodeAddress& targetAddress)
 
 	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
 	// The application point of this transformation satisfies the preconditions, continue
-	const Scop& scop = extractScopFrom( forStmt );
+	const Scop& scop = *scop::ScopRegion::toScop(forStmt);
 	if (!scop.isParallel(mgr)) {
 		throw InvalidTargetException("Loop carries dependencies, cannot be parallelized");
 	}
@@ -710,7 +632,7 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// Now we need to make sure the thing we are handling is a SCoP... otherwise makes no sense to continue
-	Scop scop(extractScopFrom( target ));
+	Scop &scop=*scop::ScopRegion::toScop(target);
 
 	IterationVector& iv = scop.getIterationVector();
 	// Region strip mining applied to something which is not a call expression which spawns a range
@@ -751,7 +673,7 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 	LOG(INFO) << "BEFORE FUSION" << scop;
 
 	core::NodePtr transformedIR = core::IRBuilder(mgr).compoundStmt( scop.toIR( mgr ).as<core::StatementPtr>() );	
-	Scop scop2( extractScopFrom( transformedIR ) );
+	Scop &scop2=*scop::ScopRegion::toScop(transformedIR);
 
 	core::VariableList strip_iters;
 	for_each(scop2, [&](StmtPtr& curStmt) {
