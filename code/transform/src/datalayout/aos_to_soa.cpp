@@ -52,6 +52,8 @@
 #include "insieme/analysis/cba/analysis.h"
 #include "insieme/analysis/scopes_map.h"
 
+#include "insieme/annotations/data_annotations.h"
+
 namespace insieme {
 namespace transform {
 namespace datalayout {
@@ -119,7 +121,7 @@ ExpressionPtr expressionContainsMarshallingCandidate(const utils::map::PointerMa
 	return ExpressionPtr();
 }
 
-utils::map::PointerMap<ExpressionPtr, RefTypePtr>findAllSuited(NodeAddress toTransform) {
+utils::map::PointerMap<ExpressionPtr, RefTypePtr> findAllSuited(NodeAddress toTransform) {
 	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
 	pattern::TreePattern structType = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
@@ -157,6 +159,33 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr>findAllSuited(NodeAddress toTra
 		structs[structVar] = structType;
 //std::cout << "Adding: " << *structVar << " as a candidate" << std::endl;
 	});
+	return structs;
+}
+
+utils::map::PointerMap<ExpressionPtr, RefTypePtr> findPragma(NodeAddress toTransform) {
+	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
+
+	pattern::TreePattern structTypePattern = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
+	core::visitDepthFirst(toTransform, [&](const core::DeclarationStmtAddress& decl) {
+		if(decl->hasAnnotation(annotations::DataTransformAnnotation::KEY)) {
+			annotations::DataTransformAnnotationPtr dta = decl->getAnnotation(annotations::DataTransformAnnotation::KEY);
+
+			if(dta->isSoa()) {
+				std::cout << "yippieaye\n";
+
+				VariablePtr structVar = decl->getVariable();
+				TypePtr varType = structVar->getType();
+
+				pattern::MatchOpt match = structTypePattern.matchPointer(varType);
+				assert(match && "Pragma-marked variable does not have valid struct type");
+
+				RefTypePtr structType = match.get()["structType"].getValue().as<RefTypePtr>();
+
+				structs[structVar] = structType;
+			}
+		}
+	});
+
 	return structs;
 }
 

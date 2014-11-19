@@ -58,6 +58,7 @@ namespace datalayout {
 typedef std::function<utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr>(core::NodeAddress toTransform)> CandidateFinder;
 
 utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findAllSuited(core::NodeAddress toTransform);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findPragma(core::NodeAddress toTransform);
 
 class AosToSoa {
 protected:
