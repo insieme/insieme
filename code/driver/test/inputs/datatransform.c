@@ -43,7 +43,7 @@ struct Aos {
 };
 
 int main() {
-#pragma insieme transfrom "32"
+#pragma insieme transfrom "0"
 	struct Aos* aos = (struct Aos*)malloc(sizeof(struct Aos) * 100);
 
 	for(int i = 0; i < 100; ++i) {

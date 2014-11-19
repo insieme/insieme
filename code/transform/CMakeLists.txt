@@ -16,6 +16,7 @@ file(GLOB_RECURSE insieme_transform_incs 	include/*.h include/*.def include/*.in
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_transform_include_dir} ) 
+include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_analysis_include_dir} ) 
 
 # Build the transform library
