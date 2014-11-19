@@ -130,7 +130,7 @@ char *argv[];
       framenum++;
     }
 
-  } while (loopflag);
+  } while (loopflag--);
 
   close(base.infile);
 
@@ -329,7 +329,9 @@ char **argvp[];
         refidct = 1;
         break;
       case 'L':
-        loopflag = 1;
+        loopflag = getval(*argvp);
+        if(loopflag < 1)
+            loopflag = 1;
         break;
       case 'D':
         deposterizeH = 1;
@@ -421,7 +423,7 @@ Options: -vn  verbose output (n: level)\n\
 #endif    
 #ifdef DISPLAY
     printf("\
-         -l   loop sequence\n");
+         -ln   loop sequence (n: additional playings)\n");
 #endif
     exit(0);
   }
