@@ -75,6 +75,8 @@ typedef struct _irt_optimizer_resources {
     #define ISOLATE_WALL_TIME
     #include "irt_metrics.def"
 
+    int quality;
+
     int samplings;
 } irt_optimizer_resources;
 
@@ -103,19 +105,26 @@ typedef struct _irt_optimizer_wi_data_id {
 //    return (value == (uint32)-1) ? -2 : value;
 //}
 
+typedef struct _irt_optimizer_param_qual_range {
+    uint32 lowb[IRT_OPTIMIZER_PARAM_COUNT];
+    uint32 uppb[IRT_OPTIMIZER_PARAM_COUNT];
+    uint32 step[IRT_OPTIMIZER_PARAM_COUNT];
+} irt_optimizer_param_qual_range;
+
 typedef struct _irt_optimizer_runtime_data {
     irt_optimizer_wi_data_id best;
     irt_optimizer_resources best_resources;
     irt_optimizer_wi_data_id cur;
     irt_optimizer_resources cur_resources;
     irt_optimizer_wi_data_id max;
+    irt_optimizer_param_qual_range param_qual_range;
     bool hc_end;        // true if hill climbing completed
     int16 hc_elem;      // element in irt_optimizer_wi_data_id currently hill climbed 
     int8 hc_dir;        // current hill climbing direction
     irt_spinlock spinlock;
 } irt_optimizer_runtime_data;
 
-uint64 irt_optimizer_pick_in_range(int id, uint64 max);
+uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub, int qual_st);
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation);
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);

@@ -774,18 +774,21 @@ protected:
 
 		if(param.hasRange()) {
 			auto max 	= build.div( build.sub(param.getRangeUBound(), param.getRangeLBound()), param.getRangeStep());
-			auto pick 	= build.pickInRange(build.intLit(paramCounter++), max);
+			auto pick 	= (!param.hasQualityRange()) ? build.pickInRange(build.intLit(paramCounter++), max)
+                            : build.pickInRange(build.intLit(paramCounter++), max, param.getQualityRangeLBound(), param.getQualityRangeUBound(), param.getQualityRangeStep());
 			auto exp = build.add( build.mul(pick, param.getRangeStep()), param.getRangeLBound() );
 			assign = build.assign(param.getVar(), exp);
 		}
 		else if(param.hasEnum()) {
-			auto pick = build.pickInRange( build.intLit(paramCounter++), core::types::castScalar(basic.getUInt8(), param.getEnumSize()) );
+			auto pick 	= (!param.hasQualityRange()) ? build.pickInRange(build.intLit(paramCounter++), core::types::castScalar(basic.getUInt8(), param.getEnumSize()))
+			                : build.pickInRange( build.intLit(paramCounter++), core::types::castScalar(basic.getUInt8(), param.getEnumSize()), param.getQualityRangeLBound(), param.getQualityRangeUBound(), param.getQualityRangeStep() );
 			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
 			assign = build.assign( param.getVar(), build.deref( arrVal ) );
 		}
 		else {
 			/* Boolean */
-			auto pick = build.pickInRange( build.intLit(paramCounter++), build.intLit(1) );
+			auto pick 	= (!param.hasQualityRange()) ? build.pickInRange(build.intLit(paramCounter++), build.intLit(1))
+			                : build.pickInRange( build.intLit(paramCounter++), build.intLit(1), param.getQualityRangeLBound(), param.getQualityRangeUBound(), param.getQualityRangeStep() );
 			assign = build.assign( param.getVar(), pick );
 		}
 
@@ -801,6 +804,7 @@ protected:
 
         objective.energy_weight = obj.getEnergyWeight();
         objective.power_weight = obj.getPowerWeight();
+        objective.quality_weight = obj.getQualityWeight();
         objective.time_weight = obj.getTimeWeight();
 
         ///* TODO: 
@@ -811,9 +815,10 @@ protected:
         // */
         std::map<Objective::Parameter, std::pair<ExpressionPtr, ExpressionPtr>> constraints;
         auto minusOneLit = build.literal(basic.getFloat(), "-1f");
-        constraints[Objective::ENERGY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-        constraints[Objective::POWER ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-        constraints[Objective::TIME  ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::ENERGY ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::POWER  ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::QUALITY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
+        constraints[Objective::TIME   ] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
 
         if(obj.hasConstraintsParams() && obj.hasConstraintsOps() && obj.hasConstraintsExprs()){
             auto params = obj.getConstraintsParams();
@@ -854,6 +859,8 @@ protected:
         objective.energy_max = constraints[Objective::ENERGY].second.as<core::LiteralPtr>()->getValueAs<float>();
         objective.power_min  = constraints[Objective::POWER].first.as<core::LiteralPtr>()->getValueAs<float>();
         objective.power_max  = constraints[Objective::POWER].second.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.quality_min  = constraints[Objective::QUALITY].first.as<core::LiteralPtr>()->getValueAs<float>();
+        objective.quality_max  = constraints[Objective::QUALITY].second.as<core::LiteralPtr>()->getValueAs<float>();
         objective.time_min   = constraints[Objective::TIME].first.as<core::LiteralPtr>()->getValueAs<float>();
         objective.time_max   = constraints[Objective::TIME].second.as<core::LiteralPtr>()->getValueAs<float>();
 
