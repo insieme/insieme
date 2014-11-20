@@ -169,7 +169,7 @@ int is_objective_satisfied(ompp_objective_info obj, irt_optimizer_resources res1
         return 0;
 }
 
-uint64 irt_optimizer_pick_in_range(int id, uint64 max) {
+uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub, int qual_st) {
     irt_worker* self = irt_worker_get_current();
     irt_wi_implementation* impl = self->cur_wi->impl;
     irt_wi_implementation_variant* variant = &(impl->variants[self->default_variant]);
@@ -497,7 +497,7 @@ void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* v
 
 void irt_optimizer_objective_init(irt_context *context) {}
 void irt_optimizer_objective_destroy(irt_context *context) {}
-uint64 irt_optimizer_pick_in_range(int id, uint64 max) { return 0; }
+uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub, int qual_st) { return 0; }
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation) {}
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant) {}
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant) {}

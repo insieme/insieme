@@ -115,7 +115,7 @@ typedef struct _irt_optimizer_runtime_data {
     irt_spinlock spinlock;
 } irt_optimizer_runtime_data;
 
-uint64 irt_optimizer_pick_in_range(int id, uint64 max);
+uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub, int qual_st);
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation);
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
