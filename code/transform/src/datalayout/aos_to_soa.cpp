@@ -598,7 +598,7 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const ExpressionMap& varR
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				var("oldVarCandidate", pirp::exprOfType(pattern::aT(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
+				var("oldVarCandidate", pirp::exprOfType(pattern::aT(/*pirp::refType*/(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
 //				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
 //				pattern::aT(pattern::atom(oldVar))
 				<< *pattern::any);

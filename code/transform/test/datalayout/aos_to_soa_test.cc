@@ -226,9 +226,9 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(56, numberOfCompoundStmts(code));
-	EXPECT_EQ(7, countMarshalledAccesses(code));
-	EXPECT_EQ(3, countMarshalledAssigns(code));
+	EXPECT_EQ(65, numberOfCompoundStmts(code));
+	EXPECT_EQ(9, countMarshalledAccesses(code));
+	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
 
 TEST(DataLayout, Globals) {

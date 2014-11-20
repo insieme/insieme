@@ -147,9 +147,9 @@ TEST(DataLayout, AosToTaos) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(117, numberOfCompoundStmts(code));
-	EXPECT_EQ(15, countMarshalledAccesses(code));
-	EXPECT_EQ(7, countMarshalledAssigns(code));
+	EXPECT_EQ(129, numberOfCompoundStmts(code));
+	EXPECT_EQ(17, countMarshalledAccesses(code));
+	EXPECT_EQ(9, countMarshalledAssigns(code));
 }
 
 TEST(DataLayout, Tuple) {
