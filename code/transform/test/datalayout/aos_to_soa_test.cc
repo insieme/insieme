@@ -264,7 +264,6 @@ TEST(DataLayout, Globals) {
 		"}"
 	));
 
-	return;
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
@@ -285,9 +284,9 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(60, numberOfCompoundStmts(code));
-	EXPECT_EQ(11, countMarshalledAccesses(code));
-	EXPECT_EQ(5, countMarshalledAssigns(code));
+	EXPECT_EQ(69, numberOfCompoundStmts(code));
+	EXPECT_EQ(13, countMarshalledAccesses(code));
+	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
 
 TEST(DataLayout, Tuple) {
@@ -344,9 +343,9 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-//	EXPECT_EQ(52, numberOfCompoundStmts(code));
-//	EXPECT_EQ(11, countMarshalledAccesses(code));
-//	EXPECT_EQ(5, countMarshalledAssigns(code));
+	EXPECT_EQ(31, numberOfCompoundStmts(code));
+	EXPECT_EQ(2, countMarshalledAccesses(code));
+	EXPECT_EQ(2, countMarshalledAssigns(code));
 }
 
 } // transform

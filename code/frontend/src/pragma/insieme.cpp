@@ -281,7 +281,7 @@ void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clan
 		if(dt) {
 			pragma::MatchMap mmap = dt->getMatchMap();
 
-			assert(mmap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
+			assert(mmap.size() == 1 && "Insieme DataTransform pragma cannot have more than one argument");
 			std::string datalayout = *mmap.begin()->second.front()->get<std::string*>();
 
 			unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
