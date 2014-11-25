@@ -46,6 +46,8 @@
 
 #include "cba_test.inc.h"
 
+#include "insieme/analysis/cba/cba_debug.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -444,8 +446,8 @@ namespace cba {
 				"	let access = (ref<array<ref<array<real<4>,1>>,1>> b, vector<uint<4>, 3> vec)->unit {"
 				"		*b[0];"
 				"		parallel(job meta(b); );"
-//				"		vector.pointwise(uint.div)(vec, vec);"
-//				"		vector.reduction(vec, 1u, uint.mul);"
+				"		vector.pointwise(uint.div)(vec, vec);"
+				"		vector.reduction(vec, 1u, uint.mul);"
 				"	};"
 				"	"
 				"	let access2 = (ref<array<real<4>,1>> d, vector<uint<4>, 3> vec)->unit {"
@@ -512,11 +514,15 @@ namespace cba {
 		auto d = varVec[3];
 		auto e = varVec[4];
 
-//		EXPECT_FALSE(mayAlias(a, b)); // uncomment for Assertion !(refB.empty()) caused by parallel job
-//		EXPECT_FALSE(mayAlias(a, c)); // uncomment for Assertion !(refB.empty()) caused by parallel job
+		// dumpPretty(sa);
+
+		EXPECT_FALSE(mayAlias(a, b));
+//		EXPECT_FALSE(mayAlias(a, c));		// not working since c is in a different thread context
 		EXPECT_FALSE(mayAlias(a, d));
-//		EXPECT_FALSE(mayAlias(a, e)); // uncomment for Assertion !(refB.empty()) caused by combination of tuples, vector.pointwise and vector.reduction
+		EXPECT_FALSE(mayAlias(a, e));
+//		createDotDump(sa);
 	}
+
 
 	TEST(CBA_Analysis, UninterpretedSymbols) {
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -570,9 +570,15 @@ LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam
 
 DERIVED(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref.narrow(v, dp.element(dp.root, i), lit('elem)); }")
 
-LITERAL(VectorPointwise,      	"vector.pointwise",
-								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")
-
+DERIVED(VectorPointwise,		"vector.pointwise",			
+		"(('elem1, 'elem2) -> 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {"
+		"	return (vector<'elem1,#l> v1, vector<'elem2,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
+		"		ref<vector<'res,#l>> res = var(vector<'res,#l>);"
+		"		for(uint<8> i = 0u .. to.uint(param(#l))-1u ) { res[i] = op(v1[i], v2[i]); }"
+		"		return *res;"
+		"	}(v1, v2, op);"
+		"}")
+								
 LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        	"vector.permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
@@ -630,7 +636,7 @@ DERIVED(IfThenElse, "ite", "(bool c, () => 'b a, () => 'b b) -> 'b { if (c) { re
 // Tunable Options ----------------------------------------------------------------------------------------------------
 
 LITERAL(Pick, "pick", "(list<'a>)->'a")
-LITERAL(PickInRange, "pickInRange", "(int<4>, 'a)->'a")
+LITERAL(PickInRange, "pickInRange", "(int<4>, 'a, int<4>, int<4>, int<4>)->'a")
 
 
 // Parallel Constructs ------------------------------------------------------------------------------------------------

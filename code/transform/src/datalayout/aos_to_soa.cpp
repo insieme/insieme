@@ -42,6 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
@@ -171,8 +172,6 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> findPragma(NodeAddress toTrans
 			annotations::DataTransformAnnotationPtr dta = decl->getAnnotation(annotations::DataTransformAnnotation::KEY);
 
 			if(dta->isSoa()) {
-				std::cout << "yippieaye\n";
-
 				VariablePtr structVar = decl->getVariable();
 				TypePtr varType = structVar->getType();
 
@@ -598,7 +597,7 @@ std::vector<StatementAddress> AosToSoa::addMarshalling(const ExpressionMap& varR
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				var("oldVarCandidate", pirp::exprOfType(pattern::aT(pirp::refType(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
+				var("oldVarCandidate", pirp::exprOfType(pattern::aT(/*pirp::refType*/(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
 //				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
 //				pattern::aT(pattern::atom(oldVar))
 				<< *pattern::any);
@@ -1085,7 +1084,7 @@ void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements
 				if(structures.find(var) != structures.end()) // already there
 					return;
 
-				if(var->getType() != init->getType()) {
+				if(!types::isSubTypeOf(init->getType(), var->getType())) {
 					structures[var] = builder.variable(init->getType());
 				}
 			}

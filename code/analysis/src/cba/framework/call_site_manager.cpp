@@ -66,7 +66,7 @@ namespace cba {
 
 					// only interested in lambdas, bind and literals
 					auto kind = cur->getNodeType();
-					if (kind != NT_LambdaExpr && kind != NT_BindExpr && kind != NT_Literal) return;
+					if (!cur->getType().isa<FunctionTypePtr>()) return;
 
 					// for literals: check whether it is a function
 					FunctionTypePtr type = cur.as<ExpressionPtr>()->getType().isa<FunctionTypePtr>();
@@ -84,11 +84,11 @@ namespace cba {
 
 					// if all uses of the function can be determined statically => done
 					// TODO: result could be immediately saved within map (since it is required later on)
-					if (getStaticUses(cur.as<NodeInstance>())) return;
+					if (getStaticUses(cur)) return;
 
 					// found a free function => register it
 					Callee callee = (kind == NT_LambdaExpr) ? Callee(cur.as<LambdaExprInstance>()->getLambda()) :
-									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprInstance>()) : Callee(cur.as<LiteralInstance>());
+									(kind == NT_BindExpr)   ? Callee(cur.as<BindExprInstance>()) : Callee(cur);
 					freeCallees[type->getParameterTypes()->size()].push_back(callee);
 				}(expr);
 				[&](const ExpressionInstance& cur) {
@@ -117,6 +117,8 @@ namespace cba {
 				}(expr);
 			}
 		);
+
+
 	}
 
 
@@ -253,7 +255,7 @@ namespace cba {
 			// there is nothing we can do for the root
 			if (function.isRoot()) return unknown;
 
-			OptCallerList res = CallerList();
+			OptCallerList res = unknown;
 
 			// check whether defining expression is actually addressing represented callee
 			if (!callee.isLambda() || function.as<LambdaExprInstance>()->getLambda() == callee.getDefinition()) {
@@ -286,6 +288,9 @@ namespace cba {
 
 			// rest is only required if successful so far and callee is recursive
 			if (!res || !callee.isRecursive()) return res;
+
+			// initialize resulting caller set for recursive functions
+			if (!res) res = CallerList();
 
 			// add recursive calls
 			auto def = function.as<LambdaExprInstance>()->getDefinition();
