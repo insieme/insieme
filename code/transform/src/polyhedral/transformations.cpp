@@ -116,11 +116,11 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 	// the extraction of the SCoP information from this target point make a copy of the polyhedral
 	// model associated to this node so that transformations are only applied to the copy and not
 	// reflected into the original region 
-	const Scop& origScop = *scop::ScopRegion::toScop(target);
+	const boost::optional<Scop> origScop = scop::ScopRegion::toScop(target);
+	assert(origScop);
+	Scop transfScop(origScop->getIterationVector(), origScop->getStmts());
 
-	Scop transfScop(origScop.getIterationVector(), origScop.getStmts());
-
-	const IterationVector& iterVec = origScop.getIterationVector();
+	const IterationVector& iterVec = origScop->getIterationVector();
 	
 	VLOG(1) << "@ Applying Transformation 'polyhedral.loop.interchange'";
 	utils::Timer t("transform.polyhedarl.loop.interchange");
@@ -133,7 +133,7 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 	applyUnimodularTransformation<SCHED_ONLY>(transfScop, makeInterchangeMatrix(iterVec, src, dest));
 
 	// The original scop is in origScop, while the transformed one is in transScop
-	if ( !checkTransformedSchedule(origScop, transfScop) ) {
+	if ( !checkTransformedSchedule(*origScop, transfScop) ) {
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 	core::NodePtr&& transformedIR = transfScop.toIR( target->getNodeManager() );	
