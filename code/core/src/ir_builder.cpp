@@ -1591,8 +1591,8 @@ CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
 
 	const auto& basic = manager.getLangBasic();
 	return nArgs == 1 ?
-            callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
-            callExpr(funTy, basic.getAccuracyFastBinary(), callee);
+            callExpr(basic.getAccuracyFastUnary(), callee) :
+            callExpr(basic.getAccuracyFastBinary(), callee);
 }
 
 CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {
