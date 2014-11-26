@@ -1133,7 +1133,7 @@ public:
                     core::TypePtr vecUintAlpha = builder.vectorType(BASIC.getUIntGen(), builder.variableIntTypeParam('l'));
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
                             builder.callExpr(vecUInt8,
-                            builder.callExpr(builder.functionType(toVector(vecUintAlpha, vecUintAlpha), vecUintAlpha ),
+                            builder.callExpr(//builder.functionType(toVector(vecUintAlpha, vecUintAlpha), vecUintAlpha ), its not a function type any more
                                     BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
 
                     newBodyStmts.push_back(groupRdecl);

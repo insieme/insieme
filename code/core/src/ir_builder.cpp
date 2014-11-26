@@ -1542,22 +1542,22 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 
 	assert(paramTys.size() <= 2 && paramTys.size() > 0  && "The function for pointwise must take one or two arguments");
 
-	FunctionTypePtr pointwiseTy;
+//	FunctionTypePtr pointwiseTy; Use automatic type deduction since vector pointwise is not a function type any more and I have no idea how to build the correct tpye
 	ExpressionPtr pointwise;
 	const auto& basic = manager.getLangBasic();
 	if(paramTys.size() == 1) { // unary function
 		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
 	} else { // binary functon
 		TypePtr newParamTy1 = vectorType(paramTys.at(1), variableIntTypeParam('l'));
 		TypePtr newParamTy2 = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 
-		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwise();
 	}
-	return callExpr(pointwiseTy, pointwise, callee);
+	return callExpr(/*pointwiseTy,*/ pointwise, callee);
 }
 
 // helper for accuraccy functions
