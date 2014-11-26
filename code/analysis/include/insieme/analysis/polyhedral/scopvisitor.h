@@ -66,11 +66,11 @@ using namespace insieme::analysis::polyhedral;
 namespace insieme { namespace analysis { namespace polyhedral {
 
 struct ScopVisitor : public IRVisitor<IterationVector, Address> {
-	std::vector<NodeAddress>& scopList;
-	std::vector<NodeAddress>  subScops;
+	std::vector<NodeAddress>& scopList; // this should not be global, should give it as a method argument
+	std::vector<NodeAddress>  subScops; // this should not be global, should give it as a method argument
 
 	typedef std::stack<std::vector<scop::Stmt> > RegionStmtStack;
-	RegionStmtStack regionStmts;
+	RegionStmtStack regionStmts;        // this should not be global, should give it as a method argument
 
 	ScopVisitor(std::vector<NodeAddress>& scopList);
 	IterationVector markAccessExpression(const ExpressionPtr& expr);
@@ -103,6 +103,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	IterationVector visitReturnStmt  (const   ReturnStmtAddress& retStmt);
 	IterationVector visitProgram     (const      ProgramAddress& prog);
 	IterationVector visitNode        (const         NodeAddress& node);
+
+private:
+	boost::optional<IterationVector> registerSeenNode(const NodeAddress &n, std::vector<NodeAddress> &subscops);
 };
 
 }}}
