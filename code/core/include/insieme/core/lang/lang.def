@@ -579,7 +579,17 @@ DERIVED(VectorPointwise,		"vector.pointwise",
 		"	}(v1, v2, op);"
 		"}")
 								
-LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
+//LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
+
+DERIVED(VectorPointwiseUnary,		"vector.pointwise.unary",
+		"(('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {"
+		"	return (vector<'elem,#l> v) => (vector<'elem,#l> v, ('elem) -> 'res op) -> vector<'res,#l> {"
+		"		ref<vector<'res,#l>> res = var(vector<'res,#l>);"
+		"		for(uint<8> i = 0u .. to.uint(param(#l))-1u ) { res[i] = op(v[i]); }"
+		"		return *res;"
+		"	}(v, op);"
+		"}")
+
 LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        	"vector.permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
 
