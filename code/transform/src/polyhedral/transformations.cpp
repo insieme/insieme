@@ -547,7 +547,7 @@ core::NodeAddress LoopStamping::apply(const core::NodeAddress& targetAddress) co
 	core::arithmetic::Formula rangeSize = 
 		core::arithmetic::toFormula(forStmt->getEnd()) - core::arithmetic::toFormula(forStmt->getStart());
 
-	std::pair<AffineConstraintPtr, core::ExpressionPtr>&& ret = stampFor(mgr, scop, iter, rangeSize, tileSize);
+	std::pair<AffineConstraintPtr, core::ExpressionPtr>&& ret = stampFor(mgr, scop, rangeSize, tileSize);
 
 	unsigned split = scop.size();
 	// Duplicate all the statements in the scop

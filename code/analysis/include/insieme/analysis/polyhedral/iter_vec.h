@@ -178,17 +178,12 @@ struct Constant : public Element {
  * representation which allows the size of the vector to grow without invalidating already generated
  * polyhedron.
  *************************************************************************************************/
-struct IterationVector : public utils::Printable, 
-	public boost::equality_comparable<IterationVector> {
-
-	typedef std::vector<Iterator> IterVec;
-	typedef std::vector<Parameter> ParamVec;
+class IterationVector: public utils::Printable, public boost::equality_comparable<IterationVector> {
 
 private:
-	IterVec iters;					// ordered list of iterators
-
-	ParamVec params;				// ordered list of parameters
-	Constant constant;				// constant part set to 1 (implicit) 
+	std::vector<Iterator>  iters;		// ordered list of iterators
+	std::vector<Parameter> params;		// ordered list of parameters
+	Constant               constant;	// constant value of the iteration vector, always set to 1
 
 	mutable int freshVarCounter;	// a counter for fresh variable IDs
 
@@ -219,15 +214,15 @@ public:
 	class iterator : public boost::random_access_iterator_helper<iterator, Element> {
 
 		const IterationVector& iterVec;
-		IterVec::const_iterator iterIt;
-		ParamVec::const_iterator paramIt;
+		std::vector<Iterator>::const_iterator iterIt;
+		std::vector<Parameter>::const_iterator paramIt;
 		bool constant, valid;
 	
 		void inc(size_t n);
 	public:
 		iterator(const IterationVector& 	iterVec, 
-				 IterVec::const_iterator 	iterIt, 
-				 ParamVec::const_iterator 	paramIt, 
+				 std::vector<Iterator>::const_iterator  iterIt,
+				 std::vector<Parameter>::const_iterator paramIt,
 				 bool 						valid=true) 
 		: iterVec(iterVec), iterIt(iterIt), paramIt(paramIt), constant(valid), valid(valid) { }
 
@@ -245,16 +240,14 @@ public:
 	// Allows the iterator class to access the private part of the IterationVector class 
 	friend class iterator;
 
-	typedef IterVec::const_iterator iter_iterator;
-	typedef ParamVec::const_iterator param_iterator;
+	typedef std::vector<Iterator>::const_iterator iter_iterator;
+	typedef std::vector<Parameter>::const_iterator param_iterator;
 
-	IterationVector( const std::vector<core::VariablePtr>& iter = std::vector<core::VariablePtr>(), 
-					 const std::vector<core::ExpressionPtr>& param = std::vector<core::ExpressionPtr>() ) 
-		: freshVarCounter(10000)
-	{
-		for_each(iter, [&](const core::VariablePtr& cur) { add( Iterator(cur) ); });
-
-		for_each(param, [&](const core::ExpressionPtr& cur) { add( Parameter(cur) ); });
+	IterationVector(const std::vector<core::VariablePtr>& iter = std::vector<core::VariablePtr>(),
+					const std::vector<core::ExpressionPtr>& param = std::vector<core::ExpressionPtr>()):
+		freshVarCounter(10000) {
+		for (const core::VariablePtr&   cur: iter ) add(Iterator (cur));
+		for (const core::ExpressionPtr& cur: param) add(Parameter(cur));
 	}
 
 	/**
@@ -268,7 +261,7 @@ public:
 		return addTo(iter, iters); 
 	}
 	inline size_t add(const Parameter& param) { 
-		assert((getIdxFrom(param, params) != -1 || getIdx(param) == -1) && "Variable exists among the iterators");
+		assert((getIdxFrom(param, params) != -1 || getIdx(param) == -1) && "Variable already among the parameters");
 		return addTo(param, params) + iters.size(); 
 	}
 

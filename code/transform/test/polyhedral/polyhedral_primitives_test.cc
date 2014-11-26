@@ -108,40 +108,34 @@ Scop getScop(NodeManager& mgr) {
 }
 
 TEST(Primitive, AddIterator) {
-
-	using namespace insieme::analysis;
-	
 	NodeManager mgr;
 	Scop&& scop = getScop( mgr );
 	std::cout << scop << std::endl;
 
-	size_t iterNum = scop.getIterationVector().getIteratorNum();
-	size_t paramNum = scop.getIterationVector().getParameterNum();
+	auto iv=scop.getIterationVector();
+	size_t iterNum = iv.getIteratorNum();
+	size_t paramNum = iv.getParameterNum();
 
 	IRBuilder builder(mgr);
-	addTo( scop, Iterator( builder.variable(mgr.getLangBasic().getInt4()) ) );
+	iv.add(Iterator( builder.variable(mgr.getLangBasic().getInt4())));
 	
 	EXPECT_EQ(iterNum+1, scop.getIterationVector().getIteratorNum());
 	EXPECT_EQ(paramNum, scop.getIterationVector().getParameterNum());
-
 }
 
 TEST(Primitive, AddParameter) {
-
-	using namespace insieme::analysis;
-	
 	NodeManager mgr;
 	Scop&& scop = getScop( mgr );
 
-	size_t iterNum = scop.getIterationVector().getIteratorNum();
-	size_t paramNum = scop.getIterationVector().getParameterNum();
+	auto iv=scop.getIterationVector();
+	size_t iterNum = iv.getIteratorNum();
+	size_t paramNum = iv.getParameterNum();
 
 	IRBuilder builder(mgr);
-	addTo( scop, Parameter( builder.variable(mgr.getLangBasic().getInt4()) ) );
+	iv.add(Parameter( builder.variable(mgr.getLangBasic().getInt4())));
 	
 	EXPECT_EQ(iterNum, scop.getIterationVector().getIteratorNum());
 	EXPECT_EQ(paramNum+1, scop.getIterationVector().getParameterNum());
-
 }
 
 TEST(Primitive, GetSubStmt) {
@@ -180,10 +174,9 @@ TEST(Primitive, ScheduleLoop) {
 	VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
 	std::cout << *scop.toIR(mgr) << std::endl;
 
-	addTo(scop, newIter);
+	scop.getIterationVector().add(newIter);
 	scheduleLoopBefore(scop, iter2, newIter);
 	addConstraint(scop, newIter, IterationDomain(scop.getIterationVector(), {{0,0,0,1,0},{0,0,0,-1,100}}));
 	setZeroOtherwise(scop, newIter);
 	std::cout << *scop.toIR(mgr) << std::endl;
-
 }
