@@ -193,11 +193,7 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
-
 utils::Matrix<int> extractFrom(const AffineSystem& sys);
-
 std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched);
-
 
 } } } // end insieme::analysis::polyhedral namespace 

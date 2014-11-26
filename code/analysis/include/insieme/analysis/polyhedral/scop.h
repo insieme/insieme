@@ -83,7 +83,7 @@ class AccessInfo : public utils::Printable {
 	core::ExpressionAddress	  expr;
 	Ref::RefType			  type;
 	Ref::UseType			  usage;
-	AffineSystemPtr	  		  access;
+	boost::optional<AffineSystem> access;
 	IterationDomain	  		  domain;
 public:
 	AccessInfo(
@@ -92,24 +92,15 @@ public:
 		const Ref::UseType& 			usage, 
 		const AffineSystem&				access,
 		const IterationDomain&	   		domain
-	) : expr(expr), 
-		type(type), 
-		usage(usage), 
-		access( std::make_shared<AffineSystem>(access) ),
-		domain(domain) { }
+	): expr(expr), type(type), usage(usage), access(access), domain(domain) {}
 
-	AccessInfo(const AccessInfo& other) : 
-		expr(other.expr), 
-		type(other.type), 
-		usage(other.usage), 
-		access( std::make_shared<AffineSystem>(*other.access) ),
-		domain( other.domain ) { }
+	AccessInfo(const AccessInfo& other):
+		expr(other.expr), type(other.type), usage(other.usage), access((*other.access)), domain(other.domain) {}
 
 	/// Copy constructor with base (iterator vector) change
-	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
-		expr(other.expr), type(other.type), usage(other.usage), 
-		access( std::make_shared<AffineSystem>(iterVec, *other.access) ),
-		domain( IterationDomain(iterVec, other.domain) ) { } 
+	AccessInfo(const IterationVector& iterVec, const AccessInfo& other):
+		expr(other.expr), type(other.type), usage(other.usage), access(AffineSystem(iterVec, *other.access)),
+		domain(IterationDomain(iterVec, other.domain)) {}
 
 	// Getters for expr/type and usage
 	inline const core::ExpressionAddress& getExpr() const { return expr; }
@@ -121,7 +112,6 @@ public:
 	inline const AffineSystem& getAccess() const { return *access; }
 
 	inline const IterationDomain& getDomain() const { return domain; }
-
 	inline bool hasDomainInfo() const { return !domain.universe(); }
 
 	// implementing the printable interface
@@ -231,7 +221,6 @@ public:
 	inline size_t size() const { return stmts.size(); }
 	inline const size_t& schedDim() const { return sched_dim; }
 	inline size_t& schedDim() { return sched_dim; }
-
 	size_t nestingLevel() const;
 
 	/**
@@ -240,17 +229,14 @@ public:
 	core::NodePtr toIR(core::NodeManager& mgr, const CloogOpts& opts = CloogOpts()) const;
 	
 	MapPtr<> getSchedule(CtxPtr<>& ctx) const;
-
 	SetPtr<> getDomain(CtxPtr<>& ctx) const;
+	bool isParallel(core::NodeManager& mgr) const;
 
 	/**
 	 * Computes analysis information for this SCoP
 	 */
 	MapPtr<> computeDeps(CtxPtr<>& ctx, const unsigned& d = 
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
-
-
-	bool isParallel(core::NodeManager& mgr) const;
 
 	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
 };
