@@ -123,7 +123,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	inline const std::vector<Stmt> &getDirectRegionStmts() const { return stmts; }
 	const SubScopList &getSubScops() const { return subScops; }
 	bool containsLoopNest() const;
-	static bool isMarked(const core::NodePtr &p) { return p->hasAnnotation(KEY); }
+	static bool isMarked(const core::NodePtr &p) { return p->hasAnnotation(annotationKey()); }
 	static boost::optional<Scop> toScop(const core::NodePtr &p);
 	static boost::optional<ScopRegion> toScopRegion(const core::NodePtr &p);
 
@@ -135,14 +135,14 @@ struct ScopRegion: public core::NodeAnnotation {
 		return *scopInfo;		
 	}
 
-	static const string NAME;
-	static const utils::StringKey<ScopRegion> KEY;
-
 private:
-	void resolveScop(const IterationVector &iterVec, IterationDomain parentDomain, const ScopRegion &region,
+	const string NAME;
+	const utils::StringKey<ScopRegion> KEY;
+ void resolveScop(const IterationVector &iterVec, IterationDomain parentDomain, const ScopRegion &region,
 				  size_t &pos, size_t &id, const AffineSystem &curScat, ScopRegion::IteratorOrder &iterators, Scop &scat);
-	std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr &cur);
+ std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr &cur);
 	void resolve();
+	static inline utils::StringKey<ScopRegion> annotationKey() { return utils::StringKey<ScopRegion>("ScopAnnotation"); }
 	const core::NodePtr annNode;
 
 	/// Iteration Vector on which constraints of this region are defined

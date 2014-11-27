@@ -545,13 +545,15 @@ TEST(IterationDomain, FromVariable) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<iint<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddresses(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	v[$i+b$]; "
 		"}$", symbols
 	);
+
 	EXPECT_EQ(2u, addresses.size());
 	scop::mark(addresses[0].getAddressedNode());
+
 	EXPECT_TRUE(scop::ScopRegion::isMarked(addresses[0]));
 
 	auto iAddr = addresses[1].as<ExpressionAddress>();

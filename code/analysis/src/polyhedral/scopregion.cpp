@@ -155,15 +155,16 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		scopList.push_back(scop);          // this will execute only if the SCoP is deemed valid
 
 	} catch(const DiscardSCoPException& e) {
-		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
-		// are sure that within this SCoP there are issues which makes the SCoP not valid.
-		region->valid=false;
-		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" <<
+		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
 				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
 		// recursively call ourselves: our SCoP is invalid, but perhaps one of our nested for-loop is a proper SCoP
 		for (auto subScop: region->getSubScops())
 			postProcessSCoP(subScop.first, scopList);
+
+		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
+		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
+		region->valid=false;
 	}
 }
 
@@ -171,18 +172,17 @@ namespace scop {
 
 //===== ScopRegion =================================================================================
 
-const string ScopRegion::NAME("SCoPAnnotation");
-const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotation");
-
 ScopRegion::ScopRegion(const core::NodePtr &annNode,
 					   const IterationVector &iv,
 					   const IterationDomain &comb,
 					   const std::vector<Stmt> &stmts= std::vector<Stmt>(),
 					   const SubScopList &subScops_= SubScopList())
-	: valid(true), annNode(annNode), iterVec(iv), stmts(stmts), domain(iterVec, comb) {   // Switch the base to the this->iterVec
+	: valid(true), NAME("SCoPAnnotation"), KEY(annotationKey()), annNode(annNode), iterVec(iv), stmts(stmts),
+	  domain(iterVec, comb) {   // Switch the base to the this->iterVec
 
-	for (auto cur: subScops_)
+	for (auto cur : subScops_) {
 		subScops.push_back(SubScop(cur.first, IterationDomain(iterVec, cur.second)));
+	}
 }
 
 std::ostream& ScopRegion::printTo(std::ostream& out) const {
@@ -217,17 +217,15 @@ boost::optional<ScopRegion> ScopRegion::toScopRegion(const core::NodePtr &p) {
 	// we expect the NodePtr to resolve to exactly one SCoP: if we could not detect a valid SCoP, or there is more
 	// than one SCoP in p (eg when the outer loop is non-affine, but two inner loops are valid sub-SCoPs), then
 	// we are not interested in the result — hence, we return an empty value
-	if (!isMarked(p)) {
-		AddressList&& al=insieme::analysis::polyhedral::scop::mark(p);
-		if (al.empty() || al.size() > 1 || al.front().getDepth() > 1 || !isMarked(p))
-			return boost::optional<ScopRegion>();
-	}
+	AddressList&& al = insieme::analysis::polyhedral::scop::mark(p);
+	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1 || !p->hasAnnotation(annotationKey()))
+		return boost::optional<ScopRegion>();
 
 	// after we made sure that there is a SCoP annotation, return it after some housekeeping
-	std::shared_ptr<ScopRegion> scopregion=p->getAnnotation(KEY);
-	if (!(bool)scopregion) return boost::optional<ScopRegion>(); // shared ptr has no value, hence we return an empty optional
-	if (/*scopregion->valid &&*/ !scopregion->isResolved()) scopregion->resolve(); // FIXME: not sure whether validity is required to resolve the SCoP
-	return boost::optional<ScopRegion>(*scopregion);
+	std::shared_ptr<ScopRegion> sr=p->getAnnotation(annotationKey());
+	if (!(bool)sr) return boost::optional<ScopRegion>(); // < shared ptr has no value, hence we return an empty optional
+	if (!sr->isResolved()) sr->resolve();
+	return boost::optional<ScopRegion>(*sr);
 }
 
 /** Recursively process ScopRegions caching the information related to access functions and
@@ -357,7 +355,6 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 					break;
 				}
 
-				// FIXME: replace for_each by for, has/getAnnotation by toScopRegion;
 				for_each(curRef->indecesExpr, [&](const ExpressionPtr &cur) {
 					assert(cur->hasAnnotation(scop::AccessFunction::KEY));
 					scop::AccessFunction &ann= *cur->getAnnotation(scop::AccessFunction::KEY);
@@ -542,7 +539,7 @@ std::ostream& AccessFunction::printTo(std::ostream& out) const {
 /** mark is the main entry point for SCoP analysis: It finds and marks the SCoPs contained in the root program tree and
 returns a list of found SCoPs (an empty list in the case no SCoP was found). */
 AddressList mark(const core::NodePtr& root) {
-	std::vector<NodeAddress> allscops, validscops;
+	AddressList allscops, validscops;
 	ScopVisitor sv(allscops);
 
 	try {
