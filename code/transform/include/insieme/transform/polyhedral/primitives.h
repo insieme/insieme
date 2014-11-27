@@ -97,7 +97,9 @@ const Elem& addTo(Scop& scop, const Elem& iter) {
 std::vector<std::reference_wrapper<Stmt>> getLoopSubStatements(Scop& scop, const Iterator& iter);
 
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter);
+
 void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter);
+
 
 /**
  * Adds a constraint to the 'iter' iterator. The constraint will be added only for the statements

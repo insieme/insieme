@@ -345,8 +345,12 @@ AffineConstraintPtr toConstraint(const DisjunctionList& disjunctions) {
 
 
 // Stride an iterator.
-core::VariablePtr doStripMine(core::NodeManager& mgr, Scop& scop,
-							  const core::VariablePtr iter, const IterationDomain& dom, unsigned tile_size) {
+core::VariablePtr doStripMine(core::NodeManager& 		mgr,
+							  Scop& 					scop, 
+							  const core::VariablePtr 	iter, 
+							  const IterationDomain& 	dom, 
+						  	  unsigned 					tile_size)
+{
 	core::IRBuilder builder(mgr);
 
 	// check whether the indexes refers to loops 
@@ -382,8 +386,9 @@ core::VariablePtr doStripMine(core::NodeManager& mgr, Scop& scop,
 	VLOG(1) << "Extractd UB:  " << *ubCons; 
 
 	DisjunctionList stride(1);
-	for (const ConjunctionList& curout: lb) {
-		for (const AffineConstraintPtr& cur: curout) {
+	for_each(lb, [&] (const ConjunctionList& cur) {
+
+		for_each(cur, [&](const AffineConstraintPtr& cur) {
 			// detect whether this constraint is an equality
 			const RawAffineConstraint& rc = static_cast<const RawAffineConstraint&>(*cur);
 			AffineFunction func(iterVec, rc.getConstraint().getFunction());
@@ -392,9 +397,9 @@ core::VariablePtr doStripMine(core::NodeManager& mgr, Scop& scop,
 			func.setCoeff(strideIter, -tile_size);
 
 			stride.back().push_back( makeCombiner( AffineConstraint(func, ConstraintType::EQ) ) );
-		}
+		});
 		if (!stride.back().empty()) { stride.push_back( ConjunctionList() ); }
-	}
+	});
 
 	addConstraint(scop, newIter, IterationDomain(lbCons and ubCons and toConstraint(stride)));
  

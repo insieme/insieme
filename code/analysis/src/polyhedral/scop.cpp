@@ -259,14 +259,18 @@ void AffineSystem::insert(const iterator& pos, const AffineFunction& af) {
 }
 
 utils::Matrix<int> extractFrom(const AffineSystem& sys) {
+
 	utils::Matrix<int> mat(sys.size(), sys.getIterationVector().size());
+
 	size_t i=0;
-	for (const AffineFunction& cur: sys) {
+	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
 			size_t j=0;
-			for (const AffineFunction::Term& term: cur)
+			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
 				mat[i][j++] = term.second;
+			});
 			i++;
-	}
+		} );
+
 	return mat;
 }
 
@@ -292,21 +296,22 @@ std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched)
 /// Stmt copy constructor
 Stmt::Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
 	addr(other.addr), schedule(iterVec, other.schedule), id(id), iterdomain(iterVec, other.iterdomain) {
-	for (const AccessInfoPtr &cur: other.accessmtx)
+	for_each(other.accessmtx, [&](const AccessInfoPtr &cur) {
 		accessmtx.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
+	});
 }
 
 std::vector<core::VariablePtr> Stmt::loopNest() const {
 	std::vector<core::VariablePtr> nest;
-	for (const AffineFunction &cur: getSchedule()) {
+	for_each(getSchedule(),	[&](const AffineFunction& cur) { 
 		const IterationVector& iv = cur.getIterationVector();
-		for (IterationVector::iter_iterator it = iv.iter_begin(), end = iv.iter_end(); it != end; ++it) {
-			if (cur.getCoeff(*it)!=0) {
-				nest.push_back(core::static_pointer_cast<const core::Variable>( it->getExpr()));
+		for(IterationVector::iter_iterator it = iv.iter_begin(), end = iv.iter_end(); it != end; ++it) {
+			if( cur.getCoeff(*it) != 0) { 
+				nest.push_back( core::static_pointer_cast<const core::Variable>( it->getExpr()) );
 				break;
 			}
 		}
-	}
+	} );
 
 	return nest;
 }
