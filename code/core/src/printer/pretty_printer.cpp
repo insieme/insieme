@@ -1238,13 +1238,25 @@ namespace {
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
 
 			typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
+			typedef AttributConverter::is_encoding_of is_encoding_of_type;
 
 			ADD_FORMATTER(ext.empty, { OUT("[]"); });
 			ADD_FORMATTER(ext.cons, {
-					vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
-					printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
-						printer.visit(cur);
-					}) << "]";
+					const is_encoding_of_type is_encoding_of;
+					// check whether syntactic sugar is supported
+					if (is_encoding_of(call)) {
+						vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
+						printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
+							printer.visit(cur);
+						}) << "]";
+					} else {
+						// use fall-back solution
+						printer.out << "[";
+						printer.visit(call[0]);
+						printer.out << ",";
+						printer.visit(call[1]);
+						printer.out << "]";
+					}
 			});
 		}
 
