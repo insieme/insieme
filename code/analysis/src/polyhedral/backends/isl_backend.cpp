@@ -439,13 +439,12 @@ int visit_constraint(isl_constraint* cons, void* user) {
 		isl_int intVal;
 		isl_int_init(intVal); 
 
-		auto idx = iv.getIdx(elem);
-		unsigned int intidx;
+		unsigned idx = iv.getIdx(elem);
 		if (elem.getType() == Element::PARAM) {
-			assert (idx && *idx >= iv.getIteratorNum());
-			intidx=*idx-iv.getIteratorNum();
+			assert (idx >= iv.getIteratorNum());
+			idx -= iv.getIteratorNum();
 		}
-		isl_constraint_get_coefficient( cons, type, intidx, &intVal );
+		isl_constraint_get_coefficient( cons, type, idx, &intVal );
 		func.setCoeff( elem, isl_int_to_c_int(intVal) );
 		isl_int_clear(intVal);
 	};

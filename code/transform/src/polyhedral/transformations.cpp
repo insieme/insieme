@@ -128,8 +128,8 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 	core::VariablePtr src = matchList[srcIdx].as<core::VariablePtr>();
 	core::VariablePtr dest = matchList[destIdx].as<core::VariablePtr>();
 
-	assert(iterVec.getIdx(src) && "Index for Source Loop is invalid");
-	assert(iterVec.getIdx(dest) && "Index for Destination Loop is invalid");
+	assert( iterVec.getIdx(src) != -1 && "Index for Source Loop is invalid");
+	assert( iterVec.getIdx(dest) != -1 && "Index for Destination Loop is invalid");
 	applyUnimodularTransformation<SCHED_ONLY>(transfScop, makeInterchangeMatrix(iterVec, src, dest));
 
 	// The original scop is in origScop, while the transformed one is in transScop
@@ -190,6 +190,7 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 		throw InvalidTargetException("loop index does not refer to a for loop");
 
 	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
 
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
@@ -299,7 +300,7 @@ core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) cons
 
 	Scop tScop(oScop.getIterationVector(), oScop.getStmts());
 
-	const IterationVector& iterVec = tScop.getIterationVector();
+	IterationVector& iterVec = tScop.getIterationVector();
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
 	utils::Timer t("transform.polyhedral.loop.tiling");
@@ -307,14 +308,15 @@ core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) cons
 	// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
 	core::VariableList tileIters, loopIters;
 	size_t pos=0;
-	for (const unsigned &cur: tileSizes) {
+	for_each(tileSizes, [&] (const unsigned& cur) {
+
 		core::ForStmtPtr forStmt = matchList[ pos++ ].as<core::ForStmtPtr>();
 		loopIters.push_back( forStmt->getDeclaration()->getVariable() );
 
-		auto mine=doStripMine(mgr, tScop, loopIters.back(),
-							  scop::ScopRegion::toScopRegion(forStmt)->getDomainConstraints(), cur);
-		tileIters.push_back(mine);
-	}
+		tileIters.push_back(
+			doStripMine(mgr, tScop, loopIters.back(), scop::ScopRegion::toScopRegion(forStmt)->getDomainConstraints(), cur)
+		);
+	});
 
 	for(size_t pos1=1; pos1<tileIters.size(); ++pos1) {
 		for(size_t pos2=pos1; pos2>0; --pos2) {
@@ -643,7 +645,10 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 		std::vector<core::VariablePtr> iters = getOrderedIteratorsFor( curStmt->getSchedule() );
 
 		if (iters.empty() && stmt->getNodeType() == core::NT_CallExpr) {
-			assert(curStmt->getSubRangeNum() == 1 && "Multiple ranges not supported");
+			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
+
+			__unused unsigned ranges = curStmt->getSubRangeNum();
+			assert(ranges == 1 && "Multiple ranges not supported");
 		
 			// Extract the variable which should be stripped 
 			core::VariablePtr var;
@@ -651,7 +656,7 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 				if ( cur->hasDomainInfo() ) {
 					assert(!var && "Variable already set");
 					var = getOrderedIteratorsFor(cur->getAccess()).front();
-					curStmt->getSchedule().append(AffineFunction(iv, core::arithmetic::Formula(var)));
+					curStmt->getSchedule().append( AffineFunction(iv, core::arithmetic::Formula(var)) );
 
 					doStripMine(mgr, scop, var, curStmt->iterdomain && cur->getDomain(), tileSize);
 				}

@@ -119,66 +119,19 @@ std::ostream& Parameter::printTo(std::ostream& out) const {
 
 //====== IterationVector ==========================================================================
 
-/// Determine the position of elem in the iteration vector component vec (vec is one of iters/params/constant).
-template <class T> boost::optional<unsigned int> IterationVector::getIdxFrom(const T& elem, const std::vector<T>& vec) const {
-	auto fit = std::find(vec.begin(), vec.end(), elem);
-	if (fit != vec.end())
-		return (unsigned int)(fit-vec.begin());
-	else
-		return boost::optional<unsigned int>();
-}
-
-/// Append the new element to the vector
-template <class T> unsigned int IterationVector::addTo(const T& elem, std::vector<T>& vec) {
-	auto idx=getIdxFrom(elem, vec);
-	if (idx) return *idx;
-	else {
-		vec.push_back(elem);
-		return vec.size()-1;
-	}
-}
-
-/** Appends an element to this iteration vector, and returns its position in it.
-If the iterator is already present, then the previous element index is returned. */
-unsigned int IterationVector::add(const Element& e) {
-	switch (e.getType()) {
-	case Element::ITER:  return              addTo((const Iterator &)e, iters);
-	case Element::PARAM: return iters.size()+addTo((const Parameter&)e, params);
-	default: LOG(ERROR) << "Trying to add unknown element type to iteration vector.";
-	}
-	return 0; // just to make the compiler happy
-}
-
-/// Returns the index of an element inside the iteration vector, if found.
-boost::optional<unsigned int> IterationVector::getIdx(const Element& elem) const {
-	if (const Iterator* iter = dynamic_cast<const Iterator*>(&elem))
+int IterationVector::getIdx(const Element& elem) const {
+	if (const Iterator* iter = dynamic_cast<const Iterator*>(&elem)) {
 		return getIdxFrom(*iter, iters);
+	}
 	if (const Parameter* param = dynamic_cast<const Parameter*>(&elem)) {
-		auto idx = getIdxFrom(*param, params);
-		if (!idx)
-			return idx;
-		else
-			return boost::optional<unsigned int>(*idx+iters.size());
+		int idx = getIdxFrom(*param, params);
+		return (idx==-1?-1:idx+iters.size());	
 	}
 	assert( dynamic_cast<const Constant*>(&elem) != NULL && "Element not valid." ); 
-	return boost::optional<unsigned int>(size()-1);
+	return size()-1;
 }
 
-/// Search for var (an Insieme variable) in this iteration vector, and return its index if found.
-/// TODO: This code looks convoluted, it is not clear to me why I can always return the index of a parameter when
-/// the node type is not a variable. Also, why do I need an explicit static_pointer_cast, can I use shorthand here?
-boost::optional<unsigned int> IterationVector::getIdx(const core::ExpressionPtr& var) const {
-	if (var->getNodeType()==core::NT_Variable) {
-		auto idx=getIdx(Iterator(core::static_pointer_cast<const core::Variable>(var)));
-		if (idx) {
-			assert(!getIdx(Parameter(var)) && "Variable is both among the iterators and parameters.");
-			return idx;
-		}
-	}
-	return getIdx(Parameter(var));
-}
-
-const Element& IterationVector::operator[](size_t idx) const {
+const Element& IterationVector::operator[](size_t idx) const { 
 	assert(idx >= 0 && idx < size() && "Index out of range");
 	if (idx<getIteratorNum()) {
 		return iters[idx];
@@ -213,7 +166,7 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 }
 
 bool IterationVector::contains(const core::ExpressionPtr& expr) const {  
-	return getIdx(expr);
+	return getIdx(expr)!=-1; 
 }
 
 core::VariablePtr IterationVector::getFreshVariable(core::NodeManager& mgr) const {
@@ -245,11 +198,13 @@ namespace {
 template <class T>
 void add_if(IterationVector& dest, 
 		typename std::vector<T>::const_iterator aBegin, 
-		typename std::vector<T>::const_iterator aEnd ) {
+		typename std::vector<T>::const_iterator aEnd ) 
+{
 	std::for_each(aBegin, aEnd, [&dest] (const T& cur) { 
-		if (!dest.getIdx(cur.getExpr()))
+		if (dest.getIdx( cur.getExpr() ) == -1 ) { 
 			dest.add(cur); 
-	});
+		}
+	} );
 }
 		
 template <class T>
@@ -284,13 +239,14 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 
 	IndexTransMap transMap;
 	std::for_each(src.begin(), src.end(), [&](const Element& cur) {
-			boost::optional<unsigned int> idx;
-			if (cur.getType() == Element::ITER || cur.getType() == Element::PARAM)
+			int idx = 0;
+			if (cur.getType() == Element::ITER || cur.getType() == Element::PARAM) {
 				idx = trg.getIdx( static_cast<const Expr&>(cur).getExpr() ); 
-			else
+			} else {
 				idx = trg.getIdx(cur);
-			assert(idx && static_cast<size_t>(*idx) < trg.size() );
-			transMap.push_back(*idx);
+			}
+			assert( idx != -1 && static_cast<size_t>(idx) < trg.size() );
+			transMap.push_back( idx ); 
 		});
 	assert(transMap.size() == src.size());
 	return transMap;

@@ -36,14 +36,17 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/core/analysis/normalize.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/pattern/ir_pattern.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/transform/polyhedral/transformations.h"
+
+#include "insieme/core/pattern/ir_pattern.h"
+
+#include "insieme/transform/polyhedral/primitives.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/normalize.h"
+
 #include "insieme/utils/logging.h"
 
 using namespace insieme::analysis::polyhedral;
@@ -79,6 +82,7 @@ TEST(Transform, InterchangeManual) {
 	auto match = pattern.matchPointer(forStmt);
 
 	VariablePtr i = match->getVarBinding("i").getList()[0].as<VariablePtr>();
+
 	VariablePtr j = match->getVarBinding("i").getList()[1].as<VariablePtr>();
 	
 	boost::optional<Scop> scop=scop::ScopRegion::toScop(forStmt);
@@ -102,10 +106,10 @@ void checkSCoPCorrectness(const insieme::core::NodePtr& node) {
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	// Check for the generated SCoP
-	auto scop = polyhedral::scop::ScopRegion::toScop(node);
-	EXPECT_TRUE(scop);
+	auto scop2 = polyhedral::scop::ScopRegion::toScop(node);
+	EXPECT_TRUE(scop2);
 
-	NodePtr res = analysis::normalize(scop->toIR(node->getNodeManager()));
+	NodePtr res = analysis::normalize(scop2->toIR(node->getNodeManager()));
 	EXPECT_EQ(*node,*res);
 }
 
@@ -203,13 +207,7 @@ TEST(Transform, StripMiningAuto) {
 
 	EXPECT_TRUE(forStmt);
 
-	auto scopnode=scop::mark(forStmt);
-	EXPECT_EQ(scopnode.size(), 1);
-	auto scopptr=scopnode[0].getAddressedNode();
-	EXPECT_TRUE(scop::ScopRegion::isMarked(scopptr));
-	auto scopopt=scop::ScopRegion::toScop(scopptr);
-	EXPECT_TRUE(scopopt);
-	std::cout << "scop is " << *scopopt << std::endl;
+	scop::mark(forStmt);
 
 	LoopStripMining li(1, 7);
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
