@@ -165,16 +165,18 @@ typedef std::shared_ptr<Stmt> StmtPtr;
  By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
  When a transformation needs to be performed a deep copy of the Scop object is created and
  transformations are applied to it. */
-struct Scop : public utils::Printable {
-
+class Scop : public utils::Printable {
 public:
-	IterationVector iterVec;
-	typedef std::vector<StmtPtr> StmtVect;
-	typedef StmtVect::iterator iterator;
+	typedef std::vector<StmtPtr>     StmtVect;
+	typedef StmtVect::iterator       iterator;
 	typedef StmtVect::const_iterator const_iterator;
+
+protected: // do not make components public for now, as we have yet to find a proper interface
+	IterationVector iterVec;
 	StmtVect stmts; /// <- all statements in the SCoP, root address is the entry point of SCoP
 	size_t sched_dim;
 
+public:
 	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) :
 		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector

@@ -174,7 +174,7 @@ TEST(Primitive, ScheduleLoop) {
 	VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
 	std::cout << *scop.toIR(mgr) << std::endl;
 
-	scop.getIterationVector().add(newIter);
+	scop.getIterationVector().add((Iterator)newIter);
 	scheduleLoopBefore(scop, iter2, newIter);
 	addConstraint(scop, newIter, IterationDomain(scop.getIterationVector(), {{0,0,0,1,0},{0,0,0,-1,100}}));
 	setZeroOtherwise(scop, newIter);

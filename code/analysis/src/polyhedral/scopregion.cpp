@@ -107,7 +107,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 
 				// SCoP needs to be discarded because one of the iterators or parameters
 				// of the iteration domain has been overwritten within the body of the SCoP
-				if ((cur->usage == Ref::DEF || cur->usage == Ref::UNKNOWN) && iterVec.getIdx(addr)!=-1)
+				if ((cur->usage == Ref::DEF || cur->usage == Ref::UNKNOWN) && iterVec.getIdx(addr))
 						THROW_EXCEPTION(DiscardSCoPException, "Assignment to element of the iteration vector detected",  
 							curStmt.addr.getAddressedNode(), addr
 						);

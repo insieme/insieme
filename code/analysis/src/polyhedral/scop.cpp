@@ -205,6 +205,8 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 		return std::make_pair(NodeAddress(), domain.getConstraint()); 
 
 	try {
+		// TODO: here, coding style is exceptionally bad: scop.getIterationVector cannot be made const, as the
+		// AffineFunction constructor will modify the IterationVector...
 		AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
 		// otherwise this is a composed by a conjunction of constraints. we need to analyze the

@@ -34,22 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/polyhedral/affine_func.h"
-
 #include <set>
 
-#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_builder.h"
-
 #include "insieme/utils/unused.h"
 
-namespace {
+namespace insieme { namespace analysis { namespace polyhedral {
 
-using namespace insieme;
-
-// Remove expression which are used in the IR for semantics checks (like derefs and refs)
-core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
+/// Remove expression which are used in the IR for semantics checks (like derefs and refs)
+core::ExpressionPtr AffineFunction::removeSugar(core::ExpressionPtr expr) {
 	const core::NodeManager& mgr = expr->getNodeManager();
 	
 	while (expr->getNodeType() == core::NT_CallExpr &&
@@ -60,14 +56,6 @@ core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
 
 	return expr;
 }
-
-} // end anonymous namespace
-
-namespace insieme { namespace analysis { namespace polyhedral {
-
-//====== Exceptions ===============================================================================
-VariableNotFound::VariableNotFound(const core::VariablePtr& var) : 
-                std::logic_error("Variable not found in the iteration vector."), var(var) { }
 
 void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) {
 	using namespace insieme::core::arithmetic;
@@ -92,11 +80,9 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 			core::ExpressionPtr&& var = removeSugar(prod.getFactors().front().first);
 			// we get rid of eventual deref operations occurring 
 						// We make sure the variable is not already among the iterators
-			if ( var->getNodeType() != core::NT_Variable || 
-					iterVec.getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) ) == -1 ) 
-			{
-				iterVec.add( Parameter(var) );
-			}
+			if (var->getNodeType() != core::NT_Variable ||
+				!iterVec.getIdx(Iterator(core::static_pointer_cast<const core::Variable>(var))))
+				iterVec.add(Parameter(var));
 		}
 	});
 
@@ -111,33 +97,29 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 		if ( prod.isOne() ) {
 			coeffs.back() = cur.second.getNumerator();
 		} else {
-			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
-			assert (idx != -1);
-			coeffs[idx] = cur.second.getNumerator();
+			auto idx=iterVec.getIdx(removeSugar(prod.getFactors().front().first));
+			assert(idx);
+			coeffs[*idx]=cur.second.getNumerator();
 		}
 	});
 }
 
-//====== AffineFunction ===========================================================================
+/// Builds an affine function from a generic IR expression. This is done by using the formula extractor
+/// and checking whether the obtained formula is affine.
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr):
+	iterVec(iterVec), sep(iterVec.getIteratorNum()) {
 
-AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
-	iterVec(iterVec), sep(iterVec.getIteratorNum())
-{
 	core::arithmetic::Formula&& formula = core::arithmetic::toFormula(expr);
-
-	if ( !(formula.isLinear() || formula.isOne()) ) 
-		throw NotAffineExpr(expr);
-
-	buildFromFormula( iterVec, formula );
+	if (!(formula.isLinear() || formula.isOne())) throw NotAffineExpr(expr);
+	buildFromFormula(iterVec, formula);
 }
 
-AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) : 
-	iterVec(iterVec), sep(iterVec.getIteratorNum())
-{
-	// this is a linear function
-	if( !formula.isLinear() ) throw NotAffineExpr( core::ExpressionPtr() );
+/// Builds an affine function from an arithmetic formula.
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula):
+	iterVec(iterVec), sep(iterVec.getIteratorNum()) {
 
-	buildFromFormula( iterVec, formula);
+	if(!formula.isLinear()) throw NotAffineExpr(core::ExpressionPtr());
+	buildFromFormula(iterVec, formula);
 }
 
 int AffineFunction::idxConv(size_t idx) const {
@@ -351,26 +333,28 @@ void AffineFunction::setCoeff(size_t idx, int coeff) {
 	coeffs[new_idx] = coeff; 
 }
 
+VariableNotFound::VariableNotFound(const core::VariablePtr& var) :
+				std::logic_error("Variable not found in the iteration vector."), var(var) { }
 
 void AffineFunction::setCoeff(const core::VariablePtr& var, int coeff) { 
-	int idx = iterVec.getIdx(var);
+	auto idx = iterVec.getIdx(var);
 	// In the case the variable is not in the iteration vector, throw an exception
-	if (idx == -1) { throw VariableNotFound(var); }
-	setCoeff( idx, coeff );
+	if (!idx) { throw VariableNotFound(var); }
+	setCoeff(*idx, coeff);
 }
 
 int AffineFunction::getCoeff(const Element& elem) const {
-	int idx = iterVec.getIdx(elem);
+	auto idx = iterVec.getIdx(elem);
 	// In the case the variable is not in the iteration vector, throw an exception
-	assert (idx != -1 && "Element not in iteration vector");
-	return getCoeff( idx );
+	assert (idx && "Element not in iteration vector");
+	return getCoeff(*idx);
 }
 
 int AffineFunction::getCoeff(const core::VariablePtr& var) const { 
-	int idx = iterVec.getIdx(var);
+	auto idx = iterVec.getIdx(var);
 	// In the case the variable is not in the iteration vector, throw an exception
-	if (idx == -1) { throw VariableNotFound(var); }
-	return getCoeff( idx );
+	if (!idx) { throw VariableNotFound(var); }
+	return getCoeff(*idx);
 }
 
 bool AffineFunction::operator==(const AffineFunction& other) const {

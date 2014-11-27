@@ -64,20 +64,20 @@ std::vector<std::reference_wrapper<Stmt>> getStmts(Scop& scop, const Iterator& i
 	const IterationVector& iterVec = scop.getIterationVector();
 
 	std::vector<std::reference_wrapper<Stmt>> ret;
-	for_each(scop, [&] (StmtPtr& cur) { 
+	for (StmtPtr& cur: scop) {
 			IntMatrix&& sched = extractFrom( cur->getSchedule() );
-			int idx = iterVec.getIdx(iter);
-			assert(idx != -1);
+			boost::optional<unsigned int> idx=iterVec.getIdx(iter);
+			assert(idx);
 
 			size_t pos = 0, end = sched.rows();
-			for(; pos<end && sched[pos][idx]==0; ++pos) ;
+			for(; pos<end && sched[pos][*idx]==0; ++pos) ;
 			
 			if( pos!=sched.rows() && internal ) {
 				ret.emplace_back( std::ref(*cur) );
 			} else if (pos == sched.rows() && !internal) {
 				ret.emplace_back( std::ref(*cur) );
 			}
-		} );
+		}
 
 	return ret;
 
@@ -103,16 +103,18 @@ void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIte
 		if ( dim > scop.schedDim() ) { scop.schedDim() = dim; }
 
 		IntMatrix mat(1, iterVec.size());
-		mat[0][iterVec.getIdx(newIter)] = 1;
+		boost::optional<unsigned int> idx=iterVec.getIdx(newIter);
+		assert(idx);
+		mat[0][*idx] = 1;
 		schedule.append( mat[0] );
 
 		IntMatrix&& sched = extractFrom( schedule );
 		
-		size_t idx = sched.rows()-1;
+		size_t rows = sched.rows()-1;
 		do {
-			sched.swapRows(idx-1, idx);
-			--idx;
-		} while( sched[idx+1][iterVec.getIdx(iter)] != 1 );
+			sched.swapRows(rows-1, rows);
+			--rows;
+		} while( sched[rows+1][*idx] != 1 );
 		
 		schedule.set( sched );
 	} );
@@ -129,15 +131,17 @@ void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter
 		if ( dim > scop.schedDim() ) { scop.schedDim() = dim; }
 
 		IntMatrix mat(1, iterVec.size());
-		mat[0][iterVec.getIdx(newIter)] = 1;
+		boost::optional<unsigned int> idx=iterVec.getIdx(newIter);
+		assert(idx);
+		mat[0][*idx] = 1;
 		schedule.append( mat[0] );
 
 		IntMatrix&& sched = extractFrom( schedule );
 		
-		size_t idx = sched.rows()-1;
-		while( sched[idx-1][iterVec.getIdx(iter)] != 1 ) {
-			sched.swapRows(idx-1, idx);
-			--idx;
+		size_t rows = sched.rows()-1;
+		while( sched[rows-1][*idx] != 1 ) {
+			sched.swapRows(rows-1, rows);
+			--rows;
 			std::cout << sched << std::endl;
 		}
 		schedule.set( sched );
@@ -154,28 +158,24 @@ void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom)
 }
 
 void setZeroOtherwise(Scop& scop, const Iterator& iter) {
-
 	const IterationVector& iterVec = scop.getIterationVector();
 	std::vector<std::reference_wrapper<Stmt>>&& stmts = getStmts(scop, iter, false);
 
-	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { 
+	for (std::reference_wrapper<Stmt>& cur: stmts) {
 		AffineFunction func(iterVec);
-		func.setCoeff( iter, 1 );
+		func.setCoeff(iter, 1);
 
-		cur.get().iterdomain &= IterationDomain( AffineConstraint( func, ConstraintType::EQ) );
-	} );
+		cur.get().iterdomain &= IterationDomain(AffineConstraint(func, ConstraintType::EQ));
+	}
 }
 
 
-UnimodularMatrix 
-makeInterchangeMatrix(const IterationVector& 	iterVec, 
-					  const core::VariablePtr& 	src, 
-					  const core::VariablePtr& 	dest) 
-{
-	int srcIdx = iterVec.getIdx( Iterator(src) );
-	int destIdx = iterVec.getIdx( Iterator(dest) );
-	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
-	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
+UnimodularMatrix makeInterchangeMatrix(const IterationVector& iterVec,
+									   const core::VariablePtr& src, const core::VariablePtr& dest) {
+	boost::optional<unsigned int> srcIdx=iterVec.getIdx(Iterator(src)),
+			destIdx=iterVec.getIdx(Iterator(dest));
+	assert(srcIdx && destIdx && *srcIdx != *destIdx && "Interchange not valid");
+	return makeInterchangeMatrix(iterVec.size(), *srcIdx, *destIdx);
 }
 
 
@@ -350,11 +350,12 @@ core::VariablePtr doStripMine(core::NodeManager& mgr, Scop& scop,
 	core::IRBuilder builder(mgr);
 
 	// check whether the indexes refers to loops 
+	LOG(WARNING) << "scop iteration vector is " << scop.getIterationVector();
 	IterationVector& iterVec = scop.getIterationVector();
 
 	// Add a new loop and schedule it before the indexed loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
-	iterVec.add(newIter);
+	iterVec.add((Iterator)newIter);
 
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
@@ -413,10 +414,7 @@ core::VariablePtr doStripMine(core::NodeManager& mgr, Scop& scop,
  
 	// LOG(INFO) << "New domain for old iter: " << *(AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT));
 
-	addConstraint(scop, iter, 
-			IterationDomain( AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)) 
-		);
-
+	addConstraint(scop, iter, IterationDomain(AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)));
 	return newIter;
 }
 

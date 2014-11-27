@@ -93,11 +93,7 @@ struct VariableNotFound : public std::logic_error {
  * coefficient matrix for the mutated iteration vector, thanks to the sep member.  
  *************************************************************************************************/
 
-class AffineFunction : 
-		public boost::noncopyable, 
-		public utils::Printable, 
-		public boost::equality_comparable<AffineFunction> 
-{ 
+class AffineFunction: public boost::noncopyable, public utils::Printable, public boost::equality_comparable<AffineFunction> {
 	/// Iteration Vector to which this function refers to
 	const IterationVector& iterVec;
 
@@ -120,15 +116,14 @@ class AffineFunction :
 
 	void setCoeff(size_t idx, int coeff);
 	int getCoeff(size_t idx) const;
-	
+	core::ExpressionPtr removeSugar(core::ExpressionPtr expr);
 	void buildFromFormula(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula);
 
 public:
-
 	static const unsigned PRINT_ZEROS = 0x01;
 	static const unsigned PRINT_VARS  = 0x10;
-
 	typedef std::pair<const Element&, int> Term;
+
 	/**
 	 * Class utilized to build iterators over Affine Functions. 
 	 *
@@ -136,39 +131,24 @@ public:
 	 * associated to it. 
 	 */
 	struct iterator : public boost::forward_iterator_helper<iterator, Term> {
-
 		const IterationVector& iterVec;
-
 		const AffineFunction& af;
 		size_t iterPos;
 
-		iterator(const IterationVector& iterVec, const AffineFunction& af, size_t iterPos=0) : 
+		iterator(const IterationVector& iterVec, const AffineFunction& af, size_t iterPos=0):
 			iterVec(iterVec), af(af), iterPos(iterPos) { }
 
 		Term operator*() const; 
 		iterator& operator++();
-
 		inline bool operator==(const iterator& rhs) const { 
 			return &iterVec == &rhs.iterVec && &af == &rhs.af && iterPos == rhs.iterPos;
 		}
 	};
 
-	/**
-	 * Builds an affine functions from an iteration vector. Initializes all the coefficients
-	 * to zero.
-	 */
-	AffineFunction(const IterationVector& iterVec) : 
-		iterVec(iterVec), coeffs( iterVec.size() ), sep( iterVec.getIteratorNum() ) { }
-
-	/**
-	 * Builds an affine function from an arithmetic formula
-	 */
+	/// Builds an affine functions from an iteration vector. Initializes all the coefficients to zero.
+	AffineFunction(const IterationVector& iterVec):
+		iterVec(iterVec), coeffs(iterVec.size()), sep(iterVec.getIteratorNum()) {}
 	AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& f);
-
-	/**
-	 * Builds an affine function from a generic IR expression. This is done by using 
-	 * the Formula extractor and checking whether the obtained formula is affine
-	 */
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
 	/**
@@ -217,7 +197,11 @@ public:
 
 	// Setter and Getter for coefficient values. 
 	inline void setCoeff(const Element& iter, int coeff) {
-		setCoeff(iterVec.getIdx(iter), coeff);
+		auto idx=iterVec.getIdx(iter);
+		if (idx)
+			setCoeff(*idx, coeff);
+		else
+			LOG(ERROR) << "Did not find the index for the given element, cannot set the coefficient.";
 	}
 	void setCoeff(const core::VariablePtr& var, int coeff);
 
