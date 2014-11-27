@@ -74,7 +74,7 @@ struct Reference : public boost::noncopyable {
 	{  }
 };
 
-typedef std::shared_ptr<Reference> ReferencePtr;
+typedef std::shared_ptr<Reference> ReferencePtr/*DELETED*/;
 
 /** Stmt:Class which contains all the information of statements inside a SCoP (both direct and
 contained in sub-scops).
@@ -87,13 +87,13 @@ A statement into a SCoP has 3 piece of information associated:
 This is information is not computed when the the SCoP region is first build but instead on demand (lazy) and cached
 for future requests. */
 class Stmt {
-	std::vector<ReferencePtr> accesses;
+	std::vector<ReferencePtr/*DELETED*/> accesses;
 
 public:
 	core::StatementAddress addr;
 
-	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr>& accesses): accesses(accesses), addr(addr) {}
-	std::vector<ReferencePtr> getRefAccesses() const { return accesses; }
+	Stmt(const core::StatementAddress& addr, const std::vector<ReferencePtr/*DELETED*/>& accesses): accesses(accesses), addr(addr) {}
+	std::vector<ReferencePtr/*DELETED*/> getRefAccesses() const { return accesses; }
 };
 
 /** ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program. The IterationVector
@@ -106,26 +106,50 @@ Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this re
 accesses directly present in this region. Accesses in the sub region are not directly listed in the current region but
 retrieval is possible via the aforementioned pointer to the sub scops. */
 struct ScopRegion: public core::NodeAnnotation {
+
+	static const string NAME;
+	static const utils::StringKey<ScopRegion> 	KEY;
 	bool valid;
 
-	typedef std::vector<Iterator> IteratorOrder;
+	typedef std::vector<Iterator> 		IteratorOrder;
+	
+	ScopRegion( const core::NodePtr& 	annNode,
+				const IterationVector& 	iv, 
+				const IterationDomain& 	comb,
+				const std::vector<Stmt>& stmts = std::vector<Stmt>(),
+				const SubScopList& 		subScops_ = SubScopList() 
+			  ) :
+		valid(true), annNode(annNode), iterVec(iv), stmts(stmts),
+		domain( iterVec, comb ) { // Switch the base to the this->iterVec
+		
+		for_each(subScops_.begin(), subScops_.end(), 
+			[&] (const SubScop& cur) { 
+				subScops.push_back( SubScop(cur.first, IterationDomain(iterVec, cur.second)) ); 
+			});	
+	} 
 
-	ScopRegion(const core::NodePtr &annNode, const IterationVector &iv, const IterationDomain &comb,
-			   const std::vector<Stmt> &stmts, const SubScopList &subScops_);
-	inline const std::string &getAnnotationName() const { return NAME; }
+	std::ostream& printTo(std::ostream& out) const;
+
+	inline const std::string& getAnnotationName() const { return NAME; }
+
 	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
-	std::ostream &printTo(std::ostream &out) const;
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const { return false; }
+	
+	
 	inline bool isResolved() const { return static_cast<bool>(scopInfo); }
-	inline const IterationVector &getIterationVector() const { return iterVec; }
-	inline IterationVector &getIterationVector() { return iterVec; }
-	inline const IterationDomain &getDomainConstraints() const { return domain; }
-	inline const std::vector<Stmt> &getDirectRegionStmts() const { return stmts; }
-	const SubScopList &getSubScops() const { return subScops; }
-	bool containsLoopNest() const;
-	static bool isMarked(const core::NodePtr &p) { return p->hasAnnotation(annotationKey()); }
-	static boost::optional<Scop> toScop(const core::NodePtr &p);
-	static boost::optional<ScopRegion> toScopRegion(const core::NodePtr &p);
+
+	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
+	inline const IterationVector& getIterationVector() const {  return iterVec; }
+	/// Return the iteration vector which is spawned by this region, and on which the associated constraints are based on.
+	inline IterationVector& getIterationVector() {  return iterVec; }
+	
+	/// Retrieves the constraint combiner associated to this ScopRegion.
+	inline const IterationDomain& getDomainConstraints() const { return domain; }
+
+	inline const std::vector<Stmt>& getDirectRegionStmts() const { return stmts; }
 
 	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
 	of its iteration domain, scattering matrix and access functions are listed. */
@@ -135,34 +159,38 @@ struct ScopRegion: public core::NodeAnnotation {
 		return *scopInfo;		
 	}
 
+	/// Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the current iteration domain
+	const SubScopList& getSubScops() const { return subScops; }
+
+	bool containsLoopNest() const;
+
+	static boost::optional<Scop> toScop(const core::NodePtr& root);
+
 private:
-	const string NAME;
-	const utils::StringKey<ScopRegion> KEY;
  void resolveScop(const IterationVector &iterVec, IterationDomain parentDomain, const ScopRegion &region,
 				  size_t &pos, size_t &id, const AffineSystem &curScat, ScopRegion::IteratorOrder &iterators, Scop &scat);
  std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr &cur);
 	void resolve();
-	static inline utils::StringKey<ScopRegion> annotationKey() { return utils::StringKey<ScopRegion>("ScopAnnotation"); }
+
+
 	const core::NodePtr annNode;
 
 	/// Iteration Vector on which constraints of this region are defined
-	/// iteration vector which is spawned by this region, and on which the associated constraints are based on
 	IterationVector iterVec;
 
 	/// List of statements direclty contained in this region (but not in nested sub-regions)
 	std::vector<Stmt> stmts;
 
 	/// List of constraints which this SCoP defines
-	/// Retrieves the constraint combiner associated to this ScopRegion.
 	IterationDomain domain;
 
 	/** Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their relative position
 	inside the current SCoP
+
 	In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty */
-	/// list of sub SCoPs which are inside this SCoP and introduce modification to the current iteration domain
 	SubScopList subScops;
 
-	std::shared_ptr<Scop> scopInfo;
+	mutable std::shared_ptr<Scop> scopInfo;
 };
 
 /** AccessFunction : this annotation is used to annotate array subscript expressions with the equality constraint

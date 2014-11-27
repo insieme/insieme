@@ -309,21 +309,21 @@ namespace {
 
 		// loop over all SCoP annotations we have discovered
 		// TODO: use class SCoPMetric (not yet introduced)
-		for (auto cur: scoplist) {
-			auto scop=insieme::analysis::polyhedral::scop::ScopRegion::toScop(cur);
-			if (!scop || scop->size()==0) continue;
+		std::for_each(scoplist.begin(), scoplist.end(),	[&](std::list<NodeAddress>::value_type& cur){
+			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 
-			// print SCoPs if relevant command line option has been set
-			if (options.MarkScop) std::cout << scop;
+			// only print SCoPs which contain statement, at the user's request
+			if (reg.getScop().size()==0) return;
+			if (options.MarkScop) std::cout << reg.getScop();
 
 			// count number of statements covered by SCoPs
-			numStmtsInScops += scop->size();
+			numStmtsInScops += reg.getScop().size();
 
 			// count maximum and average loop nesting level
-			size_t loopNest = scop->nestingLevel();
+			size_t loopNest = reg.getScop().nestingLevel();
 			if (loopNest>maxLoopNest) maxLoopNest=loopNest;
 			loopNests += loopNest;
-		}
+		});
 
 //		LOG(INFO) << std::setfill(' ') << std::endl
 //				  << "SCoP Analysis" << std::endl

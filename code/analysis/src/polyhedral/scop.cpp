@@ -156,25 +156,25 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 	core::NodeAddress prev = addr;
 	core::NodeAddress parent;
 	// get the immediate SCoP
-	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !scop::ScopRegion::isMarked(parent)) { prev=parent; }
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	boost::optional<scop::ScopRegion> parentscop=scop::ScopRegion::toScopRegion(parent);
-	if (!parentscop || !parentscop->valid)
-		return std::make_pair(NodeAddress(), AffineConstraintPtr());
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) || !parent->getAnnotation( scop::ScopRegion::KEY )->valid) {
+		return std::make_pair(NodeAddress(), AffineConstraintPtr()); 
+	}
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
-	// iterate through the statements until we find the entry point of the SCoP
-	// FIXME: we need to factorize this piece of code - this is relevant for
-	prev=parent;
-	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && scop::ScopRegion::isMarked(parent) &&
-			scop::ScopRegion::toScopRegion(parent)->valid)
+	prev = parent;
+	// Iterate throgh the stateemnts until we find the entry point of the SCoP
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) &&
+			parent->getAnnotation( scop::ScopRegion::KEY )->valid)
 		prev=parent;
-	assert(parent && "Scop entry not found");
-	// Resolve the SCoP from the entry point
-	Scop &scop = *scop::ScopRegion::toScop(prev);
 
+	assert(parent && "Scop entry not found");
+
+	// Resolve the SCoP from the entry point
+	Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
 
 	// navigate throgh the statements of the SCoP until we find the one 
 	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 
@@ -190,19 +190,21 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 		}
 
 		IterationDomain domain( scop.getIterationVector(), 
-								scop::ScopRegion::toScopRegion(enclosingScop)->getDomainConstraints());
+								enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
 		// otherwise the expression is part of a condition expression 
 		prev = enclosingScop;
 		// Iterate throgh the stateemnts until we find the entry point of the SCoP
-		while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && scop::ScopRegion::isMarked(parent)) {
+		while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
 			prev=parent;
 			domain &= IterationDomain( scop.getIterationVector(), 
-									   scop::ScopRegion::toScopRegion(prev)->getDomainConstraints() );
+									   prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
 		} 
 		return domain;
 	};
 
 	IterationDomain domain( extract_surrounding_domain() );
+
+	//LOG(INFO) << domain;
 
 	if (domain.universe() || domain.empty()) { 
 		return std::make_pair(NodeAddress(), domain.getConstraint()); 
@@ -406,9 +408,9 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 /// Returns true if the given NodePtr has a SCoP annotation, false otherwise. Can be called directly,
 /// with explicit scoping.
 bool Scop::hasScopAnnotation(insieme::core::NodePtr p) {
-	if (!scop::ScopRegion::isMarked(p)) return false;
-	auto annot=scop::ScopRegion::toScopRegion(p);
-	return annot && annot->valid;
+	if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
+	auto annot=p->getAnnotation(scop::ScopRegion::KEY);
+	return annot->valid;
 }
 
 /// Returns the outermost node with a Scop annotation, starting from the given node p. Can be called directly, with
@@ -432,10 +434,10 @@ insieme::core::NodePtr Scop::outermostScopAnnotation(insieme::core::NodePtr p) {
 /// Returns true if the given NodePtr is a (maximal) SCoP, false if there is no SCoP annotation, and also false
 /// if the SCoP is not maximal. Can be called directly, with explicit scoping.
 bool Scop::isScop(insieme::core::NodePtr p) {
-	boost::optional<Scop> scop=scop::ScopRegion::toScop(p);
-	if (!scop) return false;
-	LOG(WARNING) << "SCOP statement vector size: " << scop->stmts.size() << std::endl;
-	for (auto s: scop->stmts) {
+	if (!hasScopAnnotation(p)) return false;
+	Scop& scop=p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+	LOG(WARNING) << "SCOP statement vector size: " << scop.stmts.size() << std::endl;
+	for (auto s: scop.stmts) {
 		//if (p == s.) return true;
 	}
 	//FIXME: outermostScopAnnotation(p);
@@ -444,9 +446,8 @@ bool Scop::isScop(insieme::core::NodePtr p) {
 
 /// Return SCoP data from an existing annotation, using a NodePtr. Can be called directly, with explicit scoping.
 Scop& Scop::getScop(insieme::core::NodePtr p) {
-	boost::optional<Scop> scop=scop::ScopRegion::toScop(p);
-	if (!scop) { THROW_EXCEPTION(NotASCoP, "Given node ptr is not a SCoP.", p); }
-	return *scop;
+	if (!isScop(p)) { THROW_EXCEPTION(NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
+	return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
 }
 
 /// Return all SCoPs below an existing NodePtr as a vector of NodeAddress'es, just like scop::mark does.

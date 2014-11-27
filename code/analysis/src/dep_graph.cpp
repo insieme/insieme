@@ -269,8 +269,8 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 										bool transitive_closure) 
 {
 	polyhedral::scop::mark(root);	// add scop annotation if necessary
-	assert(scop::ScopRegion::isMarked(root) && "IR statement must be a SCoP");
-	Scop& scop = *scop::ScopRegion::toScop(root);
+	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
+	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 	
 	return extractDependenceGraph(root->getNodeManager(), scop, type, transitive_closure);
 }

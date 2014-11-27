@@ -85,16 +85,18 @@ TEST(Transform, InterchangeManual) {
 
 	VariablePtr j = match->getVarBinding("i").getList()[1].as<VariablePtr>();
 	
-	boost::optional<Scop> scop=scop::ScopRegion::toScop(forStmt);
-	EXPECT_TRUE(scop);
-	IntMatrix&& schedule = extractFrom((*scop)[0].getSchedule());
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
+
+	Scop& scop = ann.getScop();
+	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());
 	
-	auto interMat = makeInterchangeMatrix(scop->getIterationVector(), i, j );
+	auto interMat = makeInterchangeMatrix( scop.getIterationVector(), i, j );
 	auto newSched = schedule * interMat;
 
-	(*scop)[0].getSchedule().set( newSched );
+	scop[0].getSchedule().set( newSched );
 
-	NodePtr newIR = analysis::normalize(scop->toIR(mgr));
+	NodePtr newIR = analysis::normalize(scop.toIR(mgr));
 	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
 					"for(int<4> v2 = 10 .. int.add(49, 1) : 1) {"
 						"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, uint.add(v2, v0));"
