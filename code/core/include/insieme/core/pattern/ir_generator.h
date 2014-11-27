@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -72,6 +72,13 @@ namespace irg {
 		}, value));
 	}
 
+	inline TreeGenerator stringValue(const TreeGenerator& tree) {
+		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+			core::NodePtr res = core::StringValue::get(match.getRoot().getNodeManager(), toString(tree.generate(match)));
+			return MatchValue<ptr_target>(res);
+		}, format("#(%s)", toString(tree))));
+	}
+
 	inline TreeGenerator freshID() {
 		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
 			core::NodeManager& manager = match.getRoot()->getNodeManager();
@@ -90,13 +97,9 @@ namespace irg {
 		return atom( core::IRBuilder(manager).parse(code) );
 	}
 
-	inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty) {
-		return node(core::NT_GenericType, family << single(node(subtypes)) << single(node(typeParams)));
+	inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty, const ListGenerator& intParams = empty) {
+		return node(core::NT_GenericType, family << single(node(core::NT_Parents, subtypes)) << single(node(core::NT_Types, typeParams)) << single(node(core::NT_IntTypeParams, intParams)));
 	}
-	inline TreeGenerator genericType(const core::StringValuePtr& family, const ListGenerator& typeParams = empty, const ListGenerator& intParams = empty) {
-		return genericType(atom(family), typeParams, intParams);
-	}
-
 
 	inline TreeGenerator literal(const TreeGenerator& type, const TreeGenerator& value) {
 		return node(core::NT_Literal, single(type) << single(value));
@@ -114,6 +117,10 @@ namespace irg {
 		return literal(type, stringValue(toString(value)));
 	}
 
+	inline TreeGenerator typeLiteral(const TreeGenerator& type) {
+		return literal(genericType(stringValue("type"), empty, single(type), empty), stringValue(type));
+	}
+
 	inline TreeGenerator tupleType(const ListGenerator& pattern) {
 		return node(core::NT_TupleType, pattern);
 	}
@@ -128,6 +135,14 @@ namespace irg {
 
 	inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const ListGenerator& parameters = generator::empty) {
 		return callExpr(type, atom(function), parameters);
+	}
+
+	inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const TreeGenerator& arg0) {
+		return callExpr(type, atom(function), single(arg0));
+	}
+
+	inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const TreeGenerator& arg0, const TreeGenerator& arg1) {
+		return callExpr(type, atom(function), single(arg0) << single(arg1));
 	}
 
 	inline TreeGenerator bindExpr(const ListGenerator& parameters, const TreeGenerator& call) {
