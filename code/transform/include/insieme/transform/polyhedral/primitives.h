@@ -81,29 +81,41 @@ UnimodularMatrix makeInterchangeMatrix(const IterationVector&  	iterVec,
 /**************************************************************************************************
  * Building blocks for polyhedral transformations 
  *************************************************************************************************/
+/**
+ * Adds a new iterator or parameter to the iteration vector of this scop, the new iterator will be 
+ * free (=> not bounded) in the polytope. Use the setConstraint or setZero function to limit the 
+ * domain of the iterator
+ */
+template <class Elem>
+const Elem& addTo(Scop& scop, const Elem& iter) {
+	IterationVector& iterVec = scop.getIterationVector();
+	if ( iterVec.getIdx(iter) != -1 ) { throw "Element already present in iteration vector"; }
+	iterVec.add( iter );
+	return iter;
+}
+
 std::vector<std::reference_wrapper<Stmt>> getLoopSubStatements(Scop& scop, const Iterator& iter);
 
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter);
 void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter);
 
-/** After adding an iterator/parameter to the iteration vector, the newly added element will be free (not bound)
-in the polytope. Use addConstraint or setZeroOtherwise to give the element a value.
-
-Adds a constraint to the 'iter' iterator. The constraint will be added only for the statements
-which are within the loop spawned by iterator 'iter' */
+/**
+ * Adds a constraint to the 'iter' iterator. The constraint will be added only for the statements
+ * which are within the loop spawned by iterator 'iter'
+ */
 void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom);
 
-/** After adding an iterator/parameter to the iteration vector, the newly added element will be free (not bound)
-in the polytope. Use addConstraint or setZeroOtherwise to give the element a value.
 
-Adds a constraint to a parameter of the SCoP. This constraint will be added to all the statements
-composing this SCoP. */
+/**
+ * Adds a constraint to a parameter of the SCoP. This constraint will be added to all the statements
+ * composing this SCoP.
+ */
 void addConstraint(Scop& scop, const Parameter& param, const IterationDomain& dom);
 
-/** After adding an iterator/parameter to the iteration vector, the newly added element will be free (not bound)
-in the polytope. Use addConstraint or setZeroOtherwise to give the element a value.
 
-Set an iterator domain to zero for all the statements which are not scheduled under this iterator. */
+/**
+ * Set an iterator domain to zero for all the statements which are not scheduled under this iterator
+ */
 void setZeroOtherwise(Scop& scop, const Iterator& iter);
 
 enum TransMode { SCHED_ONLY, ACCESS_ONLY, BOTH };
@@ -146,7 +158,7 @@ void dupStmt(Scop& scop, const unsigned& stmtId, const analysis::polyhedral::Aff
 
 
 std::pair<analysis::polyhedral::AffineConstraintPtr, core::ExpressionPtr> 
-stampFor(core::NodeManager& mgr, Scop& scop, const core::arithmetic::Formula& dom, unsigned tileSize);
+stampFor(core::NodeManager& mgr, Scop& scop, const core::VariablePtr& iter, const core::arithmetic::Formula& dom, unsigned tileSize);
 
 } // end polyhedral namespace
 } // end transform namespace 

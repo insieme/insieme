@@ -257,7 +257,7 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 void IterationVector::iterator::inc(size_t n) {
 	if (!valid || n==0) return;
 
-	std::vector<Iterator>::const_iterator&& iterEnd = iterVec.iters.end();
+	IterVec::const_iterator&& iterEnd = iterVec.iters.end();
 	size_t dist = std::distance(iterIt, iterEnd);
 	if (iterIt != iterEnd && dist>=n) {
 		iterIt+=n;
@@ -266,7 +266,7 @@ void IterationVector::iterator::inc(size_t n) {
 	iterIt = iterEnd;
 	n-=dist;
 
-	std::vector<Parameter>::const_iterator&& paramEnd = iterVec.params.end();
+	ParamVec::const_iterator&& paramEnd = iterVec.params.end();
 	dist = std::distance(paramIt, paramEnd);
 	if (paramIt != paramEnd && dist>=n) {
 		paramIt+=n;

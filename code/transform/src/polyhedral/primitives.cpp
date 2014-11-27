@@ -354,11 +354,11 @@ core::VariablePtr doStripMine(core::NodeManager& mgr, Scop& scop,
 
 	// Add a new loop and schedule it before the indexed loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
-	iterVec.add(newIter);
+	addTo(scop, newIter);
 
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
-	iterVec.add(Iterator(strideIter, true));
+	addTo(scop, Iterator(strideIter, true));
 
 	// Schedule the new loop before the loop we are going to stride
 	scheduleLoopBefore(scop, iter, newIter);
@@ -526,16 +526,22 @@ void dupStmt(Scop& scop, const unsigned& stmtId, const analysis::polyhedral::Aff
 
 
 std::pair<analysis::polyhedral::AffineConstraintPtr, core::ExpressionPtr> 
-stampFor(core::NodeManager& mgr, Scop& scop, const core::arithmetic::Formula& range, unsigned tileSize) {
+stampFor(core::NodeManager& mgr, 
+		 Scop& scop, 
+		 const core::VariablePtr& iter, 
+		 const core::arithmetic::Formula& range, 
+		 unsigned tileSize) 
+{
+	using analysis::polyhedral::AffineConstraintPtr;
 
 	core::IRBuilder builder(mgr);
 	IterationVector& iterVec = scop.getIterationVector();
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& exists1 = builder.variable(mgr.getLangBasic().getInt4());
-	iterVec.add(Iterator(exists1, true));
+	addTo(scop, Iterator(exists1, true));
 
 	core::VariablePtr&& exists2 = builder.variable(mgr.getLangBasic().getInt4());
-	iterVec.add(Iterator(exists2, true));
+	addTo(scop, Iterator(exists2, true));
 
 	AffineFunction f(iterVec, -range);
 	f.setCoeff(exists1, -tileSize);
@@ -554,6 +560,8 @@ stampFor(core::NodeManager& mgr, Scop& scop, const core::arithmetic::Formula& ra
 		AffineConstraint(f2, utils::ConstraintType::LT);
 
 	return std::make_pair(cons,exists2);
+	
+
 }
 
 } } } // end insimee::transform::polyhedral namespace 
