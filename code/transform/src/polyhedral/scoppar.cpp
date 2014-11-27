@@ -75,14 +75,14 @@ ProgramPtr& SCoPPar::apply() {
 	else LOG(WARNING) << "Program is already annotated, using existing annotations.";
 
 	LOG(WARNING) << "We found " << scops.size() << " SCoPs in the program." << std::endl;
-	for (NodeAddress scopnode: scops) {
-		annotations::LocationOpt loc=annotations::getLocation(scopnode);
+	for (NodeAddress scop: scops) {
+		annotations::LocationOpt loc=annotations::getLocation(scop);
 		if (loc) std::cout << "Found a SCoP at location " << *loc << "." << std::endl;
-		unsigned int s=size(scopnode.getAddressedNode());
-		std::cout << "\tscop # " << scopnode
-				  << " (size " << s << "; " << scop::ScopRegion::toScop(scopnode)->size() << ")"
-				  << std::endl << printer::PrettyPrinter(scopnode) << std::endl;
-		if (s<=4) std::cout << "parent: " << printer::PrettyPrinter(scopnode.getParentAddress()) << std::endl;
+		unsigned int s=size(scop.getAddressedNode());
+		std::cout << "\tscop # " << scop
+				  << " (size " << s << "; " << scop->getAnnotation(scop::ScopRegion::KEY)->getScop().size() << ")"
+				  << std::endl << printer::PrettyPrinter(scop) << std::endl;
+		if (s<=4) std::cout << "parent: " << printer::PrettyPrinter(scop.getParentAddress()) << std::endl;
 
 	}
 
