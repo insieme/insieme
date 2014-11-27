@@ -80,6 +80,19 @@ ExpressionAddress extractVariable(ExpressionAddress expr) {
 	return expr;
 }
 
+ExpressionAddress extractNonTupleVariable(ExpressionAddress expr) {
+	ExpressionAddress ret = extractVariable(expr);
+
+	pattern::TreePattern tupleType = pattern::aT(pattern::irp::tupleType(*pattern::any));
+
+	if(tupleType.matchAddress(ret->getType())) {
+		return ExpressionAddress();
+	}
+
+	return ret;
+}
+
+
 ExpressionPtr getBaseExpression(ExpressionPtr expr) {
 	ExpressionPtr baseExpr;
 	ia::RefList&& refs = ia::collectDefUse(expr);
@@ -384,6 +397,17 @@ StatementPtr allocTypeUpdate(const StatementPtr& stmt, pattern::TreePattern& old
 	return stmt;
 }
 
+ExpressionAddress removeMemLocationCreators(const ExpressionAddress& expr) {
+	if(const CallExprAddress call = expr.isa<CallExprAddress>()) {
+
+		pattern::TreePattern memLocCreator = pirp::refVar(pattern::any) | pirp::refNew(pattern::any) | pirp::refLoc(pattern::any);
+		if(memLocCreator.matchAddress(expr)) {
+			return removeMemLocationCreators(call[0]);
+		}
+	}
+
+	return expr;
+}
 
 } // datalayout
 } // transform
