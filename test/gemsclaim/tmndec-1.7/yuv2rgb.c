@@ -520,7 +520,8 @@ void deposterizeHfunc(uint32_t* data, uint32_t* out, int w, int l, int u, int sc
             uint32_t left = data[inpos - 1];
             uint32_t right = data[inpos + 1];
             out[y*w + x] = 0;
-            for(int c=0; c<3; ++c) {
+            // upper bound should be 3. 1 is valid if working with alpha component
+            for(int c=0; c<1; ++c) {
                 uint8_t lc = (( left>>c*8)&0xFF);
                 uint8_t cc = ((center>>c*8)&0xFF);
                 uint8_t rc = (( right>>c*8)&0xFF);
@@ -562,7 +563,8 @@ void deposterizeVfunc(uint32_t* data, uint32_t* out, int w, int h, int l, int u,
             uint32_t upper = data[(y-1) * w + x];
             uint32_t lower = data[(y+1) * w + x];
             out[y*w + x] = 0;
-            for(int c=0; c<3; ++c) {
+            // upper bound should be 3. 1 is valid if working with alpha component
+            for(int c=0; c<1; ++c) {
                 uint8_t uc = (( upper>>c*8)&0xFF);
                 uint8_t cc = ((center>>c*8)&0xFF);
                 uint8_t lc = (( lower>>c*8)&0xFF);
@@ -626,7 +628,7 @@ unsigned char *out;
     unsigned char * tmp_out = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
     unsigned char * tmp_out2 = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
 
-    #pragma omp parallel //objective(0*E+1*P+0*T:T<0.041) param(scaling, range(1: 8: 1))
+    #pragma omp parallel //objective(0*E+1*P+0*T+0*Q:T<0.041;Q<4) //param(scaling, range(1: 8: 1; 0: 7: 1))
     {
     #pragma omp for schedule(dynamic)
     //for (int yt=0; yt<rows*8; yt+=2)
@@ -663,7 +665,8 @@ unsigned char *out;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            *row1 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            row1++;
 
 #ifdef INTERPOLATE
             if(x != cols_2 - 1) {
@@ -682,7 +685,8 @@ unsigned char *out;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            *row1 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            row1++;
 
             /*
              * Now, do second row.
@@ -704,14 +708,16 @@ unsigned char *out;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            *row2 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            row2++;
 
             L = *lum2++;
             R = L + cr_r;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            *row2 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+            row2++;
 
             if(scaling > 1) {
                 int pos = row1 -1 -(unsigned int*)tmp_out;
