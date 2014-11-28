@@ -81,8 +81,11 @@ const char* irt_errcode_string(irt_errcode code) {
 		"IRT_ERR_APP",
 		"IRT_ERR_OCL",
 		"IRT_ERR_INSTRUMENTATION",
+		"IRT_ERR_INVALIDARGUMENT",
 		"IRT_ERR_HW_INFO",
-		"IRT_ERR_OMPP"
+		"IRT_ERR_OMPP",
+		"IRT_ERR_BLOB_CONTAINER",
+		//NOTE: When adding a new error string here also update the list of error codes in error_handling.h
 	};
 	return irt_errcode_strings[code];
 }
