@@ -136,10 +136,10 @@ TEST(DataLayout, AosToSoa) {
 //
 //	return;
 
+//	dumpPretty(code);
+
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
-
-//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -284,7 +284,7 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(69, numberOfCompoundStmts(code));
+	EXPECT_EQ(75, numberOfCompoundStmts(code));
 	EXPECT_EQ(13, countMarshalledAccesses(code));
 	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
@@ -323,10 +323,10 @@ TEST(DataLayout, Tuple) {
 		"}"
 	));
 
+//	dumpPretty(code);
+
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
-
-	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
