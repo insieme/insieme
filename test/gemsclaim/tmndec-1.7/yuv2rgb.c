@@ -625,8 +625,16 @@ unsigned char *out;
     //  region end
     // }
    
-    unsigned char * tmp_out = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
-    unsigned char * tmp_out2 = (unsigned char *)malloc(coded_picture_width*coded_picture_height*sizeof (int)); 
+    unsigned int *tmp_out, *tmp_out2;
+
+    if(expand) {
+        tmp_out = (unsigned int *)malloc(4*coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+        tmp_out2 = (unsigned int *)malloc(4*coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+    }
+    else {
+        tmp_out = (unsigned int *)malloc(coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+        tmp_out2 = (unsigned int *)malloc(coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+    }
 
     #pragma omp parallel //objective(0*E+1*P+0*T+0*Q:T<0.041;Q<4) //param(scaling, range(1: 8: 1; 0: 7: 1))
     {
@@ -648,8 +656,8 @@ unsigned char *out;
             unsigned char *cr = src[2] + offset;
             unsigned char *lum = src[0] + 2*(offset + (y/2) * cols_2);
             unsigned char *lum2 = src[0] + (offset + (y/2) * cols_2 + cols_2)*2;
-            unsigned int *row1 = (unsigned int*)tmp_out + 2*(offset + (y/2) * cols_2); 
-            unsigned int *row2 = (unsigned int*)tmp_out + (cols_2 + offset + (y/2) * cols_2)*2; 
+            unsigned int *row1 = tmp_out + 2*(offset + (y/2) * cols_2);
+            unsigned int *row2 = tmp_out + (cols_2 + offset + (y/2) * cols_2)*2; 
 
             CR = *cr++;
             CB = *cb++;
@@ -665,8 +673,7 @@ unsigned char *out;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row1 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            row1++;
+            *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
 
 #ifdef INTERPOLATE
             if(x != cols_2 - 1) {
@@ -685,8 +692,7 @@ unsigned char *out;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row1 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            row1++;
+            *row1++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
 
             /*
              * Now, do second row.
@@ -708,26 +714,24 @@ unsigned char *out;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row2 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            row2++;
+            *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
 
             L = *lum2++;
             R = L + cr_r;
             G = L + cr_g + cb_g;
             B = L + cb_b;
 
-            *row2 = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
-            row2++;
+            *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
 
             if(scaling > 1) {
-                int pos = row1 -1 -(unsigned int*)tmp_out;
+                int pos = row1 -1 -tmp_out;
                 int yy = pos / cols - scaling +1;
                 int xx = pos % cols - scaling;
 
                 for(int j=0; j<scaling; j++) {
                     for(int i=0; i<scaling; i++) {
                         if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
-                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row1-2);
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row1-2);
                     }
                 }
 
@@ -735,7 +739,7 @@ unsigned char *out;
                 for(int j=0; j<scaling; j++) {
                     for(int i=0; i<scaling; i++) {
                         if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
-                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row1-1);
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row1-1);
                     }
                 }
 
@@ -744,7 +748,7 @@ unsigned char *out;
                 for(int j=0; j<scaling; j++) {
                     for(int i=0; i<scaling; i++) {
                         if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
-                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row2-2);
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row2-2);
                     }
                 }
 
@@ -752,7 +756,7 @@ unsigned char *out;
                 for(int j=0; j<scaling; j++) {
                     for(int i=0; i<scaling; i++) {
                         if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
-                            *((unsigned int*)tmp_out + (yy+j)*cols + (xx+i)) = *(row2-1);
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row2-1);
                     }
                 }
             }
@@ -771,7 +775,12 @@ unsigned char *out;
     }
     else {
         #pragma omp single
-        memcpy(out, tmp_out, coded_picture_width*coded_picture_height*sizeof (int));
+        {
+            if(expand)
+                memcpy(out, tmp_out, 4*coded_picture_width*coded_picture_height*sizeof (unsigned int));
+            else
+                memcpy(out, tmp_out, coded_picture_width*coded_picture_height*sizeof (unsigned int));
+        }
     }
 
     } // parallel
