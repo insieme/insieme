@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -293,7 +293,6 @@ namespace cba {
 
 		EXPECT_EQ(toString(toVector(callerA,callerF)), toString(mgr.getCaller(calleeF))) << calleeF;
 		EXPECT_EQ(toString(toVector(callerG)), toString(mgr.getCaller(calleeG))) << calleeG;
-
 	}
 
 	TEST(CBA_Call_Site_Mgr, MutualRecursiveCalls_2) {

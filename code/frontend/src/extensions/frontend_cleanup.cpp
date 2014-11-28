@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,6 +46,11 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/ir_visitor.h"
+
+#include "insieme/core/pattern/rule.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/ir_generator.h"
+
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
 
@@ -131,6 +136,48 @@
 						return node;
 					});
 			return castRemover.map(prog);
+		}
+
+		//////////////////////////////////////////////////////////////////////
+		// Support alloca call
+		// ==============
+		//
+		// This step converts alloca calls to var calls which are semantically the same
+		insieme::core::NodePtr allocaCall (const insieme::core::NodePtr& prog){
+
+			using namespace core::pattern;
+			namespace p = core::pattern::irp;
+			namespace g = core::pattern::generator::irg;
+
+			auto& base = prog->getNodeManager().getLangBasic();
+
+			// get a few function symbols
+			auto reinterpret = base.getRefReinterpret();
+			auto alloca = p::literal("__builtin_alloca");
+			auto var = base.getRefVar();
+			auto createArray = base.getArrayCreate1D();
+
+			// build a transformation rule
+
+			Variable resType;
+			Variable elementType;
+
+			TreeGenerator gen = elementType;
+			Variable arrayType = Variable(p::arrayType(elementType));
+			Variable arrayTypeLiteral = Variable(p::typeLiteral(arrayType));
+			Variable size;
+			auto rule = Rule(
+					p::callExpr(resType, reinterpret, p::callExpr(alloca, p::binaryOp(size, any)) << arrayTypeLiteral),
+					g::callExpr(resType, var, g::callExpr(arrayType, createArray, g::typeLiteral(elementType), size))
+			);
+
+			// apply the transformation
+			auto allocaReplacer = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+				// apply rule on local node
+				auto mod = rule(node);
+				return (mod) ? mod : node;
+			});
+			return allocaReplacer.map(prog);
 		}
 
 		//////////////////////////////////////////////////////////////////////
@@ -240,6 +287,7 @@
 
 		tu = applyCleanup(tu, refDerefCleanup);
 		tu = applyCleanup(tu, castCleanup);
+		tu = applyCleanup(tu, allocaCall);
 		tu = applyCleanup(tu, superfluousCode);
 
 

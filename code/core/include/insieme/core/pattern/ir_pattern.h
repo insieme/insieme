@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -103,6 +103,10 @@ namespace irp {
 
 	inline TreePattern literal() {
 		return literal(any, any);
+	}
+
+	inline TreePattern typeLiteral(const TreePattern& type = pattern::any) {
+		return literal(genericType("type", single(type), empty), any);
 	}
 
 	inline TreePattern tupleType(const ListPattern& pattern) {
@@ -373,7 +377,13 @@ namespace irp {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefDeref(); }), refExpr);
 	}
 
+	inline TreePattern unaryOp(const TreePattern& a) {
+		return callExpr(any, a);
+	}
 
+	inline TreePattern binaryOp(const TreePattern& a, const TreePattern& b) {
+		return callExpr(any, a, b);
+	}
 
 } // end namespace irp
 } // end namespace pattern
