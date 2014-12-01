@@ -103,9 +103,8 @@ namespace ocl_kernel {
 
 			// The address spaces are deduced as follows:
 			//	- variables used to initialized values within the local declarations of
-			//		the global job are referencing memory locations within the global memory
+			//    the global job are referencing memory locations within the global memory
 			//	- all other variables are referencing local memory locations
-
 
 			// get outer-most job expression
 			core::JobExprPtr job = getGlobalJob(kernel);
@@ -369,12 +368,21 @@ namespace {
                 // first descent recursively
                 core::NodePtr res = ptr->substitute(manager, *this);
 
-                if (res->getNodeType() == core::NT_DeclarationStmt){
-                    auto&& var = res.as<core::DeclarationStmtPtr>()->getVariable();
-                    auto&& init = res.as<core::DeclarationStmtPtr>()->getInitialization();
-                    if (extensions.isGlobalType(var->getType()))
-                        return builder.declarationStmt(var, builder.callExpr(extensions.wrapGlobal, init));
-                }
+
+
+				// handle particular case:
+				// decl _ocl_global<...> v201 = var(_ocl_unwrap_global(v70)); ==>
+				// decl _ocl_global<...> v201 = _ocl_wrap_global(var(_ocl_unwrap_global(v70)));
+				insieme::core::pattern::TreePattern declWrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
+				if (res->getNodeType() == core::NT_DeclarationStmt){
+					auto&& var = res.as<core::DeclarationStmtPtr>()->getVariable();
+					auto&& init = res.as<core::DeclarationStmtPtr>()->getInitialization();
+					auto&& match = declWrapGlobal.matchPointer(init);
+					if (extensions.isGlobalType(var->getType()) && match){
+						return builder.declarationStmt(var, builder.callExpr(extensions.wrapGlobal, init));
+					}
+					return res;
+				}
 
 				// check whether it is a call to an external literal
 				if (res->getNodeType() != core::NT_CallExpr) {
@@ -382,27 +390,17 @@ namespace {
 				}
 
 				core::CallExprPtr call = res.as<core::CallExprPtr>();
-                core::ExpressionPtr fun = call->getFunctionExpr();
-				//if (fun->getNodeType() != core::NT_Literal) {
-				//	return res;
-				//}
+				core::ExpressionPtr fun = call->getFunctionExpr();
 
-				if (manager.getLangBasic().isBuiltIn(fun)) {
-					return res;
-				}
-
-				//if (!core::analysis::isCallOf(fun, manager.getLangBasic().getArrayRefElem1D())) return res;
-
-				// so, it is a literal => we have to unwrap potentially wrapped arguments
 				vector<core::ExpressionPtr> newArgs;
-                for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
-                    auto&& fit = std::find(varVec.begin(), varVec.end(), cur);
-                    if (unwrapAll || fit != varVec.end())
-                        newArgs.push_back(extensions.unWrapExpr(cur));
-                    else
-                        newArgs.push_back(cur);
+				for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
+					auto&& fit = std::find(varVec.begin(), varVec.end(), cur);
+					if (fit != varVec.end()){
+						newArgs.push_back(extensions.unWrapExpr(cur));}
+					else
+						newArgs.push_back(cur);
 				});
-				//std::cout << "!!! " << fun << " " << fun->getType() << fun->getNodeType() << std::endl;
+
 				return builder.callExpr(fun, newArgs);
 			}
 		};
@@ -454,7 +452,7 @@ namespace {
 						const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
 						assert(paramTypes.size() == newArgs.size());
 
-						// add type wrappers where necessary
+						// add type wrappers where necessary for the parameters of the kernel
 						for(std::size_t i = 0; i < paramTypes.size(); i++) {
 							if (extensions.isGlobalType(paramTypes[i])) {
 								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapGlobal, newArgs[i]);
@@ -518,7 +516,6 @@ namespace {
 						if(core::annotations::hasNameAttached(cur.first)) {
 							core::annotations::attachName(var, core::annotations::getAttachedName(cur.first));
 						}
-
 						auto pos = varMap.find(var);
 						if (pos != varMap.end()) {
                             // create a new variable with the right address space
@@ -530,34 +527,26 @@ namespace {
 						}
 					} else {
                         // we are in the case of local variables, for example:
-                        // cur.first => v86 cur.second => ref.var(undefined(vector<int<4>,258>
+						// cur.first  => v86
+						// cur.second => ref.var(undefined(vector<int<4>,258>
 
                         // build a local variable
 						core::VariablePtr var = builder.variable(extensions.getType(AddressSpace::LOCAL, cur.first->getType()), cur.first->getId());
                         // create a wrapper expression to use in the declaration later..
-                        core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
+						core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
 						localVars.insert(std::make_pair(var, value));
 
 						parameters.insert(std::make_pair(cur.first, var));
 					}
 				});
-				//std::cout << "      PARAM" << parameters << std::endl;
+
 
                 // replace parameters by variables with wrapped types
-				//core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::defaultTypeRecovery);
 				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, parameters, false));
-                //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
+				//std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core)  << std::endl;
 
-                // unwrap types before being passed to build-in / external functions
-				//LOG(INFO) << "Before Unwrap: " << core::printer::PrettyPrinter(core);
-				//LOG(INFO) << "Errors Before Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
-				//core = unwrapTypes(core);
-				//LOG(INFO) << "After Unwrap: " << core::printer::PrettyPrinter(core);
-				//LOG(INFO) << "Errors After Unwrap: " << core::checks::check(core, core::checks::getFullCheck());
-
-                // search for float* gl = &g[0]; || float* gl = &g[3]; where g is global
-                // so we can add then the __global to gl
-                utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varToGlobalize;
+				// float* gl = &g[0] where g is global => __global float* gl
+				utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varToGlobalize;
                 std::vector<core::VariablePtr> varVec;
                 insieme::core::pattern::TreePattern declUnwrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
                 visitDepthFirst(core, [&](const core::DeclarationStmtPtr& decl) {
@@ -575,27 +564,22 @@ namespace {
                     }
                 });
 
-                core = core::transform::replaceVarsRecursiveGen(manager, core, varToGlobalize, false, core::transform::no_type_fixes);
-
-                core = unwrapTypes(core, varVec);
-
-                /*
-				// replace parameters by variables with wrapped types
-				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, id<core::CallExprPtr>());
-
-				// unwrap types before being passed to build-in / external functions
-				core = unwrapTypes(core);
-                */
+				core = core::transform::replaceVarsRecursiveGen(manager, core, varToGlobalize, false, core::transform::no_type_fixes);
+				//std::cout << "CORE OUTPUT 2: " << core::printer::PrettyPrinter(core)  << std::endl;
 
 				// add locals ...
 				if (!localVars.empty()) {
 					vector<core::StatementPtr> stmts;
 					for_each(localVars, [&](const VariableMap::value_type& cur) {
 						stmts.push_back(builder.declarationStmt(cur.first, cur.second));
+						varVec.push_back(cur.first);
 					});
 					stmts.push_back(core);
 					core = builder.compoundStmt(stmts);
 				}
+
+				core = unwrapTypes(core, varVec);
+
 
 
 				// ------------------------- Replace build-in literals ---------------------------
@@ -634,11 +618,6 @@ namespace {
 
                 //LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
                 //std::cout << "Core After: " << core::printer::PrettyPrinter(core) << std::endl;
-
-                /*visitDepthFirst(core, [&](const core::DeclarationStmtPtr& decl) {
-                    std::cout << "ECCOXX " << decl << std::endl;
-                });*/
-
 
 				// ------------------ Create resulting lambda expression -------------------
 
