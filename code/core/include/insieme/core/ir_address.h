@@ -591,6 +591,18 @@ namespace core {
 			// use the path comparison operation
 			return path < other.getPath();
 		}
+		template<typename S>
+		bool operator<=(const Address<S>& other) const {
+			return *this < other || this == other;
+		}
+		template<typename S>
+		bool operator>=(const Address<S>& other) const {
+			return !(*this < other);
+		}
+		template<typename S>
+		bool operator>(const Address<S>& other) const {
+			return !(*this <= other);
+		}
 
 		/**
 		 * Obtains a hash value for this address.
