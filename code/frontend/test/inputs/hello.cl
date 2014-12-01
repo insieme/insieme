@@ -41,7 +41,7 @@
 float4 subfunction(float4 a) {
 	float b = cos(a.z);
 	return (float4)(b, a.w, a.w, a.y);
-	//return (float4)(b, get_local_id(1);, a.w, a.y); // TODO: Handle builtin in subfunction
+	//return (float4)(b, get_local_id(1), a.w, a.y); // TODO: Handle builtin in subfunction
 }
 
 #pragma insieme mark

@@ -657,6 +657,8 @@ namespace {
 
 				LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
 				LOG(INFO) << "Errors After Kernel preprocess: " << core::checks::check(newKernel, core::checks::getFullCheck());
+				auto err = core::checks::check(newKernel, core::checks::getFullCheck());;
+				assert(err.empty() && "YEAHHH... You broke the OpenCL Backend!!!");
 				return res;
 			}
 		};
