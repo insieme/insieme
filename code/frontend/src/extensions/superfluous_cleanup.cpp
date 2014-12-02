@@ -304,6 +304,7 @@ void removeObviouslySuperfluousCode(tu::IRTranslationUnit& trans) {
 
 insieme::frontend::tu::IRTranslationUnit SuperfluousCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
 		cleanup::removeObviouslySuperfluousCode(tu);
+		return tu;
 }
 
 } // frontend
