@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -66,15 +66,16 @@ extern irt_spinlock irt_g_##__type__##_table_locks[__num_buckets__];
 static inline void irt_##__type__##_table_init_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
 	for(int i=0; i<__num_buckets__; ++i) { \
 		table[i] = NULL; \
-        if(__locked__) { \
-		if(irt_spin_init(&table_locks[i]) != 0) { \
-			irt_throw_string_error(IRT_ERR_INIT, "Failed initializing locks for " #__type__ " lookup table."); \
+		if(__locked__) { \
+			if(irt_spin_init(&table_locks[i]) != 0) { \
+				irt_throw_string_error(IRT_ERR_INIT, "Failed initializing locks for " #__type__ " lookup table."); \
+			} \
 		} \
-        } \
 	} \
 } \
-static inline void irt_##__type__##_table_clear_impl(irt_##__type__** table) { \
+static inline void irt_##__type__##_table_clear_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
 	for(int i=0; i<__num_buckets__; ++i) { \
+		if(__locked__) irt_spin_lock(&table_locks[i]); \
 		irt_##__type__ *element = table[i], *temp; \
 		while(element) { \
 			temp = element->__next_name__; \
@@ -82,15 +83,16 @@ static inline void irt_##__type__##_table_clear_impl(irt_##__type__** table) { \
 			element = temp; \
 		} \
 		table[i] = NULL; \
+		if(__locked__) irt_spin_unlock(&table_locks[i]); \
 	} \
 } \
 static inline void irt_##__type__##_table_cleanup_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
-	irt_##__type__##_table_clear_impl(table); \
-    if(__locked__) { \
-	for(int i=0; i<__num_buckets__; ++i) { \
-		irt_spin_destroy(&table_locks[i]); \
+	irt_##__type__##_table_clear_impl(table, table_locks); \
+	if(__locked__) { \
+		for(int i=0; i<__num_buckets__; ++i) { \
+			irt_spin_destroy(&table_locks[i]); \
+		} \
 	} \
-    } \
 } \
 \
 static inline void irt_##__type__##_table_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
@@ -158,25 +160,25 @@ static inline void irt_##__type__##_table_remove_impl(irt_##__type__** table, ir
 #define IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
 IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
 static inline void irt_##__type__##_table_init() { \
-    irt_##__type__##_table_init_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
+	irt_##__type__##_table_init_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
 static inline void irt_##__type__##_table_clear() { \
-    irt_##__type__##_table_clear_impl(irt_g_##__type__##_table); \
+	irt_##__type__##_table_clear_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
 static inline void irt_##__type__##_table_cleanup() { \
-    irt_##__type__##_table_cleanup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
+	irt_##__type__##_table_cleanup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
 static inline void irt_##__type__##_table_insert(irt_##__type__* element) { \
-    irt_##__type__##_table_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
+	irt_##__type__##_table_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id id) { \
-    return irt_##__type__##_table_lookup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
+	return irt_##__type__##_table_lookup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__type__* element) { \
-    return irt_##__type__##_table_lookup_or_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
+	return irt_##__type__##_table_lookup_or_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
 } \
 static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
-    irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
+	irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
 }
 
 #define IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
