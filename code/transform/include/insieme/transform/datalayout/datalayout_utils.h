@@ -44,6 +44,8 @@ namespace datalayout {
 
 core::ExpressionAddress extractVariable(core::ExpressionAddress expr);
 
+core::ExpressionAddress extractNonTupleVariable(core::ExpressionAddress expr);
+
 core::ExpressionPtr getBaseExpression(core::ExpressionPtr expr);
 
 /*
@@ -59,7 +61,7 @@ core::TypePtr removeRef(core::TypePtr refTy);
 
 core::TypePtr removeRefArray(core::TypePtr refTy);
 
-core::TypePtr getBaseType(core::TypePtr type, core::StringValuePtr field);
+core::TypePtr getBaseType(core::TypePtr type, core::StringValuePtr field = core::StringValuePtr());
 
 core::ExpressionPtr valueAccess(core::ExpressionPtr thing, core::ExpressionPtr index, core::StringValuePtr field,
 		core::ExpressionPtr vecIndex = core::ExpressionPtr());
@@ -78,6 +80,7 @@ bool isInsideJob(core::NodeAddress toTest);
 core::StatementPtr allocTypeUpdate(const core::StatementPtr& stmt, core::pattern::TreePattern& oldStructTypePattern,
 		core::pattern::TreePattern& newStructTypePattern);
 
+core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress& expr);
 } // datalayout
 } // transform
 } // insieme

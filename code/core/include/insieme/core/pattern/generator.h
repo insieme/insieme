@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -431,12 +431,12 @@ namespace pattern {
 				}
 
 				core::NodeType getNodeType() const {
-					assert(type != -1 && "Node is not generating an IR Node!");
+					assert_ne(type, -1) << "Node is not generating an IR Node: " << *this;
 					return core::NodeType(type);
 				}
 
 				char getId() const {
-					assert(id != -1 && "Node is not generating a Tree Node!");
+					assert_ne(id, -1) << "Node is not generating a Tree Node: " << *this;
 					return char(id);
 				}
 			};

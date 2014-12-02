@@ -647,14 +647,14 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 	IterationVector ret, saveThen, saveElse;
 	bool isThenSCOP = true, isElseSCOP = true;
 
-	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(ifStmt);
-	if (sr) {
-		if (!sr->valid) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
+	if (ifStmt->hasAnnotation(scop::ScopRegion::KEY)) {
+		scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
+		if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
 
 		// if the SCopRegion annotation is already attached, it means we already visited this
 		// function, therefore we can return the iteration vector already precomputed
 		subScops.push_back(ifStmt);
-		return sr->getIterationVector();
+		return ann.getIterationVector();
 	}
 
 	ExpressionAddress condAddr = ifStmt->getCondition();
@@ -742,9 +742,9 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 				);
 
 	// Checkpost conditions
-	assert (scop::ScopRegion::isMarked(ifStmt) &&
-			scop::ScopRegion::isMarked(ifStmt->getThenBody()) &&
-			scop::ScopRegion::isMarked(ifStmt->getElseBody()) &&
+	assert (ifStmt->hasAnnotation(scop::ScopRegion::KEY) &&
+			ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY) &&
+			ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY) &&
 			"IfStmt Post-Conditions check failed"
 			);
 
@@ -759,20 +759,20 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 	STACK_SIZE_GUARD;
 	//LOG(INFO) << "visitSwitchStmt:\n" << printer::PrettyPrinter(switchStmt);
 
-	boost::optional<scop::ScopRegion> sr=scop::ScopRegion::toScopRegion(switchStmt);
-	if (sr) {
-		if (!sr->valid) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
+	if (switchStmt->hasAnnotation(scop::ScopRegion::KEY)) {
+		scop::ScopRegion& ann = *switchStmt->getAnnotation(scop::ScopRegion::KEY);
+		if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
 
 		// if the SCopRegion annotation is already attached, it means we already visited this
 		// compoundstmt, therefore we can return the iteration vector already precomputed
 		subScops.push_back(switchStmt);
-		return sr->getIterationVector();
+		return ann.getIterationVector();
 	}
 
 	IterationVector ret;
 
 	bool isSCoP = true;
-	//IRBuilder builder(switchStmt->getNodeManager());
+	IRBuilder builder(switchStmt->getNodeManager());
 
 	std::list<SubScop> scops;
 	IterationDomain defaultCons(ret); // TODO: replace with universe constraint
@@ -801,7 +801,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// If the case statement is not a compound statement, the ScopRegion annotation will
 			// not be inserted by default. Therefore we add the annotation to simplify the
 			// resolution of the SCoP when the analysis is invoked
-			assert (scop::ScopRegion::isMarked(stmtAddr));
+			assert (stmtAddr->hasAnnotation(scop::ScopRegion::KEY));
 
 			AffineFunction af(ret, arithmetic::toFormula(switchStmt->getSwitchExpr()) -
 							  arithmetic::toFormula(exprAddr.getAddressedNode()));
@@ -831,7 +831,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// If the case statement is not a compound statement, the ScopRegion annotation will
 			// not be inserted by default. Therefore we add the annotation to simplify the
 			// resolution of the SCoP when the analysis is invoked
-			assert (scop::ScopRegion::isMarked(defAddr));
+			assert (defAddr->hasAnnotation(scop::ScopRegion::KEY));
 
 			ret = merge(ret, iv);
 			scops.push_back(SubScop(defAddr, defaultCons));
@@ -847,8 +847,9 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// get the addess of the expression of this case stmt
 			StatementAddress caseStmtAddr = cases[caseID]->getBody();
 
-			if (scop::ScopRegion::isMarked(caseStmtAddr))
-				postProcessSCoP(caseStmtAddr, scopList);
+			if(caseStmtAddr->hasAnnotation(scop::ScopRegion::KEY)) {
+				postProcessSCoP(caseStmtAddr, scopList) ;
+			}
 
 		}
 		assert (ex);
@@ -871,33 +872,20 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 	return ret;
 }
 
-/** registerSeenNode is a private helper function to reduce code bloat. It may need to be rewritten at a later point
-in time. Its goal is to record a given NodeAddress into the list of sub-SCoPs, and return the iteration vector,
-if the iteration vector is already known from previous encounters. Will return no iteration vector if it has yet
-to be computed. */
-boost::optional<IterationVector> ScopVisitor::registerSeenNode(const NodeAddress &n, std::vector<NodeAddress> &subscops) {
-	boost::optional<IterationVector> iv;
-
-	// if we already have visited this node, we avoid re-computation and return the memoized iteration vector instead
-	if (scop::ScopRegion::isMarked(n)) {
-		boost::optional<scop::ScopRegion> scopregion=*n->getAnnotation(scop::ScopRegion::KEY);
-		//auto scopregion=scop::ScopRegion::toScopRegion(n);
-		if (!scopregion || !scopregion->valid) THROW_EXCEPTION(NotASCoP, "", n.getAddressedNode());
-
-		// register the current node in the subscop list, and return the memoized iteration vector
-		subscops.push_back(n);
-		return scopregion->getIterationVector();
-	}
-	return iv;
-}
-
 IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 	STACK_SIZE_GUARD;
+
 	assert(subScops.empty());
 
-	//LOG(WARNING) << "visitForStmt with " << (scop::ScopRegion::isMarked(forStmt)? "already " : "un") << "known node";
-	auto iv=registerSeenNode(forStmt, subScops);
-	if (iv) return *iv;
+	// if we already visited this forStmt, just return the precomputed iteration vector
+	if (forStmt->hasAnnotation(scop::ScopRegion::KEY)) {
+		scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
+		if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", forStmt.getAddressedNode()); }
+
+		// return the cached value
+		subScops.push_back(forStmt);
+		return ann.getIterationVector();
+	}
 
 	// Create a new scope for region stmts
 	regionStmts.push(RegionStmtStack::value_type());
@@ -905,10 +893,14 @@ IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 	{
 		// remove element from the stack of statements from all the exit paths
 		FinalActions fa([&] () -> void { regionStmts.pop(); subScops.clear(); });
+
 		IterationVector&& bodyIV = visitStmt(forStmt->getBody()), ret;
+
 		ForStmtPtr forPtr = forStmt.getAddressedNode();
 		ret.add(Iterator(forPtr->getIterator()));
+
 		NodeManager& mgr = forStmt->getNodeManager();
+		IRBuilder builder(mgr);
 
 		try {
 			ret= merge(ret, bodyIV);
@@ -920,19 +912,22 @@ IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 			// Check the lower bound of the loop
 
 			Formula &&step= arithmetic::toFormula(forPtr->getStep());
-			if (!step.isConstant()) THROW_EXCEPTION(
+			if (!step.isConstant()) {
+				THROW_EXCEPTION(
 					NotASCoP, "Non constant stride in for statement not supported", forStmt.getAddressedNode());
+			}
 
 			AffineConstraintPtr bounds= buildStridedDomain<ExpressionPtr>(
 				mgr, ret, forStmt->getIterator(), forStmt->getStart(), forPtr->getEnd(), step);
-			IterationDomain cons(bounds);
 
-			assert(!scop::ScopRegion::isMarked(forStmt));
+			IterationDomain cons(bounds);
+			assert(!forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
 			forStmt->addAnnotation(std::make_shared<scop::ScopRegion>(
 				forStmt.getAddressedNode(), ret, cons, regionStmts.top(), toSubScopList(ret, subScops)));
-			assert(scop::ScopRegion::isMarked(forStmt));
 
 			fa.setEnabled(false);
+
 			regionStmts.pop();
 			subScops.clear();
 
@@ -959,7 +954,7 @@ IterationVector ScopVisitor::visitWhileStmt(const WhileStmtAddress& whileStmt) {
 	visit(whileStmt->getBody());
 
 	// Add eventual sub scops to the list of discovered top level scops
-	if (scop::ScopRegion::isMarked(whileStmt)) {
+	if (whileStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY)) {
 		postProcessSCoP(whileStmt->getBody(), scopList);
 	}
 
@@ -978,8 +973,16 @@ IterationVector ScopVisitor::visitCompoundStmt(const CompoundStmtAddress& compSt
 	std::vector<NodeAddress> scops;
 
 	assert(subScops.empty());
-	auto iv=registerSeenNode(compStmt, subScops);
-	if (iv) return *iv;
+
+	if (compStmt->hasAnnotation(scop::ScopRegion::KEY)) {
+		scop::ScopRegion& ann = *compStmt->getAnnotation(scop::ScopRegion::KEY);
+		if (!ann.valid) { THROW_EXCEPTION(NotASCoP, "", compStmt.getAddressedNode()); }
+
+		// if the SCopRegion annotation is already attached, it means we already visited this
+		// compoundstmt, therefore we can return the iteration vector already precomputed
+		subScops.push_back(compStmt);
+		return ann.getIterationVector();
+	}
 
 	regionStmts.push(RegionStmtStack::value_type());
 
@@ -1023,8 +1026,9 @@ IterationVector ScopVisitor::visitCompoundStmt(const CompoundStmtAddress& compSt
 				addr = AS_STMT_ADDR(addr.getAddressOfChild((addr->getNodeType()==NT_MarkerStmt?1:2))); // sub-statement or expression
 			}
 
-			if (scop::ScopRegion::isMarked(addr))
+			if (addr->hasAnnotation(scop::ScopRegion::KEY)) {
 				postProcessSCoP(addr, scopList);
+			}
 		}
 		assert(cause);
 		RETHROW_EXCEPTION(NotASCoP, *cause, "", compStmt.getAddressedNode());
@@ -1058,8 +1062,15 @@ IterationVector ScopVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
 IterationVector ScopVisitor::visitLambda(const LambdaAddress& lambda) {
 	STACK_SIZE_GUARD;
 
-	auto iv=registerSeenNode(lambda, subScops);
-	if (iv) return *iv;
+	//LOG(INFO) << "visitLambda:\n" << printer::PrettyPrinter(lambda);
+	assert(subScops.empty());
+
+	if (lambda->hasAnnotation(scop::ScopRegion::KEY)) {
+		// if the SCopRegion annotation is already attached, it means we already visited this
+		// function, therefore we can return the iteration vector already precomputed
+		subScops.push_back(lambda);
+		return lambda->getAnnotation(scop::ScopRegion::KEY)->getIterationVector();
+	}
 
 	IterationVector bodyIV;
 	// otherwise we have to visit the body and attach the ScopRegion annotation
@@ -1071,7 +1082,7 @@ IterationVector ScopVisitor::visitLambda(const LambdaAddress& lambda) {
 		StatementAddress addr = AS_STMT_ADDR(lambda->getBody());  /*getBody()*/
 		bodyIV = visitStmt(addr);
 
-		assert(scop::ScopRegion::isMarked(addr));
+		assert (addr->hasAnnotation(scop::ScopRegion::KEY));
 		assert(subScops.size() == 1 && "A Lambda cannot have more than one sub SCoP");
 
 		lambda->addAnnotation(
@@ -1094,6 +1105,8 @@ IterationVector ScopVisitor::visitLambda(const LambdaAddress& lambda) {
 
 IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 	STACK_SIZE_GUARD;
+	//LOG(INFO) << "visitCallExpr:\n" << printer::PrettyPrinter(callExpr);
+
 	const NodeAddress& func = callExpr->getFunctionExpr();
 	const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 
@@ -1144,11 +1157,13 @@ IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 		bool outlineAble = transform::isOutlineAble(lex->getBody());
 		if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode());
 
-		boost::optional<scop::ScopRegion> lambda = scop::ScopRegion::toScopRegion(lambdaScop.getAddressedNode());
-		const std::vector<scop::Stmt>& stmts = lambda->getDirectRegionStmts();
+		const scop::ScopRegion& lambda = *lambdaScop->getAnnotation(scop::ScopRegion::KEY);
+		const std::vector<scop::Stmt>& stmts = lambda.getDirectRegionStmts();
 
 		std::copy(stmts.begin(), stmts.end(), std::back_inserter(regionStmts.top()));
-		for (auto cur: lambda->getSubScops()) scops.push_back(cur.first);
+
+		auto lambdaSubScops = lambda.getSubScops();
+		for_each(lambdaSubScops.begin(), lambdaSubScops.end(), [&](const SubScop& cur) { scops.push_back(cur.first); });
 	}
 
 	subScops.clear();

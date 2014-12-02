@@ -630,8 +630,6 @@ void KernelReplacer::replaceKernels() {
 
 	// look for create kernel statements and replace them with new
 	irp::matchAllPairs(createKernelPattern, NodeAddress(prog), [&](const NodeAddress& matchAddress, const AddressMatch& createKernel) {
-		std::cout << "found ther create Kernel\n";
-
 		ExpressionPtr cKexpr = createKernel["createKernel"].getValue().getAddressedNode().as<ExpressionPtr>();
 		ExpressionPtr k = utils::getRootVariable(matchAddress >> createKernel["kernel"].getValue()).getAddressedNode().as<ExpressionPtr>();
 

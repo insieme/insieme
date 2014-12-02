@@ -92,6 +92,9 @@ namespace pattern {
 		Variable(const char* name, const TreePattern& pattern)
 			: name(name), pVar(var(name, pattern)), gVar(generator::var(name)) {}
 
+		explicit Variable(const TreePattern& pattern)
+			: name(detail::getFreshVarName()), pVar(var(name, pattern)), gVar(generator::var(name)) {}
+
 		Variable(const Variable& other) = default;
 
 		Variable(Variable&& other) = default;
