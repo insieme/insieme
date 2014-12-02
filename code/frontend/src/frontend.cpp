@@ -123,16 +123,9 @@ namespace frontend {
         	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
 		}
 
-      	registerFrontendPlugin<FrontendCleanup>();
+		registerFrontendPlugin<FrontendCleanup>();
 		registerFrontendPlugin<extensions::AnonymousRename>();
-
-	    for(auto plugin : getPlugins()) {
-            for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
-                addSystemHeadersDirectory(kidnappedHeader);
-            }
-        }
-
-    }
+	}
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
