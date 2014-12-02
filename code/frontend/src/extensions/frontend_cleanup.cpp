@@ -44,12 +44,13 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/checks/full_check.h"
+
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
-
-#include "insieme/core/checks/full_check.h"
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
@@ -67,12 +68,8 @@
 
 #include <functional>
 
-//#include <boost/algorithm/string/predicate.hpp>
-
-
- namespace insieme {
- namespace frontend {
-
+namespace insieme {
+namespace frontend {
 	namespace {
 
 		/**
@@ -241,8 +238,7 @@
 		tu = applyCleanup(tu, refDerefCleanup);
 		tu = applyCleanup(tu, castCleanup);
 		tu = applyCleanup(tu, superfluousCode);
-
-
+		
 		//////////////////////////////////////////////////////////////////////
 		// Malloc
 		// ==============
@@ -375,7 +371,6 @@ namespace {
 
 	}
 
-
 } // annonymous namespace
 
     stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
@@ -387,7 +382,7 @@ namespace {
 			core::IRBuilder builder (convFact.getNodeManager());
 
 			// stores the last expression returned to avoid writting a dead read
-			core::StatementPtr lastExpr;	
+			core::StatementPtr lastExpr;
 			// the extracted statements, only if this list is not empty the transformation is done
 			core::StatementList prependStmts;
 
