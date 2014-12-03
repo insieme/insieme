@@ -162,7 +162,7 @@ void irt_optimizer_objective_destroy(irt_context *context) {
 
 /* return 1 if res2 satisfies objective clause and it's better than res1, 0 otherwise */
 int is_objective_satisfied(ompp_objective_info obj, irt_optimizer_resources res1, irt_optimizer_resources res2) {
-    if(res2.cpu_energy < res1.cpu_energy && res2.wall_time < obj.time_max * 1e9 && res2.quality <= obj.quality_max * obj.param_count)
+    if(res2.cpu_energy < res1.cpu_energy && res2.wall_time < obj.time_max * 1e9 && res2.quality < obj.quality_max * obj.param_count)
         return 1;
     else
         return 0;
@@ -185,23 +185,9 @@ uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub,
         variant->rt_data.optimizer_rt_data.param_qual_range.step[id] = qual_st;
     }
 
-    uint64 res;
-    if(variant->rt_data.optimizer_rt_data.cur.param_value[id] == UINT64_MAX) {
-        // random value
-        do {
-            res = rand() % (max +1);
-        } while(variant->meta_info->ompp_objective.quality_max < qual_lb + res * qual_st);
-        IRT_OMPP_OPTIMIZER_PRINT("%s: rand res %" PRIu64 "\n", __func__, res);
-    }
-    else if(variant->rt_data.optimizer_rt_data.cur.param_value[id] > max)
-        res = max;
-    else 
-        res = variant->rt_data.optimizer_rt_data.cur.param_value[id];
+    variant->rt_data.optimizer_rt_data.cur.param_value[id] %= (max +1);
 
-    variant->rt_data.optimizer_rt_data.cur.param_value[id] = res;
-    variant->rt_data.optimizer_rt_data.cur_resources.quality += qual_lb + res * qual_st;
-
-    return res;
+    return variant->rt_data.optimizer_rt_data.cur.param_value[id];
 }
 
 irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objective_info obj) {
@@ -279,6 +265,7 @@ irt_optimizer_wi_data_id hill_climb(irt_optimizer_runtime_data* data, ompp_objec
 
             // if last element in solution, stop
             if(data->hc_elem == (uint64*)&(data->best.eos) - (uint64*)&(data->best)) {
+                printf("BEST: frequency %" PRIu64 " threads count %" PRIu64 " param value %" PRIu64 " time %" PRIu64 " energy %f\n", data->best.frequency, data->best.thread_count +1, data->best.param_value[0], data->cur_resources.wall_time, data->best_resources.cpu_energy);
                 data->hc_end = true;
                 return data->best;
             }
@@ -343,6 +330,9 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
 
             variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy = cur_resources.cpu_energy - variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy;
             variant->rt_data.optimizer_rt_data.cur_resources.wall_time = cur_resources.wall_time - variant->rt_data.optimizer_rt_data.cur_resources.wall_time;
+            variant->rt_data.optimizer_rt_data.cur_resources.quality = 0;
+            for(int i=0; i<variant->meta_info->ompp_objective.param_count; i++)
+                variant->rt_data.optimizer_rt_data.cur_resources.quality += variant->rt_data.optimizer_rt_data.cur.param_value[i];
 
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
             if(variant->rt_data.optimizer_rt_data.cur_resources.cpu_energy) {
@@ -397,7 +387,8 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
 #else
                 new_element.thread_count = irt_g_worker_count -1;
 #endif
-                // param_value = -1 random (memset)
+                for(int i=0; i<variant->meta_info->ompp_objective.param_count; i++)
+                    new_element.param_value[i] = rand(); 
             }
             else {
                 // second step: hill climbing

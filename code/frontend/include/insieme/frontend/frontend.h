@@ -337,7 +337,10 @@ namespace frontend {
          */
         template <class T, class ... Args>
         void registerFrontendPlugin(const Args& ... args) {
-            plugins.push_back(std::make_shared<T>(args ...));
+			plugins.push_back(std::make_shared<T>(args ...));
+			for(auto kidnappedHeader : plugins.back()->getKidnappedHeaderList()) {
+				addSystemHeadersDirectory(kidnappedHeader);
+			}
         };
 
         /**
