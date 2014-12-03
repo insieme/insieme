@@ -41,11 +41,12 @@
 
 using namespace insieme;
 
-class GemsclaimPlugin : public insieme::frontend::extensions::FrontendPlugin {
+class CrossCompilationPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 public:
-        GemsclaimPlugin() {
-                kidnappedHeaders.push_back(GEM_SYSTEM_HEADER_REPLACEMENTS_DIR);
-			    macros["_GEM"] = "";
+        CrossCompilationPlugin(const std::string& systemHeadersDir) {
+                kidnappedHeaders.push_back(systemHeadersDir);
+
+                #include "insieme/frontend/extensions/crosscompilation_macros.inl"
         }
 };
