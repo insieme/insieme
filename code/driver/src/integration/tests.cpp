@@ -49,6 +49,7 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/extensions/superfluous_cleanup.h"
 
 namespace insieme {
 namespace driver {
@@ -444,6 +445,7 @@ namespace integration {
 		// load code using frontend - using given options
 		auto job = frontend::ConversionJob(curCase->getFiles(), curCase->getIncludeDirs());
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
+		job.registerFrontendPlugin<frontend::SuperfluousCleanup>();
 
 		// add pre-processor definitions
 		for(const auto& cur : definitions) {

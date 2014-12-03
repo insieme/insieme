@@ -42,6 +42,7 @@
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/annotations/source_location.h"
@@ -185,7 +186,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 		if (fit != scop.end()) {
 			// found stmt containing the requested expression 
-			return (*fit)->getDomain();
+			return (*fit)->iterdomain;
 		}
 
 		IterationDomain domain( scop.getIterationVector(), 
@@ -319,8 +320,15 @@ std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched)
 
 //==== Stmt ==================================================================================
 
+/// Stmt copy constructor
+Stmt::Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
+	addr(other.addr), schedule(iterVec, other.schedule), id(id), iterdomain(iterVec, other.iterdomain) {
+	for_each(other.accessmtx, [&](const AccessInfoPtr &cur) {
+		accessmtx.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
+	});
+}
+
 std::vector<core::VariablePtr> Stmt::loopNest() const {
-	
 	std::vector<core::VariablePtr> nest;
 	for_each(getSchedule(),	[&](const AffineFunction& cur) { 
 		const IterationVector& iv = cur.getIterationVector();
@@ -346,54 +354,22 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	core::annotations::LocationOpt loc=core::annotations::getLocation(addr);
 	if (loc) out << "\tlocation   \t" << *loc << std::endl;
 	out << "\tnode       \t" << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
-	out << "\titer domain\t" << dom << std::endl;
+	out << "\titer domain\t" << iterdomain << std::endl;
 	out << "\tschedule   \t" << std::endl << schedule;
 
 	// Prints the list of accesses for this statement 
 	out << "\taccess     \t" << std::endl;
-	for_each(access_begin(), access_end(), [&](const AccessInfoPtr& cur){ out << *cur; });
+	for (auto it=accessmtx.begin(); it!=accessmtx.end(); ++it) out << *it;
 
 	auto&& ctx = makeCtx();
-	out << "\tcardinality\t" << *makeSet(ctx, dom)->getCard() << std::endl;
+	out << "\tcardinality\t" << *makeSet(ctx, iterdomain)->getCard() << std::endl;
 
 	return out;
 }
 
-boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt) {
-
-	NodePtr root = stmt.getRootNode();
-	scop::AddressList&& addrs = scop::mark( root );
-
-	// we have to fing whether the top level of this scop contains stmt
-	auto fit = find_if(addrs.begin(), addrs.end(), [&](const NodeAddress& cur) { 
-			if ( core::isChildOf(cur, core::static_address_cast<const Node>(stmt)) ) { 
-				return true; 
-			}
-			return false;
-		});
-	
-	if (fit == addrs.end()) {
-		// the address is not inside any of the top level scops for this region
-		return boost::optional<const Stmt&>();
-	}
-	
-	assert( fit->getAddressedNode()->hasAnnotation(scop::ScopRegion::KEY) );
-	scop::ScopRegion& reg = *fit->getAddressedNode()->getAnnotation(scop::ScopRegion::KEY);
-
-	// find the statement inside this region 
-	Scop& scop = reg.getScop();
-
-	auto fit2 = find_if(scop.begin(), scop.end(), 
-			[&](const StmtPtr& cur) { return cur->getAddr() == stmt; });
-
-	assert(fit2 != scop.end());
-
-	return boost::optional<const Stmt&>(**fit2);
-}
-
-unsigned Stmt::getSubRangeNum() const {
+unsigned Stmt::getSubRangeNum() {
 	bool ranges = 0;
-	for_each(access_begin(), access_end(), [&] (const AccessInfoPtr& cur) { 
+	for_each(accessmtx.begin(), accessmtx.end(), [&] (AccessInfoPtr& cur) {
 			if (!cur->getDomain().universe()) { ++ranges; }
 		});
 	return ranges;
@@ -432,9 +408,9 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 /// Returns true if the given NodePtr has a SCoP annotation, false otherwise. Can be called directly,
 /// with explicit scoping.
 bool Scop::hasScopAnnotation(insieme::core::NodePtr p) {
-    if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
-    auto annot=p->getAnnotation(scop::ScopRegion::KEY);
-    return annot->valid;
+	if (!p->hasAnnotation(scop::ScopRegion::KEY)) return false;
+	auto annot=p->getAnnotation(scop::ScopRegion::KEY);
+	return annot->valid;
 }
 
 /// Returns the outermost node with a Scop annotation, starting from the given node p. Can be called directly, with
@@ -458,20 +434,20 @@ insieme::core::NodePtr Scop::outermostScopAnnotation(insieme::core::NodePtr p) {
 /// Returns true if the given NodePtr is a (maximal) SCoP, false if there is no SCoP annotation, and also false
 /// if the SCoP is not maximal. Can be called directly, with explicit scoping.
 bool Scop::isScop(insieme::core::NodePtr p) {
-    if (!hasScopAnnotation(p)) return false;
-    Scop& scop=p->getAnnotation(scop::ScopRegion::KEY)->getScop();
-    LOG(WARNING) << "SCOP statement vector size: " << scop.stmts.size() << std::endl;
-    for (auto s: scop.stmts) {
-        //if (p == s.) return true;
-    }
-    //FIXME: outermostScopAnnotation(p);
-    return false;
+	if (!hasScopAnnotation(p)) return false;
+	Scop& scop=p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+	LOG(WARNING) << "SCOP statement vector size: " << scop.stmts.size() << std::endl;
+	for (auto s: scop.stmts) {
+		//if (p == s.) return true;
+	}
+	//FIXME: outermostScopAnnotation(p);
+	return false;
 }
 
 /// Return SCoP data from an existing annotation, using a NodePtr. Can be called directly, with explicit scoping.
 Scop& Scop::getScop(insieme::core::NodePtr p) {
-    if (!isScop(p)) { THROW_EXCEPTION(scop::NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
-    return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
+	if (!isScop(p)) { THROW_EXCEPTION(NotASCoP, "Given node ptr is not marked as a SCoP.", p); }
+	return p->getAnnotation(scop::ScopRegion::KEY)->getScop();
 }
 
 /// Return all SCoPs below an existing NodePtr as a vector of NodeAddress'es, just like scop::mark does.
@@ -501,20 +477,20 @@ std::ostream& Scop::printTo(std::ostream& out) const {
 }
 
 // Adds a stmt to this scop. 
-void Scop::push_back( const Stmt& stmt ) {
+void Scop::push_back(Stmt& stmt ) {
 	
-	AccessList access;
-	for_each(stmt.access_begin(), stmt.access_end(), 
-			[&] (const AccessInfoPtr& cur) { 
+	std::vector<AccessInfoPtr> access;
+	for_each(stmt.accessmtx.begin(), stmt.accessmtx.end(),
+			[&] (AccessInfoPtr& cur) {
 				access.push_back( std::make_shared<AccessInfo>( iterVec, *cur ) ); 
 			}
 		);
 
 	stmts.emplace_back( std::unique_ptr<Stmt>(
 			new Stmt(
-				stmt.getId(), 
+				stmt.id,
 				stmt.getAddr(), 
-				IterationDomain(iterVec, stmt.getDomain()),
+				IterationDomain(iterVec, stmt.iterdomain),
 				AffineSystem(iterVec, stmt.getSchedule()), 
 				access
 			)
@@ -545,56 +521,49 @@ namespace {
 /** Creates the scattering map for a statement inside the SCoP. This is done by building the domain for such statement
 (adding it to the outer domain). Then the scattering map which maps this statement to a logical execution date is
 transformed into a corresponding Map. */
-MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
-									const IterationVector&	iterVec,
-									SetPtr<>& 				outer_domain, 
-									const Stmt& 				cur, 
-									TupleName						tn,
-									size_t 							scat_size)
-{
-	
-	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
-	assert( domainSet && "Invalid domain" );
+MapPtr<> createScatteringMap(
+	CtxPtr<> &ctx, const IterationVector &iterVec, SetPtr<> &outer_domain, Stmt &cur, TupleName tn, size_t scat_size) {
+	auto &&domainSet= makeSet(ctx, cur.iterdomain, tn);
+	assert(domainSet && "Invalid domain");
 
 	// Also the accesses can define restriction on the domain (e.g. MPI calls)
-	std::for_each(cur.access_begin(), cur.access_end(), [&](const AccessInfoPtr& cur){
-			domainSet *= makeSet(ctx, cur->getDomain(), tn);
-		});
-	outer_domain = outer_domain + domainSet;
-	
-	AffineSystem sf = cur.getSchedule();
+	std::for_each(cur.accessmtx.begin(), cur.accessmtx.end(), [&](AccessInfoPtr &cur) {
+		domainSet*= makeSet(ctx, cur->getDomain(), tn);
+	});
+	outer_domain= outer_domain + domainSet;
+
+	AffineSystem sf= cur.getSchedule();
 
 	// Because the scheduling of every statement has to have the same number of elements
-	// (same dimensions) we append zeros until the size of the affine system is equal to 
-	// the number of dimensions used inside this SCoP for the scheduling functions 
-	for ( size_t s = sf.size(); s < scat_size; ++s ) {
-		sf.append( AffineFunction(iterVec) );
+	// (same dimensions) we append zeros until the size of the affine system is equal to
+	// the number of dimensions used inside this SCoP for the scheduling functions
+	for (size_t s= sf.size(); s < scat_size; ++s) {
+		sf.append(AffineFunction(iterVec));
 	}
 
 	return makeMap(ctx, sf, tn);
 }
 
-void buildScheduling(
-		CtxPtr<>& 						ctx, 
-		const IterationVector& 			iterVec,
-		SetPtr<>& 						domain,
-		MapPtr<>& 						schedule,
-		MapPtr<>& 						reads,
-		MapPtr<>& 						writes,
-		const Scop::const_iterator& 	begin, 
-		const Scop::const_iterator& 	end,
-		size_t							schedDim)
-		
+void buildScheduling(CtxPtr<> &ctx,
+					 const IterationVector &iterVec,
+					 SetPtr<> &domain,
+					 MapPtr<> &schedule,
+					 MapPtr<> &reads,
+					 MapPtr<> &writes,
+					 const Scop::const_iterator &begin,
+					 const Scop::const_iterator &end,
+					 size_t schedDim)
+
 {
 	std::for_each(begin, end, [ & ] (const StmtPtr& cur) { 
 		// Creates a name mapping which maps an entity of the IR (StmtAddress) 
 		// to a name utilied by the framework as a placeholder 
-		TupleName tn(cur, "S" + utils::numeric_cast<std::string>(cur->getId()));
+		TupleName tn(cur, "S" + utils::numeric_cast<std::string>(cur->id));
 
 		schedule = schedule + createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim);
 
 		// Access Functions 
-		std::for_each(cur->access_begin(), cur->access_end(), [&](const AccessInfoPtr& cur){
+		std::for_each(cur->accessmtx.begin(), cur->accessmtx.end(), [&](const AccessInfoPtr& cur){
 			const AffineSystem& accessInfo = cur->getAccess();
 
 			if (accessInfo.empty())  return;
@@ -623,6 +592,14 @@ void buildScheduling(
 }
 
 } // end anonymous namespace
+
+std::list<SubScop> toSubScopList(const IterationVector& iterVec, const AddressList& scops) {
+	std::list<SubScop> subScops;
+	for_each(scops.begin(), scops.end(), [&](const NodeAddress& cur) {
+			subScops.push_back( SubScop(cur, IterationDomain(iterVec)) );
+	});
+	return subScops;
+}
 
 core::NodePtr Scop::toIR(core::NodeManager& mgr, const CloogOpts& opts) const {
 
@@ -717,6 +694,7 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	return polyhedral::toIR(mgr, iterVec, ctx, domain, map);
 }
 
+/// isParallel returns true if there are no dependences; false otherwise
 bool Scop::isParallel(core::NodeManager& mgr) const {
 
 	dep::DependenceGraph&& depGraph = 

@@ -754,7 +754,6 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 				free(lker->args[i]);
 			free(lker->args);
 			free(lker);
-			free(kernel);
 			return;
 		}
 #endif
@@ -777,14 +776,13 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, uint32_t num_kernels) {
 	uint32_t num_devices = irt_ocl_get_num_devices();
 
-	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel) * num_devices * num_kernels);
 	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*) * num_devices);
 
 	for (uint32_t i = 0; i < num_devices; ++i) {
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		IRT_INFO("Compiling OpenCL program in \n");
 		irt_ocl_print_device_short_info(dev);
-		context->kernel_binary_table[i] = &(tmp[i*num_kernels]);
+		context->kernel_binary_table[i] = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel) * num_kernels);
 		for (uint32_t j = 0; j < num_kernels; ++j) {
 			irt_ocl_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
 		}
@@ -801,8 +799,8 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, uint32_t g_kernel_code
 			printf("Releasing kernel device: %d  kernel %d\n", i, j);
 			irt_ocl_release_kernel(&(context->kernel_binary_table[i][j]));
 		}
+		free(context->kernel_binary_table[i]);
 	}
-	free(context->kernel_binary_table[0]);
 	free(context->kernel_binary_table);
 	context->kernel_binary_table = NULL;
 }

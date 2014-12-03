@@ -286,7 +286,7 @@ namespace {
 				ExpressionPtr res = pos->second;
 
 				// to ensure a single evaluation!
-				if (!isSideEffectFree(res)) {
+				if (!core::analysis::isSideEffectFree(res)) {
 					replacedOnce.insert(var);
 				}
 				return res;
@@ -298,25 +298,6 @@ namespace {
 
 		bool wasSuccessful() const {
 			return successful;
-		}
-
-		static bool isSideEffectFree(const ExpressionPtr& expr) {
-			// all variables and literals are side-effect free accessible
-			NodeType type = expr->getNodeType();
-			if (type == NT_Variable || type == NT_Literal) {
-				return true;
-			}
-
-			// check for other operations
-			if (type != NT_CallExpr) {
-				return false;
-			}
-
-			// check whether function is side-effect free + all arguments are
-			CallExprPtr call = expr.as<CallExprPtr>();
-			auto& basic = expr->getNodeManager().getLangBasic();
-			return basic.isPure(call->getFunctionExpr()) &&
-					all(call->getArguments(), &isSideEffectFree);
 		}
 	};
 

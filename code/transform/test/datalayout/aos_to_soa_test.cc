@@ -136,10 +136,10 @@ TEST(DataLayout, AosToSoa) {
 //
 //	return;
 
-	datalayout::AosToSoa ats(code);
-	ats.transform();
-
 //	dumpPretty(code);
+
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
+	ats.transform();
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -206,7 +206,7 @@ TEST(DataLayout, AosToSoa2) {
 //		});
 //
 
-	datalayout::AosToSoa ats(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
 //	dumpPretty(code);
@@ -226,9 +226,9 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(56, numberOfCompoundStmts(code));
-	EXPECT_EQ(7, countMarshalledAccesses(code));
-	EXPECT_EQ(3, countMarshalledAssigns(code));
+	EXPECT_EQ(65, numberOfCompoundStmts(code));
+	EXPECT_EQ(9, countMarshalledAccesses(code));
+	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
 
 TEST(DataLayout, Globals) {
@@ -264,8 +264,7 @@ TEST(DataLayout, Globals) {
 		"}"
 	));
 
-	return;
-	datalayout::AosToSoa ats(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
 //	dumpPretty(code);
@@ -285,9 +284,9 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(60, numberOfCompoundStmts(code));
-	EXPECT_EQ(11, countMarshalledAccesses(code));
-	EXPECT_EQ(5, countMarshalledAssigns(code));
+	EXPECT_EQ(75, numberOfCompoundStmts(code));
+	EXPECT_EQ(13, countMarshalledAccesses(code));
+	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
 
 TEST(DataLayout, Tuple) {
@@ -304,11 +303,11 @@ TEST(DataLayout, Tuple) {
 		"		}"
 		"	};"
 		""
-//		"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
-//		"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
-//		"(*x[0])[3].int = 7;"
-//		"	tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
-//		"	};"
+		"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
+		"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
+		"(*x[0])[3].int = 7;"
+		"	tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
+		"	};"
 		""
 		"	ref<ref<array<twoElem,1>>> a;"
 		"	ref<ref<array<real<4>,1>>> b;"
@@ -316,18 +315,18 @@ TEST(DataLayout, Tuple) {
 		"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
 		"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
 		"ref.deref(a);"
-//		"	access(scalar.to.array(a));"
+		"	access(scalar.to.array(a));"
 		"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
-//		"	writeToTuple(*t, scalar.to.array(a));"
+		"	writeToTuple(*t, scalar.to.array(a));"
 		""
 		"	ref.delete(*t);"
 		"}"
 	));
 
-	datalayout::AosToSoa ats(code);
-	ats.transform();
+//	dumpPretty(code);
 
-	dumpPretty(code);
+	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
+	ats.transform();
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -344,9 +343,9 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-//	EXPECT_EQ(52, numberOfCompoundStmts(code));
-//	EXPECT_EQ(11, countMarshalledAccesses(code));
-//	EXPECT_EQ(5, countMarshalledAssigns(code));
+	EXPECT_EQ(31, numberOfCompoundStmts(code));
+	EXPECT_EQ(2, countMarshalledAccesses(code));
+	EXPECT_EQ(2, countMarshalledAssigns(code));
 }
 
 } // transform

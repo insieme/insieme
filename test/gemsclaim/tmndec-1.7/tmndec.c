@@ -67,6 +67,7 @@ int argc;
 char *argv[];
 {
   int first, framenum;
+  int loop_framenum;
 #ifdef USE_TIME
   int runtime;
 #ifndef WIN32
@@ -100,6 +101,7 @@ char *argv[];
   }
 
   first = 1;
+  loop_framenum = 0;
 
   do {
     if (base.infile!=0)
@@ -128,9 +130,10 @@ char *argv[];
       getpicture(&framenum);
       
       framenum++;
+      loop_framenum++;
     }
 
-  } while (loopflag);
+  } while (loopflag--);
 
   close(base.infile);
 
@@ -146,8 +149,8 @@ char *argv[];
   if (!quiet && runtime!=0)
     printf("%d.%02d seconds, %d frames, %d.%02d fps\n",
            runtime/100, runtime%100,
-           framenum, ((10000*framenum+runtime/2)/runtime)/100,
-           ((10000*framenum+runtime/2)/runtime)%100);
+           loop_framenum, ((10000*loop_framenum+runtime/2)/runtime)/100,
+           ((10000*loop_framenum+runtime/2)/runtime)%100);
 #endif
 
 #ifdef DISPLAY
@@ -311,6 +314,7 @@ char **argvp[];
   {
     while ((*argvp)[1][1])
     {
+      int val;
       switch (toupper((*argvp)[1][1]))
       {
 #ifdef USE_TIME
@@ -328,12 +332,14 @@ char **argvp[];
         refidct = 1;
         break;
       case 'L':
-        loopflag = 1;
+        loopflag = getval(*argvp);
+        if(loopflag < 1)
+            loopflag = 1;
         break;
       case 'D':
         deposterizeH = 1;
         deposterizeV = 1;
-        int val = getval(*argvp);
+        val = getval(*argvp);
         if(val == 1)
             deposterizeV = 0;
         else if(val == 2)
@@ -420,7 +426,7 @@ Options: -vn  verbose output (n: level)\n\
 #endif    
 #ifdef DISPLAY
     printf("\
-         -l   loop sequence\n");
+         -ln   loop sequence (n: additional playings)\n");
 #endif
     exit(0);
   }

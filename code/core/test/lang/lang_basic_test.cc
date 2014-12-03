@@ -62,8 +62,8 @@ TEST(LangBasic, BoolChecks) {
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
 
-	EXPECT_EQ(nm.getLangBasic().getRedistribute(), nm.getLangBasic().getLiteral("redistribute"));
-	// EXPECT_EQ(LiteralPtr(), nm.getLangBasic().getLiteral("surelyNotBuiltInISincerelyHope__"));
+	EXPECT_EQ(nm.getLangBasic().getRedistribute(), nm.getLangBasic().getBuiltIn("redistribute"));
+	// EXPECT_EQ(LiteralPtr(), nm.getLangBasic().getBuiltIn("surelyNotBuiltInISincerelyHope__"));
 }
 
 TEST(LangBasic, Grouping) {

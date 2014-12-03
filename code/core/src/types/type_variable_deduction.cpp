@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -625,6 +625,8 @@ namespace types {
 			return res;
 		}
 
+		if (debug) std::cout << " Solution: " << *res<< std::endl;
+
 		// ----------------------------------- Revert Renaming ------------------------------------------
 		// (and produce a result within the correct node manager - internal manager will be thrown away)
 
@@ -642,7 +644,7 @@ namespace types {
 
 			// also apply argument renaming backwards ..
 			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
-				substitute = it2->applyBackward(manager, it->second);
+				substitute = it2->applyBackward(manager, substitute);
 			}
 
 			restored.addMapping(manager.get(var), manager.get(substitute));
@@ -653,7 +655,7 @@ namespace types {
 
 			// also apply argument renaming backwards ..
 			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
-				substitute = it2->applyBackward(manager, it->second);
+				substitute = it2->applyBackward(manager, substitute);
 			}
 
 			restored.addMapping(manager.get(var), manager.get(substitute));

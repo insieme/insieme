@@ -60,6 +60,25 @@ namespace analysis {
 
 using std::map;
 
+bool isSideEffectFree(const ExpressionPtr& expr) {
+	// all variables and literals are side-effect free accessible
+	NodeType type = expr->getNodeType();
+	if (type == NT_Variable || type == NT_Literal) {
+		return true;
+	}
+
+	// check for other operations
+	if (type != NT_CallExpr) {
+		return false;
+	}
+
+	// check whether function is side-effect free + all arguments are
+	CallExprPtr call = expr.as<CallExprPtr>();
+	auto& basic = expr->getNodeManager().getLangBasic();
+	return basic.isPure(call->getFunctionExpr()) &&
+		all(call->getArguments(), &isSideEffectFree);
+}
+
 bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
 
 	// check for null
@@ -1128,7 +1147,6 @@ bool isZero(const core::ExpressionPtr& value) {
 	// otherwise, it is not zero
 	return false;
 }
-
 
 } // end namespace utils
 } // end namespace core

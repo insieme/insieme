@@ -291,6 +291,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 //std::cout << "arr: " << expr << " root " << getRootVariable(expr) << std::endl;
 			expr = utils::getRootVariable(expr).as<ExpressionAddress>();
+			assert(expr && "cannot found root variable");
 
 			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
@@ -299,6 +300,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			return;
 		}
 		ExpressionAddress rootExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
+		assert(rootExpr && "cannot found root variable");
 
 		TypePtr newType = transform::replaceAll(mgr, bufferExpr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 		// update structs if required

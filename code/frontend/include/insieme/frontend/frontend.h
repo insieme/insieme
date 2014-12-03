@@ -51,6 +51,8 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
+#include "insieme/utils/printable.h"
+
 namespace insieme {
 namespace frontend {
 
@@ -335,7 +337,10 @@ namespace frontend {
          */
         template <class T, class ... Args>
         void registerFrontendPlugin(const Args& ... args) {
-            plugins.push_back(std::make_shared<T>(args ...));
+			plugins.push_back(std::make_shared<T>(args ...));
+			for(auto kidnappedHeader : plugins.back()->getKidnappedHeaderList()) {
+				addSystemHeadersDirectory(kidnappedHeader);
+			}
         };
 
         /**
@@ -347,7 +352,7 @@ namespace frontend {
 	};
 
 
-	class ConversionJob : public ConversionSetup {
+	class ConversionJob : public ConversionSetup, public insieme::utils::Printable {
 
 		/**
 		 * The translation units to be converted.
@@ -456,10 +461,9 @@ namespace frontend {
 		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
 
 		/**
-		 *  Used for debugging purposes. Prints the conversion setup
+		 *  Prints the conversion setup
 		 **/
-		 void printConversionJob() const;
-
+		 std::ostream& printTo(std::ostream& out) const;
 	};
 
 

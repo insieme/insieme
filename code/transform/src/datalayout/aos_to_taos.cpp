@@ -71,7 +71,7 @@ StatementPtr aosToTaosAllocTypeUpdate(const StatementPtr& stmt) {
 
 }
 
-AosToTaos::AosToTaos(core::NodePtr& toTransform) : AosToSoa(toTransform) {
+AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder) : AosToSoa(toTransform, candidateFinder) {
 	IRBuilder builder(mgr);
 	genericTileSize = builder.variableIntTypeParam('t');
 }

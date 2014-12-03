@@ -112,6 +112,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->id.cached = wi;
 	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
 	wi->impl = impl;
+	wi->selected_impl_variant = 0;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
 	wi->_num_active_children = 0;
@@ -231,7 +232,7 @@ void irt_wi_join(irt_work_item_id wi_id) {
 	if(occ==0) { // if not completed, suspend this wi
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
-        _irt_worker_switch_from_wi(self, swi);
+		_irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
 	}
 }
@@ -273,7 +274,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 		// make stack available for children
 		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
-        _irt_worker_switch_from_wi(self, wi);
+		_irt_worker_switch_from_wi(self, wi);
 #ifdef IRT_ASTEROIDEA_STACKS
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS
@@ -324,9 +325,9 @@ void irt_wi_end(irt_work_item* wi) {
 	
 	IRT_DEBUG(" ! %p end\n", wi);
 
-    irt_wi_implementation *wimpl = wi->impl;
-    irt_optimizer_remove_dvfs(&(wimpl->variants[0]));
-    irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi, false);
+	irt_wi_implementation *wimpl = wi->impl;
+	irt_optimizer_remove_dvfs(&(wimpl->variants[0]));
+	irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi, false);
 
 	// end
 	worker->finalize_wi = wi;

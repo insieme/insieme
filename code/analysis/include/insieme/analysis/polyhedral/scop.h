@@ -55,6 +55,7 @@
 #include "insieme/analysis/polyhedral/constraint.h"
 #include "insieme/analysis/polyhedral/iter_dom.h"
 #include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_visitor.h"
@@ -62,20 +63,21 @@
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
 
-namespace insieme { namespace core { namespace arithmetic {
+namespace insieme { namespace analysis { namespace polyhedral {
 
-class Formula;
+typedef std::vector<core::NodeAddress> 					AddressList;
+typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
+typedef std::list<SubScop> 								SubScopList;
 
-} } // end core::arithmetic
+// TODO: integrate SubScop infrastructure into Scop infrastructure
+std::list<SubScop> toSubScopList(const IterationVector& iterVec, const AddressList& scops);
 
-namespace analysis { namespace polyhedral {
+/** AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
+the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
+type of access (DEF or USE). The iteration domain which defines the domain on which this
+access is defined and the access functions for each dimensions.
 
-/**
- * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
- * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
- * type of access (DEF or USE). The iteration domain which defines the domain on which this
- * access is defined and the access functions for each dimensions.
- */
+**Access functions** identify the read (USE) and writes (DEF) happening inside a statement */
 class AccessInfo : public utils::Printable {
 
 	core::ExpressionAddress	  expr;
@@ -127,7 +129,6 @@ public:
 };
 
 typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
-typedef std::vector<AccessInfoPtr> 	AccessList;
 
 /** Stmt: this class contains all necessary information which are together representing a
     statement in the polyhedral model.
@@ -136,69 +137,34 @@ typedef std::vector<AccessInfoPtr> 	AccessList;
     - an **iteration domain** (with an associated iteration vector)
     - a **scheduling** (or scattering) matrix (which defines the schedule for the statement to be
       executed)
-    - a set of **access functions** which identifies the read (USE) and writes (DEF) happening inside the statement
+	- an **access matrix** defining the access (DEF/USE) of elements within a statement
 */
 class Stmt: public utils::Printable {
-	unsigned int id;             ///< a statement number, according to the index x in the term S_x from the literature
 	core::StatementAddress addr; ///< the root of the address is the entry point of the SCoP
-	IterationDomain dom;         ///< iteration domain, according to the literature
 	AffineSystem schedule;       ///< scheduling matrix, according to the literature
-	AccessList access;           ///< access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
-								 ///< (see also class AccessInfo)
-
-	typedef AccessList::iterator AccessIterator;
-	typedef AccessList::const_iterator ConstAccessIterator;
 
 public:
-    Stmt(size_t id, const core::StatementAddress &addr, const IterationDomain &dom, const AffineSystem &schedule,
-         const AccessList &access = AccessList()): id(id), addr(addr), dom(dom), schedule(schedule), access(access) {}
+ unsigned int id;			   ///< a statement number, according to the index x in the term S_x from the literature
+ IterationDomain iterdomain;   ///< iteration domain, according to the literature
+ std::vector<AccessInfoPtr>    ///  access matrix, together with reference address, type of usage (USE/DEF/UNKNOWN)
+	 accessmtx;                ///< (see also class AccessInfo)
 
-    Stmt(const IterationVector &iterVec, size_t id, const Stmt &other):
-        id(id), addr(other.addr), dom(iterVec, other.dom), schedule(iterVec, other.schedule) {
-        for_each(other.access, [&](const AccessInfoPtr &cur) {
-            access.push_back(std::make_shared<AccessInfo>(iterVec, *cur));
-        });
-    }
+	Stmt(unsigned int id,
+		 const core::StatementAddress &addr,
+		 const IterationDomain &iterdomain,
+		 const AffineSystem &schedule,
+		 const std::vector<AccessInfoPtr> &accessmtx=std::vector<AccessInfoPtr>())
+		: addr(addr), schedule(schedule), id(id), iterdomain(iterdomain), accessmtx(accessmtx) {}
+	Stmt(const IterationVector &iterVec, size_t id, const Stmt &other);
 
-	// Getter for the ID
-	inline size_t getId() const { return id; }
-
-	// Getter for StmtAddress
+	std::ostream& printTo(std::ostream& out) const;
 	inline const core::StatementAddress& getAddr() const { return addr; }
-
-	// Getters/Setters for the iteration domain
-	inline const IterationDomain& getDomain() const { return dom; }
-	inline IterationDomain& getDomain() { return dom; }
-
-	// Getters/Setters for scheduling / scattering 
 	inline AffineSystem& getSchedule() { return schedule; }
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
-	// Getters/Setters for access list
-	inline const AccessList& getAccess() const { return access; }
-	inline AccessList& getAccess() { return access; }
-
-	// Accessories for iterating through accesses of this statement (read/write)
-	inline AccessIterator access_begin() { return access.begin(); }
-	inline AccessIterator access_end() { return access.end(); }
-
-	// Accessories for iterating through accesses of this statement (write only)
-	inline ConstAccessIterator access_begin() const { return access.cbegin(); }
-	inline ConstAccessIterator access_end() const { return access.cend(); }
-
 	std::vector<core::VariablePtr> loopNest() const;
-	unsigned getSubRangeNum() const;
-
-	std::ostream& printTo(std::ostream& out) const;
+	unsigned getSubRangeNum();
 };
-
-/**
- * Given an IR statement, return the its polyhedral representation starting from the outermost SCoP
- *
- * If the statement is not inside a SCoP, the returned optional object will be not initialized
- */
-boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
-
 typedef std::shared_ptr<Stmt> StmtPtr;
 
 /** The Scop class is the entry point for all polyhedral model analyses and transformations. The
@@ -222,9 +188,10 @@ public:
 	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) :
 		iterVec(iterVec), sched_dim(0) {
 		// rewrite all the access functions in terms of the new iteration vector
-		for_each(stmts, [&] (const StmtPtr& stmt) { 
-				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
-			});
+		for (auto s: stmts) {
+			insieme::analysis::polyhedral::Stmt poly_stmt=Stmt(this->iterVec, s->id, *s);
+			this->push_back(poly_stmt);
+		};
 	}
 
 	/// Copy constructor builds a deep copy of this SCoP.
@@ -243,7 +210,7 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	/// push_back adds a stmt to this SCoP
-	void push_back( const Stmt& stmt );
+	void push_back(Stmt &stmt);
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline IterationVector& getIterationVector() { return iterVec; }

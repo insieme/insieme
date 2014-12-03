@@ -54,7 +54,7 @@ int objective() {
 
 	int a = 0, n = 0;
 
-	#pragma omp region objective(0.1*E+0.3*P+0.6*T)
+	#pragma omp region objective(0.1*E+0.3*P+0.6*T+0*Q)
 	{
 		int x = 3;
 	}
@@ -64,7 +64,7 @@ int objective() {
 		int x = 4;
 	}
 
-	#pragma omp parallel objective(0.1*E+0.2*P+0.7*T:T<3;P>22)
+	#pragma omp parallel objective(0.1*E+0.2*P+0.7*T+0*Q:T<3;P>22)
 	{
 		int x = 5;
 	}

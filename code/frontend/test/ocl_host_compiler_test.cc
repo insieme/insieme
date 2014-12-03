@@ -87,7 +87,7 @@ void checkKernel(core::NodePtr program, const core::NodeManager& manager) {
 }
 
 void runOclTest(const std::string inputFile) {
-	Logger::get(std::cerr, ERROR, 0);
+	Logger::get(std::cerr, INFO, 0);
 
 	core::NodeManager manager;
 

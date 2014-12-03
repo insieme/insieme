@@ -876,10 +876,20 @@ CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
 }
 
-CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max) const {
+CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max, const ExpressionPtr& qualLB, const ExpressionPtr& qualUB, const ExpressionPtr& qualS) const {
 	vector<ExpressionPtr> args;
     args.push_back(id);
     args.push_back(max);
+    if(!qualLB || !qualUB || !qualS) {
+        args.push_back(intLit(0));
+        args.push_back(intLit(0));
+        args.push_back(intLit(0));
+    }
+    else {
+        args.push_back(qualLB);
+        args.push_back(qualUB);
+        args.push_back(qualS);
+    }
 	return callExpr(manager.getLangBasic().getPickInRange(), args);
 }
 
@@ -1532,22 +1542,22 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 
 	assert(paramTys.size() <= 2 && paramTys.size() > 0  && "The function for pointwise must take one or two arguments");
 
-	FunctionTypePtr pointwiseTy;
+//	FunctionTypePtr pointwiseTy; Use automatic type deduction since vector pointwise is not a function type any more and I have no idea how to build the correct tpye
 	ExpressionPtr pointwise;
 	const auto& basic = manager.getLangBasic();
 	if(paramTys.size() == 1) { // unary function
 		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
 	} else { // binary functon
 		TypePtr newParamTy1 = vectorType(paramTys.at(1), variableIntTypeParam('l'));
 		TypePtr newParamTy2 = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 
-		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwise();
 	}
-	return callExpr(pointwiseTy, pointwise, callee);
+	return callExpr(/*pointwiseTy,*/ pointwise, callee);
 }
 
 // helper for accuraccy functions
@@ -1581,8 +1591,8 @@ CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
 
 	const auto& basic = manager.getLangBasic();
 	return nArgs == 1 ?
-            callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
-            callExpr(funTy, basic.getAccuracyFastBinary(), callee);
+            callExpr(basic.getAccuracyFastUnary(), callee) :
+            callExpr(basic.getAccuracyFastBinary(), callee);
 }
 
 CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {

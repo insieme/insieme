@@ -270,6 +270,11 @@ int main(int argc, char** argv) {
         compiler.addFlag(cur);
     }
     
+    //add definitions
+    for(auto cur : options.job.getDefinitions()) {
+        compiler.addFlag(std::string("-D" + cur.first));
+    }
+
     //FIXME: Add support for -O1, -O2, ... 
     //if an optimization flag is set (e.g. -O3) 
     //set this flag in the backend compiler
