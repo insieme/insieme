@@ -151,6 +151,9 @@ namespace cmd {
 		job.addInterceptedNameSpacePatterns(Interceptions);
 		job.setInterceptedHeaderDirs(InterceptionHeaderDirs);
 
+        // cross compilation system headers
+        job.setCrossCompilationSystemHeadersDir(CrossCompile);
+
 		// add macro definitions
 		for (auto def : Defs) job.setDefinition(def);
 

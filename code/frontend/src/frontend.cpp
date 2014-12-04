@@ -62,6 +62,7 @@
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
+#include "insieme/frontend/extensions/crosscompilation_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/extensions/instrumentation_region_plugin.h"
 #include "insieme/frontend/extensions/anonymous_rename.h"
@@ -108,7 +109,10 @@ namespace frontend {
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
             registerFrontendPlugin<GemsclaimPlugin>();
-			setDefinition("_GEM");
+        }
+
+        if(!getCrossCompilationSystemHeadersDir().empty()) {
+            registerFrontendPlugin<CrossCompilationPlugin>(getCrossCompilationSystemHeadersDir());
         }
 
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
@@ -247,6 +251,7 @@ namespace frontend {
 			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<
 			"StrictSemanticChecks " << hasOption(ConversionSetup::StrictSemanticChecks) << "\n" << std::endl;
         out << "interceptions: \n" << getInterceptedNameSpacePatterns() << std::endl;
+        out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
         out << "include dirs: \n" << getIncludeDirectories() << std::endl;
         out << "definitions: \n" << getDefinitions() << std::endl;
         out << "libraries: \n" << libs << std::endl;
