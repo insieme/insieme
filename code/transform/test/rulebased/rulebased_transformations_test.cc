@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -231,25 +231,150 @@ namespace rulebased {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		auto forStmt = builder.parseStmt(
+		auto forStmt = builder.normalize(builder.parseStmt(
 			"for(int<4> i = 0 .. 50) {"
 			"	for(int<4> j = 10 .. 80) {"
-			"		i;"
+			"		i+j;"
 			"	}"
-			"}").as<core::ForStmtPtr>();
+			"}")).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
 		SimpleLoopTiling2D trans(parameter::combineValues(10u,15u));
-		auto transformed = trans.apply(core::NodeAddress(forStmt)).getAddressedNode();
+		auto transformed = builder.normalize(trans.apply(core::NodeAddress(forStmt)).getAddressedNode());
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 //		std::cout << res;
 
-		EXPECT_PRED2(containsSubString, res, "v3 = 0 .. 50 : (10*1)");
-		EXPECT_PRED2(containsSubString, res, "v4 = 10 .. 80 : (15*1)");
-		EXPECT_PRED2(containsSubString, res, "v1 = v3 .. select((v3+10), 50, int.lt) : 1");
-		EXPECT_PRED2(containsSubString, res, "v2 = v4 .. select((v4+15), 80, int.lt) : 1");
+		EXPECT_TRUE(core::checks::check(transformed).empty()) << core::checks::check(transformed);
+
+		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*1)");
+		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*1)");
+		EXPECT_PRED2(containsSubString, res, "v2 = v0 .. select((v0+10), 50, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v3 = v1 .. select((v1+15), 80, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v2+v3");
+
+		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
+
+	}
+
+	TEST(Transformations, SimpleLoopTiling2D_Extended) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		auto forStmt = builder.normalize(builder.parseStmt(
+			"for(int<4> i = 0 .. 50) {"
+			"	auto x = i;"
+			"	for(int<4> j = 10 .. 80) {"
+			"		i + j + x;"
+			"	}"
+			"}")).as<core::ForStmtPtr>();
+
+		EXPECT_TRUE(forStmt);
+
+		SimpleLoopTiling2D trans(parameter::combineValues(10u,15u));
+		auto transformed = builder.normalize(trans.apply(core::NodeAddress(forStmt)).getAddressedNode());
+		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
+
+//		std::cout << "Before:\n";
+//		std::cout << dumpPretty(forStmt);
+//		std::cout << "\n";
+//
+//		std::cout << "After:\n";
+//		std::cout << res;
+//		std::cout << "\n";
+
+		EXPECT_TRUE(core::checks::check(transformed).empty()) << core::checks::check(transformed);
+
+		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*1)");
+		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*1)");
+		EXPECT_PRED2(containsSubString, res, "v2 = v0 .. select((v0+10), 50, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v4 = v1 .. select((v1+15), 80, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "decl int<4> v3 = v2;");
+		EXPECT_PRED2(containsSubString, res, "v2+v4");
+
+		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
+
+	}
+
+	TEST(Transformations, SimpleLoopTiling3D) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		auto forStmt = builder.normalize(builder.parseStmt(
+			"for(int<4> i = 0 .. 50) {"
+			"	for(int<4> j = 10 .. 80) {"
+			"		for(int<4> k = 5 .. 20) {"
+			"			i+j+k;"
+			"		}"
+			"	}"
+			"}")).as<core::ForStmtPtr>();
+
+		EXPECT_TRUE(forStmt);
+
+		SimpleLoopTiling3D trans(parameter::combineValues(10u,15u,12u));
+		auto transformed = builder.normalize(trans.apply(core::NodeAddress(forStmt)).getAddressedNode());
+		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
+
+//		std::cout << res;
+
+		EXPECT_TRUE(core::checks::check(transformed).empty()) << core::checks::check(transformed);
+
+		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*1)");
+		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*1)");
+		EXPECT_PRED2(containsSubString, res, "v2 = 5 .. 20 : (12*1)");
+		EXPECT_PRED2(containsSubString, res, "v3 = v0 .. select((v0+10), 50, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v4 = v1 .. select((v1+15), 80, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v5 = v2 .. select((v2+12), 20, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "((v3+v4)+v5)");
+
+		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
+
+	}
+
+	TEST(Transformations, SimpleLoopTiling3D_Extended) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		auto forStmt = builder.normalize(builder.parseStmt(
+			"for(int<4> i = 0 .. 50 ) {"
+			"	auto x = i;"
+			"	for(int<4> j = 10 .. 80 ) {"
+			"		auto y = j;"
+			"		for(int<4> k = 5 .. 20 ) {"
+			"			i+j+k+x+y;"
+			"		}"
+			"	}"
+			"}")).as<core::ForStmtPtr>();
+
+		EXPECT_TRUE(forStmt);
+
+		SimpleLoopTiling3D trans(parameter::combineValues(10u,15u,12u));
+		auto transformed = builder.normalize(trans.apply(core::NodeAddress(forStmt)).getAddressedNode());
+		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
+
+//		std::cout << "Before:\n";
+//		std::cout << dumpPretty(forStmt);
+//		std::cout << "\n";
+//
+//		std::cout << "After:\n";
+//		std::cout << res;
+//		std::cout << "\n";
+
+		EXPECT_TRUE(core::checks::check(transformed).empty()) << core::checks::check(transformed);
+
+		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*1)");
+		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*1)");
+		EXPECT_PRED2(containsSubString, res, "v2 = 5 .. 20 : (12*1)");
+		EXPECT_PRED2(containsSubString, res, "v3 = v0 .. select((v0+10), 50, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v5 = v1 .. select((v1+15), 80, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "v7 = v2 .. select((v2+12), 20, int.lt) : 1");
+		EXPECT_PRED2(containsSubString, res, "decl int<4> v4 = v3;");
+		EXPECT_PRED2(containsSubString, res, "decl int<4> v6 = v5;");
+		EXPECT_PRED2(containsSubString, res, "((v3+v5)+v7)");
 
 		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
 

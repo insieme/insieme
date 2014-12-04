@@ -12,7 +12,25 @@ DECODE:
 
 DISPLAY:
 
-store.c:storeframe()
-    store.c:store_one()
-        display.c:dither()
-            display.c:display_image()
+getpic.c:getpicture()
+    tmndec.c:doframerate SLEEP
+    getpic.c:interpolate() FOR
+    store.c:storeframe()
+        store.c:store_one()
+            display.c:dither()
+                yuv2rgb:Color32()   FOR
+                display.c:display_image()
+
+PARALLELIZATION
+    yuv2rrbg.c:Color32..
+        inner loop parallelization works
+        outer loop par. works only on insieme, why?
+
+
+
+HOW TO CREATE h263
+
+ffmpeg -i carphone_qcif.y4m  test.h263
+-s 1408x1152 (to change resolution)
+
+./ffmpeg -r "24" -i wall%d-1408x1152.jpg -pix_fmt yuv420p -r 24 -codec h263p out.h263

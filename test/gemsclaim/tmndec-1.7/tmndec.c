@@ -70,8 +70,9 @@ char *argv[];
   int loop_framenum;
 #ifdef USE_TIME
   int runtime;
+  int lastLoopRuntime;
 #ifndef WIN32
-  struct timeval tstart,tstop;
+  struct timeval tstart,tstop, lastLoopTstart;
 #else
   unsigned int startTime, stopTime;
 #endif
@@ -127,6 +128,10 @@ char *argv[];
 #endif
         first = 0;
       }
+
+      if(loopflag == 0 && framenum == 0) 
+        gettimeofday(&lastLoopTstart,(struct timezone *)NULL);
+
       getpicture(&framenum);
       
       framenum++;
@@ -142,15 +147,19 @@ char *argv[];
   gettimeofday(&tstop,(struct timezone *)NULL);
   runtime = 100*(tstop.tv_sec-tstart.tv_sec)
     + (tstop.tv_usec-tstart.tv_usec)/10000;
+  lastLoopRuntime = 100*(tstop.tv_sec-lastLoopTstart.tv_sec)
+    + (tstop.tv_usec-lastLoopTstart.tv_usec)/10001;
 #else
   stopTime = timeGetTime();
   runtime = (stopTime - startTime) / 10;
 #endif
   if (!quiet && runtime!=0)
-    printf("%d.%02d seconds, %d frames, %d.%02d fps\n",
+    printf("%d.%02d seconds, %d frames, %d.%02d (%d.%02d) fps \n",
            runtime/100, runtime%100,
            loop_framenum, ((10000*loop_framenum+runtime/2)/runtime)/100,
-           ((10000*loop_framenum+runtime/2)/runtime)%100);
+           ((10000*loop_framenum+runtime/2)/runtime)%100,
+           ((10000*framenum+lastLoopRuntime/2)/lastLoopRuntime)/100,
+           ((10000*framenum+lastLoopRuntime/2)/lastLoopRuntime)%100);
 #endif
 
 #ifdef DISPLAY
