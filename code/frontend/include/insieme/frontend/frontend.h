@@ -140,6 +140,11 @@ namespace frontend {
 		 */
 		vector<path> interceptedHeaderDirs;
 
+		/**
+		 * A list of include directories containing system headers for a cross compilation.
+		 */
+		string crossCompilationSystemHeadersDir;
+
         /**
          * A list of optimization flags (-f flags) that need to be used at least in the
          * backend compiler
@@ -305,6 +310,20 @@ namespace frontend {
 			this->interceptedHeaderDirs.push_back(directory);
 		}
 
+		/**
+		 * Obtains a reference to the covered set of include directories.
+		 */
+		const string& getCrossCompilationSystemHeadersDir() const {
+			return crossCompilationSystemHeadersDir;
+		}
+
+		/**
+		 * Updates the set of considered include directories.
+		 */
+		void setCrossCompilationSystemHeadersDir(const string& crossCompilationSystemHeadersDir) {
+			this->crossCompilationSystemHeadersDir = crossCompilationSystemHeadersDir;
+		}
+
         /**
          * Adds a single optimization flag
          */
@@ -337,7 +356,10 @@ namespace frontend {
          */
         template <class T, class ... Args>
         void registerFrontendPlugin(const Args& ... args) {
-            plugins.push_back(std::make_shared<T>(args ...));
+			plugins.push_back(std::make_shared<T>(args ...));
+			for(auto kidnappedHeader : plugins.back()->getKidnappedHeaderList()) {
+				addSystemHeadersDirectory(kidnappedHeader);
+			}
         };
 
         /**

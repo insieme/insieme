@@ -413,6 +413,7 @@ DERIVED(RefLoc,  			"ref.loc",    			"('a v) -> ref<'a> { auto r = ref.alloc(  t
 DERIVED(RefIsNull,   		"ref.is.null",			"(ref<'a> r) -> bool { return ref.eq(r, ref.null); }")
 DERIVED(FuncIsNull,   		"func.is.null",			"('a f) -> bool { return f == func.null(lit('a)); }")
 
+GROUP(AllocOp, RefVar, RefNew, RefLoc)
 
 LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
 LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")

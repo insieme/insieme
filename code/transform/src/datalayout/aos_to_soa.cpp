@@ -296,11 +296,11 @@ std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::createCandidateLists
 
 	toReplaceLists = mergeLists(toReplaceLists);
 
-	//for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
-	//	std::cout << "\nList: \n";
-	//	for(ExpressionPtr tr : toReplaceList.first)
-	//		std::cout << tr << std::endl;
-	//}
+//	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+//		std::cout << "\nList: \n";
+//		for(ExpressionPtr tr : toReplaceList.first)
+//			std::cout << tr << std::endl;
+//	}
 
 	return toReplaceLists;
 }
@@ -313,10 +313,73 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& transformRoot, ExpressionSet& toReplaceList,
 		const NodeAddress& toTransform, ia::VariableScopeMap& scopes) {
 
-	visitDepthFirst(toTransform, [&](const ExpressionAddress& expr) {
-		if(expr->getType()->getNodeType() != NT_RefType)
-			return;
+#if 1
+	visitDepthFirst(toTransform, [&](const StatementAddress& stmt) {
+		if(const CallExprAddress call = stmt.isa<CallExprAddress>()) {
+			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+				ExpressionAddress lhs = removeMemLocationCreators(call[0]);
+				ExpressionAddress rhs = removeMemLocationCreators(call[1]);
+				ExpressionAddress lhsVar = extractNonTupleVariable(lhs);
+				if(!lhsVar) // lhs is not based on a variable
+					return;
+				ExpressionAddress rhsVar = extractNonTupleVariable(rhs);
+				if(!rhsVar) // rhs is not based on a variable
+					return;
 
+				if(toReplaceList.find(lhsVar) != toReplaceList.end()) { // lhsVar is already selected for replacement
+					if(rhs->getType().isa<RefTypeAddress>()) {
+						toReplaceList.insert(rhsVar);
+						return;
+					}
+				}
+				if(toReplaceList.find(rhsVar) != toReplaceList.end()) { // rhsVar is already selected for replacement
+					if(rhs->getType().isa<RefTypeAddress>()){
+						toReplaceList.insert(lhsVar);
+						return;
+					}
+				}
+			}
+
+			ExpressionAddress fun = call->getFunctionExpr();
+			if(mgr.getLangBasic().isBuiltIn(fun))
+				return;
+
+			if(LambdaExprAddress lambda = fun.isa<LambdaExprAddress>()) {
+				// go through argument list and check if one of the arguments is to be replaced
+				for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+						[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					ExpressionAddress argVar = extractNonTupleVariable(pair.first);
+					if(!argVar)
+						return;
+
+					VariableAddress param = pair.second;
+
+					if(toReplaceList.find(argVar) != toReplaceList.end()) {
+						toReplaceList.insert(param);
+					}
+				});
+			}
+		}
+
+		if(const DeclarationStmtAddress decl = stmt.isa<DeclarationStmtAddress>()) {
+			ExpressionAddress init = removeMemLocationCreators(decl->getInitialization());
+			VariableAddress var = decl->getVariable();
+
+			ExpressionAddress initVar = extractNonTupleVariable(init);
+			if(!initVar)
+				return;
+
+			if(toReplaceList.find(initVar) != toReplaceList.end()) { // the initialization is already selected for replacement
+					if(init->getType().isa<RefTypeAddress>()) {
+						toReplaceList.insert(var);
+						return;
+					}
+				}
+		}
+#else
+		visitDepthFirst(toTransform, [&](const ExpressionAddress& expr) {
+			if(expr->getType()->getNodeType() != NT_RefType)
+				return;
 		// check if it is an access to the transformRoot's memory
 		if(*transformRoot.first == *extractVariable(expr)) {
 //std::cout << "\ttesting: " << *expr << std::endl;
@@ -356,6 +419,7 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 				}
 			});
 		}
+#endif
 	});
 
 }
@@ -1029,38 +1093,39 @@ void AosToSoa::updateTuples(ExpressionMap& varReplacements, const core::StructTy
 	}
 }
 
+// unused
 void AosToSoa::updateCopyDeclarations(ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 	IRBuilder builder(mgr);
 
-//	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
-//
-//		const ExpressionPtr& oldVar = vr.first;
-////		const ExpressionPtr& newVar = vr.second;
-//
-//		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
-//
-//		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
-//			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
-//
-//			if(replacements.find(decl) != replacements.end()) {
-//				return; // already handled
-//			}
+	for(std::pair<ExpressionPtr, ExpressionPtr> vr : varReplacements) {
 
-//			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
-//
-//			TypePtr oldType = var->getType();
-//			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
-//
-//			if(oldType == newType) // check if the type depends on the tranformation
-//				return;
-//			VariablePtr updatedVar = builder.variable(newType);
-//
-//			DeclarationStmtPtr updatedDecl = builder.declarationStmt(updatedVar, decl->getInitialization());
-//
-//			replacements[decl] = updatedDecl;
-//		});
-//	}
+		const ExpressionPtr& oldVar = vr.first;
+//		const ExpressionPtr& newVar = vr.second;
+
+		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
+
+		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
+			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
+
+			if(replacements.find(decl) != replacements.end()) {
+				return; // already handled
+			}
+
+			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
+
+			TypePtr oldType = var->getType();
+			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
+
+			if(oldType == newType) // check if the type depends on the tranformation
+				return;
+			VariablePtr updatedVar = builder.variable(newType);
+
+			DeclarationStmtPtr updatedDecl = builder.declarationStmt(updatedVar, decl->getInitialization());
+
+			replacements[decl] = updatedDecl;
+		});
+	}
 }
 
 void AosToSoa::doReplacements(const std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures,

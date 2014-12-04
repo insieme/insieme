@@ -45,6 +45,14 @@ namespace core {
 namespace analysis {
 
 /**
+ * Tests whether the given expression is side effect free.
+ * An expression is side effect free if it is composed only of calls to pure functions.
+ *
+ * @param expr the expression to be tested
+ */
+bool isSideEffectFree(const ExpressionPtr& expr);
+
+/**
  * Tests whether the call referenced by the given pointer is a call to the given function.
  *
  * @param candidate the node to be tested

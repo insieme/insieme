@@ -46,5 +46,6 @@ class GemsclaimPlugin : public insieme::frontend::extensions::FrontendPlugin {
 public:
         GemsclaimPlugin() {
                 kidnappedHeaders.push_back(GEM_SYSTEM_HEADER_REPLACEMENTS_DIR);
+			    macros["_GEM"] = "";
         }
 };

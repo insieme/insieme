@@ -33,8 +33,26 @@ macro ( add_unit_test case_name )
 			)
 		endif(NOT MSVC)
 	else(USE_VALGRIND)
+		# use half the NB_PROCESSORS count to parallelize tests
+		if(NOT NB_PROCESSORS)
+			# default = 8 if system query failed
+			set(NB_PROCESSORS 8)
+		endif(NOT NB_PROCESSORS)
+		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 4")
+		
 		# add normal test
-		add_test(${case_name} ${case_name})
+		# parallelize integration tests
+		if(${case_name} MATCHES ".*integration.*")
+		add_test(NAME ${case_name} 
+			COMMAND ${CMAKE_SOURCE_DIR}/code/gtest-parallel.py 
+				-w ${NB_PROCESSOR_PART}
+				${CMAKE_CURRENT_BINARY_DIR}/${case_name}
+			WORKING_DIRECTORY
+				${CMAKE_CURRENT_BINARY_DIR}
+			)
+		else()
+			add_test(${case_name} ${case_name})
+		endif(${case_name} MATCHES ".*integration.*")
 
 		# + valgrind as a custom target (only if not explicitly prohibited)
 		if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))

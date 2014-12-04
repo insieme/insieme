@@ -42,6 +42,7 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/remove_const.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_polymorphic.hpp>
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/hash_utils.h"
@@ -590,6 +591,18 @@ namespace core {
 			// use the path comparison operation
 			return path < other.getPath();
 		}
+		template<typename S>
+		bool operator<=(const Address<S>& other) const {
+			return *this < other || this == other;
+		}
+		template<typename S>
+		bool operator>=(const Address<S>& other) const {
+			return !(*this < other);
+		}
+		template<typename S>
+		bool operator>(const Address<S>& other) const {
+			return !(*this <= other);
+		}
 
 		/**
 		 * Obtains a hash value for this address.
@@ -782,6 +795,11 @@ namespace core {
 			visitPathBottomUp(addr.getParentAddress(), visitor);
 		}
 	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathBottomUp(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathBottomUp(addr, visitor);
+	}
 
 	template<typename Visitor, typename T>
 	void visitPathTopDown(const Address<const T>& addr, Visitor& visitor) {
@@ -789,6 +807,11 @@ namespace core {
 			visitPathTopDown(addr.getParentAddress(), visitor);
 		}
 		visitor.visit(addr);
+	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathTopDown(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathTopDown(addr, visitor);
 	}
 
 	template<typename Visitor, typename T>
@@ -799,6 +822,11 @@ namespace core {
 		}
 		return res;
 	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathBottomUpInterruptible(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathBottomUpInterruptible(addr, visitor);
+	}
 
 	template<typename Visitor, typename T>
 	bool visitPathTopDownInterruptible(const Address<const T>& addr, Visitor& visitor) {
@@ -807,6 +835,11 @@ namespace core {
 			res = visitPathTopDownInterruptible(addr.getParentAddress(), visitor);
 		}
 		return res || visitor.visit(addr);
+	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathTopDownInterruptible(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathTopDownInterruptible(addr, visitor);
 	}
 	
 	template<typename Visitor>

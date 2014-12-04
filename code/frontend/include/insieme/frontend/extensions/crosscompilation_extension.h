@@ -29,30 +29,24 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/utils/config.h"
 
-namespace insieme {
-namespace frontend {
+using namespace insieme;
 
-/**
- * This is the frontend cleanup tool.
- * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
- * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
- */
-class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
-		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-        stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
+class CrossCompilationPlugin : public insieme::frontend::extensions::FrontendPlugin {
+
+public:
+        CrossCompilationPlugin(const std::string& systemHeadersDir) {
+                kidnappedHeaders.push_back(systemHeadersDir);
+
+                #include "insieme/frontend/extensions/crosscompilation_macros.inl"
+        }
 };
-
-
-} // frontend
-} // insieme
