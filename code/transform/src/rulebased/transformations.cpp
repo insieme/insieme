@@ -277,12 +277,15 @@ namespace rulebased {
 			Rule(
 
 				// match the 2 nested for-loops
-				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1", irp::literal("1")),
+				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
 					irp::compoundStmt(
-						p::listVar("DECLS", *irp::declarationStmt()) <<
-						irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2", irp::literal("1")),
+						p::listVar("A1", *!(irp::forStmt() | irp::compoundStmt()))
+						<<
+						irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
 							p::var("BODY")
 						)
+						<<
+						p::listVar("B1", *!(irp::forStmt() | irp::compoundStmt()))
 					)
 				),
 
@@ -292,11 +295,14 @@ namespace rulebased {
 
 					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
 						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
-							irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), g::var("tsA")), g::var("U1")), g::var("S1"),
-								g::listVar("DECLS") <<
-								irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), g::var("tsB")), g::var("U2")), g::var("S2"),
+							irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"),g::var("S1"))), g::var("U1")), g::var("S1"),
+								g::listVar("A1")
+								<<
+								irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"),g::var("S2"))), g::var("U2")), g::var("S2"),
 									g::var("BODY")
 								)
+								<<
+								g::listVar("B1")
 							)
 						)
 					)
@@ -317,17 +323,23 @@ namespace rulebased {
 			Rule(
 
 				// match the 2 nested for-loops
-				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1", irp::literal("1")),
+				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
 					irp::compoundStmt(
-						p::listVar("D1", *irp::declarationStmt()) <<
-						irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2", irp::literal("1")),
+						p::listVar("A1", *!(irp::forStmt() | irp::compoundStmt()))
+						<<
+						irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
 							irp::compoundStmt(
-								p::listVar("D2", *irp::declarationStmt()) <<
-								irp::forStmt(p::var("V3", irp::variable(p::var("T3"), p::any)),p::var("L3"),p::var("U3"),p::var("S3", irp::literal("1")),
+								p::listVar("A2", *!(irp::forStmt() | irp::compoundStmt()))
+								<<
+								irp::forStmt(p::var("V3", irp::variable(p::var("T3"), p::any)),p::var("L3"),p::var("U3"),p::var("S3"),
 										p::var("BODY")
 								)
+								<<
+								p::listVar("B2", *!(irp::forStmt() | irp::compoundStmt()))
 							)
 						)
+						<<
+						p::listVar("B1", *!(irp::forStmt() | irp::compoundStmt()))
 					)
 				),
 
@@ -339,14 +351,20 @@ namespace rulebased {
 					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
 						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
 							irg::forStmt(g::var("kk"), g::var("L3"), g::var("U3"), irg::mul(g::var("tsC"),g::var("S3")),
-								irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), g::var("tsA")), g::var("U1")), g::var("S1"),
-									g::listVar("D1") <<
-									irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), g::var("tsB")), g::var("U2")), g::var("S2"),
-										g::listVar("D2") <<
-										irg::forStmt(g::var("V3"), g::var("kk"), irg::min(irg::add(g::var("kk"), g::var("tsC")), g::var("U3")), g::var("S3"),
+								irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"),g::var("S1"))), g::var("U1")), g::var("S1"),
+									g::listVar("A1")
+									<<
+									irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"),g::var("S2"))), g::var("U2")), g::var("S2"),
+										g::listVar("A2")
+										<<
+										irg::forStmt(g::var("V3"), g::var("kk"), irg::min(irg::add(g::var("kk"), irg::mul(g::var("tsC"),g::var("S3"))), g::var("U3")), g::var("S3"),
 											g::var("BODY")
 										)
+										<<
+										g::listVar("B2")
 									)
+									<<
+									g::listVar("B1")
 								)
 							)
 						)

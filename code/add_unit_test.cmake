@@ -42,9 +42,9 @@ macro ( add_unit_test case_name )
 		
 		# add normal test
 		# parallelize integration tests
-		if(${case_name} MATCHES ".*integration.*")
+		if(${case_name} MATCHES ".*driver_integration.*")
 		add_test(NAME ${case_name} 
-			COMMAND ${CMAKE_SOURCE_DIR}/code/gtest-parallel.py 
+			COMMAND ${insieme_root_dir}/code/gtest-parallel.py 
 				-w ${NB_PROCESSOR_PART}
 				${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 			WORKING_DIRECTORY
@@ -52,7 +52,7 @@ macro ( add_unit_test case_name )
 			)
 		else()
 			add_test(${case_name} ${case_name})
-		endif(${case_name} MATCHES ".*integration.*")
+		endif(${case_name} MATCHES ".*driver_integration.*")
 
 		# + valgrind as a custom target (only if not explicitly prohibited)
 		if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
