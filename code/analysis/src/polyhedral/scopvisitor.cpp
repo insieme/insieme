@@ -324,7 +324,8 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 
 	if ( stride.isOne() ) { return domain; }
 
-	assert(stride.isConstant() && "Stride value of for loop is not constant.");
+	// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
+	// assert(stride.isConstant() && "Stride value of for loop is not constant.");
 
 	int stride_size = stride.getTerms().front().second.getNumerator();
 
@@ -912,10 +913,12 @@ IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 			// Check the lower bound of the loop
 
 			Formula &&step= arithmetic::toFormula(forPtr->getStep());
-			if (!step.isConstant()) {
-				THROW_EXCEPTION(
-					NotASCoP, "Non constant stride in for statement not supported", forStmt.getAddressedNode());
-			}
+
+			// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
+			// if (!step.isConstant()) {
+			// 	THROW_EXCEPTION(
+			// 	NotASCoP, "Non constant stride in for statement not supported", forStmt.getAddressedNode());
+			// }
 
 			AffineConstraintPtr bounds= buildStridedDomain<ExpressionPtr>(
 				mgr, ret, forStmt->getIterator(), forStmt->getStart(), forPtr->getEnd(), step);
