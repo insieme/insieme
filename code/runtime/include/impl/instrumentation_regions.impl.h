@@ -230,6 +230,7 @@ void irt_inst_region_wi_init(irt_work_item* wi) {
 void irt_inst_region_wi_finalize(irt_work_item* wi) {
 	free(wi->inst_region_list->items);
 	free(wi->inst_region_list);
+	free(wi->inst_region_data);
 }
 
 void irt_inst_region_wg_init(irt_work_group* wg) {
