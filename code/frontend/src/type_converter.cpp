@@ -478,6 +478,13 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		mid++;
 	}
 
+    //we have to avoid empty structs, cannot be initalized with bracket initalization
+	if(!mid) {
+        core::TypePtr&& fieldType = builder.getLangBasic().getBool();
+        core::StringValuePtr id = builder.stringValue("__insieme_bool_dummy");
+		structElements.push_back(builder.namedType(id, fieldType));
+	}
+
 
 	// build a struct or union IR type
 	retTy = handleTagType(def, structElements);
@@ -606,8 +613,8 @@ core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, co
 
 	std::string name;
 	if (tagDecl->getName() != ""){
-		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), 
-									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), 
+		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl),
+									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(),
 									   convFact.getSourceManager());
 	}
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
