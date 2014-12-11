@@ -286,19 +286,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	irt_g_runtime_behaviour = behaviour;
 
-#ifndef _GEMS_SIM
-	// TODO [_GEMS]: signal is not supported by gems platform
-	// initialize error and termination signal handlers
-	if(handle_signals) {
-		signal(IRT_SIG_ERR, &irt_error_handler);
-		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
-		signal(SIGTERM, &irt_term_handler);
-		signal(SIGINT, &irt_term_handler);
-		signal(SIGSEGV, &irt_abort_handler);
-		atexit(&irt_exit_handler);
-	}
-#endif
-
 	// initialize globals
 	irt_init_globals();
 	// TODO: superfluous?
@@ -321,17 +308,32 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
 
 	// initialize workers
-	static irt_worker_init_signal signal;
-	signal.init_count = 0;
+	static irt_worker_init_signal signalStruct;
+	signalStruct.init_count = 0;
 
-	void* ev_handle = _irt_init_signalable(&signal);
+	void* ev_handle = _irt_init_signalable(&signalStruct);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signalStruct);
 	}
 
 	// wait until all workers have signaled readiness
-	_irt_wake_sleeping_workers(&signal, ev_handle);
+	_irt_wake_sleeping_workers(&signalStruct, ev_handle);
+
+	// signal and exit handling needs to be registered after all workers have inited
+	// otherwise there is potential for the access of uninitialized per-worker locks
+#ifndef _GEMS_SIM
+	// TODO [_GEMS]: signal is not supported by gems platform
+	// initialize error and termination signal handlers
+	if(handle_signals) {
+		signal(IRT_SIG_ERR, &irt_error_handler);
+		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
+		signal(SIGTERM, &irt_term_handler);
+		signal(SIGINT, &irt_term_handler);
+		signal(SIGSEGV, &irt_abort_handler);
+		atexit(&irt_exit_handler);
+	}
+#endif
 
 	#ifdef USE_OPENCL
 		irt_log_comment("Running Insieme runtime with OpenCL!\n");
