@@ -191,6 +191,10 @@ TEST(energy, dvfs) {
 TEST(energy, rapl) {
 	// since we need PAPI working for the next line, explicitly call the init function here
 	irt_papi_init();
+	if(!irt_rapl_is_supported()) {
+		printf("warning: RAPL not available, not testing it\n");
+		return;
+	}
 	// since we test each socket once, use all cores of a single socket
 	uint32 wcount = irt_hw_get_num_cores_per_socket();
 	irt_context* context = irt_runtime_start_in_context(wcount, insieme_init_context, insieme_cleanup_context, false);
