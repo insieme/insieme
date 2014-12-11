@@ -118,8 +118,6 @@ char *argv[];
 #ifdef USE_TIME
 #ifndef WIN32
         gettimeofday(&tstart,(struct timezone *)NULL);
-        if (framerate > 0)
-          gettimeofday(&tftarget,(struct timezone *)NULL);
 #else
         startTime = timeGetTime();
         if (framerate > 0)
@@ -128,6 +126,9 @@ char *argv[];
 #endif
         first = 0;
       }
+
+      if (framerate > 0)
+        gettimeofday(&tftarget,(struct timezone *)NULL);
 
       if(loopflag == 0 && framenum == 0) 
         gettimeofday(&lastLoopTstart,(struct timezone *)NULL);
@@ -148,7 +149,7 @@ char *argv[];
   runtime = 100*(tstop.tv_sec-tstart.tv_sec)
     + (tstop.tv_usec-tstart.tv_usec)/10000;
   lastLoopRuntime = 100*(tstop.tv_sec-lastLoopTstart.tv_sec)
-    + (tstop.tv_usec-lastLoopTstart.tv_usec)/10001;
+    + (tstop.tv_usec-lastLoopTstart.tv_usec)/10000;
 #else
   stopTime = timeGetTime();
   runtime = (stopTime - startTime) / 10;
