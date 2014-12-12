@@ -299,7 +299,7 @@ std::vector<std::pair<ExpressionSet, RefTypePtr>> AosToSoa::createCandidateLists
 //	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 //		std::cout << "\nList: \n";
 //		for(ExpressionPtr tr : toReplaceList.first)
-//			std::cout << tr << std::endl;
+//			std::cout << *tr->getType() << " " << *tr << std::endl;
 //	}
 
 	return toReplaceLists;
@@ -310,20 +310,35 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> AosToSoa::findCandidates(NodeA
 	return candidateFinder(toTransform);
 }
 
+bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
+	TypePtr type = expr->getType();
+
+	if(!type.isa<RefTypePtr>())
+		return false;
+
+	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
+
+	if(containsStructType.match(type))
+		return true;
+
+	return false;
+}
+
 void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& transformRoot, ExpressionSet& toReplaceList,
 		const NodeAddress& toTransform, ia::VariableScopeMap& scopes) {
 
 #if 1
+	RefTypePtr structType = transformRoot.second;
 	visitDepthFirst(toTransform, [&](const StatementAddress& stmt) {
 		if(const CallExprAddress call = stmt.isa<CallExprAddress>()) {
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 				ExpressionAddress lhs = removeMemLocationCreators(call[0]);
 				ExpressionAddress rhs = removeMemLocationCreators(call[1]);
 				ExpressionAddress lhsVar = extractNonTupleVariable(lhs);
-				if(!lhsVar) // lhs is not based on a variable
+				if(!(lhsVar && isRefStruct(lhsVar, structType))) // lhs is not based on a variable
 					return;
 				ExpressionAddress rhsVar = extractNonTupleVariable(rhs);
-				if(!rhsVar) // rhs is not based on a variable
+				if(!(rhsVar && isRefStruct(rhsVar, structType))) // rhs is not based on a variable
 					return;
 
 				if(toReplaceList.find(lhsVar) != toReplaceList.end()) { // lhsVar is already selected for replacement
@@ -354,6 +369,9 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 
 					VariableAddress param = pair.second;
 
+					if(!isRefStruct(param, structType))
+						return;
+
 					if(toReplaceList.find(argVar) != toReplaceList.end()) {
 						toReplaceList.insert(param);
 					}
@@ -370,7 +388,7 @@ void AosToSoa::collectVariables(const std::pair<ExpressionPtr, RefTypePtr>& tran
 				return;
 
 			if(toReplaceList.find(initVar) != toReplaceList.end()) { // the initialization is already selected for replacement
-					if(init->getType().isa<RefTypeAddress>()) {
+					if(isRefStruct(init, structType)) {
 						toReplaceList.insert(var);
 						return;
 					}

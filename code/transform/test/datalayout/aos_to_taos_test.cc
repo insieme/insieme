@@ -117,6 +117,9 @@ TEST(DataLayout, AosToTaos) {
 		"		ref.deref(a)[i].int = i;"
 		"	}"
 		"	access(a);"
+		""
+		"	ref<int<4>> e = (*a)[5].int;"
+		""
 		"	store(*a);"
 		"	for(int<4> i = 0 .. 100 : 1) {"
 		"		ref<twoElem> tmp;"
@@ -130,7 +133,7 @@ TEST(DataLayout, AosToTaos) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -147,8 +150,8 @@ TEST(DataLayout, AosToTaos) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(129, numberOfCompoundStmts(code));
-	EXPECT_EQ(17, countMarshalledAccesses(code));
+	EXPECT_EQ(132, numberOfCompoundStmts(code));
+	EXPECT_EQ(18, countMarshalledAccesses(code));
 	EXPECT_EQ(9, countMarshalledAssigns(code));
 }
 
@@ -167,7 +170,7 @@ TEST(DataLayout, Tuple) {
 			"		d = a;"
 			"		b;"
 			"		c;"
-//			"		*a[0];" // reference set must not be empty /home/klaus/insieme_base/code/analysis/src/cba/analysis.cpp:193
+			"		ref<int<4>> e = (*a[0])[5].int;"
 			"	};"
 			""
 			"	let local = (ref<array<ref<array<twoElem,1>>,1>> a, ref<array<ref<array<real<4>,1>>,1>> b, uint<8> c, "
@@ -185,7 +188,7 @@ TEST(DataLayout, Tuple) {
 //			"				[ref<array<ref<array<twoElem,1>>,1>> a1 = a, ref<array<real<4>,1>> b1 = b] "
 			"		,	local(a, b, c, local_size, global_size)"
 			"		));"
-//			"		*a[0];" begin == end /home/klaus/insieme_base/code/analysis/include/insieme/analysis/cba/framework/entities/data_value.h:461
+			"		*a[0];"
 			"	};"
 			""
 			"	let kernelFct = (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {"
@@ -211,8 +214,8 @@ TEST(DataLayout, Tuple) {
 			"	ref<ref<tuple>> t;"
 			"	t = new(undefined(lit( tuple )));"
 			""
-			"ref<array<ref<array<twoElem,1>>,1>> d = scalar.to.array(a);"
-			"		*(*d[0])[0];"
+			"	ref<array<ref<array<twoElem,1>>,1>> d = scalar.to.array(a);"
+			"	ref<twoElem> e = (*d[0])[0];" // !!!!!
 			"	tuple.ref.elem(*t, 0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
 			"	tuple.ref.elem(*t, 1u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(b);"
 			"	tuple.ref.elem(*t, 2u, lit(ref<array<uint<8>,1>>)) = scalar.to.array(c);"
@@ -231,7 +234,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
