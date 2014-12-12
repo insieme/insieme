@@ -28,7 +28,7 @@ optparse.parse!
 # get test case names
 testcases=`#{ARGV.first} --gtest_list_tests`
 
-list=testcases.split("\n").map{|x| x.strip}
+list=testcases.split("\n").map{|x| x.split(" ")[0].strip }
 # remove gtest output header, merge test case names
 list.shift(1)
 prefix=list.shift(1)[0]
