@@ -36,6 +36,9 @@ list.map! do |x|
 	"#{prefix.to_s}#{x}"
 end
 
+# shuffle test cases reproducibly to balance load
+list.shuffle!(random: Random.new(17))
+
 threads=[]
 result=Hash.new
 
