@@ -397,8 +397,10 @@ TEST(TypeConversion, CombinedTypes) {
 
 	////////////////////////////////////////////////////////
 	//Now that we have a class type, lets make functions
+    #if ((__GNUC__ >= 3) && (__GNUC_MINOR__ >= 7))
+    #else
 	{
-		clang::QualType resultType = clang::BuiltinType(clang::BuiltinType::Long).getCanonicalTypeInternal();
+        clang::QualType resultType = clang::BuiltinType(clang::BuiltinType::Long).getCanonicalTypeInternal();
 		std::vector<clang::QualType> args;
 		args.push_back( resultType);
 		args.push_back( ASTctx.getLValueReferenceType(resultType));
@@ -411,7 +413,7 @@ TEST(TypeConversion, CombinedTypes) {
 		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>" ,
 								 "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>");
 	}
-
+    #endif
 	/////////////////////////////////////////////////////////
 	// function with objects
 	{
