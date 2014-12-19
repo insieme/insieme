@@ -51,7 +51,7 @@ namespace printer {
 
 		class LuaConverter;
 
-		using OperatorConverter = std::function<void(LuaConverter&, const CallExprPtr&)>;
+		typedef std::function<void(LuaConverter&, const CallExprPtr&)> OperatorConverter;
 		typedef utils::map::PointerMap<ExpressionPtr, OperatorConverter> OperatorConverterTable;
 
 		const OperatorConverterTable& getDefaultConverterTable();
