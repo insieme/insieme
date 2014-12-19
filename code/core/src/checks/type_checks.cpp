@@ -144,7 +144,7 @@ namespace {
 			size_t n = (int64_t)f.getConstantValue();
 
 			// return type of n-th component
-			return (0<=n && n<tupleType.size())? tupleType[n] : fail;
+			return (n<tupleType.size())? tupleType[n] : fail;
 		}
 
 		// check whether it is navigating along the inheritance hierarchy

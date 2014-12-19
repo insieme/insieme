@@ -78,6 +78,7 @@ namespace detail {
 				assert_fail() << "Should not be reached!";
 				return out;
 			}
+			EmptyPlugin() {}
 		} empty;
 		return empty;
 	}

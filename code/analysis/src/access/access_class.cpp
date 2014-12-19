@@ -99,7 +99,7 @@ namespace access {
 			AccessClassPtr cur = classPtr;
 
 			AccessClassPtr parent;
-			while ( parent = cur->getParentClass() )  {
+			while((parent = cur->getParentClass()))  {
 				ret.insert(parent);
 				cur = parent;
 			}

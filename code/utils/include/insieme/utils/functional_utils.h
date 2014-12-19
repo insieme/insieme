@@ -44,13 +44,10 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-struct empty {};
-
 template<typename T>
 struct id : public std::unary_function<const T&, const T&> {
 	const T& operator()(const T& element) const { return element; }
 };
-
 
 template<typename PointerType>
 struct deref: public std::unary_function<const PointerType&, decltype(*PointerType())> {

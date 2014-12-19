@@ -340,7 +340,7 @@ namespace core {
 		/**
 		 * The accessor offered to gain convenient access to members of the referenced node
 		 */
-		typedef typename node_type<typename std::remove_const<T>::type>::template accessor<Instance>::type accessor_type;
+		typedef typename node_type<typename std::remove_const<T>::type>::template accessor<::insieme::core::Instance>::type accessor_type;
 
 
 		/**
@@ -412,7 +412,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename std::enable_if<is_ir_pointer<R>::value, R>::type as() const {
-			return getAddressedNode().as<R>();
+			return getAddressedNode().template as<R>();
 		}
 
 		/**
@@ -420,7 +420,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename std::enable_if<is_ir_address<R>::value, R>::type as() const {
-			return getAsAddress().as<R>();
+			return getAsAddress().template as<R>();
 		}
 
 		/**
@@ -437,7 +437,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename boost::enable_if<is_ir_pointer<R>, R>::type isa() const {
-			return getAddressedNode().isa<R>();
+			return getAddressedNode().template isa<R>();
 		}
 
 		/**
@@ -446,8 +446,8 @@ namespace core {
 		template<typename R>
 		typename std::enable_if<is_ir_address<R>::value, R>::type isa() const {
 			// shortcut
-			if (!getAddressedNode().isa<Pointer<const typename R::element_type>>()) return R();
-			return getAsAddress().isa<R>();
+			if (!getAddressedNode().template isa<Pointer<const typename R::element_type>>()) return R();
+			return getAsAddress().template isa<R>();
 		}
 
 		/**
@@ -511,7 +511,7 @@ namespace core {
 		Address<const T> getAsAddress() const {
 			if (!path) return Address<const T>();
 			if (isRoot()) return Address<const T>(getAddressedNode());
-			return getParentInstance().getAsAddress().getAddressOfChild(getIndex()).as<Address<const T>>();
+			return getParentInstance().getAsAddress().getAddressOfChild(getIndex()).template as<Address<const T>>();
 		}
 
 		/**
@@ -842,7 +842,7 @@ namespace core {
 	 * A variant of the static instance address cast allowing for a instance type to be past
 	 * as a template argument.
 	 */
-	template<typename B, typename T, typename E = typename B::element_type>
+	template<typename B, typename T, typename E>
 	inline typename std::enable_if<is_ir_instance<B>::value && (std::is_base_of<E,T>::value || std::is_base_of<T,E>::value), B>::type
 	static_instance_cast(const Instance<T>& src) {
 		assert_true(!src || dynamic_cast<E*>(&(*src)))
@@ -875,7 +875,7 @@ namespace core {
 	 * A variant of the dynamic address cast allowing for a address type to be past
 	 * as a template argument.
 	 */
-	template<typename B, typename T, typename E = typename B::element_type>
+	template<typename B, typename T, typename E>
 	inline typename std::enable_if<is_ir_instance<B>::value && (std::is_base_of<E,T>::value || std::is_base_of<T,E>::value), B>::type
 	dynamic_instance_cast(const Instance<T>& src) {
 		if (src && dynamic_cast<E*>(&(*src))) {

@@ -261,7 +261,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename boost::enable_if<is_ir_pointer<R>, R>::type as() const {
-			return getAddressedNode().as<R>();
+			return getAddressedNode().template as<R>();
 		}
 
 		/**
@@ -278,7 +278,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename boost::enable_if<is_ir_pointer<R>, R>::type isa() const {
-			return getAddressedNode().isa<R>();
+			return getAddressedNode().template isa<R>();
 		}
 
 		/**
@@ -669,7 +669,7 @@ namespace core {
 	 * A variant of the static address cast allowing for a address type to be past
 	 * as a template argument.
 	 */
-	template<typename B, typename T, typename E = typename B::element_type>
+	template<typename B, typename T, typename E>
 	inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 	static_address_cast(const Address<T>& src) {
 		assert_true(!src || dynamic_cast<E*>(&(*src)))
@@ -702,7 +702,7 @@ namespace core {
 	 * A variant of the dynamic address cast allowing for a address type to be past
 	 * as a template argument.
 	 */
-	template<typename B, typename T, typename E = typename B::element_type>
+	template<typename B, typename T, typename E>
 	inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 	dynamic_address_cast(const Address<T>& src) {
 		if (src && dynamic_cast<E*>(&(*src))) {

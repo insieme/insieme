@@ -149,10 +149,9 @@ public:
 	 * operator is realizing this efficient conversion.
 	 */
 	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
-	operator const Pointer<B>() const {
+	operator Pointer<B>() const {
 		return Pointer<B>(this->ptr);
 	}
-
 
 	/**
 	 * Obtains a accessor instance allowing to access the members of the referenced node.
