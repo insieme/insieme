@@ -721,7 +721,7 @@ public:
 
 		std::queue<Ptr<const Node>> queue;
 
-		IRVisitor<void>* visitor;
+		IRVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
 			// visit the current node
