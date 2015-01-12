@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -174,11 +174,11 @@ namespace extensions {
 				auto innerType = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
 
 				core::IRBuilder builder (innerType->getNodeManager());
-				
+
 				if (!innerType.isa<core::GenericTypePtr>())
 					return nullptr;
 
-				// if is a typedef which ends pointing to an annonymous struct, lets save the effort and 
+				// if is a typedef which ends pointing to an annonymous struct, lets save the effort and
 				// return a generic opaque type
 				auto tmp = convFact.getIRTranslationUnit()[innerType.as<core::GenericTypePtr>()];
 				core::StructTypePtr structTy = tmp.isa<core::StructTypePtr>();
@@ -187,7 +187,7 @@ namespace extensions {
 					auto name = decl->getQualifiedNameAsString();
 					core::GenericTypePtr gen = builder.genericType(name);
 					convFact.getHeaderTagger().addHeaderForDecl(gen, decl);
-					return gen;
+					return structTy;
 				}
 				return nullptr;
 
@@ -195,6 +195,6 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-} // extensions 
+} // extensions
 } // frontend
 } // insieme
