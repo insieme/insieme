@@ -825,7 +825,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 		frontend_assert(gen.isInt(rhs->getType()) ) << "Array view displacement must be an integer type\nGiven: " << *rhs->getType();
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
-
+        if (gen.isInt16(rhs->getType()))
+            rhs = builder.castExpr(gen.getInt4(), rhs);
 
 		// compound operator do not deref the target var (no implicit LtoR cast)
 		// we need a right side in the operation call
