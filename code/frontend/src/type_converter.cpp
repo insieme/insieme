@@ -146,8 +146,8 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	case BuiltinType::UChar:		return gen.getUInt1();
 	case BuiltinType::Char16:		return gen.getWChar16(); //TODO c++11 specific builtin
 	case BuiltinType::Char32:		return gen.getWChar32(); //TODO c++11 specific builtin
-	case BuiltinType::Char_S:
-	case BuiltinType::SChar:		return gen.getChar();
+	case BuiltinType::Char_S:       return gen.getChar();
+	case BuiltinType::SChar:		return gen.getInt1(); //Signed char, remember: char, unsigned char, signed char are distinct types
 	case BuiltinType::WChar_S:		return gen.getWChar32();
 	case BuiltinType::WChar_U:		return gen.getWChar32();
 
