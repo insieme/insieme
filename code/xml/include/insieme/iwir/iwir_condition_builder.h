@@ -46,7 +46,6 @@
 #include <boost/optional.hpp>
 #include "insieme/utils/logging.h"
 
-//#include "insieme/iwir/iwir_condition_ast.h"
 #include "insieme/iwir/iwir_ast.h"
 
 namespace iwir {
@@ -57,42 +56,6 @@ namespace condition_ast {
 
 	namespace qi    = boost::spirit::qi;
 	namespace phx   = boost::phoenix;
-
-	/*
-	declared in iwir_condition_ast.h
-	struct op_or  {};
-	struct op_and {};
-	struct op_neq {};
-	struct op_eq {};
-	struct op_gt {};
-	struct op_gte {};
-	struct op_lt {};
-	struct op_lte {};
-	struct op_not {};
-
-	typedef std::string port;
-	template <typename tag> struct binop;
-	template <typename tag> struct unop;
-
-	typedef boost::variant<
-			int,
-			double,
-			bool,
-			std::string,
-			port, 
-			boost::recursive_wrapper<binop<op_or >>,
-			boost::recursive_wrapper<binop<op_and>>,
-			boost::recursive_wrapper<binop<op_neq>>, 
-			boost::recursive_wrapper<binop<op_eq >>, 
-			boost::recursive_wrapper<binop<op_gt >>, 
-			boost::recursive_wrapper<binop<op_gte>>, 
-			boost::recursive_wrapper<binop<op_lt >>, 
-			boost::recursive_wrapper<binop<op_lte>>, 
-			boost::recursive_wrapper<unop <op_not>> 
-			> ConditionExpr;
-	*/
-
-
 
 	/* 
 	* CONDITION := CONJUNCTION {or CONJUNCTION}
@@ -209,10 +172,9 @@ namespace condition_ast {
 
 			//PORT := string
 			//port_ = portString [ _val = phx::construct<port>(_1) ];
-
-			port_ = portString [ _val = phx::construct<port>(_1 /*, lookup(_1)*/) ];
-				
 			//port_ = portString [ _val = phx::construct<iwir::ast::Port*>(nullptr) /*lookup(_1)*/ ];
+			port_ = portString [ _val = phx::construct<port>(_1 /*, lookup(_1)*/) ];
+
 			portString = qi::lexeme[+alnum];
 
 			BOOST_SPIRIT_DEBUG_NODE(ConditionExpr_);
@@ -230,6 +192,7 @@ namespace condition_ast {
 
 	};
 	
+	//simple printer
 	struct printer : boost::static_visitor<void>
 	{
 		printer(std::ostream& os) : _os(os) {}
