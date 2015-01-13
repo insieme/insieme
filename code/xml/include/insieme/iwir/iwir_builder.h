@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,6 +42,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/iwir/iwir_ast.h"
+#include "insieme/iwir/iwir_condition_builder.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -173,12 +174,6 @@ class IWIRBuilder {
 
 		Context context(ifTask);
 
-		//condition
-		auto condChild = e.getFirstChildByName("condition");	
-		VLOG(2) << condChild->getText();
-		Condition* cond = handle_condition(context, *condChild);
-		ifTask->condition = cond;
-
 		//Then
 		auto thenChild = e.getFirstChildByName("then");
 		auto thenBody = handle_tasks(context, *thenChild);
@@ -199,6 +194,12 @@ class IWIRBuilder {
 		//outputPorts;
 		auto outputPorts = handle_outputPorts(context, *e.getFirstChildByName("outputPorts"));
 		ifTask->outputPorts = outputPorts;
+
+		//Condition -- we need first the ports to be handled
+		auto condChild = e.getFirstChildByName("condition");	
+		VLOG(2) << condChild->getText();
+		Condition* cond = handle_condition(context, *condChild);
+		ifTask->condition = cond;
 
 		//properties?
 		auto propChild = e.getFirstChildByName("properties");
@@ -271,11 +272,6 @@ class IWIRBuilder {
 
 		Context innerCtx(whileTask);
 
-		//Condition
-		auto condChild = e.getFirstChildByName("condition");	
-		VLOG(2) << condChild->getText();
-		Condition* cond = handle_condition(innerCtx, *condChild);
-		whileTask->condition = cond;
 
 		//Body
 		auto bodyChild= e.getFirstChildByName("body");
@@ -302,6 +298,12 @@ class IWIRBuilder {
 		auto unionPorts = handle_unionPorts(innerCtx, *unionPortsChild);
 		whileTask->unionPorts = unionPorts;
 		//TODO unionports are outpuports - add them to outputPorts?
+
+		//Condition -- we need first the ports to be handled
+		auto condChild = e.getFirstChildByName("condition");	
+		VLOG(2) << condChild->getText();
+		Condition* cond = handle_condition(innerCtx, *condChild);
+		whileTask->condition = cond;
 
 		//Links
 		auto linksChild = e.getFirstChildByName("links");
@@ -897,7 +899,17 @@ class IWIRBuilder {
 		return res;  
 	}
 
-	Condition* handle_condition(Context& ctx, const XmlElement& e) { return mgr->create<Condition>(e.getText(), ctx.getParentTask()); }
+	Condition* handle_condition(Context& ctx, const XmlElement& e) {
+		string conditionStr = e.getText();
+		auto expr = condition_ast::parseConditionString(conditionStr, ctx.getParentTask()->name, portCache);
+
+		if(expr) {
+			VLOG(2) << *expr;
+			return mgr->create<Condition>(*expr, ctx.getParentTask()); 
+		} 
+	
+		return nullptr;
+	}
 
 	void buildIWIR(const XmlElement& iwir) {
 		//TODO check for toplevel node ? <IWIR ... wfname = ...>

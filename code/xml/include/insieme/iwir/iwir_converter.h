@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -51,6 +51,7 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/encoder/lists.h"
+#include "insieme/iwir/iwir_extension.h"
 
 //#include "boost/config.hpp"
 //#include <boost/utility.hpp>
@@ -723,8 +724,12 @@ private:
 	//TODO add CONVERT_PORTS?
 	//TODO add CONVERT_LINKS?
 	//
-	#define CONVERT(name) void convert ## name( name* node)
-	#define CONVERTER(name) void convert ## name( name* node, ConversionContext& context)
+	#define CONVERTER(name) void convert ## name(name* node, ConversionContext& context)
+
+	#define CONDITION_CONVERTER(name) core::ExpressionPtr convert ## name(name* node, ConversionContext& context)
+	#define CONVERT_CONDITION(condition, context) convertCondition(condition, context);
+
+
 	
 	#define LOOPCOUNTER_CONVERTER(name) core::ExpressionPtr convert ## name( name* node, ConversionContext& context)
 	#define CONVERT_LOOPCOUNTER(loopcounter, context) convertLoopCounter(loopcounter, context);
@@ -1342,8 +1347,6 @@ private:
 		convert(node->inputPorts, context);
 		convert(node->outputPorts, context);
 
-		convert(node->condition, context);
-
 		convert(node->links, context);
 
 		//TODO turn into annotations
@@ -1581,9 +1584,9 @@ private:
 			}
 		}
 		
-		//TODO condition expression
+		//condition expression
 		core::ExpressionPtr condition;
-		condition = irBuilder.boolLit(true);
+		condition = CONVERT_CONDITION(node->condition, context);
 
 		core::CompoundStmtPtr thenBody = irBuilder.compoundStmt(thenStmts);
 		core::CompoundStmtPtr elseBody = irBuilder.compoundStmt(elseStmts);
@@ -1608,10 +1611,10 @@ private:
 
 		convert(node->inputPorts, context);
 		convert(node->outputPorts, context);
-		convert(node->condition, context);
 
 		//TODO loopports are outpuports - add them to outputPorts?
 		convert(node->loopPorts, context);	
+
 		//TODO unionports are outpuports - add them to outputPorts?
 		convert(node->unionPorts, context);	
 
@@ -1678,7 +1681,7 @@ private:
 					whileBody.push_back(linkStmt);
 				}
 			}
-		
+
 			VLOG(2) << "Links from body:";
 			for(auto l : linkCollector.getLinksFromBody()) {
 				core::StatementPtr linkStmt = context.linkStmtMap[l];
@@ -1709,20 +1712,24 @@ private:
 			VLOG(2) << "Links from LoopPorts:";
 			for(auto l : loopLinks) { VLOG(2) << "\t" << *l;}
 
+			//TODO unionLinks -- need to rewrite linkUnion(from, to) -- currently a generic "collection" type
 			whileBody.insert(whileBody.end(), unionLinks.begin(), unionLinks.end());
+
 			whileBody.insert(whileBody.end(), loopLinks.begin(), loopLinks.end());
 
 			linkCollector.printToDotFile(node->name+".dot");
 		}
 
 		//TODO convert condition Expression
-		core::ExpressionPtr condition = irBuilder.boolLit("true");
+		core::ExpressionPtr condition;
+		condition = CONVERT_CONDITION(node->condition, context);
 
 		core::WhileStmtPtr whileStmt = irBuilder.whileStmt( condition, irBuilder.compoundStmt(whileBody));
 
 		core::StatementList bodyStmts;
 		bodyStmts.insert(bodyStmts.end(), decls.begin(), decls.end()); 
 		bodyStmts.push_back(whileStmt);
+
 		core::StatementPtr body = irBuilder.compoundStmt(bodyStmts);
 		VLOG(2) << body;
 
@@ -1777,7 +1784,7 @@ private:
 				}
 			}
 		);
-
+		
 		core::StatementList forBodyStmts;
 		core::StatementList unionLinks;
 		core::StatementList loopLinks;
@@ -2425,8 +2432,288 @@ private:
 		return retType;
 	}
 
-	CONVERTER(Condition) {
+
+	CONDITION_CONVERTER(Condition) {
+		struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr>
+		{
+			Task* parentTask;
+			const VarMap& varMap;
+			const core::IRBuilder& irBuilder;
+			condition_ast_to_inspire (Task* parentTask, const VarMap& varMap, const core::IRBuilder& irBuilder): parentTask(parentTask), varMap(varMap), irBuilder(irBuilder) {}
+
+			core::VariablePtr lookup(Port* port) const {
+				core::VariablePtr var = nullptr;
+				auto p = varMap.find({parentTask, port});
+				if(p != varMap.end()) {
+					var = p->second;
+				} 
+				//VLOG(2) << var << "(" << var->getType() << ")" << " " << parentTask << " " << port;
+				return var;
+			};
+
+			std::tuple<core::ExpressionPtr, core::ExpressionPtr> implicit_cast(core::ExpressionPtr lhs, core::ExpressionPtr rhs) const {
+				const core::lang::BasicGenerator& gen = irBuilder.getLangBasic();
+				core::TypePtr lTy = lhs->getType();
+				core::TypePtr rTy = rhs->getType();
+				if(*lTy == *rTy) {
+					return std::make_tuple(lhs, rhs);
+				}
+
+				//string > integer > double > boolean
+				//1234
+				int cast = 0;
+
+				if(gen.isString(lTy)) {cast = 1;}
+				if(gen.isInt(lTy)) {cast = 2;}
+				if(gen.isDouble(lTy)) {cast = 3;}
+				if(gen.isBool(lTy)) {cast = 4;}
+
+				if(gen.isString(rTy)) {cast += 10;}
+				if(gen.isInt(rTy)) {cast += 20;}
+				if(gen.isDouble(rTy)) {cast += 30;}
+				if(gen.isBool(rTy)) {cast += 40;}
+
+				switch(cast) {
+					case 0: assert(false); break;
+						//lhs = int -- rhs = string
+					case 12: {
+								 //rhs = stringToInt(rhs);
+							auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToInt();
+							rhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(4),rhs);
+							break;
+							 }
+						//lhs = double -- rhs = string
+					case 13: {//rhs = stringToDouble(rhs);
+							auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToDouble();
+							rhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(8),rhs);
+							break;
+							 }
+						//lhs = bool -- rhs = string
+					case 14: {//rhs = stringToBool(rhs);
+							auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool();
+							rhs = irBuilder.callExpr(op,rhs);
+							break;
+							 }
+
+						//lhs = string-- rhs = int 
+					case 21: //lhs = stringToInt(lhs);
+							 break;
+						//lhs = double -- rhs = int 
+					case 23: //rhs = intToDouble(rhs); 
+							 rhs = irBuilder.callExpr(gen.getSignedToReal(),irBuilder.getIntParamLiteral(8),rhs);
+							 break;
+						//lhs = bool -- rhs = int 
+					case 24: // rhs = intToBool(rhs); 
+							 rhs = irBuilder.callExpr(gen.getSignedToBool(),irBuilder.getIntParamLiteral(8),rhs);
+							 break;
+
+						//lhs = string -- rhs = double 
+					case 31: {//lhs = stringToDouble(lhs);
+							 auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToDouble();
+							 lhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(8),lhs);
+							 break;
+							 }
+						//lhs = int -- rhs = double 
+					case 32: //lhs = intToDouble(lhs); 
+							 lhs = irBuilder.callExpr(gen.getSignedToReal(),irBuilder.getIntParamLiteral(8),lhs);
+							 break;
+						//lhs = bool -- rhs = double 
+					case 34: //rhs = doubleToBool(rhs);
+							 rhs = irBuilder.callExpr(gen.getRealToBool(),irBuilder.getIntParamLiteral(8),rhs);
+							 break;
+						
+						//lhs = string -- rhs = bool 
+					case 41: {//lhs = stringToBool(lhs);
+							 auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool();
+							 lhs = irBuilder.callExpr(op,lhs);
+							 break;
+							 }
+						//lhs = int -- rhs = bool 
+					case 42:  //lhs = intToBool(lhs);
+							 lhs = irBuilder.callExpr(gen.getSignedToBool(), lhs);
+							 break;
+						//lhs = double -- rhs = bool 
+					case 43: //lhs = doubleToBool(lhs);
+							 lhs = irBuilder.callExpr(gen.getRealToBool(), lhs);
+							 break;
+				}
+
+				return std::make_tuple(lhs, rhs);
+			}
+
+			core::ExpressionPtr cast_to_bool(core::ExpressionPtr oper) const {
+				const core::lang::BasicGenerator& gen = irBuilder.getLangBasic();
+				core::ExpressionPtr op = nullptr;
+				core::TypePtr operTy = oper.getType();
+
+				if(gen.isBool(operTy)) { 
+					return oper;
+				}
+
+				if(gen.isString(operTy)) { op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool(); }
+				if(gen.isInt(operTy)) { op = gen.getSignedToBool(); }
+				if(gen.isDouble(operTy)) { op = gen.getRealToBool(); }
+				assert(op);
+				return irBuilder.callExpr(op, oper);
+			}
+
+
+			core::ExpressionPtr operator()(int& v) const { return irBuilder.intLit(v); }
+			core::ExpressionPtr operator()(double& v) const { return irBuilder.doubleLit(v); }
+			core::ExpressionPtr operator()(bool& v) const { return irBuilder.boolLit(v); }
+			core::ExpressionPtr operator()(std::string& v) const {  return irBuilder.stringLit("\"" + v + "\""); }
+			core::ExpressionPtr operator()(condition_ast::port& v) const { 
+				core::VariablePtr portVar = lookup(v.p);
+				return irBuilder.tryDeref(portVar);
+			}
+
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_and>& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				lhs = cast_to_bool(lhs);
+				rhs = cast_to_bool(rhs);
+
+				return irBuilder.logicAnd(lhs, rhs);
+			}
+
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_or >& b) const { 
+				
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				lhs = cast_to_bool(lhs);
+				rhs = cast_to_bool(rhs);
+
+				return irBuilder.logicOr(lhs, rhs);
+			}
+
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_eq >& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				if(*lhs->getType() != *rhs->getType()) {
+					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
+				}
+				
+				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
+					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringEq(); 
+					return irBuilder.callExpr(op, lhs, rhs);
+				} else {
+					return irBuilder.eq(lhs, rhs);
+				}
+			}
+
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_neq>& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				if(*lhs->getType() != *rhs->getType()) {
+					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
+				}
+
+				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
+					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringNe(); 
+					return irBuilder.callExpr(op, lhs, rhs);
+				} else {
+					return irBuilder.ne(lhs, rhs);
+				}
+			}
+			
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_gt >& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				if(*lhs->getType() != *rhs->getType()) {
+					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
+				}
+
+				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
+					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringGt(); 
+					return irBuilder.callExpr(op, lhs, rhs);
+				} else { 
+					return irBuilder.gt(lhs, rhs);
+				}
+			}
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_gte>& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				if(*lhs->getType() != *rhs->getType()) {
+					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
+				}
+
+				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
+					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringGe(); 
+					return irBuilder.callExpr(op, lhs, rhs);
+				} else { 
+					return irBuilder.ge(lhs, rhs);
+				}
+			}
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_lt >& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				if(*lhs->getType() != *rhs->getType()) {
+					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
+				}
+				
+				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
+					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringLt(); 
+					return irBuilder.callExpr(op, lhs, rhs);
+				} else { 
+					return irBuilder.lt(lhs, rhs);
+				}
+			}
+			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_lte>& b) const { 
+				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
+				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
+				assert(lhs);
+				assert(rhs);
+
+				if(*lhs->getType() != *rhs->getType()) {
+					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
+				}
+				
+				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
+					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringLe(); 
+					return irBuilder.callExpr(op, lhs, rhs);
+				} else { 
+					return irBuilder.le(lhs, rhs);
+				}
+			}
+
+			core::ExpressionPtr operator()(condition_ast::unop<condition_ast::op_not>& u) const {
+				core::ExpressionPtr condExpr = nullptr;
+				core::ExpressionPtr oper = boost::apply_visitor(*this, u.oper1); 
+				assert(oper);
+
+				oper = cast_to_bool(oper);
+				condExpr = irBuilder.logicNeg(oper);
+				
+				return condExpr;
+			}
+		};
+
 		VLOG(2) << "Condition : " << node->condition;
+		core::ExpressionPtr condExpr = 
+			boost::apply_visitor(condition_ast_to_inspire(node->parentTask,varMap,irBuilder), node->condition);
+		dumpPretty(condExpr);
+		return condExpr;
 	}
 
 	CONVERTER(Properties) {

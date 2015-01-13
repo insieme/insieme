@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,34 +39,94 @@
 #include <boost/utility.hpp>
 #include <vector>
 #include <utility>
+//#include "insieme/iwir/iwir_condition_builder.h"
+//#include "insieme/iwir/iwir_condition_ast.h"
 
 namespace iwir {
+namespace ast {
+	//forward decls
+	class NodeManager;
+	class Node;
+	struct Port;
+	struct Link;
+	struct Task;
+	struct AtomicTask;
+	struct BlockScope;
+	struct IfTask;
+	struct ForTask;
+	struct ForEachTask;
+	struct ParallelForTask;
+	struct ParallelForEachTask;
+	struct WhileTask;
+	struct LoopCounter;
+	struct Property;
+	struct Constraint;
+	struct TaskType;
+	struct Type;
+	struct Condition;
+}
+
+namespace condition_ast {
+
+	struct op_or  {};
+	struct op_and {};
+	struct op_neq {};
+	struct op_eq {};
+	struct op_gt {};
+	struct op_gte {};
+	struct op_lt {};
+	struct op_lte {};
+	struct op_not {};
+
+	struct port { 
+		port() : name(), p(nullptr) {}
+		port(const string& n) : name(n), p(nullptr) {}
+		port(const string& n, iwir::ast::Port* p) : name(n), p(p) {}
+		string name; 
+		iwir::ast::Port* p;
+	};
+
+	template <typename tag> struct binop;
+	template <typename tag> struct unop;
+
+	typedef boost::variant<
+		int,
+		double,
+		bool,
+		std::string,
+		port, 
+		//iwir::ast::Port*, 
+		boost::recursive_wrapper<binop<op_or >>,
+		boost::recursive_wrapper<binop<op_and>>,
+		boost::recursive_wrapper<binop<op_neq>>, 
+		boost::recursive_wrapper<binop<op_eq >>, 
+		boost::recursive_wrapper<binop<op_gt >>, 
+		boost::recursive_wrapper<binop<op_gte>>, 
+		boost::recursive_wrapper<binop<op_lt >>, 
+		boost::recursive_wrapper<binop<op_lte>>, 
+		boost::recursive_wrapper< unop<op_not>> 
+		> ConditionExpr;
+
+	template <typename tag> struct binop 
+	{ 
+		explicit binop(const ConditionExpr& l, const ConditionExpr& r) : oper1(l), oper2(r) { }
+		ConditionExpr oper1, oper2; 
+	};
+
+	template <typename tag> struct unop  
+	{ 
+		explicit unop(const ConditionExpr& o) : oper1(o) { }
+		ConditionExpr oper1; 
+	};
+
+} //condition_ast end
+
 namespace ast {
 
 using std::vector;
 using std::string;
 using std::pair;
 
-//forward decls
-class NodeManager;
-class Node;
-struct Port;
-struct Link;
-struct Task;
-struct AtomicTask;
-struct BlockScope;
-struct IfTask;
-struct ForTask;
-struct ForEachTask;
-struct ParallelForTask;
-struct ParallelForEachTask;
-struct WhileTask;
-struct LoopCounter;
-struct Property;
-struct Constraint;
-struct TaskType;
-struct Type;
-struct Condition;
 
 enum NodeType { NT_Links, NT_Tasks, NT_Ports, NT_Properties, NT_Constraints, NT_Property, NT_Constraint, NT_TaskType, NT_Type, NT_Condition, NT_Port, NT_Link, NT_AtomicTask, NT_BlockScope, NT_IfTask, NT_ForTask, NT_ForEachTask, NT_ParallelForTask, NT_ParallelForEachTask, NT_WhileTask, NT_LoopCounter};
 
@@ -142,9 +202,9 @@ struct Type : public Node {
 	Type(const string& type) : Node(NT_Type), type(type) {}
 };
 struct Condition : public Node {
-	string condition;
+	iwir::condition_ast::ConditionExpr condition;
 	Task* parentTask;
-	Condition(const string& condition, Task* parentTask) : 
+	Condition(const iwir::condition_ast::ConditionExpr& condition, Task* parentTask) : 
 		Node(NT_Condition), condition(condition), parentTask(parentTask) {}
 };
 
