@@ -766,29 +766,53 @@ private:
 		auto var1 = vFrom->second;
 		auto var2 = vTo->second;
 
-		//link(var1,var2) link(from:var1, to:var2);
+		//link(from,to) link(from:fromTy, to:toTy);
 		core::StatementPtr linkStmt;
 		map<string, core::NodePtr> symbols;
-		symbols["var1"] = var1;
-		symbols["var2"] = var2;
+		//besides loopCounter variables are all variables ref
+		symbols["from"] = irBuilder.tryDeref(var1);
+		symbols["to"] = var2;
+		VLOG(2) << symbols;
 
 		if(isUnion) {
-			symbols["link"] = irBuilder.parse("lit(\"linkUnion\":('a,'b) -> unit)", symbols);
-			linkStmt = irBuilder.parseStmt("link(var1,var2);", symbols);
+			//linkUnion(from,to)
+			//symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getRefCollectionAppend();
+//			symbols["link"] = irBuilder.parse("lit(\"linkUnion\":(ref<'a>,ref<collection<'a>>) -> unit)", symbols);
+			//linkStmt = irBuilder.parseStmt("link(to, *from);", symbols);
+			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkUnion();
+			linkStmt = irBuilder.parseStmt("link(from, to);", symbols);
 		} else if(isLoopElement) {
 			//TODO get iterator to acccess correct elemnt of LoopElements-collection
-			//symbols["link"] = irBuilder.parse("lit(\"linkLoopElement\":('a,'b) -> unit)");
-			symbols["link"] = irBuilder.parse("lit(\"linkLoopElement\":(ref<'a>,'b,'c) -> unit)", symbols);
-			VLOG(2) << symbols;
-			symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+			//symbols["link"] = irBuilder.parse("lit(\"linkLoopElement\":(ref<collection<'a>>,ref<'a>,int<4>) -> unit)", symbols);
+			//symbols["link"] = irBuilder.parse("(ref<collection<'a>> le, ref<'a> to, int<4> it) -> unit {"
+			//		"to = *ref.collection.at(le, it);"
+			//		"}", symbols);
+			//symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+			//linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
 			//symbols["linkLoopElement"] = irBuilder.parse("lit(\"linkLoopElement_\":(ref<'a>,'b,'c) -> unit)", symbols);
 			//symbols["link"] = irBuilder.parse("(ref<'a> from,'b to, 'c iter) -> unit { linkLoopElement(from, to, iter); };", symbols);
-			linkStmt = irBuilder.parseStmt("link(var1, var2, iterator);", symbols);
+			
+			symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkLoopElement();
+			linkStmt = irBuilder.parseStmt("link(from, iterator, to);", symbols);
+
 		} else {
-			symbols["link"] = irBuilder.parse("lit(\"link\":('a,'b) -> unit)");
-			linkStmt = irBuilder.parseStmt("link(var1,var2);", symbols);
-			//auto linkStmt1 = irBuilder.parseStmt("var2 = var1;", symbols);
-			//VLOG(2) << linkStmt1;
+			//TODO find better solution... output links from parallelFor/ForEach are like
+			//unionlinks...
+			//FUGLY HACK!!! -- move to AST?
+			bool isOutputOfParallelFor = (node->to->parentTask->getNodeType() == NT_ParallelForTask);
+			bool isOutputOfParallelForEach = (node->to->parentTask->getNodeType() == NT_ParallelForEachTask);
+			if(isOutputOfParallelFor || isOutputOfParallelForEach) {
+				symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+				symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkParallelOutput();
+				linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
+			} else {
+				//symbols["link"] = irBuilder.parse("lit(\"link\":('a,'b) -> unit)");
+				symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkBasic();
+				linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
+				//auto linkStmt1 = irBuilder.parseStmt("to = from;", symbols);
+				//VLOG(2) << linkStmt1;
+			}
 		}
 
 		VLOG(2) << symbols;
@@ -858,30 +882,42 @@ private:
 		VLOG(2) << "isInput: " << (node->isInput ? "true" : "false" );
 		VLOG(2) << "isOutput: " << (node->isOutput ? "true" : "false" );
 
-		core::TypePtr varType = CONVERT_TYPE(node->type, context);
+		core::TypePtr varType = nullptr;
+		core::TypePtr portType = CONVERT_TYPE(node->type, context);
 		switch(node->kind) {
 			case PK_Basic:
-				varType = irBuilder.refType(varType);
+				varType = irBuilder.refType(portType);
 				break;
 			case PK_LoopPort:
-				varType = irBuilder.refType(varType);
+				varType = irBuilder.refType(portType);
 				break;
 			case PK_LoopElement:
-				varType = irBuilder.refType(varType);
+				varType = irBuilder.refType(portType);
 				break;
 			case PK_UnionPort:
-				varType = irBuilder.refType(varType);
-				break;
+				{
+					// the variable for the UnionPort 
+					varType = irBuilder.refType(portType);
+					break;
+				}
 			case PK_LoopCounter:
+				//NOTE: loopcounter is in "inputPorts" group but acts like a outputport
+				//		this is the port used as the iterVar in the IR::forStmt
 				if(node->isInput) {
-					varType = irBuilder.refType(varType);
-				}				
+					varType = irBuilder.refType(portType);
+				} else {
+					varType = portType;
+				}
 				break;
 			default: 
 				assert(false && "Wrong PortKind");
 		}
 		assert(varType);
 		core::VariablePtr var = irBuilder.variable(varType);
+
+		//declare variables for every portkind EXCEPT OUTPUT LOOPCOUNTER --> is declared in
+		//for-loop; INPUT of loopcounter (to, from, step) are "normal" declared variable
+		core::DeclarationStmtPtr decl = nullptr;
 
 		//create IR variable for port
 		if(varMap.find({node->parentTask, node}) == varMap.end()) {
@@ -895,30 +931,35 @@ private:
 			//IRVariable for Task/Port
 			varMap.insert( {key, var} ) ;
 			VLOG(2) << "port: " << node->parentTask->name << "\\" << node->name << " mapped to " << var;
-		}
 		
-		//declare variables for every portkind EXCEPT OUTPUT LOOPCOUNTER --> is declared in
-		//for-loop; INPUT of loopcounter (to, from, step) are "normal" declared variable
-
-			
-		core::DeclarationStmtPtr decl = nullptr;
-
-		switch(node->kind) {
-			case PK_Basic:
-			case PK_LoopPort:
-			case PK_LoopElement:
-			case PK_UnionPort:
-				decl = irBuilder.declarationStmt(var, irBuilder.getZero(var->getType()));
-				break;
-			case PK_LoopCounter:
-				if(node->isInput) {
-					decl = irBuilder.declarationStmt(var, irBuilder.getZero(var->getType()));
-				}				
-				//output -> to/from/step
-				break;
-			default: 
-				assert(false && "Wrong PortKind");
+			switch(node->kind) {
+				case PK_Basic:
+					decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+					break;
+				case PK_LoopPort:
+					decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+					break;
+				case PK_LoopElement:
+					decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+					break;
+				case PK_UnionPort:
+					{
+						//declare unionport
+						decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+						break;
+					}
+				case PK_LoopCounter:
+					if(node->isInput) {
+					//loopcounter for to/from/step act as input
+						decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+					}				
+					//the loopcounter itself is the iterator variable in the IR::for --> declared in the forstmt
+					break;
+				default: 
+					assert(false && "Wrong PortKind");
+			}
 		}
+
 		if(decl) {
 			VLOG(2) << decl;
 			//DeclStmt for IRVariable per Port
@@ -933,7 +974,7 @@ private:
 		}
 	}
 
-	CONVERTER(AtomicTask) { 
+	CONVERTER(AtomicTask) {
 		VLOG(2) << "AtomicTask : " << node->name << ":" << node->type->type;
 		convert(node->type, context);
 
@@ -1063,29 +1104,34 @@ private:
 
 						assert(ip);
 
-						VLOG(2) << *ip;
 						//declare and create channel -- before everything else in blockscope
 						auto fit = varMap.find( {task, ip} );
 						assert(fit != varMap.end());
 						core::VariablePtr var = fit->second;
 						auto varType = var->getType();
+						
+						VLOG(2) << *ip << " -- " << var << "(" << varType << ")";
 
 						//declare channel of size one and type "chanType"
 						symbols["chanType"] = varType;
 						core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("auto chan = channel.create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
 						declareChannels.push_back(chanDecl);
 						core::VariablePtr chan = chanDecl->getVariable();
+						VLOG(2) << chan << " " << chan->getType();
 
 						portToChannel[ip] = chan;
 						symbols["chan"] = chan;
 						symbols["var"] = var;
 
+						VLOG(2) << "asdf";
 						//release channel -- when everythings done in BlockScope
 						releaseChannels.push_back(irBuilder.parseStmt("channel.release(chan);", symbols));
 
+						VLOG(2) << "asdf";
 						//fill channel links in with : var = channel.recv();
 						chanLinkIn.push_back(irBuilder.parseStmt("var = *channel.recv(chan);", symbols));
 
+						VLOG(2) << "asdf";
 						//fill channel links out with : channel.send(var );
 						chanLinkOut.push_back(irBuilder.parseStmt("channel.send(chan, var);", symbols));
 					}
@@ -1101,6 +1147,8 @@ private:
 						assert(fit != varMap.end());
 						core::VariablePtr var = fit->second;
 						auto varType = var->getType();
+
+						VLOG(2) << *op << " -- " << var << "(" << varType << ")";
 
 						//declare channel of size one and type "chanType"
 						symbols["chanType"] = varType;
@@ -1144,7 +1192,7 @@ private:
 		core::StatementList readChannels;
 		core::StatementList fillChannels;
 
-		//TODO declare channels for BS_IP
+		//declare channels for BS_IP and provide linking stmts
 		for_each(node->inputPorts->begin(), node->inputPorts->end(),
 				[&](Port* ip) {
 				assert(ip);
@@ -1174,7 +1222,7 @@ private:
 			}
 		);
 
-		//TODO declare channels for BS_OP
+		//declare channels for BS_OP and provide linking stmts
 		for_each(node->outputPorts->begin(), node->outputPorts->end(),
 				[&](Port* op) {
 				assert(op);
@@ -1838,6 +1886,7 @@ private:
 					//from == loop && to == * 
 					loopLinks.push_back(linkStmt);
 				} else if(l->to->kind == PK_LoopCounter) { 
+					//links from some inputport of the forTask to one of loopCounter/[to,from,step]
 					loopCounterLinks.push_back(linkStmt);
 				} else {
 					assert(false);
@@ -1857,8 +1906,7 @@ private:
 		core::ExpressionPtr endVal = irBuilder.tryDeref(toCounter); 
 		core::ExpressionPtr step = irBuilder.tryDeref(stepCounter);
 
-		core::VariablePtr iterVar = counter.as<core::VariablePtr>(); //irBuilder.variable(irBuilder.getLangBasic().getInt4());
-
+		core::VariablePtr iterVar = counter.as<core::VariablePtr>(); 
 		VLOG(2) << iterVar << " " << startVal << " " << endVal << " " << step;
 
 		forBodyStmts.insert(forBodyStmts.end(), unionLinks.begin(), unionLinks.end());
@@ -1905,6 +1953,9 @@ private:
 		VLOG(2) << innerContext;
 
 		convert(node->inputPorts, context);
+		//TODO outputPorts of parallelfor need to be of collection type
+		//TODO parallelfor has no unionPort
+		//TODO parallelfor has no loopPort
 		convert(node->outputPorts, context);
 
 		//LoopCounter declarations are only needed locally
@@ -1933,13 +1984,18 @@ private:
 		//
 		//	() => {
 		//		decls-body -- decls in innerContext
+		//		loop-links[loopCounters]
 		//		pfor(TODO FILL IN) {
 		//			for(var it = from ... to : step) {
 		//				links-to-body
 		//				body
 		//				links-from-body
-		//				loop-links[loopPorts]
-		//				loop-links[unionPorts]
+		//				TODO parallelfor has no loopPort
+		//				//loop-links[loopPorts]
+		//				TODO parallelfor has no unionPort
+		//				//loop-links[unionPorts]
+		//				TODO output ports need to be collection
+		//				loop-links[outputPorts]???
 		//			}
 		//		}
 		//	}
@@ -1956,6 +2012,7 @@ private:
 		);	
 
 		core::StatementList stmts;
+		core::StatementList loopCounterLinks;
 		{
 			LinkCollector linkCollector(node->body,node->links); 
 
@@ -2008,8 +2065,16 @@ private:
 
 			VLOG(2) << "Outside body";
 			for(auto l : linkCollector.getLinksOutsideBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
 				VLOG(2) << "\t" << *l; 
-				VLOG(2) << "\t" << context.linkStmtMap[l];
+				VLOG(2) << "\t" << linkStmt;
+				//TODO loopCounter links
+				if(l->to->kind == PK_LoopCounter) { 
+					//links from some inputport of the forTask to one of loopCounter/[to,from,step]
+					loopCounterLinks.push_back(linkStmt);
+				} else {
+					assert(false);
+				}
 			}
 
 			linkCollector.printToDotFile(node->name+".dot");
@@ -2019,11 +2084,17 @@ private:
 		core::ExpressionPtr endVal = irBuilder.tryDeref(toCounter); 
 		core::ExpressionPtr step = irBuilder.tryDeref(stepCounter);
 
-		core::VariablePtr iterVar = counter.as<core::VariablePtr>(); //irBuilder.variable(irBuilder.getLangBasic().getInt4());
+		core::VariablePtr iterVar = counter.as<core::VariablePtr>(); 
 		VLOG(2) << iterVar << " " << startVal << " " << endVal << " " << step;
 
 		core::CompoundStmtPtr forBody = irBuilder.compoundStmt(stmts);
 		assert(forBody);
+
+		//replace "leIterator" literal in forBody with iterator variable
+		//NOTE when we see a link for to a outputPort we create a "leIterator" literal in Link-converter
+		core::LiteralPtr leIterator = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+		forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar, /*limitScope=*/true);
+		VLOG(2) << forBody;
 
 		core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, irBuilder.compoundStmt(forBody));
 		VLOG(2) << "forStmt";
@@ -2035,6 +2106,7 @@ private:
 	
 		core::StatementList forTaskStmts;
 		forTaskStmts.insert(forTaskStmts.end(), decls.begin(), decls.end());
+		forTaskStmts.insert(forTaskStmts.end(), loopCounterLinks.begin(), loopCounterLinks.end());
 		forTaskStmts.push_back(pFor);
 
 		core::CompoundStmtPtr forTaskBody = irBuilder.compoundStmt(forTaskStmts);
@@ -2056,11 +2128,11 @@ private:
 		convert(node->inputPorts, context);
 		convert(node->outputPorts, context);
 
-		//TODO loopports are outpuports - add them to outputPorts? 
+		//TODO loopports are outputports - add them to outputPorts? 
 		convert(node->loopPorts, context);	
-		//TODO unionports are outpuports - add them to outputPorts?
+		//TODO unionports are outputports - add them to outputPorts?
 		convert(node->unionPorts, context);	
-		//TODO loopports are outpuports - add them to outputPorts?
+		//TODO loopports are outputports - add them to outputPorts?
 		convert(node->loopElements, context);	
 	
 		convert(node->links, context);
@@ -2127,7 +2199,6 @@ private:
 			linkCollector.printToDotFile(node->name+".dot");
 		}
 
-		//TODO FILL WITH CORRECT STMTS
 		core::StatementList forBodyStmts;
 		core::StatementList unionLinks;
 		core::StatementList loopLinks;
@@ -2206,8 +2277,9 @@ private:
 			//IR: endVal = leVar.size;
 			map<string, core::NodePtr> symbols;
 			symbols["leVar"] = leVar;
+			symbols["size"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getRefCollectionSize();
 			VLOG(2) << symbols;
-			endVal = irBuilder.parseExpr("*(leVar.size)", symbols);
+			endVal = irBuilder.parseExpr("size(leVar)", symbols);
 		} else if(node->loopElements->elements.size() > 1) {
 			//we need to iterate over multiple collections
 			//TODO handle multiple loopElements -> use length of "shortest" 
@@ -2215,9 +2287,9 @@ private:
 			//	...
 			//	return biggestLoopElement->size;
 			//}
-			assert(false);
+			assert(false && "not implemented");
 		} else {
-			assert(false);
+			assert(false && "not implemented");
 		}
 
 		core::ExpressionPtr step = irBuilder.intLit(1); 
@@ -2231,7 +2303,8 @@ private:
 		core::CompoundStmtPtr forBody = irBuilder.compoundStmt(forBodyStmts);
 		assert(forBody);
 
-		//TODO replace "leIterator" literal in forBody with iterator variable
+		//replace "leIterator" literal in forBody with iterator variable
+		//NOTE when we see a link for a loopElement we create a "leIterator" literal in Link-converter
 		core::LiteralPtr leIterator = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
 		forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar, /*limitScope=*/true);
 		VLOG(2) << forBody;
@@ -2246,7 +2319,6 @@ private:
 		core::CompoundStmtPtr forTaskBody = irBuilder.compoundStmt(forTaskStmts);
 		VLOG(2) << forTaskBody;
 
-
 		core::ExpressionPtr forEachTask = irBuilder.createCallExprFromBody(forTaskBody, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
 		dumpPretty(forEachTask);
 		taskCache[node] = forEachTask;
@@ -2260,9 +2332,12 @@ private:
 		VLOG(2) << innerContext;
 
 		convert(node->inputPorts, context);
+		//TODO parallelfor has no unionPort
+		//TODO parallelfor has no loopPort
+		
+		//TODO outputPorts of parallelfor need to be of collection type
 		convert(node->outputPorts, context);
 
-		//TODO loopports are outpuports - add them to outputPorts?
 		convert(node->loopElements, context);	
 
 		convert(node->links, context);
@@ -2285,48 +2360,146 @@ private:
 		//			links-to-body
 		//			body
 		//			links-from-body
-		//			loop-links[loopPorts]
-		//			loop-links[unionPorts]
+		//			TODO parallelfor has no loopPort
+		//			//loop-links[loopPorts]
+		//			TODO parallelfor has no unionPort
+		//			//loop-links[unionPorts]
+		//			TODO output ports need to be collection
+		//			loop-links[outputPorts]???
 		//		}
 		//	}
 		//}
 
+		core::StatementList decls;
 		VLOG(2) << "Declarations:";
 		for_each(node->body->begin(),node->body->end(), 
 			[&](Task* task){
 				for(auto d : innerContext.declMap[task]) {
 					VLOG(2) << "\t" << d;
+					decls.push_back(d);
 				}
 			}
 		);
 
-		LinkCollector linkCollector(node->body,node->links); 
+		core::StatementList stmts;
+		{
+			LinkCollector linkCollector(node->body,node->links); 
 
-		VLOG(2) << "To body";
-		for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "From body";
-		for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "In body";
-		for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "Outside body";
-		for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "TaskOrder";
-		for(auto t : linkCollector.getTaskOrder()) { VLOG(2) << "\t" << *t; }
-		
-		VLOG(2) << "TaskLinkMap";
-		for(auto tl : linkCollector.getTaskLinkMap()) { 
-			VLOG(2) << "\tTask: " << *(tl.first);
-			for(auto l : (tl.second)) {
-				VLOG(2) << "\t " << *l;
+			VLOG(2) << "To body";
+			for(auto l : linkCollector.getLinksToBody()) { 
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt; 
+				stmts.push_back(linkStmt);
 			}
+			
+			VLOG(2) << "In body";
+			for(auto l : linkCollector.getLinksInBody()) {
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << context.linkStmtMap[l];
+			}
+
+			VLOG(2) << "TaskOrder";
+			auto taskLinkMap = linkCollector.getTaskLinkMap();
+			for(auto t : linkCollector.getTaskOrder()) { 
+				VLOG(2) << "\t" << *t << "(" << t << ")";
+
+				//TODO get call to task
+				auto taskStmt = taskCache[t];
+				VLOG(2) << taskStmt;
+				stmts.push_back(taskStmt);
+			
+				//Links between tasks (if only one task in body -> empty taskLinkMap)
+				for(auto link : taskLinkMap[t]) {
+					auto linkStmt = context.linkStmtMap[link];
+					stmts.push_back(linkStmt);
+				}
+			}
+			
+			VLOG(2) << "TaskLinkMap";
+			for(auto tl : linkCollector.getTaskLinkMap()) { 
+				VLOG(2) << "\tTask: " << *(tl.first);
+				for(auto l : (tl.second)) {
+					VLOG(2) << "\t " << *l;
+				}
+			}
+
+			VLOG(2) << "From body";
+			for(auto l : linkCollector.getLinksFromBody()) {
+				core::StatementPtr linkStmt = context.linkStmtMap[l];
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << linkStmt;
+				stmts.push_back(linkStmt);
+			}
+
+			VLOG(2) << "Outside body";
+			for(auto l : linkCollector.getLinksOutsideBody()) {
+				VLOG(2) << "\t" << *l; 
+				VLOG(2) << "\t" << context.linkStmtMap[l];
+			}
+
+			linkCollector.printToDotFile(node->name+".dot");
 		}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		core::ExpressionPtr startVal = irBuilder.intLit(0);
+		core::ExpressionPtr endVal;
+		if(node->loopElements->elements.size() == 1) {
+			//we only need to iterate over one collection
+			//TODO loopElements.length instead of 1
+			Port* loopElementsNode = node->loopElements->elements[0];
+			auto le = varMap.find( {node, loopElementsNode} );
+			assert(le!=varMap.end());
+			core::VariablePtr leVar = le->second;
+			
+			//IR: endVal = leVar.size;
+			map<string, core::NodePtr> symbols;
+			symbols["leVar"] = leVar;
+			symbols["size"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getRefCollectionSize();
+			VLOG(2) << symbols;
+			endVal = irBuilder.parseExpr("size(leVar)", symbols);
+		} else if(node->loopElements->elements.size() > 1) {
+			//we need to iterate over multiple collections
+			//TODO handle multiple loopElements -> use length of "shortest" 
+			//IR: findBiggestLoopElement(loopElements le1, ...) -> int<4> {
+			//	...
+			//	return biggestLoopElement->size;
+			//}
+			assert(false && "not implemented");
+		} else {
+			assert(false && "not implemented");
+		}
+
+		core::ExpressionPtr step = irBuilder.intLit(1); 
+
+		core::VariablePtr iterVar = irBuilder.variable(irBuilder.getLangBasic().getInt4());
+		VLOG(2) << iterVar << " " << startVal << " " << endVal << " " << step;
+
+		core::CompoundStmtPtr forBody = irBuilder.compoundStmt(stmts);
+		assert(forBody);
+
+		//replace "leIterator" literal in forBody with iterator variable
+		//NOTE when we see a link for a loopElement we create a "leIterator" literal in Link-converter
+		core::LiteralPtr leIterator = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+		forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar, /*limitScope=*/true);
+		VLOG(2) << forBody;
+
+		core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, forBody);
+		VLOG(2) << "forStmt";
+		dumpPretty(forStmt);
+
+		core::ExpressionPtr pFor = irBuilder.pfor(forStmt);	
+		VLOG(2) << "pFor";
+		dumpPretty(pFor);
+
+		core::StatementList forTaskStmts;
+		forTaskStmts.insert(forTaskStmts.end(), decls.begin(), decls.end());
+		forTaskStmts.push_back(pFor);
+
+		core::CompoundStmtPtr forTaskBody = irBuilder.compoundStmt(forTaskStmts);
+		VLOG(2) << forTaskBody;
 
 		//TODO FILL WITH CORRECT STMTS
-		core::ExpressionPtr parallelForEachTask = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
+		core::ExpressionPtr parallelForEachTask = irBuilder.createCallExprFromBody(forTaskBody, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
 		dumpPretty(parallelForEachTask);
 		taskCache[node] = parallelForEachTask;
 	}
@@ -2362,8 +2535,8 @@ private:
 		core::TypePtr retType;
 	
 		//TODO move to iwirBuilder?
-		enum IWIRType { Integer, String, File, Bool };
-		static map<string, IWIRType> typeMap = { {"integer", Integer}, {"string", String}, {"file", File}, {"boolean", Bool} };
+		enum IWIRType { String, Integer, Double, File, Bool };
+		static map<string, IWIRType> typeMap = { {"string", String}, {"integer", Integer}, {"double", Double}, {"file", File}, {"boolean", Bool} };
 
 		auto convertToIRType = [&](string type) {
 			core::TypePtr ret;
@@ -2371,12 +2544,16 @@ private:
 			assert(fit != typeMap.end());
 
 			switch(fit->second) {
-				case IWIRType::Integer: 
-					ret = irBuilder.getLangBasic().getInt4();
-					break;
 				case IWIRType::String:
 					//TODO proper implementation
-					ret = irBuilder.genericType("stringDummy");
+					//TODO put into IRExtensions or use stock implementation
+					ret = irBuilder.getLangBasic().getString();
+					break;
+				case IWIRType::Double: 
+					ret = irBuilder.getLangBasic().getDouble();
+					break;
+				case IWIRType::Integer: 
+					ret = irBuilder.getLangBasic().getInt4();
 					break;
 				case IWIRType::File:
 					//TODO proper implementation
@@ -2393,6 +2570,9 @@ private:
 			return ret;
 		};
 
+
+		//TODO move to iwir_ast?
+		//handling of collection types -- are "collection/[collection/]*elemType"
 		vector<string> typeSubs;
 		boost::split(typeSubs, node->type, boost::is_any_of("/"));
 
@@ -2404,23 +2584,16 @@ private:
 			core::TypePtr elemTy;
 			//iterate reverse
 			auto it = typeSubs.rbegin();
-			//last element in vector is the elementType
+			//last element in std::vector is the elementType
 			string elemTypeString = *(it++);
 			elemTy = convertToIRType(elemTypeString);
 			assert(elemTy);
 
-			//rest of vector have to be of collection type
+			//rest of typeSubs have to be of collection type
 			core::TypePtr collectionTy;
 			for(auto end = typeSubs.rend(); it!=end;it++) {
-				//TODO proper implementation
-				//TODO use array or list?
-				//arrayTy = irBuilder.arrayType( elemTy );
-				//elemTy = arrayTy;
-
-				map<string, core::NodePtr> symbols;
-				symbols["elemTy"] =  elemTy;
-				//TODO put into IRExtensions
-				collectionTy = irBuilder.parseType("struct { ref<array<elemTy,1>> collection ; int<4> size; }", symbols);
+				collectionTy =  irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getCollectionType(elemTy);
+				//for nesting of collections
 				elemTy = collectionTy;
 			}
 

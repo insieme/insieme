@@ -351,21 +351,26 @@ class IWIRBuilder {
 		auto loopCounterChild = inputPortsChild->getFirstChildByName("loopCounter");
 		std::tie(forTask->counter, forTask->fromCounter, forTask->toCounter, forTask->stepCounter) = handle_loopCounter(innerCtx, *loopCounterChild);
 		//NOTE: some loopcounters are inputports - add them to the inputports
-		if(forTask->counter->port){ inputPorts->elements.push_back(forTask->counter->port); }
 		if(forTask->fromCounter->port) { inputPorts->elements.push_back(forTask->fromCounter->port); }
 		if(forTask->toCounter->port) {inputPorts->elements.push_back(forTask->toCounter->port); }
 		if(forTask->stepCounter->port) {inputPorts->elements.push_back(forTask->stepCounter->port); }
+		//TODO LOOPCOUNTER is in inputports but acts like outputports
+		//if(forTask->counter->port){ inputPorts->elements.push_back(forTask->counter->port); }
 
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");
 		auto outputPorts = handle_outputPorts(innerCtx, *outputPortsChild );
 		forTask->outputPorts = outputPorts;
 
+		//TODO is loopcounter a outputport???
+		//if(forTask->counter->port){ outputPorts->elements.push_back(forTask->counter->port); }
+		
 		//TODO UnionPorts
 		auto unionPortsChild = outputPortsChild->getFirstChildByName("unionPorts");
 		auto unionPorts = handle_unionPorts(innerCtx, *unionPortsChild);
 		forTask->unionPorts = unionPorts;
 		//TODO unionports are outpuports - add them to outputPorts?
+		forTask->outputPorts->elements.insert(forTask->outputPorts->elements.end(), unionPorts->elements.begin(), unionPorts->elements.end());
 
 		//Links
 		auto linksChild = e.getFirstChildByName("links");
@@ -408,10 +413,14 @@ class IWIRBuilder {
 		auto loopCounterChild = inputPortsChild->getFirstChildByName("loopCounter");
 		std::tie(parFor->counter, parFor->fromCounter, parFor->toCounter, parFor->stepCounter) = handle_loopCounter(innerCtx, *loopCounterChild);
 		//NOTE: some loopcounters are inputports - add them to the inputports
-		if(parFor->counter->port){ inputPorts->elements.push_back(parFor->counter->port); }
 		if(parFor->fromCounter->port) { inputPorts->elements.push_back(parFor->fromCounter->port); }
 		if(parFor->toCounter->port) {inputPorts->elements.push_back(parFor->toCounter->port); }
 		if(parFor->stepCounter->port) {inputPorts->elements.push_back(parFor->stepCounter->port); }
+		//TODO LOOPCOUNTER is in inputports but acts like outputports
+		//if(parFor->counter->port){ inputPorts->elements.push_back(parFor->counter->port); }
+
+		//TODO is loopcounter a outputport???
+		//if(parFor->counter->port){ outputPorts->elements.push_back(parFor->counter->port); }
 
 		//OutputPorts
 		auto outputPortsChild = e.getFirstChildByName("outputPorts");

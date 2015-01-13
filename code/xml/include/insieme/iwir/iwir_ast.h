@@ -253,6 +253,9 @@ std::ostream& Port::printTo(std::ostream& out) const {
 		out << "port[" << parentTask->name << ":" << name << "]";
 		return out;
 }
+
+enum LinkKind {LK_Basic=0, LK_Loop, LK_LoopElement, LK_UnionPort, LK_ParallelOutput};
+
 struct Link : public Node {
 	Task* fromTask;
 	Task* toTask;
