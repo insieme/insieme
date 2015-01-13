@@ -2,6 +2,7 @@
   <if name="ifTask4">
     <inputPorts>
       <inputPort name="in1" type="integer"/>
+      <inputPort name="in2" type="integer"/>
     </inputPorts>
     <condition>in1 = 2 and in1 = in2</condition>
     <then>

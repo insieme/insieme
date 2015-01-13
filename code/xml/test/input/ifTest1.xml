@@ -3,7 +3,7 @@
     <inputPorts>
       <inputPort name="in1" type="integer"/>
     </inputPorts>
-    <condition>in1 = 2</condition>
+    <condition>in1 = 2 and "abce" != "abcd" </condition>
     <then>
       <task name="atomic1" tasktype="atomicType">
         <inputPorts>
