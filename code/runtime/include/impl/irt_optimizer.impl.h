@@ -76,6 +76,7 @@ void irt_optimizer_context_startup(irt_context *context) {
 
 void irt_optimizer_starting_pfor(irt_wi_implementation *impl, irt_work_item_range range, irt_work_group* group) {
 
+	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
 	if(irt_meta_info_is_opencl_available(impl->variants[0].meta_info) && irt_meta_info_get_opencl(impl->variants[0].meta_info)->opencl) {
 		irt_opencl_optimizer_starting_pfor(impl, range, group);
 	} else {
