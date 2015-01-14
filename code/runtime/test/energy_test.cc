@@ -175,9 +175,8 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 		// check rapl readings
 		EXPECT_LT(0.001, data2.package - data.package);
 		EXPECT_LT(data2.package - data.package, 100);
-		EXPECT_LT(0.001, data2.cores - data.cores);
-		EXPECT_LT(data2.cores - data.cores, 100);
 		// mc readings are not present on all CPUs, therefore they can be 0
+		EXPECT_LT(data2.cores - data.cores, 100);
 		EXPECT_LT(data2.mc - data.mc, 100);
 	}
 }
