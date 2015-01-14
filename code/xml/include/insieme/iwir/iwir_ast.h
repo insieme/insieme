@@ -39,7 +39,6 @@
 #include <boost/utility.hpp>
 #include <vector>
 #include <utility>
-//#include "insieme/iwir/iwir_condition_builder.h"
 
 namespace iwir {
 namespace ast {
@@ -126,8 +125,7 @@ using std::vector;
 using std::string;
 using std::pair;
 
-
-enum NodeType { NT_Links, NT_Tasks, NT_Ports, NT_Properties, NT_Constraints, NT_Property, NT_Constraint, NT_TaskType, NT_Type, NT_Condition, NT_Port, NT_Link, NT_AtomicTask, NT_BlockScope, NT_IfTask, NT_ForTask, NT_ForEachTask, NT_ParallelForTask, NT_ParallelForEachTask, NT_WhileTask, NT_LoopCounter};
+enum NodeType { NT_Links, NT_Tasks, NT_Ports, NT_Properties, NT_Constraints, NT_Property, NT_Constraint, NT_TaskType, NT_SimpleType, NT_CollectionType, NT_Condition, NT_Port, NT_Link, NT_AtomicTask, NT_BlockScope, NT_IfTask, NT_ForTask, NT_ForEachTask, NT_ParallelForTask, NT_ParallelForEachTask, NT_WhileTask, NT_LoopCounter};
 
 class Node : public insieme::utils::Printable {
 	NodeManager* manager; 
@@ -196,10 +194,46 @@ struct TaskType : public Node {
 	string type;
 	TaskType(const string& type) : Node(NT_TaskType), type(type) {}
 };
+
 struct Type : public Node {
-	string type;
-	Type(const string& type) : Node(NT_Type), type(type) {}
+	Type(NodeType nt) : Node(nt) {}
 };
+
+
+struct SimpleType : public Type {
+	enum IWIRType { String, Integer, Double, File, Bool };
+	IWIRType simpleType;
+	SimpleType(const IWIRType simpleType) : Type(NT_SimpleType), simpleType(simpleType) {}
+
+	std::ostream& printTo(std::ostream& out) const { 
+		switch(simpleType) {
+			case String: out << "string"; break;
+			case Integer: out << "integer"; break;
+			case Double: out << "double"; break;
+			case File: out << "file"; break; 
+			case Bool: out << "bool"; break; 
+		}
+		return out; 
+	}
+};
+
+struct CollectionType : public Type {
+	int nesting;
+	SimpleType* elementType;
+	CollectionType(int nesting, SimpleType* elementType) : 
+		Type(NT_CollectionType), nesting(nesting), elementType(elementType) {}
+
+	std::ostream& printTo(std::ostream& out) const { 
+		for(int i=0;i<nesting;i++) {
+			out << "collection/";
+		}
+		out << *elementType;
+		return out; 
+	}
+};
+
+
+
 struct Condition : public Node {
 	iwir::condition_ast::ConditionExpr condition;
 	Task* parentTask;
@@ -408,6 +442,8 @@ class NodeManager : private boost::noncopyable {
 	~NodeManager() { 
 		for(auto n : nodes) { delete n; } 
 	}
+
+	SimpleType* create(const SimpleType::IWIRType type);
 
 	template<typename T, typename ... Args>
 	T* create(Args ... args) {

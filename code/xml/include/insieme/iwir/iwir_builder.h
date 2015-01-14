@@ -749,10 +749,52 @@ class IWIRBuilder {
 		return lp;
 	}
 
+	Type* handle_type(Context& ctx, const string& typeStr) {
+		static map<string, SimpleType::IWIRType> typeMap = 
+			{	{"string", SimpleType::String}, 
+				{"integer", SimpleType::Integer}, 
+				{"double", SimpleType::Double}, 
+				{"file", SimpleType::File}, 
+				{"boolean", SimpleType::Bool} };
+
+		auto matchType = [&](string type) {
+			auto fit = typeMap.find(type);
+			assert(fit != typeMap.end());
+			return fit->second;
+		};
+
+		Type* ret = nullptr;
+		
+		vector<string> typeSubs;
+		boost::split(typeSubs, typeStr, boost::is_any_of("/"));
+
+		if(typeSubs.size() == 1) {
+			//simple type -- hence no collection ;)
+			SimpleType::IWIRType iwirType = matchType(typeSubs[0]);
+			ret = mgr->create<SimpleType>(iwirType);
+		} else {
+			//collection
+			//iterate reverse
+			auto it = typeSubs.rbegin();
+			//last element in std::vector is the elementType
+			string elemTypeString = *(it++);
+			SimpleType::IWIRType iwirType = matchType(elemTypeString);
+			SimpleType* elementType = mgr->create<SimpleType>(iwirType);
+
+			//rest of typeSubs have to be of collection type
+			int nesting = typeSubs.size()-1;
+
+			ret = mgr->create<CollectionType>(nesting, elementType);
+		}
+		assert(ret);
+
+		return ret;
+	}
+
 	Port* handle_port(Context& ctx, const XmlElement& e) {
 		string portName(e.getAttr("name"));
 		string portTypeStr = e.getAttr("type");
-		auto portType = mgr->create<Type>(portTypeStr);
+		auto portType = handle_type(ctx, portTypeStr);
 
 		VLOG(2) << "port : " << portName << ":" << portTypeStr;
 		
@@ -788,7 +830,7 @@ class IWIRBuilder {
 		//the loopcounter itself is output port (for other tasks)
 		//loopcoutner_from, loopcoutner_step, loopcoutner_to are input ports 
 		Port* counterPort = nullptr;
-		Type* type = mgr->create<Type>("integer");
+		Type* type = handle_type(ctx, "integer");
 		counterPort = mgr->create<Port>(nameStr, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 		counterPort->isInput = false;
 		counterPort->isOutput = true;
@@ -801,7 +843,7 @@ class IWIRBuilder {
 			Port* fromPort = nullptr;
 			//fromPort = = namestr+from:integer;
 			string name = nameStr + "_from";
-			Type* type = mgr->create<Type>("integer");
+			Type* type = handle_type(ctx, "integer");
 			fromPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 			fromPort->isInput = true;
 			fromPort->isOutput = false;
@@ -820,7 +862,7 @@ class IWIRBuilder {
 			Port* toPort = nullptr;
 			//toPort = = namestr+to:integer;
 			string name = nameStr + "_to";
-			Type* type = mgr->create<Type>("integer");
+			Type* type = handle_type(ctx, "integer");
 			toPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 			toPort->isInput = true;
 			toPort->isOutput = false;
@@ -843,7 +885,7 @@ class IWIRBuilder {
 				Port* stepPort = nullptr;
 				//stepPort = namestr+step:integer;
 				string name = nameStr + "_step";
-				Type* type = mgr->create<Type>("integer");
+				Type* type = handle_type(ctx, "integer");
 				stepPort = mgr->create<Port>(name, type, ctx.getParentTask(), PortKind::PK_LoopCounter);
 				stepPort->isInput = true;
 				stepPort->isOutput = false;

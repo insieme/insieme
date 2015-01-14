@@ -53,6 +53,8 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/iwir/iwir_extension.h"
 
+#include "insieme/iwir/iwir_condition_converter.h"
+
 //#include "boost/config.hpp"
 //#include <boost/utility.hpp>
 //#include <boost/graph/adjacency_list.hpp>
@@ -78,35 +80,31 @@ using namespace insieme;
 using namespace std;
 
 class IWIRConverter {
+
+public:
+	typedef map<pair<Task*, Port*>, core::VariablePtr> VarMap;	// ((Parent)Task*,Port*) :  IR_Variable
+	typedef map<Task*, list<core::StatementPtr>> DeclVarMap;	// (Parent)Task* : IR_DeclStmts)
+	typedef map<Link*, core::StatementPtr> LinkStmtMap;			// Link* : IR_LinkStmt
+	typedef map<Task*, core::ExpressionPtr> TaskCache;			// Task* : IR_LambdaExpr
+
+private :
 	core::NodeManager& irMgr;
 	const core::IRBuilder irBuilder;
 
-	//per task with links
+	//For every task with links
 	struct ConversionContext : public boost::noncopyable , insieme::utils::Printable {
-		//TODO BlockScope channel map	-- ((BlockScope*, Port*) : IR_Channel)
-		//typedef map<pair<BlockScope*, Port*>, IR_channelType> BlockScopeChannelMap;
 		//map of channels for ports used in blockscope
-		typedef map<pair<BlockScope*, Port*>, string> BlockScopeChannelMap;
+		typedef map<pair<BlockScope*, Port*>, string> BlockScopeChannelMap;	// (BlockScope*, Port*) : IR_Channel
 		BlockScopeChannelMap bsChannelMap;
-
-		//TODO Task var map				-- ((Task*, Port*) : IR_Variable)
-		//typedef map<pair<Task*, Port*>, IR_VariableType> TaskVarMap;
-		//map of used variable per task/port
-		typedef map<pair<Task*, Port*>, core::VariablePtr> TaskVarMap;
-		TaskVarMap taskVarMap;
 		
-		//TODO Decl var map				-- ( (Parent)Task* : IR_DeclStmt)
-		//typedef map<Task*, list<IR_DeclStmt>> DeclVarMap;
-		//TODO Decl var map				-- ( (Parent)Task* : list< (Task*, Port*))
-		//typedef map<Task*, list<pair<Task*, Port*>>> DeclVarMap;
+		//map of used variable per task/port
+		VarMap taskVarMap;
 		
 		//map of declared variable per task
-		typedef map<Task*, list<core::StatementPtr>> DeclVarMap;
 		DeclVarMap declMap;
 
 		//TODO map of links and the linking ir stmt
-		map<Link*, core::StatementPtr> linkStmtMap;
-
+		LinkStmtMap linkStmtMap;
 
 		std::ostream& printTo(std::ostream& out) const { 
 			out << "ConversionContext( \n";
@@ -118,13 +116,10 @@ class IWIRConverter {
 		}
 	};
 
-	typedef map<pair<Task*, Port*>, core::VariablePtr> VarMap;
 	VarMap varMap;
 
 	//mapping ir-expr to task
-	typedef map<Task*, core::ExpressionPtr> TaskCache;
 	TaskCache taskCache;
-
 
 	//Graph 
 	//	-- Vertex { Task* , Enum { begin, end, atomic} }
@@ -443,6 +438,7 @@ public:
 			);
 	}
 
+	//main entry
 	insieme::core::NodePtr convertIwirToIr(const IWIRBuilder& ib) {
 		auto tasks =  ib.getTaskCache();
 		auto ports =  ib.getPortCache();
@@ -701,7 +697,9 @@ private:
 			DISPATCH(Constraint)
 
 			DISPATCH(TaskType)
-			DISPATCH(Type)
+
+			DISPATCH(SimpleType)
+			DISPATCH(CollectionType)
 
 			DISPATCH(Tasks)
 
@@ -728,8 +726,6 @@ private:
 
 	#define CONDITION_CONVERTER(name) core::ExpressionPtr convert ## name(name* node, ConversionContext& context)
 	#define CONVERT_CONDITION(condition, context) convertCondition(condition, context);
-
-
 	
 	#define LOOPCOUNTER_CONVERTER(name) core::ExpressionPtr convert ## name( name* node, ConversionContext& context)
 	#define CONVERT_LOOPCOUNTER(loopcounter, context) convertLoopCounter(loopcounter, context);
@@ -761,8 +757,14 @@ private:
 		bool isUnion = (node->to->kind == PK_UnionPort);
 		bool isLoopElement = (node->from->kind == PK_LoopElement);
 
-		//TODO generate linking statment in IR
+		//TODO control flow links
+		
+		//TODO implicit casts
+		//bool->string, int->string, double->string, int->double
+		//A -> collection/A (one entry)
+		//file -> stringa (URI to the file)
 
+		//generate linking statment in IR
 		auto var1 = vFrom->second;
 		auto var2 = vTo->second;
 
@@ -976,6 +978,9 @@ private:
 
 	CONVERTER(AtomicTask) {
 		VLOG(2) << "AtomicTask : " << node->name << ":" << node->type->type;
+	
+		//converting TaskType
+		//TODO make use of tasktype
 		convert(node->type, context);
 
 		convert(node->inputPorts, context);
@@ -998,6 +1003,7 @@ private:
 		//}
 		//links-out
 
+		//prepare input parameters/arguments 
 		core::TypeList parameterTypes;
 		vector<core::ExpressionPtr> args;
 		for(auto port : node->inputPorts->elements) {
@@ -1009,6 +1015,7 @@ private:
 				args.push_back(var);
 			}
 		}
+		//prepare output parameters/arguments 
 		for(auto port : node->outputPorts->elements) {
 			auto p = varMap.find( {port->parentTask, port} );
 			assert(p != varMap.end());
@@ -1123,15 +1130,12 @@ private:
 						symbols["chan"] = chan;
 						symbols["var"] = var;
 
-						VLOG(2) << "asdf";
 						//release channel -- when everythings done in BlockScope
 						releaseChannels.push_back(irBuilder.parseStmt("channel.release(chan);", symbols));
 
-						VLOG(2) << "asdf";
 						//fill channel links in with : var = channel.recv();
 						chanLinkIn.push_back(irBuilder.parseStmt("var = *channel.recv(chan);", symbols));
 
-						VLOG(2) << "asdf";
 						//fill channel links out with : channel.send(var );
 						chanLinkOut.push_back(irBuilder.parseStmt("channel.send(chan, var);", symbols));
 					}
@@ -1332,7 +1336,7 @@ private:
 		//read channels
 		bodyStmts.insert(bodyStmts.end(), readChannels.begin(), readChannels.end()); 
 		
-		//release channels -- no more needed
+		//release channels
 		bodyStmts.insert(bodyStmts.end(), releaseChannels.begin(), releaseChannels.end()); 
 			
 		//create a callExpr with the BlockScopes body
@@ -1971,7 +1975,6 @@ private:
 
 		auto stepCounter = CONVERT_LOOPCOUNTER(node->stepCounter, context);	
 		VLOG(2) << "StepCounter " << stepCounter;
-		///
 
 		convert(node->links, context);
 
@@ -2530,361 +2533,71 @@ private:
 	}
 
 	TYPE_CONVERTER(Type) { 
-		VLOG(2) << "type";
-		VLOG(2) << node->type;
-		core::TypePtr retType;
-	
-		//TODO move to iwirBuilder?
-		enum IWIRType { String, Integer, Double, File, Bool };
-		static map<string, IWIRType> typeMap = { {"string", String}, {"integer", Integer}, {"double", Double}, {"file", File}, {"boolean", Bool} };
-
-		auto convertToIRType = [&](string type) {
-			core::TypePtr ret;
-			auto fit = typeMap.find(type);
-			assert(fit != typeMap.end());
-
-			switch(fit->second) {
-				case IWIRType::String:
-					//TODO proper implementation
-					//TODO put into IRExtensions or use stock implementation
-					ret = irBuilder.getLangBasic().getString();
-					break;
-				case IWIRType::Double: 
-					ret = irBuilder.getLangBasic().getDouble();
-					break;
-				case IWIRType::Integer: 
-					ret = irBuilder.getLangBasic().getInt4();
-					break;
-				case IWIRType::File:
-					//TODO proper implementation
-					//TODO put into IRExtensions
-					ret = irBuilder.genericType("fileDummy");
-					break;
-				case IWIRType::Bool:
-					ret = irBuilder.getLangBasic().getBool();
-					break;
-				default:
-					assert(false && "how did you get here?");
-					ret = core::TypePtr();
-			}
-			return ret;
-		};
-
-
-		//TODO move to iwir_ast?
-		//handling of collection types -- are "collection/[collection/]*elemType"
-		vector<string> typeSubs;
-		boost::split(typeSubs, node->type, boost::is_any_of("/"));
-
-		if(typeSubs.size() == 1) {
-			//no collection
-			retType = convertToIRType(typeSubs[0]);
-		} else {
-			//collection
-			core::TypePtr elemTy;
-			//iterate reverse
-			auto it = typeSubs.rbegin();
-			//last element in std::vector is the elementType
-			string elemTypeString = *(it++);
-			elemTy = convertToIRType(elemTypeString);
-			assert(elemTy);
-
-			//rest of typeSubs have to be of collection type
-			core::TypePtr collectionTy;
-			for(auto end = typeSubs.rend(); it!=end;it++) {
-				collectionTy =  irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getCollectionType(elemTy);
-				//for nesting of collections
-				elemTy = collectionTy;
-			}
-
-			retType = collectionTy;
+		VLOG(2) << "Type " << *node;
+		core::TypePtr retTy = nullptr;	
+		switch(node->getNodeType()) {
+			case NT_SimpleType: 
+				retTy = convertSimpleType( static_cast<SimpleType*>(node), context); 
+				break;
+			case NT_CollectionType: 
+				retTy = convertCollectionType( static_cast<CollectionType*>(node), context); 
+				break;
+			default:
+				assert(false && "how did you get here?");
 		}
-
-		assert(retType);
-		VLOG(2) << retType;
-		return retType;
+		assert(retTy);
+		VLOG(2) << retTy;
+		return retTy;
 	}
 
+	TYPE_CONVERTER(SimpleType) {
+		VLOG(2) << "SimpleType " << *node;
+		core::TypePtr retTy = nullptr;
+
+		switch(node->simpleType) {
+			case SimpleType::String:
+				//TODO proper implementation
+				//TODO put into IRExtensions or use stock implementation
+				retTy = irBuilder.getLangBasic().getString();
+				break;
+			case SimpleType::Double: 
+				retTy = irBuilder.getLangBasic().getDouble();
+				break;
+			case SimpleType::Integer: 
+				retTy = irBuilder.getLangBasic().getInt4();
+				break;
+			case SimpleType::File:
+				//TODO proper implementation
+				//TODO put into IRExtensions
+				retTy = irBuilder.genericType("fileDummy");
+				break;
+			case SimpleType::Bool:
+				retTy = irBuilder.getLangBasic().getBool();
+				break;
+			default:
+				assert(false && "how did you get here?");
+				retTy = core::TypePtr();
+		}
+		return retTy;
+	}
+
+	TYPE_CONVERTER(CollectionType) {
+		VLOG(2) << "CollectionType " << *node;
+
+		core::TypePtr elemTy = CONVERT_TYPE(node->elementType, context);
+		core::TypePtr collectionTy;
+		for(int i=0;i<node->nesting;i++) {
+			collectionTy =  irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getCollectionType(elemTy);
+			//for nesting of collections
+			elemTy = collectionTy;
+		}
+
+		return collectionTy;
+	}
 
 	CONDITION_CONVERTER(Condition) {
-		struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr>
-		{
-			Task* parentTask;
-			const VarMap& varMap;
-			const core::IRBuilder& irBuilder;
-			condition_ast_to_inspire (Task* parentTask, const VarMap& varMap, const core::IRBuilder& irBuilder): parentTask(parentTask), varMap(varMap), irBuilder(irBuilder) {}
-
-			core::VariablePtr lookup(Port* port) const {
-				core::VariablePtr var = nullptr;
-				auto p = varMap.find({parentTask, port});
-				if(p != varMap.end()) {
-					var = p->second;
-				} 
-				//VLOG(2) << var << "(" << var->getType() << ")" << " " << parentTask << " " << port;
-				return var;
-			};
-
-			std::tuple<core::ExpressionPtr, core::ExpressionPtr> implicit_cast(core::ExpressionPtr lhs, core::ExpressionPtr rhs) const {
-				const core::lang::BasicGenerator& gen = irBuilder.getLangBasic();
-				core::TypePtr lTy = lhs->getType();
-				core::TypePtr rTy = rhs->getType();
-				if(*lTy == *rTy) {
-					return std::make_tuple(lhs, rhs);
-				}
-
-				//string > integer > double > boolean
-				//1234
-				int cast = 0;
-
-				if(gen.isString(lTy)) {cast = 1;}
-				if(gen.isInt(lTy)) {cast = 2;}
-				if(gen.isDouble(lTy)) {cast = 3;}
-				if(gen.isBool(lTy)) {cast = 4;}
-
-				if(gen.isString(rTy)) {cast += 10;}
-				if(gen.isInt(rTy)) {cast += 20;}
-				if(gen.isDouble(rTy)) {cast += 30;}
-				if(gen.isBool(rTy)) {cast += 40;}
-
-				switch(cast) {
-					case 0: assert(false); break;
-						//lhs = int -- rhs = string
-					case 12: {
-								 //rhs = stringToInt(rhs);
-							auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToInt();
-							rhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(4),rhs);
-							break;
-							 }
-						//lhs = double -- rhs = string
-					case 13: {//rhs = stringToDouble(rhs);
-							auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToDouble();
-							rhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(8),rhs);
-							break;
-							 }
-						//lhs = bool -- rhs = string
-					case 14: {//rhs = stringToBool(rhs);
-							auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool();
-							rhs = irBuilder.callExpr(op,rhs);
-							break;
-							 }
-
-						//lhs = string-- rhs = int 
-					case 21: //lhs = stringToInt(lhs);
-							 break;
-						//lhs = double -- rhs = int 
-					case 23: //rhs = intToDouble(rhs); 
-							 rhs = irBuilder.callExpr(gen.getSignedToReal(),irBuilder.getIntParamLiteral(8),rhs);
-							 break;
-						//lhs = bool -- rhs = int 
-					case 24: // rhs = intToBool(rhs); 
-							 rhs = irBuilder.callExpr(gen.getSignedToBool(),irBuilder.getIntParamLiteral(8),rhs);
-							 break;
-
-						//lhs = string -- rhs = double 
-					case 31: {//lhs = stringToDouble(lhs);
-							 auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToDouble();
-							 lhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(8),lhs);
-							 break;
-							 }
-						//lhs = int -- rhs = double 
-					case 32: //lhs = intToDouble(lhs); 
-							 lhs = irBuilder.callExpr(gen.getSignedToReal(),irBuilder.getIntParamLiteral(8),lhs);
-							 break;
-						//lhs = bool -- rhs = double 
-					case 34: //rhs = doubleToBool(rhs);
-							 rhs = irBuilder.callExpr(gen.getRealToBool(),irBuilder.getIntParamLiteral(8),rhs);
-							 break;
-						
-						//lhs = string -- rhs = bool 
-					case 41: {//lhs = stringToBool(lhs);
-							 auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool();
-							 lhs = irBuilder.callExpr(op,lhs);
-							 break;
-							 }
-						//lhs = int -- rhs = bool 
-					case 42:  //lhs = intToBool(lhs);
-							 lhs = irBuilder.callExpr(gen.getSignedToBool(), lhs);
-							 break;
-						//lhs = double -- rhs = bool 
-					case 43: //lhs = doubleToBool(lhs);
-							 lhs = irBuilder.callExpr(gen.getRealToBool(), lhs);
-							 break;
-				}
-
-				return std::make_tuple(lhs, rhs);
-			}
-
-			core::ExpressionPtr cast_to_bool(core::ExpressionPtr oper) const {
-				const core::lang::BasicGenerator& gen = irBuilder.getLangBasic();
-				core::ExpressionPtr op = nullptr;
-				core::TypePtr operTy = oper.getType();
-
-				if(gen.isBool(operTy)) { 
-					return oper;
-				}
-
-				if(gen.isString(operTy)) { op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool(); }
-				if(gen.isInt(operTy)) { op = gen.getSignedToBool(); }
-				if(gen.isDouble(operTy)) { op = gen.getRealToBool(); }
-				assert(op);
-				return irBuilder.callExpr(op, oper);
-			}
-
-
-			core::ExpressionPtr operator()(int& v) const { return irBuilder.intLit(v); }
-			core::ExpressionPtr operator()(double& v) const { return irBuilder.doubleLit(v); }
-			core::ExpressionPtr operator()(bool& v) const { return irBuilder.boolLit(v); }
-			core::ExpressionPtr operator()(std::string& v) const {  return irBuilder.stringLit("\"" + v + "\""); }
-			core::ExpressionPtr operator()(condition_ast::port& v) const { 
-				core::VariablePtr portVar = lookup(v.p);
-				return irBuilder.tryDeref(portVar);
-			}
-
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_and>& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				lhs = cast_to_bool(lhs);
-				rhs = cast_to_bool(rhs);
-
-				return irBuilder.logicAnd(lhs, rhs);
-			}
-
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_or >& b) const { 
-				
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				lhs = cast_to_bool(lhs);
-				rhs = cast_to_bool(rhs);
-
-				return irBuilder.logicOr(lhs, rhs);
-			}
-
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_eq >& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				if(*lhs->getType() != *rhs->getType()) {
-					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
-				}
-				
-				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringEq(); 
-					return irBuilder.callExpr(op, lhs, rhs);
-				} else {
-					return irBuilder.eq(lhs, rhs);
-				}
-			}
-
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_neq>& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				if(*lhs->getType() != *rhs->getType()) {
-					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
-				}
-
-				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringNe(); 
-					return irBuilder.callExpr(op, lhs, rhs);
-				} else {
-					return irBuilder.ne(lhs, rhs);
-				}
-			}
-			
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_gt >& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				if(*lhs->getType() != *rhs->getType()) {
-					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
-				}
-
-				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringGt(); 
-					return irBuilder.callExpr(op, lhs, rhs);
-				} else { 
-					return irBuilder.gt(lhs, rhs);
-				}
-			}
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_gte>& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				if(*lhs->getType() != *rhs->getType()) {
-					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
-				}
-
-				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringGe(); 
-					return irBuilder.callExpr(op, lhs, rhs);
-				} else { 
-					return irBuilder.ge(lhs, rhs);
-				}
-			}
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_lt >& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				if(*lhs->getType() != *rhs->getType()) {
-					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
-				}
-				
-				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringLt(); 
-					return irBuilder.callExpr(op, lhs, rhs);
-				} else { 
-					return irBuilder.lt(lhs, rhs);
-				}
-			}
-			core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_lte>& b) const { 
-				core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
-				core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-				assert(lhs);
-				assert(rhs);
-
-				if(*lhs->getType() != *rhs->getType()) {
-					std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
-				}
-				
-				if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringLe(); 
-					return irBuilder.callExpr(op, lhs, rhs);
-				} else { 
-					return irBuilder.le(lhs, rhs);
-				}
-			}
-
-			core::ExpressionPtr operator()(condition_ast::unop<condition_ast::op_not>& u) const {
-				core::ExpressionPtr condExpr = nullptr;
-				core::ExpressionPtr oper = boost::apply_visitor(*this, u.oper1); 
-				assert(oper);
-
-				oper = cast_to_bool(oper);
-				condExpr = irBuilder.logicNeg(oper);
-				
-				return condExpr;
-			}
-		};
-
 		VLOG(2) << "Condition : " << node->condition;
-		core::ExpressionPtr condExpr = 
-			boost::apply_visitor(condition_ast_to_inspire(node->parentTask,varMap,irBuilder), node->condition);
+		core::ExpressionPtr condExpr = convert_condition_ast_to_inspire(node, varMap, irBuilder);
 		dumpPretty(condExpr);
 		return condExpr;
 	}
