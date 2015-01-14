@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -466,25 +466,25 @@ uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant) {
 
 #endif
 
-irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var) {
-    if(!parent_var || !variant) {
+irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_wi_implementation_variant* source_variant) {
+    if(!source_variant || !target_variant) {
         return NULL;
     }
 
-    irt_optimizer_runtime_data* old_data = variant->rt_data.wrapping_optimizer_rt_data;
+    irt_optimizer_runtime_data* old_data = target_variant->rt_data.wrapping_optimizer_rt_data;
 
-    if(parent_var->meta_info->ompp_objective.region_id == UINT_MAX) {
-        variant->rt_data.wrapping_optimizer_rt_data = parent_var->rt_data.wrapping_optimizer_rt_data;
+    if(source_variant->meta_info->ompp_objective.region_id == UINT_MAX) {
+        target_variant->rt_data.wrapping_optimizer_rt_data = source_variant->rt_data.wrapping_optimizer_rt_data;
     }
     else {
-        variant->rt_data.wrapping_optimizer_rt_data = &(parent_var->rt_data.optimizer_rt_data);
+        target_variant->rt_data.wrapping_optimizer_rt_data = &(source_variant->rt_data.optimizer_rt_data);
     }
 
     return old_data;
 }
 
-void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data) {
-    variant->rt_data.wrapping_optimizer_rt_data = data;
+void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_optimizer_runtime_data* data) {
+    target_variant->rt_data.wrapping_optimizer_rt_data = data;
 }
 
 #else
@@ -495,8 +495,8 @@ uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub,
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation) {}
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant) {}
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant) {}
-irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var) {return NULL;}
-void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data) {}
+irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_wi_implementation_variant* source_variant) {return NULL;}
+void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_optimizer_runtime_data* data) {}
 
 #endif // IRT_ENABLE_OMPP_OPTIMIZER
 
