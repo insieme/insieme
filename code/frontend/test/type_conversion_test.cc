@@ -92,7 +92,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	// UChar
 	CHECK_BUILTIN_TYPE(UChar, "uint<1>");
 	// Char
-	CHECK_BUILTIN_TYPE(SChar, "char");
+	CHECK_BUILTIN_TYPE(SChar, "int<1>");
 	// Char16
 	CHECK_BUILTIN_TYPE(Char16, "wchar<16>");
 	// Char32
@@ -172,7 +172,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_TYPE(Void, 	"ref<any>");
 	CHECK_POINTER_TYPE(Bool, 	"ref<array<bool,1>>");
 	CHECK_POINTER_TYPE(UChar, 	"ref<array<uint<1>,1>>");
-	CHECK_POINTER_TYPE(SChar, 	"ref<array<char,1>>");
+	CHECK_POINTER_TYPE(SChar, 	"ref<array<int<1>,1>>");
 	CHECK_POINTER_TYPE(Char16, 	"ref<array<wchar<16>,1>>");
 	CHECK_POINTER_TYPE(Char32, 	"ref<array<wchar<32>,1>>");
 	CHECK_POINTER_TYPE(UShort, 	"ref<array<uint<2>,1>>");
@@ -191,7 +191,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_TYPE(Void, 		"ref<any>");
 	CHECK_CONST_POINTER_TYPE(Bool, 		"ref<array<bool,1>>");
 	CHECK_CONST_POINTER_TYPE(UChar, 	"ref<array<uint<1>,1>>");
-	CHECK_CONST_POINTER_TYPE(SChar, 	"ref<array<char,1>>");
+	CHECK_CONST_POINTER_TYPE(SChar, 	"ref<array<int<1>,1>>");
 	CHECK_CONST_POINTER_TYPE(Char16, 	"ref<array<wchar<16>,1>>");
 	CHECK_CONST_POINTER_TYPE(Char32, 	"ref<array<wchar<32>,1>>");
 	CHECK_CONST_POINTER_TYPE(UShort, 	"ref<array<uint<2>,1>>");
@@ -210,7 +210,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_CONST_TYPE(Void, 		"ref<any>");
 	CHECK_POINTER_CONST_TYPE(Bool, 		"src<array<bool,1>>");
 	CHECK_POINTER_CONST_TYPE(UChar, 	"src<array<uint<1>,1>>");
-	CHECK_POINTER_CONST_TYPE(SChar, 	"src<array<char,1>>");
+	CHECK_POINTER_CONST_TYPE(SChar, 	"src<array<int<1>,1>>");
 	CHECK_POINTER_CONST_TYPE(Char16, 	"src<array<wchar<16>,1>>");
 	CHECK_POINTER_CONST_TYPE(Char32, 	"src<array<wchar<32>,1>>");
 	CHECK_POINTER_CONST_TYPE(UShort, 	"src<array<uint<2>,1>>");
@@ -229,7 +229,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_CONST_TYPE(Void, 	  "ref<any>");
 	CHECK_CONST_POINTER_CONST_TYPE(Bool, 	  "src<array<bool,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(UChar, 	  "src<array<uint<1>,1>>");
-	CHECK_CONST_POINTER_CONST_TYPE(SChar, 	  "src<array<char,1>>");
+	CHECK_CONST_POINTER_CONST_TYPE(SChar, 	  "src<array<int<1>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Char16, 	  "src<array<wchar<16>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(Char32, 	  "src<array<wchar<32>,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(UShort, 	  "src<array<uint<2>,1>>");
@@ -274,7 +274,7 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_TYPE(Void, 		"struct<_cpp_ref:ref<unit>>");  // <== this is actually not a type...
 	CHECK_REFERENCE_TYPE(Bool, 		"struct<_cpp_ref:ref<bool>>");
 	CHECK_REFERENCE_TYPE(UChar, 	"struct<_cpp_ref:ref<uint<1>>>");
-	CHECK_REFERENCE_TYPE(SChar, 	"struct<_cpp_ref:ref<char>>");
+	CHECK_REFERENCE_TYPE(SChar, 	"struct<_cpp_ref:ref<int<1>>>");
 	CHECK_REFERENCE_TYPE(Char16, 	"struct<_cpp_ref:ref<wchar<16>>>");
 	CHECK_REFERENCE_TYPE(Char32, 	"struct<_cpp_ref:ref<wchar<32>>>");
 	CHECK_REFERENCE_TYPE(UShort, 	"struct<_cpp_ref:ref<uint<2>>>");
@@ -293,7 +293,7 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_CONST_TYPE(Void, 	  "struct<_const_cpp_ref:src<unit>>");  // <== this is actually not a type...
 	CHECK_REFERENCE_CONST_TYPE(Bool, 	  "struct<_const_cpp_ref:src<bool>>");
 	CHECK_REFERENCE_CONST_TYPE(UChar, 	  "struct<_const_cpp_ref:src<uint<1>>>");
-	CHECK_REFERENCE_CONST_TYPE(SChar, 	  "struct<_const_cpp_ref:src<char>>");
+	CHECK_REFERENCE_CONST_TYPE(SChar, 	  "struct<_const_cpp_ref:src<int<1>>>");
 	CHECK_REFERENCE_CONST_TYPE(Char16, 	  "struct<_const_cpp_ref:src<wchar<16>>>");
 	CHECK_REFERENCE_CONST_TYPE(Char32, 	  "struct<_const_cpp_ref:src<wchar<32>>>");
 	CHECK_REFERENCE_CONST_TYPE(UShort, 	  "struct<_const_cpp_ref:src<uint<2>>>");
@@ -480,11 +480,11 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	classDecl->setCompleteDefinition (true);
 
 	CHECK_TYPE		(classTy, "RecClass",
-							  "rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}");
+							  "rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}");
 	CHECK_POINTER	(classTy, "ref<array<RecClass,1>>",
-							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>},1>>");
+							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>},1>>");
 	CHECK_REFERENCE	(classTy, "struct<_cpp_ref:ref<RecClass>>",
-							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:char,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}>>");
+							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}>>");
 }
 
 
