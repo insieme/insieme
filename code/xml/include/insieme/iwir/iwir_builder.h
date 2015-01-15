@@ -110,10 +110,10 @@ class IWIRBuilder {
 		DISPATCH2HANDLER(parallelFor,parallelFor);
 		DISPATCH2HANDLER(parallelForEach,parallelForEach);
 
-		VLOG(2) << result->name << " " << nodeName;
 		assert(result && "no task was created");
+		VLOG(2) << result->name << " " << nodeName;
 
-			return result;
+		return result;
 	}
 
 	Tasks* handle_tasks(Context& ctx, const XmlElement& e) {
@@ -136,7 +136,6 @@ class IWIRBuilder {
 		atomic = mgr->create<AtomicTask>(taskNameStr, taskType, ctx.getParentTask());
 		//TODO taskMap (taskName : Task*)
 		taskCache.insert( {atomic->name, atomic} );
-
 
 		Context context(atomic);
 		
@@ -168,7 +167,6 @@ class IWIRBuilder {
 		IfTask* ifTask = mgr->create<IfTask>(taskNameStr, ctx.getParentTask());
 		//TODO taskMap (taskName : Task*)
 		taskCache.insert( {ifTask->name, ifTask} );
-
 
 		VLOG(2) << "IfTask:" << taskNameStr;
 
@@ -226,7 +224,6 @@ class IWIRBuilder {
 		//TODO taskMap (taskName : Task*)
 		taskCache.insert( {bs->name, bs} );
 
-
 		VLOG(2) << "BlockScope:" << taskNameStr;
 
 		Context context(bs);
@@ -267,11 +264,9 @@ class IWIRBuilder {
 		//TODO taskMap (taskName : Task*)
 		taskCache.insert( {whileTask->name, whileTask} );
 
-
 		VLOG(2) << "WhileTask:" << taskNameStr;
 
 		Context innerCtx(whileTask);
-
 
 		//Body
 		auto bodyChild= e.getFirstChildByName("body");

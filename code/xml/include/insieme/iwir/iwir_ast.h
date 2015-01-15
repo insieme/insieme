@@ -36,9 +36,12 @@
 
 #pragma once 
 
+#include <boost/variant.hpp>
 #include <boost/utility.hpp>
 #include <vector>
+#include <memory>
 #include <utility>
+#include "insieme/utils/printable.h"
 
 namespace iwir {
 namespace ast {
@@ -65,7 +68,7 @@ namespace ast {
 }
 
 namespace condition_ast {
-
+	//Condition AST models the condition expression used in IfTask and WhileTask
 	struct op_or  {};
 	struct op_and {};
 	struct op_neq {};
@@ -78,9 +81,9 @@ namespace condition_ast {
 
 	struct port { 
 		port() : name(), p(nullptr) {}
-		port(const string& n) : name(n), p(nullptr) {}
-		port(const string& n, iwir::ast::Port* p) : name(n), p(p) {}
-		string name; 
+		port(const std::string& n) : name(n), p(nullptr) {}
+		port(const std::string& n, iwir::ast::Port* p) : name(n), p(p) {}
+		std::string name; 
 		iwir::ast::Port* p;
 	};
 
@@ -117,13 +120,11 @@ namespace condition_ast {
 		ConditionExpr oper1; 
 	};
 
+	std::ostream& operator<<(std::ostream& os, const ConditionExpr& e);
+
 } //condition_ast end
 
 namespace ast {
-
-using std::vector;
-using std::string;
-using std::pair;
 
 enum NodeType { NT_Links, NT_Tasks, NT_Ports, NT_Properties, NT_Constraints, NT_Property, NT_Constraint, NT_TaskType, NT_SimpleType, NT_CollectionType, NT_Condition, NT_Port, NT_Link, NT_AtomicTask, NT_BlockScope, NT_IfTask, NT_ForTask, NT_ForEachTask, NT_ParallelForTask, NT_ParallelForEachTask, NT_WhileTask, NT_LoopCounter};
 
@@ -146,10 +147,9 @@ class Node : public insieme::utils::Printable {
 	}
 };
 
-
 template<typename T> 
 struct Group : public Node {
-	vector<T*> elements;
+	std::vector<T*> elements;
 	Group(NodeType nodeType) : Node(nodeType) {};
 
 	typedef typename std::vector<T*>::const_iterator const_iterator;
@@ -161,44 +161,48 @@ struct Group : public Node {
 struct Links : public Group<Link> {
 	Links() : Group(NT_Links) {}
 }; 
+
 struct Tasks : public Group<Task> {
 	Tasks() : Group(NT_Tasks) {}
 };
+
 enum PortsKind { PK_InputPorts=0, PK_OutputPorts, PK_LoopElements, PK_LoopPorts, PK_UnionPorts};
 struct Ports : public Group<Port> {
 	PortsKind portsKind;
 	Ports(PortsKind portsKind) : 
 		Group(NT_Ports), portsKind(portsKind) {}
 };
+
 struct Properties : public Group<Property> {
 	Properties() : Group(NT_Properties) {}
 };    
+
 struct Constraints : public Group<Constraint> {
 	Constraints() : Group(NT_Constraints) {}
 };    
 
 struct Property :  public Node {
-	string name;
-	string value;
-	Property(const string& name, const string& value) : 
+	std::string name;
+	std::string value;
+	Property(const std::string& name, const std::string& value) : 
 		Node(NT_Property), name(name), value(value) {}
 };
 
 struct Constraint : public Node {
-	string name;
-	string value;
-	Constraint(const string& name, const string& value) : 
+	std::string name;
+	std::string value;
+	Constraint(const std::string& name, const std::string& value) : 
 		Node(NT_Constraint), name(name), value(value) {}
 };
+
 struct TaskType : public Node {
-	string type;
-	TaskType(const string& type) : Node(NT_TaskType), type(type) {}
+	std::string type;
+	TaskType(const std::string& type) : Node(NT_TaskType), type(type) {}
 };
 
 struct Type : public Node {
 	Type(NodeType nt) : Node(nt) {}
 };
-
 
 struct SimpleType : public Type {
 	enum IWIRType { String, Integer, Double, File, Bool };
@@ -232,8 +236,6 @@ struct CollectionType : public Type {
 	}
 };
 
-
-
 struct Condition : public Node {
 	iwir::condition_ast::ConditionExpr condition;
 	Task* parentTask;
@@ -242,9 +244,28 @@ struct Condition : public Node {
 };
 
 enum PortKind {PK_Basic=0, PK_LoopPort, PK_LoopElement, PK_UnionPort, PK_LoopCounter};
+struct Task : public Node {
+	std::string name;
+
+	Ports* inputPorts;
+	Ports* outputPorts;
+	Task* parentTask;
+	bool isTopLevel;
+
+	Properties* properties;
+	Constraints* constraints;
+
+	Task(const std::string& name, NodeType nodeType, Task* parentTask=nullptr, bool isTopLevel=false) : 
+		Node(nodeType), name(name), parentTask(parentTask), isTopLevel(isTopLevel), properties(nullptr), constraints(nullptr){};
+
+	std::ostream& printTo(std::ostream& out) const {
+		out << "task[" << name << "]";
+		return out;
+	}
+};
 
 struct Port : public Node {
-	string name;
+	std::string name;
 	Type* type;
 	PortKind kind;
 
@@ -255,37 +276,14 @@ struct Port : public Node {
 	Properties* properties;
 	Constraints* constraints;
 
-	Port(const string& name, Type* type, Task* parentTask, PortKind kind = PK_Basic) : 
+	Port(const std::string& name, Type* type, Task* parentTask, PortKind kind = PK_Basic) : 
 		Node(NT_Port), name(name), type(type), kind(kind), parentTask(parentTask), properties(nullptr), constraints(nullptr) {};
 
-	std::ostream& printTo(std::ostream& out) const;
-	
-};
-
-struct Task : public Node {
-	string name;
-
-	Ports* inputPorts;
-	Ports* outputPorts;
-	Task* parentTask;
-	bool isTopLevel;
-
-	Properties* properties;
-	Constraints* constraints;
-
-	Task(const string& name, NodeType nodeType, Task* parentTask=nullptr, bool isTopLevel=false) : 
-		Node(nodeType), name(name), parentTask(parentTask), isTopLevel(isTopLevel), properties(nullptr), constraints(nullptr){};
-
 	std::ostream& printTo(std::ostream& out) const {
-		out << "task[" << name << "]";
+		out << "port[" << parentTask->name << ":" << name << "]";
 		return out;
 	}
 };
-
-std::ostream& Port::printTo(std::ostream& out) const {
-		out << "port[" << parentTask->name << ":" << name << "]";
-		return out;
-}
 
 enum LinkKind {LK_Basic=0, LK_Loop, LK_LoopElement, LK_UnionPort, LK_ParallelOutput};
 
@@ -311,7 +309,7 @@ struct Link : public Node {
 
 struct AtomicTask : public Task {
 	TaskType* type;
-	AtomicTask(const string& name, TaskType* type, Task* parentTask) : 
+	AtomicTask(const std::string& name, TaskType* type, Task* parentTask) : 
 		Task(name, NT_AtomicTask, parentTask), type(type) {};
 };
 
@@ -319,7 +317,7 @@ struct BlockScope : public Task {
 	Tasks* body;
 	Links* links;
 
-	BlockScope(const string& name, Task* parentTask) : 
+	BlockScope(const std::string& name, Task* parentTask) : 
 		Task(name, NT_BlockScope, parentTask) {}
 };
 
@@ -330,7 +328,7 @@ struct IfTask : public Task {
 	Links* links;
 	bool hasElse;
 	
-	IfTask(const string& name, Task* parentTask) : 
+	IfTask(const std::string& name, Task* parentTask) : 
 		Task(name, NT_IfTask, parentTask), hasElse(false) {}
 };
 
@@ -355,7 +353,7 @@ struct WhileTask : public Task {
 	Tasks* body;
 	Links* links;
 
-	WhileTask(const string& name, Task* parentTask) : 
+	WhileTask(const std::string& name, Task* parentTask) : 
 		Task(name, NT_WhileTask, parentTask), 
 		loopPorts(nullptr), 
 		unionPorts(nullptr), 
@@ -375,7 +373,7 @@ struct ForTask : public Task {
 	LoopCounter* toCounter;
 	LoopCounter* stepCounter;
 	
-	ForTask(const string& name, Task* parentTask) : 
+	ForTask(const std::string& name, Task* parentTask) : 
 		Task(name, NT_ForTask, parentTask), 
 		loopPorts(nullptr), 
 		unionPorts(nullptr), 
@@ -393,7 +391,7 @@ struct ParallelForTask : public Task {
 	LoopCounter* toCounter;
 	LoopCounter* stepCounter;
 
-	ParallelForTask(const string& name, Task* parentTask) : 
+	ParallelForTask(const std::string& name, Task* parentTask) : 
 		Task(name, NT_ParallelForTask, parentTask), 
 		body(nullptr), 
 		links(nullptr),
@@ -408,7 +406,7 @@ struct ForEachTask : public Task {
 	Tasks* body;
 	Links* links;
 	
-	ForEachTask(const string& name, Task* parentTask) : 
+	ForEachTask(const std::string& name, Task* parentTask) : 
 		Task(name, NT_ForEachTask, parentTask),
 		loopPorts(nullptr), 
 		unionPorts(nullptr), 
@@ -423,7 +421,7 @@ struct ParallelForEachTask : public Task {
 	Tasks* body;
 	Links* links;
 	
-	ParallelForEachTask(const string& name, Task* parentTask) : 
+	ParallelForEachTask(const std::string& name, Task* parentTask) : 
 		Task(name, NT_ParallelForEachTask, parentTask),
 		loopElements(nullptr), 
 		body(nullptr), 
@@ -435,7 +433,7 @@ typedef std::shared_ptr<NodeManager> SharedNodeManager;
 
 class NodeManager : private boost::noncopyable {
 
-	vector<Node*> nodes;
+	std::vector<Node*> nodes;
 	public:
 
 	NodeManager() {}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-#pragma once
 #include "insieme/xml/xml_utils.h"
 #include "insieme/xml/xsd_config.h"
 

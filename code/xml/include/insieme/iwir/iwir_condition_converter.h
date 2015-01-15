@@ -44,6 +44,7 @@
 #include "insieme/iwir/iwir_extension.h"
 
 namespace iwir {
+namespace condition_ast {
 
 using namespace iwir::ast;
 using namespace insieme;
@@ -53,6 +54,10 @@ namespace {
 	typedef map<pair<Task*, Port*>, core::VariablePtr> VarMap;
 }
 
+/*
+ * take a ConditionExpr (a condition_ast) and convert it into an IR_expression - replaces the
+ * Port* with the IR_variables used 
+ */
 struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	Task* parentTask;
 	const VarMap& varMap;
@@ -70,6 +75,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		return var;
 	};
 
+	//apply implict casting rules of the condition expr
 	std::tuple<core::ExpressionPtr, core::ExpressionPtr> implicit_cast(core::ExpressionPtr lhs, core::ExpressionPtr rhs) const {
 		const core::lang::BasicGenerator& gen = irBuilder.getLangBasic();
 		core::TypePtr lTy = lhs->getType();
@@ -79,7 +85,6 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 
 		//string > integer > double > boolean
-		//1234
 		int cast = 0;
 
 		if(gen.isString(lTy)) {cast = 1;}
@@ -332,4 +337,5 @@ core::ExpressionPtr convert_condition_ast_to_inspire(Condition* node, const VarM
 	return boost::apply_visitor(condition_ast_to_inspire(node->parentTask,varMap,irBuilder), node->condition);
 };
 
+} // condition_ast end
 } // iwir end
