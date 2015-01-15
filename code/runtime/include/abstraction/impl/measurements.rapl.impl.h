@@ -177,9 +177,9 @@ bool irt_rapl_is_supported() {
 			case 58: // IvyBridge 22nm
 			case 60: // Haswell, e.g. i7-4770k
 			case 62: // SandyBridge EP, e.g. E5-1620, E5-2680, Ivy Bridge-E, e.g. i7-4820K
-			//case 63: // Haswell-E, e.g. i7-5930K
-			//case 69: // Haswell-ULT, e.g. i5-4310
-			//case 70: // Haswell-H, e.g. i7-4770HQ
+			case 63: // Haswell-E, e.g. i7-5930K
+			case 69: // Haswell-ULT, e.g. i5-4310
+			case 70: // Haswell-H, e.g. i7-4770HQ
 				return true;
 				break;
 			default:

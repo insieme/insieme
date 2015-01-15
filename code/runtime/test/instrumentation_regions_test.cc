@@ -289,11 +289,11 @@ TEST(region_instrumentation, parallel) {
 TEST(region_instrumentation, rapl) {
 
 #ifndef IRT_USE_PAPI
-	printf("warning: PAPI not available, not testing RAPL\n");
+	printf("warning: not compiled with PAPI, not testing RAPL\n");
 	return;
 #endif
 	if(!irt_rapl_is_supported()) {
-		printf("warning: RAPL not available, not testing it\n");
+		printf("warning: CPU model does not support RAPL, not testing it\n");
 		return;
 	}
 
@@ -340,9 +340,8 @@ TEST(region_instrumentation, rapl) {
 
 		EXPECT_GT(reg0->aggregated_cpu_energy, 0);
 		EXPECT_LT(reg0->aggregated_cpu_energy, 100);
-		EXPECT_GT(reg0->aggregated_cores_energy, 0);
+		// mc and core readings are not present on all CPUs, therefore they can be 0
 		EXPECT_LT(reg0->aggregated_cores_energy, 100);
-		// mc readings are not present on all CPUs, therefore they can be 0
 		EXPECT_LT(reg0->aggregated_memory_controller_energy, 100);
 		EXPECT_EQ(reg0->last_cpu_energy, 0);
 		EXPECT_EQ(reg0->last_cores_energy, 0);
