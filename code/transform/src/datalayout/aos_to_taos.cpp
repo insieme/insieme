@@ -40,17 +40,11 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/transform/manipulation.h"
-#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/utils/annotation.h"
-
-#include "insieme/analysis/defuse_collect.h"
-#include "insieme/analysis/cba/analysis.h"
-#include "insieme/analysis/scopes_map.h"
 
 namespace insieme {
 namespace transform {
@@ -71,7 +65,7 @@ StatementPtr aosToTaosAllocTypeUpdate(const StatementPtr& stmt) {
 
 }
 
-AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder) : AosToSoa(toTransform, candidateFinder) {
+AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder) : DatalayoutTransformer(toTransform, candidateFinder) {
 	IRBuilder builder(mgr);
 	genericTileSize = builder.variableIntTypeParam('t');
 }
@@ -125,8 +119,23 @@ void AosToTaos::transform() {
 		//free memory of the new variables
 		addNewDel(varReplacements, tta, newStructType, replacements);
 
+//for(std::pair<NodeAddress, NodePtr> r : replacements) {
+//	std::cout << "\nFRom:\n";
+//	dumpPretty(r.first);
+//	std::cout << "\nTo: \n";
+//	dumpPretty(r.second);
+//	std::map<NodeAddress, NodePtr> re;
+//	re[r.first] = r.second;
+//	core::transform::replaceAll(mgr, re);
+//	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
+//}
+		ExpressionMap structures;
+		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+
 		//replace array accesses
-		ExpressionMap structures = replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, structures);
+
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
@@ -138,9 +147,9 @@ void AosToTaos::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+//assert(false);
 
-		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+		//replaceStructsInJobs(varReplacements, newStructType, oldStructType, NodeAddress(toTransform), allocPattern, replacements, structures);
 
 		doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
@@ -317,6 +326,115 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 	}
 
 	return builder.structExpr(values);
+}
+
+void AosToTaos::replaceStructsInJobs(ExpressionMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+			const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
+	ExpressionMap jobReplacements;
+	IRBuilder builder(mgr);
+
+	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
+		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
+		if(CallExprAddress call = expr.isa<CallExprAddress>()) {
+			if(!core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getTupleMemberAccess()))
+				return;
+std::cout << "\nat the tuple member access\n";
+
+			// check if tuple argument has a member which will be updated
+			ExpressionPtr oldRootVar = getRootVariable(call, call->getArgument(0)).as<ExpressionPtr>();
+			auto newRootVarIter = structures.find(oldRootVar);
+
+			if(newRootVarIter != structures.end()) { // tuple has been updated, check if it was the current field
+				ExpressionPtr newRootVar = newRootVarIter->second;
+
+				RefTypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
+						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>()).as<RefTypePtr>();
+				TypePtr oldType = call->getArgument(2)->getType().as<GenericTypePtr>()->getTypeParameter(0);
+std::cout << "Creating var of new type: " << newType << std::endl;
+
+				// check if and update is needed
+				if(newType == oldType)
+					return;
+
+				ExpressionAddress argument = call.getParentAddress(2).isa<CallExprAddress>();
+				CallExprAddress parent = argument.getParentAddress(1).isa<CallExprAddress>();
+				if(!parent)
+					return;
+
+				LambdaExprAddress lambda = parent->getFunctionExpr().isa<LambdaExprAddress>();
+
+				if(!lambda)
+					return;
+
+				for_range(make_paired_range(parent->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+						[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					if(pair.first == argument) {// found the argument which will be updated
+						// create replacement for corresponding parameter
+						TypePtr newParamType = newType->getElementType().as<ArrayTypePtr>()->getElementType();
+						VariablePtr newParam = builder.variable(newParamType);
+
+						// add corresponding parameter to update list
+						jobReplacements[pair.second] = newParam;
+std::cout << ": \nAdding: " << *pair.second << " - " << newParamType << std::endl;
+					}
+				});
+			}
+		}
+
+		// propagating variables to be replaced through job expressions
+		if(JobExprPtr job = expr.isa<JobExprPtr>()) {
+			CallExprPtr parallelCall = job->getDefaultExpr().isa<BindExprPtr>()->getCall();
+
+			if(!parallelCall)
+				return;
+
+			LambdaExprPtr parallelLambda = parallelCall->getFunctionExpr().isa<LambdaExprPtr>();
+			if(!parallelLambda)
+				return;
+
+			for_range(make_paired_range(parallelCall->getArguments(), parallelLambda->getParameterList()->getElements()),
+					[&](const std::pair<const ExpressionPtr, const VariablePtr>& pair) {
+std::cout << "Looking for " << pair.first << std::endl;
+				auto newArgIter = varReplacements.find(pair.first);
+				if(newArgIter != varReplacements.end()) {
+					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
+	std::cout << "Found in VARreplacements: " << pair.first << " -> " << jobReplacements[pair.second]->getType() << std::endl;
+				}
+
+				newArgIter = jobReplacements.find(pair.first);
+				if(newArgIter != jobReplacements.end()) {
+					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
+	std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << jobReplacements[pair.second]->getType() << std::endl;
+				}
+			});
+		}
+	});
+
+	std::vector<StatementAddress> empty;
+
+	ExpressionMap nElems;
+std::cout << "\n---------------------------------------------------------------------\n\n";
+
+	//replace array accesses
+//	replaceAccesses(jobReplacements, newStructType, toTransform, empty, empty, replacements, structures);
+
+	updateCopyDeclarations(jobReplacements, newStructType, oldStructType, toTransform, replacements, structures);
+
+	// assignments to the entire struct should be ported to the new sturct members
+	replaceAssignments(jobReplacements, newStructType, oldStructType, toTransform, allocPattern, nElems, replacements);
+
+//	for(std::pair<NodeAddress, NodePtr> r : replacements) {
+//		std::cout << "\nFRom:\n";
+//		dumpPretty(r.first);
+//		std::cout << "\nTo: \n";
+//		dumpPretty(r.second);
+//		std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
+//	}
+
+//	doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
+
+//	assert(false);
+
 }
 
 } // datalayout

@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/transform/datalayout/aos_to_soa.h"
+#include "insieme/transform/datalayout/datalayout_transform.h"
 
 namespace insieme {
 
@@ -47,7 +47,7 @@ typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScope
 namespace transform {
 namespace datalayout {
 
-class AosToTaos : public AosToSoa {
+class AosToTaos : public DatalayoutTransformer {
 	core::IntTypeParamPtr genericTileSize;
 
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
@@ -74,6 +74,9 @@ class AosToTaos : public AosToSoa {
 
 	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
+
+	virtual void replaceStructsInJobs(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
 
 public:
 	AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
