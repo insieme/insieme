@@ -641,6 +641,16 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	}
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
+
+	// In case we have a K&R C-style declaration (without argument types) 
+	// and a different number of arguments in the call we need to adjust the function type
+	vector<core::TypePtr> typeList = funcTy.getParameterTypeList();
+	if(typeList.size() == 0 && args.size() > 0) {
+		typeList = ::transform(args, [](const core::ExpressionPtr& exprPtr) { return exprPtr->getType(); });
+		core::FunctionTypePtr newFuncTy = builder.functionType(typeList, funcTy->getReturnType());
+		func = core::transform::replaceAddress(mgr, core::ExpressionAddress(func)->getType(), newFuncTy).getRootNode().as<core::ExpressionPtr>();
+	}
+
 	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
 
 	// In the case this is a call to MPI, attach the loc annotation, handlling of those
