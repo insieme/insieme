@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -302,8 +302,9 @@ void irt_wi_end(irt_work_item* wi) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
-		irt_atomic_fetch_and_sub(&source->num_fragments, 1, uint32);
-		if(source->num_fragments == 0) irt_wi_end(source);
+		if (irt_atomic_sub_and_fetch(&source->num_fragments, 1, uint32) == 0) {
+			irt_wi_end(source);
+		}
 	} else {
 		// delete params struct
 		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
