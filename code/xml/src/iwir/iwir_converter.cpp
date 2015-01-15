@@ -84,42 +84,28 @@ CONVERTER(Link) {
 	//TODO implicit casts
 	//bool->string, int->string, double->string, int->double
 	//A -> collection/A (one entry)
-	//file -> stringa (URI to the file)
+	//file -> string (URI to the file)
 
 	//generate linking statment in IR
-	auto var1 = vFrom->second;
-	auto var2 = vTo->second;
-
 	//link(from,to) link(from:fromTy, to:toTy);
 	core::StatementPtr linkStmt;
 	map<string, core::NodePtr> symbols;
+	
+	core::ExpressionPtr var1 = vFrom->second;
+	core::ExpressionPtr var2 = vTo->second;
 	//besides loopCounter variables are all variables ref
 	symbols["from"] = irBuilder.tryDeref(var1);
 	symbols["to"] = var2;
-	VLOG(2) << symbols;
 
 	if(isUnion) {
 		//linkUnion(from,to)
-		//symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getRefCollectionAppend();
-//			symbols["link"] = irBuilder.parse("lit(\"linkUnion\":(ref<'a>,ref<collection<'a>>) -> unit)", symbols);
-		//linkStmt = irBuilder.parseStmt("link(to, *from);", symbols);
 		symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkUnion();
 		linkStmt = irBuilder.parseStmt("link(from, to);", symbols);
 	} else if(isLoopElement) {
-		//TODO get iterator to acccess correct elemnt of LoopElements-collection
-		//symbols["link"] = irBuilder.parse("lit(\"linkLoopElement\":(ref<collection<'a>>,ref<'a>,int<4>) -> unit)", symbols);
-		//symbols["link"] = irBuilder.parse("(ref<collection<'a>> le, ref<'a> to, int<4> it) -> unit {"
-		//		"to = *ref.collection.at(le, it);"
-		//		"}", symbols);
-		//symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-		//linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
-		//symbols["linkLoopElement"] = irBuilder.parse("lit(\"linkLoopElement_\":(ref<'a>,'b,'c) -> unit)", symbols);
-		//symbols["link"] = irBuilder.parse("(ref<'a> from,'b to, 'c iter) -> unit { linkLoopElement(from, to, iter); };", symbols);
-		
+		//TODO get iterator to acccess correct element of LoopElements-collection
 		symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
 		symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkLoopElement();
 		linkStmt = irBuilder.parseStmt("link(from, iterator, to);", symbols);
-
 	} else {
 		//TODO find better solution... output links from parallelFor/ForEach are like
 		//unionlinks...
@@ -131,15 +117,10 @@ CONVERTER(Link) {
 			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkParallelOutput();
 			linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
 		} else {
-			//symbols["link"] = irBuilder.parse("lit(\"link\":('a,'b) -> unit)");
 			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkBasic();
 			linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
-			//auto linkStmt1 = irBuilder.parseStmt("to = from;", symbols);
-			//VLOG(2) << linkStmt1;
 		}
 	}
-
-	VLOG(2) << symbols;
 	VLOG(2) << linkStmt;
 	
 	assert(linkStmt);
@@ -180,8 +161,6 @@ CONVERTER(Ports) {
 CONVERTER(Port) {
 	VLOG(2) << "port: " << node->parentTask->name << "\\" << node->name;
 
-	bool isUnion = false;
-
 	switch(node->kind) {
 		case PK_Basic:
 			VLOG(2) << "basic";
@@ -194,7 +173,6 @@ CONVERTER(Port) {
 			break;
 		case PK_UnionPort:
 			VLOG(2) << "unionPort";
-			isUnion = true;
 			break;
 		case PK_LoopCounter:
 			VLOG(2) << "loopCounter";
@@ -247,10 +225,7 @@ CONVERTER(Port) {
 	if(varMap.find({node->parentTask, node}) == varMap.end()) {
 		pair<Task*,Port*> key = { node->parentTask, node };
 		string value = "port_" + node->parentTask->name + "\\" + node->name;
-
 		assert(varType);
-		
-		context.taskVarMap.insert( {key, var});
 		
 		//IRVariable for Task/Port
 		varMap.insert( {key, var} ) ;
@@ -274,7 +249,7 @@ CONVERTER(Port) {
 				}
 			case PK_LoopCounter:
 				if(node->isInput) {
-				//loopcounter for to/from/step act as input
+				//loopcounter variable for "to"/"from"/"step" act as input
 					decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
 				}				
 				//the loopcounter itself is the iterator variable in the IR::for --> declared in the forstmt
@@ -296,9 +271,11 @@ LOOPCOUNTER_CONVERTER(LoopCounter) {
 	VLOG(2) << "loopCounter " ;
 	VLOG(2) << "hasvalue: " << node->hasValue;
 	if(node->hasValue) {
+		//from/to/step
 		VLOG(2) << "value: " << node->value;
 		ret = irBuilder.intLit(node->value); 
 	} else {
+		//from/to/step and the actual loopCounter
 		convert(node->port, context);
 
 		auto c = varMap.find( {node->parentTask, node->port} );

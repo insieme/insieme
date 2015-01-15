@@ -44,56 +44,53 @@
 namespace iwir {
 namespace utils {
 	
-namespace {
-
-enum VertexKind {begin=0, end, atomic};
-struct Vertex { string taskName; VertexKind kind; }; 
-struct Edge { string fromPort; string toPort; };
-
-//Graph 
-//	-- Vertex { Task* , Enum { begin, end, atomic} }
-//	-- Edge { Task*, Task*, Property <Port* from, Port* to> }
-typedef boost::adjacency_list < 
-	boost::listS, boost::vecS, boost::directedS, 
-	Vertex, Edge
-	> Graph;
-typedef Graph::vertex_descriptor VertexID;
-typedef Graph::edge_descriptor EdgeID;
-
-template<class Name>
-class VertexWriter {
-	Name name;
-	public:
-		VertexWriter(Name name) : name(name) {}
-		template<class VertexOrEdge>
-		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			switch(name[v].kind) {
-				case VertexKind::begin: 
-					out << "[label=" << "\"" <<  name[v].taskName << "_begin" << "\"" << "]";
-					break;
-				case VertexKind::end: 
-					out << "[label=" << "\"" <<  name[v].taskName << "_end" << "\"" << "]";
-					break;
-				case VertexKind::atomic: 
-					out << "[label=" << "\"" <<  name[v].taskName << "\"" <<  "]";
-					break;
-			}
-		}
-};
-
-template<class Name>
-class EdgeWriter {
-	Name name;
-	public:
-		EdgeWriter(Name name) : name(name) {}
-		template<class VertexOrEdge>
-		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=" << "\"" <<  name[v].fromPort << "\\n to \\n" << name[v].toPort <<  "\"" << "]";
-		}
-};
-}
-
 class TaskGraph {
+
+	enum VertexKind {begin=0, end, atomic};
+	struct Vertex { string taskName; VertexKind kind; }; 
+	struct Edge { string fromPort; string toPort; };
+
+	//Graph 
+	//	-- Vertex { Task* , Enum { begin, end, atomic} }
+	//	-- Edge { Task*, Task*, Property <Port* from, Port* to> }
+	typedef boost::adjacency_list < 
+		boost::listS, boost::vecS, boost::directedS, 
+		Vertex, Edge
+		> Graph;
+	typedef Graph::vertex_descriptor VertexID;
+	typedef Graph::edge_descriptor EdgeID;
+
+	template<class Name>
+	class VertexWriter {
+		Name name;
+		public:
+			VertexWriter(Name name) : name(name) {}
+			template<class VertexOrEdge>
+			void operator()(std::ostream& out, const VertexOrEdge& v) const {
+				switch(name[v].kind) {
+					case VertexKind::begin: 
+						out << "[label=" << "\"" <<  name[v].taskName << "_begin" << "\"" << "]";
+						break;
+					case VertexKind::end: 
+						out << "[label=" << "\"" <<  name[v].taskName << "_end" << "\"" << "]";
+						break;
+					case VertexKind::atomic: 
+						out << "[label=" << "\"" <<  name[v].taskName << "\"" <<  "]";
+						break;
+				}
+			}
+	};
+
+	template<class Name>
+	class EdgeWriter {
+		Name name;
+		public:
+			EdgeWriter(Name name) : name(name) {}
+			template<class VertexOrEdge>
+			void operator()(std::ostream& out, const VertexOrEdge& v) const {
+				out << "[label=" << "\"" <<  name[v].fromPort << "\\n to \\n" << name[v].toPort <<  "\"" << "]";
+			}
+	};
 
 	//parentTask needs begin/end entry
 	set<Link*> edgeVisited;

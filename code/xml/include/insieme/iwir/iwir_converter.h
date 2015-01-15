@@ -93,9 +93,6 @@ private :
 		typedef map<pair<BlockScope*, Port*>, string> BlockScopeChannelMap;	// (BlockScope*, Port*) : IR_Channel
 		BlockScopeChannelMap bsChannelMap;
 		
-		//map of used variable per task/port
-		VarMap taskVarMap;
-		
 		//map of declared variable per task
 		DeclVarMap declMap;
 
@@ -104,7 +101,6 @@ private :
 
 		std::ostream& printTo(std::ostream& out) const { 
 			out << "ConversionContext( \n";
-			out << "taskVars \t [ " << taskVarMap << "]\n"; 
 			out << "decls \t [ " << declMap << "]\n";
 			out << "linkStmts \t [ " << linkStmtMap << "]\n";
 			out << ")\n";

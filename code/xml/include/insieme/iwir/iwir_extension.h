@@ -86,12 +86,11 @@ class CollectionTypeExtension : public core::lang::Extension {
 public:
 	LANG_EXT_TYPE(Collection, "collection<'elemTy>");
 	LANG_EXT_LITERAL(CollectionSize,	"collection.size", "(collection<'elemTy>) -> int<4>");
+	LANG_EXT_LITERAL(ShortestCollection,	"shortest.collection", "(vector<collection<'elemTy>, #l>) -> int<4>");
 	LANG_EXT_LITERAL(RefCollectionSize, "ref.collection.size", "(ref<collection<'elemTy>>) -> int<4>");
 	LANG_EXT_LITERAL(RefCollectionAppend, "ref.collection.append", "(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>");
 	LANG_EXT_LITERAL(CollectionAt,		"collection.at", "(collection<'elemTy>, int<4>) -> 'elemTy");
 	LANG_EXT_LITERAL(RefCollectionAt,	"ref.collection.at", "(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>");
-
-//lit(\"enum.to.int\":('a)->int<4>)
 
 	LANG_EXT_DERIVED(RefLinkLoopElement,
 			"(ref<collection<'elemTy>> from, int<4> it, ref<'elemTy> to)->unit {"

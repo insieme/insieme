@@ -36,6 +36,7 @@
 
 #include "insieme/iwir/iwir_converter.h"
 #include "insieme/iwir/iwir_linkcollector.h"
+#include "insieme/core/encoder/lists.h"
 
 namespace iwir {
 
@@ -60,7 +61,7 @@ CONVERTER(AtomicTask) {
 
 	//converting TaskType
 	//TODO make use of tasktype
-	convert(node->type, context);
+	auto taskType = convertTaskType(node->type, context);
 
 	convert(node->inputPorts, context);
 	convert(node->outputPorts, context);
@@ -70,7 +71,6 @@ CONVERTER(AtomicTask) {
 	//TODO turn into annotations
 	convert(node->constraints, context);
 
-	//TODO
 	//literal for atomic task, with arguments from input/output ports
 	//variables for ips and ops
 	//generictype for tasktype?
@@ -188,8 +188,7 @@ CONVERTER(BlockScope) {
 
 			//declare channel for tasks inputports
 			for_each(task->inputPorts->begin(), task->inputPorts->end(),
-					[&](Port* ip) { 
-
+				[&](Port* ip) { 
 					assert(ip);
 
 					//declare and create channel -- before everything else in blockscope
@@ -224,7 +223,7 @@ CONVERTER(BlockScope) {
 			
 			//declare channel for tasks outputports
 			for_each(task->outputPorts->begin(), task->outputPorts->end(),
-					[&](Port* op) { 
+				[&](Port* op) { 
 					assert(op);
 
 					//declare and create channel -- before everything else in blockscope
@@ -279,7 +278,7 @@ CONVERTER(BlockScope) {
 
 	//declare channels for BS_IP and provide linking stmts
 	for_each(node->inputPorts->begin(), node->inputPorts->end(),
-			[&](Port* ip) {
+		[&](Port* ip) {
 			assert(ip);
 
 			//declare and create channel -- before everything else in blockscope
@@ -309,7 +308,7 @@ CONVERTER(BlockScope) {
 
 	//declare channels for BS_OP and provide linking stmts
 	for_each(node->outputPorts->begin(), node->outputPorts->end(),
-			[&](Port* op) {
+		[&](Port* op) {
 			assert(op);
 
 			//declare and create channel -- before everything else in blockscope
@@ -388,7 +387,7 @@ CONVERTER(BlockScope) {
 		channelLinks.push_back(muxer);
 	}
 
-	//link channels in a paralle/task construct
+	//link channels in a parallel/task construct
 	core::StatementList channelLinkStmts;
 	for(auto cl : channelLinks) {
 		channelLinkStmts.push_back(irBuilder.parallel(cl, 1));
@@ -460,7 +459,9 @@ CONVERTER(BlockScope) {
 			}
 		}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
 	}
 }
 
@@ -589,7 +590,9 @@ CONVERTER(IfTask) {
 				VLOG(2) << "\t" << context.linkStmtMap[l];
 			}
 
-			linkCollector.printToDotFile(node->name+"_then.dot");
+			if(VLOG_IS_ON(2)) {
+				linkCollector.printToDotFile(node->name+"_then.dot");
+			}
 		}
 		//Else Body
 		{
@@ -641,7 +644,9 @@ CONVERTER(IfTask) {
 				VLOG(2) << "\t" << context.linkStmtMap[l];
 			}
 
-			linkCollector.printToDotFile(node->name+"_else.dot");
+			if(VLOG_IS_ON(2)) {
+				linkCollector.printToDotFile(node->name+"_else.dot");
+			}
 		}
 	}
 	else 
@@ -690,7 +695,9 @@ CONVERTER(IfTask) {
 				VLOG(2) << "\t" << context.linkStmtMap[l];
 			}
 
-			linkCollector.printToDotFile(node->name+"_then.dot");
+			if(VLOG_IS_ON(2)) {
+				linkCollector.printToDotFile(node->name+"_then.dot");
+			}
 		}
 		{
 			//some links are outside of thenBody, these are needed because there is no elseBody
@@ -850,14 +857,16 @@ CONVERTER(WhileTask) {
 
 		whileBody.insert(whileBody.end(), loopLinks.begin(), loopLinks.end());
 
-		linkCollector.printToDotFile(node->name+".dot");
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
 	}
 
 	//TODO convert condition Expression
 	core::ExpressionPtr condition;
 	condition = CONVERT_CONDITION(node->condition, context);
 
-	core::WhileStmtPtr whileStmt = irBuilder.whileStmt( condition, irBuilder.compoundStmt(whileBody));
+	core::WhileStmtPtr whileStmt = irBuilder.whileStmt(condition, irBuilder.compoundStmt(whileBody));
 
 	core::StatementList bodyStmts;
 	bodyStmts.insert(bodyStmts.end(), decls.begin(), decls.end()); 
@@ -984,7 +993,9 @@ CONVERTER(ForTask) {
 		VLOG(2) << "Links from LoopPorts:";
 		for(auto l : loopLinks) { VLOG(2) << "\t" << *l;}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
 	}
 
 	core::ExpressionPtr startVal = irBuilder.tryDeref(fromCounter);
@@ -1161,7 +1172,9 @@ CONVERTER(ParallelForTask) {
 			}
 		}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
 	}
 
 	core::ExpressionPtr startVal = irBuilder.tryDeref(fromCounter);
@@ -1316,7 +1329,9 @@ CONVERTER(ForEachTask) {
 		VLOG(2) << "Links from LoopPorts:";
 		for(auto l : loopLinks) { VLOG(2) << "\t" << *l;}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
 	}
 
 	core::ExpressionPtr startVal = irBuilder.intLit(0);
@@ -1337,12 +1352,28 @@ CONVERTER(ForEachTask) {
 		endVal = irBuilder.parseExpr("size(leVar)", symbols);
 	} else if(node->loopElements->elements.size() > 1) {
 		//we need to iterate over multiple collections
-		//TODO handle multiple loopElements -> use length of "shortest" 
-		//IR: findBiggestLoopElement(loopElements le1, ...) -> int<4> {
+		//endvalue is length of "shortest" 
+		//IR: findShortestLoopElement(loopElements le1, ...) -> int<4> {
 		//	...
 		//	return biggestLoopElement->size;
 		//}
-		assert(false && "not implemented");
+		typedef vector<insieme::core::ExpressionPtr> ExpressionList;
+		ExpressionList elements;
+		for_each(node->loopElements->begin(),node->loopElements->end(), 
+			[&](Port* le) {
+				auto fit = varMap.find( {node, le} );
+				assert(fit!=varMap.end());
+				core::VariablePtr leVar = fit->second;
+				elements.push_back(leVar);
+			}
+		);
+
+		auto shortestCollection= irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getShortestCollection();
+		
+		endVal = irBuilder.callExpr(
+			shortestCollection,
+			core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(irMgr, elements)
+		);
 	} else {
 		assert(false && "not implemented");
 	}
@@ -1493,7 +1524,9 @@ CONVERTER(ParallelForEachTask) {
 			VLOG(2) << "\t" << context.linkStmtMap[l];
 		}
 
-		linkCollector.printToDotFile(node->name+".dot");
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
 	}
 
 	core::ExpressionPtr startVal = irBuilder.intLit(0);
@@ -1514,12 +1547,28 @@ CONVERTER(ParallelForEachTask) {
 		endVal = irBuilder.parseExpr("size(leVar)", symbols);
 	} else if(node->loopElements->elements.size() > 1) {
 		//we need to iterate over multiple collections
-		//TODO handle multiple loopElements -> use length of "shortest" 
-		//IR: findBiggestLoopElement(loopElements le1, ...) -> int<4> {
+		//endvalue is length of "shortest" 
+		//IR: findShortestLoopElement(loopElements le1, ...) -> int<4> {
 		//	...
 		//	return biggestLoopElement->size;
 		//}
-		assert(false && "not implemented");
+		typedef vector<insieme::core::ExpressionPtr> ExpressionList;
+		ExpressionList elements;
+		for_each(node->loopElements->begin(),node->loopElements->end(), 
+			[&](Port* le) {
+				auto fit = varMap.find( {node, le} );
+				assert(fit!=varMap.end());
+				core::VariablePtr leVar = fit->second;
+				elements.push_back(leVar);
+			}
+		);
+
+		auto shortestCollection= irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getShortestCollection();
+		
+		endVal = irBuilder.callExpr(
+			shortestCollection,
+			core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(irMgr, elements)
+		);
 	} else {
 		assert(false && "not implemented");
 	}
