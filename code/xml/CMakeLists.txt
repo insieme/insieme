@@ -12,8 +12,8 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB insieme_xml_srcs 	src/*.cpp )
-file(GLOB insieme_xml_incs 	include/*.h )
+file(GLOB_RECURSE insieme_xml_srcs 	src/*.cpp )
+file(GLOB_RECURSE insieme_xml_incs 	include/*.h )
 
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
 
