@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -376,7 +376,15 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDec
 	//remove typeName from qualifiedTypeName and append enumConstantName
 	size_t pos = qualifiedTypeName.find(typeName);
 	assert(pos!= std::string::npos);
-	std::string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
+	std::string fixedQualifiedName = qualifiedTypeName;
+	//we need to check if it is a c++11 scoped enumeration.
+	//if true, we need to use a different identifier
+	if(!enumDecl->isScoped()) {
+		fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
+	} else {
+		fixedQualifiedName.append("::");
+		fixedQualifiedName.append(constantName);
+	}
 
 	VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
 	VLOG(2) << fixedQualifiedName;
