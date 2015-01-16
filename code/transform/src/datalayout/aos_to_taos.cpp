@@ -42,6 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
+#include "insieme/transform/datalayout/parallelSecAtt.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/utils/annotation.h"
@@ -149,7 +150,7 @@ void AosToTaos::transform() {
 //}
 //assert(false);
 
-		//replaceStructsInJobs(varReplacements, newStructType, oldStructType, NodeAddress(toTransform), allocPattern, replacements, structures);
+		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements, structures);
 
 		doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
@@ -329,7 +330,17 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 }
 
 void AosToTaos::replaceStructsInJobs(ExpressionMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
-			const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
+			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
+
+//	std::set<ExpressionPtr> varsToPropagate;
+//	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
+//		varsToPropagate.insert(oldToNew.second);
+//		std::cout << "ölkjasfdökljsfda " << oldToNew.second << std::endl;
+//assert(false);
+//	}
+
+	ParSecAtt psa(toTransform, varReplacements);
+#if 0
 	ExpressionMap jobReplacements;
 	IRBuilder builder(mgr);
 
@@ -434,7 +445,7 @@ std::cout << "\n----------------------------------------------------------------
 //	doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
 //	assert(false);
-
+#endif
 }
 
 } // datalayout
