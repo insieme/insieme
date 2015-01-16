@@ -265,7 +265,7 @@ namespace runtime {
 			Entry entry;
 			entry.kind = converter.getCNodeManager()->create(kind);
 			entry.type = type;
-			entry.components.push_back(resolve(type->elementType).index);
+			// not resolving target type of pointer because definition might not be available
 			return addEntry(entry);
 		}
 
