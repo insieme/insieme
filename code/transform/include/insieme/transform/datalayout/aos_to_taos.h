@@ -76,7 +76,8 @@ class AosToTaos : public DatalayoutTransformer {
 			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 
 	virtual void replaceStructsInJobs(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements,
+			core::ExpressionMap& structures);
 
 public:
 	AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
