@@ -136,8 +136,9 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
+					cmd<<" ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -224,7 +225,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
 
 					//append intercept patterns
@@ -235,6 +236,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
+					cmd<<" ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -324,7 +326,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
 
 					//append intercept patterns
@@ -335,6 +337,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
+					cmd<<" ";
 
 					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
@@ -379,7 +382,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
 
 					//append intercept patterns
@@ -390,6 +393,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
+					cmd<<" ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -463,8 +467,9 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
+					cmd<<" ";
 
 					// set output file, stdOut file and stdErr file
 					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be;

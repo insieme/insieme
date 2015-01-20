@@ -15,7 +15,7 @@ int main(int argc, const char* argv[]) {
 
 	chdir(PATH);
 
-    int size = args->size;
+	int size = args->size;
 
 	int* input1 = (int*)malloc(sizeof(int) * size);
 	int* input2 = (int*) malloc(sizeof(int) * size);

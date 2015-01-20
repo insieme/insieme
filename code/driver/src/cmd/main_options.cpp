@@ -123,18 +123,18 @@ namespace cmd {
 			if( res.Help ) {
 				cout << cmdLineOpts << endl;
 				// we exit from the compiler
-				res.valid = false;
+				res.optionStatus = OptionStatus::GRACEFUL_EXIT;
 			} if( res.Version ) {
 				cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << endl <<
 						"Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2013, " <<
 						"University of Innsbruck\n";
-				res.valid = false;
+				res.optionStatus = OptionStatus::GRACEFUL_EXIT;
 			}
 
 		} catch(boost::program_options::unknown_option& ex) {
 			cout << "Usage error: " << ex.what() << endl;
 			cout << cmdLineOpts << endl;
-			res.valid = false;
+			res.optionStatus = OptionStatus::NOT_VALID;
 		}
 
 		// return result

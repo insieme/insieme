@@ -312,7 +312,17 @@ namespace backend {
 				const string& name = genericType->getFamilyName();
 				const string& header = annotations::c::getAttachedInclude(type);
 
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				bool isEnum = type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type);
+				TypeInfo* info;
+				if(isEnum ) {
+					//extract first arg of insieme enum (which is the original name of the enum)
+					//and create a corresponding type info.
+					auto innerType = genericType->getTypeParameter(0);
+					assert(innerType.isa<core::GenericTypePtr>() && "Inner Type of an Insieme enum has to be a GenericType");
+					info = type_info_utils::createInfo(converter.getFragmentManager(), innerType.as<core::GenericTypePtr>()->getFamilyName(), header);
+				} else {
+					info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				}
 
 				// if is an enum, there is no need to translate inner generic types, since it is the name of the enum construct
 				if (!(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))) {
