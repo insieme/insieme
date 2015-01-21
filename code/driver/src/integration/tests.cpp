@@ -130,7 +130,8 @@ namespace integration {
 			// done
 			return res;
 		}
-		
+
+
 		boost::optional<IntegrationTestCase> loadTestCase(const std::string& testName) {
 			static const boost::optional<IntegrationTestCase> fail;
 
@@ -239,6 +240,7 @@ namespace integration {
 			// don't just replace "test/" here, as unintended replacements might occur deeper in the directory structure
 			boost::algorithm::replace_first(name, "ext/test/", "ext/");
 			boost::algorithm::replace_first(name, "base/test/", "base/");
+			if(boost::algorithm::starts_with(name, "/")) name = name.substr(1);
 
 			// add test case
 			return IntegrationTestCase(name, testCaseDir, files, includeDirs, libPaths, libNames,
