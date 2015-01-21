@@ -130,7 +130,7 @@ namespace integration {
 			// done
 			return res;
 		}
-
+		
 		boost::optional<IntegrationTestCase> loadTestCase(const std::string& testName) {
 			static const boost::optional<IntegrationTestCase> fail;
 
@@ -232,8 +232,16 @@ namespace integration {
 				}
 			}
 
+			// find "canonical" test name regardless of setup
+			string canonRoot = fs::canonical(fs::path(TEST_ROOT_DIR)).string();
+			string prefix = commonPrefix(testCaseDir.string(), canonRoot);
+			string name = testCaseDir.string().substr(prefix.size());
+			// don't just replace "test/" here, as unintended replacements might occur deeper in the directory structure
+			boost::algorithm::replace_first(name, "ext/test/", "ext/");
+			boost::algorithm::replace_first(name, "base/test/", "base/");
+
 			// add test case
-			return IntegrationTestCase(testName, testCaseDir, files, includeDirs, libPaths, libNames,
+			return IntegrationTestCase(name, testCaseDir, files, includeDirs, libPaths, libNames,
 					interceptionNameSpacePatterns, interceptedHeaderFileDirectories,
 					enableOpenMP, enableOpenCL, enableCXX11, prop);
 		}
