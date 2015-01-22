@@ -293,7 +293,7 @@ namespace backend {
 			auto fragmentManager = converter.getFragmentManager();
 			string fragmentName = "global:" + ptr->getStringValue();
 			auto fragment = fragmentManager->getFragment(fragmentName);
-				
+
 			// check fragment
 			if (!fragment) {
 
@@ -574,6 +574,7 @@ namespace backend {
 
 		// goal: create a variable declaration and register new variable within variable manager
 		auto manager = converter.getCNodeManager();
+		core::IRBuilder builder(ptr->getNodeManager());
 
 		core::VariablePtr var = ptr->getVariable();
 		core::ExpressionPtr init = ptr->getInitialization();
@@ -619,6 +620,19 @@ namespace backend {
 		if( core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT ) {
 			initValue = c_ast::deref(initValue);
 		}
+
+        // check if we have an intercepted default ctor call (e.g., std::stringstream s;)
+        // the interceptor adds a zero initalization that would be converted into something like
+        // std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
+        // and therefore we need to avoid such copy initalizations.
+        if( init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) &&
+            core::analysis::isGeneric(core::analysis::getReferencedType(init->getType())) &&
+            init.as<core::CallExprPtr>()->getArguments().size()==1) {
+                core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
+                core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
+                if(arg == zeroInit)
+                    initValue = c_ast::ExpressionPtr();
+        }
 
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}
