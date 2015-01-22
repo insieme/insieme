@@ -51,6 +51,7 @@
 #pragma GCC diagnostic pop
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -82,7 +83,12 @@ namespace {
 		std::stringstream ss;
 		ss << prefix;
 
-		ss << sm.getFilename(decl->getLocStart()).str();   //.getHashValue();
+		// canonicalize filename in case we refer to it from different relative locations
+		std::string filename = sm.getFilename(decl->getLocStart()).str();
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path);
+
+		ss << path.string();   //.getHashValue();
 		ss << sm.getExpansionLineNumber (decl->getLocStart());
 		ss << sm.getExpansionColumnNumber(decl->getLocStart());
 
