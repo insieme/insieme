@@ -148,8 +148,11 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 		if (method->isVirtual()) {
 			name = funcDecl->getNameAsString();
-		}
-		else if(method->isOverloadedOperator()) {
+		} else if (method->getParent()) {
+	            if(method->getParent()->isLambda()) {
+        	        name = createNameForAnnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager());
+	            }
+		} else if(method->isOverloadedOperator()) {
 		//	name = funcDecl->getNameAsString();
 		}
 	}
