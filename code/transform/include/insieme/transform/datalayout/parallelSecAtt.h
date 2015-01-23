@@ -48,13 +48,13 @@ typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScope
 namespace transform {
 namespace datalayout {
 
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
 
 class ParSecAtt : public AosToTaos {
 
-	core::ExpressionMap& varReplacements;
+	core::ExpressionSet& varsToPropagate;
 public:
-	ParSecAtt(core::NodePtr& toTransform, core::ExpressionMap& varReplacements);
+	ParSecAtt(core::NodePtr& toTransform, core::ExpressionSet& varsToPropagate);
 //	virtual ~ParSecAtt() {}
 };
 

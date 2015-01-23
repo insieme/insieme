@@ -54,10 +54,10 @@ typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
 namespace transform {
 namespace datalayout {
 
-typedef std::function<utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr>(core::NodeAddress toTransform)> CandidateFinder;
+typedef std::function<utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr>(core::NodeAddress toTransform, core::ExpressionSet)> CandidateFinder;
 
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findAllSuited(core::NodeAddress toTransform);
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findPragma(core::NodeAddress toTransform);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findAllSuited(core::NodeAddress toTransform, core::ExpressionSet);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findPragma(core::NodeAddress toTransform, core::ExpressionSet);
 
 class DatalayoutTransformer {
 protected:

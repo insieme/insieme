@@ -44,14 +44,14 @@ using namespace core;
 //namespace pirp = pattern::irp;
 //namespace ia = insieme::analysis;
 
-utils::map::PointerMap<ExpressionPtr, RefTypePtr> propagateTrhoughJobsAndTuples(NodeAddress toTransform) {
+utils::map::PointerMap<ExpressionPtr, RefTypePtr> propagateTrhoughJobsAndTuples(NodeAddress toTransform, ExpressionSet vars) {
 	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
 	return structs;
 }
 
-ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionMap& varReplacements)
-		: AosToTaos(toTransform, propagateTrhoughJobsAndTuples), varReplacements(varReplacements) {
+ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionSet& varsToPropagate)
+		: AosToTaos(toTransform, propagateTrhoughJobsAndTuples), varsToPropagate(varsToPropagate) {
 
 }
 

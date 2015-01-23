@@ -86,7 +86,7 @@ ExpressionPtr expressionContainsMarshallingCandidate(const utils::map::PointerMa
 	return ExpressionPtr();
 }
 
-utils::map::PointerMap<ExpressionPtr, RefTypePtr> findAllSuited(NodeAddress toTransform) {
+utils::map::PointerMap<ExpressionPtr, RefTypePtr> findAllSuited(NodeAddress toTransform, ExpressionSet vars) {
 	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
 	pattern::TreePattern structType = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
@@ -127,7 +127,7 @@ utils::map::PointerMap<ExpressionPtr, RefTypePtr> findAllSuited(NodeAddress toTr
 	return structs;
 }
 
-utils::map::PointerMap<ExpressionPtr, RefTypePtr> findPragma(NodeAddress toTransform) {
+utils::map::PointerMap<ExpressionPtr, RefTypePtr> findPragma(NodeAddress toTransform, ExpressionSet vars) {
 	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
 
 	pattern::TreePattern structTypePattern = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
@@ -351,7 +351,7 @@ std::vector<std::pair<ExpressionSet, RefTypePtr>> DatalayoutTransformer::createC
 
 utils::map::PointerMap<ExpressionPtr, RefTypePtr> DatalayoutTransformer::findCandidates(NodeAddress toTransform) {
 
-	return candidateFinder(toTransform);
+	return candidateFinder(toTransform, ExpressionSet());
 }
 
 
