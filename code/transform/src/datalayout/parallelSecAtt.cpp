@@ -34,7 +34,12 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
+
 #include "insieme/transform/datalayout/parallelSecAtt.h"
+#include "insieme/transform/datalayout/datalayout_utils.h"
+
 
 namespace insieme {
 namespace transform {
@@ -43,17 +48,94 @@ namespace datalayout {
 using namespace core;
 //namespace pirp = pattern::irp;
 //namespace ia = insieme::analysis;
-
-utils::map::PointerMap<ExpressionPtr, RefTypePtr> propagateTrhoughJobsAndTuples(NodeAddress toTransform, ExpressionSet vars) {
+utils::map::PointerMap<ExpressionPtr, RefTypePtr> ParSecAtt::findCandidates(NodeAddress toTransform) {
 	utils::map::PointerMap<ExpressionPtr, RefTypePtr> structs;
+
+	ExpressionMap jobReplacements;
+	IRBuilder builder(mgr);
+
+	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
+		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
+		if(CallExprAddress call = expr.isa<CallExprAddress>()) {
+			if(!core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getTupleMemberAccess()))
+				return;
+std::cout << "\nat the tuple member access\n";
+
+			// check if tuple argument has a member which will be updated
+			ExpressionPtr oldRootVar = getRootVariable(call, call->getArgument(0)).as<ExpressionPtr>();
+			auto newRootVarIter = varsToPropagate.find(oldRootVar);
+
+			if(newRootVarIter != varsToPropagate.end()) { // tuple has been updated, check if it was the current field
+				ExpressionPtr newRootVar = *newRootVarIter;
+
+				RefTypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
+						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>()).as<RefTypePtr>();
+				TypePtr oldType = call->getArgument(2)->getType().as<GenericTypePtr>()->getTypeParameter(0);
+std::cout << "Creating var of new type: " << newType << std::endl;
+
+				// check if and update is needed
+				if(newType == oldType)
+					return;
+
+				ExpressionAddress argument = call.getParentAddress(2).isa<CallExprAddress>();
+				CallExprAddress parent = argument.getParentAddress(1).isa<CallExprAddress>();
+				if(!parent)
+					return;
+
+				LambdaExprAddress lambda = parent->getFunctionExpr().isa<LambdaExprAddress>();
+
+				if(!lambda)
+					return;
+
+				for_range(make_paired_range(parent->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+						[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					if(pair.first == argument) {// found the argument which will be updated
+						// create replacement for corresponding parameter
+						TypePtr newParamType = newType->getElementType().as<ArrayTypePtr>()->getElementType();
+						VariablePtr newParam = builder.variable(newParamType);
+
+						// add corresponding parameter to update list
+						jobReplacements[pair.second] = newParam;
+std::cout << ": \nAdding: " << *pair.second << " - " << newParamType << std::endl;
+					}
+				});
+			}
+		}
+
+		// propagating variables to be replaced through job expressions
+		if(JobExprPtr job = expr.isa<JobExprPtr>()) {
+			CallExprPtr parallelCall = job->getDefaultExpr().isa<BindExprPtr>()->getCall();
+
+			if(!parallelCall)
+				return;
+
+			LambdaExprPtr parallelLambda = parallelCall->getFunctionExpr().isa<LambdaExprPtr>();
+			if(!parallelLambda)
+				return;
+
+			for_range(make_paired_range(parallelCall->getArguments(), parallelLambda->getParameterList()->getElements()),
+					[&](const std::pair<const ExpressionPtr, const VariablePtr>& pair) {
+std::cout << "Looking for " << pair.first << std::endl;
+				auto newArgIter = varsToPropagate.find(pair.first);
+				if(newArgIter != varsToPropagate.end()) {
+					jobReplacements[pair.second] = builder.variable((*newArgIter)->getType());
+	std::cout << "Found in VARreplacements: " << pair.first << " -> " << jobReplacements[pair.second]->getType() << std::endl;
+				}
+
+				auto newArgIter1 = jobReplacements.find(pair.first);
+				if(newArgIter1 != jobReplacements.end()) {
+					jobReplacements[pair.second] = builder.variable(newArgIter1->second->getType());
+	std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << jobReplacements[pair.second]->getType() << std::endl;
+				}
+			});
+		}
+	});
 
 	return structs;
 }
 
-ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionSet& varsToPropagate)
-		: AosToTaos(toTransform, propagateTrhoughJobsAndTuples), varsToPropagate(varsToPropagate) {
-
-}
+ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionSet& varsToPropagate, const StructTypePtr& newStructType, const StructTypePtr& oldStructType)
+		: AosToTaos(toTransform), varsToPropagate(varsToPropagate), newStructType(newStructType), oldStructType(oldStructType) {}
 
 //utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> OclAts::findCandidates(core::NodeAddress toTransform) {
 //	utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> retVal;
@@ -63,6 +145,11 @@ ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionSet& varsToPropagate)
 //core::StructTypePtr OclAts::createNewType(core::StructTypePtr oldType) {
 //	return StructTypePtr();
 //}
+
+void ParSecAtt::transform() {
+	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists = createCandidateLists();
+}
+
 
 } // datalayout
 } // transform

@@ -339,7 +339,8 @@ void AosToTaos::replaceStructsInJobs(ExpressionMap& varReplacements, const Struc
 //assert(false);
 	}
 
-	ParSecAtt psa(toTransform, varsToPropagate);
+	ParSecAtt psa(toTransform, varsToPropagate, newStructType, oldStructType);
+	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;
 	IRBuilder builder(mgr);

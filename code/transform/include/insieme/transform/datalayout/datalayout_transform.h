@@ -54,10 +54,10 @@ typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
 namespace transform {
 namespace datalayout {
 
-typedef std::function<utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr>(core::NodeAddress toTransform, core::ExpressionSet)> CandidateFinder;
+typedef std::function<utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr>(core::NodeAddress toTransform)> CandidateFinder;
 
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findAllSuited(core::NodeAddress toTransform, core::ExpressionSet);
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findPragma(core::NodeAddress toTransform, core::ExpressionSet);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findAllSuited(core::NodeAddress toTransform);
+utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findPragma(core::NodeAddress toTransform);
 
 class DatalayoutTransformer {
 protected:
@@ -65,7 +65,7 @@ protected:
 	core::NodePtr& toTransform;
 	CandidateFinder candidateFinder;
 
-	utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
+	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
 	void collectVariables(const std::pair<core::ExpressionPtr, core::RefTypePtr>& transformRoot, core::ExpressionSet& toReplaceList,
 			const core::NodeAddress& toTransform, insieme::analysis::VariableScopeMap& scopes);
 	std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>> createCandidateLists();
