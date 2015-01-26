@@ -138,8 +138,8 @@ namespace runtime {
 
 		NameManager& nameMan = converter.getNameManager();
 		// this should be an exhaustive listing at some point, for now it only includes functions which caused issues
-		nameMan.reserveName("read");
-		nameMan.reserveName("write");
+		nameMan.reserveName("read");  // unistd.h
+		nameMan.reserveName("write"); // unistd.h
 
 		// done
 		return converter;
