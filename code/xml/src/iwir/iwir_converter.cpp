@@ -63,68 +63,72 @@ CONVERTER(Links) {
 }
 
 CONVERTER(Link) { 
-	VLOG(2) << "link";
-	VLOG(2) << node->fromTask->name << " " << node->from->name;
-	VLOG(2) << node->toTask->name << " " << node->to->name;
+	VLOG(2) << *node;
 			
-	//lookup port-variable
-	auto vFrom = varMap.find( {node->fromTask, node->from} );
-	auto vTo = varMap.find( {node->toTask, node->to} );
-	assert(vFrom != varMap.end());
-	assert(vTo != varMap.end());
+	if(node->isDataLink) {
+		//lookup port-variable
+		auto vFrom = varMap.find( {node->fromTask, node->from} );
+		auto vTo = varMap.find( {node->toTask, node->to} );
+		assert(vFrom != varMap.end());
+		assert(vTo != varMap.end());
 
-	convert(node->from, context);
-	convert(node->to, context);
+		convert(node->from, context);
+		convert(node->to, context);
 
-	bool isUnion = (node->to->kind == PK_UnionPort);
-	bool isLoopElement = (node->from->kind == PK_LoopElement);
+		bool isUnion = (node->to->kind == PK_UnionPort);
+		bool isLoopElement = (node->from->kind == PK_LoopElement);
 
-	//TODO control flow links
-	
-	//TODO implicit casts
-	//bool->string, int->string, double->string, int->double
-	//A -> collection/A (one entry)
-	//file -> string (URI to the file)
+		//TODO control flow links
+		
+		//TODO implicit casts
+		//bool->string, int->string, double->string, int->double
+		//A -> collection/A (one entry)
+		//file -> string (URI to the file)
 
-	//generate linking statment in IR
-	//link(from,to) link(from:fromTy, to:toTy);
-	core::StatementPtr linkStmt;
-	map<string, core::NodePtr> symbols;
-	
-	core::ExpressionPtr var1 = vFrom->second;
-	core::ExpressionPtr var2 = vTo->second;
-	//besides loopCounter variables are all variables ref
-	symbols["from"] = irBuilder.tryDeref(var1);
-	symbols["to"] = var2;
+		//generate linking statment in IR
+		//link(from,to) link(from:fromTy, to:toTy);
+		core::StatementPtr linkStmt;
+		map<string, core::NodePtr> symbols;
+		
+		core::ExpressionPtr var1 = vFrom->second;
+		core::ExpressionPtr var2 = vTo->second;
+		//besides loopCounter variables are all variables ref
+		symbols["from"] = irBuilder.tryDeref(var1);
+		symbols["to"] = var2;
 
-	if(isUnion) {
-		//linkUnion(from,to)
-		symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkUnion();
-		linkStmt = irBuilder.parseStmt("link(from, to);", symbols);
-	} else if(isLoopElement) {
-		//TODO get iterator to acccess correct element of LoopElements-collection
-		symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-		symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkLoopElement();
-		linkStmt = irBuilder.parseStmt("link(from, iterator, to);", symbols);
-	} else {
-		//TODO find better solution... output links from parallelFor/ForEach are like
-		//unionlinks...
-		//FUGLY HACK!!! -- move to AST?
-		bool isOutputOfParallelFor = (node->to->parentTask->getNodeType() == NT_ParallelForTask);
-		bool isOutputOfParallelForEach = (node->to->parentTask->getNodeType() == NT_ParallelForEachTask);
-		if(isOutputOfParallelFor || isOutputOfParallelForEach) {
+		if(isUnion) {
+			//linkUnion(from,to)
+			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkUnion();
+			linkStmt = irBuilder.parseStmt("link(from, to);", symbols);
+		} else if(isLoopElement) {
+			//TODO get iterator to acccess correct element of LoopElements-collection
 			symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkParallelOutput();
-			linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
+			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkLoopElement();
+			linkStmt = irBuilder.parseStmt("link(from, iterator, to);", symbols);
 		} else {
-			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkBasic();
-			linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
+			//TODO find better solution... output links from parallelFor/ForEach are like
+			//unionlinks...
+			//FUGLY HACK!!! -- move to AST?
+			bool isOutputOfParallelFor = (node->to->parentTask->getNodeType() == NT_ParallelForTask);
+			bool isOutputOfParallelForEach = (node->to->parentTask->getNodeType() == NT_ParallelForEachTask);
+			if(isOutputOfParallelFor || isOutputOfParallelForEach) {
+				symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
+				symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkParallelOutput();
+				linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
+			} else {
+				symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkBasic();
+				linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
+			}
 		}
+		VLOG(2) << linkStmt;
+		
+		assert(linkStmt);
+		context.linkStmtMap[node] = linkStmt;
+	} else {
+		//control flow link -- link[task1->task2] -- no ports
+		//assert(false && "control flow not implemented");
+		//only needed for block scope -- handled in blockscope converter
 	}
-	VLOG(2) << linkStmt;
-	
-	assert(linkStmt);
-	context.linkStmtMap[node] = linkStmt;
 }
 
 CONVERTER(Ports) {
@@ -233,24 +237,24 @@ CONVERTER(Port) {
 	
 		switch(node->kind) {
 			case PK_Basic:
-				decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+				decl = irBuilder.declarationStmt(var, irBuilder.refVar(irBuilder.undefined(portType)));
 				break;
 			case PK_LoopPort:
-				decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+				decl = irBuilder.declarationStmt(var, irBuilder.refVar(irBuilder.undefined(portType)));
 				break;
 			case PK_LoopElement:
-				decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+				decl = irBuilder.declarationStmt(var, irBuilder.refVar(irBuilder.undefined(portType)));
 				break;
 			case PK_UnionPort:
 				{
 					//declare unionport
-					decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+					decl = irBuilder.declarationStmt(var, irBuilder.refVar(irBuilder.undefined(portType)));
 					break;
 				}
 			case PK_LoopCounter:
 				if(node->isInput) {
 				//loopcounter variable for "to"/"from"/"step" act as input
-					decl = irBuilder.declarationStmt(var, irBuilder.undefinedVar(var->getType()));
+					decl = irBuilder.declarationStmt(var, irBuilder.refVar(irBuilder.undefined(portType)));
 				}				
 				//the loopcounter itself is the iterator variable in the IR::for --> declared in the forstmt
 				break;

@@ -238,7 +238,6 @@ class TaskGraph {
 						vidTo= fit->second;
 					}
 				}  else {
-					VLOG(2) << "eeeh";
 					if(vertexVisited.find(f) == vertexVisited.end()) {
 						fillGraph(f);
 					}
@@ -264,11 +263,19 @@ class TaskGraph {
 					boost::tie(edge, ok) =  boost::add_edge(vidFrom,vidTo, g);
 					edgeVisited.insert( l );
 					
-					if(ok) {
-						g[edge].fromPort = l->from->name;
-						g[edge].toPort = l->to->name;
+					if(l->isDataLink) {
+						if(ok) {
+							g[edge].fromPort = l->from->name;
+							g[edge].toPort = l->to->name;
+						}
+						VLOG(2) << task->name << " : link from " << f->name << " to "<< t->name;
+					} else {
+						if(ok) {
+							g[edge].fromPort = "controlFlow";
+							g[edge].toPort = "controlFlow";
+						}
+						VLOG(2) << task->name << " : link from " << f->name << " to "<< t->name;
 					}
-					VLOG(2) << task->name << " : link from " << f->name << " to "<< t->name;
 				}
 			}
 		}

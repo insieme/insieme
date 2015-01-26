@@ -134,7 +134,11 @@ class LinkCollector {
 		EdgeWriter(Name name) : name(name) {}
 		template<class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=" << "\"" <<  name[v]->from->name<< "\\n to \\n" << name[v]->to->name<<  "\"" << "]";
+			if(name[v]->isDataLink) {
+				out << "[label=" << "\"" <<  name[v]->from->name<< "\\n to \\n" << name[v]->to->name<<  "\"" << "]";
+			} else {
+				out << "[label=" << "\"" <<  name[v]->fromTask->name<< "\\n to \\n" << name[v]->toTask->name<<  "\"" << "]";
+			}
 		}
 	};
 

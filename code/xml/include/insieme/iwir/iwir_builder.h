@@ -134,7 +134,7 @@ class IWIRBuilder {
 
 		VLOG(2) << "atomicTask : " << taskNameStr << ":" << taskTypeStr;
 		atomic = mgr->create<AtomicTask>(taskNameStr, taskType, ctx.getParentTask());
-		//TODO taskMap (taskName : Task*)
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {atomic->name, atomic} );
 
 		Context context(atomic);
@@ -165,7 +165,7 @@ class IWIRBuilder {
 	IfTask* handle_if(Context& ctx, const XmlElement& e) {
 		auto taskNameStr = e.getAttr("name");
 		IfTask* ifTask = mgr->create<IfTask>(taskNameStr, ctx.getParentTask());
-		//TODO taskMap (taskName : Task*)
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {ifTask->name, ifTask} );
 
 		VLOG(2) << "IfTask:" << taskNameStr;
@@ -221,7 +221,7 @@ class IWIRBuilder {
 	BlockScope* handle_blockScope(Context& ctx, const XmlElement& e) {
 		auto taskNameStr = e.getAttr("name");
 		BlockScope* bs = mgr->create<BlockScope>(taskNameStr, ctx.getParentTask());
-		//TODO taskMap (taskName : Task*)
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {bs->name, bs} );
 
 		VLOG(2) << "BlockScope:" << taskNameStr;
@@ -261,7 +261,7 @@ class IWIRBuilder {
 	WhileTask* handle_while(Context& ctx, const XmlElement& e) {
 		auto taskNameStr = e.getAttr("name");
 		WhileTask* whileTask = mgr->create<WhileTask>(taskNameStr, ctx.getParentTask());
-		//TODO taskMap (taskName : Task*)
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {whileTask->name, whileTask} );
 
 		VLOG(2) << "WhileTask:" << taskNameStr;
@@ -322,6 +322,7 @@ class IWIRBuilder {
 	ForTask* handle_for(Context& ctx, const XmlElement& e) {
 		auto taskNameStr = e.getAttr("name");
 		ForTask* forTask = mgr->create<ForTask>(taskNameStr, ctx.getParentTask());
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {forTask->name, forTask} );
 		VLOG(2) << "ForTask:" << taskNameStr;
 
@@ -390,6 +391,7 @@ class IWIRBuilder {
 	ParallelForTask* handle_parallelFor(Context& ctx, const XmlElement& e) { 
 		auto taskNameStr = e.getAttr("name");
 		ParallelForTask* parFor = mgr->create<ParallelForTask>(taskNameStr, ctx.getParentTask());
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {parFor->name, parFor} );
 		VLOG(2) << "ParallelForTask:" << taskNameStr;
 		
@@ -445,6 +447,7 @@ class IWIRBuilder {
 		auto taskNameStr = e.getAttr("name");
 		ForEachTask* forEach = nullptr;
 		forEach = mgr->create<ForEachTask>(taskNameStr,ctx.getParentTask());
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {forEach->name, forEach} );
 		VLOG(2) << "ForEachTask:" << taskNameStr;
 
@@ -505,6 +508,7 @@ class IWIRBuilder {
 		auto taskNameStr = e.getAttr("name");
 		ParallelForEachTask* parForEach = nullptr;
 		parForEach = mgr->create<ParallelForEachTask>(taskNameStr,ctx.getParentTask());
+		//fill taskCache (taskName : Task*)
 		taskCache.insert( {parForEach->name, parForEach} );
 		VLOG(2) << "ParallelForEach:" << taskNameStr;
 
@@ -587,7 +591,7 @@ class IWIRBuilder {
 			isDataLink = true;
 		} else if(fromSubs.size() == 1 && toSubs.size() == 1) {
 			isDataLink = false;
-			assert(false && "ControlFlowLink not implemented yet");
+//			assert(false && "ControlFlowLink not implemented yet");
 		} else {
 			assert(false && "link is not of form task/[port]/[loopCounter]");
 		}

@@ -115,8 +115,39 @@ CONVERTER(AtomicTask) {
 	taskCache[node] = atomicTaskCall;
 }
 
-CONVERTER(BlockScope) { 
+CONVERTER(BlockScope) {
 	VLOG(2) << "BlockScope : " << node->name;
+
+	{
+		LinkCollector linkCollector(node->body,node->links); 
+
+		VLOG(2) << "To body";
+		for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
+		VLOG(2) << "From body";
+		for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
+		VLOG(2) << "In body";
+		for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
+
+		VLOG(2) << "Outside body";
+		for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
+
+		VLOG(2) << "TaskOrder";
+		for(auto t : linkCollector.getTaskOrder()) { 
+			VLOG(2) << "\t" << *t;
+		}
+		
+		VLOG(2) << "TaskLinkMap";
+		for(auto tl : linkCollector.getTaskLinkMap()) { 
+			VLOG(2) << "\tTask: " << *(tl.first);
+			for(auto l : (tl.second)) {
+				VLOG(2) << "\t " << *l;
+			}
+		}
+
+		if(VLOG_IS_ON(2)) {
+			linkCollector.printToDotFile(node->name+".dot");
+		}
+	}
 
 	ConversionContext innerContext;
 	convert(node->body, innerContext);
@@ -286,7 +317,7 @@ CONVERTER(BlockScope) {
 			assert(fit != varMap.end());
 			core::VariablePtr var = fit->second;
 			auto varType = var->getType();
-			auto chanType = irBuilder.channelType(varType, irBuilder.concreteIntTypeParam(1));
+			//auto chanType = irBuilder.channelType(varType, irBuilder.concreteIntTypeParam(1));
 
 			//declare channel of size one and type "chanType"
 			symbols["chanType"] = varType;
@@ -320,6 +351,7 @@ CONVERTER(BlockScope) {
 			//declare channel of size one and type "chanType"
 			symbols["chanType"] = varType;
 			core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("auto chan = channel.create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
+		VLOG(2) << chanDecl;
 			declareChannels.push_back(chanDecl);
 			core::VariablePtr chan = chanDecl->getVariable();
 
@@ -338,17 +370,68 @@ CONVERTER(BlockScope) {
 	// channel Links between tasks 
 	core::StatementList channelLinks;
 
-	//as input ports can be linked to several other ports, with channels we need a multiplexer
-	map<Port*, list<Port*>> muxMap;
-	//collect all links with same starting port
+	map<Task*, list<Task*>> controlFlowMap;
+
+	//declare control-flow-link-channels and provide linking stmts
 	for_each(node->links->begin(), node->links->end(),
-		[&](Link* link) {
-			muxMap[link->from].push_back(link->to);
+		[&](Link* link) {		
+			if(!link->isDataLink) {
+				controlFlowMap[link->fromTask].push_back(link->toTask);
+			}
 		}
 	);
 
+	dumpPretty(irBuilder.getLangBasic().getUnitConstant());
+
+	map<string, core::NodePtr> cfSymbols;
+	// control links are modeled as channels
+	for(pair<Task*, list<Task*>> cf : controlFlowMap) {
+		Task* from = cf.first;
+		//decl cfChan -- in BlockScope Task
+		//declare channel - queue size == #targets
+		auto queueSize = cf.second.size();
+		cfSymbols["queueSize"] = irBuilder.getIntParamLiteral(queueSize);
+		core::DeclarationStmtPtr cfChanDecl = irBuilder.parseStmt("auto chan = channel.create(type(unit), queueSize);", cfSymbols).as<core::DeclarationStmtPtr>();
+		declareChannels.push_back(cfChanDecl);
+
+		cfSymbols["cfChan"] = cfChanDecl->getVariable();
+		//release channel -- when everythings done in BlockScope
+		releaseChannels.push_back(irBuilder.parseStmt("channel.release(cfChan);", cfSymbols));
+	
+		auto fromBody = taskJob[from];
+	
+		for(Task* to : cf.second) {
+			// for every dependent task send a token
+			//cfSymbols["UnitConstant"] = irBuilder.getLangBasic().getUnitConstant();
+			fromBody.insert(fromBody.end(), irBuilder.parseStmt("channel.send(cfChan,unit);", cfSymbols));
+	
+			// dependent tasks need to read channel
+			auto toBody = taskJob[to];
+			toBody.insert(toBody.begin(), irBuilder.parseStmt("channel.recv(cfChan);", cfSymbols));
+
+			//update the task's body
+			taskJob[to] = toBody;
+		}
+
+		//update the task's body
+		taskJob[from] = fromBody;
+	}
+	
+	//as input ports can be linked to several other ports, with channels we need a multiplexer
+	map<Port*, list<Port*>> muxMap;
+
+	//collect all links with same starting port
+	for_each(node->links->begin(), node->links->end(),
+		[&](Link* link) {
+			if(link->isDataLink) {
+				muxMap[link->from].push_back(link->to);
+			} 
+		}
+	);
+	
+
 	//creates mux function
-	//NOTE: even link with only one target port is muxed currently
+	//NOTE: also links with only ONE target port are muxed currently
 	//fun(chan from, chan to ...) {
 	//	var t = from.recv
 	//	to.send(t);
@@ -424,45 +507,6 @@ CONVERTER(BlockScope) {
 	core::ExpressionPtr bs = irBuilder.createCallExprFromBody(body, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
 	dumpPretty(bs);
 	taskCache[node] = bs;
-
-	{
-		VLOG(2) << "Declarations:";
-		for_each(node->body->begin(),node->body->end(), 
-			[&](Task* task){
-				for(auto d : innerContext.declMap[task]) {
-					VLOG(2) << "\t" << d;
-				}
-			}
-		);
-		LinkCollector linkCollector(node->body,node->links); 
-
-		VLOG(2) << "To body";
-		for(auto l : linkCollector.getLinksToBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "From body";
-		for(auto l : linkCollector.getLinksFromBody()) { VLOG(2) << "\t" << *l; }
-		VLOG(2) << "In body";
-		for(auto l : linkCollector.getLinksInBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "Outside body";
-		for(auto l : linkCollector.getLinksOutsideBody()) { VLOG(2) << "\t" << *l; }
-
-		VLOG(2) << "TaskOrder";
-		for(auto t : linkCollector.getTaskOrder()) { 
-			VLOG(2) << "\t" << *t;
-		}
-		
-		VLOG(2) << "TaskLinkMap";
-		for(auto tl : linkCollector.getTaskLinkMap()) { 
-			VLOG(2) << "\tTask: " << *(tl.first);
-			for(auto l : (tl.second)) {
-				VLOG(2) << "\t " << *l;
-			}
-		}
-
-		if(VLOG_IS_ON(2)) {
-			linkCollector.printToDotFile(node->name+".dot");
-		}
-	}
 }
 
 CONVERTER(IfTask) { 

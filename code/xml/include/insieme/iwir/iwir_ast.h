@@ -302,9 +302,13 @@ struct Link : public Node {
 		Node(NT_Link), fromTask(fromTask), toTask(toTask), from(from), to(to), parentTask(parentTask), isDataLink(true) {}
 
 	std::ostream& printTo(std::ostream& out) const { 
+		if(isDataLink) {
 			out << "link[" << fromTask->name << "\\" << from->name<<"->"<<toTask->name << "\\" << to->name <<"]";
-			return out;
+		} else {
+			out << "link[" << fromTask->name << "->" << toTask->name <<"]";
 		}
+		return out;
+	}
 };
 
 struct AtomicTask : public Task {
