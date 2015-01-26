@@ -65,7 +65,7 @@ protected:
 	core::NodePtr& toTransform;
 	CandidateFinder candidateFinder;
 
-	utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
+	virtual utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
 	void collectVariables(const std::pair<core::ExpressionPtr, core::RefTypePtr>& transformRoot, core::ExpressionSet& toReplaceList,
 			const core::NodeAddress& toTransform, insieme::analysis::VariableScopeMap& scopes);
 	std::vector<std::pair<core::ExpressionSet, core::RefTypePtr>> createCandidateLists();

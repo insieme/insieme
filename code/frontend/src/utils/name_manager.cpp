@@ -44,6 +44,7 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/DeclTemplate.h>
+#include <clang/AST/ASTContext.h>
 #include <llvm/Support/Casting.h>
 
 #include <clang/Basic/SourceLocation.h>
@@ -147,8 +148,11 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 		if (method->isVirtual()) {
 			name = funcDecl->getNameAsString();
-		}
-		else if(method->isOverloadedOperator()) {
+		} else if (method->getParent()) {
+	            if(method->getParent()->isLambda()) {
+        	        name = createNameForAnnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager());
+	            }
+		} else if(method->isOverloadedOperator()) {
 		//	name = funcDecl->getNameAsString();
 		}
 	}
@@ -224,7 +228,14 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 						break;
 					}
 					case clang::TemplateArgument::Type: {
-						name.append ("_"+arg.getAsType().getAsString());
+					    //check if the type is a lambda, this one needs special handling
+					    std::string typeName;
+					    if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
+                            typeName = createNameForAnnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
+					    } else {
+                            typeName = arg.getAsType().getAsString();
+					    }
+						name.append ("_"+typeName);
 						break;
 					}
 					case clang::TemplateArgument::Null: {
