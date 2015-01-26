@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1313,7 +1313,7 @@ TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
 
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
 	auto literalType = getTypeLiteralType(type);
-	return literal(literalType, toString(*type));
+	return literal(literalType, toString(*literalType));
 }
 
 LiteralPtr IRBuilder::getIdentifierLiteral(const string& value) const {
