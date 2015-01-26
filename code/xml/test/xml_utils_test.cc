@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -219,6 +219,17 @@ TEST(XmlTest, ReadIWIR_BS5) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
 	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest5.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_BS6) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest6.xml";
 
 	NodeManager mgr;
 	std::cout << "---" << std::endl;
