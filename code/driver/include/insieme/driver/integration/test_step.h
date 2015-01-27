@@ -186,9 +186,9 @@ namespace integration {
         }
         int executeWithTimeout(const string& executableParam, const string& argumentsParam,
                                const string& environmentParam, const string& outFilePath,
-                               const string& errFilePath, unsigned cpuTimeLimit) const;
+                               const string& errFilePath, unsigned cpuTimeLimit, const string& execDir = "") const;
         TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig,
-                              const string& cmd, const string& producedFile="") const;
+                              const string& cmd, const string& producedFile="", const string& execDir = "") const;
         void attachExecuteOnKill(std::function<void()> f) {
             func = f;
         }
