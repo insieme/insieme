@@ -142,7 +142,7 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 }
 
 
-std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
+std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 
 	std::string name = funcDecl->getQualifiedNameAsString();
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
@@ -312,14 +312,14 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	return name;
 }
 
-std::string buildNameForVariable  (const clang::VarDecl* varDecl){
+std::string buildNameForVariable(const clang::VarDecl* varDecl){
 	std::string name = varDecl->getQualifiedNameAsString();
 	REMOVE_SYMBOLS(name);
 	return name;
 
 }
 
-std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm){
+std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm){
 	std::stringstream ss;
 	ss << "_global";
 
@@ -339,7 +339,7 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 }
 
 
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
+std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
 	std::stringstream ss;
 	ss << "_enum";
 
