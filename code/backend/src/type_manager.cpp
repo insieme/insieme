@@ -346,9 +346,14 @@ namespace backend {
 								info->definition->addDependency(curInfo->definition);
 							}
 						}
-
-						// add type to parameter list
-						cType->parameters.push_back(curInfo->rValueType);
+                        
+                        // if we have a function type as template argument, we need to
+                        // avoid that the asterisk is written -> directly take the element type.
+                        if(curInfo->rValueType.isa<c_ast::PointerTypePtr>() && cur.isa<core::FunctionTypePtr>()) {
+                            cType->parameters.push_back(curInfo->rValueType.as<c_ast::PointerTypePtr>()->elementType);
+                        } else {
+                            cType->parameters.push_back(curInfo->rValueType);
+                        }
 					}
 				}
 
