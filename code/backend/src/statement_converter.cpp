@@ -213,7 +213,15 @@ namespace backend {
 			const string& value = ptr->getStringValue();
 
 			// things that need not be extra-casted (default values)
-			if (basic.isInt4(ptr->getType()) || basic.isReal4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+			if (basic.isInt4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+				return res;
+			}
+
+			// add a f in case it is a float literal and it is missing
+			if (basic.isReal4(ptr->getType())) {
+				if (*value.rbegin() != 'f') {
+					res = toLiteral(value + "f");
+				}
 				return res;
 			}
 
