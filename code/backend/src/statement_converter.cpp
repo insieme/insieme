@@ -221,6 +221,10 @@ namespace backend {
 			if (basic.isReal4(ptr->getType())) {
 				if (*value.rbegin() != 'f') {
 					res = toLiteral(value + "f");
+					// add a ".0" if we have an integer in a float literal
+					if (!any(value, [](const string::value_type& ch) { return ch=='.' || ch=='e'; })) {
+						res = toLiteral(value + ".0f");
+					}
 				}
 				return res;
 			}
