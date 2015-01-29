@@ -80,7 +80,6 @@ namespace backend {
         // if the main function is renamed, we need this to avoid 
         // the original main function to be named main
         globalScope.usedNames.insert("main");
-
 	}
 
 	string SimpleNameManager::getName(const core::VariablePtr& var) {
@@ -200,6 +199,9 @@ namespace backend {
 		used->insert(name);
 	}
 
+	void SimpleNameManager::reserveName(const string& name) {
+		globalScope.usedNames.insert(name);
+	}
 
 	void SimpleNameManager::pushVarScope(bool isolated) {
 

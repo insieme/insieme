@@ -85,6 +85,14 @@ namespace backend {
 		 * @param name the name to be assigned to the given construct
 		 */
 		virtual void setName(const core::NodePtr& ptr, const string& name) =0;
+		
+		/**
+		 * Reserves a given name, so that it can not be used by the original program
+		 * (used e.g. for runtime function names)
+		 *
+		 * @param name the name to reserve
+		 */
+		virtual void reserveName(const string& name) =0;
 
 		/**
 		 * Creates a new sub-scope for variables. Whenever entering a new scope in C this function
@@ -209,6 +217,14 @@ namespace backend {
 		 * @return name the name to be assigned to the given variable within the current scope
 		 */
 		void setName(const core::VariablePtr& var, const string& name);
+		
+		/**
+		 * Reserves a given name, so that it can not be used by the original program
+		 * (used e.g. for runtime function names)
+		 *
+		 * @param name the name to reserve
+		 */
+		virtual void reserveName(const string& name);
 
 		/**
 		 * Creates a new sub-scope for variables. Whenever entering a new scope in C this function

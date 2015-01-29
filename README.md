@@ -16,7 +16,7 @@ Insieme is written in C++11 and relies on several third-party libraries, an upda
 ### List of Required Libraries and Software
 Name 		| Version | What's for |
 --------|---------|------------|
-[G++](http://gcc.gnu.org/gcc-4.6/)	                                | = 4.6.x  | Compiler |
+[G++](http://gcc.gnu.org/gcc-4.7/)	                                | >= 4.7  | Compiler |
 [CMake](http://www.cmake.org/)                                      | >= 2.8.x | Build System |
 [Google Test](https://code.google.com/p/googletest/)                | >= 1.6  | Unit testing |
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)  	  | = 1.50 | Utilities, regex, filesystem, program options|
@@ -56,7 +56,7 @@ CXX=$PREFIX/gcc-latest/bin/g++ INSIEME_LIBS_HOME=$PREFIX $PREFIX/cmake-latest/bi
 ```
 
 Several other options can be provided to enable/disable some of the compiler features:
-- ``-DDOC=ON|OFF`` -- Enable/disable generation of documentation 
+- ``-DDOCS=ON|OFF`` -- Enable/disable generation of documentation
 - ``-DCMAKE_BUILD_TYPE=Debug|Release`` -- Set the build to be in Debug or Release mode 
 - ``-DUSE_OPENCL=ON|OFF`` -- Enabe/disable OpenCL support (in both frontend/backend/runtime)
 (note: this variables must be passed as parameters of the cmake command, not set as environment variables)
