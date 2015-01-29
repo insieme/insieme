@@ -148,36 +148,6 @@ int perm[512] = {
   return mix(v0, v1, w);
 }
 
-/**
- * transpose
- * 
- * Transpose matrix.
- */
-static inline void transpose(float4 m[4])
-{
-  // Read Matrix into a float16 vector
-  //float16 x = (float16) (m[0], m[1], m[2], m[3]);
-  float16 x;
-  float16 t;
-
-  x.lo.lo = m[0];
-  x.lo.hi = m[1];
-  x.hi.lo = m[2];
-  x.hi.hi = m[3];
-
-  // Transpose
-  t.even = x.lo;
-  t.odd = x.hi;
-  x.even = t.lo;
-  x.odd = t.hi;
-
-  // write back
-  m[0] = x.lo.lo;               // { m[0][0], m[1][0], m[2][0], m[3][0] }
-  m[1] = x.lo.hi;               // { m[0][1], m[1][1], m[2][1], m[3][1] }
-  m[2] = x.hi.lo;               // { m[0][2], m[1][2], m[2][2], m[3][2] }
-  m[3] = x.hi.hi;               // { m[0][3], m[1][3], m[2][3], m[3][3] }
-}
-
 typedef struct colors {
   float r;
   float g;
