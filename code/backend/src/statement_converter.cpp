@@ -57,6 +57,7 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -637,14 +638,16 @@ namespace backend {
         // the interceptor adds a zero initalization that would be converted into something like
         // std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
         // and therefore we need to avoid such copy initalizations.
-        if( init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) &&
-            core::analysis::isGeneric(core::analysis::getReferencedType(init->getType())) &&
-            init.as<core::CallExprPtr>()->getArguments().size()==1) {
+        if( init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size()==1)) {
+            core::TypePtr refType = core::analysis::getReferencedType(init->getType());
+            // only do this for intercepted types
+            if (annotations::c::hasIncludeAttached(refType) && !core::annotations::hasNameAttached(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
                 core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
                 core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
                 if(arg == zeroInit)
                     initValue = c_ast::ExpressionPtr();
-        }
+            }
+        }                                                                                                     
 
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}
