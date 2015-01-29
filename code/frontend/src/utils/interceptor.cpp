@@ -226,11 +226,11 @@ bool Interceptor::isIntercepted(const clang::QualType& type)const {
 }
 
 bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
-	if(toIntercept.empty()) {return false; }
+	if(toIntercept.empty()) { return false; }
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
-insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs) const {
+insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs, const std::string& name) const {
 
 	auto builder = convFact.getIRBuilder();
 	std::stringstream ss;
@@ -337,6 +337,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
+	if(!name.empty()) literalName = name;
 
 	//append eventual templateSpecializations
 	literalName.append(ss.str());
