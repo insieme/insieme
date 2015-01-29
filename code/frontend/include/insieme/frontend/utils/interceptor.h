@@ -73,7 +73,9 @@ public:
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
 	insieme::core::TypePtr 		 intercept(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) const ;
-	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs=false) const;
+	insieme::core::ExpressionPtr intercept(
+		const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, 
+		const bool explicitTemplateArgs = false, const std::string& name = "") const;
 	insieme::core::ExpressionPtr intercept(const clang::EnumConstantDecl* enumConstant, insieme::frontend::conversion::Converter& convFact) const;
 
 private:
