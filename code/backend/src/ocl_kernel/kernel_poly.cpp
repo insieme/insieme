@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,14 +43,12 @@
 
 #include "insieme/transform/sequential/constant_folding.h"
 
-#include "insieme/annotations/ocl/ocl_annotations.h"
-
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/ir_generator.h"
 
 /*
 #include "insieme/transform/polyhedral/transform.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 */
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 //#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
@@ -63,7 +61,6 @@ namespace backend {
 namespace ocl_kernel {
 
 //using namespace insieme::transform::polyhedral;
-using namespace insieme::annotations::ocl;
 using namespace insieme::core;
 using namespace insieme::core::pattern;
 namespace irg = insieme::core::pattern::generator::irg;
@@ -128,8 +125,8 @@ ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
  */
 ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
 
-	TreePattern kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
-
+	TreePattern kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"),
+													single(var("kernel")))) << *any << var("offset") << any << any << var("varlist"));
 	MatchOpt match = kernelCall.matchPointer(call);
 	if(match) {
 		return dynamic_pointer_cast<const Expression>(match->getVarBinding("kernel").getValue());
@@ -295,8 +292,6 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	utils::map::PointerMap<NodePtr, NodePtr> lowerBreplacements, upperBreplacements;
 
 
-	bool fail = false;
-
 //	IRVisitor<bool>* visitAccessPtr;
 	auto visitAccess = makeLambdaVisitor([&](const NodePtr& node) {
 		if (node->getNodeCategory() == NodeCategory::NC_Type || node->getNodeCategory() == NC_Value || node->getNodeCategory() == NC_IntTypeParam ||
@@ -311,7 +306,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 			ExpressionPtr fun = call->getFunctionExpr();
 
 			// skip casts and other operators
-			if(basic.isScalarCast(fun) || basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
+			if(basic.isScalarCast(fun) || basic.isLinearIntOp(fun) || basic.isRefOp(fun) || basic.isAccuracy(fun) || basic.isScalarCast(fun) ||
+					fun->toString().find("get_global_id") != string::npos)
 				return false;
 
 			// modulo can only be handled when reading from it
@@ -337,17 +333,17 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		}
 
-//std::cout << "\nFailing at " << node << " -  " << access << std::endl;
+std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
 //	visitAccessPtr = &visitAccess;
 
-	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
+	bool fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
 	if(fail)
 		return std::make_pair(builder.literal(BASIC.getInt4(), "0"), builder.literal(BASIC.getInt4(), "2147483646")); // int4 min and max-1
 
-	// return the acces expression with the needed replacements for lower and upper boundary applied
+	// return the access expression with the needed replacements for lower and upper boundary applied
 	return std::make_pair(static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, lowerBreplacements)),
 			static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, upperBreplacements)));
 }
@@ -415,7 +411,7 @@ void KernelPoly::genWiDiRelation() {
 					ExpressionPtr upper = *boundaries.second->getType() == *int4 ? boundaries.second : builder.castExpr(int4, boundaries.second);
 
 					++dirtyLimiter;
-                    std::cout << "Limit on " << variable.first << " " << dirtyLimiter << std::endl;
+//std::cout << "Limit on " << variable.first << " " << dirtyLimiter << std::endl;
 					if(boundaries.first->toString().find("get_global_id") == string::npos ||
 						boundaries.second->toString().find("get_global_id") == string::npos) {
 						splittable = false;
@@ -426,6 +422,7 @@ void KernelPoly::genWiDiRelation() {
 						lowerBoundary = builder.literal(BASIC.getInt4(), "0");
 						upperBoundary = builder.literal(BASIC.getInt4(), "2147483646");
 					} else {
+//std::cout << variable.first << " lower " << *boundaries.first->getType() << " upper " << *boundaries.second->getType() << std::endl;
 						if(!lowerBoundary) { // first iteration, just copy the first access
 							lowerBoundary = lower;
 							upperBoundary = upper;

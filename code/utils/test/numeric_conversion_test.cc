@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -64,6 +64,22 @@ TEST(NumericConversion, FromString) {
 	EXPECT_EQ(0, numeric_cast<int64_t>("-0"));
 	EXPECT_EQ(0, numeric_cast<int64_t>("-0u"));
 	EXPECT_EQ(0, numeric_cast<int64_t>("-0l"));
+
+	EXPECT_EQ(0, numeric_cast<int64_t>("-0ll"));
+	EXPECT_EQ(0, numeric_cast<int64_t>("-0ull"));
+
+
+	EXPECT_EQ(10u, numeric_cast<unsigned>("10u"));
+	EXPECT_EQ(10,  numeric_cast<int>("10u"));
+	EXPECT_EQ(10,  numeric_cast<int64_t>("10u"));
+	EXPECT_EQ(10,  numeric_cast<int64_t>("10l"));
+	EXPECT_EQ(-10, numeric_cast<int64_t>("-10"));
+	EXPECT_EQ(10,  numeric_cast<int64_t>("10u"));
+	EXPECT_EQ(-10, numeric_cast<int64_t>("-10l"));
+
+	EXPECT_EQ(-10, numeric_cast<int64_t>("-10ll"));
+	EXPECT_EQ( 10, numeric_cast<int64_t>("10ull"));
+
 
 	// memory address
 //	int a = 0, *ptr = &a;

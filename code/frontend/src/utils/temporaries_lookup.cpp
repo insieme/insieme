@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,7 @@
 #include <iostream>
 #include <vector>
 namespace insieme {
-namespace frontend { 
+namespace frontend {
 namespace utils {
 
 namespace{
@@ -59,11 +59,15 @@ class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bo
 		std::vector<const clang::CXXTemporary*>& tempList;
 
 	public:
-		temporariesVisitor (std::vector<const clang::CXXTemporary*>& list) 
+		temporariesVisitor (std::vector<const clang::CXXTemporary*>& list)
 			: tempList(list) {}
 
 
 		bool 	Visit (const clang::Stmt *S){
+		    //if our stmt is a nullptr don't use it
+		    if (!S)
+                return false;
+
 			if (llvm::isa<clang::CXXBindTemporaryExpr>(S))
 				tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary ());
 
@@ -102,6 +106,6 @@ class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bo
 
 
 
-} //namespace utils 
-} //namespace frontend 
-} //namespace insieme 
+} //namespace utils
+} //namespace frontend
+} //namespace insieme

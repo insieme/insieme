@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -146,8 +146,8 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	case BuiltinType::UChar:		return gen.getUInt1();
 	case BuiltinType::Char16:		return gen.getWChar16(); //TODO c++11 specific builtin
 	case BuiltinType::Char32:		return gen.getWChar32(); //TODO c++11 specific builtin
-	case BuiltinType::Char_S:
-	case BuiltinType::SChar:		return gen.getChar();
+	case BuiltinType::Char_S:       return gen.getChar();
+	case BuiltinType::SChar:		return gen.getInt1(); //Signed char, remember: char, unsigned char, signed char are distinct types
 	case BuiltinType::WChar_S:		return gen.getWChar32();
 	case BuiltinType::WChar_U:		return gen.getWChar32();
 
@@ -161,9 +161,8 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	case BuiltinType::ULong:		return gen.getUInt8();
 	case BuiltinType::Long:			return gen.getInt8();
 
-									// long long is packed in a struct to avoid aliases with just long
-	case BuiltinType::LongLong:		return builder.structType(toVector( builder.namedType("longlong_val", gen.getInt8())));
-	case BuiltinType::ULongLong:	return builder.structType(toVector( builder.namedType("longlong_val", gen.getUInt8())));
+	case BuiltinType::LongLong:		return gen.getInt16();
+	case BuiltinType::ULongLong:	return gen.getUInt16();
 
 	// real types
 	case BuiltinType::Float:		return gen.getFloat();
@@ -479,6 +478,13 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		mid++;
 	}
 
+    //we have to avoid empty structs, cannot be initalized with bracket initalization
+	if(!mid) {
+        core::TypePtr&& fieldType = builder.getLangBasic().getBool();
+        core::StringValuePtr id = builder.stringValue("__insieme_bool_dummy");
+		structElements.push_back(builder.namedType(id, fieldType));
+	}
+
 
 	// build a struct or union IR type
 	retTy = handleTagType(def, structElements);
@@ -607,8 +613,8 @@ core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, co
 
 	std::string name;
 	if (tagDecl->getName() != ""){
-		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), 
-									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(), 
+		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl),
+									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(),
 									   convFact.getSourceManager());
 	}
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {

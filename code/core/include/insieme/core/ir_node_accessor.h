@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -223,7 +223,7 @@ namespace core {
 
 		template<typename Annotation, typename ... Params>
 		void addAnnotation(Params ... p) const {
-			getNode().getAnnotationContainer().addAnnotation<Annotation>(p...);
+			getNode().getAnnotationContainer().template addAnnotation<Annotation>(p...);
 		}
 
 		const std::shared_ptr<core::NodeAnnotation>& getAnnotation(const utils::AnnotationKeyPtr& key) const {
@@ -272,27 +272,27 @@ namespace core {
 
 		template<typename V>
 		bool hasAttachedValue() const {
-			return getNode().getAnnotationContainer().hasAttachedValue<V>();
+			return getNode().getAnnotationContainer().template hasAttachedValue<V>();
 		}
 
 		template<typename V>
 		void attachValue(const V& value = V()) const {
-			return getNode().getAnnotationContainer().attachValue<V>(value);
+			return getNode().getAnnotationContainer().template attachValue<V>(value);
 		}
 
 		template<typename V, typename ... Args>
 		void attachValue(const Args& ... args) const {
-			return getNode().getAnnotationContainer().attachValue<V>(args...);
+			return getNode().getAnnotationContainer().template attachValue<V>(args...);
 		}
 
 		template<typename V>
 		void detachValue() const {
-			getNode().getAnnotationContainer().detachValue<V>();
+			getNode().getAnnotationContainer().template detachValue<V>();
 		}
 
 		template<typename V>
 		const V& getAttachedValue() const {
-			return getNode().getAnnotationContainer().getAttachedValue<V>();
+			return getNode().getAnnotationContainer().template getAttachedValue<V>();
 		}
 
 		std::size_t getNodeHashValue() const {

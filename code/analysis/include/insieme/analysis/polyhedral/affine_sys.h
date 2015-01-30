@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,7 +49,7 @@ using insieme::utils::Matrix;
  * composing an affine system refers to the same iteration vector. Therefore changes to the
  * iteration vector owned by this affine system results in changes to all the affine functions. 
  *
- * Note that the implementation of the class can be found in analysis/src/polyhedral/polyhedral.cpp .
+ * Note that the implementation of the class can be found in analysis/src/polyhedral/scop.cpp .
  */
 class AffineSystem : public utils::Printable, boost::noncopyable {
 	

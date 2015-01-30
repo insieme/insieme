@@ -15,7 +15,7 @@ int main(int argc, const char* argv[]) {
 
 	chdir(PATH);
 
-    int size = args->size;
+	int size = args->size;
 
 	int* input1 = (int*)malloc(sizeof(int) * size);
 	int* input2 = (int*) malloc(sizeof(int) * size);
@@ -34,7 +34,8 @@ int main(int argc, const char* argv[]) {
 		icl_device* dev = icl_get_device(0);
 
 		icl_print_device_short_info(dev);
-		icl_kernel* kernel = icl_create_kernel(dev, "vec_add.cl", "vec_add", "", ICL_SOURCE);
+		icl_kernel* kernel;
+		kernel = icl_create_kernel(dev, "vec_add.cl", "vec_add", "", ICL_SOURCE);
 		
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
@@ -79,7 +80,7 @@ int main(int argc, const char* argv[]) {
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
     } else {
-		printf("Result check: OK\n");
+		printf("Result check: Not Executed\n");
     }
 
 	icl_release_args(args);

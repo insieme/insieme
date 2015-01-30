@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,10 +55,6 @@
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/utils/config.h"
 
-// to remove
-#include "insieme/core/checks/ir_checks.h"
-#include "insieme/core/checks/full_check.h"
-
 using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::core::annotations;
@@ -67,8 +63,68 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
-TEST(ocl_hostKernel, baseTest) {
-/*	NodeManager manager;
+TEST(ocl_hostKernel, vecadd_bare) {
+	NodeManager manager;
+	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
+	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add_bare.c");
+
+	// Frontend PATH
+	job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");					// this is for CL/cl.h in host.c
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/vec_add");
+
+	// Backend PATH
+	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
+	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+
+	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
+	auto program = job.execute(manager);
+	std::cout << "Done.\n";
+
+	LOG(INFO) << "Starting OpenCL host code transformations";
+
+	insieme::core::printer::PrettyPrinter pp(program); // program->getElement(0)
+
+	std::cout << "Starting OpenCL Backend visit\n";
+
+	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+	auto converted = backend->convert(program);
+	std::cout << "Converted code:\n" << *converted;
+}
+
+TEST(ocl_hostKernel, vecadd) {
+	NodeManager manager;
+	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
+	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add.c");
+
+	// Frontend PATH
+	job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
+	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");					// this is for CL/cl.h in host.c
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
+	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/vec_add");
+
+	// Backend PATH
+	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
+	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+
+	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
+	auto program = job.execute(manager);
+	std::cout << "Done.\n";
+
+	LOG(INFO) << "Starting OpenCL host code transformations";
+
+	insieme::core::printer::PrettyPrinter pp(program); // program->getElement(0)
+
+	std::cout << "Starting OpenCL Backend visit\n";
+
+	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+	auto converted = backend->convert(program);
+	std::cout << "Converted code:\n" << *converted;
+}
+
+TEST(ocl_hostKernel, matmul) {
+	NodeManager manager;
 	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
 	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c");
 
@@ -88,31 +144,12 @@ TEST(ocl_hostKernel, baseTest) {
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	//insieme::frontend::ocl::HostCompiler hc(program, job);
-	//hc.compile();
 
-	insieme::core::printer::PrettyPrinter pp(program);
+	insieme::core::printer::PrettyPrinter pp(program); // program->getElement(0)
 
-	auto s = insieme::core::checks::check(program->getElement(0), insieme::core::checks::getFullCheck());
-	auto w = s.getWarnings();
-	std::sort(w.begin(), w.end());
-	for_each(w, [](const insieme::core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-
-	auto e = s.getErrors();
-	std::sort(e.begin(), e.end());
-	std::cout << "** Error Before the backend pass: \n=======================" << std::endl;
-	for_each(e, [](const insieme::core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-	std::cout << "=======================" << std::endl;
-
-	std::cout << "Printing the IR: " << pp;
-
-	std::cout << "Start OpenCL Backend visit\n";
+	std::cout << "Starting OpenCL Backend visit\n";
 
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
-	std::cout << "Converted code:\n" << *converted;*/
+	std::cout << "Converted code:\n" << *converted;
 }

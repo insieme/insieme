@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -149,7 +149,7 @@ void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom)
 	
 	std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter);
 
-	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { cur.get().getDomain() &= dom; } );
+	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { cur.get().iterdomain &= dom; } );
 
 }
 
@@ -162,7 +162,7 @@ void setZeroOtherwise(Scop& scop, const Iterator& iter) {
 		AffineFunction func(iterVec);
 		func.setCoeff( iter, 1 );
 
-		cur.get().getDomain() &= IterationDomain( AffineConstraint( func, ConstraintType::EQ) ); 
+		cur.get().iterdomain &= IterationDomain( AffineConstraint( func, ConstraintType::EQ) );
 	} );
 }
 
@@ -191,7 +191,7 @@ void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatri
 template <>
 void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
 	for_each(scop, [&](StmtPtr& cur) { 
-		for_each( cur->getAccess(), [&](AccessInfoPtr& cur) { 
+		for_each( cur->accessmtx, [&](AccessInfoPtr& cur) {
 			IntMatrix&& access = extractFrom( cur->getAccess() );
 			IntMatrix&& newAccess = access * trans;
 			cur->getAccess().set( newAccess ) ;
@@ -525,7 +525,7 @@ void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsign
 void dupStmt(Scop& scop, const unsigned& stmtId, const analysis::polyhedral::AffineConstraintPtr& cons) {
 
 	Stmt stmt = Stmt(scop.getIterationVector(), scop.size(), scop[stmtId]);
-	stmt.getDomain() &= IterationDomain(cons);
+	stmt.iterdomain &= IterationDomain(cons);
 	scop.push_back( stmt );
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -222,7 +222,7 @@ namespace cba {
 	public:
 
 		UninterpretedSymbolsConstraintGenerator(CBA& cba)
-			: super(cba, cba::U, cba::u, cba.getDataManager<lattice<uninterpreted_symbols_analysis_data>::type>().atomic(utils::set::toSet<set<ExpressionPtr>>(ExpressionPtr()))),
+			: super(cba, cba::U, cba::u, cba.getDataManager<lattice<uninterpreted_symbols_analysis_data>::type>().atomic(utils::set::toSet<set<ExpressionPtr>>())),
 			  base(cba.getRoot()->getNodeManager().getLangBasic()),
 			  cba(cba)
 		{ };

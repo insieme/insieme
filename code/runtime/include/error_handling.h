@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,9 @@ typedef enum _irt_errcode {
 	IRT_ERR_INSTRUMENTATION,	// error related to the instrumentation system
 	IRT_ERR_INVALIDARGUMENT,	// error caused by calls to irt functions with invalid arguments
 	IRT_ERR_HW_INFO,			// error caused by requesting hardware information that is not available
-	IRT_ERR_OMPP			    // error caused by OpenMP+ optimizations 
+	IRT_ERR_OMPP,			    // error caused by OpenMP+ optimizations 
+	IRT_ERR_BLOB_CONTAINER,		// error caused by the blobs container
+	//NOTE: When adding a new error code here also update the list of strings in error_handling.impl.h
 } irt_errcode;
 
 struct _irt_error {

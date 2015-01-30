@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -576,9 +576,9 @@ namespace cba {
 			assert_true(path) << "Unable to delete head of empty list!";
 
 			// make sure the head index is the given value
-			assert_true(path->isOverlapping(element))
-				<< "Path:    " << *path << "\n"
-				<< "Element: " << element << "\n";
+//			assert_true(path->isOverlapping(element))
+//				<< "Path:    " << *path << "\n"
+//				<< "Element: " << element << "\n";
 
 			// remove the head
 			popHead();

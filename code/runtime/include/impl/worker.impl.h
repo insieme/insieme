@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -142,6 +142,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wake_signal = true;
 #endif
 	irt_cond_var_init(&self->dop_wait_cond);
+	irt_spin_init(&self->shutdown_lock);
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
@@ -188,6 +189,19 @@ void* _irt_worker_func(void *argvp) {
 	return NULL;
 }
 
+uint32 _irt_worker_select_implementation_variant(const irt_worker* self, const irt_work_item* wi) {
+	irt_wi_implementation *wimpl = wi->impl;
+	#ifndef IRT_TASK_OPT
+	if(self->default_variant < wimpl->num_variants) {
+		return self->default_variant;
+	} else {
+		return 0;
+	}
+	#else // !IRT_TASK_OPT
+	return wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
+	#endif // !IRT_TASK_OPT
+}
+
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
 	// wait for previous operations on WI to complete
@@ -208,20 +222,12 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
-		irt_wi_implementation *wimpl = wi->impl;
-		#ifndef IRT_TASK_OPT
-		if(self->default_variant < wimpl->num_variants) {
-            irt_optimizer_apply_dvfs(&(wimpl->variants[self->default_variant]));
-			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
-		} else {
-            irt_optimizer_apply_dvfs(&(wimpl->variants[0]));
-			lwt_start(wi, &self->basestack, wimpl->variants[0].implementation);
-		}
-		#else // !IRT_TASK_OPT
-        uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
-        irt_optimizer_apply_dvfs(&(wimpl->variants[opt]));
-		lwt_start(wi, &self->basestack, wimpl->variants[opt].implementation);
-		#endif // !IRT_TASK_OPT
+		//determine and store the implementation variant to use
+		wi->selected_impl_variant = _irt_worker_select_implementation_variant(self, wi);
+		irt_wi_implementation_variant* impl_variant = &(wi->impl->variants[wi->selected_impl_variant]);
+		//and start that variant
+		irt_optimizer_apply_dvfs(impl_variant);
+		lwt_start(wi, &self->basestack, impl_variant->implementation);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
@@ -236,7 +242,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED_UNKNOWN, wi->id);
 		irt_wi_implementation *wimpl = wi->impl;
-        irt_optimizer_apply_dvfs(&(wimpl->variants[0]));
+		irt_optimizer_apply_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
 		lwt_continue(&wi->stack_ptr, &self->basestack);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
@@ -244,9 +250,9 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 }
 
 void _irt_worker_switch_from_wi(irt_worker* self, irt_work_item *wi) {
-    irt_wi_implementation *wimpl = wi->impl;
-    irt_optimizer_remove_dvfs(&(wimpl->variants[0]));
-    lwt_continue(&self->basestack, &wi->stack_ptr);
+	irt_wi_implementation *wimpl = wi->impl;
+	irt_optimizer_remove_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
+	lwt_continue(&self->basestack, &wi->stack_ptr);
 }
 
 void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item *wi) {
@@ -260,6 +266,7 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	irt_lw_data_item *prev_args = self->parameters;
 	irt_work_item_range prev_range = self->range;
 	irt_wi_implementation* prev_impl = self->impl;
+	uint32 prev_selected_impl_variant = self->selected_impl_variant;
 	irt_work_item_id prev_source = self->source_id;
 	uint32 prev_fragments = self->num_fragments;
 	// set new wi data
@@ -274,13 +281,8 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	volatile uint32 active_child_count = 0;
 	self->num_active_children = &active_child_count;
 	// call wi
-#ifndef IRT_TASK_OPT
-	(impl->variants[0].implementation)(self);
-#else // !IRT_TASK_OPT
-	irt_wi_implementation *wimpl = impl;
-	uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(self, target) : 0;
-	wimpl->variants[opt].implementation(self);
-#endif // !IRT_TASK_OPT
+	self->selected_impl_variant = _irt_worker_select_implementation_variant(target, self);
+	(impl->variants[self->selected_impl_variant].implementation)(self);
 	// restore active child number(s)
 	self->num_active_children = self->parent_num_active_children;
 	self->parent_num_active_children = prev_parent_active_child_count;
@@ -288,6 +290,7 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->parameters = prev_args;
 	self->range = prev_range;
 	self->impl = prev_impl;
+	self->selected_impl_variant = prev_selected_impl_variant;
 	self->source_id = prev_source;
 	self->num_fragments = prev_fragments;
 }
@@ -327,18 +330,27 @@ void _irt_worker_end_all() {
 	irt_thread calling_thread;
 	irt_thread_get_current(&calling_thread);
 
+	irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
-		if(cur->state != IRT_WORKER_STATE_STOP) {
+		irt_spin_lock(&cur->shutdown_lock);
+		if(cur->state == IRT_WORKER_STATE_JOINED) continue;
+		do {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_signal_worker(cur);
-
-			// avoid calling thread awaiting its own termination
-			if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
-				irt_thread_join(&(cur->thread));
-			}
+			// workers stopped by dop setting should be woken up
+			irt_cond_wake_one(&cur->dop_wait_cond);
+		} while(cur->state != IRT_WORKER_STATE_STOP);
+		// don't join calling thread
+		if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
+			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
+			if(cur->state != IRT_WORKER_STATE_JOINED) irt_thread_join(&(cur->thread));
+			irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
+			cur->state = IRT_WORKER_STATE_JOINED;
 		}
+		irt_spin_unlock(&cur->shutdown_lock);
 	}
+	irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 
 	// clean up after all workers have finished running
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -348,6 +360,7 @@ void _irt_worker_end_all() {
 
 
 void irt_worker_cleanup(irt_worker* self) {
+	irt_spin_destroy(&self->shutdown_lock);
 	// clean up event register reuse stacks
 	{ // wi registers
 		irt_wi_event_register *cur, *next;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <stack>
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/analysis/func_sema.h"
 
@@ -710,7 +710,7 @@ public:
 		assert(cloogStmt->name);
 
 		// get the stmt object 
-		const Stmt& stmt = *ctx.getAs<StmtPtr>( cloogStmt->name );
+		Stmt& stmt = *ctx.getAs<StmtPtr>( cloogStmt->name );
 		core::StatementPtr irStmt = stmt.getAddr().getAddressedNode();
 		
 		stmtStack.top().push_back(irStmt); 
@@ -723,7 +723,7 @@ public:
 			if (callExpr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
 
 				RangedFunction::VarVect ranges;
-				for_each(stmt.access_begin(), stmt.access_end(), [&](const AccessInfoPtr& cur) {
+				for_each(stmt.accessmtx.begin(), stmt.accessmtx.end(), [&](AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
 						assert( !iters.empty() && iters.size() == 1 );

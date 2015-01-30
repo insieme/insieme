@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -38,15 +38,14 @@
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
- namespace insieme {
- namespace frontend {
+namespace insieme {
+namespace frontend {
 
 /**
- *
  * This is the frontend cleanup tool.
  * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate suff in an "correct" but not optimal way just because is the straight forward aproach.
- * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code
+ * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
+ * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
  */
 class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
 		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -52,14 +52,44 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
+
 	// the type used for encoding a translation unit
-	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::Initializer, IRTranslationUnit::EntryPointList, IRTranslationUnit::MetaInfoMap, bool> WrapperType;
+	typedef std::tuple<
+		IRTranslationUnit::TypeMap, 
+		IRTranslationUnit::FunctionMap, 
+		IRTranslationUnit::GlobalsList, 
+		IRTranslationUnit::Initializer, 
+		IRTranslationUnit::EntryPointList, 
+		IRTranslationUnit::MetaInfoMap, 
+		bool
+	> WrapperType;
+
+
+	core::ExpressionPtr toIR ( core::NodeManager& manager, const IRTranslationUnit& unit){
+		return core::encoder::toIR(manager, std::make_tuple(unit.getTypes(), 
+															 unit.getFunctions(), 
+															 unit.getGlobals(), 
+															 unit.getInitializer(), 
+															 unit.getEntryPoints(), 
+															 unit.getMetaInfos(), 
+															 unit.isCXX()));
+	}
+
+	IRTranslationUnit fromIR (const core::ExpressionPtr& node){
+		// decode encoded IR
+		auto values = core::encoder::toValue<WrapperType>(node);
+
+		// build resulting translation unit
+		return IRTranslationUnit(node.getNodeManager(), std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values), std::get<5>(values), std::get<6>(values));
+	}
+
+
 
 	void dump(std::ostream& out, const IRTranslationUnit& unit) {
 		core::NodeManager localMgr(unit.getNodeManager());
 
 		// encode translation unit into an IR expression
-		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals(), unit.getInitializer(), unit.getEntryPoints(), unit.getMetaInfos(), unit.isCXX()));
+		auto encoded = toIR(localMgr, unit);
 
 		// dump IR expression
 		core::dump::binary::dumpIR(out, encoded);
@@ -69,12 +99,7 @@ namespace tu {
 
 		// load encoded IR expression from stream
 		auto encoded = core::dump::binary::loadIR(in, manager).as<core::ExpressionPtr>();
-
-		// decode encoded IR
-		auto values = core::encoder::toValue<WrapperType>(encoded);
-
-		// build resulting translation unit
-		return IRTranslationUnit(manager, std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values), std::get<5>(values), std::get<6>(values));
+		return fromIR(encoded);
 	}
 
 

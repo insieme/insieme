@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,6 +44,7 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/DeclTemplate.h>
+#include <clang/AST/ASTContext.h>
 #include <llvm/Support/Casting.h>
 
 #include <clang/Basic/SourceLocation.h>
@@ -51,6 +52,7 @@
 #pragma GCC diagnostic pop
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -82,7 +84,12 @@ namespace {
 		std::stringstream ss;
 		ss << prefix;
 
-		ss << sm.getFilename(decl->getLocStart()).str();   //.getHashValue();
+		// canonicalize filename in case we refer to it from different relative locations
+		std::string filename = sm.getFilename(decl->getLocStart()).str();
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path);
+
+		ss << path.string();   //.getHashValue();
 		ss << sm.getExpansionLineNumber (decl->getLocStart());
 		ss << sm.getExpansionColumnNumber(decl->getLocStart());
 
@@ -135,14 +142,17 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 }
 
 
-std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
+std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 
 	std::string name = funcDecl->getQualifiedNameAsString();
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 		if (method->isVirtual()) {
 			name = funcDecl->getNameAsString();
-		}
-		else if(method->isOverloadedOperator()) {
+		} else if (method->getParent()) {
+	            if(method->getParent()->isLambda()) {
+        	        name = createNameForAnnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager());
+	            }
+		} else if(method->isOverloadedOperator()) {
 		//	name = funcDecl->getNameAsString();
 		}
 	}
@@ -162,11 +172,11 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 
 		if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
 			functionname.append("_c");
-        
+
         utils::removeSymbols(functionname);
 
         return functionname;
-	} 
+	}
 	*/
 
     //if we have non type template specialization args,
@@ -189,11 +199,22 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "operator<","sdummy");
 	boost::algorithm::replace_last(name, "operator>","gdummy");
 	// also other*symbols
+	boost::algorithm::replace_last(name, "operator()","PARENdummy");
+	boost::algorithm::replace_last(name, "operator/=","DIVEQdummy");
+	boost::algorithm::replace_last(name, "operator-=","MINEQdummy");
+	boost::algorithm::replace_last(name, "operator+=","PLUEQdummy");
+	boost::algorithm::replace_last(name, "operator*=","TIMEQdummy");
+	boost::algorithm::replace_last(name, "operator==","EQEQdummy");
+
 	boost::algorithm::replace_last(name, "operator*","ASTdummy");
 	boost::algorithm::replace_last(name, "operator,","COMdummy");
-	boost::algorithm::replace_last(name, "operator()","PARENdummy");
+	boost::algorithm::replace_last(name, "operator+","PLUSdummy");
+	boost::algorithm::replace_last(name, "operator-","MINUSdummy");
+	boost::algorithm::replace_last(name, "operator/","DIVIDEdummy");
+	boost::algorithm::replace_last(name, "operator=","EQUALSdummy");
 
-	//if(!funcDecl->isOverloadedOperator()) 
+
+	//if(!funcDecl->isOverloadedOperator())
 	{
 		// beware of spetialized functions, the type does not show off
 		// check if we have template spec args otherwise seg faults may occur
@@ -207,7 +228,14 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 						break;
 					}
 					case clang::TemplateArgument::Type: {
-						name.append ("_"+arg.getAsType().getAsString());
+					    //check if the type is a lambda, this one needs special handling
+					    std::string typeName;
+					    if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
+                            typeName = createNameForAnnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
+					    } else {
+                            typeName = arg.getAsType().getAsString();
+					    }
+						name.append ("_"+typeName);
 						break;
 					}
 					case clang::TemplateArgument::Null: {
@@ -250,7 +278,7 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 			name.append(returnType);
 		}
 	}
-	
+
 	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst()) {
 		name.append("_c");
 	}
@@ -265,21 +293,33 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "gdummy", "operator>");
 	// and the asterisc symbol
 	boost::algorithm::replace_last(name, "ASTdummy","operator*");
-	boost::algorithm::replace_last(name, "COMdummy","operator-");
+	boost::algorithm::replace_last(name, "COMdummy","operator,");
+	boost::algorithm::replace_last(name, "MINUSdummy","operator-");
 	boost::algorithm::replace_last(name, "PARENdummy", "operator()");
+
+	boost::algorithm::replace_last(name, "PLUSdummy", "operator+");
+	boost::algorithm::replace_last(name, "DIVIDEdummy", "operator/");
+	boost::algorithm::replace_last(name, "EQUALSdummy", "operator=");
+
+	boost::algorithm::replace_last(name, "DIVEQdummy", "operator/=");
+	boost::algorithm::replace_last(name, "MINEQdummy", "operator-=");
+	boost::algorithm::replace_last(name, "PLUEQdummy", "operator+=");
+	boost::algorithm::replace_last(name, "TIMEQdummy", "operator*=");
+	boost::algorithm::replace_last(name, "EQEQdummy", "operator==");
+
 
 	// all done
 	return name;
 }
 
-std::string buildNameForVariable  (const clang::VarDecl* varDecl){
+std::string buildNameForVariable(const clang::VarDecl* varDecl){
 	std::string name = varDecl->getQualifiedNameAsString();
 	REMOVE_SYMBOLS(name);
 	return name;
 
 }
 
-std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm){
+std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm){
 	std::stringstream ss;
 	ss << "_global";
 
@@ -299,11 +339,16 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 }
 
 
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
+std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
 	std::stringstream ss;
 	ss << "_enum";
 
-	ss << sm.getFilename(enumDecl->getLocStart()).str();   //.getHashValue();
+    // A canonical path is needed to avoid different names for
+    // differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
+    char path[PATH_MAX];
+    realpath(sm.getFilename(enumDecl->getLocStart()).str().c_str(), path);
+    ss << path;
+
 	ss << sm.getExpansionLineNumber (enumDecl->getLocStart());
 	ss << sm.getExpansionColumnNumber(enumDecl->getLocStart());
 	ss << "_";
@@ -322,7 +367,13 @@ std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::Sour
 std::string buildNameForEnumConstant(const clang::EnumConstantDecl* ecd, const clang::SourceManager& sm){
 	std::stringstream ss;
 	ss << "_enumCtnt";
-	ss << sm.getFilename(ecd->getLocStart()).str();   //.getHashValue();
+
+    // A canonical path is needed to avoid different names for
+    // differently specified paths ( a/b/enum.h vs a/c/../b/enum.h)
+    char path[PATH_MAX];
+    realpath(sm.getFilename(ecd->getLocStart()).str().c_str(), path);
+    ss << path;
+
 	ss << sm.getExpansionLineNumber (ecd->getLocStart());
 	ss << sm.getExpansionColumnNumber(ecd->getLocStart());
 	ss << "_";

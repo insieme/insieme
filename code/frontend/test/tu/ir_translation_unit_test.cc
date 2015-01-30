@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -73,6 +73,8 @@ namespace tu {
 		EXPECT_FALSE(toString(unit).empty());
 	}
 
+
+
 	TEST(TranslationUnit, IO) {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
@@ -100,6 +102,36 @@ namespace tu {
 		// reload unit
 		core::NodeManager managerB;
 		IRTranslationUnit unitB = load(buffer, managerB);
+
+		// they should be equal
+		EXPECT_EQ(toString(unit), toString(unitB));
+	}
+
+	TEST(TranslationUnit, IR) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		// create a dummy translation unit
+		IRTranslationUnit unit(mgr);
+
+		// check adding types
+		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+
+		// check adding functions
+		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
+
+		// check adding globals
+		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
+
+		// -------------  dump it + restore it ------------
+
+		core::ExpressionPtr ptr;
+
+		// dump unit
+		ptr = toIR(mgr, unit);
+
+		// reload unit
+		IRTranslationUnit unitB = fromIR(ptr);
 
 		// they should be equal
 		EXPECT_EQ(toString(unit), toString(unitB));

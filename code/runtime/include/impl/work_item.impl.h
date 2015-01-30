@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -103,7 +103,7 @@ static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
 }
 
 static inline void _irt_print_work_item_range(const irt_work_item_range* r) { 
-	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
+	IRT_INFO("%" PRId64 "..%" PRId64 " : %" PRId64, r->begin, r->end, r->step);
 }
 
 static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range, 
@@ -112,18 +112,14 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->id.cached = wi;
 	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
 	wi->impl = impl;
+	wi->selected_impl_variant = 0;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
 	wi->_num_active_children = 0;
 	wi->num_active_children = &(wi->_num_active_children);
 	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
 	if(params != NULL) {
-		uint32 size = 0;
-		if(params->type_id < 0) { // if <0, it's not an id but -(size)
-			size = - params->type_id;
-		} else {
-			size = self->cur_context.cached->type_table[params->type_id].bytes;
-		}
+		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
 		} else { 
@@ -236,7 +232,7 @@ void irt_wi_join(irt_work_item_id wi_id) {
 	if(occ==0) { // if not completed, suspend this wi
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
-        _irt_worker_switch_from_wi(self, swi);
+		_irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
 	}
 }
@@ -278,7 +274,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 		// make stack available for children
 		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
-        _irt_worker_switch_from_wi(self, wi);
+		_irt_worker_switch_from_wi(self, wi);
 #ifdef IRT_ASTEROIDEA_STACKS
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS
@@ -306,8 +302,9 @@ void irt_wi_end(irt_work_item* wi) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
-		irt_atomic_fetch_and_sub(&source->num_fragments, 1, uint32);
-		if(source->num_fragments == 0) irt_wi_end(source);
+		if (irt_atomic_sub_and_fetch(&source->num_fragments, 1, uint32) == 0) {
+			irt_wi_end(source);
+		}
 	} else {
 		// delete params struct
 		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
@@ -329,9 +326,9 @@ void irt_wi_end(irt_work_item* wi) {
 	
 	IRT_DEBUG(" ! %p end\n", wi);
 
-    irt_wi_implementation *wimpl = wi->impl;
-    irt_optimizer_remove_dvfs(&(wimpl->variants[0]));
-    irt_optimizer_compute_optimizations(&(wimpl->variants[0]), wi, false);
+	irt_wi_implementation *wimpl = wi->impl;
+	irt_optimizer_remove_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
+	irt_optimizer_compute_optimizations(&(wimpl->variants[wi->selected_impl_variant]), wi, false);
 
 	// end
 	worker->finalize_wi = wi;

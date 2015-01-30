@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1030,6 +1030,16 @@ namespace parser {
 		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
 	}
 
+	TEST(IR_Parser2, Cast) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto expr = builder.parseExpr("(int<4>) 8 ");
+
+		EXPECT_EQ("cast<int<4>>(8)", toString(*expr));
+
+	}
+
 	TEST(IR_Parser2, Bind) {
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -1080,6 +1090,59 @@ namespace parser {
 
 		ASSERT_TRUE(expr);
 		EXPECT_EQ("struct{x=1, y=2.0}", toString(*expr));
+	}
+
+	TEST(IR_Parser2, StructFieldAccess) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr expr = builder.parseExpr(
+				"let pair = struct { int<4> x; real<8> y; } in "
+				"((pair){ 1, 2.0 }).x"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_EQ("composite.member.access(struct{x=1, y=2.0}, x, type<int<4>>)", toString(*expr));
+
+
+		expr = builder.parseExpr(
+				"let pair = struct { int<4> x; real<8> y; } in "
+				"var((pair){ 1, 2.0 }).x"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_TRUE(analysis::isCallOf(expr, manager.getLangBasic().getCompositeRefElem()));
+	}
+
+	TEST(IR_Parser2, TupleExpr) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr expr = builder.parseExpr(
+				"(1,2.0)"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_EQ("tuple(1,2.0)", toString(*expr));
+	}
+
+	TEST(IR_Parser2, TupleFieldAccess) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr expr = builder.parseExpr(
+				"(1,2.0).1"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_EQ("tuple.member.access(tuple(1,2.0), 1, type<real<8>>)", toString(*expr));
+
+		expr = builder.parseExpr(
+				"var((1,2.0)).1"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_TRUE(analysis::isCallOf(expr, manager.getLangBasic().getTupleRefElem()));
 	}
 
 	TEST(IR_Parser2, UnionExpr) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -266,6 +266,13 @@ namespace lang {
 			"('a)->struct { src<std::type_info>  _const_cpp_ref; }"
 		);
 
+		/**
+		 *  std init list expr
+		 */
+		LANG_EXT_LITERAL(StdInitListExpr, "std_init_list_expr",
+            "(list<'a>, type<'b>)->'b"
+        );
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//	member pointer (only for data member pointers)
@@ -294,46 +301,7 @@ namespace lang {
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
-	//   long long
-
-		/**
-		 * cast from long to long long
-		 */
-		LANG_EXT_DERIVED(LongToLongLong,
-				"let longlong = struct { int<8> longlong_val } in "
-				"(int<8> x)->longlong { return (longlong) { x }; }"
-		);
-		LANG_EXT_DERIVED(ULongToULongLong,
-				"let longlong = struct { uint<8> longlong_val } in "
-				"(uint<8> x)->longlong { return (longlong) { x }; }"
-		);
-
-		/**
-		 * cast from long long to long
-		 */
-		LANG_EXT_DERIVED(LongLongToLong,
-				"let longlong = struct { int<8> longlong_val } in "
-				"(longlong x)->int<8> { return x.longlong_val; }"
-		);
-		LANG_EXT_DERIVED(ULongLongToULong,
-				"let longlong = struct { uint<8> longlong_val } in "
-				"(longlong x)->uint<8> { return x.longlong_val; }"
-		);
-		LANG_EXT_DERIVED(ULongLongToLongLong,
-				"let longlong  = struct { int<8>  longlong_val } in "
-				"let ulonglong = struct { uint<8> longlong_val } in "
-				"(ulonglong x)->longlong { return (longlong) { (int<8>) x.longlong_val }; }"
-		);
-		LANG_EXT_DERIVED(LongLongToULongLong,
-				"let longlong  = struct { int<8>  longlong_val } in "
-				"let ulonglong = struct { uint<8> longlong_val } in "
-				"(longlong x)->ulonglong { return (ulonglong) { (uint<8>) x.longlong_val }; }"
-		);
-
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//   long long
+	//   alignof c++11 keyword
 
 	LANG_EXT_LITERAL(Alignof, "alignof", "('a)->uint<8>");
 

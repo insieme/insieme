@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -64,6 +64,14 @@ struct _irt_work_group {
 	volatile uint32 joined_pfor_count; // index of the latest joined pfor
 	irt_loop_sched_policy cur_sched; // current scheduling policy
 	irt_loop_sched_data loop_sched_data[IRT_WG_RING_BUFFER_SIZE];
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	volatile uint64 regions_started;
+	volatile uint64 regions_ended;
+	volatile uint64* region_data_entries;
+	volatile uint64* region_data_exits;
+	volatile uint64 region_completions_required[IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE];
+	volatile irt_inst_region_wi_data** region_data; //[IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE];
+#endif //IRT_ENABLE_REGION_INSTRUMENTATION
 };
 
 struct _irt_wi_wg_membership {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -124,6 +124,13 @@ namespace integration {
 			for(const auto& i : o.second) {
 				// TODO: apply variable substitution
 				set(o.first, i.first, orig.mapVars(i.second));
+			}
+		}
+
+		// map existing keys with new info
+		for(const auto& o : data) {
+			for(const auto& i : o.second) {
+				set(o.first, i.first, mapVars(i.second));
 			}
 		}
 

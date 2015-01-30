@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,6 +44,7 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/string_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -52,7 +53,7 @@ namespace core {
 namespace arithmetic {
 
 NotAFormulaException::NotAFormulaException(const ExpressionPtr& expr)
-	: expr(expr), msg("Unable to convert expression - it is not a formula!") { }
+	: expr(expr), msg(format("Unable to convert expression %s - it is not a formula!", toString(*expr))) { }
 
 const char* NotAFormulaException::what() const throw() {	
 	return msg.c_str(); 

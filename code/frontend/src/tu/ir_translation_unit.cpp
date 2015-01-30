@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -579,6 +579,24 @@ namespace tu {
 			core::visitDepthFirstOnce (internalMainFunc, [&] (const core::LiteralPtr& literal){
 				usedLiterals.insert(literal);
 			});
+
+            // we check if the global var is used as initializer for a global var inserted in the previous step
+			core::NodeSet prevAddedLiterals = usedLiterals;
+			core::NodeSet currAddedLiterals;
+            while(!prevAddedLiterals.empty()) {
+			    for (auto cur : unit.getGlobals()) {
+                    if(contains(prevAddedLiterals, cur.first)) {
+			            core::visitDepthFirstOnce (cur.second, [&] (const core::LiteralPtr& literal){
+                            if(literal->getType().isa<RefTypePtr>()) {
+                                currAddedLiterals.insert(literal);
+                                usedLiterals.insert(literal);
+                            }
+			            });
+                    }
+                }
+                prevAddedLiterals = currAddedLiterals;
+                currAddedLiterals.clear();
+            };
 
 			// check all types for dtors which use literals
 			for( auto cur : unit.getTypes()) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -117,6 +117,32 @@ public:
 
 typedef std::shared_ptr<DataRangeAnnotation> DataRangeAnnotationPtr;
 
+class DataTransformAnnotation : public NodeAnnotation {
+	unsigned tilesize;
+
+public:
+	static const string NAME;
+    static const utils::StringKey<DataTransformAnnotation> KEY;
+
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
+    const std::string& getAnnotationName() const { return NAME; }
+
+    DataTransformAnnotation() : tilesize(1) {}
+    DataTransformAnnotation(unsigned tileSize) : tilesize(tileSize) {}
+
+    unsigned getTilesize() const { return tilesize; }
+    unsigned isSoa() const { return tilesize == 0; }
+
+    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
+};
+
+typedef std::shared_ptr<DataTransformAnnotation> DataTransformAnnotationPtr;
+
 } // end namespace insieme
 } // end namespace annotations
 
@@ -125,4 +151,5 @@ namespace std {
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range);
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot);
 
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& rAnnot);
 } // end namespace std

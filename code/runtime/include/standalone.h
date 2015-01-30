@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -110,7 +110,7 @@ void irt_init_globals() {
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
 
-	_irt_hardware_info_init();
+	_irt_hw_info_init();
 #if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_init();
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
@@ -183,7 +183,7 @@ void irt_exit_handler() {
 	// every other thread which comes after simply exits
 	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
 		if (irt_g_exit_handling_done)
-			irt_thread_exit(0);
+			return;
 
 	if (irt_g_exit_handling_done)
 		return;
@@ -194,7 +194,7 @@ void irt_exit_handler() {
 		irt_cpu_freq_reset_frequencies();
 #endif
 
-	_irt_hardware_info_shutdown();
+	_irt_hw_info_shutdown();
 
 #if defined IRT_ENABLE_REGION_INSTRUMENTATION && !defined _GEMS
 	irt_maintenance_cleanup();
@@ -286,19 +286,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	irt_g_runtime_behaviour = behaviour;
 
-#ifndef _GEMS_SIM
-	// TODO [_GEMS]: signal is not supported by gems platform
-	// initialize error and termination signal handlers
-	if(handle_signals) {
-		signal(IRT_SIG_ERR, &irt_error_handler);
-		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
-		signal(SIGTERM, &irt_term_handler);
-		signal(SIGINT, &irt_term_handler);
-		signal(SIGSEGV, &irt_abort_handler);
-		atexit(&irt_exit_handler);
-	}
-#endif
-
 	// initialize globals
 	irt_init_globals();
 	// TODO: superfluous?
@@ -321,17 +308,32 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
 
 	// initialize workers
-	static irt_worker_init_signal signal;
-	signal.init_count = 0;
+	static irt_worker_init_signal signalStruct;
+	signalStruct.init_count = 0;
 
-	void* ev_handle = _irt_init_signalable(&signal);
+	void* ev_handle = _irt_init_signalable(&signalStruct);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signalStruct);
 	}
 
 	// wait until all workers have signaled readiness
-	_irt_wake_sleeping_workers(&signal, ev_handle);
+	_irt_wake_sleeping_workers(&signalStruct, ev_handle);
+
+	// signal and exit handling needs to be registered after all workers have inited
+	// otherwise there is potential for the access of uninitialized per-worker locks
+#ifndef _GEMS_SIM
+	// TODO [_GEMS]: signal is not supported by gems platform
+	// initialize error and termination signal handlers
+	if(handle_signals) {
+		signal(IRT_SIG_ERR, &irt_error_handler);
+		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
+		signal(SIGTERM, &irt_term_handler);
+		signal(SIGINT, &irt_term_handler);
+		signal(SIGSEGV, &irt_abort_handler);
+		atexit(&irt_exit_handler);
+	}
+#endif
 
 	#ifdef USE_OPENCL
 		irt_log_comment("Running Insieme runtime with OpenCL!\n");
@@ -372,15 +374,15 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	handler.next = NULL;
 	handler.data = &condbundle;
 	handler.func = &_irt_runtime_standalone_end_func;
+	irt_mutex_lock(&condbundle.mutex);
 	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 
 	// wait for workers to finish the main work-item
-	irt_mutex_lock(&condbundle.mutex);
 	irt_cond_bundle_wait(&condbundle);
 	irt_mutex_unlock(&condbundle.mutex);
-	irt_mutex_destroy(&condbundle.mutex);
+	irt_cond_bundle_destroy(&condbundle);
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
@@ -394,9 +396,9 @@ irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun*
 	tempw.generator_id = 0;
 	irt_tls_set(irt_g_worker_key, &tempw); // slightly hacky
 
-	irt_context* context = irt_context_create_standalone(cleanup_fun);
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count, handle_signals);
-	irt_context_initialize(context, init_fun);
+	irt_context_initialize(context);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
@@ -417,18 +419,13 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 
 	if(getenv(IRT_REPORT_ENV)) {
 		irt_dbg_print_context(context);
+		irt_hw_dump_info();
 		exit(0);
 	}
 
 	irt_runtime_run_wi(impl, startup_params);
 
-	_irt_worker_end_all();
-
-	// shut-down context
-	irt_context_destroy(context);
-
-	IRT_DEBUG("Exiting ...\n");
-	irt_exit_handler();
+	irt_runtime_end_in_context(context);
 }
 
 

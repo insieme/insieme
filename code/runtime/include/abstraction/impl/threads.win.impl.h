@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -90,10 +90,10 @@ void irt_thread_cancel(irt_thread *t){
 	/*
 	from http://msdn.microsoft.com/en-us/library/windows/desktop/ms686717(v=vs.85).aspx :
 	TerminateThread can result in the following problems:
-	•If the target thread owns a critical section, the critical section will not be released.
-	•If the target thread is allocating memory from the heap, the heap lock will not be released.
-	•If the target thread is executing certain kernel32 calls when it is terminated, the kernel32 state for the thread's process could be inconsistent.
-	•If the target thread is manipulating the global state of a shared DLL, the state of the DLL could be destroyed, affecting other users of the DLL.
+	- If the target thread owns a critical section, the critical section will not be released.
+	- If the target thread is allocating memory from the heap, the heap lock will not be released.
+	- If the target thread is executing certain kernel32 calls when it is terminated, the kernel32 state for the thread's process could be inconsistent.
+	- If the target thread is manipulating the global state of a shared DLL, the state of the DLL could be destroyed, affecting other users of the DLL.
 
 	we don't care about all those issues since this function is only called in case of an error and the program
 	should exit
@@ -131,6 +131,10 @@ void irt_cond_var_init(irt_cond_var *cv) {
 	#else
 		InitializeConditionVariable(cv);
 	#endif
+}
+
+void irt_cond_var_destroy(irt_cond_var *cv) {
+	// there is no WinAPI call
 }
 
 void irt_cond_wake_all(irt_cond_var* cv){

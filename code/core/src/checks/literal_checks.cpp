@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,8 +51,8 @@ namespace checks {
 		#define FLAGS (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript)
 
 		// some static regex expressions to be utilized by literal format checks
-		boost::regex floatRegex		(R"(-?((0)|((([1-9][0-9]*)|0)\.[0-9]+[fF])|(0x0\.[0-9]*p-[0-9]+)))", FLAGS);
-		boost::regex doubleRegex	(R"(-?((0)|((([1-9][0-9]*)|0)\.[0-9]+)|(0x0\.[0-9]*p-[0-9]+)))", FLAGS);
+		boost::regex floatRegex		(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+)|f)?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
+		boost::regex doubleRegex	(R"((-?[0-9]+((\.[0-9]+)?(((E|e)(\+|-)[0-9]+))?)?)|(0x[0-9]+\.[0-9]+p(\+|-)[0-9]+))", FLAGS);
 
 		boost::regex charRegex		(R"('\\?.')", FLAGS);
 		boost::regex stringRegex	(R"("(\\.|[^\\"])*")", FLAGS);
@@ -74,7 +74,7 @@ namespace checks {
 		TypePtr type = address.as<LiteralPtr>()->getType();
 		LiteralPtr lit = address;
 
-		const string& value = address->getStringValue();
+		string value = address->getStringValue();
 
 
 		if (value == "this"){
@@ -85,17 +85,17 @@ namespace checks {
 		}
 
 		// a utility to register an error
-		auto addError = [&]() {
+		auto addError = [&](const std::string& reason) {
 			add(res, Message(address,
 					EC_FORMAT_INVALID_LITERAL,
-					format("Invalid format for %s literal: %s", toString(*type), value),
+					format("Invalid format for %s literal: %s\n\t%s", toString(*type), value, reason),
 					Message::ERROR));
 		};
 
 		// check booleans
 		if (basic.isBool(type)) {
 			if (lit != basic.getTrue() && lit != basic.getFalse()) {
-				addError();
+				addError("bool literal is not TRUE or FALSE");
 			}
 			return res;
 		}
@@ -112,7 +112,7 @@ namespace checks {
 
 		// check pattern
 		if (pattern && !boost::regex_match(value, *pattern)) {
-			addError();
+			addError(format ("value %s does not match type %s format", value, toString(*type)));
 			return res;
 		}
 
@@ -133,23 +133,35 @@ namespace checks {
 			} else if (basic.isInt8(type)) {
 				min = std::numeric_limits<int64_t>::min();
 				max = std::numeric_limits<int64_t>::max();
+			} else if (basic.isInt16(type)) {
+				// note int16 is used for long long, and it has same values as long for this architecture
+				min = std::numeric_limits<int64_t>::min();
+				max = std::numeric_limits<int64_t>::max();
 			} else {
 				assert(false && "Unsupported signed integer type encountered!");
 			}
 
-			if (!basic.isInt8(type) && *value.rbegin() == 'l') {
-				addError();
+			if (!(basic.isInt8(type) || basic.isInt16(type)) && *value.rbegin() == 'l') {
+				addError("long modifier (l) with no long type");
 				return res;
 			}
 
-			int64_t num = utils::numeric_cast<int64_t>(value);
-			if (!(min <= num && num <= max)) {
+			try{
+				int64_t num = utils::numeric_cast<int64_t>(value);
+				if (!(min <= num && num <= max)) {
+					add(res, Message(address,
+							EC_FORMAT_INVALID_LITERAL,
+							format("Literal out of range for type %s literal: %s", toString(*type), value),
+							Message::ERROR)
+					);
+					return res;
+				}
+			}catch(...) {
 				add(res, Message(address,
 						EC_FORMAT_INVALID_LITERAL,
-						format("Literal out of range for type %s literal: %s", toString(*type), value),
+						format("Malformed Literal %s literal: %s", toString(*type), value),
 						Message::ERROR)
 				);
-				return res;
 			}
 
 		} else if (basic.isUnsignedInt(type)) {
@@ -163,19 +175,29 @@ namespace checks {
 				max = std::numeric_limits<uint32_t>::max();
 			} else if (basic.isUInt8(type)) {
 				max = std::numeric_limits<uint64_t>::max();
+			} else if (basic.isUInt16(type)) {
+				max = std::numeric_limits<uint64_t>::max();
 			} else {
 				assert(false && "Unsupported signed integer type encountered!");
 			}
 
-			if (!basic.isUInt8(type) && *value.rbegin() == 'l') {
-				addError();
+			if (!(basic.isUInt8(type) || basic.isUInt16(type)) && *value.rbegin() == 'l') {
+				addError("long modifier (l) with no long type");
 				return res;
 			}
-
-			if (!(utils::numeric_cast<uint64_t>(value) <= max)) {
+			
+			try{
+				if (!(utils::numeric_cast<uint64_t>(value) <= max)) {
+					add(res, Message(address,
+							EC_FORMAT_INVALID_LITERAL,
+							format("Literal out of range for type %s literal: %s", toString(*type), value),
+							Message::ERROR)
+					);
+				}
+			}catch(...) {
 				add(res, Message(address,
 						EC_FORMAT_INVALID_LITERAL,
-						format("Literal out of range for type %s literal: %s", toString(*type), value),
+						format("Malformed Literal %s literal: %s", toString(*type), value),
 						Message::ERROR)
 				);
 			}

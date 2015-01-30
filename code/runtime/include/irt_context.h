@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,9 +50,14 @@
 
 IRT_MAKE_ID_TYPE(context);
 
+typedef void (init_context_fun)(irt_context* context);
+typedef void (cleanup_context_fun)(irt_context* context);
+
 struct _irt_context {
 	irt_context_id id;
 	irt_client_app* client_app;
+	init_context_fun* init_fun;
+	cleanup_context_fun* cleanup_fun;
 	uint32 type_table_size;
 	irt_type* type_table;
 	uint32 impl_table_size;
@@ -81,9 +86,9 @@ struct _irt_context {
 
 static inline irt_context* irt_context_get_current();
 
-irt_context* irt_context_create(irt_client_app* app);
-irt_context* irt_context_create_standalone(cleanup_context_fun*);
-void irt_context_initialize(irt_context* context, init_context_fun* init_fun);
+irt_context* irt_context_create(irt_client_app*, init_context_fun*, cleanup_context_fun*);
+irt_context* irt_context_create_standalone(init_context_fun*, cleanup_context_fun*);
+void irt_context_initialize(irt_context* context);
 void irt_context_destroy(irt_context* context);
 
 

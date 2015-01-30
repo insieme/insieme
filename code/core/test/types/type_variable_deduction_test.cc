@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -907,7 +907,7 @@ TEST(TypeVariableDeduction, IntTypeParamVariableNameBug) {
 	auto call = builder.callExpr(basic.getVectorPointwise(), op);
 
 	EXPECT_EQ("((uint<#a>,uint<#a>)->uint<#a>)", toString(*op->getType()));
-	EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)->vector<uint<#a>,#l>)", toString(*call->getType()));
+	EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)=>vector<uint<#a>,#l>)", toString(*call->getType()));
 
 }
 
@@ -1038,10 +1038,9 @@ TEST(TypeVariableDeduction, ReductionType) {
 
 	auto res = getTypeVariableInstantiation(manager, funType, args);
 	EXPECT_TRUE(res);
-	std::cout << *res << "\n";
+
 	EXPECT_EQ("'a", toString(*res->applyTo(builder.typeVariable("a"))));
 	EXPECT_EQ("'b", toString(*res->applyTo(builder.typeVariable("b"))));
-
 
 }
 

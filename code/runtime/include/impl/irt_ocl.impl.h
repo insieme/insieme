@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -754,7 +754,6 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 				free(lker->args[i]);
 			free(lker->args);
 			free(lker);
-			free(kernel);
 			return;
 		}
 #endif
@@ -777,14 +776,13 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, uint32_t num_kernels) {
 	uint32_t num_devices = irt_ocl_get_num_devices();
 
-	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel) * num_devices * num_kernels);
 	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*) * num_devices);
 
 	for (uint32_t i = 0; i < num_devices; ++i) {
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		IRT_INFO("Compiling OpenCL program in \n");
 		irt_ocl_print_device_short_info(dev);
-		context->kernel_binary_table[i] = &(tmp[i*num_kernels]);
+		context->kernel_binary_table[i] = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel) * num_kernels);
 		for (uint32_t j = 0; j < num_kernels; ++j) {
 			irt_ocl_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
 		}
@@ -801,8 +799,8 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, uint32_t g_kernel_code
 			printf("Releasing kernel device: %d  kernel %d\n", i, j);
 			irt_ocl_release_kernel(&(context->kernel_binary_table[i][j]));
 		}
+		free(context->kernel_binary_table[i]);
 	}
-	free(context->kernel_binary_table[0]);
 	free(context->kernel_binary_table);
 	context->kernel_binary_table = NULL;
 }
@@ -821,9 +819,9 @@ void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global
 #ifdef LOCAL_MODE
 	if (node == 0) {
 			irt_ocl_local_kernel* lkernel = (irt_ocl_local_kernel*)(kernel->kernel_add);
-		#ifdef IRT_OCL_DEBUG
+
 			IRT_INFO("Running Opencl Kernel in \"%s\"\n", lkernel->local_dev->name);
-		#endif
+
 			irt_spin_lock(&(lkernel->kernel_lock));
 
 			lkernel->type = IRT_OCL_NDRANGE;

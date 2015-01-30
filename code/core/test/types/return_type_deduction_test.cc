@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -152,7 +152,7 @@ namespace types {
 		ExpressionPtr pointwise = builder.callExpr(manager.getLangBasic().getVectorPointwise(), add);
 
 		EXPECT_EQ("((uint<#a>,uint<#a>)->uint<#a>)", toString(*add->getType()));
-		EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)->vector<uint<#a>,#l>)", toString(*pointwise->getType()));
+		EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)=>vector<uint<#a>,#l>)", toString(*pointwise->getType()));
 
 	}
 
@@ -284,6 +284,31 @@ namespace types {
 		auto c = builder.callExpr(f,a);
 
 		EXPECT_EQ("p<#m,#n>", toString(*c->getType()));
+	}
+
+	TEST(ReturnTypeDeduction, VectorPointwise) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto op1 = builder.parseExpr(
+			"(vector<'elem1,#l> v1, vector<'elem2,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
+			"	ref<vector<'res,#l>> res = var(vector<'res,#l>);"
+			"	return *res;"
+			"}(v1, v2, lit(\"x\":('elem1,'elem2)->'res))"
+		);
+
+		EXPECT_EQ("((vector<'elem1,#l>,vector<'elem2,#l>)=>vector<'res,#l>)", toString(*op1->getType()));
+
+		auto op2 = builder.parseExpr(
+			"(vector<int<#a>,#l> v1, vector<int<#a>,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
+			"	ref<vector<'res,#l>> res = var(vector<'res,#l>);"
+			"	return *res;"
+			"}(v1, v2, int.add)"
+		);
+
+		EXPECT_EQ("((vector<int<#a>,#l>,vector<int<#a>,#l>)=>vector<int<#a>,#l>)", toString(*op2->getType()));
+
 	}
 
 } // end namespace types

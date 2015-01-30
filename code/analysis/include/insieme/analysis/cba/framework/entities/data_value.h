@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -851,6 +851,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct projection_op {
+			projection_op() {}
 			template<typename IndexType>
 			const Data<BaseLattice>& operator()(const Data<BaseLattice>& value, const IndexType& index) const {
 				return value[index];
@@ -859,6 +860,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct mutation_op {
+			mutation_op() {}
 			Data<BaseLattice> operator()(DataManager<BaseLattice>& mgr, const Data<BaseLattice>& cur_state, const DataPath& path, const Data<BaseLattice>& new_value) const {
 				// forward request to data object
 				return cur_state.mutate(mgr, path, new_value);
@@ -867,6 +869,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct meet_assign_op {
+			meet_assign_op() {}
 			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return a.meetAssign(b);
 			}
@@ -874,6 +877,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct less_op {
+			less_op() {}
 			template<typename E>
 			bool operator()(const E& e, const Data<BaseLattice>& a) const {
 				return a.contains(e);
@@ -1482,6 +1486,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct projection_op {
+			projection_op() {}
 			template<typename IndexType>
 			Data<BaseLattice> operator()(const Data<BaseLattice>& value, const IndexType& index) const {
 				return value[index];
@@ -1490,6 +1495,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct mutation_op {
+			mutation_op() {}
 			Data<BaseLattice> operator()(DataManager<BaseLattice>& mgr, const Data<BaseLattice>& cur_state, const DataPath& path, const Data<BaseLattice>& new_value) const {
 				return cur_state.mutate(mgr, path, new_value);
 			}
@@ -1497,6 +1503,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct meet_assign_op {
+			meet_assign_op() {}
 			bool operator()(Data<BaseLattice>& a, const Data<BaseLattice>& b) const {
 				return a.meetAssign(b);
 			}
@@ -1504,6 +1511,7 @@ namespace cba {
 
 		template<typename BaseLattice>
 		struct less_op {
+			less_op() {}
 			template<typename E>
 			bool operator()(const E& e, const Data<BaseLattice>& a) const {
 				return a.contains(e);

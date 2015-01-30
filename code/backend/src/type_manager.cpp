@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -312,7 +312,17 @@ namespace backend {
 				const string& name = genericType->getFamilyName();
 				const string& header = annotations::c::getAttachedInclude(type);
 
-				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				bool isEnum = type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type);
+				TypeInfo* info;
+				if(isEnum ) {
+					//extract first arg of insieme enum (which is the original name of the enum)
+					//and create a corresponding type info.
+					auto innerType = genericType->getTypeParameter(0);
+					assert(innerType.isa<core::GenericTypePtr>() && "Inner Type of an Insieme enum has to be a GenericType");
+					info = type_info_utils::createInfo(converter.getFragmentManager(), innerType.as<core::GenericTypePtr>()->getFamilyName(), header);
+				} else {
+					info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				}
 
 				// if is an enum, there is no need to translate inner generic types, since it is the name of the enum construct
 				if (!(type->getNodeManager().getLangExtension<core::lang::EnumExtension>().isEnumType(type))) {
@@ -336,9 +346,14 @@ namespace backend {
 								info->definition->addDependency(curInfo->definition);
 							}
 						}
-
-						// add type to parameter list
-						cType->parameters.push_back(curInfo->rValueType);
+                        
+                        // if we have a function type as template argument, we need to
+                        // avoid that the asterisk is written -> directly take the element type.
+                        if(curInfo->rValueType.isa<c_ast::PointerTypePtr>() && cur.isa<core::FunctionTypePtr>()) {
+                            cType->parameters.push_back(curInfo->rValueType.as<c_ast::PointerTypePtr>()->elementType);
+                        } else {
+                            cType->parameters.push_back(curInfo->rValueType);
+                        }
 					}
 				}
 
@@ -451,7 +466,6 @@ namespace backend {
 			if (basic.isInt(ptr)) {
 
 				c_ast::PrimitiveType::CType type;
-
 				if (basic.isUInt1(ptr)) {
 					type = c_ast::PrimitiveType::UInt8;
 				} else if (basic.isUInt2(ptr)) {
@@ -460,6 +474,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::UInt32;
 				} else if (basic.isUInt8(ptr)) {
 					type = c_ast::PrimitiveType::UInt64;
+				} else if (basic.isUInt16(ptr)) {
+					type = c_ast::PrimitiveType::UInt128;
 				} else if (basic.isInt1(ptr)) {
 					type = c_ast::PrimitiveType::Int8;
 				} else if (basic.isInt2(ptr)) {
@@ -468,6 +484,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::Int32;
 				} else if (basic.isInt8(ptr)) {
 					type = c_ast::PrimitiveType::Int64;
+				} else if (basic.isInt16(ptr)) {
+					type = c_ast::PrimitiveType::Int128;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;
 					//assert(false && "Unsupported Integer type encountered!");

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,7 @@ void irt_dbg_print_context(irt_context* c) {
 		for(uint32 j = 0; j<impl->num_variants; ++j) {
 			irt_wi_implementation_variant *v = &impl->variants[j];
 			printf("    Variant %2u -- requirements (DIs/channels): %3u/%3u, meta info index: %3ld\n",
-				   j, v->num_required_data_items, v->num_required_channels, v->meta_info ? v->meta_info - c->info_table : 0);
+				   j, v->num_required_data_items, v->num_required_channels, v->meta_info ? (long signed)(v->meta_info - c->info_table) : 0l);
 		}
 	}
 	printf("----\nMeta Info table (%u entries):\n", c->info_table_size);

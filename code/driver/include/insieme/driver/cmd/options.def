@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -57,15 +57,16 @@ FLAG("gem-cross-compile", "gem-cross-compile", GemCrossCompile, false, "Set cros
 
 // backend options
 FLAG("estimate-effort",		"estimate-effort",		EstimateEffort,	false,	"Enables generation of the effort estimation function")
+FLAG("use-pm",                          "use-pm",            UsePM,		false,	"Perform code transformations using the Polyhedral Model")
+FLAG("mark-scop",       	"mark-scop",            MarkScop,		false,	"Mark SCoPs (Static COntrol Parts) in the IR (analysis only)")
 
 // output options
 FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
 FLAG("show-line-no",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
-FLAG("use-pm",                          "use-pm",            UsePM,		false,	"Perform code transformations using the Polyhedral Model")
-FLAG("mark-scop",       	"mark-scop",            MarkScop,		false,	"Mark Static Control Parts int the IR")
+//FLAG("timer",              "timer",                 UseTimer,   false, "Show timing information for code analysis and transformation")
 FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check on the generated IR")
 FLAG("show-stats",			"show-stats", 			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
-FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
+//FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
 
 //OPTION(opt_name, opt_id, var_name, var_type, var_help)
 
@@ -86,6 +87,7 @@ OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph o
 
 OPTION("intercept",			"intercept", 		Interceptions,		std::vector<std::string>, 	"Add a regular expression to be intercepted")
 OPTION("intercept-include",			"intercept-include", 		InterceptionHeaderDirs , std::vector<path>, 	"Add include dir which contains headers to be intercepted")
+OPTION("cross-compile", "cross-compile", CrossCompile, std::string, "Set cross compilation. System Headers path must be provided.")
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")

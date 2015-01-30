@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -179,26 +179,14 @@ namespace cba {
 
 		void visitCallExpr(const CallExprInstance& call, const Context& ctxt, Constraints& constraints) {
 
-			// conduct std-procedure
-			super::visitCallExpr(call, ctxt, constraints);
-
-			// only care for integer expressions calling literals
-			if (!base.isBool(call->getType())) return;
-
 			// check whether it is a literal => otherwise basic data flow is handling it
 			auto fun = call->getFunctionExpr();
-			if (!fun.isa<LiteralPtr>()) return;
 
 			// get some labels / ids
 			auto B_res = cba.getVar(B, cba.getLabel(call), ctxt);
 
 			// handle unary literals
 			if (call.size() == 1u) {
-
-				// check whether it is a de-ref
-				if (base.isRefDeref(fun)) {
-					return;		// has been handled by super!
-				}
 
 				// support negation
 				if (base.isBoolLNot(fun)) {
@@ -214,9 +202,8 @@ namespace cba {
 
 			// and binary operators
 			if (call.size() != 2u) {
-				// this value is unknown => might be both
-				constraints.add(elem(true, B_res));
-				constraints.add(elem(false, B_res));
+				// conduct std-procedure
+				super::visitCallExpr(call, ctxt, constraints);
 				return;
 			}
 
@@ -311,9 +298,9 @@ namespace cba {
 				}
 			}
 
-			// otherwise it is unknown, hence both may be possible
-			constraints.add(elem(true, B_res));
-			constraints.add(elem(false, B_res));
+			// conduct std-procedure
+			super::visitCallExpr(call, ctxt, constraints);
+			return;
 		}
 
 	};

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -75,69 +75,61 @@ typedef struct _irt_optimizer_resources {
     #define ISOLATE_WALL_TIME
     #include "irt_metrics.def"
 
-    #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \
-    _data_type__ cpu_time;
-    #define ISOLATE_METRIC
-    #define ISOLATE_CPU_TIME
-    #include "irt_metrics.def"
+    int quality;
 
-    // TODO: power data type?
-    float power;
+    int samplings;
 } irt_optimizer_resources;
 
 // Data types for runtime collected data 
 
+#define IRT_OPTIMIZER_PARAM_COUNT 8
 // An id is needed because of hashmap (lookup_table) implementations
-struct _irt_optimizer_wi_data;
 typedef struct _irt_optimizer_wi_data_id {
-    union {
-        uint64 full;
-        struct {
-            // TODO: only a single param clause per region is supported 
-            uint32 param_value;
-            uint16 frequency;
-            uint16 thread_count;
-        };
+    struct {
+        uint64 frequency;
+        uint64 thread_count;
+        uint64 param_value[IRT_OPTIMIZER_PARAM_COUNT];
     };
-    struct _irt_optimizer_wi_data* cached;
+    uint64 eos;
 } irt_optimizer_wi_data_id;
 
-typedef struct _irt_optimizer_wi_data {
-    irt_optimizer_wi_data_id id;
-    struct _irt_optimizer_wi_data* lookup_table_next;
-} irt_optimizer_wi_data;
+//uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
+//    // Python integer tuple hash
+//    uint32 value = 0x345678;
+//
+//    value = (1000003 * value) ^ id.param_value;
+//    value = (1000003 * value) ^ id.thread_count;
+//    value = (1000003 * value) ^ id.frequency;
+//    value = value ^ (3);
+//
+//    return (value == (uint32)-1) ? -2 : value;
+//}
 
-uint32 irt_optimizer_hash(irt_optimizer_wi_data_id id) {
-    // Python integer tuple hash
-    uint32 value = 0x345678;
-
-    value = (1000003 * value) ^ id.param_value;
-    value = (1000003 * value) ^ id.thread_count;
-    value = (1000003 * value) ^ id.frequency;
-    value = value ^ (3);
-
-    return (value == (uint32)-1) ? -2 : value;
-}
+typedef struct _irt_optimizer_param_qual_range {
+    uint32 lowb[IRT_OPTIMIZER_PARAM_COUNT];
+    uint32 uppb[IRT_OPTIMIZER_PARAM_COUNT];
+    uint32 step[IRT_OPTIMIZER_PARAM_COUNT];
+} irt_optimizer_param_qual_range;
 
 typedef struct _irt_optimizer_runtime_data {
-    IRT_CREATE_LOCKFREE_LOOKUP_TABLE(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS)
     irt_optimizer_wi_data_id best;
     irt_optimizer_resources best_resources;
     irt_optimizer_wi_data_id cur;
     irt_optimizer_resources cur_resources;
+    irt_optimizer_wi_data_id max;
+    irt_optimizer_param_qual_range param_qual_range;
+    bool hc_end;        // true if hill climbing completed
+    int16 hc_elem;      // element in irt_optimizer_wi_data_id currently hill climbed 
+    int8 hc_dir;        // current hill climbing direction
     irt_spinlock spinlock;
 } irt_optimizer_runtime_data;
 
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER
-IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(optimizer_wi_data, lookup_table_next, irt_optimizer_hash, IRT_OPTIMIZER_LT_BUCKETS, 0);
-#endif
-
-uint64_t irt_optimizer_pick_in_range(uint64_t max);
+uint64 irt_optimizer_pick_in_range(int id, uint64 max, int qual_lb, int qual_ub, int qual_st);
 void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant, irt_work_item* wi, bool force_computation);
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
 uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant);
-irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var);
-void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data);
+irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_wi_implementation_variant* source_variant);
+void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_optimizer_runtime_data* data);
 
 #endif // ifndef __GUARD_IRT_OPTIMIZER_H

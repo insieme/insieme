@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -365,6 +365,12 @@ namespace {
 
 }
 
+std::ostream& MessageList::printTo(std::ostream& out) const {
+	if (empty()) return out << "[]";
+	return out << "[\n\t" << join("\n\t",getAll()) << "\n]";
+}
+
+
 void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
 	// if there is no new element => skip
 	if (!list) {
@@ -431,9 +437,3 @@ CheckPtr combine(const CheckList& list) {
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
-
-
-std::ostream& operator<<(std::ostream& out, const insieme::core::checks::MessageList& messageList) {
-	if (messageList.empty()) return out << "[]";
-	return out << "[\n\t" << join("\n\t",messageList.getAll()) << "\n]";
-}

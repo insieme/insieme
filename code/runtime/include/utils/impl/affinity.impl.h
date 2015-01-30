@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -110,7 +110,7 @@ static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mas
 // affinity policy handling ----------------------------------------------------
 
 irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
-	uint32 ncpus = irt_get_num_cpus();
+	uint32 ncpus = irt_hw_get_num_cpus();
 	uint32 nworkers = irt_g_worker_count;
 	uint32 d = ncpus/nworkers;
 	uint32 pos = d;
@@ -173,7 +173,7 @@ static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy 
 	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
 	skip++;
 	uint32 pos = id*skip;
-	uint32 ncpus = irt_get_num_cpus();
+	uint32 ncpus = irt_hw_get_num_cpus();
 	uint32 ret = (pos+(pos+1)/ncpus)%ncpus;
 	return irt_affinity_mask_create_single_cpu((pos == ncpus-1) ? ncpus-1 : ret);
 }

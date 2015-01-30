@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,22 +29,21 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
-
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
+#include "insieme/analysis/polyhedral/except.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/analysis/normalize.h"
-
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
@@ -420,7 +419,7 @@ TEST(ScopRegion, WhileStmt) {
 	VariablePtr cond = IRBuilder(mgr).variable( mgr.getLangBasic().getBool() );
 	WhileStmtPtr whileStmt = builder.whileStmt(cond, forStmt);
 
-	scop::AddressList scops = scop::mark(whileStmt);
+	AddressList scops = scop::mark(whileStmt);
 
 	EXPECT_FALSE(whileStmt->hasAnnotation(scop::ScopRegion::KEY));
 	EXPECT_EQ(1u, scops.size());
@@ -446,7 +445,7 @@ TEST(ScopRegion, NotAScopForStmt) {
 
 	EXPECT_TRUE(compStmt);
 
-	scop::AddressList scops = scop::mark(compStmt);
+	AddressList scops = scop::mark(compStmt);
 
 	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 	EXPECT_EQ(0u, scops.size());
@@ -477,7 +476,7 @@ TEST(ScopRegion, ForStmtToIR) {
 	NodePtr res = scop->toIR(mgr);
 	res = analysis::normalize(res);
 	EXPECT_EQ("for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
-				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
 			  "}", 
 			  toString(*res)
 			 );
@@ -514,7 +513,7 @@ TEST(ScopRegion, ForStmtToIR2) {
 		"{"
 			"ref.assign(v3, 0); "
 			"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
-				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
 			"};"
 		"}", toString(*res));
 
@@ -550,7 +549,7 @@ TEST(ScopRegion, IfStmtSelect) {
 	NodeManager mgr1;
 	NodePtr res = scop->toIR(mgr1);
 	EXPECT_EQ(
-		"{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v4) {return int.eq(v4, 5);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
+		"{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v4) {return int.eq(v4, 5);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -589,7 +588,7 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	NodeManager mgr1;
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
-	EXPECT_EQ("{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
+	EXPECT_EQ("{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -627,7 +626,7 @@ TEST(ScopRegion, ForStmtToIR3) {
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
 
-	EXPECT_EQ("if(int.ge(v2, 6)) {for(int<4> v1 = 1 .. int.add(cloog.floor(int.add(cast<int<4>>(v2), cast<int<4>>(-3)), 3), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v1, v3)));};} else {}", toString(*res));
+	EXPECT_EQ("if(int.ge(v2, 6)) {for(int<4> v1 = 1 .. int.add(cloog.floor(int.add(cast<int<4>>(v2), cast<int<4>>(-3)), 3), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v1, v3)));};} else {}", toString(*res));
 	
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -799,7 +798,7 @@ TEST(ScopRegion, ForStmtToIR4) {
 	NodePtr res = scop->toIR(mgr);
 	// normalize varnames
 	res = analysis::normalize(res);
-	EXPECT_EQ("{ref<int<4>> v0 = v4; for(int<4> v2 = 10 .. int.add(49, 1) : 1) {ref.assign(v0, ref.deref(v4)); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v1, cast<uint<8>>(int.add(v2, v3)));};}", toString(*res));
+	EXPECT_EQ("{ref<int<4>> v0 = v4; for(int<4> v2 = 10 .. int.add(49, 1) : 1) {ref.assign(v0, ref.deref(v4)); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));};}", toString(*res));
 
 }
 

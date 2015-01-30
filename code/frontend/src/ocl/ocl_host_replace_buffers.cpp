@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,13 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/utils/logging.h"
 #include "insieme/analysis/cba/analysis.h"
+
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
@@ -43,9 +44,10 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/types/cast_tool.h"
+
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
-#include "insieme/frontend/utils/ir_cast.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -141,7 +143,7 @@ ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, co
 	NodeManager& mgr = size->getNodeManager();
 	IRBuilder builder(mgr);
 
-	ExpressionPtr fun = getClCreateBuffer(copyPtr, frontend::utils::isNullPtrExpression(errcode_ret), builder);
+	ExpressionPtr fun = getClCreateBuffer(copyPtr, core::types::isNullPtrExpression(errcode_ret), builder);
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
@@ -289,6 +291,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 //std::cout << "arr: " << expr << " root " << getRootVariable(expr) << std::endl;
 			expr = utils::getRootVariable(expr).as<ExpressionAddress>();
+			assert(expr && "cannot found root variable");
 
 			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
@@ -297,6 +300,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			return;
 		}
 		ExpressionAddress rootExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
+		assert(rootExpr && "cannot found root variable");
 
 		TypePtr newType = transform::replaceAll(mgr, bufferExpr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 		// update structs if required

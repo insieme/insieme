@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -72,7 +72,7 @@ TEST(Lists, listConversion) {
 	vector<int> back = toValue<vector<int>>(irList);
 
 	EXPECT_EQ("[1,2,3]", toString(list));
-	EXPECT_EQ("cons(1, cons(2, cons(3, empty(int<4>))))", toString(*irList));
+	EXPECT_EQ("cons(1, cons(2, cons(3, empty(type<int<4>>))))", toString(*irList));
 
 	EXPECT_TRUE(isEncodingOf<vector<int>>(irList));
 	EXPECT_EQ(list, back);
@@ -81,7 +81,7 @@ TEST(Lists, listConversion) {
 
 
 	// test another type
-	EXPECT_EQ("cons(3.75, cons(1.47, empty(real<8>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
+	EXPECT_EQ("cons(3.75, cons(1.47, empty(type<real<8>>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
 
 }
 

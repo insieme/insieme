@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -110,6 +110,16 @@ inline std::vector<string> split(const string& str) {
 	         istream_iterator<string>(),
 	         back_inserter<vector<string> >(tokens));
 	return tokens;
+}
+
+/**
+ * A utility method to find the common prefix of two strings.
+ *
+ * @return a new string containing the prefix
+ */
+inline std::string commonPrefix(std::string a, std::string b) {
+	if(a.size() > b.size()) std::swap(a,b) ;
+	return std::string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
 }
 
 /**

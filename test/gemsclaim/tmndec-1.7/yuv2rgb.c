@@ -504,6 +504,92 @@ unsigned char *out;
  *--------------------------------------------------------------
  */
 
+#include <inttypes.h>
+
+// deposterization: smoothes posterized gradients from low-color-depth (e.g. 444, 565, compressed) sources
+// scaling doesn't match Color32DitherImage pattern. The latter function should be updated (more efficient solution)
+void deposterizeHfunc(uint32_t* data, uint32_t* out, int w, int l, int u, int scaling) {
+    static const int T = 8;
+    int nu = u / scaling * scaling;
+    int nw = w / scaling * scaling;
+
+    #pragma omp for
+    for(int y = l; y < nu; y+=scaling) {
+        for(int x = 0; x < nw; x+=scaling) {
+            int inpos = y*w + x;
+            uint32_t center = data[inpos];
+            if(x==0 || x==w-scaling) {
+                out[y*w + x] = center;
+                continue;
+            }
+            uint32_t left = data[inpos - 1];
+            uint32_t right = data[inpos + scaling];
+            out[y*w + x] = 0;
+            // upper bound should be 3. 1 is valid if working with alpha component
+            for(int c=0; c<1; ++c) {
+                uint8_t lc = (( left>>c*8)&0xFF);
+                uint8_t cc = ((center>>c*8)&0xFF);
+                uint8_t rc = (( right>>c*8)&0xFF);
+                if((lc != rc) && ((lc == cc && abs((int)((int)rc)-cc) <= T) || (rc == cc && abs((int)((int)lc)-cc) <= T))) {
+                    // blend this component
+                    out[y*w + x] |= ((rc+lc)/2) << (c*8);
+                } else {
+                    // no change for this component
+                    out[y*w + x] |= cc << (c*8);
+                }
+            }
+
+            if(scaling > 1) {
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        out[(y+j)*w + x + i] = out[y*w +x];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void deposterizeVfunc(uint32_t* data, uint32_t* out, int w, int h, int l, int u, int scaling) {
+    static const int T = 8;
+    int nu = u / scaling * scaling;
+    int nw = w / scaling * scaling;
+    #pragma omp for
+    for(int y = l; y < nu; y+=scaling) {
+        for(int x = 0; x < nw; x+=scaling) {
+            uint32_t center = data[ y * w + x];
+            if(y==0 || y==h-scaling) {
+                out[y*w + x] = center;
+                continue;
+            }
+            uint32_t upper = data[(y-1) * w + x];
+            uint32_t lower = data[(y+scaling) * w + x];
+            out[y*w + x] = 0;
+            // upper bound should be 3. 1 is valid if working with alpha component
+            for(int c=0; c<1; ++c) {
+                uint8_t uc = (( upper>>c*8)&0xFF);
+                uint8_t cc = ((center>>c*8)&0xFF);
+                uint8_t lc = (( lower>>c*8)&0xFF);
+                if((uc != lc) && ((uc == cc && abs((int)((int)lc)-cc) <= T) || (lc == cc && abs((int)((int)uc)-cc) <= T))) {
+                    // blend this component
+                    out[y*w + x] |= ((lc+uc)/2) << (c*8);
+                } else {
+                    // no change for this component
+                    out[y*w + x] |= cc << (c*8);
+                }
+            }
+
+            if(scaling > 1) {
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        out[(y+j)*w + x + i] = out[y*w +x];
+                    }
+                }
+            }
+        }
+    }
+}
+
 /*
  * This is a copysoft version of the function above with ints instead
  * of shorts to cause a 4-byte pixel size
@@ -517,7 +603,6 @@ unsigned char *out;
     int cols;
     int rows;
 
-    int y;
     int cols_2;
 
     cols = coded_picture_width;
@@ -528,10 +613,33 @@ unsigned char *out;
     }
     cols_2 = cols/2;
 
-    //#pragma omp parallel for objective(0*E+1*P+0*T)
-    #pragma omp parallel for schedule(dynamic) 
-    for (y=0; y<rows; y+=2) {
-        for (int x=0; x<cols_2; x++) {
+    int scaling = 1;
+    // irt_merge( irt_parallel ( wi_5 ) )
+    //
+    // wi_5 () + meta {
+    //  region start
+    //  irt_pfor( func )
+    //  region end
+    // }
+   
+    unsigned int *tmp_out, *tmp_out2;
+
+    if(expand) {
+        tmp_out = (unsigned int *)malloc(4*coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+        tmp_out2 = (unsigned int *)malloc(4*coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+    }
+    else {
+        tmp_out = (unsigned int *)malloc(coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+        tmp_out2 = (unsigned int *)malloc(coded_picture_width*coded_picture_height*sizeof (unsigned int)); 
+    }
+
+    #pragma omp parallel //objective(0*E+1*P+0*T+0*Q:T<0.041;Q<3) param(scaling, range(1: 8: 1; 0: 7: 1))
+    {
+    #pragma omp for schedule(dynamic)
+    //for (int yt=0; yt<rows*8; yt+=2)
+    //    int y = yt % rows;
+    for (int y=0; y<rows; y+=2*scaling) {
+        for (int x=0; x<cols_2; x+=scaling) {
             int R, G, B;
 
             int L, CR, CB;
@@ -545,8 +653,8 @@ unsigned char *out;
             unsigned char *cr = src[2] + offset;
             unsigned char *lum = src[0] + 2*(offset + (y/2) * cols_2);
             unsigned char *lum2 = src[0] + (offset + (y/2) * cols_2 + cols_2)*2;
-            unsigned int *row1 = (unsigned int*)out + 2*(offset + (y/2) * cols_2); 
-            unsigned int *row2 = (unsigned int*)out + (cols_2 + offset + (y/2) * cols_2)*2; 
+            unsigned int *row1 = tmp_out + 2*(offset + (y/2) * cols_2);
+            unsigned int *row2 = tmp_out + (cols_2 + offset + (y/2) * cols_2)*2; 
 
             CR = *cr++;
             CB = *cb++;
@@ -611,13 +719,73 @@ unsigned char *out;
             B = L + cb_b;
 
             *row2++ = (r_2_pix[R] | g_2_pix[G] | b_2_pix[B]);
+
+            if(scaling > 1) {
+                int pos = row1 -1 -tmp_out;
+                int yy = pos / cols - scaling +1;
+                int xx = pos % cols - scaling;
+
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row1-2);
+                    }
+                }
+
+                xx += scaling;
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row1-1);
+                    }
+                }
+
+                xx -= scaling;
+                yy += scaling;
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row2-2);
+                    }
+                }
+
+                xx += scaling;
+                for(int j=0; j<scaling; j++) {
+                    for(int i=0; i<scaling; i++) {
+                        if(yy+j >= 0 && yy+j < rows && xx+i >=0 && xx+i < cols)
+                            *(tmp_out + (yy+j)*cols + (xx+i)) = *(row2-1);
+                    }
+                }
+            }
         }
     }
+    
+    if(deposterizeH && deposterizeV) {
+        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)tmp_out2, cols, 0, rows, scaling);
+        deposterizeVfunc((uint32_t*)tmp_out2, (uint32_t*)out, cols, rows, 0, rows, scaling);
+    }
+    else if(deposterizeH && !deposterizeV) {
+        deposterizeHfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, 0, rows, scaling);
+    }
+    else if(!deposterizeH && deposterizeV) {
+        deposterizeVfunc((uint32_t*)tmp_out, (uint32_t*)out, cols, rows, 0, rows, scaling);
+    }
+    else {
+        #pragma omp single
+        {
+            if(expand)
+                memcpy(out, tmp_out, 4*coded_picture_width*coded_picture_height*sizeof (unsigned int));
+            else
+                memcpy(out, tmp_out, coded_picture_width*coded_picture_height*sizeof (unsigned int));
+        }
+    }
+
+    } // parallel
+
+
+    free(tmp_out);
+    free(tmp_out2);
 }
-
-
-
-
 
 #endif
 

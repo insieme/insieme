@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,6 +54,7 @@
 
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_visitor.h"
@@ -123,6 +124,39 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeO
 	core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
 	return retExpr;
 }
+
+
+insieme::core::ExpressionPtr Cpp11Plugin::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact) {
+    //get the sub expression of the std init list expression
+    auto expr = initList->getSubExpr();
+    auto builder = convFact.getIRBuilder();
+    auto& mgr = convFact.getNodeManager();
+    auto& ext = mgr.getLangExtension<insieme::core::lang::IRppExtensions>();
+
+    //we must have a materialize below the cxxstdinitlistexpr
+    if(llvm::dyn_cast<clang::MaterializeTemporaryExpr>(expr)) {
+        //get the materialize
+        auto materialize = llvm::cast<clang::MaterializeTemporaryExpr>(expr);
+        //if we have an non builtin element type there might be a cxxbindtemporaryexpr below
+        //but at least we know that a initlistexpr is somewhere. either directly after the materializeexpr
+        //or after the cxxbindtemporary
+        const clang::InitListExpr* innerInitList;
+        //if we have a bind temporary, extract the inner init list expression
+        //else get it directly from the materialize expression
+        if(llvm::dyn_cast<clang::CXXBindTemporaryExpr>(materialize->GetTemporaryExpr())) {
+            auto bindExpr = llvm::cast<clang::CXXBindTemporaryExpr>(materialize->GetTemporaryExpr());
+            innerInitList = llvm::cast<clang::InitListExpr>(bindExpr->getSubExpr());
+        } else {
+            innerInitList = llvm::cast<clang::InitListExpr>(materialize->GetTemporaryExpr());
+        }
+        //perfect, convert the inner list, create a literal out of it and return
+        auto retExpr = convFact.convertExpr(innerInitList);
+        return builder.callExpr(ext.getStdInitListExpr(), retExpr, builder.getTypeLiteral(convFact.convertType(initList->getType())));
+    }
+    assert_fail() << "failed to convert a CXXStdInitializerListExpr";
+    return nullptr;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 types
@@ -197,29 +231,29 @@ core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* de
 }
 
 
-stmtutils::StmtWrapper Cpp11Plugin::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) { 
+stmtutils::StmtWrapper Cpp11Plugin::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) {
 	auto builder = convFact.getIRBuilder();
-	
+
 	const clang::DeclStmt* rangeStmt 		= frStmt->getRangeStmt ();
 	const clang::DeclStmt* beginStmt 		= frStmt->getBeginEndStmt ();
 	const clang::Expr* cond				= frStmt->getCond ();
 	const clang::Expr* inc 				= frStmt->getInc ();
 	const clang::DeclStmt* loopVarStmt	= frStmt->getLoopVarStmt ();
 	const clang::Stmt* body 				= frStmt->getBody ();
-	
-	core::StatementPtr range = convFact.convertStmt(rangeStmt);  
-	core::StatementPtr begin = convFact.convertStmt(beginStmt);    
-	core::ExpressionPtr condIr = convFact.convertExpr(cond);    
-	core::ExpressionPtr incIr = convFact.convertExpr(inc);   
-	core::StatementPtr loopVarStmtIr = convFact.convertStmt(loopVarStmt);   
+
+	core::StatementPtr range = convFact.convertStmt(rangeStmt);
+	core::StatementPtr begin = convFact.convertStmt(beginStmt);
+	core::ExpressionPtr condIr = convFact.convertExpr(cond);
+	core::ExpressionPtr incIr = convFact.convertExpr(inc);
+	core::StatementPtr loopVarStmtIr = convFact.convertStmt(loopVarStmt);
 	core::StatementPtr  bodyIr = convFact.convertStmt(body);
 
 	StatementList stmts;
 	stmts.push_back(loopVarStmtIr);
 	stmts.push_back(bodyIr);
 	stmts.push_back(incIr);
-	core::CompoundStmtPtr fullBody = builder.compoundStmt(stmts);   
-	core::StatementPtr whileStmt = builder.whileStmt(condIr, fullBody.as<core::StatementPtr>());  
+	core::CompoundStmtPtr fullBody = builder.compoundStmt(stmts);
+	core::StatementPtr whileStmt = builder.whileStmt(condIr, fullBody.as<core::StatementPtr>());
 
 
 	stmtutils::StmtWrapper res;

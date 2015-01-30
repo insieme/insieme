@@ -67,10 +67,12 @@ int argc;
 char *argv[];
 {
   int first, framenum;
+  int loop_framenum;
 #ifdef USE_TIME
   int runtime;
+  int lastLoopRuntime;
 #ifndef WIN32
-  struct timeval tstart,tstop;
+  struct timeval tstart,tstop, lastLoopTstart;
 #else
   unsigned int startTime, stopTime;
 #endif
@@ -100,6 +102,7 @@ char *argv[];
   }
 
   first = 1;
+  loop_framenum = 0;
 
   do {
     if (base.infile!=0)
@@ -115,8 +118,6 @@ char *argv[];
 #ifdef USE_TIME
 #ifndef WIN32
         gettimeofday(&tstart,(struct timezone *)NULL);
-        if (framerate > 0)
-          gettimeofday(&tftarget,(struct timezone *)NULL);
 #else
         startTime = timeGetTime();
         if (framerate > 0)
@@ -125,12 +126,20 @@ char *argv[];
 #endif
         first = 0;
       }
+
+      if (framerate > 0)
+        gettimeofday(&tftarget,(struct timezone *)NULL);
+
+      if(loopflag == 0 && framenum == 0) 
+        gettimeofday(&lastLoopTstart,(struct timezone *)NULL);
+
       getpicture(&framenum);
       
       framenum++;
+      loop_framenum++;
     }
 
-  } while (loopflag);
+  } while (loopflag--);
 
   close(base.infile);
 
@@ -139,15 +148,19 @@ char *argv[];
   gettimeofday(&tstop,(struct timezone *)NULL);
   runtime = 100*(tstop.tv_sec-tstart.tv_sec)
     + (tstop.tv_usec-tstart.tv_usec)/10000;
+  lastLoopRuntime = 100*(tstop.tv_sec-lastLoopTstart.tv_sec)
+    + (tstop.tv_usec-lastLoopTstart.tv_usec)/10000;
 #else
   stopTime = timeGetTime();
   runtime = (stopTime - startTime) / 10;
 #endif
   if (!quiet && runtime!=0)
-    printf("%d.%02d seconds, %d frames, %d.%02d fps\n",
+    printf("%d.%02d seconds, %d frames, %d.%02d (%d.%02d) fps \n",
            runtime/100, runtime%100,
-           framenum, ((10000*framenum+runtime/2)/runtime)/100,
-           ((10000*framenum+runtime/2)/runtime)%100);
+           loop_framenum, ((10000*loop_framenum+runtime/2)/runtime)/100,
+           ((10000*loop_framenum+runtime/2)/runtime)%100,
+           ((10000*framenum+lastLoopRuntime/2)/lastLoopRuntime)/100,
+           ((10000*framenum+lastLoopRuntime/2)/lastLoopRuntime)%100);
 #endif
 
 #ifdef DISPLAY
@@ -311,6 +324,7 @@ char **argvp[];
   {
     while ((*argvp)[1][1])
     {
+      int val;
       switch (toupper((*argvp)[1][1]))
       {
 #ifdef USE_TIME
@@ -328,7 +342,18 @@ char **argvp[];
         refidct = 1;
         break;
       case 'L':
-        loopflag = 1;
+        loopflag = getval(*argvp);
+        if(loopflag < 1)
+            loopflag = 1;
+        break;
+      case 'D':
+        deposterizeH = 1;
+        deposterizeV = 1;
+        val = getval(*argvp);
+        if(val == 1)
+            deposterizeV = 0;
+        else if(val == 2)
+            deposterizeH = 0;
         break;
       case 'X':
         expand = 1;
@@ -394,6 +419,10 @@ Options: -vn  verbose output (n: level)\n\
               You have to choose one output format!\n\
          -q   disable warnings to stderr\n\
          -r   use double precision reference IDCT\n\
+         -dn  apply deposterization\n\
+              n=  : horizontal and vertical\n\
+              n=1 : horizontal only\n\
+              n=2 : vertical only\n\
          -t   enable low level tracing\n");
 #ifdef DISPLAY
     printf("\
@@ -407,7 +436,7 @@ Options: -vn  verbose output (n: level)\n\
 #endif    
 #ifdef DISPLAY
     printf("\
-         -l   loop sequence\n");
+         -ln   loop sequence (n: additional playings)\n");
 #endif
     exit(0);
   }

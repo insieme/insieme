@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -139,7 +139,15 @@ namespace cba {
 
 			} else if (base.isDataPathComponent(fun)) {
 
-				assert_not_implemented();
+				// get set containing value of identifier
+				auto A_index = cba.getVar(A, call[1], ctxt);	// we use the arithmetic analyses to obtain the index
+
+				constraints.add(combine(this->getValueManager(), DP_src, A_index, DP_trg,
+						[](const DataPath& head, const Formula& index)->DataPath {
+							if (!index) return head << ElementIndex();
+							return head << ElementIndex(*index.formula);
+						})
+				);
 
 			} else {
 				// unknown constructur encountered

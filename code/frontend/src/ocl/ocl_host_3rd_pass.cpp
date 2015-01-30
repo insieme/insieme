@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,15 +29,16 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
-#include "insieme/frontend/utils/cast_tool.h"
+#include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -176,7 +177,7 @@ assert(seType->toString().find("_cl_kernel") == string::npos && "Kernel variable
 // returns a 0-literal of the corresponding type or NoOp in cas of unit
 const ExpressionPtr HostMapper3rdPass::getZeroElem(const TypePtr& type) {
 	auto zero = builder.intLit(0);
-	return frontend::utils::castScalar(type,zero);
+	return core::types::castScalar(type,zero);
 	/*TypeList noArgs;
 	std::vector<VariablePtr> noParams;
 	std::vector<ExpressionPtr> noExpr;

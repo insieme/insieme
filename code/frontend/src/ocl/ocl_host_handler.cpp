@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -37,10 +37,10 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
-#include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/types/cast_tool.h"
 
 #include <fstream>
 
@@ -286,7 +286,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	params.push_back(tuple);
 	StatementList body;
 
-	if(frontend::utils::isNullPtrExpression(arg)) {
+	if(core::types::isNullPtrExpression(arg)) {
 		// in this case arg is a local variable which has to be declared in host code
 		// need to read size parameter
 		ExpressionPtr size;
@@ -836,7 +836,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 
 						ExpressionPtr arg = *I;
 						// check for local memory argument
-						if(frontend::utils::isNullPtrExpression(arg)) {
+						if(core::types::isNullPtrExpression(arg)) {
 							// in this case arg is a local variable which has to be declared in host code
 							// need to read size parameter
 							ExpressionPtr size;

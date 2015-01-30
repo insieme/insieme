@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -470,7 +470,7 @@ namespace detail {
 	/**
 	 * A specialization handling lambdas dealing with node pointers, addresses and other stuff.
 	 */
-	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P, template<typename T> class Ptr>
+	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P, template<typename> class Ptr>
 	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Ptr<const T>&) const, Lambda, R (C2::*)( const Ptr<const T>&, P ... ) const> {
 		typedef LambdaVisitor<Lambda, R, Ptr, T, Filter, P...> visitorType;
 	};
@@ -721,7 +721,7 @@ public:
 
 		std::queue<Ptr<const Node>> queue;
 
-		IRVisitor<void>* visitor;
+		IRVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
 			// visit the current node

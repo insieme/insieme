@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,6 +51,13 @@ namespace cmd {
 	// fix an alias for the path type
 	typedef frontend::path path;
 
+	// allows to distinguish between graceful and ungraceful exits
+	enum class OptionStatus{
+		VALID,
+		NOT_VALID,
+		GRACEFUL_EXIT
+	};
+
 	/**
 	 * The CommandLineOptions is a container for input arguments to the main Insieme compiler executable.
 	 */
@@ -61,7 +68,7 @@ namespace cmd {
 		/**
 		 * A flag indicating whether the parsed options are valid.
 		 */
-		bool valid;
+		OptionStatus optionStatus;
 
 		#define FLAG(opt_name, opt_id, var_name, def_value, var_help) \
 			bool var_name;
@@ -87,7 +94,7 @@ namespace cmd {
 	private:
 
 		// avoid constructing instances of CommandLineOptions
-		CommandLineOptions() : valid(true) { }
+		CommandLineOptions() : optionStatus(OptionStatus::VALID) { }
 
 	public:
 

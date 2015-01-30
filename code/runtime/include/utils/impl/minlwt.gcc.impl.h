@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,17 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 // currently only a 64 bit implementation exists
-
-__attribute__ ((noinline,optimize(0)))
+#if __GNUC_PREREQ(4,8)
+__attribute__ ((noinline,noclone,optimize(0),aligned(16)))
+#else
+__attribute__ ((noinline,noclone,optimize(0)))
+#endif
 void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
 		intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
 	__asm__ (

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,7 +41,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/except.h"
+#include "insieme/analysis/polyhedral/scopvisitor.h"
 #include "insieme/analysis/polyhedral/iter_dom.h"
 #include "insieme/analysis/polyhedral/iter_vec.h"
 
@@ -72,7 +73,7 @@ core::NodePtr deadBranchElimination(const core::NodePtr& node) {
 			stmt.as<WhileStmtPtr>()->getCondition();
 
 		try {
-			auto iterDom = extractFromCondition(iv, cond);
+			auto iterDom = ScopVisitor::extractFromCondition(iv, cond);
 
 			if (iterDom.universe() && stmt->getNodeType() == NT_IfStmt) {
 				replacements.insert( { stmt, stmt.as<IfStmtPtr>()->getThenBody() } );
@@ -88,7 +89,7 @@ core::NodePtr deadBranchElimination(const core::NodePtr& node) {
 					replacements.insert( { stmt, stmt.as<IfStmtPtr>()->getElseBody() } );
 				
 			}
-		} catch(scop::NotASCoP e) { }
+		} catch(NotASCoP e) { }
 
 	}, true));
 

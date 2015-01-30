@@ -3,6 +3,72 @@
 
 int main (){
 
+    //no capture, no arguments
+    {
+        auto lambda = []() {
+            std::cout << " no capture, no argument." << std::endl;
+            return;
+        };
+
+        auto lambdaRetType = []()->void {
+            std::cout << " no capture, no argument." << std::endl;
+            return;
+        };
+
+        lambda();
+        lambdaRetType();
+    }
+
+    //no capture, arguments
+    {
+        auto lambda = [](int x) {
+            std::cout << " no capture, argument: " << x << std::endl;
+            return;
+        };
+
+        auto lambdaRetType = [](int x)->void {
+            std::cout << " no capture, argument: " << x << std::endl;
+            return;
+        };
+
+        lambda(1);
+        lambdaRetType(1);
+    }
+
+    //capture, no arguments
+    {
+        int x=1;
+        auto lambda = [&]() {
+            std::cout << " capture, no argument: " << x << std::endl;
+            return;
+        };
+
+        auto lambdaRetType = [&]()->void {
+            std::cout << " capture, no argument: " << x << std::endl;
+            return;
+        };
+
+        lambda();
+        lambdaRetType();
+    }
+
+    //capture, arguments
+    {
+        int x=1;
+        auto lambda = [&](int y) {
+            std::cout << " capture, argument: " << (x+y) << std::endl;
+            return;
+        };
+
+        auto lambdaRetType = [&](int y)->int {
+            std::cout << " capture, argument: " << (x+y) << std::endl;
+            return (x+y);
+        };
+
+        lambda(2);
+        lambdaRetType(2);
+    }
+
 	// value capture
 	{
 		int x=0;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -167,28 +167,49 @@ insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, ins
 	core::IRBuilder builder = convFact.getIRBuilder();
 	const core::lang::BasicGenerator& gen(builder.getLangBasic());
 
-	// catch hi and lo
-	if(accessor == "hi" || accessor == "lo") {
+	// catch hi and lo, even and odd
+	if(accessor == "hi" || accessor == "lo" || accessor == "even" || accessor == "odd" ) {
 		core::TypePtr ty = base->getType();
 		core::RefTypePtr refTy = ty.isa<core::RefTypePtr>();
 
 		core::VectorTypePtr vecTy = refTy ? refTy->getElementType().as<core::VectorTypePtr>() : ty.as<core::VectorTypePtr>();
 		core::TypePtr elementTy = vecTy->getElementType();
 		unsigned vecSize = vecTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+		unsigned halfVecSize = vecSize/2;
 
 		// length is always half of original vector length
-		core::LiteralPtr newVecSize = builder.getIntParamLiteral(vecSize/2);
+		core::LiteralPtr newVecSize = builder.getIntParamLiteral(halfVecSize);
 
-		// start at 0 for lo, vecSize/2 for hi
-		core::LiteralPtr start = accessor == "lo" ? builder.getIntParamLiteral(0) : newVecSize;
-
-		core::TypePtr resultTy = builder.vectorType(elementTy, builder.concreteIntTypeParam(vecSize/2));
+		core::TypePtr resultTy = builder.vectorType(elementTy, builder.concreteIntTypeParam(halfVecSize));
 		if(refTy) resultTy = builder.refType(resultTy);
 
-		// select ref or non-ref projection function
-		core::ExpressionPtr fct = refTy ? gen.getVectorRefProjection() : gen.getVectorProjection();
+		if(accessor == "hi" || accessor == "lo") {
+			// start at 0 for lo, vecSize/2 for hi
+			core::LiteralPtr start = accessor == "lo" ? builder.getIntParamLiteral(0) : newVecSize;
 
-		return builder.callExpr(resultTy, fct, base, start.as<core::ExpressionPtr>(), newVecSize.as<core::ExpressionPtr>());
+			// select ref or non-ref projection function
+			core::ExpressionPtr fct = refTy ? gen.getVectorRefProjection() : gen.getVectorProjection();
+
+			return builder.callExpr(resultTy, fct, base, start.as<core::ExpressionPtr>(), newVecSize.as<core::ExpressionPtr>());
+		}
+
+		if(accessor == "even" || accessor == "odd" ) {
+			unsigned odd = accessor == "odd" ? 1 : 0;
+
+			if(refTy) {
+				assert(false && "Vector functions 'even' and 'odd' are not supported as l-values");
+			}
+
+			// non-ref type
+			core::ExpressionList indices;
+			for(unsigned i = 0; i < 4; ++i) {
+				indices.push_back(builder.uintLit(i*2 + odd));
+			}
+
+			core::ExpressionPtr indexVector = builder.vectorExpr(indices);
+
+			return builder.vectorPermute(base, indexVector);
+		}
 	}
 	//translate OpenCL accessor string to index
 	else if ( accessor == "x" ) pos = 0u;
@@ -270,8 +291,15 @@ insieme::core::TypePtr OclKernelPlugin::Visit(const clang::QualType& type, insie
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////
-//               adding OpenCL kernel annotation
+/** FuncDeclPostVisit will add the OpenCL kernel annotation.
+    User provided post clang function decl visitor. Will be called after clang decl
+    was visted by the insieme function decl visitor and returns a modified IR expression.
+    See FrontendPlugin FuncDeclPostVisit
+
+    @param decl clang function decl
+    @param type IR ExpressionPtr
+    @param convFact insieme conversion factory
+    @return modified version of IR ExpressionPtr */
 insieme::core::ExpressionPtr OclKernelPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
 
 	if(!symbolic) {

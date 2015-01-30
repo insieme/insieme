@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -66,6 +66,7 @@ inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_ran
 	irt_work_item_range prev_range = self->range;
 	self->parameters = args;
 	self->range = range;
+	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
 	(impl->variants[0].implementation)(self);
 	self->parameters = prev_args;
 	self->range = prev_range;
@@ -177,7 +178,7 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 		uint64 bsize = sched_data->block_size;
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize, uint64)) {
 			uint64 new_bsize = (uint64)((bsize / base_range.step) * 0.8) * base_range.step;
-			new_bsize = MAX(new_bsize, sched_data->policy.param.chunk_size * base_range.step);
+			new_bsize = MAX(new_bsize, (uint64)(sched_data->policy.param.chunk_size * base_range.step));
 			irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize, uint64);
 			base_range.begin = comp;
 			base_range.end = MIN(comp+bsize, final);

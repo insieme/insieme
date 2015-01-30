@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -219,6 +219,15 @@ namespace cba {
 			std::map<FieldIndex,value_type> data;
 			for(const auto& cur : compound) {
 				data[FieldIndex(cur->getName())] = getUniformValue(valueMgr, cur->getType(), value);
+			}
+			return valueMgr.compound(data);
+
+		} else if (auto tuple = type.isa<TupleTypePtr>()) {
+
+			// built up the value representing an undefined tuple type
+			std::map<ElementIndex,value_type> data;
+			for(unsigned i = 0; i<tuple.size(); ++i) {
+				data[i] = getUniformValue(valueMgr, tuple[i], value);
 			}
 			return valueMgr.compound(data);
 

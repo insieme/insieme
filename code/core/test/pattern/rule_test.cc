@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -277,8 +277,8 @@ namespace pattern {
 		auto b = builder.deref(builder.refVar(a));
 		auto c = builder.deref(builder.refNew(a));
 
-		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return 'a;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(1))", toString(*b));
-		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return 'a;}}(v1), memloc.heap); ref.assign(v2, v1); return v2;}}(1))", toString(*c));
+		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(1))", toString(*b));
+		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc.heap); ref.assign(v2, v1); return v2;}}(1))", toString(*c));
 		EXPECT_EQ("1", toString(*r.fixpoint(b)));
 		EXPECT_EQ("1", toString(*r.fixpoint(c)));
 		EXPECT_EQ("1", toString(*r.fixpointNested(b)));

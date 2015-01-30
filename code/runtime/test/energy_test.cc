@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -81,7 +81,7 @@ void insieme_cleanup_context(irt_context* context) {
 // work item function definitions
 
 void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
-	uint32 sockets = irt_get_num_sockets();
+	uint32 sockets = irt_hw_get_num_sockets();
 	uint32 length;
 	uint32 frequencies[IRT_INST_MAX_CPU_FREQUENCIES];
 
@@ -90,29 +90,29 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 
 	// try each frequency once
 	for(uint32 freq_id = 0; freq_id < length; ++freq_id) {
-		uint32 all_core_frequencies_min[irt_get_num_sockets() * irt_get_num_cores_per_socket()];
-		uint32 all_core_frequencies_max[irt_get_num_sockets() * irt_get_num_cores_per_socket()];
+		uint32 all_core_frequencies_min[irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket()];
+		uint32 all_core_frequencies_max[irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket()];
 		uint32 frequency = frequencies[freq_id];
 		// try each socket once
 		for(uint32 socket_id = 0; socket_id < sockets; ++socket_id) {
 			// save the current frequency settings
-			for(uint32 core_id = 0; core_id < irt_get_num_sockets() * irt_get_num_cores_per_socket(); ++core_id) {
+			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
 				all_core_frequencies_min[core_id] = _irt_cpu_freq_get(core_id, "scaling_min_freq");
 				all_core_frequencies_max[core_id] = _irt_cpu_freq_get(core_id, "scaling_max_freq");
 			}
 			// set the frequency of the current socket
 			irt_cpu_freq_set_frequency_socket(socket_id, frequency);
 			// check all cores, the ones on this socket must be set correctly, the rest must remain unchanged
-			for(uint32 core_id = 0; core_id < irt_get_num_sockets() * irt_get_num_cores_per_socket(); ++core_id) {
-				if(core_id >= socket_id * irt_get_num_cores_per_socket() && core_id < (socket_id+1)*irt_get_num_cores_per_socket()) {
+			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
+				if(core_id >= socket_id * irt_hw_get_num_cores_per_socket() && core_id < (socket_id+1)*irt_hw_get_num_cores_per_socket()) {
 					EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_cur_freq"), frequency);
-					if(irt_get_hyperthreading_enabled())
-						EXPECT_EQ(_irt_cpu_freq_get(irt_get_sibling_hyperthread(core_id), "scaling_cur_freq"), frequency);
+					if(irt_hw_get_hyperthreading_enabled())
+						EXPECT_EQ(_irt_cpu_freq_get(irt_hw_get_sibling_hyperthread(core_id), "scaling_cur_freq"), frequency);
 				} else {
 					EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_cur_freq"), all_core_frequencies_min[core_id]);
 					EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_cur_freq"), all_core_frequencies_max[core_id]);
-					if(irt_get_hyperthreading_enabled()) {
-						uint32 sibling = irt_get_sibling_hyperthread(core_id);
+					if(irt_hw_get_hyperthreading_enabled()) {
+						uint32 sibling = irt_hw_get_sibling_hyperthread(core_id);
 						EXPECT_EQ(_irt_cpu_freq_get(sibling, "scaling_cur_freq"), all_core_frequencies_min[sibling]);
 						EXPECT_EQ(_irt_cpu_freq_get(sibling, "scaling_cur_freq"), all_core_frequencies_max[sibling]);
 					}
@@ -121,7 +121,7 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 			// reset all frequencies to system default again
 			irt_cpu_freq_reset_frequencies();
 			// check that all frequencies have been reset
-			for(uint32 core_id = 0; core_id < irt_get_num_sockets() * irt_get_num_cores_per_socket(); ++core_id) {
+			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
 				EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_min_freq"), _irt_cpu_freq_get(core_id, "cpuinfo_min_freq"));
 				EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_max_freq"), _irt_cpu_freq_get(core_id, "cpuinfo_max_freq"));
 			}
@@ -148,7 +148,7 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 	irt_affinity_policy policy = { IRT_AFFINITY_FIXED, 0 };
 
 	// try each socket once
-	for(uint32 socketid = 0; socketid < irt_get_num_sockets(); ++socketid) {
+	for(uint32 socketid = 0; socketid < irt_hw_get_num_sockets(); ++socketid) {
 
 		uint32 workerid = 0;
 
@@ -157,7 +157,7 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 			policy.fixed_map[coreid] = 0;
 
 		// set affinity map to use all cores of the current socket
-		for(uint32 coreid = socketid * irt_get_num_cores_per_socket(); coreid < (socketid+1) * irt_get_num_cores_per_socket(); ++coreid) {
+		for(uint32 coreid = socketid * irt_hw_get_num_cores_per_socket(); coreid < (socketid+1) * irt_hw_get_num_cores_per_socket(); ++coreid) {
 			policy.fixed_map[workerid++] = coreid;
 			//printf("%d\n", policy.fixed_map[coreid]);
 		}
@@ -175,9 +175,8 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 		// check rapl readings
 		EXPECT_LT(0.001, data2.package - data.package);
 		EXPECT_LT(data2.package - data.package, 100);
-		EXPECT_LT(0.001, data2.cores - data.cores);
-		EXPECT_LT(data2.cores - data.cores, 100);
 		// mc readings are not present on all CPUs, therefore they can be 0
+		EXPECT_LT(data2.cores - data.cores, 100);
 		EXPECT_LT(data2.mc - data.mc, 100);
 	}
 }
@@ -191,8 +190,12 @@ TEST(energy, dvfs) {
 TEST(energy, rapl) {
 	// since we need PAPI working for the next line, explicitly call the init function here
 	irt_papi_init();
+	if(!irt_rapl_is_supported()) {
+		printf("warning: RAPL not available, not testing it\n");
+		return;
+	}
 	// since we test each socket once, use all cores of a single socket
-	uint32 wcount = irt_get_num_cores_per_socket();
+	uint32 wcount = irt_hw_get_num_cores_per_socket();
 	irt_context* context = irt_runtime_start_in_context(wcount, insieme_init_context, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[1], NULL);
 	irt_runtime_end_in_context(context);

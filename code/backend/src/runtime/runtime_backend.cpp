@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -64,6 +64,7 @@
 #include "insieme/backend/addons/cpp_memb_ptr.h"
 #include "insieme/backend/addons/complex_type.h"
 #include "insieme/backend/addons/enum_type.h"
+#include "insieme/backend/addons/longlong_type.h"
 #include "insieme/backend/addons/simd_vector.h"
 #include "insieme/backend/addons/asm_stmt.h"
 #include "insieme/backend/addons/varargs.h"
@@ -100,9 +101,9 @@ namespace runtime {
 		res->addAddOn<addons::CppMembAddon>();
         res->addAddOn<addons::ComplexType>();
         res->addAddOn<addons::EnumTypes>();
+        res->addAddOn<addons::LongLongType>();
 		res->addAddOn<addons::SIMDVector>();
 		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
 		res->addAddOn<addons::VarArgs>();
 		res->addAddOn<addons::StaticVariables>();
 		return res;
@@ -134,6 +135,11 @@ namespace runtime {
 		FunctionManager& functionManager = converter.getFunctionManager();
 		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
 		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
+
+		NameManager& nameMan = converter.getNameManager();
+		// this should be an exhaustive listing at some point, for now it only includes functions which caused issues
+		nameMan.reserveName("read");  // unistd.h
+		nameMan.reserveName("write"); // unistd.h
 
 		// done
 		return converter;

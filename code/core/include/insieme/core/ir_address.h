@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,6 +42,7 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/type_traits/remove_const.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_polymorphic.hpp>
 
 #include "insieme/utils/assert.h"
 #include "insieme/utils/hash_utils.h"
@@ -49,6 +50,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_node_path.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
@@ -259,7 +261,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename boost::enable_if<is_ir_pointer<R>, R>::type as() const {
-			return getAddressedNode().as<R>();
+			return getAddressedNode().template as<R>();
 		}
 
 		/**
@@ -276,7 +278,7 @@ namespace core {
 		 */
 		template<typename R>
 		typename boost::enable_if<is_ir_pointer<R>, R>::type isa() const {
-			return getAddressedNode().isa<R>();
+			return getAddressedNode().template isa<R>();
 		}
 
 		/**
@@ -590,6 +592,18 @@ namespace core {
 			// use the path comparison operation
 			return path < other.getPath();
 		}
+		template<typename S>
+		bool operator<=(const Address<S>& other) const {
+			return *this < other || this == other;
+		}
+		template<typename S>
+		bool operator>=(const Address<S>& other) const {
+			return !(*this < other);
+		}
+		template<typename S>
+		bool operator>(const Address<S>& other) const {
+			return !(*this <= other);
+		}
 
 		/**
 		 * Obtains a hash value for this address.
@@ -655,7 +669,7 @@ namespace core {
 	 * A variant of the static address cast allowing for a address type to be past
 	 * as a template argument.
 	 */
-	template<typename B, typename T, typename E = typename B::element_type>
+	template<typename B, typename T, typename E>
 	inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 	static_address_cast(const Address<T>& src) {
 		assert_true(!src || dynamic_cast<E*>(&(*src)))
@@ -688,7 +702,7 @@ namespace core {
 	 * A variant of the dynamic address cast allowing for a address type to be past
 	 * as a template argument.
 	 */
-	template<typename B, typename T, typename E = typename B::element_type>
+	template<typename B, typename T, typename E>
 	inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 	dynamic_address_cast(const Address<T>& src) {
 		if (src && dynamic_cast<E*>(&(*src))) {
@@ -782,6 +796,11 @@ namespace core {
 			visitPathBottomUp(addr.getParentAddress(), visitor);
 		}
 	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathBottomUp(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathBottomUp(addr, visitor);
+	}
 
 	template<typename Visitor, typename T>
 	void visitPathTopDown(const Address<const T>& addr, Visitor& visitor) {
@@ -789,6 +808,11 @@ namespace core {
 			visitPathTopDown(addr.getParentAddress(), visitor);
 		}
 		visitor.visit(addr);
+	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathTopDown(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathTopDown(addr, visitor);
 	}
 
 	template<typename Visitor, typename T>
@@ -799,6 +823,11 @@ namespace core {
 		}
 		return res;
 	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathBottomUpInterruptible(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathBottomUpInterruptible(addr, visitor);
+	}
 
 	template<typename Visitor, typename T>
 	bool visitPathTopDownInterruptible(const Address<const T>& addr, Visitor& visitor) {
@@ -807,6 +836,11 @@ namespace core {
 			res = visitPathTopDownInterruptible(addr.getParentAddress(), visitor);
 		}
 		return res || visitor.visit(addr);
+	}
+	template<typename T, typename Lambda, typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+	void visitPathTopDownInterruptible(const Address<const T>& addr, Lambda lam) {
+		auto visitor = makeLambdaVisitor(lam);
+		visitPathTopDownInterruptible(addr, visitor);
 	}
 	
 	template<typename Visitor>

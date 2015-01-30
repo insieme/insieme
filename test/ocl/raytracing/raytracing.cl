@@ -1,6 +1,3 @@
-#ifdef INSIEME
-#include "ocl_device.h"
-#endif
 #define EPSILON_DET 0.0f
 #define EPSILON_EDGE 0.00001f
 

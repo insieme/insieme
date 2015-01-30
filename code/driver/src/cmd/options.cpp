@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -207,6 +207,8 @@ namespace cmd {
 					res.job.setStandard(frontend::ConversionSetup::Auto);
 				} else if (selected == "c99") {
 					res.job.setStandard(frontend::ConversionSetup::C99);
+				} else if (selected == "c++98") {
+					res.job.setStandard(frontend::ConversionSetup::Cxx98);
 				} else if (selected == "c++03") {
 					res.job.setStandard(frontend::ConversionSetup::Cxx03);
 				} else if (selected == "c++0x") {
@@ -216,7 +218,7 @@ namespace cmd {
 					res.job.setStandard(frontend::ConversionSetup::Cxx11);
 					assert(res.job.isCxx());
 				} else {
-					cout << "Unsupported standard: " << selected << " - supported: auto, c99, c++03, c++11";
+					cout << "Unsupported standard: " << selected << " - supported: auto, c99, c++98, c++03, c++11";
 					res.valid=false;
 				}
 			}

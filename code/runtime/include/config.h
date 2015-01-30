@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -76,6 +76,7 @@
 
 // maximum number of sockets (used by features such as DVFS)
 #define IRT_HW_MAX_NUM_SOCKETS 128
+#define IRT_HW_MAX_STRING_LENGTH 128
 
 // maximum number of frequencies that can be stored
 #define IRT_INST_MAX_CPU_FREQUENCIES 32
@@ -95,6 +96,7 @@
 #define IRT_INST_WORKER_PD_BLOCKSIZE	512
 #define IRT_INST_REGION_INSTRUMENTATION_ENV "IRT_INST_REGION_INSTRUMENTATION"
 #define IRT_INST_REGION_INSTRUMENTATION_TYPES_ENV "IRT_INST_REGION_INSTRUMENTATION_TYPES"
+#define IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE 256
 
 // standalone
 #define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
@@ -122,7 +124,9 @@
 // TODO : better configurability, maybe per-wi stack size set by compiler?
 // updated to 8MB due to failing test cases (quicksort, jacobi)
 // don't misalign!
+#ifndef IRT_WI_STACK_SIZE
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
+#endif
 
 #ifndef IRT_DEF_WORKERS
 #define IRT_DEF_WORKERS 1
@@ -138,9 +142,10 @@
 #if defined(_GEMS)
 #ifdef __arm__
     #define _GEMS_TODO
+    #define _GEMS_ODROID
     #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
-        "cpu_time,wall_time,a15_avgpow,a7_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
-        "a15_energy,a7_energy,mem_energy,gpu_energy,cpu_energy"
+        "cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
+        "a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
 #else
     #define _GEMS_SIM
 	#define	GEMS_CORE_FREQ_MHZ 100

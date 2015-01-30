@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -66,7 +66,7 @@ namespace checks {
 		// those should all be wrong
 		EXPECT_EQ(1u, check(err1).size());
 		EXPECT_EQ(1u, check(err2).size());
-		EXPECT_EQ(1u, check(err3).size());
+		EXPECT_EQ(1u, check(err3).size()); 
 		EXPECT_EQ(1u, check(err4).size());
 
 	}
@@ -91,7 +91,7 @@ namespace checks {
 		// those should all be wrong
 		EXPECT_EQ(1u, check(err1).size());
 		EXPECT_EQ(1u, check(err2).size());
-		EXPECT_EQ(1u, check(err3).size());
+		EXPECT_EQ(0, check(err3).size()); // lets just ignore this for a chance
 		EXPECT_EQ(1u, check(err4).size());
 
 	}
@@ -158,6 +158,53 @@ namespace checks {
 		// stuff that is out of bound
 		node = builder.literal(basic.getUInt1(), "1000");
 		EXPECT_EQ(1u, check(node).size());
+
+	}
+
+
+
+	TEST(LiteralFormat, limitsMax) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const lang::BasicGenerator& basic = manager.getLangBasic();
+		std::vector< std::pair<TypePtr,std::string> > types;
+
+
+		EXPECT_EQ(0, check(builder.literal(basic.getInt1(),  toString(INT8_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt2(),  toString(INT16_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt4(),  toString(INT32_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt8(),  toString(INT64_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt16(), toString(INT64_MAX))).size() );
+
+		EXPECT_EQ(0, check(builder.literal(basic.getInt1(),  toString(INT8_MIN))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt2(),  toString(INT16_MIN))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt4(),  toString(INT32_MIN))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt8(),  toString(INT64_MIN))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getInt16(), toString(INT64_MIN))).size() );
+
+		EXPECT_EQ(0, check(builder.literal(basic.getUInt1(),  toString(UINT8_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getUInt2(),  toString(UINT16_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getUInt4(),  toString(UINT32_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getUInt8(),  toString(UINT64_MAX)+"u")).size() );
+		EXPECT_EQ(1, check(builder.literal(basic.getUInt8(),  toString(UINT64_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getUInt8(),  toString(UINT64_MAX)+"u")).size() );
+		EXPECT_EQ(1, check(builder.literal(basic.getUInt8(),  toString(UINT64_MAX))).size() );
+		EXPECT_EQ(0, check(builder.literal(basic.getUInt16(), toString(UINT64_MAX)+"u")).size() );
+		EXPECT_EQ(1, check(builder.literal(basic.getUInt16(), toString(UINT64_MAX))).size() );
+
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(0.0))).size() 	);
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(.0))).size() 	);
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(190))).size() 	);
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(-190.0))).size() );
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(-.01))).size() 	);
+
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(FLT_MAX))).size() );
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal4(), toString(FLT_MIN))).size() );
+
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal8(), toString(-1e-10))).size() 	);
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal8(), toString(DBL_MAX))).size() );
+		EXPECT_EQ(0 ,check(builder.literal(basic.getReal8(), toString(DBL_MIN))).size() );
 
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,8 +45,8 @@
 #include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/transform/filter/standard_filter.h"
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/unused.h"
@@ -63,23 +63,19 @@ using insieme::core::pattern::any;
 
 namespace {
 
+/** Run the SCoP analysis on this node in order to determine whether is possible to apply polyhedral transformations to
+it */
 const Scop& extractScopFrom(const core::NodePtr& target) {
-	// Run the SCoP analysis on this node in order to determine whether is possible to apply
-	// polyhedral transformations to it
 	scop::mark(target);
 
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
-		throw InvalidTargetException(
-			"Polyhedral transformation applyied to a non Static Control Region"
-		);
+		throw InvalidTargetException("Polyhedral transformation wanted but no SCoP found");
 	}
 	
 	// FIXME: We need to find the larger SCoP which contains this SCoP
 	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
-	if ( !region.isValid() ) {
-		throw InvalidTargetException(
-			"Polyhedral transformation applyied to a non Static Control Region"
-		);
+	if ( !region.valid ) {
+		throw InvalidTargetException("Polyhedral transformation wanted but region is invalid");
 	}
 	return region.getScop();
 }
@@ -126,9 +122,9 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 		);
 	auto&& match = pattern.matchPointer( target );
 
-	if (!match || !match->isVarBound("iter")) {
-		throw InvalidTargetException("Invalid application point for loop strip mining");
-	}
+	if (!match) throw InvalidTargetException("Loop interchange cannot find pattern for PM application");
+	if (!match->isVarBound("iter"))
+		throw InvalidTargetException("Loop interchange cannot use PM as variable \"iter\" is not bound");
 	auto&& matchList = match->getVarBinding("iter").getList();
 
 	// check whether the indexes refers to loops 
@@ -633,14 +629,14 @@ core::NodeAddress LoopStamping::apply(const core::NodeAddress& targetAddress) co
 
 	unsigned split = scop.size();
 	// Duplicate all the statements in the scop
-	for (size_t idx=stampedStmts.front().get().getId(), end=stampedStmts.back().get().getId(); idx<=end; ++idx) {
+	for (size_t idx=stampedStmts.front().get().id, end=stampedStmts.back().get().id; idx<=end; ++idx) {
 		AffineFunction f(scop.getIterationVector(), 
 				-(core::arithmetic::toFormula(forStmt->getEnd())-core::arithmetic::toFormula(ret.second))
 			);
 		f.setCoeff(iter, 1);
 		dupStmt(scop, idx, AffineConstraint(f, utils::ConstraintType::GE) and ret.first);
 
-		scop[idx].getDomain() &= IterationDomain( AffineConstraint(f, utils::ConstraintType::LT) and ret.first );
+		scop[idx].iterdomain &= IterationDomain( AffineConstraint(f, utils::ConstraintType::LT) and ret.first );
 	}
 
 	doSplit(scop, outerStmt->getDeclaration()->getVariable(), { split });
@@ -734,13 +730,13 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 		
 			// Extract the variable which should be stripped 
 			core::VariablePtr var;
-			for_each(curStmt->access_begin(), curStmt->access_end(), [&](const AccessInfoPtr& cur) {
+			for_each(curStmt->accessmtx.begin(), curStmt->accessmtx.end(), [&](const AccessInfoPtr& cur) {
 				if ( cur->hasDomainInfo() ) {
 					assert(!var && "Variable already set");
 					var = getOrderedIteratorsFor(cur->getAccess()).front();
 					curStmt->getSchedule().append( AffineFunction(iv, core::arithmetic::Formula(var)) );
 
-					doStripMine(mgr, scop, var, curStmt->getDomain() && cur->getDomain(), tileSize);
+					doStripMine(mgr, scop, var, curStmt->iterdomain && cur->getDomain(), tileSize);
 				}
 			});
 			return;
@@ -749,7 +745,7 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 		if (iters.empty()) {
 			throw InvalidTargetException("Region contains statements which cannot be stripped");
 		}
-		doStripMine(mgr, scop, iters.front(), curStmt->getDomain(), tileSize);
+		doStripMine(mgr, scop, iters.front(), curStmt->iterdomain, tileSize);
 	});
 	
 	LOG(INFO) << "BEFORE FUSION" << scop;

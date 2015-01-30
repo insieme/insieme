@@ -19,6 +19,7 @@ if (GCC_INCLUDE_DIR)
 	include_directories( ${GCC_INCLUDE_DIR} )
 endif()
 
+
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
@@ -52,18 +53,6 @@ set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
 
 set ( insieme_plugins_include_dir  		${insieme_code_dir}/plugins/include )
-
-
-# -------------------------------------------------------------- determines insieme version
-
-find_package(Git)
-if(GIT_FOUND)
-	# deduce the code version using git describe
-	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
-	#set ( insieme_version "shit" )
-else()
-	set ( insieme_version "unknown" )
-endif()
 
 
 # -------------------------------------------------------------- find location of utilities
@@ -324,9 +313,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
 
-	# add insieme version definition (add_definitions escapes back-quotes)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
-
 endif()
 
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
@@ -377,6 +363,20 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
 
+# -------------------------------------------------------------- determines insieme version
+
+find_package(Git)
+if(GIT_FOUND)
+	# deduce the code version using git describe
+	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
+else()
+	set ( insieme_version "unknown" )
+endif()
+
+
+# add insieme version definition (add_definitions escapes back-quotes)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
+
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
@@ -389,5 +389,10 @@ if (NOT MEMORY_CHECK_SETUP)
 	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif (NOT MEMORY_CHECK_SETUP)
 
+# query the number of cores to control parallelism
+execute_process(COMMAND getconf  _NPROCESSORS_ONLN
+                OUTPUT_VARIABLE NB_PROCESSORS
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
 
 

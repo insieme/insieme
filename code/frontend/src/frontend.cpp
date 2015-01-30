@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,6 +62,7 @@
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
+#include "insieme/frontend/extensions/crosscompilation_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/extensions/instrumentation_region_plugin.h"
 #include "insieme/frontend/extensions/anonymous_rename.h"
@@ -85,7 +86,7 @@ namespace frontend {
 
 	bool ConversionSetup::isCxx(const path& file) const {
 		static std::set<string> CxxExtensions({ ".cpp", ".cxx", ".cc", ".C" });
-		return standard == Cxx03 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
+		return standard == Cxx03 || standard == Cxx98 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
 
     //register frontend plugins
@@ -108,7 +109,10 @@ namespace frontend {
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
             registerFrontendPlugin<GemsclaimPlugin>();
-			setDefinition("_GEM");
+        }
+
+        if(!getCrossCompilationSystemHeadersDir().empty()) {
+            registerFrontendPlugin<CrossCompilationPlugin>(getCrossCompilationSystemHeadersDir());
         }
 
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
@@ -123,16 +127,9 @@ namespace frontend {
         	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
 		}
 
-      	registerFrontendPlugin<FrontendCleanup>();
+		registerFrontendPlugin<FrontendCleanup>();
 		registerFrontendPlugin<extensions::AnonymousRename>();
-
-	    for(auto plugin : getPlugins()) {
-            for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
-                addSystemHeadersDirectory(kidnappedHeader);
-            }
-        }
-
-    }
+	}
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
@@ -227,7 +224,7 @@ namespace frontend {
 	}
 
 	bool ConversionJob::isCxx() const {
-		if (getStandard() == Standard::Cxx03 || getStandard() == Standard::Cxx11) return true;
+		if (getStandard() == Standard::Cxx03 || getStandard() == Cxx98 || getStandard() == Standard::Cxx11) return true;
 		if (getStandard() == Standard::C99) return false;
 
 		bool cppFile = any(files, [&](const path& cur) {
@@ -239,10 +236,10 @@ namespace frontend {
 		return cppFile || cppLibs;
 	}
 
-	void ConversionJob::printConversionJob() const {
-        std::cout << "~~~~~~CONVERSION SETUP~~~~~~\n";
-        std::cout << "input files: \n" << this->files << std::endl;
-        std::cout << "flags: \n" <<
+	std::ostream& ConversionJob::printTo(std::ostream& out) const {
+        out << "~~~~~~CONVERSION SETUP~~~~~~\n";
+        out << "input files: \n" << files << std::endl;
+        out << "flags: \n" <<
 			"PrintDiag " << hasOption(ConversionSetup::PrintDiag) << "\n" <<
 			"OpenMP " << hasOption(ConversionSetup::OpenMP) << "\n" <<
 			"OpenCL " << hasOption(ConversionSetup::OpenCL) << "\n" <<
@@ -253,11 +250,14 @@ namespace frontend {
 			"ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n" <<
 			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<
 			"StrictSemanticChecks " << hasOption(ConversionSetup::StrictSemanticChecks) << "\n" << std::endl;
-        std::cout << "interceptions: \n" << this->getInterceptedNameSpacePatterns() << std::endl;
-        std::cout << "include dirs: \n" << this->getIncludeDirectories() << std::endl;
-        std::cout << "libraries: \n" << this->libs << std::endl;
-        std::cout << "standard: \n" << this->getStandard() << std::endl;
-        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+        out << "interceptions: \n" << getInterceptedNameSpacePatterns() << std::endl;
+        out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
+        out << "include dirs: \n" << getIncludeDirectories() << std::endl;
+        out << "definitions: \n" << getDefinitions() << std::endl;
+        out << "libraries: \n" << libs << std::endl;
+        out << "standard: \n" << getStandard() << std::endl;
+        out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+        return out;
 	}
 
 } // end namespace frontend

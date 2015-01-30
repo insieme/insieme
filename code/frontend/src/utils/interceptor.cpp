@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -226,11 +226,11 @@ bool Interceptor::isIntercepted(const clang::QualType& type)const {
 }
 
 bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
-	if(toIntercept.empty()) {return false; }
+	if(toIntercept.empty()) { return false; }
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
-insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs) const {
+insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact, const bool explicitTemplateArgs, const std::string& name) const {
 
 	auto builder = convFact.getIRBuilder();
 	std::stringstream ss;
@@ -337,6 +337,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
+	if(!name.empty()) literalName = name;
 
 	//append eventual templateSpecializations
 	literalName.append(ss.str());
@@ -376,7 +377,15 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::EnumConstantDec
 	//remove typeName from qualifiedTypeName and append enumConstantName
 	size_t pos = qualifiedTypeName.find(typeName);
 	assert(pos!= std::string::npos);
-	std::string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
+	std::string fixedQualifiedName = qualifiedTypeName;
+	//we need to check if it is a c++11 scoped enumeration.
+	//if true, we need to use a different identifier
+	if(!enumDecl->isScoped()) {
+		fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
+	} else {
+		fixedQualifiedName.append("::");
+		fixedQualifiedName.append(constantName);
+	}
 
 	VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
 	VLOG(2) << fixedQualifiedName;

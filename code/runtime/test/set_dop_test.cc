@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,6 +38,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <cmath>
+#include <future>
 #include <iostream>
 using std::string;
 using std::ostream;
@@ -45,7 +47,7 @@ using std::vector;
 
 #define MAX_PARA 4
 
-#define N 1000
+#define N 500
 
 double A[N][N];
 double B[N][N];
@@ -100,4 +102,44 @@ TEST(SetDopTest, MMul) {
 		irt::merge(irt::parallel(workload));
 	});
 	irt::shutdown();
+}
+
+TEST(SetDopTest, ReducedEnd) {
+	irt::init(MAX_PARA);
+	irt::run([]() {
+		irt_scheduling_set_dop(1);
+	});
+	irt::shutdown();
+}
+
+TEST(SetDopTest, Stability) {
+	for(int i = 0; i<N; ++i) {
+		irt::init(MAX_PARA);
+		irt::run([]() {
+			irt_scheduling_set_dop(rand()%MAX_PARA + 1);
+		});
+		irt::shutdown();
+	}
+}
+
+TEST(SetDopTest, External) {
+	for(int i = 0; i<N; ++i) {
+		irt::init(MAX_PARA);
+		volatile bool run = true;
+		auto f = std::async(std::launch::async, [&run] { 
+			while(run) { 
+				irt_scheduling_set_dop(rand()%MAX_PARA + 1);
+				irt_busy_nanosleep(50 * 1000);
+			};
+			return true;
+		});
+		irt::run([]() {
+			double sum = 0;
+			for(int i=0; i<N; ++i) sum += sin(rand()%10/10.0);
+			printf("", sum);
+		});
+		run = false;
+		EXPECT_TRUE(f.get());
+		irt::shutdown();
+	}
 }

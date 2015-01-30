@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -523,7 +523,64 @@ namespace analysis {
 		EXPECT_PRED2(notReadOnly, call, varD);
 
 	}
+	namespace {
+		bool isNotReadOnlyWithinScope(const StatementPtr& stmt, const VariablePtr& var) {
+			return !isReadOnlyWithinScope(stmt, var);
+		};
 
+	}
+	TEST(IsReadOnly, LocalScope) {
+
+		// check whether usage in nested functions is discovered
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		ExpressionPtr none = builder.parseExpr("(ref<int<4>> x)->unit { *x; }");
+		ExpressionPtr used = builder.parseExpr("(ref<int<4>> x)->unit { x = 4; }");
+
+		VariablePtr var = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 5);
+
+		ExpressionPtr call1 = builder.callExpr(none, var);
+		ExpressionPtr call2 = builder.callExpr(used, var);
+
+		EXPECT_PRED2(readOnly, call1, var);
+		EXPECT_PRED2(notReadOnly, call2, var);
+
+		// check two parameters
+		ExpressionPtr fun = builder.parseExpr("(ref<int<4>> a, ref<int<4>> b)->unit { a = *b; }");
+
+		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
+		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
+
+		ExpressionPtr call = builder.callExpr(fun, varA, varB);
+
+		EXPECT_PRED2(isNotReadOnlyWithinScope, call, varA);
+		EXPECT_PRED2(isNotReadOnlyWithinScope, call, varB);
+
+
+		// check recursive functions
+		// 	a ... just read
+		//  b ... written in f, not in g
+		//  c ... written in g, not in f
+		//  d ... written in both
+		ExpressionPtr recFun = builder.parseExpr(
+				"let f,g = "
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { b = *a; d = *b; g(a,b,c,d); },"
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { c = *a; d = *c; f(a,b,c,d); }"
+				"in f"
+		);
+
+		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
+		VariablePtr varD = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 9);
+
+		call = builder.callExpr(recFun, varA, varB, varC, varD);
+
+		EXPECT_PRED2(isNotReadOnlyWithinScope, call, varA);
+		EXPECT_PRED2(isNotReadOnlyWithinScope, call, varB);
+		EXPECT_PRED2(isNotReadOnlyWithinScope, call, varC);
+		EXPECT_PRED2(isNotReadOnlyWithinScope, call, varD);
+
+	}
 	TEST(IsReadOnly, Forwarding) {
 
 		NodeManager mgr;

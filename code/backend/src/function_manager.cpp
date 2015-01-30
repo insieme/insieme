@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -387,7 +387,7 @@ namespace backend {
 		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
 		// 1) see whether call is call to a known operator
-		auto pos = operatorTable.find(core::analysis::normalize(fun));
+		auto pos = operatorTable.find(fun);
 		if (pos != operatorTable.end()) {
 			// use operator converter
 			return pos->second(context, call);
@@ -411,6 +411,9 @@ namespace backend {
 
 		// 3) test whether target is generic => instantiate
 		if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
+            // normalize the function
+            fun = core::analysis::normalize(fun);
+
 			auto& manager = call->getNodeManager();
 
 			// compute substitutions

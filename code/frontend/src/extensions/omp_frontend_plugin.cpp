@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -95,10 +95,11 @@ namespace {
 	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >>
 							  var_list["reduction"] >> r_paren;
 
+	auto param_quality_range= tok::expr["quality_range"] >> colon >> tok::expr["quality_range"] >> colon >> tok::expr["quality_range"];
 	// range(l_bound:u_bound:step)
-	auto param_range		= kwd("range") >> l_paren >> tok::expr["range"] >> colon >> tok::expr["range"] >> colon >> tok::expr["range"] >> r_paren;
+	auto param_range		= kwd("range") >> l_paren >> tok::expr["range"] >> colon >> tok::expr["range"] >> colon >> tok::expr["range"] >> !( tok::semi >> param_quality_range ) >> r_paren;
 	// enum(A: s)
-	auto param_enum			= Tok<clang::tok::kw_enum>() >> l_paren >> var["enum_list"] >> colon >> tok::expr["enum_size"] >> r_paren;
+	auto param_enum			= Tok<clang::tok::kw_enum>() >> l_paren >> var["enum_list"] >> colon >> tok::expr["enum_size"] >> !( tok::semi >> param_quality_range ) >> r_paren;
 
 	// param(var, [range(l:u:s) | enum(A:s)])
 	auto param_clause		= kwd("param") >> l_paren >> var["param_var"] >> !( comma >> ( param_range | param_enum )) >> r_paren;
@@ -111,18 +112,18 @@ namespace {
 	auto target_clause		= kwd("target") >> l_paren >> ( kwd("general") | kwd("accelerator") )["target_type"]
 	                  		  >> !( colon >> target_group ) >> !( colon >> ( target_core ) ) >> r_paren;
 
-	// f * (T | E | P)
+	// f * (T | E | P | Q)
 	auto objective_weight	=  tok::numeric_constant["obj_weights_factors"] >> tok::star
-								>> ( kwd("T")["obj_weights_params"] | kwd("E")["obj_weights_params"] | kwd("P")["obj_weights_params"] );
+								>> ( kwd("T")["obj_weights_params"] | kwd("E")["obj_weights_params"] | kwd("P")["obj_weights_params"] | kwd("Q")["obj_weights_params"]);
 
-	// f1 * T + f2 * E + f3 * P
-	auto objective_weights	= objective_weight >> tok::plus >> objective_weight >> tok::plus >> objective_weight;
+	// f1 * T + f2 * E + f3 * P + f4 * Q
+	auto objective_weights	= objective_weight >> tok::plus >> objective_weight >> tok::plus >> objective_weight >> tok::plus >> objective_weight;
 
 	//  < or <= or == or >= or >
 	auto obj_constraints_op = tok::less | tok::lessequal | tok::equalequal | tok::greaterequal | tok::greater;
 
 	// constraint = ( T | P | E ) op expr
-	auto objective_constraint	=  ( kwd("T")["obj_constraints_params"] | kwd("E")["obj_constraints_params"] | kwd("P")["obj_constraints_params"] )
+	auto objective_constraint	=  ( kwd("T")["obj_constraints_params"] | kwd("E")["obj_constraints_params"] | kwd("P")["obj_constraints_params"] | kwd("Q")["obj_constraints_params"] )
 								>> obj_constraints_op["obj_constraints_ops"] >> tok::expr["obj_constraints_exprs"];
 
 	// constraints = constraint, constraints | 0
@@ -387,6 +388,13 @@ namespace {
     	    		&& "Param clause range must contain a lower bound, an upper bound and a step!");
         }
 
+    	// quality range
+    	auto quality_range = mmap.getExprs("quality_range");
+        if(!quality_range.empty()) {
+    	    assert( quality_range.size() == 3
+    	    		&& "Param clause quality range must contain a lower bound, an upper bound and a step!");
+        }
+
     	// enum
         omp::VarListPtr enumList = handleIdentifierList(mmap, "enum_list");
         if(!enumList->empty()) {
@@ -405,10 +413,10 @@ namespace {
     	    assert( ((!enumExpr && !enumSize) || (enumExpr && enumSize))
     	    		&& "Param clause enum must contain a list and its size!");
 
-    	    return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), enumExpr, enumSize);
+    	    return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), std::make_shared<std::vector<core::ExpressionPtr>>(quality_range), enumExpr, enumSize);
         }
 
-    	return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), core::ExpressionPtr(), core::ExpressionPtr());
+    	return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), std::make_shared<std::vector<core::ExpressionPtr>>(quality_range), core::ExpressionPtr(), core::ExpressionPtr());
     }
 
     std::shared_ptr<core::ExpressionList> getCommaSeparatedExprs(const core::ExpressionPtr& expr) {
@@ -468,6 +476,7 @@ namespace {
     		if(paramStr == "T")		param = Objective::TIME;
     		else if(paramStr == "E")	param = Objective::ENERGY;
     		else if(paramStr == "P")	param = Objective::POWER;
+    		else if(paramStr == "Q")	param = Objective::QUALITY;
     		else assert(false && "Objective clause constraint parameter not supported.");
 
     		paramList->push_back(param);
@@ -522,10 +531,10 @@ namespace {
     	std::vector<double> weightsFactorList;
     	handleObjectiveFactorList(mmap, weightsFactorList);
 
-    	double timeWeight = 0, energyWeight = 0, powerWeight = 0;
+    	double timeWeight = 0, energyWeight = 0, powerWeight = 0, qualityWeight = 0;
         if(weightsParamList) {
-    	    assert( weightsParamList && weightsParamList->size() <= 3 && weightsFactorList.size() <= 3 && weightsParamList->size() == weightsFactorList.size()
-    	    		&& "Objective clause weights must contain time(T), energy(E) and power(P)");
+    	    assert( weightsParamList && weightsParamList->size() <= 4 && weightsFactorList.size() <= 4 && weightsParamList->size() == weightsFactorList.size()
+    	    		&& "Objective clause weights must contain time(T), energy(E), power(P) and quality(Q)");
 
     	    auto facIt = weightsFactorList.begin();
 
@@ -543,10 +552,14 @@ namespace {
     	    	{
     	    		powerWeight = *facIt;
     	    	}
+    	    	else if(it == omp::Objective::QUALITY)
+    	    	{
+    	    		qualityWeight = *facIt;
+    	    	}
     	    	++facIt;
     	    }
 
-    	    assert( timeWeight + energyWeight + powerWeight == 1
+    	    assert( timeWeight + energyWeight + powerWeight + qualityWeight == 1
     	    		&& "Sum of Objective clause weights must be equal to 1!");
         }
 
@@ -563,7 +576,7 @@ namespace {
     					&& constraintsExprList && constraintsParamList->size() == constraintsExprList->size() ))
     			&& "Objective clause constraints bad formatted" );
 
-    	return std::make_shared<omp::Objective>(timeWeight, energyWeight, powerWeight,
+    	return std::make_shared<omp::Objective>(timeWeight, energyWeight, powerWeight, qualityWeight,
                         constraintsParamList, constraintsOpList, constraintsExprList);
     }
 

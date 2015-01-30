@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,6 +62,11 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/polyhedral/scoppar.h"
+#include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/transform/transformation.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -82,6 +87,7 @@
 #include "insieme/analysis/cfg.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/analysis/func_sema.h"
 
 using namespace std;
@@ -291,23 +297,24 @@ namespace {
 	}
 
 	/// Polyhedral Model Extraction: Start analysis for SCoPs and prints out stats
-	void markSCoPs(ProgramPtr& program, MessageList& errors, const CommandLineOptions& options) {
+	void markSCoPs(ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.MarkScop && !options.UsePM) return;
 		using namespace anal::polyhedral::scop;
 
 		// find SCoPs in our current program
-		AddressList sl = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ",
-			[&]() -> AddressList { return mark(program); });
+		std::vector<NodeAddress> scoplist = utils::measureTimeFor<std::vector<NodeAddress>, INFO>("IR.SCoP.Analysis ",
+			[&]() -> std::vector<NodeAddress> { return mark(program); });
 
 		size_t numStmtsInScops=0, loopNests=0, maxLoopNest=0;
 
 		// loop over all SCoP annotations we have discovered
-		std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){
+		// TODO: use class SCoPMetric (not yet introduced)
+		std::for_each(scoplist.begin(), scoplist.end(),	[&](std::list<NodeAddress>::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 
 			// only print SCoPs which contain statement, at the user's request
 			if (reg.getScop().size()==0) return;
-			else { if (options.MarkScop) { std::cout << reg.getScop(); } }
+			if (options.MarkScop) std::cout << reg.getScop();
 
 			// count number of statements covered by SCoPs
 			numStmtsInScops += reg.getScop().size();
@@ -318,13 +325,25 @@ namespace {
 			loopNests += loopNest;
 		});
 
-		LOG(INFO) << std::setfill(' ') << std::endl
-				  << "SCoP Analysis" << std::endl
-				  << "\t# of SCoPs: " << sl.size() << std::endl
-				  << "\t# of stmts within SCoPs: " << numStmtsInScops << std::endl
-				  << "\tavg stmts per SCoP: " << std::setprecision(2) << (double)numStmtsInScops/sl.size() << std::endl
-				  << "\tavg loop nests per SCoP: " << std::setprecision(2) << (double)loopNests/sl.size() << std::endl
-				  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
+//		LOG(INFO) << std::setfill(' ') << std::endl
+//				  << "SCoP Analysis" << std::endl
+//				  << "\t# of SCoPs: " << sl.size() << std::endl
+//				  << "\t# of stmts within SCoPs: " << numStmtsInScops << std::endl
+//				  << "\tavg stmts per SCoP: " << std::setprecision(2) << (double)numStmtsInScops/sl.size() << std::endl
+//				  << "\tavg loop nests per SCoP: " << std::setprecision(2) << (double)loopNests/sl.size() << std::endl
+//				  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
+	}
+
+	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
+	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
+		if (!options.UsePM) return program;
+		LOG(DEBUG) << "We will be using the backend: " << options.Backend << std::endl;
+		if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL)) {
+			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl;
+			return program;
+		}
+
+		return insieme::transform::polyhedral::SCoPPar(program).apply();
 	}
 
 	//***************************************************************************************
@@ -368,7 +387,8 @@ namespace {
 
 		switch(selection) {
 			case 'o': {
-				// check if the host is in the entrypoints, otherwise use the kernel backend
+				// use the OCL kernel backend if a KernelFctAnnotation can be found in the program,
+				// otherwise use the OCL host backend
 				bool host = [&]() {
 					const auto& ep = program->getEntryPoints();
 					for (auto& e : ep) {
@@ -422,14 +442,18 @@ namespace {
  */
 int main(int argc, char** argv) {
 
-	const CommandLineOptions options = CommandLineOptions::parse(argc, argv);
-	if (!options.valid) return 0;		// it was a help or about request
+	CommandLineOptions options = CommandLineOptions::parse(argc, argv);
+	if (options.optionStatus != OptionStatus::VALID) return static_cast<int>(options.optionStatus);		// it was a help/version request, or a parameter error
+	string backendName; // needed now so that we can sanitize user input early (string given to --backend option)
+	be::BackendPtr backend;
 
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.LogLevel), options.Verbosity);
 	LOG(INFO) << "Insieme compiler - Version: " << utils::getVersion();
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
+
+	// try to read the input sources and do some benchmarking
 	try {
 		if(!options.InputFiles.empty()) {
 
@@ -446,6 +470,12 @@ int main(int argc, char** argv) {
 			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
 					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
 
+			// after reading in the source files, we need to do backend selection
+			if (!options.Backend.empty()) {
+				std::tie(backendName, backend) = selectBackend(program, options);
+				options.Backend=backendName; // sanitize user input
+			}
+
 			printIR(program, options);
 
 			// perform checks
@@ -459,7 +489,8 @@ int main(int argc, char** argv) {
 			dumpCFG(program, options.CFG);
 
 			// Perform SCoP region analysis
-			markSCoPs(program, errors, options);
+			markSCoPs(program, options);
+			program=SCoPTransformation(program, options);
 
 			// IR statistics
 			showStatistics(program, options);
@@ -469,38 +500,28 @@ int main(int argc, char** argv) {
 
 		}
 
-		{
-			// see whether a backend has been selected
-			if (!options.Backend.empty()) {
+		// write program output only if a backend has been selected
+		if (!backendName.empty()) {
+			//openBoxTitle("Converting to TargetCode"); // this should be made into LOG(DEBUG)
 
-				openBoxTitle("Converting to TargetCode");
+			utils::measureTimeFor<INFO>( backendName, [&](){
+				// convert code
+				be::TargetCodePtr targetCode = backend->convert(program);
+				LOG(DEBUG) << "\n" << *targetCode; // do logger output before writing to a file
 
-				string backendName;
-				be::BackendPtr backend;
+				// select output target
+				if(!options.Output.empty()) {
+					// write result to file ...
+					std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
+					outFile << *targetCode;
+					outFile.close();
 
-				std::tie(backendName, backend) = selectBackend(program, options);
+					// TODO: reinstate rewriter when fractions of programs are supported as entry points
+					return;
+				}
+			});
 
-				utils::measureTimeFor<INFO>( backendName, [&](){
-					// convert code
-					be::TargetCodePtr targetCode = backend->convert(program);
-
-					// select output target
-					if(!options.Output.empty()) {
-						// write result to file ...
-						std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
-						outFile << *targetCode;
-						outFile.close();
-
-						// TODO: reinstate rewriter when fractions of programs are supported as entry points
-	//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), options.Output);
-						return;
-					}
-					// just write result to logger
-					LOG(INFO) << "\n" << *targetCode;
-				});
-
-				closeBox();
-			}
+			//closeBox();
 		}
 
 	} catch (fe::ClangParsingError& e) {

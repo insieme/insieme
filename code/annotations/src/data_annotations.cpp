@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -104,6 +104,10 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode,
 	});
 }
 
+
+const string DataTransformAnnotation::NAME = "DataTransformAnnotation";
+const utils::StringKey<DataTransformAnnotation> DataTransformAnnotation::KEY("Transform");
+
 } // namespace annotations
 } // namespace insieme
 
@@ -130,6 +134,14 @@ namespace std {
 		for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
 			out << "\t" << *I  << std::endl;
 		}
+
+		return out;
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& tAnnot) {
+		out << "DataTransformAnnotation:\n";
+
+		out << "\t" << (tAnnot.isSoa() == 0 ? "SOA" : ("Tilesize: " + tAnnot.getTilesize())) << std::endl;
 
 		return out;
 	}

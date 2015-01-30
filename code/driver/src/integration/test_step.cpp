@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -136,8 +136,9 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
+					cmd<<" ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -179,7 +180,7 @@ namespace integration {
 					set.numThreads=numThreads;
 
 					// run it
-					return runner.runCommand(name, set, props, cmd.str());
+					return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
 				}, deps,RUN);
 			}
 
@@ -224,7 +225,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
 
 					//append intercept patterns
@@ -235,6 +236,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
+					cmd<<" ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -260,7 +262,6 @@ namespace integration {
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
 						executionDirectory=set.executionDir;
-	
 
 					// start with executable
 					cmd << executionDirectory << "/" << test.getBaseName() << ".insiemecc";
@@ -276,7 +277,7 @@ namespace integration {
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runner.runCommand(name, set, props, cmd.str());
+					return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
 				}, deps,RUN);
 			}
 
@@ -324,7 +325,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
 
 					//append intercept patterns
@@ -335,6 +336,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
+					cmd<<" ";
 
 					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
@@ -379,7 +381,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
 
 					//append intercept patterns
@@ -390,6 +392,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
+					cmd<<" ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -463,8 +466,9 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<"-D"<<def.first<<"="<<def.second<<" ";
+						cmd<<" -D"<<def.first<<"="<<def.second;
 					});
+					cmd<<" ";
 
 					// set output file, stdOut file and stdErr file
 					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be;
@@ -489,7 +493,7 @@ namespace integration {
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
 						executionDirectory=set.executionDir;
-	
+						
 					// start with executable
 					cmd << executionDirectory << "/" << test.getBaseName() << ".insieme." << be;
 
@@ -506,7 +510,7 @@ namespace integration {
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-					return runner.runCommand(name, set, props, cmd.str());
+					return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
 				}, deps,RUN);
 			}
 
@@ -966,7 +970,7 @@ namespace integration {
      */
     int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
                            const string& environmentParam, const string& outFilePath,
-                           const string& errFilePath, unsigned cpuTimeLimit) const {
+                           const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
 
         /*
          * Setup arguments
@@ -1088,6 +1092,8 @@ namespace integration {
 				std::cerr << "Unable to close stdout file descriptor, reason: " << strerror(errno) << "\n";
 			if(close(fdErr) == -1)
 				std::cerr << "Unable to close stderr file descriptor, reason: " << strerror(errno) << "\n";
+			// navigate to execution directory if one is specified
+			if(!execDir.empty()) boost::filesystem::current_path(execDir);
 			// execute
 			if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1)
 				std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
@@ -1102,7 +1108,7 @@ namespace integration {
 
 	TestResult TestRunner::runCommand(const string& stepName, const TestSetup& setup,
                        const PropertyView& testConfig, const string& cmd,
-                       const string& producedFile) const {
+                       const string& producedFile, const string& execDir) const {
 
 		vector<string> producedFiles;
 		producedFiles.push_back(setup.stdOutFile);
@@ -1124,7 +1130,7 @@ namespace integration {
 			outfile= " -o "+setup.outputFile;
 		}
 
-		//setup possible environment vars
+		// setup possible environment vars
 		std::stringstream env;
 		{
 			//set LD_LIBRARY_PATH
@@ -1160,7 +1166,8 @@ namespace integration {
 
 		// if it is a mock-run do nothing
 		if (setup.mockRun) {
-			return TestResult(stepName,0,true,metricResults,"","",env.str() + cmd + outfile);
+			return TestResult(stepName, 0, true, metricResults, "", "", 
+				(execDir.empty() ? "" : "cd "+ execDir + " && ") + env.str() + cmd + outfile);
 		}
 
 		string perfString("");
@@ -1195,7 +1202,7 @@ namespace integration {
 		// cpu time limit in seconds
 		unsigned cpuTimeLimit = 1200;
 
-		int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit);
+		int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit, execDir);
 
 		/*
 		 * NOTE: Ordinarily, one would use WIFSIGNALED(int exitCode) to check whether a child process was terminated by a signal.

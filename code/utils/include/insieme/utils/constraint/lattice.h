@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -104,6 +104,7 @@ namespace constraint {
 
 	template<typename T>
 	struct default_meet_assign_op {
+		default_meet_assign_op() {}
 		bool operator()(T& trg, const T& src) const {
 			T old = trg;
 			trg += src;
@@ -113,6 +114,7 @@ namespace constraint {
 
 	template<typename meet_assign_op>
 	struct meet_assign_based_meet_op {
+		meet_assign_based_meet_op() {}
 		template<typename A, typename B>
 		A operator()(const A& a, const B& b) const {
 			static const meet_assign_op meet_assign;
@@ -124,6 +126,7 @@ namespace constraint {
 
 	template<typename meet_assign_op>
 	struct meet_assign_based_less_op {
+		meet_assign_based_less_op() {}
 		template<typename A, typename B>
 		bool operator()(const A& a, const B& b) const {
 			static const meet_assign_op meet_assign;
@@ -137,6 +140,7 @@ namespace constraint {
 
 	template<typename E>
 	struct set_union_meet_assign_op {
+		set_union_meet_assign_op() {}
 		bool operator()(std::set<E>& trg, const E& element) const {
 			return trg.insert(element).second;
 		}
@@ -155,6 +159,7 @@ namespace constraint {
 
 	template<typename E>
 	struct set_union_less_op {
+		set_union_less_op() {}
 		bool operator()(const E& e, const std::set<E>& a) const {
 			return a.find(e) != a.end();
 		}
@@ -180,6 +185,7 @@ namespace constraint {
 
 	template<typename E>
 	struct set_intersect_meet_assign_op {
+		set_intersect_meet_assign_op() {}
 		bool operator()(iset<E>& trg, const E& element) const {
 
 			// deal with universe
@@ -229,6 +235,7 @@ namespace constraint {
 
 	template<typename E>
 	struct set_intersect_less_op {
+		set_intersect_less_op() {}
 		bool operator()(const E& e, const iset<E>& a) const {
 			return a.empty() || (a.size() == 1u && *a.begin() == e);
 		}

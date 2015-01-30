@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -142,10 +142,12 @@ namespace c_ast {
 				case PrimitiveType::Int16 : return out << "int16_t";
 				case PrimitiveType::Int32 : return out << "int32_t";
 				case PrimitiveType::Int64 : return out << "int64_t";
+				case PrimitiveType::Int128 : return out << "int128_t";
 				case PrimitiveType::UInt8 : return out << "uint8_t";
 				case PrimitiveType::UInt16 : return out << "uint16_t";
 				case PrimitiveType::UInt32 : return out << "uint32_t";
 				case PrimitiveType::UInt64 : return out << "uint64_t";
+				case PrimitiveType::UInt128 : return out << "uint128_t";
 				case PrimitiveType::Float : return out << "float";
 				case PrimitiveType::Double : return out << "double";
 				case PrimitiveType::LongLong : return out << "long long";

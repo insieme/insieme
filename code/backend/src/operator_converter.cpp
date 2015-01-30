@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,13 +61,23 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
 
+#include "insieme/core/ir_class_info.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
 
+namespace {
+
+	bool isPrimitiveType(const core::TypePtr& type) {
+		auto& basic = type->getNodeManager().getLangBasic();
+		return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
+	}
+} //anon
+
     namespace operators {
-        
+
 		#include "insieme/backend/operator_converter_begin.inc"
 
 	    c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name = "free", bool addHeader = true) {
@@ -131,8 +141,8 @@ namespace backend {
 			// use core functionality
 			auto res = core::transform::evalLazy(manager, exprPtr);
 
-			// simplify evaluated lazy expression
-			return core::transform::simplify(manager, res, false);
+			// return evaluated lazy expression
+			return res;
 		}
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
@@ -431,7 +441,7 @@ namespace backend {
 		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- generic --
-	
+
 		res[basic.getGenAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getGenSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getGenMul()] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -454,7 +464,7 @@ namespace backend {
 		// -- undefined --
 		res[basic.getZero()] = OP_CONVERTER({
 			auto type = call->getType();
-			// special case: intercepted object 
+			// special case: intercepted object
 			if (type.isa<core::GenericTypePtr>()) {
 
 				// write a string witch is the whole type
@@ -476,7 +486,7 @@ namespace backend {
 					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
 				}
 			}
-			// 2) special case: intercepted object 
+			// 2) special case: intercepted object
 			if (type.isa<core::GenericTypePtr>()) {
 
 				// write a string witch is the whole type
@@ -535,7 +545,7 @@ namespace backend {
 		});
 
 		res[basic.getRefAssign()] = OP_CONVERTER({
-				
+
 			// extract type
 			core::ExpressionPtr initValue = call->getArgument(0);
 			core::TypePtr type = initValue->getType();
@@ -561,7 +571,6 @@ namespace backend {
 			// fix dependency
 			context.getDependencies().insert(valueTypeInfo.definition);
 
-
 			// special handling for arrays
 			if (type->getNodeType() == core::NT_ArrayType) {
 				// no out allocation required!
@@ -583,6 +592,17 @@ namespace backend {
 			if (res->getNodeType() == c_ast::NT_Initializer) {
 				return c_ast::ref(res);
 			}
+
+			// moderm C++ does not allow the usage of the syntax (int[1]{x})
+			// the value of a class instance is implicity materialized to
+			// be used as reference paramenter in function calls,
+			// lets try just to write the expression and let the backend compiler
+			// materialize it
+			// 	Classes && generic types (which are intercepted objects)
+			if(type.isa<core::StructTypePtr>() || (type.isa<core::GenericTypePtr>() && !isPrimitiveType(type))){
+				return c_ast::ref(res);
+			}
+
 			// creates a something of the format "(int[1]){x}"
 			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		});
@@ -801,14 +821,14 @@ namespace backend {
 		res[basic.getArrayRefDistance()] = OP_CONVERTER({
 
 			// add dependency to full type for both operators, need to know the offset for the pointer arithmetics
-			core::TypePtr elementType = core::analysis::getReferencedType(call[0]->getType()); 
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
-			const TypeInfo& info = GET_TYPE_INFO(elementType); 
+			core::TypePtr elementType = core::analysis::getReferencedType(call[0]->getType());
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
+			const TypeInfo& info = GET_TYPE_INFO(elementType);
 			context.getDependencies().insert(info.definition);
 
-			elementType = core::analysis::getReferencedType(call[1]->getType()); 
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
-			const TypeInfo& info2 = GET_TYPE_INFO(elementType); 
+			elementType = core::analysis::getReferencedType(call[1]->getType());
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
+			const TypeInfo& info2 = GET_TYPE_INFO(elementType);
 			context.getDependencies().insert(info2.definition);
 
 			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
@@ -1097,12 +1117,12 @@ namespace backend {
 			assert_false(decl->external) << "Can not initialize external declaration!";
 
 			// avoid zero inits, those are implicit
-			if (core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero()) || 
+			if (core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getZero()) ||
 				core::analysis::isCallOf(call[1], call->getNodeManager().getLangBasic().getUndefined())){
 				return none;
 			}
 
-			// convert init-value in fresh context, 
+			// convert init-value in fresh context,
 			ConversionContext innerContext(context.getConverter(), context.getEntryPoint());
 			decl->init = context.getConverter().getStmtConverter().convertExpression(innerContext, call[1]);
 
@@ -1218,22 +1238,22 @@ namespace backend {
 
 		res[basic.getGenInit()] = OP_CONVERTER({
 			// this is a blind initialization, used to initialize intercepted objects
-		
+
 				// we need a little introspection over whatever we find inside, it might be that we find another expression list.
-				// the last thing we want to do is to cast those into any type (clasical compound initializer: (type){...} ) 
-				// since we know NOTHING about inner types, we'll create a compound without 
+				// the last thing we want to do is to cast those into any type (clasical compound initializer: (type){...} )
+				// since we know NOTHING about inner types, we'll create a compound without
 			auto tupleExpr = ARG(1).as<core::TupleExprPtr>();
 
 			vector<c_ast::NodePtr> v;
 			for (auto cur : tupleExpr->getExpressions()){
 				v.push_back(CONVERT_EXPR(cur));
 			}
-			
+
 			return C_NODE_MANAGER->create<c_ast::Initializer>(CONVERT_TYPE(call->getType()), v );
 		});
 
 		// ----------------------------  Attribute extension --------------------------
-		
+
 		auto& attrExt = manager.getLangExtension<core::analysis::AttributeExtension>();
 		res[attrExt.getAttr()] = OP_CONVERTER({
 			// just skip this attribute
@@ -1348,7 +1368,7 @@ namespace backend {
 					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);
 				}
-				
+
 				// cast needs full definition of target type to be done
 				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(targetTy);
 				context.addDependency(info.definition);
@@ -1461,8 +1481,32 @@ namespace backend {
             res[irppExt.getMemberPointerCheck()] = OP_CONVERTER({
                 return CONVERT_ARG(0);
             });
+
+            res[irppExt.getStdInitListExpr()] = OP_CONVERTER({
+                //get type of the init list expression elements
+                const core::TypePtr type = core::analysis::getRepresentedType(ARG(1));
+                const TypeInfo& info = GET_TYPE_INFO(type);
+                //retrieve the list of init values
+                auto values = (insieme::core::encoder::toValue<vector<insieme::core::ExpressionPtr>,core::encoder::DirectExprListConverter>(ARG(0)));
+                //convert the list elements
+                auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr {
+                    c_ast::ExpressionPtr no = CONVERT_EXPR(cur);
+                    //in a bracket initalization we cannot use references, we have to use values
+                    if(c_ast::isUnaryOp(no, c_ast::UnaryOperation::Reference)) {
+                        no = c_ast::deref(no);
+                    }
+                    return no;
+                });
+                //create the {val1, val2, ...} init list
+                c_ast::InitializerPtr initializer = c_ast::init(info.rValueType, converted);
+                //avoid explicit type printing
+                initializer->explicitType = false;
+                std::vector<c_ast::NodePtr> args {initializer};
+                //return the ctor call of the given type (e.g., std::vector) and the init list as argument
+                return c_ast::ctorCall(info.rValueType, args);
+			});
 		}
-		
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table

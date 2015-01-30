@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -131,6 +131,7 @@ namespace integration {
 			return res;
 		}
 
+
 		boost::optional<IntegrationTestCase> loadTestCase(const std::string& testName) {
 			static const boost::optional<IntegrationTestCase> fail;
 
@@ -182,11 +183,8 @@ namespace integration {
 					files.push_back((testCaseDir / (caseName + ".c")).string());
 				else {
 					// this must be a c++ test case
-					assert_true(fs::exists(testCaseDir / (caseName + ".cpp"))) << "file dosen't exist: " << testCaseDir << "/" << caseName << ".cpp";
+					assert_true(fs::exists(testCaseDir / (caseName + ".cpp"))) << "file doesn't exist: " << testCaseDir << "/" << caseName << ".cpp";
 					files.push_back((testCaseDir / (caseName + ".cpp")).string());
-
-					// if test is located in apropiate folder, activate CXX11 standard
-					//std::size_t found = testCaseDir.string().find("cpp11");
 				}
 			}
 
@@ -235,20 +233,29 @@ namespace integration {
 				}
 			}
 
+			// find "canonical" test name regardless of setup
+			string canonRoot = fs::canonical(fs::path(TEST_ROOT_DIR)).string();
+			string prefix = commonPrefix(testCaseDir.string(), canonRoot);
+			string name = testCaseDir.string().substr(prefix.size());
+			// don't just replace "test/" here, as unintended replacements might occur deeper in the directory structure
+			boost::algorithm::replace_first(name, "ext/test/", "ext/");
+			boost::algorithm::replace_first(name, "base/test/", "base/");
+			if(boost::algorithm::starts_with(name, "/")) name = name.substr(1);
+
 			// add test case
-			return IntegrationTestCase(testName, testCaseDir, files, includeDirs, libPaths, libNames,
+			return IntegrationTestCase(name, testCaseDir, files, includeDirs, libPaths, libNames,
 					interceptionNameSpacePatterns, interceptedHeaderFileDirectories,
 					enableOpenMP, enableOpenCL, enableCXX11, prop);
 		}
 
 
-		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const std::string& prefix = "", bool forceCommented = false) {
-
+		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, bool forceCommented = false) {
+			
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
 			// obtain access to the test directory
-			const fs::path testDir(testDirStr /*TEST_ROOT_DIR*/);
+			const fs::path testDir(testDirStr);
 
 			// check whether the directory is correct
 			if (!fs::exists(testDir)) {
@@ -304,13 +311,13 @@ namespace integration {
 				const fs::path subTestConfig = testCaseDir / "test.cfg";
 				if (fs::exists(subTestConfig)) {
 					LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
-					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/",forceCommented);
+					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), forceCommented);
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
 					continue;
 				}
 
 				// load individual test case
-				auto testCase = loadTestCase(prefix + cur);
+				auto testCase = loadTestCase(testCaseDir.string());
 				if (testCase) res.push_back(*testCase);
 			}
 
@@ -324,7 +331,7 @@ namespace integration {
 	const vector<IntegrationTestCase>& getAllCases(bool forceCommented) {
 		// check whether cases have been loaded before
 		if (!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR,"",forceCommented));
+			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR, forceCommented));
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;
@@ -390,46 +397,20 @@ namespace integration {
 
 	vector<IntegrationTestCase> getTestSuite(const string& path, bool forceCommented) {
 
-		// load list of test cases
-		const vector<IntegrationTestCase>& cases = getAllCases(forceCommented);
-
 		// convert the path into an absolute path
 		frontend::path absolute_path = fs::canonical(fs::absolute(path));
 
-		// search for case with given name
-		vector<IntegrationTestCase> res;
-		for(const auto& cur : cases) {
-			// check the directory
-			if (isParentOf(absolute_path, cur.getDirectory())) {
-				res.push_back(cur);
+		// first check if it's an individual test case
+		const fs::path testConfig = absolute_path / "test.cfg";
+		if (!fs::exists(testConfig)) { 
+			//individual test cases have no "test.cfg"
+			auto testCase = loadTestCase(path);
+			if (testCase) {
+				return toVector(*testCase);
 			}
 		}
 
-		// if not included in ALL test cases since not covered by the configuration => load rest
-		if (res.empty()) {
-            string prefix;
-            if(absolute_path.string().size() > fs::canonical(fs::absolute(TEST_ROOT_DIR)).string().size()) {
-                prefix = absolute_path.string().substr(fs::canonical(fs::absolute(TEST_ROOT_DIR)).string().size());
-                if(prefix.back() != '/') prefix.push_back('/');
-            }
-			res = loadAllCases(path, prefix );
-		}
-
-		// if still not found => it is a individual test case
-		if (res.empty()) {
-
-			const fs::path testConfig = absolute_path / "test.cfg";
-			if (!fs::exists(testConfig)) { 
-				//individual test cases have no "test.cfg"
-				auto testCase = loadTestCase(path);
-				if (testCase) {
-					return toVector(*testCase);
-				}
-			}
-		}
-
-		// return list of results
-		return res;
+		return loadAllCases(absolute_path.string(), forceCommented);
 	}
 
 

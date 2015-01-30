@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,10 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
@@ -79,6 +80,11 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 	 */
 	insieme::core::ExpressionPtr VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact);
 
+	/**
+	 *			StdInitListExpr
+	 */
+	insieme::core::ExpressionPtr VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact);
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 types
 
@@ -111,6 +117,8 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 			return VisitCXXNullPtrLiteralExpr(nullExpr, convFact);
 		if(const clang::SizeOfPackExpr* sope = llvm::dyn_cast<clang::SizeOfPackExpr>(expr))
 			return VisitSizeOfPackExpr(sope, convFact);
+        if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr))
+            return VisitInitListExpr(initList, convFact);
 		return nullptr;
 	}
 

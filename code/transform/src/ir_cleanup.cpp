@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,29 +49,28 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/transform/connectors.h"
 
 #include "insieme/transform/dfabased/const_prop.h"
 #include "insieme/transform/dfabased/dead_variables.h"
 
+#include <ostream>
+#include <execinfo.h>
+
 namespace insieme { namespace transform {
 
 using namespace insieme::core;
 
 
+/** Is it just me, or is this function really never called? If I am wrong, please document the behaviour, and the
+relationship with the --cleanup/-C command line switch! */
 core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation) {
-
-	// start by doing nothing ..
 	core::NodePtr res = node;
 
 	res = deadBranchElimination(res);
-
-	//res = polyhedralSemplification(res);
-
 	res = eliminateRedundantAssignments(res);
-
 	res = eliminatePseudoArrays(res);
 
 	if(constantPropagation) {
@@ -80,7 +79,6 @@ core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation) {
 		res = removeDeadVariables(res->getNodeManager(), res);
 		res = core::transform::simplify(res->getNodeManager(), res);
 	}
-	// done
 	return res;
 }
 

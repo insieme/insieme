@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,7 @@ typedef enum _irt_type_kind {
 	IRT_T_UINT8, IRT_T_UINT16, IRT_T_UINT32, IRT_T_UINT64,
 	IRT_T_REAL16, IRT_T_REAL32, IRT_T_REAL64,
 	IRT_T_STRUCT = 0xFF00,								// complex type start
-	IRT_T_UNION, IRT_T_FUNC, IRT_T_POINTER, IRT_T_ARRAY, IRT_T_VECTOR, IRT_T_VAR_VECTOR, IRT_T_CHANNEL, IRT_T_BASIC
+	IRT_T_UNION, IRT_T_FUNC, IRT_T_POINTER, IRT_T_REFERENCE, IRT_T_ARRAY, IRT_T_VECTOR, IRT_T_VAR_VECTOR, IRT_T_CHANNEL, IRT_T_BASIC
 } irt_type_kind;
 
 // TODO structs for complex types / union
@@ -63,7 +63,11 @@ struct _irt_type {
 /* ------------------------------ operations ----- */
 
 static inline uint32 irt_type_get_bytes(irt_context* context, irt_type_id type_id) {
-	return context->type_table[type_id].bytes;
+	if(type_id < 0) { // if <0, it's not an id but -(size)
+		return - type_id;
+	} else {
+		return context->type_table[type_id].bytes;
+	}
 }
 
 static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
@@ -85,7 +89,8 @@ static inline const char* irt_type_kind_get_name(irt_type_kind kind) {
 	case IRT_T_UNION: return "IRT_T_UNION"; 
 	case IRT_T_FUNC: return "IRT_T_FUNC";
 	case IRT_T_POINTER: return "IRT_T_POINTER"; 
-	case IRT_T_ARRAY: return "IRT_T_ARRAY"; 
+    case IRT_T_REFERENCE: return "IRT_T_REFERENCE";
+    case IRT_T_ARRAY: return "IRT_T_ARRAY"; 
 	case IRT_T_VECTOR: return "IRT_T_VECTOR"; 
 	case IRT_T_VAR_VECTOR: return "IRT_T_VAR_VECTOR"; 
 	case IRT_T_CHANNEL: return "IRT_T_CHANNEL"; 

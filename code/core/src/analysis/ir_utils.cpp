@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -59,6 +59,25 @@ namespace core {
 namespace analysis {
 
 using std::map;
+
+bool isSideEffectFree(const ExpressionPtr& expr) {
+	// all variables and literals are side-effect free accessible
+	NodeType type = expr->getNodeType();
+	if (type == NT_Variable || type == NT_Literal) {
+		return true;
+	}
+
+	// check for other operations
+	if (type != NT_CallExpr) {
+		return false;
+	}
+
+	// check whether function is side-effect free + all arguments are
+	CallExprPtr call = expr.as<CallExprPtr>();
+	auto& basic = expr->getNodeManager().getLangBasic();
+	return basic.isPure(call->getFunctionExpr()) &&
+		all(call->getArguments(), &isSideEffectFree);
+}
 
 bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
 
@@ -344,6 +363,7 @@ namespace {
 	struct rec_free_var_collector<Pointer> {
 		vector<VariablePtr> operator()(const NodePtr& cur) const { return analysis::getFreeVariables(cur); }
 		VariablePtr extend(const NodePtr&, const VariablePtr& res) const { return res; }
+		rec_free_var_collector() {}
 	};
 
 	/**
@@ -357,6 +377,7 @@ namespace {
 		VariableAddress extend(const NodeAddress& head, const VariableAddress& tail) const {
 			return concat(head, tail);
 		}
+		rec_free_var_collector() {}
 	};
 
 	/**
@@ -677,7 +698,6 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 					  if (*varAddr == *pair.second) {
 							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
 								varAddr = tmp;
-							std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
 						}
 			});
 		}
@@ -825,6 +845,8 @@ namespace {
 	 * in a recursive context.
 	 */
 	struct ReadOnlyCheck {
+		bool VisitScopes;
+		ReadOnlyCheck(bool v =true) : VisitScopes(v){ }
 
 		/**
 		 * A map mapping recursive variables and parameter positions to a flag
@@ -859,6 +881,7 @@ namespace {
 
 
 		bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
+			if (!VisitScopes) return true;
 
 			// check the parameter
 			assert(::contains(lambda->getParameterList(), param) && "Asking for non-existing parameter.");
@@ -876,7 +899,6 @@ namespace {
 
 				// add body
 				bodyMap[cur->getVariable()] = cur->getLambda();
-
 			}
 
 			// assume parameter is save (co-induction)
@@ -922,24 +944,28 @@ namespace {
 				if (cur.getParentNode()->getNodeType() == NT_CompoundStmt) return true;
 
 				// if it is a call to a lambda, check the lambda
-				if (CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
+				if (VisitScopes){
+					if (CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
 
-					// check calls to nested functions
-					if (LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
-						if (!isReadOnly(fun, fun->getParameterList()[cur.getIndex()-2])) {		// -1 for type, -1 for function expr
-							readOnly = false;		// it is no longer read-only
-						}
-						// we can stop the decent here
-						return true;
-					}
+						// check calls to nested functions
+						if (LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
 
-					// check calls to recursive functions
-					if (VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
-						if (!isReadOnly(var, cur.getIndex()-2)) {		// -1 for type, -1 for function expr
-							readOnly = false;		// it is no longer read-only
+							if (!isReadOnly(fun, fun->getParameterList()[cur.getIndex()-2])) {		// -1 for type, -1 for function expr
+								readOnly = false;		// it is no longer read-only
+							}
+
+							// we can stop the decent here
+							return true;
 						}
-						// we can stop the decent here
-						return true;
+
+						// check calls to recursive functions
+						if (VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
+							if (!isReadOnly(var, cur.getIndex()-2)) {		// -1 for type, -1 for function expr
+								readOnly = false;		// it is no longer read-only
+							}
+							// we can stop the decent here
+							return true;
+						}
 					}
 				}
 
@@ -968,6 +994,10 @@ bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
 
 bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 	return ReadOnlyCheck().isReadOnly(stmt, var);
+}
+
+bool isReadOnlyWithinScope(const StatementPtr& stmt, const VariablePtr& var) {
+	return ReadOnlyCheck(false).isReadOnly(stmt, var);
 }
 
 bool isStaticVar (const ExpressionPtr& var){
@@ -1119,7 +1149,6 @@ bool isZero(const core::ExpressionPtr& value) {
 	// otherwise, it is not zero
 	return false;
 }
-
 
 } // end namespace utils
 } // end namespace core

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -119,6 +119,12 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDatarange>(
             pp.getIdentifierInfo("datarange"), range_list["ranges"] >> eod, "insieme")
         );
+
+    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDataTransform>(
+            pp.getIdentifierInfo("transfrom"), string_literal >> eod, "insieme")
+        );
+
+
 
 //*************************************************************************************************
 // Insieme Pragmas for Feature estimations
@@ -262,6 +268,34 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
 
 }
 
+void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
+	insieme::core::NodeAnnotationPtr annot;
+
+	// check if there is a datarange annotation
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+	std::for_each(iter.first, iter.second,
+			[ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+		const frontend::InsiemeDataTransform* dt = dynamic_cast<const frontend::InsiemeDataTransform*>( &*(curr.second) );
+		if(dt) {
+			pragma::MatchMap mmap = dt->getMatchMap();
+
+			assert(mmap.size() == 1 && "Insieme DataTransform pragma cannot have more than one argument");
+			std::string datalayout = *mmap.begin()->second.front()->get<std::string*>();
+
+			unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
+
+			annotations::DataTransformAnnotation dataTransform(tilesize);
+			annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);
+		}
+	});
+
+	if(annot)
+		irNode->addAnnotation(annot);
+
+
+}
 
 void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
     insieme::core::NodeAnnotationPtr annot;

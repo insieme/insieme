@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,7 +40,8 @@
 
 float4 subfunction(float4 a) {
 	float b = cos(a.z);
-	return (float4)(b, get_local_id(1), a.w, a.y);
+	return (float4)(b, a.w, a.w, a.y);
+	//return (float4)(b, get_local_id(1), a.w, a.y); // TODO: Handle builtin in subfunction
 }
 
 #pragma insieme mark
@@ -88,5 +89,6 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	dst[5] = (a + c) * 2.0f;
 	dst[6] = (float4)(6.0f) + c.z;
 	int i = get_global_id(0);
+	int txz = get_local_id(1);
 	dst[i].x += src[i] * factor;
 }}

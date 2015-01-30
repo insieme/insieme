@@ -51,6 +51,8 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_program.h"
 
+#include "insieme/core/types/cast_tool.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -351,12 +353,12 @@ ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt)
 	core::ExpressionPtr finalVal = add( // start + ceil((end-start)/step) * step
 			loopStmt->getStart(),
 			mul( // ceil((end-start)/step) * step
-				castExpr(iterType,// ( cast )
+				types::smartCast(iterType,// ( cast )
 						callExpr(
 								getLangBasic().getDouble(),
 								literal(ceilTy, "ceil"),// ceil()
 								div(// (end-start)/step
-										castExpr(
+										types::smartCast(
 												getLangBasic().getDouble(),
 												sub(
 													sub(
@@ -366,11 +368,11 @@ ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt)
 													loopStmt->getStart()
 												)// end - start
 										),
-										castExpr(getLangBasic().getDouble(), loopStmt->getStep())
+										types::smartCast(getLangBasic().getDouble(), loopStmt->getStep())
 								)
 						)
 				),
-				castExpr(loopStmt->getStart()->getType(), loopStmt->getStep())
+				types::smartCast(loopStmt->getStart()->getType(), loopStmt->getStep())
 			)
 	);
 
@@ -478,6 +480,7 @@ LiteralPtr IRBuilder::floatLit(float value) const {
 		<< std::fixed
 		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
 		<< value << "f";
+	assert(!out.str().empty() && "empty string? ");
 	return floatLit(out.str());
 }
 
@@ -486,17 +489,17 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
-
 	// special handling for de-normalized values
 	if (std::fpclassify(value) == FP_SUBNORMAL) {
-		return doubleLit(format("%a", value));
+		return floatLit(format("%a", value));
 	}
 
 	std::stringstream out;
 	out << std::scientific
 		<< std::fixed
-		<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
 		<< value;
+	assert(!out.str().empty() && "empty string? ");
 	return doubleLit(out.str());
 }
 
@@ -721,7 +724,7 @@ ExpressionPtr IRBuilder::toRef(const ExpressionPtr& srcSinkExpr) const {
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
     // add a vector init expression if subExpr is of vector type
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
-	    scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
+	    scalarToVector(subExpr->getType(), intLit(0)) : types::smartCast(subExpr->getType(), intLit(0));
 
 	//we have to check if it is a literal. if
 	//it is a literal we need to create a new
@@ -862,8 +865,21 @@ CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
 }
 
-CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& max) const {
-	return callExpr(manager.getLangBasic().getPickInRange(), max);
+CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max, const ExpressionPtr& qualLB, const ExpressionPtr& qualUB, const ExpressionPtr& qualS) const {
+	vector<ExpressionPtr> args;
+    args.push_back(id);
+    args.push_back(max);
+    if(!qualLB || !qualUB || !qualS) {
+        args.push_back(intLit(0));
+        args.push_back(intLit(0));
+        args.push_back(intLit(0));
+    }
+    else {
+        args.push_back(qualLB);
+        args.push_back(qualUB);
+        args.push_back(qualS);
+    }
+	return callExpr(manager.getLangBasic().getPickInRange(), args);
 }
 
 
@@ -1032,11 +1048,11 @@ CallExprPtr IRBuilder::getThreadNumRange(unsigned min, unsigned max) const {
 
 CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min) const {
 	TypePtr type = manager.getLangBasic().getUInt8();
-	return callExpr(manager.getLangBasic().getCreateMinRange(), castExpr(type, min));
+	return callExpr(manager.getLangBasic().getCreateMinRange(), types::smartCast(type, min));
 }
 CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
 	TypePtr type = manager.getLangBasic().getUInt8();
-	return callExpr(manager.getLangBasic().getCreateBoundRange(), castExpr(type, min), castExpr(type, max));
+	return callExpr(manager.getLangBasic().getCreateBoundRange(), types::smartCast(type, min), types::smartCast(type, max));
 }
 
 
@@ -1317,7 +1333,7 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 			//dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
 	core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-		castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+		types::smartCast(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
 
 	core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
 		(elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
@@ -1420,7 +1436,7 @@ ExpressionPtr IRBuilder::minus(const ExpressionPtr& a) const {
 
 	ExpressionPtr value = a;
 	if (value->getType() != type) {
-		value = castExpr(type, value);
+		value = types::smartCast(type, value);
 	}
 
 	// return 0 - a
@@ -1515,22 +1531,22 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 
 	assert(paramTys.size() <= 2 && paramTys.size() > 0  && "The function for pointwise must take one or two arguments");
 
-	FunctionTypePtr pointwiseTy;
+//	FunctionTypePtr pointwiseTy; Use automatic type deduction since vector pointwise is not a function type any more and I have no idea how to build the correct tpye
 	ExpressionPtr pointwise;
 	const auto& basic = manager.getLangBasic();
 	if(paramTys.size() == 1) { // unary function
 		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
 	} else { // binary functon
 		TypePtr newParamTy1 = vectorType(paramTys.at(1), variableIntTypeParam('l'));
 		TypePtr newParamTy2 = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 
-		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+//		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwise();
 	}
-	return callExpr(pointwiseTy, pointwise, callee);
+	return callExpr(/*pointwiseTy,*/ pointwise, callee);
 }
 
 // helper for accuraccy functions
@@ -1564,8 +1580,8 @@ CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
 
 	const auto& basic = manager.getLangBasic();
 	return nArgs == 1 ?
-            callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
-            callExpr(funTy, basic.getAccuracyFastBinary(), callee);
+            callExpr(basic.getAccuracyFastUnary(), callee) :
+            callExpr(basic.getAccuracyFastBinary(), callee);
 }
 
 CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {

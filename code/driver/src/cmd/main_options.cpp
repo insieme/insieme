@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -123,18 +123,18 @@ namespace cmd {
 			if( res.Help ) {
 				cout << cmdLineOpts << endl;
 				// we exit from the compiler
-				res.valid = false;
+				res.optionStatus = OptionStatus::GRACEFUL_EXIT;
 			} if( res.Version ) {
 				cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << endl <<
 						"Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2013, " <<
 						"University of Innsbruck\n";
-				res.valid = false;
+				res.optionStatus = OptionStatus::GRACEFUL_EXIT;
 			}
 
 		} catch(boost::program_options::unknown_option& ex) {
 			cout << "Usage error: " << ex.what() << endl;
 			cout << cmdLineOpts << endl;
-			res.valid = false;
+			res.optionStatus = OptionStatus::NOT_VALID;
 		}
 
 		// return result
@@ -150,6 +150,9 @@ namespace cmd {
 		// add intercepts
 		job.addInterceptedNameSpacePatterns(Interceptions);
 		job.setInterceptedHeaderDirs(InterceptionHeaderDirs);
+
+        // cross compilation system headers
+        job.setCrossCompilationSystemHeadersDir(CrossCompile);
 
 		// add macro definitions
 		for (auto def : Defs) job.setDefinition(def);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,7 +42,7 @@
 #include "standalone.h"
 
 TEST(affinity, fill) {
-	_irt_set_num_cpus(8);
+	_irt_hw_set_num_cpus(8);
 	irt_g_worker_count = 8;
 
 	irt_affinity_policy pol;
@@ -54,7 +54,7 @@ TEST(affinity, fill) {
 }
 
 TEST(affinity, skip) {
-	_irt_set_num_cpus(8);
+	_irt_hw_set_num_cpus(8);
 	irt_g_worker_count = 8;
 	
 	irt_affinity_policy pol;
@@ -93,7 +93,7 @@ TEST(affinity, skip) {
 
 
 TEST(affinity, maxdist) {
-	_irt_set_num_cpus(8);
+	_irt_hw_set_num_cpus(8);
 	
 	irt_affinity_policy pol;
 	pol.type = IRT_AFFINITY_MAX_DISTANCE;

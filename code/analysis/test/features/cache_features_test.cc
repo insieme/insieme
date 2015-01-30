@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -267,6 +267,46 @@ namespace features {
 		std::cout << "Num accesses: " << model.getFeatureValue() << "\n";
 
 //		EXPECT_GT(1.5, sum/num) << "Performance should not be so bad!";
+
+	}
+
+	TEST(CacheSimulator, AccessPatternEffect) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<int<4>,1000>,1000>>"));
+
+		auto forStmtA = builder.parseStmt(
+			"for(int<4> i = 0 .. 1000) {"
+			"	for(int<4> j = 0 .. 1000) {"
+			"		v[i][j] = i+j;"
+			"	}"
+			"}", symbols).as<ForStmtPtr>();
+
+		auto forStmtB = builder.parseStmt(
+			"for(int<4> i = 0 .. 1000) {"
+			"	for(int<4> j = 0 .. 1000) {"
+			"		v[j][i] = i+j;"
+			"	}"
+			"}", symbols).as<ForStmtPtr>();
+
+		EXPECT_TRUE(forStmtA);
+		EXPECT_TRUE(forStmtB);
+
+		LRUCacheModel<64,64,8> modelA;
+		LRUCacheModel<64,64,8> modelB;
+
+		evalModel(forStmtA, modelA);
+		evalModel(forStmtB, modelB);
+
+		auto missesA = modelA.getMisses();
+		auto missesB = modelB.getMisses();
+
+		EXPECT_LT(missesA, missesB);
+		EXPECT_EQ(missesB, 1000000);
 
 	}
 

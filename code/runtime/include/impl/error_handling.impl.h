@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -80,7 +80,12 @@ const char* irt_errcode_string(irt_errcode code) {
 		"IRT_ERR_OVERFLOW",
 		"IRT_ERR_APP",
 		"IRT_ERR_OCL",
-		"IRT_ERR_INSTRUMENTATION"
+		"IRT_ERR_INSTRUMENTATION",
+		"IRT_ERR_INVALIDARGUMENT",
+		"IRT_ERR_HW_INFO",
+		"IRT_ERR_OMPP",
+		"IRT_ERR_BLOB_CONTAINER",
+		//NOTE: When adding a new error string here also update the list of error codes in error_handling.h
 	};
 	return irt_errcode_strings[code];
 }

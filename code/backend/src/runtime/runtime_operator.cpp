@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -345,7 +345,7 @@ namespace runtime {
         // param clause
 
 		table[basic.getPickInRange()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0));
+			return c_ast::call(C_NODE_MANAGER->create("irt_optimizer_pick_in_range"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2), CONVERT_ARG(3), CONVERT_ARG(4));
 		});
 		
 		table[basic.getRefDelete()] = OP_CONVERTER({

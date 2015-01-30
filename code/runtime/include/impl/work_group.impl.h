@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -73,6 +73,7 @@ irt_work_group* _irt_wg_create(irt_worker* self) {
 	reg->id.full = wg->id.full;
 	reg->id.cached = reg;
 	_irt_wg_event_register_only(reg);
+	irt_inst_region_wg_init(wg);
 	return wg;
 }
 
@@ -83,6 +84,7 @@ irt_work_group* irt_wg_create() {
 	return wg;
 }
 void irt_wg_end(irt_work_group* wg) {
+	irt_inst_region_wg_finalize(wg);
 	irt_wg_event_register_id tgid;
 	tgid.full = wg->id.full;
 	tgid.cached = NULL;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,6 +56,7 @@ namespace map {
 
 template<class KeyPtr, class ValueType>
 struct PointerMap : public std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> {
+	PointerMap() {};
 	template<typename Container> void insertAll(const Container& c) { this->insert(c.begin(), c.end()); }
 };
 

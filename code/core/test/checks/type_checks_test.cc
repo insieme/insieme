@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1099,6 +1099,46 @@ TEST(ArrayTypeChecks, Basic) {
 	EXPECT_TRUE(errors.empty()) << errors;
 }
 
+
+TEST(GenOperatorsChecks, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& base = manager.getLangBasic();
+
+	CheckPtr typeCheck = getFullCheck();
+
+	auto i12 = builder.intLit(12);
+	auto i14 = builder.intLit(14);
+	auto r16 = builder.floatLit(16);
+
+	auto s1 = builder.tupleExpr(i12);
+	auto s2 = builder.tupleExpr(i14);
+
+	auto v1 = builder.literal(builder.typeVariable("b"), "c");
+
+	auto it = i12.getType();
+	auto rt = r16.getType();
+
+	auto ok1 = builder.callExpr(it, base.getGenAdd(), i12, i14);
+	auto ok2 = builder.callExpr(rt, base.getGenSub(), r16, r16);
+	auto ok3 = builder.callExpr(base.getGenSub(), v1, v1);
+
+	auto err1 = builder.callExpr(it, base.getGenAdd(), i12, r16);
+	auto err2 = builder.callExpr(base.getGenAdd(), s1, s2);
+
+	EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+	EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+	EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+
+	EXPECT_FALSE(check(err1).empty());
+	EXPECT_FALSE(check(err2).empty());
+
+	EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1), EC_TYPE_INVALID_ARGUMENT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2), EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION, "", Message::ERROR));
+
+
+
+}
 
 TEST(NarrowExpression, Basic) {
 

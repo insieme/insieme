@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,8 +39,8 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/normalize.h"
@@ -866,7 +866,8 @@ TEST(Scop, BuildScop) {
 							      {0, 1, 0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
+	Stmt s=Stmt(0, StatementAddress(stmt), domain, sched);
+	scop.push_back(s);
 
 	std::vector<insieme::core::VariablePtr> nest = scop[0].loopNest();
 	EXPECT_EQ( 2u, nest.size() );
@@ -915,13 +916,14 @@ TEST(Transformations, Interchange) {
 							      {0, 1, 0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
+	Stmt s=Stmt(0, StatementAddress(stmt), domain, sched);
+	scop.push_back(s);
 
 	NodePtr ir = scop.toIR(mgr);
 	
 	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
 				 "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
-				 	"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v7), v8)));"
+				 	"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v4, v7), v8)));"
 				  "};"
 			   "}", toString(*ir));
 
@@ -933,7 +935,7 @@ TEST(Transformations, Interchange) {
 	ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
 					"for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v10), v9)));"
+						"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v4, v10), v9)));"
 					"};"
 				"}", toString(*ir));
 }
@@ -977,12 +979,13 @@ TEST(Transformations, Tiling) {
 	AffineSystem sched( iterVec, { { 1,0,0 }, { 0,1,0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
+	Stmt s=Stmt(0, StatementAddress(stmt), domain, sched);
+	scop.push_back(s);
 
 	NodePtr ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
 					"for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v8), v9)));"
+						"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v8), v9)));"
 					"};"
 				"}", toString(*ir));
 
@@ -998,14 +1001,14 @@ TEST(Transformations, Tiling) {
 	// update the domain
 	// v3 >= 0 && v3 <= 100
 	// v1 >= v3 && v1 <= v3+T
-	scop[0].getDomain() &= IterationDomain(scop.getIterationVector(),
+	scop[0].iterdomain &= IterationDomain(scop.getIterationVector(),
 			{ { 0, 0,  1, 0,   0 }, 
 		      { 0, 0, -1, 0, 100 }, 
 		      { 1, 0, -1, 0,   0 },
 			  {-1, 0,  1, 0,  25 } } );
 	
 	// exist e0: e0*T == v3
-	scop[0].getDomain() &= IterationDomain( 
+	scop[0].iterdomain &= IterationDomain(
 		AffineConstraint( 
 			AffineFunction( scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), 
 			ConstraintType::EQ 
@@ -1027,7 +1030,7 @@ TEST(Transformations, Tiling) {
 	EXPECT_EQ( "for(int<4> v11 = 0 .. int.add(100, 1) : 25) {"
 					"for(int<4> v12 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(25)), 100, int.lt), 1) : 1) {"
 						"for(int<4> v13 = 0 .. int.add(100, 1) : 1) {"
-							"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v12), v13)));"
+							"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v12), v13)));"
 						"};"
 					"};"
 				"}", toString(*ir));
@@ -1101,7 +1104,8 @@ TEST(Transformations, Fusion) {
 								   {0, 0, 0} } );
 
 	Scop scop(iterVec);
-	scop.push_back( Stmt( 0, StatementAddress(stmt1), domain1, sched1 ) );
+	Stmt s0= Stmt(0, StatementAddress(stmt1), domain1, sched1);
+	scop.push_back(s0);
 
 	// STMT2
 	AffineSystem sched2(iterVec, { {0, 0, 1}, 
@@ -1119,17 +1123,18 @@ TEST(Transformations, Fusion) {
 		)  
 	);
 
-	scop.push_back( Stmt( 1, StatementAddress(stmt2), domain2, sched2 ) );
+	Stmt s1= Stmt(1, StatementAddress(stmt2), domain2, sched2);
+	scop.push_back(s1);
 
 	NodePtr ir = scop.toIR(mgr);
 
 
 	EXPECT_EQ("{"
 				"for(int<4> v9 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v9), 0)));"
+					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v9), 0)));"
 			   "}; "
 			   "for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v10), 0))));"
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v10), 0))));"
 				"};"
 			  "}", toString(*ir));
 
@@ -1168,11 +1173,11 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v11 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v11), 0))); "
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v11), 0))));"
+					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v11), 0))); "
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v11), 0))));"
 				"}; "
 				"for(int<4> v12 = 91 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v12), 0))));"
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v12), 0))));"
 				"};"
 			  "}", toString(*ir));
 }

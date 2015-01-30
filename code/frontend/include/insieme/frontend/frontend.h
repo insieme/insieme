@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,6 +50,8 @@
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace frontend {
@@ -96,7 +98,7 @@ namespace frontend {
 		 * A list of supported standards.
 		 */
 		enum Standard {
-			Auto, C99, Cxx03, Cxx11
+			Auto, C99, Cxx98, Cxx03, Cxx11
 		};
 
 		/**
@@ -137,6 +139,11 @@ namespace frontend {
 		 * A list of include directories containing intercepted headers.
 		 */
 		vector<path> interceptedHeaderDirs;
+
+		/**
+		 * A list of include directories containing system headers for a cross compilation.
+		 */
+		string crossCompilationSystemHeadersDir;
 
         /**
          * A list of optimization flags (-f flags) that need to be used at least in the
@@ -303,6 +310,20 @@ namespace frontend {
 			this->interceptedHeaderDirs.push_back(directory);
 		}
 
+		/**
+		 * Obtains a reference to the covered set of include directories.
+		 */
+		const string& getCrossCompilationSystemHeadersDir() const {
+			return crossCompilationSystemHeadersDir;
+		}
+
+		/**
+		 * Updates the set of considered include directories.
+		 */
+		void setCrossCompilationSystemHeadersDir(const string& crossCompilationSystemHeadersDir) {
+			this->crossCompilationSystemHeadersDir = crossCompilationSystemHeadersDir;
+		}
+
         /**
          * Adds a single optimization flag
          */
@@ -335,7 +356,10 @@ namespace frontend {
          */
         template <class T, class ... Args>
         void registerFrontendPlugin(const Args& ... args) {
-            plugins.push_back(std::make_shared<T>(args ...));
+			plugins.push_back(std::make_shared<T>(args ...));
+			for(auto kidnappedHeader : plugins.back()->getKidnappedHeaderList()) {
+				addSystemHeadersDirectory(kidnappedHeader);
+			}
         };
 
         /**
@@ -347,7 +371,7 @@ namespace frontend {
 	};
 
 
-	class ConversionJob : public ConversionSetup {
+	class ConversionJob : public ConversionSetup, public insieme::utils::Printable {
 
 		/**
 		 * The translation units to be converted.
@@ -456,10 +480,9 @@ namespace frontend {
 		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
 
 		/**
-		 *  Used for debugging purposes. Prints the conversion setup
+		 *  Prints the conversion setup
 		 **/
-		 void printConversionJob() const;
-
+		 std::ostream& printTo(std::ostream& out) const;
 	};
 
 

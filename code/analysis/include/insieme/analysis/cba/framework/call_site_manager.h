@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -111,7 +111,9 @@ namespace cba {
 	public:
 
 		Callee(const core::LiteralInstance& lit)
-			: definition(lit) { assert_true(definition); }
+			: definition(lit) { assert_true(definition); assert_true(lit->getType().isa<FunctionTypePtr>()); }
+		Callee(const core::ExpressionInstance& expr)
+			: definition(expr) { assert_true(definition); assert_true(expr->getType().isa<FunctionTypePtr>()); }
 		Callee(const core::LambdaInstance& fun)
 			: definition(fun) { assert_true(definition); }
 		Callee(const core::LambdaExprInstance& fun)
@@ -142,7 +144,7 @@ namespace cba {
 			return !(*this == other);
 		}
 
-		bool isLiteral() const { return definition->getNodeType() == core::NT_Literal;  }
+		bool isLiteral() const { return !isBind() && !isLambda();  }
 		bool isBind()    const { return definition->getNodeType() == core::NT_BindExpr; }
 		bool isLambda()  const { return definition->getNodeType() == core::NT_Lambda;   }
 
@@ -161,7 +163,7 @@ namespace cba {
 		StatementInstance getBody() const {
 			if (isBind())   return definition.as<core::BindExprInstance>()->getCall();
 			if (isLambda()) return definition.as<core::LambdaInstance>()->getBody();
-			if (isLiteral()) return definition.as<core::LiteralInstance>();
+			if (isLiteral()) return definition.as<core::ExpressionInstance>();
 			assert_fail() << "No body within definition: " << definition << " (" << (definition?"null":toString(definition->getNodeType())) << ")";
 			return StatementInstance();
 		}

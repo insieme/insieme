@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -285,6 +285,7 @@ namespace encoder {
 			core::TypePtr operator()(core::NodeManager& manager) const { \
 				return manager.getLangBasic().get ## irtype(); \
 			} \
+			type_factory() {} \
 		}; \
 		\
 		template<> struct value_to_ir_converter<type> : public detail::simple_value_converter<type> {}; \
@@ -318,6 +319,7 @@ namespace encoder {
 		core::TypePtr operator()(core::NodeManager& manager) const {
 			return manager.getLangBasic().getBool();
 		}
+		type_factory() {}
 	};
 
 	template<> struct is_encoding_of<bool> {
@@ -325,12 +327,14 @@ namespace encoder {
 			auto& basic = expr->getNodeManager().getLangBasic();
 			return basic.isTrue(expr) || basic.isFalse(expr);
 		}
+		is_encoding_of() {}
 	};
 
 	template<> struct value_to_ir_converter<bool> {
 		core::ExpressionPtr operator()(core::NodeManager& manager, bool value) const {
 			return IRBuilder(manager).boolLit(value);
 		}
+		value_to_ir_converter() {}
 	};
 
 	template<> struct ir_to_value_converter<bool> {
@@ -339,6 +343,7 @@ namespace encoder {
 			assert(is_encoding_of<bool>()(expr));
 			return basic.isTrue(expr);
 		}
+		ir_to_value_converter() {}
 	};
 
 	// --------------------------------------------------------------------
@@ -352,24 +357,28 @@ namespace encoder {
 				assert(false && "Not applicable in the general case!");
 				throw InvalidExpression("Cannot define generic type for all expressions!");
 			}
+			create_expr_type() {}
 		};
 
 		struct is_expr {
 			bool operator()(const core::ExpressionPtr& expr) const {
 				return true;	// every expression is a direct encoding of itself
 			}
+			is_expr() {}
 		};
 
 		struct encode_expr {
 			core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
 				return manager.get(value);
 			}
+			encode_expr() {}
 		};
 
 		struct decode_expr {
 			core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
 				return expr;
 			}
+			decode_expr() {}
 		};
 
 	}
@@ -391,6 +400,7 @@ namespace encoder {
 			core::TypePtr operator()(core::NodeManager& manager) const { \
 				return GenericType::get(manager, "encoded_" #_TYPE); \
 			} \
+			type_factory() {} \
 		}; \
 		\
 		template<> \
@@ -403,6 +413,7 @@ namespace encoder {
 				auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
 				return core::analysis::isCallOf(expr, wrapFun) || core::analysis::isCallOf(expr, nullFun); \
 			} \
+			is_encoding_of() {} \
 		}; \
 		\
 		template<> \
@@ -418,6 +429,7 @@ namespace encoder {
 				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
 				return builder.callExpr(resType, wrapFun, value); \
 			} \
+			value_to_ir_converter() {} \
 		}; \
 		\
 		template<> \
@@ -432,6 +444,7 @@ namespace encoder {
 				} \
 				return expr.as<CallExprPtr>().getArgument(0).as<_TYPE>(); \
 			} \
+			ir_to_value_converter() {} \
 		}
 
 	ADD_EXPRESSION_CONVERTER(ExpressionPtr);
@@ -448,6 +461,7 @@ namespace encoder {
 			core::TypePtr operator()(core::NodeManager& manager) const { \
 				return GenericType::get(manager, "encoded_" #_TYPE); \
 			} \
+			type_factory() {} \
 		}; \
 		\
 		template<> \
@@ -477,6 +491,7 @@ namespace encoder {
 						genType->getTypeParameter()[0].isa<_TYPE>() && \
 						genType->getIntTypeParameter().empty(); \
 			} \
+			is_encoding_of() {} \
 		}; \
 		\
 		template<> \
@@ -492,6 +507,7 @@ namespace encoder {
 				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
 				return builder.callExpr(resType, wrapFun, builder.getTypeLiteral(value)); \
 			} \
+			value_to_ir_converter() {} \
 		}; \
 		\
 		template<> \
@@ -506,6 +522,7 @@ namespace encoder {
 				} \
 				return analysis::getRepresentedType(expr.as<CallExprPtr>().getArgument(0)).as<_TYPE>(); \
 			} \
+			ir_to_value_converter() {} \
 		}
 
 	ADD_TYPE_CONVERTER(TypePtr);

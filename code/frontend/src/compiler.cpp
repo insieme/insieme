@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -331,12 +331,16 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	}
 
 	if (config.getStandard() == ConversionSetup::Auto && config.isCxx(file)) pimpl->m_isCXX = true;
-	if (config.getStandard() == ConversionSetup::Cxx03 || config.getStandard() == ConversionSetup::Cxx11) pimpl->m_isCXX = true;
+	if (config.getStandard() == ConversionSetup::Cxx03 || 
+		config.getStandard() == ConversionSetup::Cxx98 || 
+		config.getStandard() == ConversionSetup::Cxx11) pimpl->m_isCXX = true;
 
 	if (pimpl->m_isCXX){
 		// set cxx standard to c++98
 		if (config.getStandard() == ConversionSetup::Cxx11)
 			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx11);
+		else if (config.getStandard() == ConversionSetup::Cxx98)
+			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
 		else
 			CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 

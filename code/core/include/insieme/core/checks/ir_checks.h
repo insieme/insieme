@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -360,7 +360,7 @@ namespace checks {
 	/**
 	 * A container for error and warning messages.
 	 */
-	class MessageList {
+	class MessageList : public utils::Printable {
 		/**
 		 * The list of encountered errors.
 		 */
@@ -454,6 +454,11 @@ namespace checks {
 		bool operator==(const MessageList& other) const {
 			return errors == other.errors && warnings == other.warnings;
 		}
+
+		/**
+		 * Enables messages to be printed to some output stream.
+		 */
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -471,11 +476,6 @@ namespace checks {
 } // end namspace checks
 } // end namespace core
 } // end namespace insieme
-
-/**
- * Allows message lists to be printed to an output stream.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::checks::MessageList& messageList);
 
 /**
  * Allows to use Messages in STL map containers

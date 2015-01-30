@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,43 +41,42 @@ namespace utils {
 
 	namespace {
 
-		template<typename F1, typename F2, typename ... Params>
-		struct chain_fun {
-			F1 f1; F2 f2;
+		template<typename ... Funs> struct chain_fun;
 
-			chain_fun(const F1& f1, const F2& f2) : f1(f1), f2(f2) {}
+		template<>
+		struct chain_fun<> {
+			chain_fun() {};
 
+			template<typename ... Params>
+			void operator()(const Params& ... param) const { }
+		};
+
+		template<typename F, typename ... Funs>
+		struct chain_fun<F,Funs...> {
+
+			F f;
+			chain_fun<Funs...> rest;
+
+			chain_fun(const F& f, const Funs& ... fs) : f(f), rest(chain_fun<Funs...>(fs...)) {}
+
+			template<typename ... Params>
 			void operator()(const Params& ... param) const {
-				f1(param...);
-				f2(param...);
+				f(param...);
+				rest(param...);
 			}
 		};
 
-
-		template<typename F1, typename F2, typename R, typename C, typename ... Params>
-		chain_fun<F1,F2,Params...> make_chain(const F1& f1, const F2& f2, R(C::* dummy)(Params...)) {
-			return chain_fun<F1,F2,Params...>(f1,f2);
-		}
-
-		template<typename F1, typename F2, typename R, typename C, typename ... Params>
-		chain_fun<F1,F2,Params...> make_chain(const F1& f1, const F2& f2, R(C::* dummy)(Params...) const) {
-			return chain_fun<F1,F2,Params...>(f1,f2);
-		}
-
-		template<typename F1, typename F2, typename F = decltype(&F1::operator())>
-		auto make_chain(const F1& f1, const F2& f2) -> decltype(make_chain(f1, f2, (F)(0))) {
-			return make_chain(f1,f2, &F1::operator());
+		template<typename F1, typename ... Fs>
+		chain_fun<F1,Fs...> make_chain(const F1& f1, const Fs& ... fs) {
+			return chain_fun<F1,Fs...>(f1,fs...);
 		}
 
 	}
 
 
-	template<typename F1>
-	F1 chain(const F1& f1) { return f1; }
-
-	template<typename F1, typename F2, typename ... Rest>
-	auto chain(const F1& f1, const F2& f2, const Rest& ... rest) -> decltype(make_chain(f1,chain(f2, rest...))) {
-		return make_chain(f1,chain(f2, rest...));
+	template<typename ... Funs>
+	chain_fun<Funs...> chain(const Funs& ... funs) {
+		return make_chain(funs...);
 	}
 
 } // end namespace utils

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -649,15 +649,18 @@ private:
 			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
 				std::cout << "ARRR " << call << std::endl;
 			}*/
+
+			res = call;
+
 			TypeList argumentTypes;
 			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 			try {
+				// check if function type is consistent
 				tryDeduceReturnType(funType, argumentTypes);
 			} catch(ReturnTypeDeductionException& rtde) {
-				typeHandler(call);
+				// use type handler if function type is inconsistent
+				res = typeHandler(call);
 			}
-
-			res = call;
 		} else if (res->getNodeType() == NT_DeclarationStmt) {
 			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
 
@@ -810,7 +813,7 @@ private:
 		VariableList newParams;
 		TypeMap tyMap;
 		ExpressionMap map = replacements;
-		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
+		for_range(make_paired_range(args, params), [&](const std::pair<ExpressionPtr, VariablePtr>& cur) {
 /*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
 						std::cerr << param->getType() << " - " << type << std::endl;
@@ -825,10 +828,12 @@ private:
 					}
 				}*/
 
-			VariablePtr param = cur.first;
-			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
-				param = this->builder.variable(cur.second->getType());
-				map[cur.first] = param;
+			auto hasReplacement = replacements.find(cur.second);
+			VariablePtr param = (hasReplacement == replacements.end()) ? cur.second : (*hasReplacement).second.as<VariablePtr>();
+			if (!isSubTypeOf(cur.first->getType(), param->getType())) {
+				param = this->builder.variable(cur.first->getType());
+
+				map[cur.second] = param;
 			}
 
 			newParams.push_back(param);
@@ -1378,6 +1383,14 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacemen
 	auto mapper = ::TypeFixer(mgr, replacements, limitScope, typeHandler);
 	return applyReplacer(mgr, root, mapper);
 }
+
+NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
+		const TypeHandler& typeHandler ) {
+	ExpressionMap replacements;
+	replacements[toReplace] = replacement;
+	return fixTypes(mgr, root, replacements, limitScope, typeHandler);
+}
+
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
 	assert(root && "Root must not be a null pointer!");

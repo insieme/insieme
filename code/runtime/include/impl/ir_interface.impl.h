@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -68,14 +68,16 @@
 //}
 
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* args) {
-    irt_optimizer_runtime_data* old_data =  irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[0]), &(impl->variants[0]));
-    irt_optimizer_apply_dvfs(&(impl->variants[0]));
+	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
+	irt_optimizer_runtime_data* old_data = irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(impl->variants[0]));
+	irt_optimizer_apply_dvfs(&(impl->variants[0]));
 
 	irt_schedule_loop(self, group, range, impl, args);
 
-    irt_optimizer_remove_dvfs(&(impl->variants[0]));
-    irt_optimizer_compute_optimizations(&(impl->variants[0]), NULL, true);
-    irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[0]), old_data);
+	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
+	irt_optimizer_remove_dvfs(&(impl->variants[0]));
+	irt_optimizer_compute_optimizations(&(impl->variants[0]), NULL, true);
+	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), old_data);
 }
 
 
@@ -83,6 +85,11 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	// Parallel
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
+#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
+	//Note: We use the first implementation here since it may carry optimization data
+	//Note: this call and the call of irt_optimizer_set_wrapping_optimizations below maybe should be moved further down just before WI assignment
+	irt_optimizer_apply_dct(&job->impl->variants[0]);
+#endif
 	irt_work_group* retwg = irt_wg_create();
 	irt_joinable ret;
 	ret.wg_id = retwg->id;
@@ -91,13 +98,7 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	num_threads -= num_threads%job->mod;
 	if(num_threads<job->min) num_threads = job->min;
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
-    irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0], &(irt_worker_get_current()->cur_wi->impl->variants[0]));
-#ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-    uint32 dct_num_threads = irt_optimizer_apply_dct(&job->impl->variants[0]);
-    // job->max == UINT_MAX means not num_thread() clause was specified so
-    // we can safely pick whatever value we want
-    num_threads = (dct_num_threads && job->max == UINT_MAX) ? dct_num_threads : num_threads;
-#endif
+	irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0], &(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]));
 	irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
 	for(uint32 i=0; i<num_threads; ++i) {
 		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);
@@ -105,7 +106,7 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	}
 	for(uint32 i=0; i<num_threads; ++i) {
 		irt_scheduling_generate_wi(irt_g_workers[(i+irt_g_degree_of_parallelism/2-1)%irt_g_degree_of_parallelism], wis[i]);
-    }
+	}
 #ifdef _GEMS_SIM
 	// alloca is implemented as malloc
 	free(wis);
@@ -122,21 +123,23 @@ irt_joinable irt_task(const irt_parallel_job* job) {
 void irt_region(const irt_parallel_job* job) {
 	irt_work_item* wis = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);
 
-    irt_optimizer_runtime_data* old_data =  irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[0]), &(job->impl->variants[0]));
-    irt_optimizer_apply_dvfs(&(job->impl->variants[0]));
+	//Note: We use the first implementation here since it may carry optimization data
+	irt_optimizer_runtime_data* old_data =  irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(job->impl->variants[0]));
+	irt_optimizer_apply_dvfs(&(job->impl->variants[0]));
 
-    job->impl->variants[0].implementation(wis);
+	job->impl->variants[0].implementation(wis);
 
-    irt_optimizer_remove_dvfs(&(job->impl->variants[0]));
-    irt_optimizer_compute_optimizations(&(job->impl->variants[0]), NULL, true);
-    irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[0]), old_data);
+	irt_optimizer_remove_dvfs(&(job->impl->variants[0]));
+	irt_optimizer_compute_optimizations(&(job->impl->variants[0]), NULL, true);
+	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), old_data);
 
-    free(wis);
+	//TODO need some proper cleanup here. simply freeing the WI will not clean everything which has been created
+	free(wis);
 }
 
 void irt_merge(irt_joinable joinable) {
 	if(joinable.wi_id.full == irt_work_item_null_id().full) return;
-   
+
 	if(joinable.wi_id.id_type == IRT_ID_work_group) {
 		irt_wg_join(joinable.wg_id);
 	} else {

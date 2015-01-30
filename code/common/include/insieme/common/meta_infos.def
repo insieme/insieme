@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -81,9 +81,13 @@ INFO_STRUCT_BEGIN(ompp_objective)
     INFO_FIELD(power_weight,    float,      0)
     INFO_FIELD(power_min,       float,      -1)
     INFO_FIELD(power_max,       float,      -1)
+    INFO_FIELD(quality_weight,    float,      0)
+    INFO_FIELD(quality_min,       float,      -1)
+    INFO_FIELD(quality_max,       float,      -1)
     INFO_FIELD(time_weight,     float,      0)
     INFO_FIELD(time_min,        float,      -1)
     INFO_FIELD(time_max,        float,      -1)
+    INFO_FIELD(param_count,     unsigned,   UINT_MAX)
     INFO_FIELD(region_id,       unsigned,   UINT_MAX)
 INFO_STRUCT_END()
 

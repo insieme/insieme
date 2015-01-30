@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,7 +54,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	lwt_reused_stack* ret = lwt_g_stack_reuse.stacks[w_id];
 #ifdef LWT_STACK_STEALING_ENABLED
 	if(ret) {
-		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next)) {
+		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next, intptr_t)) {
 			//IRT_DEBUG("LWT_RE\n");
 			return ret;
 		} else {
@@ -63,7 +63,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	} else {
 		for(int i=0; i<irt_g_worker_count; ++i) {
 			ret = lwt_g_stack_reuse.stacks[i];
-			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next)) {
+			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next, intptr_t)) {
 				//IRT_DEBUG("LWT_ST\n");
 				return ret;
 			}
@@ -108,7 +108,7 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 		irt_work_item* parent = wi->parent_id.cached;
 		IRT_DEBUG(" + %p returning stack to %p\n", wi, parent);
 		IRT_ASSERT(parent != NULL, IRT_ERR_INTERNAL, "Asteroidea: No parent and no stack storage.\n");
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack.\n");
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack.\n");
 #endif //IRT_ASTEROIDEA_STACKS
 		return;
 	}
@@ -116,7 +116,7 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 	for(;;) {
 		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
 		wi->stack_storage->next = top;
-		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage)) {
+		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage, intptr_t)) {
 			//IRT_DEBUG("LWT_CYC\n");
 			return;
 		} else {
@@ -158,9 +158,9 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 	// if parent stack is available, reuse it
 	irt_work_item* parent = wi->parent_id.cached;
 	if(parent && parent->num_active_children == wi->parent_num_active_children) {
-		if(irt_atomic_bool_compare_and_swap(&parent->stack_available, true, false)) {
+		if(irt_atomic_bool_compare_and_swap(&parent->stack_available, true, false, intptr_t)) {
 			// check required to see if stack is not in use by directly evaluated child wi
-			if(parent->num_active_children != wi->parent_num_active_children) irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true);
+			if(parent->num_active_children != wi->parent_num_active_children) irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t);
 			else {
 				IRT_DEBUG(" + %p taking stack from %p\n", wi, parent);
 				IRT_DEBUG("   %p child count: %d\n", parent, *parent->num_active_children);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,12 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/core/transform/node_mapper_utils.h"
-
-#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/core/pattern/ir_generator.h"
 
@@ -49,7 +47,6 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-using namespace insieme::annotations::ocl;
 using namespace insieme::core;
 using namespace insieme::core::pattern;
 namespace irg = insieme::core::pattern::generator::irg;
@@ -69,13 +66,12 @@ core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core
  * checks if the passed variable an alias to get_global_id
  */
 bool InductionVarMapper::isGetId(ExpressionPtr expr) {
-	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
-		return isGetId(cast->getSubExpression());
-
-	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(expr)){
+	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(removeAnnoyingStuff(expr))){
 		ExpressionPtr fun = call->getFunctionExpr();
-		if(*fun == *extensions.getGlobalID /*|| *fun == *extensions.getLocalID || *fun == *extensions.getGroupID*/)
+
+		if(*fun == *extensions.getGlobalID /*|| *fun == *extensions.getLocalID || *fun == *extensions.getGroupID*/) {
 			return true;
+		}
 	}
 
 	return false;
@@ -94,7 +90,9 @@ ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const 
 		return removeAnnoyingStuff(cast->getSubExpression());
 
 	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
-		if(BASIC.isRefDeref(call->getFunctionExpr()) || BASIC.isRefVar(call->getFunctionExpr()) || BASIC.isRefNew(call->getFunctionExpr()))
+		ExpressionPtr fun = call->getFunctionExpr();
+
+		if(BASIC.isRefDeref(fun) || BASIC.isRefVar(fun) || BASIC.isRefNew(fun) || BASIC.isScalarCast(fun))
 			return removeAnnoyingStuff(call->getArgument(0));
 	}
 
@@ -112,13 +110,8 @@ size_t InductionVarMapper::extractIndexFromArg(CallExprPtr call) const {
 	size_t retval = 0;
 
 	// try to read literal
-	ExpressionPtr arg = args.at(0);
-	// remove casts
-	CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(arg);
-	while(cast) {
-		arg = cast->getSubExpression();
-		cast = dynamic_pointer_cast<const CastExpr>(arg);
-	}
+	ExpressionPtr arg = removeAnnoyingStuff(args.at(0));
+
 	if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
 		retval = dim->getValueAs<size_t>();
 
@@ -133,7 +126,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	}
 
 	if(BASIC.isRefVar(ptr) || BASIC.isRefNew(ptr))
-			return ptr;
+		return ptr;
 
 	// replace variable with loop induction variable if semantically correct
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
@@ -183,6 +176,9 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 		// maps arguments to parameters
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
+			if(BASIC.isBuiltIn(lambda));
+				return ptr->substitute(mgr, *this);
+
 			ExpressionList args;
 			for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), call->getArguments()),
 					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
@@ -197,15 +193,16 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 				args.push_back(replacements[pair.first].as<ExpressionPtr>());
 			});
 
-			return call;
+//			return call;
 //			clearCacheEntry(lambda->getBody());
-			InductionVarMapper subMapper(mgr, replacements);
-			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
-					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
+//			InductionVarMapper subMapper(mgr, replacements);
+//			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
+//					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
 		}
 
 	}
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(ptr)) {
+
 		ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
 
 		// remove cast and other annoying stuff

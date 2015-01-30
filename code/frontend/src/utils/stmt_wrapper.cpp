@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+/**
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,11 +29,10 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
-
 
 #include "insieme/frontend/utils/stmt_wrapper.h"
 #include "insieme/core/ir_statements.h"
@@ -45,26 +44,24 @@ namespace stmtutils {
 
 using namespace insieme::core;
 
-// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
-       return (stmtVect.size() == 1) ? tryAggregateStmt(builder, stmtVect.front()) : builder.compoundStmt(stmtVect);
-}
+	// Tried to aggregate statements into a compound statement (if more than 1 statement is present)
+	StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
+		if (stmtVect.empty())     return builder.compoundStmt();
+		if (stmtVect.size() == 1) return tryAggregateStmt(builder, stmtVect[0]);
+		return  builder.compoundStmt(stmtVect);
+	}
 
-StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
-       return stmt->getNodeType() == NT_CompoundStmt ?
-               tryAggregateStmts(builder, stmt.as<CompoundStmtPtr>()->getStatements()) : stmt;
-}
+	StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
+		if (stmt.isa<CompoundStmtPtr>()) return tryAggregateStmts(builder,  stmt.as<CompoundStmtPtr>()->getStatements());
+		return stmt;
+	}
 
-ExpressionPtr makeOperation(const IRBuilder& builder,
-                                                       const ExpressionPtr& lhs,
-                                                       const ExpressionPtr& rhs,
-                                                       const lang::BasicGenerator::Operator& op)
-{
-       return builder.callExpr(lhs->getType(), // return type
-                       builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
-                       lhs, rhs         // LHS and RHS of the operation
-               );
-}
+	ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs,
+							    const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op) {
+		   return builder.callExpr(lhs->getType(), // return type
+						   builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
+						   lhs, rhs );        // LHS and RHS of the operation
+	}
 
 } // end stmtutils namespace
 

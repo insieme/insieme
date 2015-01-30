@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -293,8 +293,9 @@ class Param {
 public:
 	Param(const core::ExpressionPtr& var,
 			const std::shared_ptr<core::ExpressionList>& range,
+			const std::shared_ptr<core::ExpressionList>& quality_range,
 			const core::ExpressionPtr& enumList,
-			const core::ExpressionPtr& enumSize): var(var), range(range), enumList(enumList), enumSize(enumSize) {}
+			const core::ExpressionPtr& enumSize): var(var), range(range), quality_range(quality_range), enumList(enumList), enumSize(enumSize) {}
 
 	const core::ExpressionPtr& getVar() const { assert(var); return var; }
 
@@ -303,6 +304,11 @@ public:
 	const core::ExpressionPtr& getRangeUBound() const { assert(hasRange()); return (range->at(1)); }
 	const core::ExpressionPtr& getRangeStep() const { assert(hasRange()); return (range->at(2)); }
 
+	bool hasQualityRange() const { return static_cast<bool>(quality_range && quality_range->size() == 3); }
+	const core::ExpressionPtr& getQualityRangeLBound() const { assert(hasQualityRange()); return (quality_range->at(0)); }
+	const core::ExpressionPtr& getQualityRangeUBound() const { assert(hasQualityRange()); return (quality_range->at(1)); }
+	const core::ExpressionPtr& getQualityRangeStep() const { assert(hasQualityRange()); return (quality_range->at(2)); }
+
 	bool hasEnum() const { return static_cast<bool>(enumList); }
 	const core::ExpressionPtr& getEnumList() const { assert(hasEnum()); return enumList; }
 	const core::ExpressionPtr& getEnumSize() const { assert(hasEnum()); return enumSize; }
@@ -310,7 +316,11 @@ public:
 	std::ostream& dump(std::ostream& out) const {
 		out << "param(" << *var;
 		if(hasRange())
-			out << ", range(" << *(range->at(0)) << ", " << *(range->at(1)) << ", " << *(range->at(2)) << ")";
+			out << ", range(" << *(range->at(0)) << ", " << *(range->at(1)) << ", " << *(range->at(2));
+		if(hasQualityRange())
+			out << "; " << *(quality_range->at(0)) << ", " << *(quality_range->at(1)) << ", " << *(quality_range->at(2)) << ")";
+        else
+            out << ")";
 		if(hasEnum())
 			out << ", enum(" << *enumList << ", " << *enumSize << ")";
 		return out << ")";
@@ -319,6 +329,7 @@ public:
 	void replaceUsage (const core::NodeMap& map){
 		if(var)replaceVars (var, map);
 		if(range)replaceVars (range, map);
+		if(quality_range)replaceVars (quality_range, map);
 		if(enumList)replaceVars (enumList, map);
 		if(enumSize)replaceVars (enumSize, map);
 	}
@@ -326,6 +337,7 @@ public:
 private:
 	core::ExpressionPtr var;
 	std::shared_ptr<core::ExpressionList> range;
+	std::shared_ptr<core::ExpressionList> quality_range;
 	core::ExpressionPtr enumList;
 	core::ExpressionPtr enumSize;
 };
@@ -403,7 +415,7 @@ public:
 	// operator = < or <= or == or >= or >
 	enum Operator { LESS, LESSEQUAL, EQUALEQUAL, GREATEREQUAL, GREATER };
 	// parameter = T or E or P
-	enum Parameter { TIME, ENERGY, POWER};
+	enum Parameter { TIME, ENERGY, POWER, QUALITY};
 
 	typedef std::vector<Operator> OperatorList;
 	typedef std::vector<Parameter> ParameterList;
@@ -411,10 +423,11 @@ public:
 	Objective(const double timeWeight,
 				const double energyWeight,
 				const double powerWeight,
+				const double qualityWeight,
 				const std::shared_ptr<ParameterList>& constraintsParams,
 				const std::shared_ptr<OperatorList>& constraintsOps,
 				const std::shared_ptr<core::ExpressionList>& constraintsExprs) : timeWeight(timeWeight), energyWeight(energyWeight),
-						powerWeight(powerWeight), constraintsParams(constraintsParams), constraintsOps(constraintsOps), constraintsExprs(constraintsExprs) {}
+						powerWeight(powerWeight), qualityWeight(qualityWeight), constraintsParams(constraintsParams), constraintsOps(constraintsOps), constraintsExprs(constraintsExprs) {}
 
 	bool hasTimeWeight() const { return true; }
 	const double getTimeWeight() const { assert(hasTimeWeight()); return timeWeight; }
@@ -424,6 +437,9 @@ public:
 
 	bool hasPowerWeight() const { return true; }
 	const double getPowerWeight() const { assert(hasPowerWeight()); return powerWeight; }
+
+	bool hasQualityWeight() const { return true; }
+	const double getQualityWeight() const { assert(hasQualityWeight()); return qualityWeight; }
 
 	bool hasConstraintsParams() const { return static_cast<bool>(constraintsParams); }
 	const std::vector<Parameter>& getConstraintsParams() const { assert(hasConstraintsParams()); return *constraintsParams; }
@@ -451,6 +467,7 @@ public:
 		case TIME: 		return "T";
 		case ENERGY: 	return "E";
 		case POWER: 	return "P";
+		case QUALITY: 	return "Q";
 		}
 		assert(false && "Parameter doesn't exist");
 		return "?";
@@ -466,6 +483,10 @@ public:
 			out << "P * " << powerWeight << " + ";
 		else
 			out << "P * 0 + ";
+		if(hasQualityWeight())
+			out << "Q * " << qualityWeight << " + ";
+		else
+			out << "Q * 0 + ";
 		if(hasTimeWeight())
 			out << "T * " << timeWeight << ": ";
 		else
@@ -493,6 +514,7 @@ private:
 	double timeWeight;
 	double energyWeight;
 	double powerWeight;
+	double qualityWeight;
 	std::shared_ptr<std::vector<Parameter>> constraintsParams;
 	std::shared_ptr<std::vector<Operator>> constraintsOps;
 	std::shared_ptr<core::ExpressionList> constraintsExprs;
@@ -652,7 +674,7 @@ public:
 	bool hasPrivate() const { return static_cast<bool>(privateClause); }
 	const VarList& getPrivate() const { assert(hasPrivate()); return *privateClause; }
 
-	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause); }
+	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause) && firstPrivateClause->size() > 0; }
 	const VarList& getFirstPrivate() const { assert(hasFirstPrivate()); return *firstPrivateClause; }
 
 	bool hasLocal() const { return static_cast<bool>(localClause); }

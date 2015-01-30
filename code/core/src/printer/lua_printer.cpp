@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,11 +51,10 @@ namespace printer {
 
 		class LuaConverter;
 
-		typedef void(* OperatorConverter)(LuaConverter&, const CallExprPtr&);
+		typedef std::function<void(LuaConverter&, const CallExprPtr&)> OperatorConverter;
 		typedef utils::map::PointerMap<ExpressionPtr, OperatorConverter> OperatorConverterTable;
 
 		const OperatorConverterTable& getDefaultConverterTable();
-
 
 
 		class LuaConverter : public IRVisitor<> {
@@ -263,20 +262,16 @@ namespace printer {
 			const auto& basic = manager.getLangBasic();
 
 			OperatorConverterTable res;
-
+			
 			#define OP_CONVERTER(Conversion) \
-					&(((struct { \
-						int dummy; \
-						static void f(LuaConverter& converter, const CallExprPtr& call) Conversion \
-					 }){0}).f)
+				[](LuaConverter& converter, const CallExprPtr& call) Conversion 
 
 			#define PRINT_ARG(index) ( converter.visit(call->getArgument(index)) )
 			#define PRINT_EXPR(expr) ( converter.visit(expr) )
 			#define OUT(code) ( converter.getOut() << code )
 
-
 			// arithmetic operators
-
+						
 			res[basic.getSignedIntAdd()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" + "); PRINT_ARG(1); });
 			res[basic.getSignedIntSub()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" - "); PRINT_ARG(1); });
 			res[basic.getSignedIntMul()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" * "); PRINT_ARG(1); });
@@ -293,7 +288,6 @@ namespace printer {
 			res[basic.getRealSub()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" - "); PRINT_ARG(1); });
 			res[basic.getRealMul()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" * "); PRINT_ARG(1); });
 			res[basic.getRealDiv()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" / "); PRINT_ARG(1); });
-
 
 			// relational operators
 
@@ -318,7 +312,6 @@ namespace printer {
 			res[basic.getRealLe()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" <= "); PRINT_ARG(1); });
 			res[basic.getRealGe()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" >= "); PRINT_ARG(1); });
 
-
 			// logical operators
 
 			res[basic.getBoolEq()]   = OP_CONVERTER({ PRINT_ARG(0); OUT(" == "); PRINT_ARG(1); });
@@ -326,7 +319,6 @@ namespace printer {
 			res[basic.getBoolLAnd()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" and "); PRINT_ARG(1); });
 			res[basic.getBoolLOr()]  = OP_CONVERTER({ PRINT_ARG(0); OUT(" or "); PRINT_ARG(1); });
 			res[basic.getBoolLNot()] = OP_CONVERTER({ OUT(" not "); PRINT_ARG(0); });
-
 
 			// ref operators
 
@@ -338,13 +330,11 @@ namespace printer {
 				PRINT_ARG(0); OUT(" = "); PRINT_ARG(1);
 			});
 
-
 			// array operators
 
 			res[basic.getArrayCreate1D()]     = OP_CONVERTER({ OUT("{}"); });
 			res[basic.getArraySubscript1D()]  = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 			res[basic.getArrayRefElem1D()]    = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-
 
 			// vector operators
 
@@ -357,9 +347,8 @@ namespace printer {
 			res[basic.getCompositeRefElem()]      = OP_CONVERTER({ PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 			res[basic.getCompositeMemberAccess()] = OP_CONVERTER({ PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 
-
-
 			// special functions
+
 			res[basic.getIfThenElse()]				= OP_CONVERTER({
 				OUT("(");
 				PRINT_ARG(0);
