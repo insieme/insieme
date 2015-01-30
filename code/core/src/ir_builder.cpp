@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -115,19 +115,8 @@ namespace {
 	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
-
-		// Define the comparator for the set
-		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool {
-			return *lhs < *rhs;
-		};
-		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
-
-		std::set_difference(
-				visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(),
-				std::inserter(nonDecls, nonDecls.begin()),
-				cmp
-			);
+		
+		auto nonDecls = utils::set::difference(visitor.usedVars, visitor.declaredVars);
 
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}
@@ -1313,7 +1302,7 @@ TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
 
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
 	auto literalType = getTypeLiteralType(type);
-	return literal(literalType, toString(*type));
+	return literal(literalType, toString(*literalType));
 }
 
 LiteralPtr IRBuilder::getIdentifierLiteral(const string& value) const {

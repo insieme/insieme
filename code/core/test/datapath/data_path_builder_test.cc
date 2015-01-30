@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,10 +55,10 @@ TEST(DataPathBuilder, Basic) {
 	EXPECT_EQ("dp.member(dp.root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
 	EXPECT_EQ("dp.element(dp.root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
 	EXPECT_EQ("dp.component(dp.root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
-	EXPECT_EQ("dp.parent(dp.root, A)", toString(*DataPathBuilder(mgr).parent(typeA).getPath()));
+	EXPECT_EQ("dp.parent(dp.root, type<A>)", toString(*DataPathBuilder(mgr).parent(typeA).getPath()));
 
 
-	EXPECT_EQ("dp.parent(dp.component(dp.member(dp.element(dp.root, 12), hello), 3), A)", toString(*DataPathBuilder(mgr)
+	EXPECT_EQ("dp.parent(dp.component(dp.member(dp.element(dp.root, 12), hello), 3), type<A>)", toString(*DataPathBuilder(mgr)
 			.element(12)
 			.member("hello")
 			.component(3)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -398,8 +398,8 @@ TEST(ExpressionsTest, MemberAccessExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, a, typeA)", toString(*access));
-	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, b, typeB)", toString(*access2));
+	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, a, type<typeA>)", toString(*access));
+	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, b, type<typeB>)", toString(*access2));
 }
 
 TEST(ExpressionsTest, TupleProjectionExpr) {
@@ -428,8 +428,8 @@ TEST(ExpressionsTest, TupleProjectionExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("tuple.member.access(tuple(1,2), 0, typeA)", toString(*access));
-	EXPECT_EQ ("tuple.member.access(tuple(1,2), 1, typeB)", toString(*access2));
+	EXPECT_EQ ("tuple.member.access(tuple(1,2), 0, type<typeA>)", toString(*access));
+	EXPECT_EQ ("tuple.member.access(tuple(1,2), 1, type<typeB>)", toString(*access2));
 }
 
 

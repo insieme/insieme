@@ -58,12 +58,23 @@ namespace extensions {
 		}
 
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
+			
+			const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl());
+			std::string name;
 
-			if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl()) ) {
-				if(declRefExpr->hasExplicitTemplateArgs() && getInterceptor().isIntercepted(funcDecl)) {
+			// if the decl is shadowed (brought into the current namespace with "using")
+			// we need to (a) find the original decl and (b) get a canonical name
+			if(const auto* shadowDecl = llvm::dyn_cast<clang::UsingShadowDecl>(declRefExpr->getFoundDecl())) {
+				name = shadowDecl->getCanonicalDecl()->getQualifiedNameAsString();
+				funcDecl = llvm::dyn_cast<clang::FunctionDecl>(shadowDecl->getTargetDecl());
+			}
+
+			if(funcDecl) {
+				if(name.empty()) name = funcDecl->getQualifiedNameAsString();				
+				if(getInterceptor().isIntercepted(name)) {
 					VLOG(2) << "interceptorplugin\n";
 					//returns a callable expression
-					return getInterceptor().intercept(funcDecl, convFact, true);
+					return getInterceptor().intercept(funcDecl, convFact, declRefExpr->hasExplicitTemplateArgs(), name);
 				}
 			}
 
