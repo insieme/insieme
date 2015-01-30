@@ -323,7 +323,8 @@ namespace {
 					}
 				}
 
-				if (basic.isBarrier(fun)) {
+				// Problem with the ThreadGroup type handling in the Backend
+				/*if (basic.isBarrier(fun)) {
 					auto threadGroup = call->getArgument(0);
 					if (core::analysis::isCallOf(threadGroup, basic.getGetThreadGroup())) {
 						auto arg = core::analysis::getArgument(threadGroup, 0);
@@ -340,8 +341,23 @@ namespace {
 							}
 						}
 					}
-				}
+				}*/
 
+				if (basic.isBarrier(fun)) {
+					auto threadGroup = call->getArgument(0);
+					if (core::analysis::isCallOf(threadGroup, basic.getGetThreadGroup())) {
+						auto arg = core::analysis::getArgument(threadGroup, 0);
+						if (arg->getNodeType() == core::NT_Literal) {
+							core::LiteralPtr argument = static_pointer_cast<const core::Literal>(arg);
+							core::LiteralPtr lit;
+							if (argument->getStringValue() == "0") {
+								return core::lang::getLiteral(manager, "unit", "barrier(CLK_LOCAL_MEM_FENCE)");
+							} else if (argument->getStringValue() == "1") {
+								return core::lang::getLiteral(manager, "unit", "barrier(CLK_GLOBAL_MEM_FENCE)");
+							}
+						}
+					}
+				}
 				return res;
 			}
 
@@ -492,7 +508,7 @@ namespace {
 				// - get_num_groups => first declaration
 				// - get_*_size => last two parameters
 
-				LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core);
+				LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 				LOG(INFO) << "Errors Before: " << core::checks::check(core, core::checks::getFullCheck());
 
 				// ------------------ Update variable names within kernel core -------------------
@@ -593,17 +609,16 @@ namespace {
 				core = static_pointer_cast<const core::Statement>(core->substitute(manager, replacer));
 
 				// ------------------------- Replace IR convert version to convert builtin --------------
-				// decl ref<vector<uint<1>,4>> v34 = ( var(fun(vector<real<4>,4> v46, type<uint<1>> v47){
+				//   decl ref<vector<uint<1>,4>> v34 = ( var(fun(vector<real<4>,4> v46, type<uint<1>> v47){
 				//	 decl ref<vector<uint<1>,4>> v48 = ( var(undefined(type<vector<uint<1>,4>>)));
 				//	 for(decl uint<8> v49 = 0 .. CAST<uint<8>>(4) : 1) { ((v48&[v49]) := CAST<uint<1>>((v46[v49]))); };
 				//	 return ( *v48);
 				//}(( *v33), type<uint<1>>)));
 				// ==> IR: decl ref<vector<uint<1>,4>> v34 = ref.var(convert(ref.deref(v33)))
 
-				//std::cout << "Core Before: " << core << std::endl;
 				utils::map::PointerMap<core::NodePtr, core::NodePtr> nodeMap;
 				// TODO: improve pattern
-				insieme::core::pattern::TreePattern convertPattern = irp::callExpr(tr::any, tr::any,
+				insieme::core::pattern::TreePattern convertPattern = irp::callExpr(tr::any, insieme::core::pattern::aT(irp::forStmt()),
 					tr::var("expr") << irp::literal(irp::genericType("type", *tr::any, *tr::any), tr::any)); // list 2 arguments
 
 				visitDepthFirst(core, [&](const core::CallExprPtr& call) {
