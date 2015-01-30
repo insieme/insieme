@@ -386,6 +386,9 @@ namespace backend {
 		// extract target function
 		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
+		// normalize the function
+		fun = core::analysis::normalize(fun);
+
 		// 1) see whether call is call to a known operator
 		auto pos = operatorTable.find(fun);
 		if (pos != operatorTable.end()) {
@@ -411,9 +414,6 @@ namespace backend {
 
 		// 3) test whether target is generic => instantiate
 		if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
-            // normalize the function
-            fun = core::analysis::normalize(fun);
-
 			auto& manager = call->getNodeManager();
 
 			// compute substitutions
