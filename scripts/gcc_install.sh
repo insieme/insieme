@@ -5,7 +5,7 @@
 ##                                 GCC
 ########################################################################
 
-VERSION=4.6.3
+VERSION=4.7.3
 PACKAGE=gcc-$VERSION
 FILE=gcc-$VERSION.tar.bz2
 
@@ -33,11 +33,6 @@ if [ ! -d "$PACKAGE" ]; then
 	echo "#### Unpacking tar ####"
 	tar -xf $FILE
 fi
-
-# patch gcc in order to compile it with newer versions of texinfo packages (e.g. on Fedora 20)
-cd $PACKAGE
-patch -p2 < ../patches/gcc_texinfo5.0_fix.patch
-cd ..
 
 echo "#### Building GCC ####"
 mkdir gcc-build
