@@ -74,13 +74,13 @@ namespace backend {
 		);
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << *program << std::endl;
+		//std::cout << "Program: " << *program << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -146,13 +146,13 @@ namespace backend {
 		);
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << *program << std::endl;
+		//std::cout << "Program: " << *program << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -217,13 +217,13 @@ namespace backend {
 		);
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << core::printer::PrettyPrinter(program) << std::endl;
+		//std::cout << "Program: " << core::printer::PrettyPrinter(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -283,7 +283,7 @@ namespace backend {
 		// a pure virtual, const function
 		info.addMemberFunction("dummy2", builder.getPureVirtual(parseType("Counter::()->int<4>")), true, true);
 
-		std::cout << info << "\n";
+		//std::cout << info << "\n";
 
 		// attach
 		core::setMetaInfo(counterType, info);
@@ -404,7 +404,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -454,7 +454,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -513,7 +513,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -567,7 +567,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -641,7 +641,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -707,7 +707,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A var_1(10);");
+		EXPECT_PRED2(containsSubString, code, "A a(10);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t y) : x(4), y(y) {");
 		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
 
@@ -764,9 +764,9 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "B b(1, 2);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t var_3) : A(x), y(var_3) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y) : A(x), y(y) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -819,9 +819,9 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2, 3);");
+		EXPECT_PRED2(containsSubString, code, "B b(1, 2, 3);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y(y) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t var_4) : A(x, y + var_4), z(var_4) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t z) : A(x, y + z), z(z) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -867,7 +867,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A var_1(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "A b(1, 2);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y((*this).x + y) {");
 
 		// check whether code is compiling
@@ -915,7 +915,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -964,7 +964,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -1009,7 +1009,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -1053,7 +1053,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -1099,7 +1099,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
