@@ -77,12 +77,12 @@ int main(int argc, const char* argv[]) {
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 7,
 											(size_t)0, (void *)buf_pos,
 											(size_t)0, (void *)buf_vel,
+											(size_t)0, (void *)buf_newPos,
+											(size_t)0, (void *)buf_newVel,
 											sizeof(cl_int), (void *)&size,
 											sizeof(cl_float), (void *)&deltaTime,
-											sizeof(cl_float), (void *)&epsSqr,
-											(size_t)0, (void *)buf_newPos,
-											(size_t)0, (void *)buf_newVel);
-											
+											sizeof(cl_float), (void *)&epsSqr);
+										
 			icl_read_buffer(buf_newPos, CL_TRUE, sizeof(cl_float4) * size, &pos[0], NULL, NULL);
 			icl_read_buffer(buf_newVel, CL_TRUE, sizeof(cl_float4) * size, &vel[0], NULL, NULL);
 			icl_release_buffers(4, buf_vel, buf_pos, buf_newVel, buf_newPos);
@@ -101,7 +101,9 @@ int main(int argc, const char* argv[]) {
 			sum = ADD(sum, vel[i]);
 		}
 
-		unsigned int check = EQ(sum, triple_zero());
+		cl_float4 test = triple_zero();
+
+		unsigned int check = EQ(sum, test);
 
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");

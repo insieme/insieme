@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -923,7 +923,7 @@ TEST(Transformations, Interchange) {
 	
 	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
 				 "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
-				 	"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v7), v8)));"
+				 	"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v4, v7), v8)));"
 				  "};"
 			   "}", toString(*ir));
 
@@ -935,7 +935,7 @@ TEST(Transformations, Interchange) {
 	ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
 					"for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v4, v10), v9)));"
+						"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v4, v10), v9)));"
 					"};"
 				"}", toString(*ir));
 }
@@ -985,7 +985,7 @@ TEST(Transformations, Tiling) {
 	NodePtr ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
 					"for(int<4> v9 = 0 .. int.add(100, 1) : 1) {"
-						"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v8), v9)));"
+						"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v8), v9)));"
 					"};"
 				"}", toString(*ir));
 
@@ -1030,7 +1030,7 @@ TEST(Transformations, Tiling) {
 	EXPECT_EQ( "for(int<4> v11 = 0 .. int.add(100, 1) : 25) {"
 					"for(int<4> v12 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(25)), 100, int.lt), 1) : 1) {"
 						"for(int<4> v13 = 0 .. int.add(100, 1) : 1) {"
-							"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v12), v13)));"
+							"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v12), v13)));"
 						"};"
 					"};"
 				"}", toString(*ir));
@@ -1131,10 +1131,10 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v9 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v9), 0)));"
+					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v9), 0)));"
 			   "}; "
 			   "for(int<4> v10 = 0 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v10), 0))));"
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v10), 0))));"
 				"};"
 			  "}", toString(*ir));
 
@@ -1173,11 +1173,11 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v11 = 0 .. int.add(90, 1) : 1) {"
-					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v5, v11), 0))); "
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v11), 0))));"
+					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v11), 0))); "
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v11), 0))));"
 				"}; "
 				"for(int<4> v12 = 91 .. int.add(100, 1) : 1) {"
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), 'elem);}}(v8, v12), 0))));"
+					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v12), 0))));"
 				"};"
 			  "}", toString(*ir));
 }

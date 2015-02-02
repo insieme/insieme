@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -564,5 +564,5 @@ TEST(TypeConversion, FunctionPtr) {
 		auto program = insieme::frontend::tu::toProgram(manager, irtu);
 
 		//check for some enum features
-   		EXPECT_EQ("PROGRAM { \n// Entry Points: \n\trec v0.{v0=fun() {ref<(()->int<4>)> v1 = rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return 'a;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(rec v0.{v0=fun() {return 1;}});}}\n", toString(*program));
+   		EXPECT_EQ("PROGRAM { \n// Entry Points: \n\trec v0.{v0=fun() {ref<(()->int<4>)> v1 = rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(rec v0.{v0=fun() {return 1;}});}}\n", toString(*program));
 }
