@@ -41,6 +41,7 @@
 #include <map>
 #include <string>
 
+namespace insieme {
 namespace iwir {
 namespace utils {
 	
@@ -292,3 +293,4 @@ class TaskGraph {
 
 } // utils end
 } // iwir end
+} // insieme end

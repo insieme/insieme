@@ -40,6 +40,7 @@
 #include <map>
 #include <utility>
 
+namespace insieme {
 namespace iwir {
 
 using namespace iwir::ast;
@@ -253,3 +254,4 @@ class LinkCollector {
 };
 
 } // iwir end
+} // insieme end

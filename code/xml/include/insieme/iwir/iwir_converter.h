@@ -39,6 +39,8 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -69,6 +71,7 @@
 #include <functional>
 #include <algorithm>
 
+namespace insieme {
 namespace iwir {
 
 using namespace iwir::ast;
@@ -152,7 +155,10 @@ public:
 		core::ExpressionPtr topLevelTaskExpr = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(bodyStmts), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
 
 		VLOG(2) << "-- TopLevelTask --";
-		dumpPretty(topLevelTaskExpr);
+		VLOG(2) << core::printer::PrettyPrinter(topLevelTaskExpr, 
+				core::printer::PrettyPrinter::OPTIONS_DEFAULT | 
+				core::printer::PrettyPrinter::USE_COLOR | 
+				core::printer::PrettyPrinter::PRINT_ANNOTATIONS);
 		VLOG(2) << "------------------";
 
 		auto semantic = core::checks::check(topLevelTaskExpr);
@@ -205,20 +211,35 @@ private:
 
 	#define DECLARE_CONVERTER(name) void convert ## name(name* node, ConversionContext& context);
 	#define DECLARE_TYPE_CONVERTER(name) core::TypePtr convert ## name( name* node, ConversionContext& context);
-	#define DECLARE_CONDITION_CONVERTER(name) core::ExpressionPtr convert ## name(name* node, ConversionContext& context);
-	#define DECLARE_LOOPCOUNTER_CONVERTER(name) core::ExpressionPtr convert ## name( name* node, ConversionContext& context);
+	#define CONVERT_TYPE(type, context) convertType(type, context);
 
+	#define DECLARE_CONDITION_CONVERTER(name) core::ExpressionPtr convert ## name(name* node, ConversionContext& context);
+	#define CONVERT_CONDITION(condition, context) convertCondition(condition, context);
+
+	#define DECLARE_LOOPCOUNTER_CONVERTER(name) core::ExpressionPtr convert ## name( name* node, ConversionContext& context);
+	#define CONVERT_LOOPCOUNTER(loopcounter, context) convertLoopCounter(loopcounter, context);
+	
 	DECLARE_CONVERTER(Links)
 	DECLARE_CONVERTER(Link)
 
 	DECLARE_CONVERTER(Ports)
 	DECLARE_CONVERTER(Port)
 
-	DECLARE_CONVERTER(Properties)
-	DECLARE_CONVERTER(Property)
+	#define DECLARE_PROPERTIES_CONVERTER(name) map<string, string> convert ## name( name* node, ConversionContext& context);
+	#define CONVERT_PROPERTIES(properties, context) convertProperties(properties, context);
+	#define DECLARE_PROPERTY_CONVERTER(name) pair<string, string> convert ## name( name* node, ConversionContext& context);
+	#define CONVERT_PROPERTY(property, context) convertProperty(property, context);
 
-	DECLARE_CONVERTER(Constraints)
-	DECLARE_CONVERTER(Constraint)
+	DECLARE_PROPERTIES_CONVERTER(Properties)
+	DECLARE_PROPERTY_CONVERTER(Property)
+
+	#define DECLARE_CONSTRAINTS_CONVERTER(name) map<string, string> convert ## name( name* node, ConversionContext& context);
+	#define CONVERT_CONSTRAINTS(constraints, context) convertConstraints(constraints, context);
+	#define DECLARE_CONSTRAINT_CONVERTER(name) pair<string, string> convert ## name( name* node, ConversionContext& context);
+	#define CONVERT_CONSTRAINT(constraint, context) convertConstraint(constraint, context);
+
+	DECLARE_CONSTRAINTS_CONVERTER(Constraints)
+	DECLARE_CONSTRAINT_CONVERTER(Constraint)
 
 	DECLARE_TYPE_CONVERTER(TaskType)
 	DECLARE_TYPE_CONVERTER(Type)
@@ -240,9 +261,14 @@ private:
 	DECLARE_LOOPCOUNTER_CONVERTER(LoopCounter)
 
 	#undef DECLARE_CONVERTER
+	#undef DECLARE_CONSTRAINTS_CONVERTER
+	#undef DECLARE_CONSTRAINT_CONVERTER
+	#undef DECLARE_PROPERTIES_CONVERTER
+	#undef DECLARE_PROPERTY_CONVERTER
 	#undef DECLARE_TYPE_CONVERTER
 	#undef DECLARE_CONDITION_CONVERTER
 	#undef DECLARE_LOOPCOUNTER_CONVERTER
 };
 
 } // namespace iwir end
+} // namespace insieme end

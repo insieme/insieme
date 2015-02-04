@@ -237,6 +237,17 @@ TEST(XmlTest, ReadIWIR_BS6) {
 	std::cout << "---" << std::endl;
 }
 
+TEST(XmlTest, ReadIWIR_BS7) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/blockScopeTest7.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
 TEST(XmlTest, ReadIWIR_While1) {
 	Logger::get(std::cerr, DEBUG, 2);
 	

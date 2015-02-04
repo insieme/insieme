@@ -35,6 +35,7 @@
  */
 
 #include "insieme/iwir/iwir_condition_builder.h"
+namespace insieme {
 namespace iwir {
 namespace condition_ast {
 
@@ -113,3 +114,4 @@ boost::optional<ConditionExpr> parseConditionString(const std::string& condition
 
 } //condition_ast
 } //iwir
+} //insieme

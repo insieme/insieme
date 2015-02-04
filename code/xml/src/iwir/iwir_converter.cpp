@@ -35,9 +35,12 @@
  */
 
 #include "insieme/iwir/iwir_converter.h"
-
 #include "insieme/iwir/iwir_condition_converter.h"
 
+#include "insieme/iwir/property_annotation.h"
+#include "insieme/iwir/constraint_annotation.h"
+
+namespace insieme {
 namespace iwir {
 
 using namespace iwir::ast;
@@ -47,13 +50,16 @@ using namespace std;
 #define CONVERTER(name) void IWIRConverter::convert ## name(name* node, IWIRConverter::ConversionContext& context)
 
 #define CONDITION_CONVERTER(name) core::ExpressionPtr IWIRConverter::convert ## name(name* node, IWIRConverter::ConversionContext& context)
-#define CONVERT_CONDITION(condition, context) convertCondition(condition, context);
 
 #define LOOPCOUNTER_CONVERTER(name) core::ExpressionPtr IWIRConverter::convert ## name( name* node, IWIRConverter::ConversionContext& context)
-#define CONVERT_LOOPCOUNTER(loopcounter, context) convertLoopCounter(loopcounter, context);
 
 #define TYPE_CONVERTER(name) core::TypePtr IWIRConverter::convert ## name( name* node, IWIRConverter::ConversionContext& context)
-#define CONVERT_TYPE(type, context) convertType(type, context);
+	
+#define CONSTRAINTS_CONVERTER(name) map<string, string> IWIRConverter::convert ## name( name* node, ConversionContext& context)
+#define CONSTRAINT_CONVERTER(name) pair<string, string> IWIRConverter::convert ## name( name* node, ConversionContext& context)
+
+#define PROPERTIES_CONVERTER(name) map<string, string> IWIRConverter::convert ## name( name* node, ConversionContext& context)
+#define PROPERTY_CONVERTER(name) pair<string, string> IWIRConverter::convert ## name( name* node, ConversionContext& context)
 
 CONVERTER(Links) {
 	VLOG(2) << "links ";
@@ -78,8 +84,6 @@ CONVERTER(Link) {
 		bool isUnion = (node->to->kind == PK_UnionPort);
 		bool isLoopElement = (node->from->kind == PK_LoopElement);
 
-		//TODO control flow links
-		
 		//TODO implicit casts
 		//bool->string, int->string, double->string, int->double
 		//A -> collection/A (one entry)
@@ -98,12 +102,12 @@ CONVERTER(Link) {
 
 		if(isUnion) {
 			//linkUnion(from,to)
-			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkUnion();
+			symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkUnion();
 			linkStmt = irBuilder.parseStmt("link(from, to);", symbols);
 		} else if(isLoopElement) {
 			//TODO get iterator to acccess correct element of LoopElements-collection
 			symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-			symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkLoopElement();
+			symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkLoopElement();
 			linkStmt = irBuilder.parseStmt("link(from, iterator, to);", symbols);
 		} else {
 			//TODO find better solution... output links from parallelFor/ForEach are like
@@ -113,10 +117,10 @@ CONVERTER(Link) {
 			bool isOutputOfParallelForEach = (node->to->parentTask->getNodeType() == NT_ParallelForEachTask);
 			if(isOutputOfParallelFor || isOutputOfParallelForEach) {
 				symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-				symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkParallelOutput();
+				symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkParallelOutput();
 				linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
 			} else {
-				symbols["link"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getLinkBasic();
+				symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkBasic();
 				linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
 			}
 		}
@@ -221,6 +225,16 @@ CONVERTER(Port) {
 	assert(varType);
 	core::VariablePtr var = irBuilder.variable(varType);
 
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context)
+	auto properties = CONVERT_PROPERTIES(node->properties, context)
+
+	if(!constraints.empty()) {
+		annotations::iwir::attachConstraintMap(var, constraints);
+	}
+	if(!properties.empty()) {
+		annotations::iwir::attachPropertyMap(var, properties);
+	}
+
 	//declare variables for every portkind EXCEPT OUTPUT LOOPCOUNTER --> is declared in
 	//for-loop; INPUT of loopcounter (to, from, step) are "normal" declared variable
 	core::DeclarationStmtPtr decl = nullptr;
@@ -293,9 +307,11 @@ LOOPCOUNTER_CONVERTER(LoopCounter) {
 }
 
 TYPE_CONVERTER(TaskType) { 
-	VLOG(2) << "TaskType : " << node->type;
 	//TODO generic type? annotation?
-	return nullptr;
+	VLOG(2) << "TaskType : " << node->type;
+
+	//GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intTypeParams) const;
+	return irBuilder.genericType(node->type, core::TypeList(), core::IntParamList());
 }
 
 TYPE_CONVERTER(Type) { 
@@ -333,9 +349,8 @@ TYPE_CONVERTER(SimpleType) {
 			retTy = irBuilder.getLangBasic().getInt4();
 			break;
 		case SimpleType::File:
-			//TODO proper implementation
-			//TODO put into IRExtensions
-			retTy = irBuilder.genericType("fileDummy");
+			//TODO do we need a "file<string>" type in IR?
+			retTy = irMgr.getLangExtension<iwir::extension::IWIRExtension>().getFile();
 			break;
 		case SimpleType::Bool:
 			retTy = irBuilder.getLangBasic().getBool();
@@ -353,7 +368,7 @@ TYPE_CONVERTER(CollectionType) {
 	core::TypePtr elemTy = CONVERT_TYPE(node->elementType, context);
 	core::TypePtr collectionTy;
 	for(int i=0;i<node->nesting;i++) {
-		collectionTy =  irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getCollectionType(elemTy);
+		collectionTy =  irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getCollectionType(elemTy);
 		//for nesting of collections
 		elemTy = collectionTy;
 	}
@@ -368,28 +383,46 @@ CONDITION_CONVERTER(Condition) {
 	return condExpr;
 }
 
-CONVERTER(Properties) {
-	//TODO turn into annotations
-	VLOG(2) << "Properties";
-	for(Property* n : node->elements) {
-		convert(n, context);
+PROPERTIES_CONVERTER(Properties) {
+	// are attached as annotations in Port, Task* converter
+	std::map<string, string> propertyMap;
+	if(node) {
+		for(Property* n : node->elements) {
+			auto property = CONVERT_PROPERTY(n, context);
+			propertyMap.insert( property );
+		}
 	}
+	VLOG(2) << "Properties " << propertyMap;
+	return propertyMap;
 }
-CONVERTER(Constraints) {
-	//TODO turn into annotations
-	VLOG(2) << "Constraints";
-	for(Constraint* n : node->elements) {
-		convert(n, context);
-	}
-}
-CONVERTER(Property) { 
-	//TODO turn into annotations
+
+PROPERTY_CONVERTER(Property) { 
+	// attached to DataPorts, atomic tasks, composite tasks
+	// are attached as annotations in Port, Task* converter
 	VLOG(2) << "Property: " << node->name << ":" << node->value;
+	return std::make_pair(node->name, node->value);
 }
-CONVERTER(Constraint) { 
-	//TODO turn into annotations
+
+CONSTRAINTS_CONVERTER(Constraints) {
+	// are attached as annotations in Port, Task* converter
+	std::map<string, string> constraintMap;
+	if(node) {
+		for(Constraint* n : node->elements) {
+			auto constraint = CONVERT_CONSTRAINT(n, context);
+			constraintMap.insert( constraint );
+		}
+		VLOG(2) << "Constraints " << constraintMap;
+	}
+	return constraintMap;
+}
+
+CONSTRAINT_CONVERTER(Constraint) { 
+	// attached to DataPorts, atomic tasks, composite tasks
+	// are attached as annotations in Port, Task* converter
 	VLOG(2) << "Constraint : " << node->name << ":" << node->value;
+	return std::make_pair(node->name, node->value);
 }
 #undef CONVERTER
 
+} // namespace insieme end
 } // namespace iwir end

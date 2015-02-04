@@ -38,6 +38,10 @@
 #include "insieme/iwir/iwir_linkcollector.h"
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/iwir/property_annotation.h"
+#include "insieme/iwir/constraint_annotation.h"
+
+namespace insieme {
 namespace iwir {
 
 using namespace iwir::ast;
@@ -45,9 +49,6 @@ using namespace insieme;
 using namespace std;
 
 #define CONVERTER(name) void IWIRConverter::convert ## name(name* node, ConversionContext& context)
-#define CONVERT_CONDITION(condition, context) convertCondition(condition, context);
-#define CONVERT_LOOPCOUNTER(loopcounter, context) convertLoopCounter(loopcounter, context);
-#define CONVERT_TYPE(type, context) convertType(type, context);
 
 CONVERTER(Tasks) {
 	VLOG(2) << "Tasks";
@@ -58,18 +59,6 @@ CONVERTER(Tasks) {
 
 CONVERTER(AtomicTask) {
 	VLOG(2) << "AtomicTask : " << node->name << ":" << node->type->type;
-
-	//converting TaskType
-	//TODO make use of tasktype
-	auto taskType = convertTaskType(node->type, context);
-
-	convert(node->inputPorts, context);
-	convert(node->outputPorts, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	//literal for atomic task, with arguments from input/output ports
 	//variables for ips and ops
@@ -82,9 +71,22 @@ CONVERTER(AtomicTask) {
 	//}
 	//links-out
 
-	//prepare input parameters/arguments 
 	core::TypeList parameterTypes;
 	vector<core::ExpressionPtr> args;
+
+	//converting TaskType
+	auto taskType = convertTaskType(node->type, context);
+
+	//tasktype as parameter
+	auto taskTypeLit = irBuilder.getTypeLiteral(taskType);
+	parameterTypes.push_back(taskTypeLit->getType());
+	//taskType literal as argument
+	args.push_back(taskTypeLit);
+
+	convert(node->inputPorts, context);
+	convert(node->outputPorts, context);
+
+	//prepare input parameters/arguments 
 	for(auto port : node->inputPorts->elements) {
 		auto p = varMap.find( {port->parentTask, port} );
 		assert(p != varMap.end());
@@ -109,7 +111,20 @@ CONVERTER(AtomicTask) {
 	map<string, core::NodePtr> symbols;
 	symbols["taskFuncTy"] = taskFuncTy;
 	core::ExpressionPtr taskExpr = irBuilder.parseExpr("lit(\""+node->name+"\": taskFuncTy )", symbols);
-	dumpPretty(taskExpr);
+
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(taskExpr, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(taskExpr, properties);
+	}
+
+	VLOG(2) << dumpPretty(taskExpr);
 
 	core::ExpressionPtr atomicTaskCall =  irBuilder.callExpr(taskExpr, args);
 	taskCache[node] = atomicTaskCall;
@@ -118,6 +133,8 @@ CONVERTER(AtomicTask) {
 CONVERTER(BlockScope) {
 	VLOG(2) << "BlockScope : " << node->name;
 
+	// linkcollector not necessary as we model the parallelism with 
+	// "parallel(taskJob)" and channels
 	{
 		LinkCollector linkCollector(node->body,node->links); 
 
@@ -157,11 +174,6 @@ CONVERTER(BlockScope) {
 	convert(node->outputPorts, context);
 
 	convert(node->links, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	//decls
 	//links-in
@@ -381,10 +393,8 @@ CONVERTER(BlockScope) {
 		}
 	);
 
-	dumpPretty(irBuilder.getLangBasic().getUnitConstant());
-
-	map<string, core::NodePtr> cfSymbols;
 	// control links are modeled as channels
+	map<string, core::NodePtr> cfSymbols;
 	for(pair<Task*, list<Task*>> cf : controlFlowMap) {
 		Task* from = cf.first;
 		//decl cfChan -- in BlockScope Task
@@ -398,22 +408,22 @@ CONVERTER(BlockScope) {
 		//release channel -- when everythings done in BlockScope
 		releaseChannels.push_back(irBuilder.parseStmt("channel.release(cfChan);", cfSymbols));
 	
+		//get "from" task body
 		auto fromBody = taskJob[from];
 	
 		for(Task* to : cf.second) {
 			// for every dependent task send a token
-			//cfSymbols["UnitConstant"] = irBuilder.getLangBasic().getUnitConstant();
 			fromBody.insert(fromBody.end(), irBuilder.parseStmt("channel.send(cfChan,unit);", cfSymbols));
 	
 			// dependent tasks need to read channel
 			auto toBody = taskJob[to];
 			toBody.insert(toBody.begin(), irBuilder.parseStmt("channel.recv(cfChan);", cfSymbols));
 
-			//update the task's body
+			//update the "to" task body
 			taskJob[to] = toBody;
 		}
 
-		//update the task's body
+		//update the "from" task body
 		taskJob[from] = fromBody;
 	}
 	
@@ -428,7 +438,6 @@ CONVERTER(BlockScope) {
 			} 
 		}
 	);
-	
 
 	//creates mux function
 	//NOTE: also links with only ONE target port are muxed currently
@@ -466,7 +475,7 @@ CONVERTER(BlockScope) {
 		}
 	
 		core::ExpressionPtr muxer = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(muxBody), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-		dumpPretty(muxer);
+		VLOG(2) << dumpPretty(muxer);
 		channelLinks.push_back(muxer);
 	}
 
@@ -505,7 +514,22 @@ CONVERTER(BlockScope) {
 	//create a callExpr with the BlockScopes body
 	core::StatementPtr body = irBuilder.compoundStmt(bodyStmts);
 	core::ExpressionPtr bs = irBuilder.createCallExprFromBody(body, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(bs);
+	
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(bs, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(bs, properties);
+	}
+
+	VLOG(2) << dumpPretty(bs);
 	taskCache[node] = bs;
 }
 
@@ -526,11 +550,6 @@ CONVERTER(IfTask) {
 	convert(node->outputPorts, context);
 
 	convert(node->links, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	//decls
 	//links-in
@@ -782,7 +801,22 @@ CONVERTER(IfTask) {
 	VLOG(2) << ifStmt;
 
 	core::ExpressionPtr ifTaskExpr =  irBuilder.createCallExprFromBody(ifStmt, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(ifTaskExpr);
+
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(ifTaskExpr, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(ifTaskExpr, properties);
+	}
+
+	VLOG(2) << dumpPretty(ifTaskExpr);
 	taskCache[node] = ifTaskExpr;
 }
 
@@ -804,12 +838,7 @@ CONVERTER(WhileTask) {
 
 	convert(node->links, context);
 
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
-
-
+	
 	//decls
 	//
 	//() => {
@@ -920,7 +949,22 @@ CONVERTER(WhileTask) {
 	VLOG(2) << body;
 
 	core::ExpressionPtr bind = irBuilder.createCallExprFromBody( body, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(bind);
+
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(bind, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(bind, properties);
+	}
+
+	VLOG(2) << dumpPretty(bind);
 	taskCache[node] = bind;
 }
 
@@ -954,11 +998,6 @@ CONVERTER(ForTask) {
 	VLOG(2) << "StepCounter " << stepCounter;
 	
 	convert(node->links, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	core::StatementList decls;
 	VLOG(2) << "Declarations:";
@@ -1081,7 +1120,22 @@ CONVERTER(ForTask) {
 	VLOG(2) << forTaskBody;
 
 	core::ExpressionPtr bind = irBuilder.createCallExprFromBody(forTaskBody,irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(bind);
+
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(bind, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(bind, properties);
+	}
+
+	VLOG(2) << dumpPretty(bind);
 	taskCache[node] = bind;
 }
 
@@ -1113,11 +1167,6 @@ CONVERTER(ParallelForTask) {
 	VLOG(2) << "StepCounter " << stepCounter;
 
 	convert(node->links, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	//decls
 	//
@@ -1239,11 +1288,11 @@ CONVERTER(ParallelForTask) {
 
 	core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, irBuilder.compoundStmt(forBody));
 	VLOG(2) << "forStmt";
-	dumpPretty(forStmt);
+	VLOG(2) << dumpPretty(forStmt);
 	
 	core::ExpressionPtr pFor = irBuilder.pfor(forStmt);	
 	VLOG(2) << "pFor";
-	dumpPretty(pFor);
+	VLOG(2) << dumpPretty(pFor);
 
 	core::StatementList forTaskStmts;
 	forTaskStmts.insert(forTaskStmts.end(), decls.begin(), decls.end());
@@ -1253,9 +1302,23 @@ CONVERTER(ParallelForTask) {
 	core::CompoundStmtPtr forTaskBody = irBuilder.compoundStmt(forTaskStmts);
 	VLOG(2) << forTaskBody;
 
-	//TODO FILL WITH CORRECT STMTS
 	core::ExpressionPtr parallelForTask = irBuilder.createCallExprFromBody(forTaskBody, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(parallelForTask);
+
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(parallelForTask, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(parallelForTask, properties);
+	}
+
+	VLOG(2) << dumpPretty(parallelForTask);
 	taskCache[node] = parallelForTask;
 }
 
@@ -1277,11 +1340,6 @@ CONVERTER(ForEachTask) {
 	convert(node->loopElements, context);	
 
 	convert(node->links, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	//decls
 	//
@@ -1391,7 +1449,7 @@ CONVERTER(ForEachTask) {
 		//IR: endVal = leVar.size;
 		map<string, core::NodePtr> symbols;
 		symbols["leVar"] = leVar;
-		symbols["size"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getRefCollectionSize();
+		symbols["size"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getRefCollectionSize();
 		VLOG(2) << symbols;
 		endVal = irBuilder.parseExpr("size(leVar)", symbols);
 	} else if(node->loopElements->elements.size() > 1) {
@@ -1412,7 +1470,7 @@ CONVERTER(ForEachTask) {
 			}
 		);
 
-		auto shortestCollection= irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getShortestCollection();
+		auto shortestCollection= irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getShortestCollection();
 		
 		endVal = irBuilder.callExpr(
 			shortestCollection,
@@ -1450,7 +1508,22 @@ CONVERTER(ForEachTask) {
 	VLOG(2) << forTaskBody;
 
 	core::ExpressionPtr forEachTask = irBuilder.createCallExprFromBody(forTaskBody, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(forEachTask);
+
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(forEachTask, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(forEachTask, properties);
+	}
+
+	VLOG(2) << dumpPretty(forEachTask);
 	taskCache[node] = forEachTask;
 }
 
@@ -1471,11 +1544,6 @@ CONVERTER(ParallelForEachTask) {
 	convert(node->loopElements, context);	
 
 	convert(node->links, context);
-
-	//TODO turn into annotations
-	convert(node->properties, context);
-	//TODO turn into annotations
-	convert(node->constraints, context);
 
 	//decls
 	//
@@ -1586,7 +1654,7 @@ CONVERTER(ParallelForEachTask) {
 		//IR: endVal = leVar.size;
 		map<string, core::NodePtr> symbols;
 		symbols["leVar"] = leVar;
-		symbols["size"] = irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getRefCollectionSize();
+		symbols["size"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getRefCollectionSize();
 		VLOG(2) << symbols;
 		endVal = irBuilder.parseExpr("size(leVar)", symbols);
 	} else if(node->loopElements->elements.size() > 1) {
@@ -1607,7 +1675,7 @@ CONVERTER(ParallelForEachTask) {
 			}
 		);
 
-		auto shortestCollection= irMgr.getLangExtension<core::lang::CollectionTypeExtension>().getShortestCollection();
+		auto shortestCollection= irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getShortestCollection();
 		
 		endVal = irBuilder.callExpr(
 			shortestCollection,
@@ -1633,11 +1701,11 @@ CONVERTER(ParallelForEachTask) {
 
 	core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, forBody);
 	VLOG(2) << "forStmt";
-	dumpPretty(forStmt);
+	VLOG(2) << dumpPretty(forStmt);
 
 	core::ExpressionPtr pFor = irBuilder.pfor(forStmt);	
 	VLOG(2) << "pFor";
-	dumpPretty(pFor);
+	VLOG(2) << dumpPretty(pFor);
 
 	core::StatementList forTaskStmts;
 	forTaskStmts.insert(forTaskStmts.end(), decls.begin(), decls.end());
@@ -1647,8 +1715,24 @@ CONVERTER(ParallelForEachTask) {
 	VLOG(2) << forTaskBody;
 
 	core::ExpressionPtr parallelForEachTask = irBuilder.createCallExprFromBody(forTaskBody, irBuilder.getLangBasic().getUnit(), /*lazy=*/false);
-	dumpPretty(parallelForEachTask);
+	
+	//handle constraints and properties - attached as annotation
+	auto properties = CONVERT_PROPERTIES(node->properties, context);
+	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context);
+
+	//TODO attach to correct IR node -> currently attached to CallExpr
+	if(!constraints.empty()) {
+		// attach constraints as annotation to the generated taskExpr
+		annotations::iwir::attachConstraintMap(parallelForEachTask, constraints);
+	}
+	if(!properties.empty()) {
+		// attach property as annotation to the generated taskExpr
+		annotations::iwir::attachPropertyMap(parallelForEachTask, properties);
+	}
+
+	VLOG(2) << dumpPretty(parallelForEachTask);
 	taskCache[node] = parallelForEachTask;
 }
 
 } // namespace iwir end
+} // namespace insieme end

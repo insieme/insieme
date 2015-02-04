@@ -43,6 +43,7 @@
 
 #include "insieme/iwir/iwir_extension.h"
 
+namespace insieme {
 namespace iwir {
 namespace condition_ast {
 
@@ -102,19 +103,19 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 				//lhs = int -- rhs = string
 			case 12: {
 							//rhs = stringToInt(rhs);
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToInt();
+					auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToInt();
 					rhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(4),rhs);
 					break;
 						}
 				//lhs = double -- rhs = string
 			case 13: {//rhs = stringToDouble(rhs);
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToDouble();
+					auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToDouble();
 					rhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(8),rhs);
 					break;
 						}
 				//lhs = bool -- rhs = string
 			case 14: {//rhs = stringToBool(rhs);
-					auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool();
+					auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToBool();
 					rhs = irBuilder.callExpr(op,rhs);
 					break;
 						}
@@ -133,7 +134,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 
 				//lhs = string -- rhs = double 
 			case 31: {//lhs = stringToDouble(lhs);
-						auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToDouble();
+						auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToDouble();
 						lhs = irBuilder.callExpr(op,irBuilder.getIntParamLiteral(8),lhs);
 						break;
 						}
@@ -148,7 +149,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 				
 				//lhs = string -- rhs = bool 
 			case 41: {//lhs = stringToBool(lhs);
-						auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool();
+						auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToBool();
 						lhs = irBuilder.callExpr(op,lhs);
 						break;
 						}
@@ -174,7 +175,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 			return oper;
 		}
 
-		if(gen.isString(operTy)) { op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringToBool(); }
+		if(gen.isString(operTy)) { op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToBool(); }
 		if(gen.isInt(operTy)) { op = gen.getSignedToBool(); }
 		if(gen.isDouble(operTy)) { op = gen.getRealToBool(); }
 		assert(op);
@@ -227,7 +228,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 		
 		if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-			auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringEq(); 
+			auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringEq(); 
 			return irBuilder.callExpr(op, lhs, rhs);
 		} else {
 			return irBuilder.eq(lhs, rhs);
@@ -245,7 +246,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 
 		if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-			auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringNe(); 
+			auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringNe(); 
 			return irBuilder.callExpr(op, lhs, rhs);
 		} else {
 			return irBuilder.ne(lhs, rhs);
@@ -263,7 +264,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 
 		if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-			auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringGt(); 
+			auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringGt(); 
 			return irBuilder.callExpr(op, lhs, rhs);
 		} else { 
 			return irBuilder.gt(lhs, rhs);
@@ -280,7 +281,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 
 		if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-			auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringGe(); 
+			auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringGe(); 
 			return irBuilder.callExpr(op, lhs, rhs);
 		} else { 
 			return irBuilder.ge(lhs, rhs);
@@ -297,7 +298,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 		
 		if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-			auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringLt(); 
+			auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringLt(); 
 			return irBuilder.callExpr(op, lhs, rhs);
 		} else { 
 			return irBuilder.lt(lhs, rhs);
@@ -314,7 +315,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		}
 		
 		if(irBuilder.getLangBasic().isString(lhs->getType()) && irBuilder.getLangBasic().isString(rhs->getType())) { 
-			auto op = irBuilder.getNodeManager().getLangExtension<core::lang::IWIRExtension>().getStringLe(); 
+			auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringLe(); 
 			return irBuilder.callExpr(op, lhs, rhs);
 		} else { 
 			return irBuilder.le(lhs, rhs);
@@ -339,3 +340,4 @@ core::ExpressionPtr convert_condition_ast_to_inspire(Condition* node, const VarM
 
 } // condition_ast end
 } // iwir end
+} // insieme end

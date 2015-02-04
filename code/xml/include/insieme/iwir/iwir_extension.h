@@ -38,8 +38,8 @@
 #include "insieme/core/lang/extension.h"
 
 namespace insieme {
-namespace core {
-namespace lang {
+namespace iwir {
+namespace extension {
 
 class IWIRExtension : public core::lang::Extension {
 
@@ -67,6 +67,10 @@ public:
 	LANG_EXT_LITERAL(StringGe, "string.ge", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
 	LANG_EXT_LITERAL(StringEq, "string.eq", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
 	LANG_EXT_LITERAL(StringNe, "string.ne", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+
+	//file<string> to differentiate string and a filepath-string
+	LANG_EXT_TYPE(File, "file<ref<array<char,1>>>");
+	LANG_EXT_LITERAL(FilePath, "file.path", "(file<ref<array<char,1>>>) -> ref<array<char,1>>");
 
 };
 
@@ -144,8 +148,8 @@ public:
 
 	core::TypePtr getCollectionType(const core::TypePtr elemType) const {
 		assert(elemType);
-		IRBuilder builder(elemType.getNodeManager());
-		return builder.genericType("collection", { elemType }, IntParamList());
+		core::IRBuilder builder(elemType.getNodeManager());
+		return builder.genericType("collection", { elemType }, core::IntParamList());
 	}
 
 	bool isCollectionType(const core::TypePtr type) const {
@@ -165,6 +169,6 @@ public:
 	}
 };
 
-}
-}
-}
+} // namespace extension end
+} // namespace iwir end
+} // namespace insieme end

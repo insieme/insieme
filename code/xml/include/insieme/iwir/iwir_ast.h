@@ -43,6 +43,7 @@
 #include <utility>
 #include "insieme/utils/printable.h"
 
+namespace insieme {
 namespace iwir {
 namespace ast {
 	//forward decls
@@ -459,3 +460,4 @@ class NodeManager : private boost::noncopyable {
 
 } // namespace ast end 
 } // namespace iwir end
+} // namespace insieme end

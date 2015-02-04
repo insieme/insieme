@@ -35,5 +35,23 @@
  */
 
 #pragma once
-#define XML_TEST_DIR std::string("/home/bernhard/iwir_repo/code/xml/test/")
 
+#include <string>
+#include <map>
+#include <utility>
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_annotation.h"
+
+namespace insieme {
+namespace annotations {
+namespace iwir {
+
+	typedef std::map<string, string> PropertyMap;
+
+	bool hasPropertyMapAttached(const insieme::core::NodePtr& node);
+	PropertyMap getPropertyMapAttached(const insieme::core::NodePtr& node);
+	void attachPropertyMap(const insieme::core::NodePtr& node, const PropertyMap& propertyMap);
+
+} //iwir 
+} //annotations
+} //insieme 

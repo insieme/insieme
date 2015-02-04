@@ -50,6 +50,7 @@
 #include <string>
 #include <map>
 
+namespace insieme {
 namespace iwir {
 
 using namespace iwir::ast;
@@ -979,4 +980,5 @@ class IWIRBuilder {
 	#undef DISPATCH2HANDLER
 };
 
+}
 }

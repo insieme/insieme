@@ -36,6 +36,7 @@
 
 #include "insieme/iwir/iwir_ast.h"
 
+namespace insieme {
 namespace iwir {
 namespace condition_ast {
 
@@ -85,3 +86,4 @@ namespace condition_ast {
 	}
 } //condition_ast end
 } //iwir end
+} //insieme end

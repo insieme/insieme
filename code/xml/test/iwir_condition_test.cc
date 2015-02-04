@@ -49,6 +49,7 @@
 
 using namespace std;
 
+namespace insieme {
 namespace iwir {
 namespace condition_ast {
 
@@ -84,7 +85,7 @@ TEST(ConditionTest, Parsing) {
 
 //			ConditionExpr result = parseConditionString(input);
 			auto f(std::begin(input)), l(std::end(input));
-			parser<decltype(f)> p;
+			parser<decltype(f)> p("ConditionTest");
 
 			try
 			{
@@ -109,7 +110,10 @@ TEST(ConditionTest, Parsing) {
 
 TEST(ConditionTest, InvalidParsing) {
 
+	//TODO needs better invalid input detection
+	
 	auto inputs = std::list<std::string>( {
+				"AND false",
 				"true AND false",
 				"true And false",
 				"true OR false",
@@ -119,14 +123,31 @@ TEST(ConditionTest, InvalidParsing) {
 
 	for(auto& input : inputs) 
 	{
-		auto result = parseConditionString(input);
-		
-		EXPECT_FALSE(result);
-		if(result) {
-			std::cout << *result << std::endl;
+//		ConditionExpr result = parseConditionString(input);
+		auto f(std::begin(input)), l(std::end(input));
+		parser<decltype(f)> p("ConditionTest");
+
+		try {
+			ConditionExpr result;
+			bool ok = qi::phrase_parse(f,l,p,qi::space,result);
+
+			/*
+			if (!ok)
+				std::cerr << "invalid input\n";
+			else
+				std::cout << "Successfully parsed - input: " << input << " - result: " << result << "\n";
+			*/
+
+		} catch (const qi::expectation_failure<decltype(f)>& e) {
+			std::cerr << "expectation_failure at '" << std::string(e.first, e.last) << "'\n";
+			EXPECT_TRUE(false);
 		}
+
+		if (f!=l) std::cerr << "unparsed: '" << std::string(f,l) << "'\n";
+		EXPECT_TRUE(f!=l);
 	}
 }
 
-} // end namespace xml
+} // end namespace condition_ast 
+} // end namespace iwir 
 } // end namespace insieme
