@@ -1,5 +1,5 @@
 <IWIR version="1.1" wfname="whileTask" xmlns="http://shiwa-workflow.eu/IWIR">
-  <while name="whileTask2">
+  <while name="whileTask3">
     <inputPorts>
       <inputPort name="in1" type="integer"/>
       <loopPorts>
@@ -32,11 +32,12 @@
       </unionPorts>
     </outputPorts>
     <links>
-      <link from="whileTask2/in1" to="atomic1/in1"/>
+      <link from="whileTask3/in1" to="atomic1/in1"/>
       <link from="atomic1/out1" to="atomic2/in1"/>
-      <link from="atomic2/out1" to="whileTask2/loop1"/>
-      <link from="whileTask2/loop1" to="whileTask2/union1"/>
-      <link from="whileTask2/loop1" to="whileTask2/out1"/>
+      <link from="whileTask3/in1" to="whileTask3/loop1"/>
+      <link from="atomic2/out1" to="whileTask3/loop1"/>
+      <link from="whileTask3/loop1" to="whileTask3/union1"/>
+      <link from="whileTask3/loop1" to="whileTask3/out1"/>
     </links>
   </while>
 </IWIR>

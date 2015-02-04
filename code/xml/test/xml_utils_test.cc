@@ -270,6 +270,18 @@ TEST(XmlTest, ReadIWIR_While2) {
 	std::cout << "---" << std::endl;
 }
 
+TEST(XmlTest, ReadIWIR_While3) {
+
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/whileTest3.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
 TEST(XmlTest, ReadIWIR_For1) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
@@ -340,6 +352,17 @@ TEST(XmlTest, ReadIWIR_For7) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
 	auto iwirInput = XML_TEST_DIR + "input/forTest7.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
+TEST(XmlTest, ReadIWIR_For8) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/forTest8.xml";
 
 	NodeManager mgr;
 	std::cout << "---" << std::endl;

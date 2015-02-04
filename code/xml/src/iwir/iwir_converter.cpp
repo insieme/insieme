@@ -105,7 +105,9 @@ CONVERTER(Link) {
 			symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkUnion();
 			linkStmt = irBuilder.parseStmt("link(from, to);", symbols);
 		} else if(isLoopElement) {
-			//TODO get iterator to acccess correct element of LoopElements-collection
+			//we create a "leIterator" variable to use as iterator to acccess correct element of LoopElements-collection
+			//in the parallelForEach/forEachTask we replace the "leIterator" literal with the actual
+			//iterator variable
 			symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
 			symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkLoopElement();
 			linkStmt = irBuilder.parseStmt("link(from, iterator, to);", symbols);
@@ -130,8 +132,8 @@ CONVERTER(Link) {
 		context.linkStmtMap[node] = linkStmt;
 	} else {
 		//control flow link -- link[task1->task2] -- no ports
-		//assert(false && "control flow not implemented");
 		//only needed for block scope -- handled in blockscope converter
+		//assert(false && "control flow not implemented");
 	}
 }
 
@@ -307,10 +309,7 @@ LOOPCOUNTER_CONVERTER(LoopCounter) {
 }
 
 TYPE_CONVERTER(TaskType) { 
-	//TODO generic type? annotation?
 	VLOG(2) << "TaskType : " << node->type;
-
-	//GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intTypeParams) const;
 	return irBuilder.genericType(node->type, core::TypeList(), core::IntParamList());
 }
 
@@ -377,7 +376,7 @@ TYPE_CONVERTER(CollectionType) {
 }
 
 CONDITION_CONVERTER(Condition) {
-//	VLOG(2) << "Condition : " << node->condition;
+	VLOG(2) << "Condition : " << node->condition;
 	core::ExpressionPtr condExpr = condition_ast::convert_condition_ast_to_inspire(node, varMap, irBuilder);
 	dumpPretty(condExpr);
 	return condExpr;
@@ -399,7 +398,7 @@ PROPERTIES_CONVERTER(Properties) {
 PROPERTY_CONVERTER(Property) { 
 	// attached to DataPorts, atomic tasks, composite tasks
 	// are attached as annotations in Port, Task* converter
-	VLOG(2) << "Property: " << node->name << ":" << node->value;
+	VLOG(2) << "\tProperty: " << node->name << ":" << node->value;
 	return std::make_pair(node->name, node->value);
 }
 
@@ -419,7 +418,7 @@ CONSTRAINTS_CONVERTER(Constraints) {
 CONSTRAINT_CONVERTER(Constraint) { 
 	// attached to DataPorts, atomic tasks, composite tasks
 	// are attached as annotations in Port, Task* converter
-	VLOG(2) << "Constraint : " << node->name << ":" << node->value;
+	VLOG(2) << "\tConstraint : " << node->name << ":" << node->value;
 	return std::make_pair(node->name, node->value);
 }
 #undef CONVERTER
