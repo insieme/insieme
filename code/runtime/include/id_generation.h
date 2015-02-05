@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -73,8 +73,7 @@ static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_pt
 	irt_##__type##_id id; \
 	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
 	id.full = gen_id->full; \
-	id.index = gen_id->index++; \
-	id.node = gen_id->node; \
+	gen_id->index++; \
 	id.id_type = IRT_ID_##__type; \
 	id.cached = NULL; \
 	return id; \
