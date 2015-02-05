@@ -126,8 +126,9 @@ uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __sh
 	/* check if event already occurred */ \
 	if(reg->occurrence_count[event_code] > p_val) { \
 		/* if so, return occurrence count */ \
+		uint32 ret = reg->occurrence_count[event_code]; \
 		irt_spin_unlock(&reg->lock); \
-		return reg->occurrence_count[event_code]; \
+		return ret; \
 	} \
 	/* else insert additional handler */ \
 	handler->next = reg->handler[event_code]; \
@@ -149,8 +150,9 @@ int64 irt_##__short__##_event_check_exists_gt_and_register(irt_##__subject__##_i
 	/* check if event already occurred */ \
 	if(reg->occurrence_count[event_code] > p_val) { \
 		/* if so, return occurrence count */ \
+		uint32 ret = reg->occurrence_count[event_code]; \
 		irt_spin_unlock(&reg->lock); \
-		return reg->occurrence_count[event_code]; \
+		return ret; \
 	} \
 	/* else insert additional handler */ \
 	handler->next = reg->handler[event_code]; \
@@ -259,7 +261,7 @@ void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id __short__##
 	irt_spin_unlock(&reg->lock); \
 } \
  \
- void irt_##__short__##_event_trigger_existing_no_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
+void irt_##__short__##_event_trigger_existing_no_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
 	irt_##__short__##_event_register_id id; \
 	id.full = __short__##_id.full; \
 	id.cached = NULL; \
