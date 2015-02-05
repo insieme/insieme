@@ -378,6 +378,7 @@ void irt_worker_cleanup(irt_worker* self) {
 		cur = self->wi_ev_register_list;
 		while(cur) {
 			next = cur->lookup_table_next;
+			irt_spin_destroy(&cur->lock);
 			free(cur);
 			cur = next;
 		}
@@ -388,6 +389,7 @@ void irt_worker_cleanup(irt_worker* self) {
 		cur = self->wg_ev_register_list;
 		while(cur) {
 			next = cur->lookup_table_next;
+			irt_spin_destroy(&cur->lock);
 			free(cur);
 			cur = next;
 		}
