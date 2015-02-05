@@ -478,8 +478,8 @@ using insieme::core::pattern::anyList;
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
 		Logger::get(std::cerr, ERROR, 0);
 		// Semantic check on code
-		LOG(INFO) << "Errors Before OCL host preprocess: " << core::checks::check(code, core::checks::getFullCheck());
-		LOG(DEBUG) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		//LOG(INFO) << "Errors Before OCL host preprocess: " << core::checks::check(code, core::checks::getFullCheck());
+		//LOG(DEBUG) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 		auto& manager = converter.getNodeManager();
 
@@ -515,9 +515,6 @@ using insieme::core::pattern::anyList;
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& matchKernel = callKernel.matchPointer(call);
 			if (matchKernel) {
-				std::cout <<  " ################################################## \n";
-				std::cout << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
-				std::cout <<  " ################################################## \n";
 				std::vector<LiteralPtr> tupleAccessVec;
 				VariablePtr tupleVar;
 				CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
@@ -891,11 +888,11 @@ using insieme::core::pattern::anyList;
 			});
 		}
 
-		LOG(DEBUG) << "\nFinal Code Before Splitting" << std::endl
-				   << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		LOG(INFO) << "Errors before starting split: \n" << core::checks::check(code2, core::checks::getFullCheck());
+		LOG(DEBUG) << "Code before starting split: \n" << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 		// Semantic check on code2
-		auto sem = core::checks::check(code2, insieme::core::checks::getFullCheck());
+		/*auto sem = core::checks::check(code2, insieme::core::checks::getFullCheck());
 		auto warn = sem.getWarnings();
 		std::sort(warn.begin(), warn.end());
 		for_each(warn, [](const core::checks::Message& cur) {
@@ -937,21 +934,13 @@ using insieme::core::pattern::anyList;
 																	   printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE |
 																	   printer::PrettyPrinter::PRINT_CASTS) << std::endl;
 				}
-
-		//		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 			});
 			//---------------------------------------------------------------------------------
-
-
-
-			/*for_each(errs, [](const core::checks::Message& cur) {
-				LOG(ERROR) << cur << std::endl;
-			});*/
 			LOG(ERROR) <<     "=========================================" << std::endl;
-		}
+		}*/
 
 		// UNCOMMENT TO AVOID THE SPLITTING
-		return code2;
+		//return code2;
 
 
 
@@ -959,16 +948,20 @@ using insieme::core::pattern::anyList;
         insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
 
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		//TreePattern splitPoint = irp::ifStmt(at("1u != (uint<4>)0"), any, any);
 		TreePattern splitPoint = irp::ifStmt(at("1u != 0u"), any, any);
 
 		bool foundErrors = false;
 		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
 			auto&& matchIf = splitPoint.matchPointer(ifSplit);
 			if (matchIf) {
-				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody()); // create the new isolated call
+				// create the new isolated call
+				/*let fun005 = fun(ref<ref<array<type000,1>>> v323, ref<int<4>> v324, ...) -> unit {}; // new variable Names
+				fun005(v3, v35, ...) // Old variable names
+				*/
+				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody());
 
-				std::cout << "=== NEW CALL AFTER OUTLINE ===\n" << printer::PrettyPrinter(call);
+				//LOG(DEBUG) << "=== NEW CALL AFTER OUTLINE ===\n" << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+				//LOG(INFO) << "\n==== ERROR CHECK START ====\n " << core::checks::check(call, core::checks::getFullCheck()) << "\n==== ERROR CHECK STOP ====\n ";
 
 				CallExprPtr varlist;
 				visitDepthFirst(call, [&](const CallExprPtr& cl) {
@@ -1032,16 +1025,16 @@ using insieme::core::pattern::anyList;
 				TupleExprPtr tuple = static_pointer_cast<const TupleExpr>(varlist->getArgument(0));
 				for_range(make_paired_range(tuple->getExpressions(), kernLambda->getLambda()->getParameters()->getElements()),
 						[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
-//						std::cout << "First " << getVariableArg(pair.first, builder) << " " << *pair.second << std::endl;
+						//std::cout << "First " << getVariableArg(pair.first, builder) << " " << *pair.second << std::endl;
 						for_each(buffers,[&](VariableAddress bufAdd) {
-//						std::cout << *bufAdd << " == " << *pair.second << std::endl;
+						//std::cout << *bufAdd << " == " << *pair.second << std::endl;
 							if (*bufAdd == *pair.second) {
 								VariablePtr varPtr = getVariableArg(pair.first, builder);//static_pointer_cast<const Variable>(deref->getArgument(0));
 								bufferMap[bufAdd] = core::Address<const core::Variable>::find(varPtr, callBody);
 							}
 						});
 						if(boundaryVars.find(pair.second) != boundaryVars.end()) {
-							VariablePtr varPtr = static_pointer_cast<const Variable>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
+							VariablePtr varPtr = getVariableArg(pair.first, builder);//static_pointer_cast<const Variable>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
 							boundaryVarMap[core::Address<const core::Variable>::find(pair.second, callBody)] =
 									core::Address<const core::Variable>::find(varPtr, callBody);
 						}
@@ -1098,7 +1091,7 @@ using insieme::core::pattern::anyList;
 							arguments.push_back(pair.second);
 						} else {
 							sizeVar = pair.first; // update the sizeVar with the parameters value of the new wi isolated function
-							// alwasys keep the unsplitted size. Otherwise everything is wheired and complicated. Use a fresh variable for it
+							// alwasys keep the unsplitted size. Otherwise everything is complicated. Use a fresh variable for it
 							newSize = builder.variable(pair.first->getType());
 							parameters.push_back(newSize);
 							arguments.push_back(pair.second);
@@ -1204,6 +1197,15 @@ using insieme::core::pattern::anyList;
 				// replace the remaining size variable with end - begin
 				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
 											builder.deref(sizeVar), builder.sub(end, begin)).as<CompoundStmtPtr>();
+				// NEW CODE
+				newBody2 = core::transform::replaceAll(manager, newBody,
+											sizeVar, newSize).as<CompoundStmtPtr>();
+
+				//LOG(DEBUG) << "=== NEWBODY ===\n" << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+				//LOG(INFO) << "\n==== ERROR NEWBODY START ====\n " << core::checks::check(newBody, core::checks::getFullCheck()) << "\n==== ERROR CHECK STOP ====\n ";
+
+				//LOG(DEBUG) << "=== NEWBODY2 ===\n" << core::printer::PrettyPrinter(newBody2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+				//LOG(INFO) << "\n==== ERROR NEWBODY2 START ====\n " << core::checks::check(newBody2, core::checks::getFullCheck()) << "\n==== ERROR CHECK STOP ====\n ";
 
 				visitDepthFirst(newBody2, [&](const CallExprPtr& cl) {
 					auto&& matchKernel = callKernel.matchPointer(cl);
@@ -1314,22 +1316,11 @@ using insieme::core::pattern::anyList;
 
 				// building the new Call
 				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), newBody2, parameters);
+
 				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
 
-				// Semantic check on newCall
-				auto semantic = core::checks::check(newCall, insieme::core::checks::getFullCheck());
-				auto warnings = semantic.getWarnings();
-				std::sort(warnings.begin(), warnings.end());
-				for_each(warnings, [](const core::checks::Message& cur) {
-					LOG(INFO) << cur << std::endl;
-				});
-
-				auto errors = semantic.getErrors();
-				std::sort(errors.begin(), errors.end());
-				std::cout << "ERROR New CAll: " << std::endl;
-				for_each(errors, [](const core::checks::Message& cur) {
-					LOG(INFO) << cur << std::endl;
-				});
+				//LOG(DEBUG) << "=== NEW CALL ===\n" << core::printer::PrettyPrinter(newCall, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+				//LOG(INFO) << "\n==== ERROR NEW CALL ====\n " << core::checks::check(newCall, core::checks::getFullCheck()) << "\n==== ERROR STOP ====\n ";
 
 				// add bind for the begin, end, step around the call
 				VariableList besArgs;
@@ -1350,19 +1341,20 @@ using insieme::core::pattern::anyList;
 				nodeMap.clear();
 				nodeMap.insert(std::make_pair(ifSplit, mergeCall));
 
-				code2 = core::transform::replaceAll(manager, code2, nodeMap, true);
+				code2 = core::transform::replaceAll(manager, code2, nodeMap, false);
 
-				std::cout << "NEWCALL " << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+				std::cout << "FINAL CODE " << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
 				// Semantic check on code2
-				semantic = core::checks::check(newBody2, insieme::core::checks::getFullCheck());
-				warnings = semantic.getWarnings();
+				auto semantic = core::checks::check(code2, insieme::core::checks::getFullCheck());
+				auto warnings = semantic.getWarnings();
 				std::sort(warnings.begin(), warnings.end());
 				for_each(warnings, [](const core::checks::Message& cur) {
 					LOG(INFO) << cur << std::endl;
 				});
 
-				errors = semantic.getErrors();
+				std::cout << "CHECKING FOR ERRORS" << std::endl;
+				auto errors = semantic.getErrors();
 				std::sort(errors.begin(), errors.end());
 				for_each(errors, [&builder, &foundErrors](const core::checks::Message& cur) {
 					LOG(INFO) << "---- SEMANTIC ERROR - FINAL STEP ---- \n" << cur << std::endl;
@@ -1371,7 +1363,7 @@ using insieme::core::pattern::anyList;
 			}
 		});
 
-//		assert(!foundErrors && "Semantic errors when generating the splitting");
+		assert(!foundErrors && "Semantic errors when generating the splitting");
 
 		return code2;
 	}
