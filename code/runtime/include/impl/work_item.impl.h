@@ -152,6 +152,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
+	reg->id.cached = reg;
 	_irt_wi_event_register_only(reg);
 	return retval;
 }
