@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,13 +49,11 @@ static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_reg
 		reg->lookup_table_next = NULL; \
 		memset(reg->occurrence_count, 0, __num_events__*sizeof(uint32)); \
 		memset(reg->handler, 0, __num_events__*sizeof(irt_##__short__##_event_lambda*)); \
-		irt_spin_init(&reg->lock); \
-		return reg; \
 	} else { \
-		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
-		irt_spin_init(&ret->lock); \
-		return ret; \
+		reg = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
 	} \
+	irt_spin_init(&reg->lock); \
+	return reg; \
 } \
  \
 static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id __short__##_id) { \
