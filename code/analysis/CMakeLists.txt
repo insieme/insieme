@@ -8,6 +8,12 @@ include(../environment.cmake)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
+#ninja job pools setting
+if( NOT DEFINED(CBA_JOBS) OR (CBA_JOBS) )
+	set(CBA_JOBS "1" CACHE STRING "number of parallel cba unit test jobs")
+endif()
+set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} )
+
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_analysis_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_analysis_incs 	include/*.h )
@@ -37,9 +43,15 @@ set ( ut_prefix  ut_analysis_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
-	
+
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
+
+	#ninja job pools
+	if(${case_name} MATCHES "ut_analysis_cba_(.*)")
+		set_property(TARGET ${case_name} PROPERTY JOB_POOL_COMPILE cba_jobs)
+	endif()
+
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_analysis)

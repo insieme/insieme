@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -122,6 +122,42 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 		std::cout << cur << std::endl;
 	});
 
+}
+
+
+TEST(BuilderTest, CreateCallExprFromBody1) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
+
+	std::map<string, core::NodePtr> symbols;
+
+	core::VariablePtr varA =  builder.variable(builder.refType(gen.getInt4()));
+	core::VariablePtr varB =  builder.variable(builder.refType(gen.getInt4()));
+
+	symbols["var1"] = varA;
+	symbols["var2"] = varB;
+	symbols["var3"] = builder.variable(builder.refType(gen.getInt4()));
+	symbols["var4"] = builder.variable(builder.refType(gen.getInt4()));
+
+	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.getZero(builder.refType(gen.getInt4())) );
+	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.getZero(builder.refType(gen.getInt4())) );
+
+	core::StatementPtr assignStmt1 = builder.parseStmt("var1 = var3;", symbols);
+	core::StatementPtr assignStmt2 = builder.parseStmt("var4 = var2;", symbols);
+
+	//body with 2 decl stmts and usage of 4 variables
+	core::StatementList bodyStmts;
+	bodyStmts.push_back(declA);
+	bodyStmts.push_back(declB);
+	bodyStmts.push_back(assignStmt1);
+	bodyStmts.push_back(assignStmt2);
+
+	core::CompoundStmtPtr body = builder.compoundStmt(bodyStmts);
+	core::CallExprPtr call = builder.createCallExprFromBody(body, gen.getUnit()).as<core::CallExprPtr>();
+
+	EXPECT_EQ(2u, call->getArguments().size());
 }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,7 +61,7 @@ TEST(Maps, MapsConversion) {
 	auto back = toValue<map<string,int>>(ir);
 
 	EXPECT_EQ("{}", toString(value));
-	EXPECT_EQ("empty(pair<ref<array<char,1>>,int<4>>)", toString(*ir));
+	EXPECT_EQ("empty(type<pair<ref<array<char,1>>,int<4>>>)", toString(*ir));
 
 
 	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
@@ -80,7 +80,7 @@ TEST(Maps, MapsConversion) {
 	back = toValue<map<string,int>>(ir);
 
 	EXPECT_EQ("{hello=12, world=14}", toString(value));
-	EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(pair<ref<array<char,1>>,int<4>>)))", toString(*ir));
+	EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(type<pair<ref<array<char,1>>,int<4>>>)))", toString(*ir));
 
 	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
 	EXPECT_EQ(value, back);

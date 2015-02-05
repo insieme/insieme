@@ -36,6 +36,7 @@
 
 // TODO: BRING to the runtime informations: kernel is splittable or not.
 #include <fstream>
+#define MIN_CONTEXT 40
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
@@ -49,6 +50,7 @@
 #include "insieme/core/annotations/naming.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -67,6 +69,9 @@
 
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
+#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
+
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -471,10 +476,10 @@ using insieme::core::pattern::anyList;
 
 
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
+		Logger::get(std::cerr, ERROR, 0);
 		// Semantic check on code
+		LOG(INFO) << "Errors Before OCL host preprocess: " << core::checks::check(code, core::checks::getFullCheck());
 		LOG(DEBUG) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		core::checks::MessageList msgl=core::checks::check(code, core::checks::getFullCheck());
-		if (!msgl.empty()) { LOG(ERROR) << "OCL host pp errors: " << msgl; }
 
 		auto& manager = converter.getNodeManager();
 
@@ -499,7 +504,10 @@ using insieme::core::pattern::anyList;
 
 		TreePattern tupleAccess = irp::arrayRefElem1D(irp::tupleMemberAccess(var("tupleVar"), var("index"), var("memberType")), var("arrayIndex"));
 
-		TreePattern wrapGlobalTuple = irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(manager.getLangBasic().getRefDeref(), tupleAccess));
+		TreePattern reinterpretTupleAccess = irp::refReinterpret(tupleAccess);
+
+		TreePattern wrapGlobalTuple = irp::callExpr(irp::literal("_ocl_wrap_global"),
+										irp::callExpr(manager.getLangBasic().getRefDeref(), (reinterpretTupleAccess | tupleAccess)));
 
 		TreePattern tupleAccessOrWrap = (tupleAccess | wrapGlobalTuple);
 
@@ -507,10 +515,14 @@ using insieme::core::pattern::anyList;
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& matchKernel = callKernel.matchPointer(call);
 			if (matchKernel) {
+				std::cout <<  " ################################################## \n";
+				std::cout << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+				std::cout <<  " ################################################## \n";
 				std::vector<LiteralPtr> tupleAccessVec;
 				VariablePtr tupleVar;
 				CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
 				visitDepthFirst(varlist, [&](const CallExprPtr& call) {
+
 					auto&& matchGlobalWrap = wrapGlobalTuple.matchPointer(call);
 					if (matchGlobalWrap) {
 						 if (!tupleVar) {
@@ -525,7 +537,7 @@ using insieme::core::pattern::anyList;
 				});
 
 				// Create new type for the tuple (with Buffers)
-				const TupleTypePtr oldTupleType = static_pointer_cast<const TupleType>(tupleVar.getType());
+				const TupleTypePtr oldTupleType = static_pointer_cast<const TupleType>(tupleVar.getType()); //FIXME BUG!!
 				std::vector<TypePtr> oldTypeList = oldTupleType.getElementTypes();
 				std::vector<TypePtr> newTypeList;
 				for (uint i = 0; i < tupleAccessVec.size(); ++i) newTypeList.push_back(builder.refType(builder.arrayType(refBufType)));
@@ -832,7 +844,7 @@ using insieme::core::pattern::anyList;
 									newParams.push_back(builder.variable(refRefBufType, params[i].getID()));
 								}
 								// case tuple
-							} else if (fitTuple != end(tupleVarNameVec)) {
+							} else if (fitTuple != end(tupleVarNameVec)) { // TODO: Improve it
 								insertInMap = true;
 								TypePtr newArgType;
 								TypePtr newParamType;
@@ -892,12 +904,49 @@ using insieme::core::pattern::anyList;
 
 		auto errs = sem.getErrors();
 		std::sort(errs.begin(), errs.end());
-		if (errs.begin()!=errs.end()) {
+		if (errs.begin()!= errs.end()) {
 			LOG(ERROR) << "\n\nError in the final code before splitting:" << std::endl
 					   <<     "=========================================" << std::endl;
-			for_each(errs, [](const core::checks::Message& cur) {
-				LOG(ERROR) << cur << std::endl;
+			//---------------------------------------------------------------------------------
+			for_each(errs, [&](const core::checks::Message& cur) {
+				LOG(INFO) << cur;
+				NodeAddress address = cur.getOrigin();
+				std::stringstream ss;
+				unsigned contextSize = 1;
+				do {
+
+					ss.str("");
+					ss.clear();
+					NodePtr&& context = address.getParentNode(
+							std::min((unsigned)contextSize, address.getDepth()-contextSize)
+						);
+					ss << printer::PrettyPrinter(context, printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+
+				} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+				// LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
+				LOG(INFO) << "\t Source: " << printer::PrettyPrinter(address, printer::PrettyPrinter::OPTIONS_SINGLE_LINE);
+				LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+
+				// find enclosing function
+				auto fun = address;
+				while(!fun.isRoot() && fun->getNodeType() != core::NT_LambdaExpr) {
+					fun = fun.getParentAddress();
+				}
+				if (fun->getNodeType() == core::NT_LambdaExpr) {
+					LOG(INFO) << "\t Context:\n" << printer::PrettyPrinter(fun, printer::PrettyPrinter::PRINT_DEREFS |
+																	   printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+																	   printer::PrettyPrinter::PRINT_CASTS) << std::endl;
+				}
+
+		//		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 			});
+			//---------------------------------------------------------------------------------
+
+
+
+			/*for_each(errs, [](const core::checks::Message& cur) {
+				LOG(ERROR) << cur << std::endl;
+			});*/
 			LOG(ERROR) <<     "=========================================" << std::endl;
 		}
 

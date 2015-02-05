@@ -44,6 +44,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 namespace insieme {
 namespace core {
@@ -259,6 +260,8 @@ namespace analysis {
 
 						// register variable to be replaced
 						varMap[var] = getNextVariable(var->getType());
+						// this might not be the best idea, as we could get unwanted names on nodes (e.g. all int v0 have the same name)
+						core::transform::utils::migrateAnnotations(var, varMap[var]);
 						break;
 					}
 					case NT_LambdaExpr: {

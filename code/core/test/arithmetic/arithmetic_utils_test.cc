@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -210,7 +210,7 @@ TEST(ArithmeticTest, nonVariableValues) {
 
 	f= toFormula(tmp);
 	EXPECT_EQ("v1+v3.a", toString(f));
-	EXPECT_EQ("int.add(v1, composite.member.access(v3, a, int<4>))", toString(*toIR(manager, f)));
+	EXPECT_EQ("int.add(v1, composite.member.access(v3, a, type<int<4>>))", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
