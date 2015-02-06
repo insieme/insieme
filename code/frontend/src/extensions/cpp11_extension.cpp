@@ -72,6 +72,15 @@ namespace extensions {
 //               C++11 expressions
 
 /**
+ *			Cxx11 default init expression
+ */
+insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr, 
+												insieme::frontend::conversion::Converter& convFact) {
+    return convFact.convertExpr(initExpr->getExpr());
+}
+
+
+/**
  *			Cxx11 null pointer
  */
 insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
@@ -116,9 +125,9 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 }
 
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//		SizeOfPack expr
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/**
+ *  			Cxx11 size of pack expression
+ */
 insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact) {
 	//sizeOf... returns size_t --> use unsigned int
 	core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
@@ -126,6 +135,9 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeO
 }
 
 
+/**
+ *  			Cxx11 init list expression
+ */
 insieme::core::ExpressionPtr Cpp11Plugin::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact) {
     //get the sub expression of the std init list expression
     auto expr = initList->getSubExpr();
