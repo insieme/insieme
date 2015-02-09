@@ -113,6 +113,16 @@ inline std::vector<string> split(const string& str) {
 }
 
 /**
+ * A utility method to find the common prefix of two strings.
+ *
+ * @return a new string containing the prefix
+ */
+inline std::string commonPrefix(std::string a, std::string b) {
+	if(a.size() > b.size()) std::swap(a,b) ;
+	return std::string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
+}
+
+/**
  * Tests whether the given string contains the given sub-string.
  *
  * @param str the string searching in

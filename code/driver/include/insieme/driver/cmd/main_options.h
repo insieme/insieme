@@ -51,6 +51,13 @@ namespace cmd {
 	// fix an alias for the path type
 	typedef frontend::path path;
 
+	// allows to distinguish between graceful and ungraceful exits
+	enum class OptionStatus{
+		VALID,
+		NOT_VALID,
+		GRACEFUL_EXIT
+	};
+
 	/**
 	 * The CommandLineOptions is a container for input arguments to the main Insieme compiler executable.
 	 */
@@ -61,7 +68,7 @@ namespace cmd {
 		/**
 		 * A flag indicating whether the parsed options are valid.
 		 */
-		bool valid;
+		OptionStatus optionStatus;
 
 		#define FLAG(opt_name, opt_id, var_name, def_value, var_help) \
 			bool var_name;
@@ -87,7 +94,7 @@ namespace cmd {
 	private:
 
 		// avoid constructing instances of CommandLineOptions
-		CommandLineOptions() : valid(true) { }
+		CommandLineOptions() : optionStatus(OptionStatus::VALID) { }
 
 	public:
 

@@ -38,6 +38,7 @@
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/constraint.h"
+#include "affine_sys.h"
 
 struct cloogoptions;
 
@@ -48,7 +49,6 @@ typedef std::shared_ptr<Stmt> StmtPtr;
 
 class IterationVector;
 class IterationDomain;
-class AffineSystem;
 
 typedef boost::variant<
 	core::NodePtr, 

@@ -300,7 +300,7 @@ namespace cba {
 		}
 
 		template<typename A, typename Context = DefaultContext>
-		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(int id, const Context& context = Context()) {
+		sc::TypedVariable<typename lattice<A,analysis_config<Context>>::type> getVar(int id, const Context& context) {
 			return getVariable<A,analysis_config<Context>,int,Context>(id, context);
 		}
 

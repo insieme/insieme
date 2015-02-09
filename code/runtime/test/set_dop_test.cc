@@ -126,11 +126,12 @@ TEST(SetDopTest, External) {
 	for(int i = 0; i<N; ++i) {
 		irt::init(MAX_PARA);
 		volatile bool run = true;
-		auto f = std::async(std::launch::async, [&run]{ 
+		auto f = std::async(std::launch::async, [&run] { 
 			while(run) { 
 				irt_scheduling_set_dop(rand()%MAX_PARA + 1);
-				irt_busy_nanosleep(1 * 1000 * 1000);
+				irt_busy_nanosleep(50 * 1000);
 			};
+			return true;
 		});
 		irt::run([]() {
 			double sum = 0;
@@ -138,7 +139,7 @@ TEST(SetDopTest, External) {
 			printf("", sum);
 		});
 		run = false;
-		f.wait();
+		EXPECT_TRUE(f.get());
 		irt::shutdown();
 	}
 }

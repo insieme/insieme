@@ -86,6 +86,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 		stmtutils::StmtWrapper retList;
 		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
 
+		// external declaration statement as per very early K&R C -> ignore
+		if(varDecl->hasExternalStorage()) {
+			return retList;
+		}
+
 		auto retStmt = convFact.convertVarDecl(varDecl);
 		if (core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()){
 			// check if there is a kernelFile annotation
@@ -106,15 +111,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 	stmtutils::StmtWrapper retList;
 	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-//
-//try {
-			auto retStmt = convFact.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
-			// handle eventual Data Transformation pragmas attached to the Clang node
-			attatchDataTransformAnnotation(retStmt, declStmt, convFact);
+		auto retStmt = convFact.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
+		// handle eventual Data Transformation pragmas attached to the Clang node
+		attatchDataTransformAnnotation(retStmt, declStmt, convFact);
 
-			retList.push_back( retStmt );
-
-//		} catch ( const GlobalVariableDeclarationException& err ) {}
+		retList.push_back( retStmt );
 	}
 	return retList;
 }

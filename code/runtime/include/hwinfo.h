@@ -139,6 +139,7 @@ int32 _irt_hw_info_init() {
 
 	strncpy(__irt_g_cached_hw_info.model_string, hwinfo->model_string, IRT_HW_MAX_STRING_LENGTH);
 	strncpy(__irt_g_cached_hw_info.vendor_string, hwinfo->vendor_string, IRT_HW_MAX_STRING_LENGTH);
+
 #else
 	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
 #endif
@@ -202,7 +203,7 @@ uint32 irt_hw_get_cpu_max_mhz() {
 }
 
 uint32 irt_hw_get_cpu_min_mhz() {
-		if(__irt_g_cached_hw_info.cpu_min_mhz == 0)
+	if(__irt_g_cached_hw_info.cpu_min_mhz == 0)
 		_irt_hw_info_init();
 
 	IRT_ASSERT(__irt_g_cached_hw_info.cpu_min_mhz != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
@@ -215,14 +216,20 @@ bool irt_hw_get_hyperthreading_enabled() {
 }
 
 irt_hw_cpuid_info irt_hw_get_cpuid_info() {
+	if(__irt_g_cached_hw_info.cpuid.family == 0)
+		_irt_hw_info_init();
 	return __irt_g_cached_hw_info.cpuid;
 }
 
 char* irt_hw_get_vendor_string() {
+	if(strlen(__irt_g_cached_hw_info.vendor_string) == 0)
+		_irt_hw_info_init();
 	return __irt_g_cached_hw_info.vendor_string;
 }
 
 char* irt_hw_get_model_string() {
+	if(strlen(__irt_g_cached_hw_info.model_string) == 0)
+		_irt_hw_info_init();
 	return __irt_g_cached_hw_info.model_string;
 }
 

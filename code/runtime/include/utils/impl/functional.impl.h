@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,7 @@ char* irt_util_to_str(irt_util_snprinter* p, ...) {
 	while(!res) {
 		va_list copy;
 		va_copy(copy, list);
-		char* res = malloc(sizeof(char)*size);
+		char* res = (char*) malloc(sizeof(char)*size);
 		int num_printed = (*p)(res, size, copy);
 		va_end(copy);
 

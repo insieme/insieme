@@ -127,6 +127,13 @@ namespace integration {
 			}
 		}
 
+		// map existing keys with new info
+		for(const auto& o : data) {
+			for(const auto& i : o.second) {
+				set(o.first, i.first, mapVars(i.second));
+			}
+		}
+
 		// done
 		return *this;
 	}

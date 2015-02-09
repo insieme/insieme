@@ -954,7 +954,7 @@ namespace pattern {
 		}
 
 
-		template<typename T, typename target = typename match_target_info<T>::target_type>
+		template<typename T, typename target>
 		boost::optional<Match<target>> match(const impl::TreePattern& pattern, const T& tree) {
 			MatchContext<target> context(tree);
 			std::function<bool(MatchContext<target>&)> accept = [](MatchContext<target>& context)->bool { return true; };
@@ -965,7 +965,7 @@ namespace pattern {
 			return 0;
 		}
 
-		template<typename T, typename target = typename match_target_info<T>::target_type>
+		template<typename T, typename target>
 		boost::optional<Match<target>> match(const impl::ListPattern& pattern, const std::vector<T>& trees) {
 			MatchContext<target> context;
 			std::function<bool(MatchContext<target>&)> accept = [](MatchContext<target>& context)->bool { return true; };
@@ -976,12 +976,12 @@ namespace pattern {
 			return 0;
 		}
 
-		template<typename T, typename target = typename match_target_info<T>::target_type>
+		template<typename T, typename target>
 		boost::optional<Match<target>> match(const impl::TreePatternPtr& pattern, const T& tree) {
 			return match(*pattern.get(), tree);
 		}
 
-		template<typename T, typename target = typename match_target_info<T>::target_type>
+		template<typename T, typename target>
 		boost::optional<Match<target>> match(const impl::ListPatternPtr& pattern, const std::vector<T>& trees) {
 			return match(*pattern.get(), trees);
 		}
@@ -1488,7 +1488,7 @@ namespace pattern {
 			}
 		}
 
-		template<typename T, typename iterator = typename T::value_iterator>
+		template<typename T, typename iterator>
 		bool match(const impl::ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
 
 			const bool DEBUG = false;

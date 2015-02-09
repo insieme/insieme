@@ -44,7 +44,7 @@ macro ( add_unit_test case_name )
 		# parallelize integration tests
 		if(${case_name} MATCHES ".*driver_integration.*")
 		add_test(NAME ${case_name} 
-			COMMAND ${insieme_root_dir}/code/gtest-parallel.py 
+			COMMAND ${insieme_root_dir}/code/gtest-parallel.rb 
 				-w ${NB_PROCESSOR_PART}
 				${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 			WORKING_DIRECTORY

@@ -1,0 +1,24 @@
+
+#include <vector>
+#include <gmp.h>
+
+using namespace std;
+
+typedef struct {
+	int x;
+} A;
+
+
+struct B {};
+
+typedef B C;
+
+int main() {
+//	A a;
+
+	vector<A> as;
+	vector<B> bs;
+//	vector<C> as;
+
+	return 0;
+}

@@ -57,6 +57,8 @@
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_class_info.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/include.h"
@@ -132,7 +134,7 @@ namespace backend {
 
 			// create a new context
 			ConversionContext entryContext(converter, core::LambdaPtr());
-
+			
 			c_ast::CodeFragmentPtr fragment;
 			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
 				// handle function-entry point specially
@@ -213,7 +215,19 @@ namespace backend {
 			const string& value = ptr->getStringValue();
 
 			// things that need not be extra-casted (default values)
-			if (basic.isInt4(ptr->getType()) || basic.isReal4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+			if (basic.isInt4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+				return res;
+			}
+
+			// add a f in case it is a float literal and it is missing
+			if (basic.isReal4(ptr->getType())) {
+				if (*value.rbegin() != 'f') {
+					res = toLiteral(value + "f");
+					// add a ".0" if we have an integer in a float literal
+					if (!any(value, [](const string::value_type& ch) { return ch=='.' || ch=='e'; })) {
+						res = toLiteral(value + ".0f");
+					}
+				}
 				return res;
 			}
 
@@ -293,7 +307,7 @@ namespace backend {
 			auto fragmentManager = converter.getFragmentManager();
 			string fragmentName = "global:" + ptr->getStringValue();
 			auto fragment = fragmentManager->getFragment(fragmentName);
-				
+
 			// check fragment
 			if (!fragment) {
 
@@ -574,6 +588,7 @@ namespace backend {
 
 		// goal: create a variable declaration and register new variable within variable manager
 		auto manager = converter.getCNodeManager();
+		core::IRBuilder builder(ptr->getNodeManager());
 
 		core::VariablePtr var = ptr->getVariable();
 		core::ExpressionPtr init = ptr->getInitialization();
@@ -619,6 +634,21 @@ namespace backend {
 		if( core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT ) {
 			initValue = c_ast::deref(initValue);
 		}
+
+        // check if we have an intercepted default ctor call (e.g., std::stringstream s;)
+        // the interceptor adds a zero initalization that would be converted into something like
+        // std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
+        // and therefore we need to avoid such copy initalizations.
+		if(init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size()==1)) {
+			core::TypePtr refType = core::analysis::getReferencedType(init->getType());
+			// only do this for intercepted types
+			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasNameAttached(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
+                core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
+                core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
+                if(arg == zeroInit)
+                    initValue = c_ast::ExpressionPtr();
+			}
+        }
 
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}

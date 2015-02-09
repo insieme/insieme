@@ -566,7 +566,7 @@ void read_input_data(char *filename)
       bots_message("Could not open sequence file (%s)\n", filename);
       exit (-1);
    }
-   res = fscanf(fin,"%d %d %d %d %d %d %ld %f %f %f %d %d %d %d %d %d %d %d %f", 
+   res = fscanf(fin,"%d %d %d %d %d %d %d %f %f %f %d %d %d %d %d %d %d %d %f", 
              &sim_level,
              &sim_cities,
              &sim_population_ratio,

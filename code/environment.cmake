@@ -55,17 +55,6 @@ set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learnin
 set ( insieme_plugins_include_dir  		${insieme_code_dir}/plugins/include )
 
 
-# -------------------------------------------------------------- determines insieme version
-
-find_package(Git)
-if(GIT_FOUND)
-	# deduce the code version using git describe
-	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
-else()
-	set ( insieme_version "unknown" )
-endif()
-
-
 # -------------------------------------------------------------- find location of utilities
 
 find_program(TIME_EXECUTABLE time)
@@ -318,9 +307,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
 
-    # add insieme version definition (add_definitions escapes back-quotes)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
-
 endif()
 
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
@@ -370,6 +356,20 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
 # required for affinity-related macros
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
+
+# -------------------------------------------------------------- determines insieme version
+
+find_package(Git)
+if(GIT_FOUND)
+	# deduce the code version using git describe
+	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
+else()
+	set ( insieme_version "unknown" )
+endif()
+
+
+# add insieme version definition (add_definitions escapes back-quotes)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import

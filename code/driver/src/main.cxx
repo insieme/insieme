@@ -443,7 +443,7 @@ namespace {
 int main(int argc, char** argv) {
 
 	CommandLineOptions options = CommandLineOptions::parse(argc, argv);
-	if (!options.valid) return 0;		// it was a help or about request
+	if (options.optionStatus != OptionStatus::VALID) return static_cast<int>(options.optionStatus);		// it was a help/version request, or a parameter error
 	string backendName; // needed now so that we can sanitize user input early (string given to --backend option)
 	be::BackendPtr backend;
 

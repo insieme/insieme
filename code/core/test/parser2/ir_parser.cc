@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1102,7 +1102,7 @@ namespace parser {
 		);
 
 		ASSERT_TRUE(expr);
-		EXPECT_EQ("composite.member.access(struct{x=1, y=2.0}, x, int<4>)", toString(*expr));
+		EXPECT_EQ("composite.member.access(struct{x=1, y=2.0}, x, type<int<4>>)", toString(*expr));
 
 
 		expr = builder.parseExpr(
@@ -1135,7 +1135,7 @@ namespace parser {
 		);
 
 		ASSERT_TRUE(expr);
-		EXPECT_EQ("tuple.member.access(tuple(1,2.0), 1, real<8>)", toString(*expr));
+		EXPECT_EQ("tuple.member.access(tuple(1,2.0), 1, type<real<8>>)", toString(*expr));
 
 		expr = builder.parseExpr(
 				"var((1,2.0)).1"

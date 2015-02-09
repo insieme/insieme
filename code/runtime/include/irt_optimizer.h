@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -129,7 +129,7 @@ void irt_optimizer_compute_optimizations(irt_wi_implementation_variant* variant,
 void irt_optimizer_apply_dvfs(irt_wi_implementation_variant* variant);
 void irt_optimizer_remove_dvfs(irt_wi_implementation_variant* variant);
 uint32 irt_optimizer_apply_dct(irt_wi_implementation_variant* variant);
-irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_wi_implementation_variant* parent_var);
-void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* variant, irt_optimizer_runtime_data* data);
+irt_optimizer_runtime_data* irt_optimizer_set_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_wi_implementation_variant* source_variant);
+void irt_optimizer_reset_wrapping_optimizations(irt_wi_implementation_variant* target_variant, irt_optimizer_runtime_data* data);
 
 #endif // ifndef __GUARD_IRT_OPTIMIZER_H
