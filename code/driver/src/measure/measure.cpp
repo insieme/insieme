@@ -63,6 +63,8 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
+	using std::pair;
+
 	namespace bfs = boost::filesystem;
 
 	// -- metrics --
@@ -1117,9 +1119,9 @@ namespace measure {
 
 		// sort addresses in descending order
 		typedef std::pair<core::StatementAddress, region_id> region_pair;
-		vector<pair<core::StatementAddress, region_id>> sorted_regions(regions.begin(), regions.end());
+		vector<region_pair> sorted_regions(regions.begin(), regions.end());
 		std::sort(sorted_regions.begin(), sorted_regions.end(), [](const region_pair& first, const region_pair& second) {
-			return first.second < second.second;
+			return first.second > second.second;
 		});
 
 		// replace all regions with instrumented and optimized versions
@@ -1128,7 +1130,7 @@ namespace measure {
 			// obtain address with current root
 			core::StatementAddress tmp = cur.first.switchRoot(root);
 			// instrument the new region
-			core::StatementPtr instrumentedTmp = instrument(cur.first, cur.second);
+			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
 			// replace region
 			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
 
