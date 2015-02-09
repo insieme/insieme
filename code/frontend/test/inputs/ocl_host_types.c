@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
 
 	// basic types
 	{
-		#pragma test "decl ref<char> v0 = ( var(undefined(type<char>)))" 
+		#pragma test "decl ref<int<1>> v0 = ( var(undefined(type<int<1>>)))" 
 		cl_char     var1;
 		#pragma test "decl ref<uint<1>> v0 = ( var(undefined(type<uint<1>>)))" 
 		cl_uchar    var2;
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 
 	// basic types with initilization
 	{
-		#pragma test "decl ref<char> v0 = ( var(int.to.char(1)))" 
+		#pragma test "decl ref<int<1>> v0 = ( var(1))" 
 		cl_char     var1 = 1;
 		#pragma test "decl ref<uint<1>> v0 = ( var(1u))" 
 		cl_uchar    var2 = 1;
@@ -117,31 +117,31 @@ int main(int argc, char **argv) {
 	// cl_char2
 	{
 		#pragma test \
-		"decl ref<union<s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>> v0 = ( var(undefined(type<union<s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>>)))" 
+		"decl ref<union<s:vector<int<1>,2>,__m1:struct<x:int<1>,y:int<1>>,__m2:struct<s0:int<1>,s1:int<1>>,__m3:struct<lo:int<1>,hi:int<1>>>> v0 = ( var(undefined(type<union<s:vector<int<1>,2>,__m1:struct<x:int<1>,y:int<1>>,__m2:struct<s0:int<1>,s1:int<1>>,__m3:struct<lo:int<1>,hi:int<1>>>>)))" 
 		cl_char2 var;
 
 		#pragma test \
-		"decl ref<union<s:vector<char,2>,__m1:struct<x:char,y:char>,__m2:struct<s0:char,s1:char>,__m3:struct<lo:char,hi:char>>> v0 = ( var(union{AP(s):=['a', 'b']}))" 
+		"decl ref<union<s:vector<int<1>,2>,__m1:struct<x:int<1>,y:int<1>>,__m2:struct<s0:int<1>,s1:int<1>>,__m3:struct<lo:int<1>,hi:int<1>>>> v0 = ( var(union{AP(s):=[char.to.int('a', 1), char.to.int('b', 1)]}))" 
 		cl_char2 initVar = {'a','b'};
 
 		#pragma test \
-		"((ref.vector.to.ref.array((v100->s))&[0u]) := int.to.char(1))"
+		"((ref.vector.to.ref.array((v100->s))&[0u]) := 1)"
 		initVar.s[0] = 1;
 
 		#pragma test \
-		"(((v100->__m1)->x) := int.to.char(1))"
+		"(((v100->__m1)->x) := 1)"
 		initVar.x = 1;
 		
 		#pragma test \
-		"(((v100->__m2)->s0) := int.to.char(1))"
+		"(((v100->__m2)->s0) := 1)"
 		initVar.s0 = 1;
 
 		#pragma test \
-		"(((v100->__m3)->lo) := int.to.char(1))"
+		"(((v100->__m3)->lo) := 1)"
 		initVar.lo = 1;
 
 		#pragma test \
-		"(v100 := union{AP(s):=[int.to.char(1), int.to.char(2)]})"
+		"(v100 := union{AP(s):=[1, 2]})"
 		initVar = (cl_char2) { 1, 2 };
 	}
 

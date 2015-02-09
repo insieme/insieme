@@ -266,6 +266,13 @@ namespace lang {
 			"('a)->struct { src<std::type_info>  _const_cpp_ref; }"
 		);
 
+		/**
+		 *  std init list expr
+		 */
+		LANG_EXT_LITERAL(StdInitListExpr, "std_init_list_expr",
+            "(list<'a>, type<'b>)->'b"
+        );
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//	member pointer (only for data member pointers)

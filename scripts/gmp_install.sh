@@ -5,9 +5,10 @@
 ##								GMP
 ########################################################################
 
-VERSION=5.0.5
+VERSION=6.0.0
+SUBVERSION=a
 PACKAGE=gmp-$VERSION
-FILE=$PACKAGE.tar.bz2
+FILE=$PACKAGE$SUBVERSION.tar.bz2
 
 if [ -d $PREFIX/gmp-$VERSION ]; then
   echo "GMP version $VERSION already installed"

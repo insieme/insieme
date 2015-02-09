@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,14 +53,7 @@ irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_ran
 	if(irt_g_worker_count == 1 || target->sched_data.queue.size > irt_g_worker_count+15) {
 		//printf("WO %d lazy: queued %d, address: %p\n", target->id.index, target->sched_data.queue.size,
 		//	&target->sched_data.queue.size);
-		irt_work_item *self = target->cur_wi;
-		irt_lw_data_item *prev_args = self->parameters;
-		irt_work_item_range prev_range = self->range;
-		self->parameters = args;
-		self->range = *range;
-		(impl->variants[0].implementation)(self);
-		self->parameters = prev_args;
-		self->range = prev_range;
+		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
 	}
 	else {

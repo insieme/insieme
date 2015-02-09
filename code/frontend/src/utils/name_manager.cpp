@@ -44,6 +44,7 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/DeclTemplate.h>
+#include <clang/AST/ASTContext.h>
 #include <llvm/Support/Casting.h>
 
 #include <clang/Basic/SourceLocation.h>
@@ -51,6 +52,7 @@
 #pragma GCC diagnostic pop
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -82,7 +84,12 @@ namespace {
 		std::stringstream ss;
 		ss << prefix;
 
-		ss << sm.getFilename(decl->getLocStart()).str();   //.getHashValue();
+		// canonicalize filename in case we refer to it from different relative locations
+		std::string filename = sm.getFilename(decl->getLocStart()).str();
+		boost::filesystem::path path(filename);
+		path = boost::filesystem::canonical(path);
+
+		ss << path.string();   //.getHashValue();
 		ss << sm.getExpansionLineNumber (decl->getLocStart());
 		ss << sm.getExpansionColumnNumber(decl->getLocStart());
 
@@ -135,14 +142,17 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
 }
 
 
-std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
+std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 
 	std::string name = funcDecl->getQualifiedNameAsString();
 	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) {
 		if (method->isVirtual()) {
 			name = funcDecl->getNameAsString();
-		}
-		else if(method->isOverloadedOperator()) {
+		} else if (method->getParent()) {
+	            if(method->getParent()->isLambda()) {
+        	        name = createNameForAnnon("lambda", method->getParent(), funcDecl->getASTContext().getSourceManager());
+	            }
+		} else if(method->isOverloadedOperator()) {
 		//	name = funcDecl->getNameAsString();
 		}
 	}
@@ -218,7 +228,14 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 						break;
 					}
 					case clang::TemplateArgument::Type: {
-						name.append ("_"+arg.getAsType().getAsString());
+					    //check if the type is a lambda, this one needs special handling
+					    std::string typeName;
+					    if(arg.getAsType().getTypePtr()->getAsCXXRecordDecl() && arg.getAsType().getTypePtr()->getAsCXXRecordDecl()->isLambda()) {
+                            typeName = createNameForAnnon("lambda", arg.getAsType().getTypePtr()->getAsCXXRecordDecl(), funcDecl->getASTContext().getSourceManager());
+					    } else {
+                            typeName = arg.getAsType().getAsString();
+					    }
+						name.append ("_"+typeName);
 						break;
 					}
 					case clang::TemplateArgument::Null: {
@@ -295,14 +312,14 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	return name;
 }
 
-std::string buildNameForVariable  (const clang::VarDecl* varDecl){
+std::string buildNameForVariable(const clang::VarDecl* varDecl){
 	std::string name = varDecl->getQualifiedNameAsString();
 	REMOVE_SYMBOLS(name);
 	return name;
 
 }
 
-std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm){
+std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm){
 	std::stringstream ss;
 	ss << "_global";
 
@@ -322,7 +339,7 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
 }
 
 
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
+std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm) {
 	std::stringstream ss;
 	ss << "_enum";
 

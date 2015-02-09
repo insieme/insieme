@@ -68,7 +68,7 @@ namespace types {
 			auto numComponents = boost::strong_components(graph.asBoostGraph(), componentMap);
 
 			// create type sets forming equivalence groups
-			vector<TypePtr> sets[numComponents];
+			vector<vector<TypePtr>> sets(numComponents);
 
 			const SubTypeGraph::GraphType& boostGraph = graph.asBoostGraph();
 			for (std::size_t i=0; i<numTypes; i++) {

@@ -59,7 +59,9 @@ namespace core {
 	/**
 	 * A marker token for non-annotated node path elements.
 	 */
-	struct empty {};
+	struct empty {
+		empty() {}
+	};
 
 	/**
 	 * A base class for node path elements providing the essential operations including

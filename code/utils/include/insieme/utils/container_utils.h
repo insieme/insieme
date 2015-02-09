@@ -120,12 +120,61 @@ inline void copy(const Container& c, OutputIterator out) {
 }
 
 /**
- * Convenience function for std::transform.
+ * Convenience function for std::transform for vector-like types.
  */
 template<template <typename, typename> class Container, typename Functor, 
 	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
 	typename Result = Container<ResultMember, A<ResultMember>>>
 inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
+ * Convenience function for std::transform for map-like types.
+ */
+template<template <typename, typename, typename, typename> class MapLikeContainer, typename Functor, 
+	typename T, typename K, typename V, typename C, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = MapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, std::less<typename ResultMember::first_type>, A<ResultMember>>>
+inline Result transform(const MapLikeContainer<K, V, C, A<T>>& m, const Functor& f) {
+	Result res;
+	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
+ * Convenience function for std::transform for changing vector-like types to other vector-like types.
+ */
+template<template <typename, typename> class TargetContainer, template <typename, typename> class Container, typename Functor, 
+	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = TargetContainer<ResultMember, A<ResultMember>>>
+inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
+ * Convenience function for std::transform for changing vector-like types to map-like types.
+ */
+template<template <typename, typename, typename, typename> class TargetMapLikeContainer, template <typename, typename> class Container, typename Functor, 
+	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = TargetMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, std::less<typename ResultMember::first_type>, A<ResultMember>>>
+inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
+	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
+	return res;
+}
+
+/**
+ * Convenience function for std::transform for changing map-like types to vector-like types.
+ */
+template<template <typename, typename> class TargetContainer, 
+	template <typename, typename, typename, typename> class MapLikeContainer, typename Functor, 
+	typename T, typename K, typename V, typename C, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = TargetContainer<ResultMember, A<ResultMember>>>
+inline Result transform(const MapLikeContainer<K, V, C, A<T>>& c, const Functor& f) {
 	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
 	return res;

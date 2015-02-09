@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -68,6 +68,7 @@ inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_ran
 	irt_work_item_range prev_range = self->range;
 	self->parameters = args;
 	self->range = range;
+	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
 	(impl->variants[0].implementation)(self);
 	self->parameters = prev_args;
 	self->range = prev_range;

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -58,12 +58,23 @@ namespace extensions {
 		}
 
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
+			
+			const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl());
+			std::string name;
 
-			if( const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl()) ) {
-				if(declRefExpr->hasExplicitTemplateArgs() && getInterceptor().isIntercepted(funcDecl)) {
+			// if the decl is shadowed (brought into the current namespace with "using")
+			// we need to (a) find the original decl and (b) get a canonical name
+			if(const auto* shadowDecl = llvm::dyn_cast<clang::UsingShadowDecl>(declRefExpr->getFoundDecl())) {
+				name = shadowDecl->getCanonicalDecl()->getQualifiedNameAsString();
+				funcDecl = llvm::dyn_cast<clang::FunctionDecl>(shadowDecl->getTargetDecl());
+			}
+
+			if(funcDecl) {
+				if(name.empty()) name = funcDecl->getQualifiedNameAsString();				
+				if(getInterceptor().isIntercepted(name)) {
 					VLOG(2) << "interceptorplugin\n";
 					//returns a callable expression
-					return getInterceptor().intercept(funcDecl, convFact, true);
+					return getInterceptor().intercept(funcDecl, convFact, declRefExpr->hasExplicitTemplateArgs(), name);
 				}
 			}
 
@@ -174,11 +185,11 @@ namespace extensions {
 				auto innerType = convFact.convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
 
 				core::IRBuilder builder (innerType->getNodeManager());
-				
+
 				if (!innerType.isa<core::GenericTypePtr>())
 					return nullptr;
 
-				// if is a typedef which ends pointing to an annonymous struct, lets save the effort and 
+				// if is a typedef which ends pointing to an annonymous struct, lets save the effort and
 				// return a generic opaque type
 				auto tmp = convFact.getIRTranslationUnit()[innerType.as<core::GenericTypePtr>()];
 				core::StructTypePtr structTy = tmp.isa<core::StructTypePtr>();
@@ -187,7 +198,7 @@ namespace extensions {
 					auto name = decl->getQualifiedNameAsString();
 					core::GenericTypePtr gen = builder.genericType(name);
 					convFact.getHeaderTagger().addHeaderForDecl(gen, decl);
-					return gen;
+					return structTy;
 				}
 				return nullptr;
 
@@ -195,6 +206,6 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-} // extensions 
+} // extensions
 } // frontend
 } // insieme

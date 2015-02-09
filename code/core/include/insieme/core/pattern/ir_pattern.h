@@ -377,6 +377,10 @@ namespace irp {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefDeref(); }), refExpr);
 	}
 
+	inline TreePattern refReinterpret(const TreePattern& refExpr = any, const TreePattern& type = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getRefReinterpret(); }), refExpr, type);
+	}
+
 	inline TreePattern unaryOp(const TreePattern& a) {
 		return callExpr(any, a);
 	}

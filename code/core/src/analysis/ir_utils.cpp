@@ -363,6 +363,7 @@ namespace {
 	struct rec_free_var_collector<Pointer> {
 		vector<VariablePtr> operator()(const NodePtr& cur) const { return analysis::getFreeVariables(cur); }
 		VariablePtr extend(const NodePtr&, const VariablePtr& res) const { return res; }
+		rec_free_var_collector() {}
 	};
 
 	/**
@@ -376,6 +377,7 @@ namespace {
 		VariableAddress extend(const NodeAddress& head, const VariableAddress& tail) const {
 			return concat(head, tail);
 		}
+		rec_free_var_collector() {}
 	};
 
 	/**

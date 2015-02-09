@@ -322,14 +322,14 @@ namespace tu {
 		 * -- by default symbolic 
 		 * @return the merged metaInfo
 		 */
-		core::ClassMetaInfo getMetaInfo(const core::TypePtr& classType, bool symbolic=true);
+		core::ClassMetaInfo getMetaInfo(const core::TypePtr& classType, bool symbolic=true) const;
 
 		/**
 		 * Adds the given metainfo to the vector associated with classType
 		 * @param classType a TypePtr with the type the meta-info should be associated with
 		 * @param metaInfo a core::ClassMetaInfor for the given classType
 		 */
-		void addMetaInfo(const core::TypePtr& classType, core::ClassMetaInfo metaInfo);
+		void addMetaInfo(const core::TypePtr& classType, const core::ClassMetaInfo& metaInfo);
 
 		/**
 		 * Adds the given vector of metainfos to the vector associated with classType
@@ -337,7 +337,7 @@ namespace tu {
 		 * @param metaInfo a vector of core::ClassMetaInfos for the given classType
 
 		 */
-		void addMetaInfo(const core::TypePtr& classType, std::vector<core::ClassMetaInfo> metaInfoList);
+		void addMetaInfo(const core::TypePtr& classType, const std::vector<core::ClassMetaInfo>& metaInfoList);
 
 	};
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -73,7 +73,7 @@ TEST(Attributes, Basic) {
 	set.insert(a1);
 	tmp = addAttribute(expr, a1);
 	EXPECT_EQ(set, getAttributes(tmp));
-	EXPECT_EQ("attr(1, cons(unordered, empty(attribute)))", toString(*tmp));
+	EXPECT_EQ("attr(1, cons(unordered, empty(type<attribute>)))", toString(*tmp));
 
 	// add another attribute
 	set.insert(a2);

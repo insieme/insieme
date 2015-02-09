@@ -136,6 +136,11 @@ namespace runtime {
 		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
 		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
 
+		NameManager& nameMan = converter.getNameManager();
+		// this should be an exhaustive listing at some point, for now it only includes functions which caused issues
+		nameMan.reserveName("read");  // unistd.h
+		nameMan.reserveName("write"); // unistd.h
+
 		// done
 		return converter;
 	}

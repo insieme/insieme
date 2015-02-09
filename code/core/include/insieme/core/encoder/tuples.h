@@ -83,6 +83,7 @@ namespace encoder {
 				// this is the dirty, manual fall-back ...
 				return TupleType::get(manager, toTypeList<T...>(manager));
 			}
+			create_tuple_type() {}
 		};
 
 		namespace {
@@ -120,6 +121,7 @@ namespace encoder {
 				TupleExprPtr tuple = expr.as<TupleExprPtr>();
 				return checkEncoding<decltype(tuple->getExpressions().begin()), T...>(tuple->getExpressions().begin(), tuple->getExpressions().end());
 			}
+			is_tuple() {}
 		};
 
 		namespace {
@@ -130,11 +132,13 @@ namespace encoder {
 					res[pos-1] = toIR(mgr, std::get<pos-1>(tuple));
 					pack<pos-1,T...>()(mgr, tuple, res);
 				}
+				pack() {}
 			};
 
 			template<typename ... T>
 			struct pack<0, T...> {
 				void operator()(NodeManager& mgr, const tuple<T...>& tuple, vector<ExpressionPtr>& res) const {}
+				pack() {}
 			};
 
 			template<typename ... T>
@@ -158,6 +162,7 @@ namespace encoder {
 				// convert tuple into tuple expression using helper function
 				return IRBuilder(manager).tupleExpr(encodeTuple(manager, tuple));
 			}
+			encode_tuple() {}
 		};
 
 		namespace {
@@ -168,11 +173,13 @@ namespace encoder {
 					std::get<pos-1>(tuple) = toValue<typename std::tuple_element<pos-1, std::tuple<T...>>::type>(encoded[pos-1]);
 					unpack<pos-1,T...>()(encoded, tuple);
 				}
+				unpack() {}
 			};
 
 			template<typename ... T>
 			struct unpack<0, T...> {
 				void operator()(const vector<ExpressionPtr>& encoded, tuple<T...>& tuple) const {}
+				unpack() {}
 			};
 
 			template<typename ... T>
@@ -191,11 +198,11 @@ namespace encoder {
 		 */
 		template<typename ... T>
 		struct decode_tuple {
-
 			tuple<T...> operator()(const core::ExpressionPtr& expr) const {
 				assert((is_tuple<T...>()(expr)) && "Can only convert tuples to tuples!");
 				return decodeTuple<T...>(expr.as<TupleExprPtr>()->getExpressions()->getExpressions());
 			}
+			decode_tuple() {}
 		};
 
 
@@ -216,28 +223,36 @@ namespace encoder {
 	 * of tuples using default element type converters.
 	 */
 	template<typename ... T>
-	struct type_factory<tuple<T...>> : public detail::create_tuple_type<T...> {};
+	struct type_factory<tuple<T...>> : public detail::create_tuple_type<T...> {
+		type_factory() {}
+	};
 
 	/**
 	 * A partial template specialization for the value_to_ir_converter struct to support the encoding
 	 * of tuples using default element type converters.
 	 */
 	template<typename ... T>
-	struct value_to_ir_converter<tuple<T...>> : public detail::encode_tuple<T...> {};
+	struct value_to_ir_converter<tuple<T...>> : public detail::encode_tuple<T...> {
+		value_to_ir_converter() {}
+	};
 
 	/**
 	 * A partial template specialization for the ir_to_value_converter struct to support the encoding
 	 * of tuples using default element type converters.
 	 */
 	template<typename ... T>
-	struct ir_to_value_converter<tuple<T...>> : public detail::decode_tuple<T...> {};
+	struct ir_to_value_converter<tuple<T...>> : public detail::decode_tuple<T...> {
+		ir_to_value_converter() {}
+	};
 
 	/**
 	 * A partial template specialization for the is_encoding_of struct to support the encoding
 	 * of tuples using default element type converters.
 	 */
 	template<typename ... T>
-	struct is_encoding_of<tuple<T...>> : public detail::is_tuple<T...> { };
+	struct is_encoding_of<tuple<T...>> : public detail::is_tuple<T...> {
+		is_encoding_of() {}
+	};
 
 
 } // end namespace encoder

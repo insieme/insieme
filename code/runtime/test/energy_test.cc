@@ -175,9 +175,8 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 		// check rapl readings
 		EXPECT_LT(0.001, data2.package - data.package);
 		EXPECT_LT(data2.package - data.package, 100);
-		EXPECT_LT(0.001, data2.cores - data.cores);
-		EXPECT_LT(data2.cores - data.cores, 100);
 		// mc readings are not present on all CPUs, therefore they can be 0
+		EXPECT_LT(data2.cores - data.cores, 100);
 		EXPECT_LT(data2.mc - data.mc, 100);
 	}
 }
@@ -191,6 +190,10 @@ TEST(energy, dvfs) {
 TEST(energy, rapl) {
 	// since we need PAPI working for the next line, explicitly call the init function here
 	irt_papi_init();
+	if(!irt_rapl_is_supported()) {
+		printf("warning: RAPL not available, not testing it\n");
+		return;
+	}
 	// since we test each socket once, use all cores of a single socket
 	uint32 wcount = irt_hw_get_num_cores_per_socket();
 	irt_context* context = irt_runtime_start_in_context(wcount, insieme_init_context, insieme_cleanup_context, false);

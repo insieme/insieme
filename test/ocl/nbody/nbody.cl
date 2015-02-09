@@ -18,15 +18,15 @@
 __kernel
 void 
 nbody(
-    __global float4* pos ,
+    __global float4* pos,
     __global float4* vel,
+    __global float4* newPosition,
+    __global float4* newVelocity,
     int numBodies,
     float deltaTime,
-    float epsSqr,
-//    __local float4* localPos,
-    __global float4* newPosition,
-    __global float4* newVelocity)
+    float epsSqr)
 {
+
 	__local float4 localPos[256];
 
     unsigned int tid = get_local_id(0);

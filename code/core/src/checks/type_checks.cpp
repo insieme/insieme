@@ -45,6 +45,7 @@
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/enum_extension.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -144,7 +145,7 @@ namespace {
 			size_t n = (int64_t)f.getConstantValue();
 
 			// return type of n-th component
-			return (0<=n && n<tupleType.size())? tupleType[n] : fail;
+			return (n<tupleType.size())? tupleType[n] : fail;
 		}
 
 		// check whether it is navigating along the inheritance hierarchy
@@ -672,6 +673,7 @@ OptionalMessageList GenericOpsCheck::visitCallExpr(const CallExprAddress& addres
 	// get as pointer
 	CallExprPtr call = address;
 	auto& base = call->getNodeManager().getLangBasic();
+	auto& enumExt = call->getNodeManager().getLangExtension<lang::EnumExtension>();
 
 	OptionalMessageList res;
 
@@ -685,7 +687,7 @@ OptionalMessageList GenericOpsCheck::visitCallExpr(const CallExprAddress& addres
 	// arguments need to be arithmetic types or function types
 	for(auto arg : call) {
 		auto type = arg->getType();
-		if (!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>()){
+		if (!type.isa<TypeVariablePtr>() && !base.isScalarType(type) && !type.isa<FunctionTypePtr>() && !enumExt.isEnumType(type)){
 			add(res, Message(address,
 					EC_TYPE_INVALID_GENERIC_OPERATOR_APPLICATION,
 					format("Generic operators must only be applied on arithmetic types - found: %s", toString(*type)),
