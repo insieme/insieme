@@ -72,9 +72,11 @@ namespace measure {
 
 	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
 		// create output directory
-		// set capabilities
+#ifndef DISABLE_ENERGY
+		// set capabilities for energy measurements, required for kernel versions 3.7 and newer
 		// TODO: only do this for newer kernel versions or kernels that have this fix
 		runCommand("sudo setcap cap_sys_rawio=ep " + binary);
+#endif
 		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
 	}
 

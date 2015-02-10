@@ -182,12 +182,20 @@ void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 }
 
 TEST(energy, dvfs) {
+#ifdef DISABLE_ENERGY
+	printf("Warning: Compiled with -DDISABLE_ENERGY, not testing DVFS\n");
+	return;
+#endif
 	irt_context* context = irt_runtime_start_in_context(irt_get_default_worker_count(), insieme_init_context, insieme_cleanup_context, false);
 	irt_runtime_run_wi(&g_insieme_impl_table[0], NULL);
 	irt_runtime_end_in_context(context);
 }
 
 TEST(energy, rapl) {
+#ifdef DISABLE_ENERGY
+	printf("Warning: Compiled with -DDISABLE_ENERGY, not testing RAPL\n");
+	return;
+#endif
 	// since we need PAPI working for the next line, explicitly call the init function here
 	irt_papi_init();
 	if(!irt_rapl_is_supported()) {
