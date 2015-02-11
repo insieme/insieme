@@ -50,6 +50,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -1125,17 +1126,17 @@ namespace measure {
 		});
 
 		// replace all regions with instrumented and optimized versions
-		std::set<region_id> regionIDs;
 		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
 			// obtain address with current root
 			core::StatementAddress tmp = cur.first.switchRoot(root);
+			// migrate autotuning information (and other annotations if present)
+			core::transform::utils::migrateAnnotations(cur.first, tmp);
 			// instrument the new region
 			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
 			// replace region
 			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
-
-			regionIDs.insert(cur.second);
 		});
+
 
 		// create resulting program
 		core::ProgramPtr program;
