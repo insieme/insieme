@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -231,8 +231,8 @@ void irt_dbg_print_active_wis() {
 	_irt_dbg_wi_list *l = active_wis;
 	while(l) {
 		printf("--------\nActive wi [%d %d]\n", l->thread, l->wi_index);
-		for(uint32 i=0; i<active_wis->num_events; ++i) {
-			irt_inst_event_data_output_single(*active_wis->events[i], stdout, true);
+		for(uint32 i = 0; i < l->num_events; ++i) {
+			irt_inst_event_data_output_single(*l->events[i], stdout, true);
 		}
 		l = l->next;
 	}
