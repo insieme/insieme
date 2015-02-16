@@ -42,7 +42,7 @@ namespace condition_ast {
 typedef map<pair<std::string, std::string>, iwir::ast::Port*> PortMap;
 
 /*
- * take a ConditionExpr (a condition_ast) and replaces the PortNames with the Port* used in the iwir_ast
+ * A Visitor which takes a ConditionExpr (a condition_ast) and replaces the PortNames with the Port* used in the iwir_ast
  */
 struct set_port_pointer: boost::static_visitor<void> {
 	const std::string& parentTaskStr;
@@ -58,7 +58,7 @@ struct set_port_pointer: boost::static_visitor<void> {
 			return nullptr;	
 		}
 	};
-	//
+
 	void operator()(int& v) const { }
 	void operator()(double& v) const { }
 	void operator()(bool& v) const { }
@@ -79,6 +79,7 @@ struct set_port_pointer: boost::static_visitor<void> {
 	void operator()( unop<op_not>& u) const { boost::apply_visitor(*this, u.oper1); }
 };
 
+//parse a condition string representing a condition expr into an condition_ast
 boost::optional<ConditionExpr> parseConditionString(const std::string& conditionString, const std::string& parentTaskStr, const PortMap& portMap) {
 	static const boost::optional<ConditionExpr> fail;
 

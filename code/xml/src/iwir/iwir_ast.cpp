@@ -40,7 +40,10 @@ namespace insieme {
 namespace iwir {
 namespace condition_ast {
 
-	//simple printer
+	/*
+	 *	A simple condition ast printer - simple prints the given condition expr.
+	 *	the ports are printed as "port[PORTNAME]"
+	 */
 	struct printer : boost::static_visitor<void> {
 		printer(std::ostream& os) : _os(os) {}
 		std::ostream& _os;

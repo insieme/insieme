@@ -125,7 +125,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 						break;
 				//lhs = double -- rhs = int 
 			case 23: //rhs = intToDouble(rhs); 
-						rhs = irBuilder.callExpr(gen.getSignedToReal(),irBuilder.getIntParamLiteral(8),rhs);
+						rhs = irBuilder.callExpr(gen.getSignedToReal(),rhs, irBuilder.getIntParamLiteral(8));
 						break;
 				//lhs = bool -- rhs = int 
 			case 24: // rhs = intToBool(rhs); 
@@ -140,11 +140,11 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 						}
 				//lhs = int -- rhs = double 
 			case 32: //lhs = intToDouble(lhs); 
-						lhs = irBuilder.callExpr(gen.getSignedToReal(),irBuilder.getIntParamLiteral(8),lhs);
+						lhs = irBuilder.callExpr(gen.getSignedToReal(),lhs, irBuilder.getIntParamLiteral(8));
 						break;
 				//lhs = bool -- rhs = double 
 			case 34: //rhs = doubleToBool(rhs);
-						rhs = irBuilder.callExpr(gen.getRealToBool(),irBuilder.getIntParamLiteral(8),rhs);
+						rhs = irBuilder.callExpr(gen.getRealToBool(),rhs);
 						break;
 				
 				//lhs = string -- rhs = bool 

@@ -84,21 +84,79 @@ CONVERTER(Link) {
 		bool isUnion = (node->to->kind == PK_UnionPort);
 		bool isLoopElement = (node->from->kind == PK_LoopElement);
 
-		//TODO implicit casts
-		//bool->string, int->string, double->string, int->double
-		//A -> collection/A (one entry)
-		//file -> string (URI to the file)
+		//apply implict casting rules of the link construct
+		auto implicit_cast = [&](core::ExpressionPtr from, core::ExpressionPtr to) {
+			const core::lang::BasicGenerator& gen = irBuilder.getLangBasic();
+			core::TypePtr fromTy = from->getType();
+			core::TypePtr toTy = to->getType();
+
+			VLOG(2) << fromTy;
+			VLOG(2) << toTy;
+
+			//the target port is a reference, but we need the element type for the cast
+			assert(toTy.isa<core::RefTypePtr>()); 
+			toTy = toTy.as<core::RefTypePtr>()->getElementType();
+
+			VLOG(2) << fromTy;
+			VLOG(2) << toTy;
+
+			if(*fromTy == *toTy) {
+				return std::make_tuple(from, to);
+			}
+
+			//TODO implicit casts
+			//bool->string, int->string, double->string, int->double
+
+			if(gen.isBool(fromTy) && gen.isString(toTy)) { 
+				//bool->string
+				auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getBoolToString();
+				from = irBuilder.callExpr(op, from);
+			} else if(gen.isInt(fromTy) && gen.isString(toTy)) { 
+				//int->string
+				auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getIntToString();
+				from = irBuilder.callExpr(op,from);
+			} else if(gen.isDouble(fromTy) && gen.isString(toTy)) { 
+				//double->string
+				auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getDoubleToString();
+				from = irBuilder.callExpr(op,from);
+			} else if(gen.isInt(fromTy) && gen.isDouble(toTy)) { 
+				// int->double
+				from = irBuilder.callExpr(gen.getSignedToReal(),from, irBuilder.getIntParamLiteral(8));
+			}
+
+			//TODO A -> collection/A (collection with only one entry) -- see further down as we need
+			//to use a different link construct to emplace the given data into the collection
+			/*if(	irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().isCollectionType(toTy) 
+				&& (*fromTy ==  *(irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getElementType(toTy)))
+			) { }
+			*/
+
+			//file -> string (URI to the file)
+			if( irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().isFileType(fromTy)
+				&& gen.isString(toTy)) {
+				auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getFilePath();
+				from = irBuilder.callExpr(op,from);
+			}
+			
+			return std::make_tuple(from, to);
+		};
 
 		//generate linking statment in IR
 		//link(from,to) link(from:fromTy, to:toTy);
 		core::StatementPtr linkStmt;
 		map<string, core::NodePtr> symbols;
 		
-		core::ExpressionPtr var1 = vFrom->second;
-		core::ExpressionPtr var2 = vTo->second;
+		core::ExpressionPtr from = irBuilder.tryDeref(vFrom->second);
+		core::ExpressionPtr to = vTo->second;
+			
+		std::tie(from, to) = implicit_cast(from,to);
+
+		VLOG(2) << from;
+		VLOG(2) << to;
+
 		//besides loopCounter variables are all variables ref
-		symbols["from"] = irBuilder.tryDeref(var1);
-		symbols["to"] = var2;
+		symbols["from"] = from;
+		symbols["to"] = to;
 
 		if(isUnion) {
 			//linkUnion(from,to)
@@ -122,8 +180,28 @@ CONVERTER(Link) {
 				symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkParallelOutput();
 				linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
 			} else {
-				symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkBasic();
-				linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
+				//BASIC LINK!
+				
+				//to should be a reference
+				core::TypePtr toTy = to->getType();
+				assert(toTy.isa<core::RefTypePtr>());
+				toTy = 	toTy.as<core::RefTypePtr>()->getElementType();
+				core::TypePtr fromTy = from->getType();
+
+				bool isImplicitCastToCollection = 
+					(	irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().isCollectionType(toTy) 
+						&& (*fromTy ==  *(irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getElementType(toTy))));
+
+				if(isImplicitCastToCollection) {
+					//a link with a implicit cast from type A to collection/A we use similar ir
+					//constructas for parallel output but with iteratro fixed to 0
+					symbols["iterator"] = irBuilder.intLit(0);
+					symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkParallelOutput();
+					linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
+				} else {
+					symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkBasic();
+					linkStmt = irBuilder.parseStmt("link(from,to);", symbols);
+				}
 			}
 		}
 		VLOG(2) << linkStmt;

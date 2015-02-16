@@ -58,6 +58,7 @@ public:
 
 	LANG_EXT_LITERAL(StringToInt, "string.to.int", "(ref<array<char,1>> ,intTypeParam<#b>) -> int<#b>");
 	LANG_EXT_LITERAL(StringToDouble, "string.to.double", "(ref<array<char,1>> ,intTypeParam<#b>) -> real<#b>");
+	
 	//TODO implement stringToBool conversion as derived operation? 
 	LANG_EXT_LITERAL(StringToBool, "string.to.bool", "(ref<array<char,1>>) -> bool");
 
@@ -72,6 +73,19 @@ public:
 	LANG_EXT_TYPE(File, "file<ref<array<char,1>>>");
 	LANG_EXT_LITERAL(FilePath, "file.path", "(file<ref<array<char,1>>>) -> ref<array<char,1>>");
 
+	bool isFileType(const core::TypePtr type) const {
+		assert(type);
+		core::GenericTypePtr gt = type.isa<core::GenericTypePtr>();
+		if(!gt) return false;
+
+		return (gt->getName()->getValue() == "file" && 
+				gt->getTypeParameter().size() == 1u &&
+				gt->getIntTypeParameter().empty()
+			   ); 
+	}
+	LANG_EXT_LITERAL(BoolToString, "bool.to.string", "(bool) -> ref<array<char,1>>");
+	LANG_EXT_LITERAL(IntToString, "int.to.string", "(int<4>) -> ref<array<char,1>>");
+	LANG_EXT_LITERAL(DoubleToString, "double.to.string", "(real<8>) -> ref<array<char,1>>");
 };
 
 class CollectionTypeExtension : public core::lang::Extension {
@@ -154,7 +168,7 @@ public:
 
 	bool isCollectionType(const core::TypePtr type) const {
 		assert(type);
-		core::GenericTypePtr gt = type.as<core::GenericTypePtr>();
+		core::GenericTypePtr gt = type.isa<core::GenericTypePtr>();
 		if(!gt) return false;
 
 		return (gt->getName()->getValue() == "collection" && 

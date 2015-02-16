@@ -426,6 +426,17 @@ TEST(XmlTest, ReadIWIR_ParallelFor2) {
 	std::cout << "---" << std::endl;
 }
 
+TEST(XmlTest, ReadIWIR_ImplicitLinkCasts) {
+	Logger::get(std::cerr, DEBUG, 2);
+	
+	auto iwirInput = XML_TEST_DIR + "input/implicitLinkCasts.xml";
+
+	NodeManager mgr;
+	std::cout << "---" << std::endl;
+	XmlUtil::readIWIR(mgr, iwirInput);
+	std::cout << "---" << std::endl;
+}
+
 TEST(XmlTest, ReadIWIR_Wien2K) {
 	Logger::get(std::cerr, DEBUG, 2);
 	
