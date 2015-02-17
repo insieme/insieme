@@ -350,6 +350,16 @@ if(MSVC)
 	add_definitions( /W4 )
 endif()
 
+# disable energy stuff if not explicitely requested
+option(USE_ENERGY "Enable energy capabilities" OFF)
+if (NOT MSVC)
+	if(NOT USE_ENERGY)
+		message(STATUS "Disabling energy capabilities" )
+		add_definitions(-DDISABLE_ENERGY)
+	endif ( NOT USE_ENERGY)
+endif (NOT MSVC)
+
+
 # --------------------------------------------------------- Runtime
 # -D_XOPEN_SOURCE=700 is required to get recent pthread features with -std=c99
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
