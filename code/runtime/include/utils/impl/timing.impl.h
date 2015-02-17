@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,8 +43,8 @@
 #include "utils/timing.h"
 #include "abstraction/impl/rdtsc.impl.h"
 #include "irt_inttypes.h"
-#include "../filesystem.h"
-#include "irt_logging.h"
+#include "utils/filesystem.h"
+#include "impl/irt_logging.impl.h"
 
 #ifdef _GEMS_SIM
 	#include "include_gems/impl/time.impl.h"
