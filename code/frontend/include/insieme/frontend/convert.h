@@ -353,6 +353,17 @@ public:
 	 */
 	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
 
+
+    /**
+     * Returns a reference to the IR data structure used to represent a variable of the input C code.
+     *
+     * The function guarantees that the same variable in the input code is always represented in the
+     * IR with the same generated Variable and in the case of access to global variables, a reference
+     * to a member of the global data structure is returned.
+     */
+    core::ExpressionPtr lookUpVariableInWrapRefMap(const core::ExpressionPtr variable);
+
+
 	/**
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
 	 * @return The statement to pragma multimap

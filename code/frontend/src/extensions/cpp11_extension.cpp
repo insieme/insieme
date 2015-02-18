@@ -221,6 +221,11 @@ core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* de
 				unsigned id(0);
 				for (;cap_it != cap_end; ++cap_it){
 					auto var = convFact.lookUpVariable(cap_it->getCapturedVar());
+                    if(llvm::dyn_cast<clang::ParmVarDecl>(cap_it->getCapturedVar())) {
+                        var = convFact.lookUpVariableInWrapRefMap(var);
+                        if(core::analysis::isCppRef(var->getType()))
+                            var = core::analysis::unwrapCppRef(var);
+                    }
 
 					core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
 					core::ExpressionPtr access =  builder.callExpr (var->getType(),
