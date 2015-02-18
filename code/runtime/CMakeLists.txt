@@ -15,11 +15,9 @@ if (NOT third_part_libs_home )
 	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
-
 include(../lookup_lib.cmake)
-include (../add_unit_test.cmake)
-
-#add_subdirectory( pmlib )
+include(../add_unit_test.cmake)
+include(../environment_common.cmake)
 
 # for win64 we need to add a assembly object file to each target, see below.
 # For all other platforms this var is empty. This safes a lot of if clauses througout this file
@@ -186,14 +184,6 @@ set ( ut_prefix  ut_rt_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 # get energy unit tests, to be removed if papi and msr module are not present
 file(GLOB_RECURSE energy_test_cases test/energy*.cc)
-
-# check for RAPL module
-if (NOT MSVC)
-	if (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
-		message(STATUS "Excluding runtime energy tests" )
-		list(REMOVE_ITEM test_cases ${energy_test_cases})
-	endif (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
-endif (NOT MSVC)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
