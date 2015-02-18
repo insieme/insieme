@@ -108,7 +108,7 @@ if ( NOT DEFINED BOOST_ROOT )
 		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
 	endif()
 endif()
-find_package( Boost 1.48 COMPONENTS program_options system filesystem regex serialization )
+find_package( Boost 1.48 QUIET COMPONENTS program_options system filesystem regex serialization )
 include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
