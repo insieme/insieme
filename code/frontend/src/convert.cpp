@@ -587,6 +587,15 @@ core::TypePtr Converter::tryDeref(const core::TypePtr& type) const {
 
 //////////////////////////////////////////////////////////////////
 ///
+core::ExpressionPtr Converter::lookUpVariableInWrapRefMap(const core::ExpressionPtr variable) {
+    if(variable.isa<core::VariablePtr>() && wrapRefMap.find(variable.as<core::VariablePtr>()) != wrapRefMap.end()) {
+        return wrapRefMap.find(variable.as<core::VariablePtr>())->second;
+    }
+    return variable;
+}
+
+//////////////////////////////////////////////////////////////////
+///
 core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	VLOG(1) << "LOOKUP Variable: " << valDecl->getNameAsString();
 

@@ -940,7 +940,7 @@ using insieme::core::pattern::anyList;
 		}*/
 
 		// UNCOMMENT TO AVOID THE SPLITTING
-		//return code2;
+		return code2;
 
 
 
@@ -1198,8 +1198,7 @@ using insieme::core::pattern::anyList;
 				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
 											builder.deref(sizeVar), builder.sub(end, begin)).as<CompoundStmtPtr>();
 				// NEW CODE
-				newBody2 = core::transform::replaceAll(manager, newBody,
-											sizeVar, newSize).as<CompoundStmtPtr>();
+				//newBody2 = core::transform::replaceAll(manager, newBody2, sizeVar, newSize).as<CompoundStmtPtr>();
 
 				//LOG(DEBUG) << "=== NEWBODY ===\n" << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 				//LOG(INFO) << "\n==== ERROR NEWBODY START ====\n " << core::checks::check(newBody, core::checks::getFullCheck()) << "\n==== ERROR CHECK STOP ====\n ";

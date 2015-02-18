@@ -1,5 +1,41 @@
 #include <iostream>
 
+int sum(int a, int b) {
+    //capture it by ref
+    auto sumr = [&]() {
+        return a+b;
+    };
+    //capture it by val
+    auto sumv = [=]() {
+        return a+b;
+    };
+    return sumr()+sumv();
+}
+
+int sum_ref(int& a, int &b) {
+    //capture it by ref
+    auto sumr = [&]() {
+        return a+b;
+    };
+    //capture it by val
+    auto sumv = [=]() {
+        return a+b;
+    };
+    return sumr()+sumv();
+}
+
+int sum_ptr(int* a, int* b) {
+    //capture it by ref
+    auto sumr = [&]() {
+        return *a+*b;
+    };
+    //capture it by val
+    auto sumv = [=]() {
+        return *a+*b;
+    };
+    return sumr()+sumv();
+}
+
 
 int main (){
 
@@ -135,5 +171,23 @@ int main (){
 		std::cout << " x: " << x << std::endl;
 	}
 
+    //take arguments from function
+    {
+        std::cout << "arguments from function: " << sum(1,2) << std::endl;
+    }
+
+    //take arguments from function (ref)
+    {
+        int a=10;
+        int b=20;
+        std::cout << "arguments from function ref: " << sum_ref(a,b) << std::endl;
+    }
+
+    //take arguments from function (ptr)
+    {
+        int a=10;
+        int b=20;
+        std::cout << "arguments from function ref: " << sum_ptr(&a,&b) << std::endl;
+    }
 	return 0;
 }
