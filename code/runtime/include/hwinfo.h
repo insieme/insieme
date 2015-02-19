@@ -40,6 +40,7 @@
 
 #ifndef _GEMS_SIM
 	#include <unistd.h>
+	#include <string.h>
 #endif
 
 #ifdef IRT_USE_PAPI
