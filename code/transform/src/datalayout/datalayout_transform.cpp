@@ -163,25 +163,9 @@ void DatalayoutTransformer::addToReplacements(std::map<core::NodeAddress, core::
 DatalayoutTransformer::DatalayoutTransformer(core::NodePtr& toTransform, CandidateFinder candidateFinder)
 		: mgr(toTransform->getNodeManager()), toTransform(toTransform), candidateFinder(candidateFinder) {}
 
-
-bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
-	TypePtr type = expr->getType();
-
-	if(!type.isa<RefTypePtr>())
-		return false;
-
-	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
-
-	if(containsStructType.match(type))
-		return true;
-
-	return false;
-}
-
 void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, RefTypePtr>& transformRoot,	ExprAddressSet& toReplaceList,
 		const NodeAddress& toTransform, ia::VariableScopeMap& scopes) {
 
-#if 1
 	RefTypePtr structType = transformRoot.second;
 	visitDepthFirst(toTransform, [&](const StatementAddress& stmt) {
 		if(const CallExprAddress call = stmt.isa<CallExprAddress>()) {
@@ -249,50 +233,6 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 					}
 				}
 		}
-#else
-		visitDepthFirst(toTransform, [&](const ExpressionAddress& expr) {
-			if(expr->getType()->getNodeType() != NT_RefType)
-				return;
-		// check if it is an access to the transformRoot's memory
-		if(*transformRoot.first == *extractVariable(expr)) {
-//std::cout << "\ttesting: " << *expr << std::endl;
-			// if so, add all variable which alias it to the toReplaceList
-			visitDepthFirst(toTransform, [&](const ExpressionAddress& potentialAlias) {
-				if(potentialAlias->getType()->getNodeType() != NT_RefType)
-					return;
-
-				if(*potentialAlias->getType() == *transformRoot.second)
-				{
-//dumpPretty(potentialAlias);
-					if(ExpressionPtr varToAdd = extractVariable(potentialAlias)) {
-						// no need to add the same variable again
-						if(*varToAdd == *transformRoot.first)
-							return;
-
-						if(expr->getNodeType() == NT_Variable && potentialAlias->getNodeType() == NT_Variable)
-							if(scopes[expr.as<VariableAddress>()] != scopes[potentialAlias.as<VariableAddress>()])
-								return;
-
-
-						if(varToAdd->getNodeType() == NT_Variable ||
-								(varToAdd->getNodeType() == NT_Literal && varToAdd->getType()->getNodeType() == NT_RefType)) {
-//dumpPretty(expr );
-//dumpPretty(potentialAlias );
-//std::cout << expr << " ------------------------------- \n";
-							if(ia::cba::mayAlias(expr, potentialAlias)) {
-								/*auto newly = */toReplaceList.insert(varToAdd);
-//if(newly.second) {
-//std::cout << "Expr:  " << *expr;
-//std::cout << " alias: " /* << *potentialAlias */<< std::endl;
-//dumpPretty(potentialAlias);
-//}
-							}
-						}
-					}
-				}
-			});
-		}
-#endif
 	});
 
 //for(ExpressionAddress addr : toReplaceList)
@@ -612,10 +552,6 @@ std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const Expr
 	return unmarshallingPoints;
 }
 
-pattern::TreePattern addOptionalDeref(const pattern::TreePattern& mayToBeDerefed) {
-	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
-}
-
 void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const NodeAddress& toTransform,
 		const std::vector<StatementAddress>& begin, const std::vector<StatementAddress>& end, std::map<NodeAddress, NodePtr>& replacements,
 		ExpressionMap& structures) {
@@ -685,69 +621,7 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 			return false;
 		});
 	}
-/*
-	for(std::pair<ExpressionPtr, ExpressionPtr> vr : structures) {
-		const ExpressionPtr& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
 
-std::cout << "ODLE TY " << *oldVar->getType() << "  " << *oldVar << std::endl;
-
-		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(
-				pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)))), var("index", pattern::any)), pattern::var("member", pattern::any)));
-
-		pattern::TreePattern structAccess = pattern::var("call", pirp::refDeref(pirp::arrayRefElem1D(pirp::refDeref(pattern::var("structAccess",
-				pattern::aT(pattern::atom(oldVar)))), var("index", pattern::any))));
-		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("target",
-				pirp::variable(pattern::aT(pirp::refType(pirp::structType(*pattern::any))))), structAccess);
-
-	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> c : newMemberAccesses) {
-	//		ExpressionPtr old = builder.arrayRefElem()
-	//	}
-
-		visitDepthFirstPrunable(toTransform, [&](const StatementAddress& node)->bool {
-
-			// do not touch marshalling and unmrashalling points
-			if(contains(begin, node))
-				return true;
-			if(contains(end, node))
-				return true;
-
-			CallExprAddress call = node.isa<CallExprAddress>();
-
-			if(call) {
-				pattern::AddressMatchOpt match = structMemberAccess.matchAddress(node);
-//std::cout << "\nCall: ";
-//dumpPretty(node);
-				if(match) {
-//	assert(false);
-					StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
-					ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-					ExpressionPtr structAccess = match.get()["structAccess"].getValue().as<ExpressionPtr>();
-					ExpressionPtr replacement = generateNewAccesses(oldVar, newVar, member, index, structAccess);
-
-					addToReplacements(replacements, node, replacement);
-					return true;
-				}
-			}
-			pattern::AddressMatchOpt match = assignStructAccess.matchAddress(node);
-
-			if(match) {
-				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-				ExpressionPtr oldStructAccess = match.get()["structAccess"].getValue().as<ExpressionPtr>();
-
-				ExpressionPtr inplaceUnmarshalled = generateByValueAccesses(oldVar, newVar, newStructType, index, oldStructAccess);
-				if(match.get().isVarBound("decl"))
-					addToReplacements(replacements, match.get().getRoot(), builder.declarationStmt(match.get()["target"].getValue().as<VariablePtr>(),
-							builder.refVar(inplaceUnmarshalled));
-				if(match.get().isVarBound("assignment"))
-					addToReplacements(replacements, match.get().getRoot(),
-							builder.assign(match.get()["target"].getValue().as<ExpressionPtr>(), inplaceUnmarshalled);
-			}
-
-			return false;
-		});
-	}
-*/
 }
 
 void DatalayoutTransformer::updateScalarStructAccesses(NodePtr& toTransform) {
@@ -966,128 +840,6 @@ do	 {
 }
 
 
-VariableAdder0::VariableAdder0(NodeManager& mgr, core::ExpressionMap& varReplacements)
-		: mgr(mgr), varsToReplace(varReplacements),
-		  typePattern(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))),
-		  variablePattern(pirp::variable(typePattern) // local variable
-				| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
-		  namedVariablePattern(var("variable", variablePattern)),
-		  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern) | pirp::scalarToArray(namedVariablePattern)){
-
-//	for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements) {
-//		std::cout<< *rep.first << " -> " << *rep.second << std::endl;
-//	}
-}
-
-std::map<int, ExpressionPtr> VariableAdder0::searchInArgumentList(const std::vector<ExpressionPtr>& args) {
-	ExpressionPtr oldVarArg;
-	ExpressionPtr oldVar, newVar;
-	std::map<int, ExpressionPtr> indicesToNewArgs;
-	int idx = 0;
-//std::cout << "\nFUN\n";
-	for(ExpressionPtr arg : args) {
-//std::cout << "ARG: " << arg << std::endl;
-
-		pattern::MatchOpt match = varWithOptionalDeref.matchPointer(arg);
-		if(match) {
-			auto varCheck = varsToReplace.find(match.get()["variable"].getValue().as<ExpressionPtr>());
-			if(varCheck != varsToReplace.end()) {
-				oldVarArg = arg;
-				oldVar = varCheck->first;
-				newVar = varCheck->second;
-
-				ExpressionPtr newArg = core::transform::fixTypesGen(mgr, oldVarArg, oldVar, newVar, false);
-				indicesToNewArgs[idx] = newArg;
-			}
-		}
-		++idx;
-	}
-
-	return indicesToNewArgs;
-}
-
-const NodePtr VariableAdder0::resolveElement(const core::NodePtr& element) {
-	// stop recursion at type level
-//	if (element->getNodeCategory() == NodeCategory::NC_Type) {
-		return element;
-//	}
-
-	if(element.isa<CompoundStmtPtr>())
-		return element->substitute(mgr, *this);
-
-//	if(ForStmtPtr f = element.isa<ForStmtPtr>()) {
-//std::cout << "found for\n";
-//dumpPretty(f->getBody());
-//		return element->substitute(mgr, *this);
-//	}
-
-	if(CallExprPtr call = element.isa<CallExprPtr>()) {
-
-		LambdaExprPtr lambdaExpr = call->getFunctionExpr().isa<LambdaExprPtr>();
-
-		if(!lambdaExpr)
-			return element;
-
-//dumpPretty(call);
-//std::cout << "is builtin " << mgr.getLangBasic().isBuiltIn(lambdaExpr) << std::endl << "----------------------------------------------------------------\n\n";
-		// do the substitution to take care of body and function calls inside the argument list
-		CallExprPtr newCall = call->substitute(mgr, *this);
-
-		// functions with no implementation are ignored
-		if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
-			return newCall;
-
-//std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
-		std::vector<ExpressionPtr> args(call->getArguments());
-
-		std::map<int, ExpressionPtr> indicesToNewArgs = searchInArgumentList(args);
-
-		// oldVar is not an argument, nothing will be done
-		if(indicesToNewArgs.empty())
-			return newCall;
-
-		lambdaExpr = newCall->getFunctionExpr().as<LambdaExprPtr>();
-
-		IRBuilder builder(mgr);
-		FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
-		std::vector<TypePtr> funTyMembers = lambdaType->getParameterTypeList();
-		std::vector<VariablePtr> params = lambdaExpr->getParameterList();
-
-		for(std::pair<int, ExpressionPtr> itna : indicesToNewArgs) {
-			int idx = itna.first;
-			ExpressionPtr newArg  = itna.second;
-			// get new variable from the previously created map
-			VariablePtr newParam = varsToReplace[params[idx]].isa<VariablePtr>();
-//std::cout << "\njodliehie: " << *params[idx] << std::endl;
-			assert(newParam && "no replacement for parameter found");
-
-			// if oldVar was an argument, newVar will be added too and search is continued in the called function
-			args.push_back(newArg);
-			//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
-			// add it also to the new type of the lambda
-			funTyMembers.push_back(newParam->getType());
-			// add a new variable to the parameter list
-			params.push_back(newParam);
-		}
-
-		FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
-
-		StatementPtr newBody = lambdaExpr->getBody()->substitute(mgr, *this);
-
-		LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, newBody);
-		newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
-
-		//migrate possible annotations
-		core::transform::utils::migrateAnnotations(lambdaExpr->getBody(), newBody);
-		core::transform::utils::migrateAnnotations(lambdaExpr, newLambdaExpr);
-		core::transform::utils::migrateAnnotations(call, newCall);
-
-		return newCall;
-	}
-
-	return element->substitute(mgr, *this);
-}
-
 std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vector<ExpressionAddress>& args) {
 	ExpressionAddress oldVar;
 	ExpressionPtr newVar;
@@ -1231,84 +983,6 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 	return srcAddr;
 }
 
-void VariableAdder::visitCallExpr(const CallExprAddress& call) {
-	LambdaExprAddress lambdaExpr = call->getFunctionExpr().isa<LambdaExprAddress>();
-
-	if(!lambdaExpr)
-		return;
-
-	// functions with no implementation are ignored
-	if(mgr.getLangBasic().isBuiltIn(lambdaExpr))
-		return;
-
-//std::cout << "checking a lambda with " << *varReplacements.begin() << std::endl;
-	std::vector<ExpressionAddress> argsAddr(call->getArguments());
-
-	std::map<int, ExpressionPtr> indicesToNewArgs = searchInArgumentList(argsAddr);
-
-	// oldVar is not an argument, nothing will be done
-	if(indicesToNewArgs.empty())
-		return;
-
-	IRBuilder builder(mgr);
-	FunctionTypeAddress lambdaType = lambdaExpr->getType().as<FunctionTypeAddress>();
-	std::vector<TypePtr> funTyMembers = lambdaType.getAddressedNode()->getParameterTypeList();
-	std::vector<VariableAddress> paramsAddr = lambdaExpr->getParameterList();
-	VariableList params = lambdaExpr.getAddressedNode()->getParameterList();
-
-	std::vector<ExpressionPtr> args(call.getAddressedNode()->getArguments());
-
-	for(std::pair<int, ExpressionPtr> itna : indicesToNewArgs) {
-		int idx = itna.first;
-		ExpressionPtr newArg  = itna.second;
-		// get new variable from the previously created map
-		VariablePtr newParam = varsToReplace[paramsAddr[idx]].isa<VariablePtr>();
-//std::cout << "\njodliehie: " << *params[idx] << std::endl;
-		assert(newParam && "no replacement for parameter found");
-
-		// if oldVar was an argument, newVar will be added too and search is continued in the called function
-		args.push_back(newArg);
-		//args.push_back(core::transform::replaceAll(mgr, oldVarArg, oldVar, newVar).as<ExpressionPtr>());
-		// add it also to the new type of the lambda
-		funTyMembers.push_back(newParam->getType());
-		// add a new variable to the parameter list
-		params.push_back(newParam);
-	}
-
-
-//int cnt = 0;
-//NodeAddress xx = lambdaExpr->getDefinition();
-//std::vector<NodeAddress> yyy = lambdaExpr->getDefinition().getChildList();
-//for(NodePtr node : yyy) {
-//	++cnt;
-//	std::cout << "\nVECTOR: " << node << std::endl;
-//	dumpPretty(node);
-//}
-//for(NodePtr node : yyy) {
-//	++cnt;
-//	std::cout << "\nPARAM: " << node << std::endl;
-//	dumpPretty(node);
-//}
-	FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
-
-	StatementPtr newBody = lambdaExpr->getBody();//->substitute(mgr, *this);
-
-	LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, newBody);
-	CallExprPtr newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
-
-	//migrate possible annotations
-	core::transform::utils::migrateAnnotations(lambdaExpr->getBody().getAddressedNode(), newBody);
-	core::transform::utils::migrateAnnotations(lambdaExpr.getAddressedNode(), newLambdaExpr);
-	core::transform::utils::migrateAnnotations(call.getAddressedNode(), newCall);
-
-	std::map<NodeAddress, NodePtr> replacements;
-	replacements[call] = newCall;
-
-//	replacements[lambdaType] = newFunType;
-//	replacements[lambdaExpr->getLambda()->getType()] = newFunType;
-//	replacements[lambdaExpr->getVariable()] = builder.variable(lambdaExpr->getVariable()->getType(), lambdaExpr->getVariable()->getId());
-//	replacements[lambdaExpr->getLambda()->getParameters()] = builder.parameters(params);
-}
 
 const NodePtr NewCompoundsRemover::resolveElement(const core::NodePtr& element) {
 	// stop recursion at type level

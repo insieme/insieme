@@ -474,6 +474,26 @@ ExpressionAddress removeMemLocationCreators(const ExpressionAddress& expr) {
 	return expr;
 }
 
+
+bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
+	TypePtr type = expr->getType();
+
+	if(!type.isa<RefTypePtr>())
+		return false;
+
+	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
+
+	if(containsStructType.match(type))
+		return true;
+
+	return false;
+}
+
+pattern::TreePattern addOptionalDeref(const pattern::TreePattern& mayToBeDerefed) {
+	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
+}
+
+
 } // datalayout
 } // transform
 } // insieme

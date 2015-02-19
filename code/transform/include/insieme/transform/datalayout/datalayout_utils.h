@@ -89,6 +89,17 @@ core::StatementPtr allocTypeUpdate(const core::StatementPtr& stmt, core::pattern
 		core::pattern::TreePattern& newStructTypePattern);
 
 core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress& expr);
+
+/*
+ * Returns true if the type of expr contains structType
+ */
+bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
+
+/*
+ * creates a pattern that matches mayToBeDerefed as well as ref.deref(mayToBeDerefed)
+ */
+core::pattern::TreePattern addOptionalDeref(const core::pattern::TreePattern& mayToBeDerefed);
+
 } // datalayout
 } // transform
 } // insieme

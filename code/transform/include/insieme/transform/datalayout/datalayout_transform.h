@@ -142,25 +142,7 @@ public:
 	virtual void transform() =0;
 };
 
-class VariableAdder0: public core::transform::CachedNodeMapping {
-	core::NodeManager& mgr;
-	core::ExpressionMap& varsToReplace;
-	core::pattern::TreePattern typePattern;
-	core::pattern::TreePattern variablePattern;
-	core::pattern::TreePattern namedVariablePattern;
-	core::pattern::TreePattern varWithOptionalDeref;
-
-	std::map<int, core::ExpressionPtr> searchInArgumentList(const std::vector<core::ExpressionPtr>& args);
-
-public:
-	VariableAdder0(core::NodeManager& mgr, core::ExpressionMap& varReplacements);
-
-	const core::NodePtr resolveElement(const core::NodePtr& element);
-
-	core::ExpressionMap getVarsToReplace() { return varsToReplace; }
-};
-
-class VariableAdder: public core::IRVisitor<void, core::Address> {
+class VariableAdder {
 	core::NodeManager& mgr;
 	ExprAddressMap& varsToReplace;
 //	std::map<core::NodeAddress, core::NodePtr>& replacements;
