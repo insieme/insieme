@@ -79,7 +79,7 @@ int countMarshalledAccesses(const NodePtr root) {
 
 int countMarshalledAssigns(const NodePtr root) {
 	pattern::TreePattern marshalledAccesses = pattern::irp::assignment(pattern::irp::arrayRefElem1D(pattern::irp::refDeref(
-			pattern::irp::compositeRefElem()), pattern::any), pattern::any) ;
+			pattern::irp::compositeRefElem()) | pattern::irp::compositeMemberAccess(), pattern::any), pattern::any) ;
 
 	auto&& matches = pattern::irp::collectAllPairs(marshalledAccesses, root, false);
 	return matches.size();
@@ -156,7 +156,7 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(100, numberOfCompoundStmts(code));
+	EXPECT_EQ(98, numberOfCompoundStmts(code));
 	EXPECT_EQ(10, countMarshalledAccesses(code));
 	EXPECT_EQ(4, countMarshalledAssigns(code));
 }
@@ -171,9 +171,9 @@ TEST(DataLayout, AosToSoa2) {
 		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	let load = lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
 		""
-		"	let access = (ref<ref<array<twoElem,1>>> x, int<4> i)->unit {"
+		"	let access = (ref<array<twoElem,1>> x, int<4> i)->unit {"
 		"		for(int<4> i = 0 .. 42 : 1) {"
-		"			ref.deref(x)[i].int = i;"
+		"			x[i].int = i;"
 		"		}"
 		"	};"
 		"	ref<ref<array<twoElem,1>>> a;"
@@ -183,7 +183,7 @@ TEST(DataLayout, AosToSoa2) {
 		"	ref<ref<array<twoElem,1>>> copy = ref.var(*a);"
 		"	store(*copy);"
 		""
-		"	access(a, 0);"
+		"	access(*a, 0);"
 		"	store(*a);"
 		"	ref.delete(*a);"
 		"}"
@@ -226,7 +226,7 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(65, numberOfCompoundStmts(code));
+	EXPECT_EQ(64, numberOfCompoundStmts(code));
 	EXPECT_EQ(9, countMarshalledAccesses(code));
 	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
@@ -284,7 +284,7 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(75, numberOfCompoundStmts(code));
+	EXPECT_EQ(72, numberOfCompoundStmts(code));
 	EXPECT_EQ(13, countMarshalledAccesses(code));
 	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
@@ -305,8 +305,8 @@ TEST(DataLayout, Tuple) {
 		""
 		"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
 		"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
-		"(*x[0])[3].int = 7;"
-		"	tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
+		"		(*x[0])[3].int = 7;"
+		"		tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
 		"	};"
 		""
 		"	ref<ref<array<twoElem,1>>> a;"
@@ -314,7 +314,7 @@ TEST(DataLayout, Tuple) {
 		"	ref<uint<8>> c;"
 		"	ref<ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)>> t;"
 		"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
-		"ref.deref(a);"
+		"	ref.deref(a);"
 		"	access(scalar.to.array(a));"
 		"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
 		"	writeToTuple(*t, scalar.to.array(a));"
@@ -323,10 +323,10 @@ TEST(DataLayout, Tuple) {
 		"}"
 	));
 
-//	dumpPretty(code);
-
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
+
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -343,7 +343,7 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(31, numberOfCompoundStmts(code));
+	EXPECT_EQ(29, numberOfCompoundStmts(code));
 	EXPECT_EQ(2, countMarshalledAccesses(code));
 	EXPECT_EQ(2, countMarshalledAssigns(code));
 }

@@ -74,20 +74,24 @@ AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder
 void AosToTaos::transform() {
 	IRBuilder builder(mgr);
 
-	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists = createCandidateLists();
+	const NodeAddress toTransAddr(toTransform);
+	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
-		ExpressionMap varReplacements;
+		ExprAddressMap varReplacements;
 		ExpressionMap nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
-		for(ExpressionPtr oldVar : toReplaceList.first) {
+		for(ExpressionAddress oldVar : toReplaceList.first) {
+			// update root for in case it has been modified in a previous iteration
+			oldVar = oldVar.switchRoot(toTransform);
+
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
 					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
@@ -102,13 +106,11 @@ void AosToTaos::transform() {
 		}
 
 		VariableAdder varAdd(mgr, varReplacements);
-		toTransform = varAdd.mapElement(0, toTransform);
-
-		NodeAddress tta(toTransform);
+		NodeAddress tta = varAdd.addVariablesToLambdas(toTransform);
 
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
-		// assignments to the entire struct should be ported to the new sturct members
+		// assignments to the entire struct should be ported to the new struct members
 		replaceAssignments(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 		//introducing marshalling
@@ -149,10 +151,9 @@ void AosToTaos::transform() {
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
 //assert(false);
-
-		doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
-
 		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements, structures);
+
+		doReplacements(replacements, aosToTaosAllocTypeUpdate);
 
 		NodeMap tilesize;
 		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);
@@ -179,7 +180,7 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
@@ -199,7 +200,7 @@ StatementList AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, c
 	return allDecls;
 }
 
-StatementList AosToTaos::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
+StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
 		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
@@ -215,7 +216,7 @@ StatementList AosToTaos::generateNewAssigns(const ExpressionMap& varReplacements
 	return allAssigns;
 }
 
-StatementPtr AosToTaos::generateMarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToTaos::generateMarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -245,7 +246,7 @@ StatementPtr AosToTaos::generateMarshalling(const ExpressionPtr& oldVar, const E
 			builder.castExpr(boundaryType, builder.div(end, tilesize)), builder.literal(boundaryType, "1"), innerLoop);
 }
 
-StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToTaos::generateUnmarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -275,7 +276,7 @@ StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const
 			builder.castExpr(boundaryType, builder.div(end, tilesize)), builder.literal(boundaryType, "1"), innerLoop);
 }
 
-StatementList AosToTaos::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
+StatementList AosToTaos::generateDel(const StatementAddress& stmt, const ExpressionAddress& oldVar, const ExpressionPtr& newVar,
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
@@ -329,18 +330,22 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 	return builder.structExpr(values);
 }
 
-void AosToTaos::replaceStructsInJobs(ExpressionMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
 			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 
-	ExpressionSet varsToPropagate;
-	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
-		varsToPropagate.insert(oldToNew.second);
-		std::cout << "ölkjasfdökljsfda " << oldToNew.second << std::endl;
-//assert(false);
-	}
+//	ExpressionSet varsToPropagate;
+//	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
+//		varsToPropagate.insert(oldToNew.first);
+//		std::cout << "ölkjasfdökljsfda " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
+////assert(false);
+//	}
+//	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : structures) {
+//		varsToPropagate.insert(oldToNew.first);
+//		std::cout << "blabla " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
+//	}
 
-	ParSecAtt psa(toTransform, varsToPropagate, newStructType, oldStructType);
-	psa.transform();
+//	ParSecAtt psa(toTransform, structures, newStructType, oldStructType);
+//	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;
 	IRBuilder builder(mgr);
