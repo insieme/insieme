@@ -192,7 +192,7 @@ namespace frontend {
 						if (core::CompoundStmtPtr cmpnd = node.isa<core::CompoundStmtPtr>()){
 							vector<core::StatementPtr> stmtList;
 							for (core::StatementPtr stmt : cmpnd->getStatements()){
-								// if not empty 
+								// if not empty
 								core::CompoundStmtPtr inCmpd = stmt.isa<core::CompoundStmtPtr>();
 								if (inCmpd && inCmpd.empty())
 									continue;
@@ -232,7 +232,6 @@ namespace frontend {
 			return clean.map(prog);
 		}
 
-
 	} // anonymous namespace
 
 
@@ -259,7 +258,7 @@ namespace frontend {
 //
 //
 //			if (core::LambdaExprPtr expr = node.isa<core::LambdaExprPtr>()){
-//				core::FunctionTypePtr fty = expr->getType().as<core::FunctionTypePtr>();	
+//				core::FunctionTypePtr fty = expr->getType().as<core::FunctionTypePtr>();
 //				if (fty->getParameterTypes().size() == 3){
 //					if (boost::starts_with(toString( fty->getParameterTypes()[0]), "AP(ref<struct CGAL_Lazy_class_struct")){
 //						dumpPretty(expr);
@@ -284,12 +283,12 @@ namespace frontend {
 		tu = applyCleanup(tu, castCleanup);
 		tu = applyCleanup(tu, allocaCall);
 		tu = applyCleanup(tu, superfluousCode);
-		
+
 		//////////////////////////////////////////////////////////////////////
 		// Malloc
 		// ==============
     	// used to replace all malloc and calloc calls with the correct IR expression
-		{ 
+		{
 			for (auto& pair : tu.getFunctions()) {
 				core::ExpressionPtr lit = pair.first;
 				core::LambdaExprPtr func = pair.second;
@@ -386,7 +385,7 @@ namespace {
 						   core::analysis::isCallOf(call, builder.getLangBasic().getGenPostInc()) ||
 						   core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostDec()) ||
 						   core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostInc())){
-							
+
 								auto var = builder.variable(call->getType());
 								auto decl = builder.declarationStmt(var,call);
 								preProcess.push_back(decl);
@@ -421,6 +420,7 @@ namespace {
 
     stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
 		stmtutils::StmtWrapper newStmts;
+
 		//////////////////////////////////////////////////////////////
 		// remove frontend assignments and extract them into different statements
 		{
@@ -485,10 +485,10 @@ namespace {
 					core::StatementList bodyList = res.as<core::WhileStmtPtr>()->getBody()->getStatements();
 					{
 						core::StatementList newBody;
-						core::StatementPtr lastBodyExpr;	
+						core::StatementPtr lastBodyExpr;
 						core::StatementList preBodyProcess;
 						for (auto bodyStmt : bodyList){
-							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess, 
+							auto bodyRes = collectAssignments(bodyStmt, feExt.getRefAssign(), lastBodyExpr, preBodyProcess,
 															  convFact.getCompiler().isCXX());
 							if (preBodyProcess.empty() || allPostOps(preBodyProcess)){
 								if (res != lastBodyExpr)
@@ -524,6 +524,55 @@ namespace {
 				prependStmts.clear();
 				lastExpr = core::StatementPtr();
 			}
+		}
+
+		//////////////////////////////////////////////////////////////
+		// check for declaration statements like int x=x;
+		// this is valid in C/C++ but not in IR. Create
+		// something like
+		// decl ref<type> x = var(undefined(type));
+		// x = *x;
+		{
+		    //do we have a single statement that is a declaration statement?!
+            if(newStmts.size() == 1 && newStmts[0].isa<core::DeclarationStmtPtr>()) {
+                //check if the variable uses itself in the initialization
+                core::DeclarationStmtPtr decl = newStmts[0].as<core::DeclarationStmtPtr>();
+                core::VariablePtr var = decl->getVariable();
+                bool usesVar = false;
+                core::visitDepthFirstOnce(decl->getInitialization(), [&](const core::VariablePtr& use) {
+                    if(use==var)
+                        usesVar = true;
+                }, true, false);
+                //if it is not using itself in the initialization don't touch it
+                if(!usesVar) {
+                    return newStmts;
+                }
+                //now we know that we have something like int x=x;
+                //create decl ref<type> a = undefined(type);
+                auto& builder = convFact.getIRBuilder();
+                //keep the old var name (instead if creating a new one)
+                //makes life easier, because we dont have to replace
+                //the name of the var everywhere..
+                core::DeclarationStmtPtr newDecl = core::transform::replaceAllGen(convFact.getNodeManager(), decl,
+                                                                decl->getInitialization(),
+                                                                builder.undefinedVar(var->getType()), true);
+                //this is our new declaration statement
+                newStmts[0] = newDecl;
+                //if it is a ctor call we have to call a deref operation
+                //on the constructor. otherwise we just use the inner part of the
+                //var call.. (e.g., var(*v1) -> *v1)
+                if(core::analysis::isConstructorCall(decl->getInitialization())) {
+                    newStmts.push_back(builder.assign(newDecl->getVariable(),
+                                       builder.deref(decl->getInitialization())));
+                } else {
+                    newStmts.push_back(builder.assign(newDecl->getVariable(),
+                                       decl->getInitialization().as<core::CallExprPtr>()->getArgument(0)));
+                }
+                //fix uses on right side.. var(*v1) -> *v1
+                newStmts[1] = core::transform::replaceAllGen(convFact.getNodeManager(), newStmts[1],
+                                                             builder.refVar(builder.deref(newDecl->getVariable())),
+                                                             builder.deref(newDecl->getVariable()));
+            }
 		}
 
 		return newStmts;
