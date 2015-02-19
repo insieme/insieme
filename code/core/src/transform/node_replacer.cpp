@@ -888,6 +888,42 @@ private:
 
 };
 
+class InterfaceFixer : public CachedNodeMapping {
+
+	NodeManager& manager;
+
+public:
+	InterfaceFixer(NodeManager& manager) : manager(manager) {}
+
+private:
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+		if(LambdaExprPtr lambdaExpr = ptr.isa<LambdaExprPtr>()) {
+			ParametersPtr params = lambdaExpr->getParameterList();
+			FunctionTypePtr funTy = lambdaExpr->getType().isa<FunctionTypePtr>();
+
+			if(funTy) {
+				TypeList newParamTys;
+				bool changed = false;
+				for_range(make_paired_range(params, funTy->getParameterTypeList()), [&](const std::pair<VariablePtr, TypePtr>& cur) {
+					if(cur.first->getType() != cur.second) {
+						changed = true;
+						newParamTys.push_back(cur.first->getType());
+					} else {
+						newParamTys.push_back(cur.second);
+					}
+				});
+
+				if(changed) {
+					IRBuilder builder(manager);
+					return builder.lambdaExpr(builder.functionType(newParamTys, funTy->getReturnType()), params,
+							lambdaExpr->getBody()->substitute(manager, *this));
+				}
+			}
+		}
+
+		return ptr->substitute(manager, *this);
+	}
+};
 
 class TypeVariableReplacer : public CachedNodeMapping {
 
@@ -1391,6 +1427,10 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace
 	return fixTypes(mgr, root, replacements, limitScope, typeHandler);
 }
 
+NodePtr fixInterfaces(NodeManager& mgr, NodePtr root) {
+	auto mapper = ::InterfaceFixer(mgr);
+	return applyReplacer(mgr, root, mapper);
+}
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
 	assert(root && "Root must not be a null pointer!");
