@@ -48,25 +48,26 @@ namespace transform {
 namespace datalayout {
 
 class AosToTaos : public DatalayoutTransformer {
+protected:
 	core::IntTypeParamPtr genericTileSize;
 
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
-	virtual core::StatementList generateNewDecl(const core::ExpressionMap& varReplacements, const core::DeclarationStmtAddress& decl,
+	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems);
 
-	virtual core::StatementList generateNewAssigns(const core::ExpressionMap& varReplacements, const core::CallExprAddress& call,
+	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
 			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems);
 
-	virtual core::StatementPtr generateMarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
+	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
 
-	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
+	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
 
-	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType);
 
 	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
@@ -75,7 +76,7 @@ class AosToTaos : public DatalayoutTransformer {
 	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 
-	virtual void replaceStructsInJobs(core::ExpressionMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+	virtual void replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements,
 			core::ExpressionMap& structures);
 

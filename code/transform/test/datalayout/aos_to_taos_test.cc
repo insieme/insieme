@@ -67,7 +67,7 @@ int numberOfCompoundStmts(const NodePtr root) {
 int countMarshalledAccesses(const NodePtr root) {
 	pattern::TreePattern marshalledAccesses = (pattern::irp::vectorSubscript(pattern::irp::compositeMemberAccess(
 			pattern::irp::refDeref(pattern::irp::arrayRefElem1D())))) |
-			pattern::irp::vectorRefElem(pattern::irp::compositeRefElem((pattern::irp::arrayRefElem1D(pattern::irp::refDeref()))));
+			pattern::irp::vectorRefElem(pattern::irp::compositeRefElem((pattern::irp::arrayRefElem1D())));
 
 	auto&& matches = pattern::irp::collectAllPairs(marshalledAccesses, root, false);
 	return matches.size();
@@ -75,7 +75,7 @@ int countMarshalledAccesses(const NodePtr root) {
 
 int countMarshalledAssigns(const NodePtr root) {
 	pattern::TreePattern marshalledAccesses = pattern::irp::assignment(pattern::irp::vectorRefElem(pattern::irp::compositeRefElem(
-			(pattern::irp::arrayRefElem1D(pattern::irp::refDeref()))), pattern::any)) ;
+			(pattern::irp::arrayRefElem1D())), pattern::any)) ;
 
 	auto&& matches = pattern::irp::collectAllPairs(marshalledAccesses, root, false);
 
@@ -92,9 +92,9 @@ TEST(DataLayout, AosToTaos) {
 		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	let load = lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
 		""
-		"	let access = (ref<ref<array<twoElem,1>>> x)->unit {"
+		"	let access = (ref<array<twoElem,1>> x)->unit {"
 		"		for(int<4> i = 0 .. 42 : 1) {"
-		"			ref.deref(x)[i].int = i;"
+		"			x[i].int = i;"
 		"		}"
 		"	};"
 		""
@@ -116,7 +116,7 @@ TEST(DataLayout, AosToTaos) {
 		"		(*ptr)[i].int = i;"
 		"		ref.deref(a)[i].int = i;"
 		"	}"
-		"	access(a);"
+		"	access(*a);"
 		""
 		"	ref<int<4>> e = (*a)[5].int;"
 		""
@@ -133,7 +133,7 @@ TEST(DataLayout, AosToTaos) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -175,7 +175,7 @@ TEST(DataLayout, Tuple) {
 	//		"		f = *a[7];"
 			"	};"
 			""
-			"	let local = (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, "
+			"	let local = (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, "
 			"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
 			"		parallel(job([vector.reduction(local_size, 1u, uint.mul)-vector.reduction(local_size, 1u, uint.mul)]"
 //			"				[ref<array<twoElem,1>> a1 = a, ref<array<real<4>,1>> b1 = b] "
@@ -188,7 +188,7 @@ TEST(DataLayout, Tuple) {
 			"		vector<uint<8>,3> groups = vector.pointwise(uint.div)(global_size, local_size);"
 			"		parallel(job([vector.reduction(groups, 1u, uint.mul)-vector.reduction(groups, 1u, uint.mul)]"
 //			"				[ref<array<ref<array<twoElem,1>>,1>> a1 = a, ref<array<real<4>,1>> b1 = b] "
-			"		,	local(a, b, c, local_size, global_size)"
+			"		,	local(b, a, c, local_size, global_size)"
 			"		));"
 			"		*a[0];"
 			"	};"
@@ -236,7 +236,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
