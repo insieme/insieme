@@ -89,6 +89,14 @@ struct X {
 	X(const C& c) : c(c) {}
 };
 
+//tests private struct used 
+//as ctor default argument
+class Y {
+    struct Z {};
+public:
+    Y(Z z=Z()) { printf("generated object Y\n"); }
+};
+
 int main() {
 	// ctor + init
 	{
@@ -145,6 +153,10 @@ int main() {
 		printf("\nE eA[3]:\n\n");
 		E eA[3];
 	}
+
+    {
+        Y y;
+    }
 		
 	E e2(10, 10);
 	
