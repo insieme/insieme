@@ -526,8 +526,8 @@ namespace tok {
 			return expr_p(name);
 		}
 		inline operator expr_p() { return expr_p(); }
-	}; 
-	static ExprGenerator expr;
+	};
+	__attribute__((unused)) static ExprGenerator expr;
 
 	struct VarGenerator {
 		inline var_p operator[](const std::string name) {
@@ -535,7 +535,7 @@ namespace tok {
 		}
 		inline operator var_p() { return var_p(); }
 	};
-	static VarGenerator var;
+	__attribute__((unused)) static VarGenerator var;
 
 } // End tok namespace
 } // End pragma namespace
