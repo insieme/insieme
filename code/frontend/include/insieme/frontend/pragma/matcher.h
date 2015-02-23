@@ -357,7 +357,7 @@ struct concat: public val_pair<concat> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const override;
 };
 
 /**
@@ -377,7 +377,7 @@ struct option: public val_single<option> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const override;
 };
 
 /**
@@ -388,7 +388,7 @@ struct star: public val_single<star> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const override;
 };
 
 /**
@@ -403,7 +403,8 @@ class MappableNode: public node {
 
 public:
 	MappableNode(std::string const& str=std::string(), bool addToMap=true)
-		: mapName(str), addToMap(addToMap) { }
+		: mapName(str), addToMap(addToMap) {
+	}
 
 	node& operator[](const std::string& str) {
 		mapName = str;
@@ -431,6 +432,8 @@ struct expr_p: public MappableNode<expr_p> {
 	expr_p(std::string const& map_str, bool addToMap=true) : MappableNode<expr_p>(map_str, addToMap) { }
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
+
+	virtual std::ostream& printTo(std::ostream& out) const override;
 };
 
 
@@ -504,6 +507,8 @@ struct kwd: public Tok<clang::tok::identifier> {
 struct var_p: public Tok<clang::tok::identifier> {
 	var_p() : Tok<clang::tok::identifier>("", true, true) { }
 	var_p(std::string const& str) : Tok<clang::tok::identifier>(str, true, true) { }
+
+	virtual std::ostream& printTo(std::ostream& out) const override;
 };
 
 // import token definitions from clang
@@ -515,8 +520,22 @@ namespace tok {
 #include <clang/Basic/TokenKinds.def>
 #undef PUNCTUATOR
 #undef TOK
-static expr_p expr = expr_p();
-static var_p  var  = var_p();
+
+	struct ExprGenerator {
+		inline expr_p operator[](const std::string name) {
+			return expr_p(name);
+		}
+		inline operator expr_p() { return expr_p(); }
+	};
+	__attribute__((unused)) static ExprGenerator expr;
+
+	struct VarGenerator {
+		inline var_p operator[](const std::string name) {
+			return var_p(name);
+		}
+		inline operator var_p() { return var_p(); }
+	};
+	__attribute__((unused)) static VarGenerator var;
 
 } // End tok namespace
 } // End pragma namespace

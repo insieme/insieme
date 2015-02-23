@@ -58,7 +58,7 @@ namespace {
 							  ( kwd("shared") | kwd("none") )["default"] >> r_paren;
 
 	// identifier *(, identifier)
-	auto var_list   		= var >> *(~comma >> var);
+	auto var_list   		= var["v"] >> *(~comma >> var["v"]);
 
 	// private(list)
 	auto private_clause    	=  kwd("private") >> l_paren >> var_list["private"] >> r_paren;
@@ -131,6 +131,8 @@ namespace {
 
 	// objective((weights, constraints)
 	auto objective_clause	= kwd("objective") >> l_paren >> !objective_weights >> !( tok::colon >> objective_constraints ) >> r_paren;
+
+	auto approximate_clause = kwd("approximate") >> l_paren >> expr["approx_target_expr"] >> colon >> expr["approx_replacement_expr"] >> r_paren;
 
 	auto region_clause = 	(	// param(var, [range(l,u,s) | enum(A,s)])
 								param_clause
@@ -258,6 +260,8 @@ namespace {
 								objective_clause
 	                        |	// param(var, [range(l,u,s) | enum(A,s)])
 								param_clause
+							|	// approximate(target:replacement)
+								approximate_clause
 							);
 
 	auto task_clause_list = !(task_clause >> *( !comma >> task_clause ));
@@ -418,6 +422,16 @@ namespace {
 
     	return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), std::make_shared<std::vector<core::ExpressionPtr>>(quality_range), core::ExpressionPtr(), core::ExpressionPtr());
     }
+	
+    /**
+     *  Checks given match object for approximate clauses
+     */
+    omp::ApproximatePtr handleApproximateClause(MatchObject& mmap) {
+		if(!mmap.stringValueExists("approximate")) return omp::ApproximatePtr();
+		auto target = mmap.getSingleExpr("approx_target_expr");
+		auto replacement = mmap.getSingleExpr("approx_replacement_expr");
+		return std::make_shared<omp::Approximate>(target, replacement);
+	}
 
     std::shared_ptr<core::ExpressionList> getCommaSeparatedExprs(const core::ExpressionPtr& expr) {
         std::vector<core::ExpressionPtr> exprs;
@@ -911,12 +925,14 @@ namespace {
                             omp::ObjectivePtr objectiveClause = handleObjectiveClause(object);
 	                        // check for param clause
                             omp::ParamPtr paramClause = handleParamClause(object);
-                            // We need to check if the
-                            frontend::omp::BaseAnnotation::AnnotationList anns;
+                            // check for approximate clause
+							omp::ApproximatePtr approxClause = handleApproximateClause(object);
+							
+							frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Task>(ifClause, untied, defaultClause, privateClause,
                                                                        firstPrivateClause, sharedClause,
 			                                                           localClause, firstLocalClause, targetClause,
-                                                                       objectiveClause, paramClause));
+                                                                       objectiveClause, paramClause, approxClause));
 
                             for(unsigned i=0; i<node.size(); i++) {
                                 node[i] = getMarkedNode(node[i], anns);

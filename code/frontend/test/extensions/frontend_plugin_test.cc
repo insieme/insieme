@@ -86,7 +86,7 @@ public:
             macros.insert(std::make_pair<std::string,std::string>("A",""));
             injectedHeaders.push_back("injectedHeader.h");
 
-            auto var_list = tok::var >> *(~tok::comma >> tok::var);
+            auto var_list = tok::var["v"] >> *(~tok::comma >> tok::var["v"]);
 
             node&& x =  var_list["private"] >> kwd("num_threads") >> tok::l_paren >>
                         tok::expr["num_threads"] >> tok::r_paren >> tok::eod;

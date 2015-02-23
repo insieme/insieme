@@ -945,7 +945,19 @@ protected:
 		auto paramNode = implementParamClause(newStmtNode, par);
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
-		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+		JobExprPtr jobExp;
+
+		// implement multiversioning for approximate clause
+		if(par->hasApproximate()) {
+			auto target = par->getApproximateTarget();
+			auto replacement = par->getApproximateReplacement();
+			auto approxLambda = core::transform::replaceAllGen(nodeMan, parLambda, target, replacement, false);
+			auto pick = build.pickVariant(ExpressionList{parLambda, approxLambda});
+			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), pick);
+		} else {
+			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+		}
 
         if(par->hasObjective()) {
             implementObjectiveClause(jobExp, par->getObjective());

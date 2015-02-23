@@ -307,6 +307,14 @@ std::ostream& kwd::printTo(std::ostream& out) const {
 	return out << "kwd(" << kw << ")";
 }
 
+std::ostream& expr_p::printTo(std::ostream& out) const {
+	return out << "expr_p[" << getMapName() << "]";
+}
+
+std::ostream& var_p::printTo(std::ostream& out) const {
+	return out << "var_p[" << getMapName() << "]";
+}
+
 bool concat::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 	int id = errStack.openRecord();
 	PP.EnableBacktrackAtThisPos();
