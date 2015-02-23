@@ -34,45 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/xml/xml_utils.h"
-#include "insieme/xml/xsd_config.h"
+#pragma once
+#define IWIR_TEST_DIR std::string("/home/bernhard/iwir_repo/code/iwir/test/")
 
-#include "insieme/utils/logging.h"
-
-#include "insieme/iwir/iwir_converter.h"
-#include "insieme/iwir/iwir_builder.h"
-
-#include <memory>
-#include <vector>
-#include <string>
-
-using namespace insieme::utils;
-using namespace insieme::utils::log;
-using namespace insieme::xml;
-using namespace std;
-
-XERCES_CPP_NAMESPACE_USE
-
-namespace insieme {
-namespace xml {
-
-insieme::core::NodePtr XmlUtil::readIWIR(insieme::core::NodeManager& mgr, const std::string& fileName) {
-	auto iwirSchema = XML_SCHEMA_DIR + "iwir_schema1.1.xsd";
-	//IWIR XML -> DOM 
-	XmlUtil xml;
-	xml.convertXmlToDom(fileName, iwirSchema, true);
-
-	VLOG(DEBUG) << xml.convertDomToString();
-
-	//DOM -> IWIR AST
-	XmlElement iwirDom(xml.doc->getDocumentElement(), xml.doc);
-	iwir::IWIRBuilder ib;
-	ib.buildIWIR(iwirDom);
-
-	//IWIR AST -> INSPIRE 
-	iwir::IWIRConverter iwirToIr(mgr);
-	return iwirToIr.convertIwirToIr(ib);
-}
-
-} // end xml namespace
-} // end insieme namespace

@@ -100,7 +100,7 @@ boost::optional<ConditionExpr> parseConditionString(const std::string& condition
 				std::cerr << "unparsed: '" << std::string(f,l) << "'\n";
 				return fail;
 			} else {
-				std::cout << "Success -- " << result << "\n";
+				VLOG(2) << "Success -- " << result << "\n";
 				// when succesfully parsed the condition-expr-string fill in the Port*
 				boost::apply_visitor(set_port_pointer(parentTaskStr,portMap), result);
 				return result;

@@ -35,6 +35,7 @@ set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_annotations_include_dir       	${insieme_code_dir}/annotations/include )
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
+set ( insieme_iwir_include_dir            	${insieme_code_dir}/iwir/include )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 

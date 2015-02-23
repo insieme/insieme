@@ -35,13 +35,9 @@
  */
 
 #include <gtest/gtest.h>
-#include <xercesc/util/XercesDefs.hpp>
 
-#include "insieme/core/ir_builder.h"
+//#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
-
-#include "insieme/xml/xml_utils.h"
-#include "insieme/xml/test_config.h"
 
 #include "insieme/utils/logging.h"
 
@@ -54,6 +50,7 @@ namespace iwir {
 namespace condition_ast {
 
 TEST(ConditionTest, Parsing) {
+	Logger::get(std::cerr, INFO, 1);
 
 	auto inputs = std::list<std::string>( {
 				"true",
@@ -80,8 +77,7 @@ TEST(ConditionTest, Parsing) {
 				"3=3",
 				"3 &gt; (4 &gt; 3)"
 				} );
-		for(auto& input : inputs) 
-		{
+		for(auto& input : inputs) {
 
 //			ConditionExpr result = parseConditionString(input);
 			auto f(std::begin(input)), l(std::end(input));
@@ -92,10 +88,13 @@ TEST(ConditionTest, Parsing) {
 				ConditionExpr result;
 				bool ok = qi::phrase_parse(f,l,p,qi::space,result);
 
-				if (!ok)
+				if (!ok) {
 					std::cerr << "invalid input\n";
-				else
-					std::cout << "Successfully parsed - input: " << input << " - result: " << result << "\n";
+					EXPECT_TRUE(false);
+				} else {
+					VLOG(2) << "Successfully parsed - input: " << input << " - result: " << result << "\n";
+					EXPECT_TRUE(true);
+				}
 
 			} catch (const qi::expectation_failure<decltype(f)>& e)
 			{
@@ -109,6 +108,7 @@ TEST(ConditionTest, Parsing) {
 }
 
 TEST(ConditionTest, InvalidParsing) {
+	Logger::get(std::cerr, INFO, 1);
 
 	//TODO needs better invalid input detection
 	
@@ -143,8 +143,10 @@ TEST(ConditionTest, InvalidParsing) {
 			EXPECT_TRUE(false);
 		}
 
-		if (f!=l) std::cerr << "unparsed: '" << std::string(f,l) << "'\n";
 		EXPECT_TRUE(f!=l);
+		if (f!=l) { 
+			VLOG(2) << "unparsed: '" << std::string(f,l) << "'\n";
+		}
 	}
 }
 

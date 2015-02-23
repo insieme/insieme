@@ -619,7 +619,7 @@ CONVERTER(IfTask) {
 			for(auto t : linkCollector.getTaskOrder()) { 
 				VLOG(2) << "\t" << *t << "(" << t << ")";
 
-				//TODO get call to task
+				//get call to task
 				auto taskStmt = taskCache[t];
 				VLOG(2) << "\t" << taskStmt;
 				thenStmts.push_back(taskStmt);
@@ -724,7 +724,7 @@ CONVERTER(IfTask) {
 			for(auto t : linkCollector.getTaskOrder()) { 
 				VLOG(2) << "\t" << *t << "(" << t << ")";
 
-				//TODO get call to task
+				//get call to task
 				auto taskStmt = taskCache[t];
 				VLOG(2) << "\t" << taskStmt;
 				thenStmts.push_back(taskStmt);
@@ -872,7 +872,7 @@ CONVERTER(WhileTask) {
 		for(auto t : linkCollector.getTaskOrder()) { 
 			VLOG(2) << "\t" << *t;
 
-			//TODO get call to task
+			//get call to task
 			auto taskStmt = taskCache[t];
 			VLOG(2) << "\t" << taskStmt;
 			whileBody.push_back(taskStmt);
@@ -919,7 +919,6 @@ CONVERTER(WhileTask) {
 		VLOG(2) << "Links from LoopPorts:";
 		for(auto l : loopLinks) { VLOG(2) << "\t" << *l;}
 
-		//TODO unionLinks -- need to rewrite linkUnion(from, to) -- currently a generic "collection" type
 		whileBody.insert(whileBody.end(), unionLinks.begin(), unionLinks.end());
 
 		whileBody.insert(whileBody.end(), loopLinks.begin(), loopLinks.end());
@@ -929,7 +928,7 @@ CONVERTER(WhileTask) {
 		}
 	}
 
-	//TODO convert condition Expression
+	//convert condition Expression
 	core::ExpressionPtr condition;
 	condition = CONVERT_CONDITION(node->condition, context);
 
@@ -1027,7 +1026,7 @@ CONVERTER(ForTask) {
 		for(auto t : linkCollector.getTaskOrder()) { 
 			VLOG(2) << "\t" << *t;
 
-			//TODO get call to task
+			//get call to task
 			auto taskStmt = taskCache[t];
 			VLOG(2) << "\t" << taskStmt;
 			forBodyStmts.push_back(taskStmt);
@@ -1218,7 +1217,7 @@ CONVERTER(ParallelForTask) {
 		for(auto t : linkCollector.getTaskOrder()) { 
 			VLOG(2) << "\t" << *t << "(" << t << ")";
 
-			//TODO get call to task
+			//get call to task
 			auto taskStmt = taskCache[t];
 			VLOG(2) << taskStmt;
 			stmts.push_back(taskStmt);
@@ -1251,7 +1250,7 @@ CONVERTER(ParallelForTask) {
 			core::StatementPtr linkStmt = context.linkStmtMap[l];
 			VLOG(2) << "\t" << *l; 
 			VLOG(2) << "\t" << linkStmt;
-			//TODO loopCounter links
+			//loopCounter links
 			if(l->to->kind == PK_LoopCounter) { 
 				//from == * && to == LoopCounter 
 				//links from some inputport of the forTask to one of loopCounter/[to,from,step]

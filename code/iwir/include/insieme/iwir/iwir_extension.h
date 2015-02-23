@@ -58,8 +58,6 @@ public:
 
 	LANG_EXT_LITERAL(StringToInt, "string.to.int", "(ref<array<char,1>> ,intTypeParam<#b>) -> int<#b>");
 	LANG_EXT_LITERAL(StringToDouble, "string.to.double", "(ref<array<char,1>> ,intTypeParam<#b>) -> real<#b>");
-	
-	//TODO implement stringToBool conversion as derived operation? 
 	LANG_EXT_LITERAL(StringToBool, "string.to.bool", "(ref<array<char,1>>) -> bool");
 
 	LANG_EXT_LITERAL(StringLt, "string.lt", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");

@@ -104,9 +104,7 @@ CONVERTER(Link) {
 				return std::make_tuple(from, to);
 			}
 
-			//TODO implicit casts
 			//bool->string, int->string, double->string, int->double
-
 			if(gen.isBool(fromTy) && gen.isString(toTy)) { 
 				//bool->string
 				auto op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getBoolToString();
@@ -124,7 +122,8 @@ CONVERTER(Link) {
 				from = irBuilder.callExpr(gen.getSignedToReal(),from, irBuilder.getIntParamLiteral(8));
 			}
 
-			//TODO A -> collection/A (collection with only one entry) -- see further down as we need
+			//A -> collection/A (collection with only one entry) 
+			//see further down in handling of BasicLinks as we need
 			//to use a different link construct to emplace the given data into the collection
 			/*if(	irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().isCollectionType(toTy) 
 				&& (*fromTy ==  *(irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getElementType(toTy)))
@@ -415,8 +414,6 @@ TYPE_CONVERTER(SimpleType) {
 
 	switch(node->simpleType) {
 		case SimpleType::String:
-			//TODO proper implementation
-			//TODO put into IRExtensions or use stock implementation
 			retTy = irBuilder.getLangBasic().getString();
 			break;
 		case SimpleType::Double: 
@@ -426,7 +423,6 @@ TYPE_CONVERTER(SimpleType) {
 			retTy = irBuilder.getLangBasic().getInt4();
 			break;
 		case SimpleType::File:
-			//TODO do we need a "file<string>" type in IR?
 			retTy = irMgr.getLangExtension<iwir::extension::IWIRExtension>().getFile();
 			break;
 		case SimpleType::Bool:
@@ -456,7 +452,7 @@ TYPE_CONVERTER(CollectionType) {
 CONDITION_CONVERTER(Condition) {
 	VLOG(2) << "Condition : " << node->condition;
 	core::ExpressionPtr condExpr = condition_ast::convert_condition_ast_to_inspire(node, varMap, irBuilder);
-	dumpPretty(condExpr);
+	VLOG(2) << condExpr;
 	return condExpr;
 }
 

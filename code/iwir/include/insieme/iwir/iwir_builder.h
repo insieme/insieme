@@ -33,14 +33,13 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
-
 #pragma once
-#include <xercesc/dom/DOM.hpp>
-
 #include "insieme/xml/xml_utils.h"
-#include "insieme/xml/xsd_config.h"
 #include "insieme/utils/logging.h"
 
+#include <insieme/core/ir_node.h>
+
+#include "insieme/iwir/xsd_config.h"
 #include "insieme/iwir/iwir_ast.h"
 #include "insieme/iwir/iwir_condition_builder.h"
 
@@ -962,13 +961,23 @@ class IWIRBuilder {
 		return nullptr;
 	}
 
-	void buildIWIR(const XmlElement& iwir) {
+	void buildIWIR(const std::string& fileName) {
+		auto iwirSchema = IWIR_SCHEMA_DIR + "iwir_schema1.1.xsd";
+		//IWIR XML -> DOM 
+		XmlUtil xml;
+		xml.convertXmlToDom(fileName, iwirSchema, true);
+
+		VLOG(2) << xml.convertDomToString();
+
+		//DOM -> IWIR AST
+		XmlElement iwirDom(xml.doc->getDocumentElement(), xml.doc);
+
 		//TODO check for toplevel node ? <IWIR ... wfname = ...>
-		this->wfName = iwir.getAttr("wfname");
-		std::cout << "wfName:" << this->wfName << std::endl;
+		this->wfName = iwirDom.getAttr("wfname");
+		VLOG(2) << "wfName:" << this->wfName << std::endl;
 
 		Context ctx;
-		auto children= iwir.getChildren();	
+		auto children= iwirDom.getChildren();	
 
 		//only one child -> the toplevel task
 		for(XmlElement c : children) {

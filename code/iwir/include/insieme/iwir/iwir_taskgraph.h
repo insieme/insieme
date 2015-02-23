@@ -286,7 +286,7 @@ class TaskGraph {
 		VertexWriter<Graph> vw(g);
 		EdgeWriter<Graph> ew(g);
 		// write the dot file
-		std::ofstream dotfile (path+"out.dot");
+		std::ofstream dotfile (path);
 		boost::write_graphviz(dotfile, g, vw,  ew);
 	}
 };

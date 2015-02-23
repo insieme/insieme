@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -35,10 +35,12 @@
  */
 
 #pragma once
-#include <insieme/utils/annotation.h>
-#include <insieme/core/ir_node.h>
+#include <xercesc/dom/DOM.hpp>
+#include <xercesc/util/XMLString.hpp>
+#include <xercesc/framework/StdOutFormatTarget.hpp>
+#include <xercesc/framework/LocalFileFormatTarget.hpp>
 
-#include "insieme/xml/xsd_config.h"
+#include <insieme/core/ir_node.h>
 
 #include <map>
 
@@ -76,8 +78,6 @@ public:
 	void convertXmlToDom(const std::string& fileName, const std::string& schemaFile, const bool validate);
 	void convertStringToDom(const std::string& stringName, const std::string& schemaFile, const bool validate);	
 	string convertDomToString();
-
-	static insieme::core::NodePtr readIWIR(insieme::core::NodeManager& manager, const std::string& fileName);
 
 	~XmlUtil();
 };

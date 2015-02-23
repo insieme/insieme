@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,18 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#include <xercesc/dom/DOM.hpp>
-#include <xercesc/util/XMLString.hpp>
-#include <xercesc/framework/StdOutFormatTarget.hpp>
-#include <xercesc/framework/LocalFileFormatTarget.hpp>
+//#include <xercesc/dom/DOM.hpp>
+//#include <xercesc/util/XMLString.hpp>
+//#include <xercesc/framework/StdOutFormatTarget.hpp>
+//#include <xercesc/framework/LocalFileFormatTarget.hpp>
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/ir_builder.h"
-
 #include "insieme/xml/xml_utils.h"
-#include "insieme/xml/xsd_config.h"
 
 #include <sstream>
 

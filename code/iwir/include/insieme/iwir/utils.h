@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,6 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define XML_TEST_DIR std::string("${CMAKE_CURRENT_SOURCE_DIR}/test/")
+#include <insieme/core/ir_node.h>
+#include <string>
 
+namespace insieme {
+namespace iwir {
+
+insieme::core::NodePtr readIWIR(insieme::core::NodeManager& mgr, const std::string& fileName);
+
+}
+}

@@ -34,6 +34,57 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define XML_TEST_DIR std::string("/home/bernhard/iwir_repo/code/xml/test/")
+#include "insieme/utils/logging.h"
 
+#include "insieme/iwir/utils.h"
+#include "insieme/iwir/cmd/options.h"
+#include "insieme/iwir/iwir_converter.h"
+#include "insieme/iwir/iwir_builder.h"
+
+#include <string>
+
+using namespace insieme;
+
+int main(int argc, char** argv) {
+
+	std::string taskGraphFile;
+	int verbosity;
+	iwir::cmd::Options options = iwir::cmd::Options::parse(argc, argv)
+ 		("verbose,v", verbosity, 0, "vebosity level - 1 or 2")
+ 		("task-graph,g", taskGraphFile, string(""), "writes a dot representation of the given IWIR Workflow into the given file")
+	;
+
+	if (!options.valid) return (options.help)?0:1;
+
+	Logger::get(std::cerr, DEBUG, verbosity);
+
+	core::NodeManager mgr;
+	std::string iwirFile = options.inFile;
+	
+	std::cout << "Reading input, and building IWIR AST " << iwirFile << std::endl;
+
+	//IWR XML -> IWIR AST
+	iwir::IWIRBuilder ib;
+	ib.buildIWIR(iwirFile);
+
+	std::cout << "Converting IWIR AST to INSPIRE" << std::endl;
+
+	//IWIR AST -> INSPIRE 
+	iwir::IWIRConverter iwirToIr(mgr);
+	core::NodePtr ir = iwirToIr.convertIwirToIr(ib);
+
+	// write task graph dot reprsentation 
+	if (taskGraphFile != "") {
+		std::cout << "Writing dot file file -- " << taskGraphFile  << std::endl;
+		iwirToIr.writeTaskGraphToDot(ib, taskGraphFile);
+	}
+
+	// writing IR code
+	if (options.outFile != "") {
+		std::cout << "Writing output file -- " << options.outFile << std::endl;
+		std::ofstream out(options.outFile);
+		out << core::printer::PrettyPrinter(ir, core::printer::PrettyPrinter::PRINT_DEREFS);
+	}
+
+	return 0;
+}

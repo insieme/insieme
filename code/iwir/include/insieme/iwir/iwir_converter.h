@@ -53,16 +53,6 @@
 #include "insieme/iwir/iwir_extension.h"
 #include "insieme/iwir/iwir_taskgraph.h"
 
-//#include "boost/config.hpp"
-//#include <boost/utility.hpp>
-//#include <boost/graph/adjacency_list.hpp>
-//#include <boost/graph/topological_sort.hpp>
-//#include <boost/graph/depth_first_search.hpp>
-//#include <boost/graph/dijkstra_shortest_paths.hpp>
-//#include <boost/graph/visitors.hpp>
-//#include <boost/graph/graphviz.hpp>
-
-
 #include <utility>
 #include <map>
 #include <set>
@@ -99,7 +89,7 @@ private :
 		//map of declared variable per task
 		DeclVarMap declMap;
 
-		//TODO map of links and the linking ir stmt
+		//map of links and the linking ir stmt
 		LinkStmtMap linkStmtMap;
 
 		std::ostream& printTo(std::ostream& out) const { 
@@ -121,10 +111,10 @@ public:
 	IWIRConverter(insieme::core::NodeManager& irMgr) : irMgr(irMgr), irBuilder(irMgr) {}
 
 	//generates a dotfile out of the given workflow
-	void writeTaskGraphToDot(const IWIRBuilder& ib) {
+	void writeTaskGraphToDot(const IWIRBuilder& ib, const std::string& dotFile) {
 		iwir::utils::TaskGraph taskGraph;
 		taskGraph.fillGraph(ib.getTopLevel());
-		taskGraph.writeDotFile(ib.getWFName());
+		taskGraph.writeDotFile(dotFile);
 	}
 
 	//main entry
@@ -164,8 +154,7 @@ public:
 		auto semantic = core::checks::check(topLevelTaskExpr);
 		VLOG(2) << semantic;
 
-		writeTaskGraphToDot(ib);
-		return insieme::core::NodePtr();
+		return topLevelTaskExpr;
 	}
 	
 private:
