@@ -48,14 +48,14 @@ namespace datalayout {
 using namespace core;
 //namespace pirp = pattern::irp;
 //namespace ia = insieme::analysis;
-utils::map::PointerMap<ExpressionAddress, RefTypePtr> ParSecAtt::findCandidates(NodeAddress toTransform) {
-	utils::map::PointerMap<ExpressionAddress, RefTypePtr> structs;
+ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) {
+	ExprAddressRefTypeMap structs;
 
 	ExpressionMap jobReplacements; // TODO delete
 	IRBuilder builder(mgr);
 
 	for(std::pair<ExpressionPtr, ExpressionPtr> dudu : varsToPropagate) {
-		std::cout << "      sadthings " << dudu.first << std::endl;
+		std::cout << "      things " << dudu.first << std::endl;
 	}
 	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
 		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
@@ -106,7 +106,7 @@ utils::map::PointerMap<ExpressionAddress, RefTypePtr> ParSecAtt::findCandidates(
 						// add corresponding parameter to update list
 						jobReplacements[pair.second] = newParam;
 						structs[pair.second] = newParamType;
-//std::cout << ": \nAdding: " << *pair.second << " - " << structs.size() << std::endl;
+std::cout << ": \nAdding: " << *pair.second << " - " << structs.size() << std::endl;
 					}
 				});
 			}
@@ -130,14 +130,14 @@ utils::map::PointerMap<ExpressionAddress, RefTypePtr> ParSecAtt::findCandidates(
 				if(newArgIter != varsToPropagate.end()) {
 					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
 					structs[pair.second] = newArgIter->second->getType().as<RefTypePtr>();
-//std::cout << "Found in VARreplacements: " << pair.first << " -> " << structs.size() << std::endl;
+std::cout << "Found in VARreplacements: " << pair.first << " -> " << structs.size() << std::endl;
 				}
 
 				newArgIter = jobReplacements.find(pair.first);
 				if(newArgIter != jobReplacements.end()) {
 					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
 					structs[pair.second] = newArgIter->second->getType().as<RefTypePtr>();
-//std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << structs.size() << std::endl;
+std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << structs.size() << std::endl;
 				}
 			});
 		}
@@ -149,14 +149,6 @@ utils::map::PointerMap<ExpressionAddress, RefTypePtr> ParSecAtt::findCandidates(
 ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionMap& varsToPropagate, const StructTypePtr& newStructType, const StructTypePtr& oldStructType)
 		: AosToTaos(toTransform), varsToPropagate(varsToPropagate), newStructType(newStructType), oldStructType(oldStructType) {}
 
-//utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> OclAts::findCandidates(core::NodeAddress toTransform) {
-//	utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> retVal;
-//
-//	return retVal;
-//}
-//core::StructTypePtr OclAts::createNewType(core::StructTypePtr oldType) {
-//	return StructTypePtr();
-//}
 
 void ParSecAtt::transform() {
 	IRBuilder builder(mgr);
@@ -180,7 +172,7 @@ void ParSecAtt::transform() {
 			VariablePtr test = builder.variable(oldVar->getType());
 			std::cout << "this is " << *test << std::endl << std::endl;
 
-			dumpPretty(core::transform::replaceAll(mgr, toTransform, oldVar, test, false));
+//			dumpPretty(core::transform::replaceAll(mgr, toTransform, oldVar, test, false));
 
 //			int cnt = 0;
 //			core::visitDepthFirst(NodeAddress(toTransform), [&](const VariableAddress& var) {

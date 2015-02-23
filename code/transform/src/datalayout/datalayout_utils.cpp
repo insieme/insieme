@@ -166,7 +166,7 @@ core::ExpressionAddress getDeclaration(const NodeAddress scope, const Expression
 	return getDeclaration(scope.getParentAddress(), var);
 }
 
-core::ExpressionAddress getDeclaration(const ExpressionAddress var) {
+core::ExpressionAddress getDeclaration(const ExpressionAddress& var) {
 	if(!var)
 		return ExpressionAddress();
 	return getDeclaration(var.getParentAddress(), var);

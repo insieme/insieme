@@ -344,8 +344,8 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 //		std::cout << "blabla " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
 //	}
 
-//	ParSecAtt psa(toTransform, structures, newStructType, oldStructType);
-//	psa.transform();
+	ParSecAtt psa(toTransform, structures, newStructType, oldStructType);
+	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;
 	IRBuilder builder(mgr);

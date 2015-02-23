@@ -56,10 +56,16 @@ typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
 namespace transform {
 namespace datalayout {
 
-typedef utils::map::PointerMap<core::ExpressionAddress, core::RefTypePtr> ExprAddressRefTypeMap;
-typedef utils::map::PointerMap<core::ExpressionAddress, core::ExpressionPtr> ExprAddressMap;
-typedef utils::set::PointerSet<core::ExpressionAddress> ExprAddressSet; /*
-typedef std::set<core::ExpressionAddress> ExprAddressSet; // */
+struct VariableComparator {
+	bool operator()(const core::ExpressionAddress& a, const core::ExpressionAddress& b) const;
+};
+template<class ValueType>
+struct VariableMap : public std::map<core::ExpressionAddress, ValueType, VariableComparator> {};
+struct ExprAddressSet : public std::set<core::ExpressionAddress, VariableComparator> {};
+
+typedef VariableMap<core::RefTypePtr> ExprAddressRefTypeMap;
+typedef VariableMap<core::ExpressionPtr> ExprAddressMap;
+//typedef std::set<core::ExpressionAddress> ExprAddressSet;
 typedef std::function<ExprAddressRefTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
 ExprAddressRefTypeMap findAllSuited(const core::NodeAddress& toTransform);

@@ -56,7 +56,7 @@ class ParSecAtt : public AosToTaos {
 	const core::StructTypePtr& newStructType;
 	const core::StructTypePtr& oldStructType;
 
-	virtual utils::map::PointerMap<core::ExpressionAddress, core::RefTypePtr> findCandidates(core::NodeAddress toTransform);
+	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
 
 public:
 	ParSecAtt(core::NodePtr& toTransform, core::ExpressionMap& varsToPropagate, const core::StructTypePtr& newStructType,

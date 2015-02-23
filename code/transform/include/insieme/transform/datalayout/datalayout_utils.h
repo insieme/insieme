@@ -59,7 +59,7 @@ core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
  */
 bool sameAsDecl(const core::ExpressionAddress var, const core::ExpressionAddress decl);
 
-core::ExpressionAddress getDeclaration(const core::ExpressionAddress var);
+core::ExpressionAddress getDeclaration(const core::ExpressionAddress& var);
 
 core::NodeAddress getRootVariable(const core::NodeAddress scope, core::NodeAddress var);
 
