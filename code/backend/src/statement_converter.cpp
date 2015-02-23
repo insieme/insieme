@@ -134,7 +134,7 @@ namespace backend {
 
 			// create a new context
 			ConversionContext entryContext(converter, core::LambdaPtr());
-			
+
 			c_ast::CodeFragmentPtr fragment;
 			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
 				// handle function-entry point specially
@@ -820,7 +820,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
-		if (context.getConverter().getNodeManager().getLangBasic().isUnit(ptr->getReturnExpr()->getType())) {
+		if (converter.getNodeManager().getLangBasic().isUnitConstant(ptr->getReturnExpr())) {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
