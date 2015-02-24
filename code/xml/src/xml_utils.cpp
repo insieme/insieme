@@ -34,15 +34,8 @@
  * regarding third party software licenses.
  */
 
-//#include <xercesc/dom/DOM.hpp>
-//#include <xercesc/util/XMLString.hpp>
-//#include <xercesc/framework/StdOutFormatTarget.hpp>
-//#include <xercesc/framework/LocalFileFormatTarget.hpp>
-
 #include "insieme/utils/logging.h"
-
 #include "insieme/xml/xml_utils.h"
-
 #include <sstream>
 
 using namespace insieme::core;
@@ -73,14 +66,19 @@ public:
 	
 		stringstream ss;
 		ss << /* uri << */ ":" << loc->getLineNumber () << ":" << loc->getColumnNumber () << " " << msg;
-		if(warn)
+		if(warn) {
 			LOG(log::WARNING) << ss.str();
-		else
+			return true;
+		}
+		else  {
 			LOG(log::ERROR) << ss.str();
 
 		XMLString::release (&uri);
 		XMLString::release (&msg);
-		return true;
+		//FIXME gracefull exit is something else...
+		exit(1);
+		return false;
+		}
 	}
 };
 } // end anonymoous namespace
@@ -272,9 +270,11 @@ void XmlUtil::convertXmlToDom(const string& fileName, const string& schemaFile, 
 			}
 		}
 		if (doc) doc->release();
+
 		doc = parser->parseURI(fileName.c_str());
+
 		if (eh.failed ()) {
-			doc->release();
+			if (doc) doc->release();
 			doc = NULL;
 			LOG(log::ERROR) << "problem during parsing of XML file" << endl;
 			return;
@@ -335,7 +335,7 @@ void XmlUtil::convertStringToDom(const string& stringName, const string& schemaF
 		doc = parser->parse(input);
 		
 		if (eh.failed ()) {
-			doc->release();
+			if (doc) doc->release();
 			doc = NULL;
 			LOG(log::ERROR) << "problem during parsing of XML file" << endl;
 			return;

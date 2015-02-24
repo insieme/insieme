@@ -449,5 +449,17 @@ TEST(IWIRTest, ReadIWIR_Wien2K) {
 	auto ir = readIWIR(mgr, iwirInput);
 	VLOG(2) << "---" << std::endl;
 }
+
+TEST(IWIRTest, ReadIWIR_SubWF1) {
+	Logger::get(std::cerr, INFO, 1);
+	
+	auto iwirInput = IWIR_TEST_DIR + "input/subWFTest1.xml";
+
+	NodeManager mgr;
+	VLOG(2) << "---" << std::endl;
+	auto ir = readIWIR(mgr, iwirInput);
+	VLOG(2) << "---" << std::endl;
+}
+
 } // end namespace iwir
 } // end namespace insieme

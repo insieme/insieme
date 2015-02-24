@@ -120,7 +120,7 @@ namespace cmd {
 			}
 
 			// output file (optional)
-			res.outFile = "a.out";
+			res.outFile = "out.ir";
 			if (map.count("output-file")) {
 				res.outFile = map["output-file"].as<string>();
 			}

@@ -125,9 +125,9 @@ CONVERTER(Link) {
 			//A -> collection/A (collection with only one entry) 
 			//see further down in handling of BasicLinks as we need
 			//to use a different link construct to emplace the given data into the collection
-			/*if(	irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().isCollectionType(toTy) 
-				&& (*fromTy ==  *(irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getElementType(toTy)))
-			) { }
+			/* IMPLEMENTED IN BASE LINK HANDLING if(	irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().isCollectionType(toTy) 
+			*  IMPLEMENTED IN BASE LINK HANDLING 	&& (*fromTy ==  *(irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getElementType(toTy)))
+			*  IMPLEMENTED IN BASE LINK HANDLING ) { }
 			*/
 
 			//file -> string (URI to the file)
