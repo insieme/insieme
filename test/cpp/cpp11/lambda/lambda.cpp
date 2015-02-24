@@ -1,5 +1,82 @@
 #include <iostream>
+#include <functional>
 
+
+//don't worry about the strange
+//if checks in the following methods.
+//those were used for debugging issues
+
+int sum(int a, int b) {
+    //capture it by ref
+    auto sumr = [&]() {
+        if(a==0)
+            return b;
+        if(b==0)
+            return a;
+        return a+b;
+    };
+    //capture it by val
+    auto sumv = [=]() {
+        if(a==0)
+            return b;
+        if(b==0)
+            return a;
+        return a+b;
+    };
+    return sumr()+sumv();
+}
+
+int sum_ref(int& a, int &b) {
+    //capture it by ref
+    auto sumr = [&]() {
+        if(a==0)
+            return b;
+        if(b==0)
+            return a;
+        return a+b;
+    };
+    //capture it by val
+    auto sumv = [=]() {
+        if(a==0)
+            return b;
+        if(b==0)
+            return a;
+        return a+b;
+    };
+    return sumr()+sumv();
+}
+
+int sum_ptr(int* a, int* b) {
+    //capture it by ref
+    auto sumr = [&]() {
+        if(*a==0)
+            return *b;
+        if(*b==0)
+            return *a;
+        return *a+*b;
+    };
+    //capture it by val
+    auto sumv = [=]() {
+        if(*a==0)
+            return *b;
+        if(*b==0)
+            return *a;
+        return *a+*b;
+    };
+    return sumr()+sumv();
+}
+
+int rec_lambda_refcap(int n) {
+    std::function<int (int)> x = [&](int y)->int {
+        if(y==n) 
+            return y;
+        return x(y-1);
+    };
+    return x(3);
+}
+
+//recursive lambda that captures itself
+//by value is not allowed...
 
 int main (){
 
@@ -134,6 +211,29 @@ int main (){
 		lambda(2);
 		std::cout << " x: " << x << std::endl;
 	}
+
+    //take arguments from function
+    {
+        std::cout << "arguments from function: " << sum(1,2) << std::endl;
+    }
+
+    //take arguments from function (ref)
+    {
+        int a=10;
+        int b=20;
+        std::cout << "arguments from function ref: " << sum_ref(a,b) << std::endl;
+    }
+
+    //take arguments from function (ptr)
+    {
+        int a=10;
+        int b=20;
+        std::cout << "arguments from function ref: " << sum_ptr(&a,&b) << std::endl;
+    }
+
+    {
+        std::cout << "recursive lambda refcap: " << rec_lambda_refcap(0) << std::endl;
+    }
 
 	return 0;
 }

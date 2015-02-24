@@ -710,13 +710,16 @@ namespace tu {
 		return Resolver(getNodeManager(), *this).apply(node);
 	}
 
-	core::ClassMetaInfo IRTranslationUnit::getMetaInfo(const core::TypePtr& classType, bool symbolic) {
-		auto metaInfoList = metaInfos[classType];
-			
-		//merge metaInfos into one 
+	core::ClassMetaInfo IRTranslationUnit::getMetaInfo(const core::TypePtr& classType, bool symbolic) const {
 		core::ClassMetaInfo metaInfo;
-		for(auto m : metaInfoList) {
-			metaInfo = core::merge(metaInfo, m);
+		auto mm = metaInfos.find(classType);
+		if(mm != metaInfos.end()) {
+			auto metaInfoList = mm->second;
+			
+			//merge metaInfos into one 
+			for(auto m : metaInfoList) {
+				metaInfo = core::merge(metaInfo, m);
+			}
 		}
 
 		if(symbolic) 
@@ -732,12 +735,12 @@ namespace tu {
 		return resolved;
 	}
 
-	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, core::ClassMetaInfo metaInfo) {
+	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, const core::ClassMetaInfo& metaInfo) {
 		//TODO: optimization/simplification: store the metainfos already merged?
 		metaInfos[classType].push_back(metaInfo);
 	}
 
-	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, std::vector<core::ClassMetaInfo> metaInfoList) {
+	void IRTranslationUnit::addMetaInfo(const core::TypePtr& classType, const std::vector<core::ClassMetaInfo>& metaInfoList) {
 		//TODO:  optimization/simplification: store the metainfos already merged?
 		for(auto m : metaInfoList) {
 			metaInfos[classType].push_back(m);

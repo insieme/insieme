@@ -68,6 +68,17 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 													 insieme::frontend::conversion::Converter& convFact);
 
 	/**
+	 * CXX Default Init Expr
+	 * This wraps a use of a C++ default initializer (technically, a brace-or-equal-initializer
+	 * for a non-static data member) when it is implicitly used in a mem-initializer-list in a
+ 	 * constructor (C++11) or in aggregate initialization (C++1y).
+ 	 **/
+	insieme::core::ExpressionPtr VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr,
+                                                    insieme::frontend::conversion::Converter& convFact);
+
+
+
+	/**
 	 *  			Cxx11 lambda expression
 	 *  		we could convert the body, encapsulate it into a function and pas all the captures
 	 *  		as parameters, but this will ruin compatibility. We need a class with the operator() overload
@@ -117,8 +128,10 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 			return VisitCXXNullPtrLiteralExpr(nullExpr, convFact);
 		if(const clang::SizeOfPackExpr* sope = llvm::dyn_cast<clang::SizeOfPackExpr>(expr))
 			return VisitSizeOfPackExpr(sope, convFact);
-        if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr))
-            return VisitInitListExpr(initList, convFact);
+	        if(const clang::CXXDefaultInitExpr* defaultInit = llvm::dyn_cast<clang::CXXDefaultInitExpr>(expr))
+        		return VisitCXXDefaultInitExpr(defaultInit, convFact);
+	        if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr))
+        		return VisitInitListExpr(initList, convFact);
 		return nullptr;
 	}
 

@@ -287,12 +287,17 @@ TEST(region_instrumentation, parallel) {
 
 TEST(region_instrumentation, rapl) {
 
+#ifdef DISABLE_ENERGY
+	printf("Warning: Compiled with -DDISABLE_ENERGY, not testing RAPL\n");
+	return;
+#endif
+
 #ifndef IRT_USE_PAPI
-	printf("warning: not compiled with PAPI, not testing RAPL\n");
+	printf("Warning: Not compiled with PAPI, not testing RAPL\n");
 	return;
 #endif
 	if(!irt_rapl_is_supported()) {
-		printf("warning: CPU model does not support RAPL, not testing it\n");
+		printf("Warning: CPU model does not support RAPL, not testing it\n");
 		return;
 	}
 

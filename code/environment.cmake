@@ -109,7 +109,7 @@ if ( NOT DEFINED BOOST_ROOT )
 		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
 	endif()
 endif()
-find_package( Boost 1.48 COMPONENTS program_options system filesystem regex serialization )
+find_package( Boost 1.48 QUIET COMPONENTS program_options system filesystem regex serialization )
 include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -357,6 +357,7 @@ if(MSVC)
 	add_definitions( /W4 )
 endif()
 
+
 # --------------------------------------------------------- Runtime
 # -D_XOPEN_SOURCE=700 is required to get recent pthread features with -std=c99
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
@@ -395,5 +396,4 @@ execute_process(COMMAND getconf  _NPROCESSORS_ONLN
                 OUTPUT_VARIABLE NB_PROCESSORS
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
-
 

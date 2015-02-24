@@ -241,7 +241,7 @@ namespace c_ast {
 					} else {
 						out << " = " << print(expr);
 					}
-				    
+
                     if (node->isStatic) {
                         makeTypesImplicit = false;
                     }
@@ -261,7 +261,7 @@ namespace c_ast {
 						// just add list of parameters
 						return out << "("
 								<< join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
-									out << print(cur);
+									out << "(" << print(cur) << ")";
 						}) << ")";
 					}
 
@@ -594,11 +594,12 @@ namespace c_ast {
 				}
 
 				// the rest
-				return out
-						<< print(node->classType) << "("
-						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
-							out << print(cur);
-						}) << ")";
+                return out
+                        << print(node->classType) << "("
+                        << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+                            out << print(cur);
+                        }) << ")";
+
 			}
 
 			PRINT(DestructorCall) {
@@ -658,7 +659,7 @@ namespace c_ast {
 				auto fun = node->fun->function;
 				return out
 						<< (node->isVirtual?"virtual ":"")
-						<< (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
+						<< (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ")
 						<< print(fun->name)
 						<< "(" << printMemberParam(fun->parameter)<< ")"
 						<< (node->fun->isConstant?" const":"")
@@ -703,7 +704,7 @@ namespace c_ast {
 
 				// handle type definitions
 				if ((bool)(node->name)) {
-					// since here is the only place where we have type + name, we have to take care of 
+					// since here is the only place where we have type + name, we have to take care of
 					// function type declarations
 
 					// function type declaration need to be parametrized
@@ -829,9 +830,9 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
-					<< " " 
-					<< print(node->className) << "::" 
+				out << (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ")
+					<< " "
+					<< print(node->className) << "::"
 					<< print(fun->name)
 					<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
 
@@ -908,9 +909,9 @@ namespace c_ast {
 
 		TypePtr computeNesting(TypeNesting& data, const TypePtr& type) {
 			// check whether there is something to do
-			if (type->getType() != NT_PointerType && 
-				type->getType() != NT_VectorType && 
-				type->getType() != NT_FunctionType && 
+			if (type->getType() != NT_PointerType &&
+				type->getType() != NT_VectorType &&
+				type->getType() != NT_FunctionType &&
 				type->getType() != NT_MemberFieldPointer ){
 				return type;
 			}

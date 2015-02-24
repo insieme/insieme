@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 #pragma once
@@ -56,6 +56,8 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
     virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
 
     virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
+
+    virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact);
 
 	private:
 

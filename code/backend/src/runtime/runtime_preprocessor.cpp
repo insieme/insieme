@@ -47,6 +47,7 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ir_class_info.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
@@ -936,7 +937,25 @@ namespace runtime {
 
 
 	core::NodePtr WorkItemizer::process(const backend::Converter& converter, const core::NodePtr& node) {
-		return WorkItemIntroducer(converter.getNodeManager(), includeEffortEstimation).resolveElement(node);
+		WorkItemIntroducer wiIntroducer(converter.getNodeManager(), includeEffortEstimation);
+		auto ret = wiIntroducer.resolveElement(node);
+
+		// pre-process meta information
+		// TODO: apply to all annotations which satisfy has_child_list
+		visitDepthFirstOnce(ret, [&](const core::TypePtr& typ){
+			if(core::hasMetaInfo(typ)) {
+				core::ClassMetaInfo metaInfos = core::getMetaInfo(typ);
+				vector<core::MemberFunction> newMemFuns = ::transform(metaInfos.getMemberFunctions(), [&](const core::MemberFunction& memFun) {
+					core::MemberFunction copy(memFun);
+					copy.setImplementation(wiIntroducer.resolveElement(memFun.getImplementation()).as<core::ExpressionPtr>());
+					return copy;
+				});
+				metaInfos.setMemberFunctions(newMemFuns);
+				core::setMetaInfo(typ, metaInfos);
+			}			
+		}, true, true);
+
+		return ret;
 	}
 
 

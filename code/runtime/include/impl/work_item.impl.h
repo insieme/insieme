@@ -152,7 +152,9 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
+	reg->id.cached = reg;
 	_irt_wi_event_register_only(reg);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params) {
@@ -160,7 +162,6 @@ static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_imp
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* wi = _irt_wi_create(self, &range, impl, params);
 	irt_inst_region_list_copy(wi, self->cur_wi); // TODO philipp fix your shit
-	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, wi->id);
 	return wi;
 }
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {

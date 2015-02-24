@@ -33,6 +33,7 @@ PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
 CCACHE	:= ${PREFIX}/ccache-$(shell ${AWK_CMD} ccache_install.sh | cut -d= -f2 )
 HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
+NINJA := ${PREFIX}/ninja-$(shell ${AWK_CMD} ninja_install.sh | cut -d= -f2 )
 
 all: INSIEME
 
@@ -182,9 +183,13 @@ ${HWLOC}: hwloc_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh hwloc_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## OpenMPI
+## NINJA
+${NINJA}: ninja_install.sh ${PYTHON}
+	@echo "#### INSTALL NINJA ${NINJA} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ninja_install.sh
+	@echo "@@@@ Done! @@@@"
 
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
-		 ${PYTHON} ${RUBY} ${PAPI} ${OPENMPI} ${CCACHE}
+		 ${PYTHON} ${RUBY} ${PAPI} ${CCACHE} ${NINJA}

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -74,13 +74,13 @@ namespace backend {
 		);
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << *program << std::endl;
+		//std::cout << "Program: " << *program << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -98,37 +98,37 @@ namespace backend {
 		core::ProgramPtr program = builder.parseProgram(
 				R"(
 				let int = int<4>;
-				
+
 				let Counter = struct {
 					int value;
 				};
-				
+
 				let reset = Counter::()->unit {
 					this->value = 0;
 				};
-				
+
 				let inc = Counter::()->int {
 					this->value = this->value + 1;
 					return *this->value;
 				};
-				
+
 				let dec = Counter::()->int {
 					this->value = this->value - 1;
 					return *this->value;
 				};
-				
+
 				let get = Counter::()->int {
 					return *this->value;
 				};
-				
-				let set = Counter::(int x)->unit { 
+
+				let set = Counter::(int x)->unit {
 					this->value = x;
 				};
-				
+
 				let p = Counter::()->unit {
 					print("%d\n", this->get());
 				};
-				
+
 				int main() {
 					ref<Counter> c;
 					c.reset();
@@ -146,13 +146,13 @@ namespace backend {
 		);
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << *program << std::endl;
+		//std::cout << "Program: " << *program << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -188,42 +188,42 @@ namespace backend {
 					// -------- handle an instance of A --------
 					ref<A> a;
 					a.x = 1;
-					
-					
+
+
 					// -------- handle an instance of B --------
 					ref<B> b;
-					
+
 					// direct access
 					b.as(A).x = 1;
 					b.y = 2;
-					
+
 					// indirect access of A's x
 					auto bA = b.as(A);
 					bA.x = 3;
-					
-					
+
+
 					// -------- handle an instance of C --------
 					ref<C> c;
-					
+
 					// access B's A's x
 					c.as(B).as(A).x = 1;
 
 					// access C's A's x
 					c.as(B).y = 2;
-					
+
 					c.z = 3;
 				}
 				)"
 		);
 
 		ASSERT_TRUE(program);
-		std::cout << "Program: " << core::printer::PrettyPrinter(program) << std::endl;
+		//std::cout << "Program: " << core::printer::PrettyPrinter(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code
 		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 		ASSERT_TRUE((bool)converted);
-		std::cout << "Converted: \n" << *converted << std::endl;
+		//std::cout << "Converted: \n" << *converted << std::endl;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -283,7 +283,7 @@ namespace backend {
 		// a pure virtual, const function
 		info.addMemberFunction("dummy2", builder.getPureVirtual(parseType("Counter::()->int<4>")), true, true);
 
-		std::cout << info << "\n";
+		//std::cout << info << "\n";
 
 		// attach
 		core::setMetaInfo(counterType, info);
@@ -404,7 +404,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -425,25 +425,25 @@ namespace backend {
 		auto res = builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; };
-					
+
 					let ctorA1 = A::() { this->x = 0; };
 					let ctorA2 = A::(int x) { this->x = x; };
-					
+
 					int main() {
 						// on stack
 						ref<A> a1 = ctorA1(var(A));
 						ref<A> a2 = ctorA2(var(A), 1);
-					
+
 						// on heap
 						ref<A> a3 = ctorA1(new(A));
 						ref<A> a4 = ctorA2(new(A), 1);
-					
+
 						// in place
 						ref<A> a5; ctorA1(a5);
 						ref<A> a6; ctorA2(a6, 1);
-					
+
 						return 0;
 					}
 				)"
@@ -454,12 +454,12 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "A a1;");
-		EXPECT_PRED2(containsSubString, code, "A a2(1);");
+		EXPECT_PRED2(containsSubString, code, "A a2((1));");
 		EXPECT_PRED2(containsSubString, code, "A* a3 = new A();");
 		EXPECT_PRED2(containsSubString, code, "A* a4 = new A(1);");
 		EXPECT_PRED2(containsSubString, code, "new (&a5) A();");
@@ -479,30 +479,30 @@ namespace backend {
 		auto res = builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; };
-					
-					let ctorA = A::(int<4> x) { 
-						this->x = x; 
+
+					let ctorA = A::(int<4> x) {
+						this->x = x;
 						print("Creating: %d\n", x);
 					};
-					
-					let dtorA = ~A::() { 
+
+					let dtorA = ~A::() {
 						print("Clearing: %d\n", *this->x);
-						this->x = 0; 
+						this->x = 0;
 					};
-					
+
 					int main() {
-					
+
 						// create an un-initialized memory location
 						ref<A> a = ctorA(new(A), 3);
-						
+
 						// init using in-place constructor
 						ctorA(a, 2);
-					
+
 						// invoce destructor
 						dtorA(a);
-					
+
 						return 0;
 					}
 				)"
@@ -513,7 +513,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -536,25 +536,25 @@ namespace backend {
 		auto res = builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; };
-					
-					let ctorA = A::() { 
-						this->x = 4; 
+
+					let ctorA = A::() {
+						this->x = 4;
 					};
-					
+
 					int main() {
-						
+
 						// create an array of objects of type A on the stack
 						ref<array<A,1>> a = createArray(ref.var, ctorA, 5u);
-						
+
 						// create an array of objects of type A on the heap
 						ref<array<A,1>> b = createArray(ref.new, ctorA, 5u);
-						
+
 						// update an element
 						a[3]->x = 12;
 						b[3]->x = 12;
-						
+
 						return 0;
 					}
 				)",
@@ -567,7 +567,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -598,26 +598,26 @@ namespace backend {
 		auto res = builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; };
-					
-					let ctorA = A::() { 
-						this->x = 4; 
+
+					let ctorA = A::() {
+						this->x = 4;
 					};
-					
+
 					int main() {
-						
+
 						let size = lit("not important" : intTypeParam<5>);
 
 						// create an array of objects of type A on the stack
 						ref<array<A,1>> a = createVector(ref.var, ctorA, size);
-						
+
 						// create an array of objects of type A on the heap
 						ref<array<A,1>> b = createVector(ref.new, ctorA, size);
-						
+
 //						// create an array of objects of type A on the stack
 //						ref<vector<A,5>> c = createVector(ref.var, ctorA, size);
-//						
+//
 //						// create an array of objects of type A on the heap
 //						ref<vector<A,5>> d = createVector(ref.new, ctorA, size);
 
@@ -626,7 +626,7 @@ namespace backend {
 						b[3]->x = 12;
 //						c[3]->x = 12;
 //						d[3]->x = 12;
-						
+
 						return 0;
 					}
 				)",
@@ -641,7 +641,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -673,25 +673,25 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let B = struct { };
 					let A = struct : B { int x; int y; int z; };
 
 					let ctorA = A::(int y) {
-						this->y = y; 
+						this->y = y;
 						for ( int i = 0 .. 10 ) {
 							this->y = 1;
 							this->z = 3;
 						}
-						this->x = 4; 
+						this->x = 4;
 						this->z = 2;
 					};
-					
+
 					int main() {
-						
+
 						// call constructor
 						ref<A> a = ctorA(ref.var(undefined(lit(A))), 10);
-						
+
 						return 0;
 					}
 				)"
@@ -707,7 +707,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A var_1(10);");
+		EXPECT_PRED2(containsSubString, code, "A a((10));");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t y) : x(4), y(y) {");
 		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
 
@@ -730,7 +730,7 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; };
 					let B = struct : A { int y; };
 
@@ -741,14 +741,14 @@ namespace backend {
 
 					let ctorB = B::(int x, int y) {
 						ctorA(this, x);
-						this->y = y; 
+						this->y = y;
 					};
-					
+
 					int main() {
-						
+
 						// call constructor
 						ref<B> b = ctorB(ref.var(undefined(lit(B))), 1, 2);
-						
+
 						return 0;
 					}
 				)"
@@ -764,9 +764,9 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "B b((1), (2));");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x) : x(x) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t var_3) : A(x), y(var_3) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y) : A(x), y(y) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -784,7 +784,7 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; int y; };
 					let B = struct : A { int z; };
 
@@ -796,14 +796,14 @@ namespace backend {
 
 					let ctorB = B::(int x, int y, int z) {
 						ctorA(this, x, y + z);
-						this->z = z; 
+						this->z = z;
 					};
-					
+
 					int main() {
-						
+
 						// call constructor
 						ref<B> b = ctorB(ref.var(undefined(lit(B))), 1, 2, 3);
-						
+
 						return 0;
 					}
 				)"
@@ -819,9 +819,9 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2, 3);");
+		EXPECT_PRED2(containsSubString, code, "B b((1), (2), (3));");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y(y) {");
-		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t var_4) : A(x, y + var_4), z(var_4) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t x, int32_t y, int32_t z) : A(x, y + z), z(z) {");
 
 		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
@@ -839,7 +839,7 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					
+
 					let A = struct { int x; int y; };
 
 					let ctorA = A::(int x, int y) {
@@ -848,10 +848,10 @@ namespace backend {
 					};
 
 					int main() {
-						
+
 						// call constructor
 						ref<A> b = ctorA(ref.var(undefined(lit(A))), 1, 2);
-						
+
 						return 0;
 					}
 				)"
@@ -867,7 +867,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A var_1(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "A b((1), (2));");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t x, int32_t y) : x(x), y((*this).x + y) {");
 
 		// check whether code is compiling
@@ -889,7 +889,7 @@ namespace backend {
 					let int = int<4>;
 
 					int main() {
-						
+
 						try {
 
 							throw 4;
@@ -915,7 +915,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -950,7 +950,7 @@ namespace backend {
 					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
 
 					int main() {
-						
+
 						init(a, 5);
 
 						return 0;
@@ -964,7 +964,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -994,7 +994,7 @@ namespace backend {
 					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
 
 					int main() {
-						
+
 						init(a, ()=> 1);
 						init(a, ()=> 2);
 
@@ -1009,7 +1009,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -1039,7 +1039,7 @@ namespace backend {
 					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
 
 					int main() {
-						
+
 						init(a, ()=> 2);
 
 						return 0;
@@ -1053,7 +1053,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);
@@ -1085,7 +1085,7 @@ namespace backend {
 					let ctorA = A::() { };
 
 					int main() {
-						
+
 						init(a, ()=> *ctorA(var(undefined(lit(A)))));
 
 						return 0;
@@ -1099,7 +1099,7 @@ namespace backend {
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
 
-		std::cout << *targetCode;
+		//std::cout << *targetCode;
 
 		// check generated code
 		auto code = toString(*targetCode);

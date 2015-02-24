@@ -13,7 +13,7 @@ public:
 class B : public A {
 public:
 	B() {
-		fp = fopen("test.f", "wb");
+		fp = fopen("test.out", "wb");
 	}
 	~B() {
 		fclose(fp);

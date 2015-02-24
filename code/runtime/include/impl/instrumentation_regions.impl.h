@@ -38,17 +38,20 @@
 #ifndef __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
 #define __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
 
+#include "instrumentation_regions.h"
+
+#include <string.h>
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
 #ifndef _GEMS_SIM
 	#include <sys/stat.h>
 #endif
 #include <errno.h>
+
 #include "utils/timing.h"
 #include "abstraction/measurements.h"
 #include "abstraction/impl/measurements.impl.h"
 #include "utils/memory.h"
-#include "instrumentation_regions.h"
 #include "impl/error_handling.impl.h"
 #include "instrumentation_regions_includes.h"
 

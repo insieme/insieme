@@ -116,6 +116,62 @@ ExpressionAddress tryRemoveDeref(const ExpressionAddress& expr) {
 	return expr;
 }
 
+/*
+ * Checks if the variable addressed in var is the same as the one declared in decl. Save to be used in programs with multiple scopes as long as var and decl
+ * refer to the same base address
+ */
+bool sameAsDecl(const ExpressionAddress var, const ExpressionAddress decl) {
+	if(*var != *decl)
+		return false;
+
+	ExpressionAddress varDecl = getDeclaration(var);
+
+	if(varDecl == decl)
+		return true;
+
+	return false;
+}
+
+core::ExpressionAddress getDeclaration(const NodeAddress scope, const ExpressionAddress var) {
+	// if the variable is a literal, its a global variable and should therefore be the root
+	if(LiteralAddress lit = var.isa<LiteralAddress>()) {
+		if(lit.getType().isa<RefTypeAddress>()) { // check if literal was a global variable in the input code
+			return var;
+		}
+	}
+
+	vector<NodeAddress> childAddresses = scope.getChildAddresses();
+	for(auto I = childAddresses.rbegin(); I != childAddresses.rend(); ++I) {
+		NodeAddress child = *I;
+
+		// look for declaration in parameter lists
+		if(LambdaAddress lambda = child.isa<LambdaAddress>()) {
+			for(ExpressionAddress param : lambda->getParameters()) {
+				if(*param == *var)
+					return param;
+			}
+		}
+
+		// look for declaration in siblings of the scope
+		if(DeclarationStmtAddress decl = child.isa<DeclarationStmtAddress>()) {
+			if(*(decl->getVariable()) == *var)
+				return decl->getVariable();
+		}
+	}
+
+	//check if we already reached the top
+	if(scope.getDepth() <= 1)
+		return ExpressionAddress();
+
+	return getDeclaration(scope.getParentAddress(), var);
+}
+
+core::ExpressionAddress getDeclaration(const ExpressionAddress& var) {
+	if(!var)
+		return ExpressionAddress();
+	return getDeclaration(var.getParentAddress(), var);
+}
+
 NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
 
 //std::cout << "\nlooking for var " << *var << std::endl;
@@ -123,14 +179,14 @@ NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
 	if(LiteralAddress lit = var.isa<LiteralAddress>()) {
 		if(lit.getType().isa<RefTypeAddress>()) { // check if literal was a global variable in the input code
 //std::cout << "found literal " << *var << std::endl;
-		return var;
+			return var;
 		}
 	}
 
 	// search in declaration in siblings
 	NodeManager& mgr = var.getNodeManager();
 
-	pattern::TreePattern localOrGlobalVar = pirp::variable() | pirp::literal(pirp::refType(pattern::any), pattern::any);
+//	pattern::TreePattern localOrGlobalVar = pirp::variable() | pirp::literal(pirp::refType(pattern::any), pattern::any);
 	pattern::TreePattern valueCopy = pattern::var("val", pirp::variable()) |
 			pirp::callExpr(mgr.getLangBasic().getRefDeref(), pattern::var("val", pirp::variable())) |
 			pirp::callExpr(mgr.getLangBasic().getRefNew(), pattern::var("val", pirp::variable())) |
@@ -194,11 +250,12 @@ NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
 	return getRootVariable(scope.getParentAddress(), var);
 }
 
-ExpressionPtr removeRefVar(ExpressionPtr refVar) {
+ExpressionAddress removeRefVar(ExpressionAddress refVar) {
 //	std::cout << "remvoing var from " << refVar << std::endl;
+
 	if(core::analysis::isCallOf(refVar, refVar->getNodeManager().getLangBasic().getRefVar())) {
 //		dumpPretty(refVar.as<CallExprPtr>()[0]);
-		return refVar.as<CallExprPtr>()[0];
+		return refVar.as<CallExprAddress>()[0];
 	}
 
 	return refVar;
@@ -313,9 +370,17 @@ ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr
 		return refAccess(builder.deref(thing), index, field, vecIndex);
 	}
 
+	if(thing->getType().isa<StructTypePtr>()) {
+		if(!field)
+			return thing;
+
+		return refAccess(builder.accessMember(thing, field), index, field, vecIndex);
+	}
+
 	return thing;
 
 }
+
 
 pattern::TreePattern declOrAssignment(pattern::TreePattern lhs, pattern::TreePattern rhs) {
 	pattern::TreePattern assign = pattern::var("assignment", pirp::assignment(lhs, rhs));
@@ -408,6 +473,26 @@ ExpressionAddress removeMemLocationCreators(const ExpressionAddress& expr) {
 
 	return expr;
 }
+
+
+bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
+	TypePtr type = expr->getType();
+
+	if(!type.isa<RefTypePtr>())
+		return false;
+
+	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
+
+	if(containsStructType.match(type))
+		return true;
+
+	return false;
+}
+
+pattern::TreePattern addOptionalDeref(const pattern::TreePattern& mayToBeDerefed) {
+	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
+}
+
 
 } // datalayout
 } // transform

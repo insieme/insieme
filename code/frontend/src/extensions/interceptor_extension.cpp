@@ -58,7 +58,7 @@ namespace extensions {
 		}
 
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
-			
+
 			const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl());
 			std::string name;
 
@@ -70,7 +70,7 @@ namespace extensions {
 			}
 
 			if(funcDecl) {
-				if(name.empty()) name = funcDecl->getQualifiedNameAsString();				
+				if(name.empty()) name = funcDecl->getQualifiedNameAsString();
 				if(getInterceptor().isIntercepted(name)) {
 					VLOG(2) << "interceptorplugin\n";
 					//returns a callable expression
@@ -206,6 +206,73 @@ namespace extensions {
 		}
 		return nullptr;
 	}
+
+
+    /**
+     * This post visitor is needed to check if we have a ctor that contains a default argument
+     * that accesses or uses private structs or elements. We have to remove this default arguments
+     * otherwise our backend code will contain a call to a private element -> compiler error
+     * Example:
+     *  class A { private: struct X{}; public: A(X x=X()) {} };
+     *  int main() { A a; }
+     */
+    core::ExpressionPtr InterceptorPlugin::PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact){
+
+        if(const clang::CXXConstructExpr* call = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
+            //only do this for intercepted types and only if we have an IR ctor call
+            if(!interceptor.isIntercepted(call->getConstructor()))
+                return irExpr;
+            if(!core::analysis::isConstructorCall(irExpr))
+                return irExpr;
+            //check for default arguments
+            unsigned defaultArgs=0;
+            for(unsigned i=0; i<call->getNumArgs(); ++i) {
+                //count the number of default args. they have to be at the end...
+                if(llvm::dyn_cast<clang::CXXDefaultArgExpr>(call->getArg(i)->IgnoreImplicit())) {
+                    defaultArgs++;
+                }
+            }
+            //if no default args -> early exit
+            if(!defaultArgs)
+                return irExpr;
+            //else create a new call
+            //first check if the ir call is a call expression
+            assert(irExpr.isa<core::CallExprPtr>() && "the constructor call has to be a call expression.");
+            core::CallExprPtr callExpr = irExpr.as<core::CallExprPtr>();
+            //no literal means not intercepted. return.
+            if(!callExpr->getFunctionExpr().isa<core::LiteralPtr>())
+                return irExpr;
+            //create new argument list
+            core::ExpressionList newArgs;
+            core::TypeList argTypes;
+            for(unsigned i=0; i<callExpr->getArguments().size()-defaultArgs; ++i) {
+                //migrate the annotations and store the node in the list
+                core::ExpressionPtr newA = callExpr->getArgument(i);
+                core::TypePtr newT = callExpr->getArgument(i)->getType();
+                core::transform::utils::migrateAnnotations(callExpr->getArgument(i), newA);
+                core::transform::utils::migrateAnnotations(callExpr->getArgument(i)->getType(), newT);
+                newArgs.push_back(newA);
+                argTypes.push_back(newT);
+            }
+            //extract old function type and return type
+            core::FunctionTypePtr funType = callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
+            core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr()->getType(), funType);
+            core::TypePtr retType = funType->getReturnType();
+            core::transform::utils::migrateAnnotations(funType->getReturnType(), retType);
+            //create new function expression
+            core::LiteralPtr literal = callExpr->getFunctionExpr().as<core::LiteralPtr>();
+            core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr(), literal);
+            core::ExpressionPtr newFunExpr = convFact.getIRBuilder().literal(literal->getStringValue(),
+                            convFact.getIRBuilder().functionType(argTypes, retType, core::FK_CONSTRUCTOR));
+            core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr(), newFunExpr);
+
+            auto ir = convFact.getIRBuilder().callExpr(retType, newFunExpr, newArgs);
+            core::transform::utils::migrateAnnotations(irExpr, ir);
+            return ir;
+        }
+        return irExpr;
+    }
+
 } // extensions
 } // frontend
 } // insieme

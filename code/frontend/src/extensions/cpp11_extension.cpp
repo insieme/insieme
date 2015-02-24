@@ -61,7 +61,6 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/encoder/lists.h"
 
-
 using namespace insieme::frontend;
 
 namespace insieme {
@@ -70,6 +69,15 @@ namespace extensions {
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 expressions
+
+/**
+ *			Cxx11 default init expression
+ */
+insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr,
+												insieme::frontend::conversion::Converter& convFact) {
+    return convFact.convertExpr(initExpr->getExpr());
+}
+
 
 /**
  *			Cxx11 null pointer
@@ -116,9 +124,9 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 }
 
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//		SizeOfPack expr
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/**
+ *  			Cxx11 size of pack expression
+ */
 insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact) {
 	//sizeOf... returns size_t --> use unsigned int
 	core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
@@ -126,6 +134,9 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeO
 }
 
 
+/**
+ *  			Cxx11 init list expression
+ */
 insieme::core::ExpressionPtr Cpp11Plugin::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact) {
     //get the sub expression of the std init list expression
     auto expr = initList->getSubExpr();
@@ -209,11 +220,44 @@ core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* de
 				unsigned id(0);
 				for (;cap_it != cap_end; ++cap_it){
 					auto var = convFact.lookUpVariable(cap_it->getCapturedVar());
+                    if(llvm::dyn_cast<clang::ParmVarDecl>(cap_it->getCapturedVar())) {
+                        var = convFact.lookUpVariableInWrapRefMap(var);
+                        if(core::analysis::isCppRef(var->getType()))
+                            var = core::analysis::unwrapCppRef(var);
+                    }
+
+
 
 					core::StringValuePtr ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(id));
-					core::ExpressionPtr access =  builder.callExpr (var->getType(),
-															builder.getLangBasic().getCompositeRefElem(), thisExpr,
-															builder.getIdentifierLiteral(ident), builder.getTypeLiteral(var->getType()));
+					core::ExpressionPtr access;
+					//now we have to create the access to the lambda struct
+					//if thisExpr is not a struct type use the fallback method
+					//otherwise call the builder accessMember method to create the call
+					auto typeCheck = [](const core::TypePtr ty)->bool {
+					    if(ty.isa<core::RefTypePtr>())
+                            if(core::analysis::getReferencedType(ty).isa<core::NamedCompositeTypePtr>())
+                                return true;
+                        if(ty.isa<core::NamedCompositeTypePtr>())
+                            return true;
+                        return false;
+					};
+					if(!typeCheck(thisExpr->getType())) {
+                        access =  builder.callExpr (var->getType(),
+                                                    builder.getLangBasic().getCompositeRefElem(), thisExpr,
+                                                    builder.getIdentifierLiteral(ident),
+                                                    builder.getTypeLiteral(var->getType()));
+
+					} else {
+                        access = builder.accessMember(thisExpr, ident);
+					}
+					//check if we have a cpp ref or a ref<cpp ref> internally
+					//if true we have to replace the uses of the old
+					//variable (e.g., *v1) with (e.g., *RefCppToIR(*v_new))
+                    if(core::analysis::isCppRef(access->getType()) ||
+                        (core::analysis::isRefType(access->getType()) &&
+                         core::analysis::isCppRef(core::analysis::getReferencedType(access->getType())))) {
+                        access = core::analysis::unwrapCppRef(access);
+                    }
 					replacements[var] = access;
 					id++;
 				}

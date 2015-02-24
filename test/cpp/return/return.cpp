@@ -1,3 +1,4 @@
+#include <iostream>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 int value(){
@@ -18,6 +19,20 @@ const int& constRef(){
 int* pointer(){
 	int a =1;
 	return &a;
+}
+
+int recursive(int a) {
+    std::cout << "recursive call: " << a << std::endl;
+    if(a>0)
+        return recursive(a-1);
+    return a;
+}
+
+void recursive_void(int a) {
+    std::cout << "recursive call void: " << a << std::endl;
+    if(a>0)
+        return recursive_void(a-1);
+    return;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -121,5 +136,15 @@ int main(){
 		o.value3();
 		o.constRef3();
 	}
+
+//recursive
+    {
+        recursive(3);
+    }
+
+//recursive void
+    {
+        recursive_void(3);
+    }
 	return 0;
 }

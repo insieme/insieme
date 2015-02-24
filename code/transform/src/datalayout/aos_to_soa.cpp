@@ -67,23 +67,28 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder)
 void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
-	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists = createCandidateLists();
+	const NodeAddress toTransAddr(toTransform);
+	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
 
-	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
-		ExpressionMap varReplacements;
+		ExprAddressMap varReplacements;
 		ExpressionMap nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
-		for(ExpressionPtr oldVar : toReplaceList.first) {
+		for(ExpressionAddress oldVar : toReplaceList.first) {
+			// update root for in case it has been modified in a previous iteration
+			oldVar = oldVar.switchRoot(toTransform);
+
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second, newStructType).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -95,12 +100,11 @@ void AosToSoa::transform() {
 		}
 
 		VariableAdder varAdd(mgr, varReplacements);
-		toTransform = varAdd.mapElement(0, toTransform);
 
 //for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements)
 //	std::cout << "from " << rep.first << "  to  " << rep.second << std::endl;
 
-		NodeAddress tta(toTransform);
+		NodeAddress tta = varAdd.addVariablesToLambdas(toTransform);
 
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
@@ -126,7 +130,7 @@ void AosToSoa::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		ExpressionMap structures;
+		ExpressionMap structures; // TODO remove
 		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
 
 		//replace array accesses
@@ -134,7 +138,7 @@ void AosToSoa::transform() {
 
 		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
-		doReplacements(replacements, structures, aosToSoaAllocTypeUpdate);
+		doReplacements(replacements, aosToSoaAllocTypeUpdate);
 
 //		replacements.clear();
 //		tta = NodeAddress(toTransform);
@@ -161,7 +165,7 @@ StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
@@ -200,7 +204,7 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 }
 
 
-StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
+StatementList AosToSoa::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
 		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
@@ -218,7 +222,7 @@ StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements,
 	return allAssigns;
 }
 
-StatementPtr AosToSoa::generateMarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToSoa::generateMarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -235,7 +239,7 @@ StatementPtr AosToSoa::generateMarshalling(const ExpressionPtr& oldVar, const Ex
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.literal(start->getType(), "1"), builder.compoundStmt(loopBody));
 }
 
-StatementPtr AosToSoa::generateUnmarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToSoa::generateUnmarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -281,7 +285,7 @@ ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, con
 }
 
 
-StatementList AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
+StatementList AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionAddress& oldVar, const ExpressionPtr& newVar,
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
@@ -298,6 +302,7 @@ StatementList AosToSoa::generateDel(const StatementAddress& stmt, const Expressi
 	}
 
 	return deletes;
+
 }
 
 

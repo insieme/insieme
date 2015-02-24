@@ -250,6 +250,29 @@ TEST(ContainerUtils, transform) {
 	// changed member type
 	auto result4 = transform(listA, [](const int val){ return 'A' + (char)(val) - 1; }); 
 	EXPECT_TRUE(equals(listC, result4));
+
+	// changed container type (list -> vector)
+	auto result5 = transform<vector>(listA, [](const int val){ return val; });
+	static_assert(std::is_same<decltype(result5), vector<int>>::value, "Unexpected type from transform list -> vector");
+	EXPECT_TRUE(equals(listA, result5));
+
+	// changed container type (list -> map)
+	auto result6 = transform<std::map>(listA, [](const int val){ return std::make_pair(val, val); });
+	std::map<int,int> refMapA { {1, 1}, {2, 2}, {3, 3} };
+	static_assert(std::is_same<decltype(result6)::key_type, decltype(refMapA)::key_type>::value, "Unexpected key type from transform list -> map");
+	static_assert(std::is_same<decltype(result6)::mapped_type, decltype(refMapA)::mapped_type>::value, "Unexpected value type from transform list -> map");
+	EXPECT_TRUE(equals(refMapA, result6));
+
+	// changed container type (map -> vector)
+	auto result7 = transform<std::vector>(refMapA, [](const pair<int,int> val){ return val.first; });
+	static_assert(std::is_same<decltype(result7), vector<int>>::value, "Unexpected type from transform map -> vector");
+	EXPECT_TRUE(equals(listA, result7));
+
+	// maps
+	std::map<string,int> mapA { {"one", 1}, {"two", 2}, {"Jorg", 42} };
+	std::map<int,string> mapB { {1, "one"}, {2, "two"}, {42, "Jorg"} };
+	auto mapResult = transform(mapA, [](const pair<string,int>& p) { return std::make_pair(p.second, p.first); });
+	EXPECT_TRUE(equals(mapB, mapResult));
 }
 
 TEST(Tuple, RemoveHead) {

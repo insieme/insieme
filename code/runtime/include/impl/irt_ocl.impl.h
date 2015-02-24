@@ -37,6 +37,7 @@
 #pragma once
 #ifndef __GUARD_IMPL_IRT_OCL_IMPL_H
 #define __GUARD_IMPL_IRT_OCL_IMPL_H
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32

@@ -411,8 +411,11 @@ namespace backend {
 
 		// 3) test whether target is generic => instantiate
 		if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
-            // normalize the function
-            fun = core::analysis::normalize(fun);
+
+			// normalize the function
+			// TODO/FIXME: if this is done at the start (outside this branch), which it should be, one unit test (be_multi_version) breaks.
+			// assumption: multiple functions with the exact same body will not be added multiple times to the backend output code.
+			fun = core::analysis::normalize(fun);
 
 			auto& manager = call->getNodeManager();
 

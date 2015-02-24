@@ -104,6 +104,9 @@ DEFINE_TYPE(Objective);
 DEFINE_TYPE(Region);
 DEFINE_TYPE(SharedOMPP);
 
+// OMPA extension
+DEFINE_TYPE(Approximate);
+
 /**
  * It implements the annotation node which is attached to the insieme IR for OpenMP directives
  *
@@ -283,6 +286,29 @@ public:
 
 private:
 	Kind mode;
+};
+
+
+class Approximate {
+public:
+	Approximate(const core::ExpressionPtr& target, const core::ExpressionPtr& replacement) :
+		available(true), approxTarget(target), approxReplacement(replacement) { }
+
+	Approximate(const ApproximatePtr& ptr) {
+		if(ptr) {
+			*this = *ptr;
+		} else {
+			available = false;
+		}
+	}
+
+	bool hasApproximate() { return available; }
+	core::ExpressionPtr getApproximateTarget() { return approxTarget; }
+	core::ExpressionPtr getApproximateReplacement() { return approxReplacement; }
+
+private:
+	bool available;
+	core::ExpressionPtr approxTarget, approxReplacement;
 };
 
 /**
@@ -991,7 +1017,7 @@ public:
 /**
  * OpenMP 'task' clause
  */
-class Task: public DatasharingClause, public Annotation, public SharedParallelAndTaskClause {
+class Task: public DatasharingClause, public Annotation, public SharedParallelAndTaskClause, public Approximate {
 	bool 	untied;
 	Reduction dummy;
 public:
@@ -1005,10 +1031,12 @@ public:
 		const VarListPtr& firstLocalClause,
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause,
-        const ParamPtr& paramClause) :
+        const ParamPtr& paramClause,
+		const ApproximatePtr& approximateClause) :
             SharedOMPP(targetClause, objectiveClause, paramClause),
 			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, targetClause, objectiveClause, paramClause),
+			Approximate(approximateClause),
 			untied(untied), dummy(Reduction::PLUS, VarListPtr()) { }
 
 	bool hasUntied() const { return untied; }

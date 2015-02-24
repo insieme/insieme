@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/transform/datalayout/aos_to_soa.h"
+#include "insieme/transform/datalayout/datalayout_transform.h"
 
 namespace insieme {
 namespace transform {
@@ -53,9 +53,17 @@ core::ExpressionPtr getBaseExpression(core::ExpressionPtr expr);
  */
 core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
 
+/*
+ * Checks if the variable addressed in var is the same as the one declared in decl. Save to be used in programs with multiple scopes as long as var and decl
+ * refer to the same base address
+ */
+bool sameAsDecl(const core::ExpressionAddress var, const core::ExpressionAddress decl);
+
+core::ExpressionAddress getDeclaration(const core::ExpressionAddress& var);
+
 core::NodeAddress getRootVariable(const core::NodeAddress scope, core::NodeAddress var);
 
-core::ExpressionPtr removeRefVar(core::ExpressionPtr refVar);
+core::ExpressionAddress removeRefVar(core::ExpressionAddress refVar);
 
 core::TypePtr removeRef(core::TypePtr refTy);
 
@@ -81,6 +89,17 @@ core::StatementPtr allocTypeUpdate(const core::StatementPtr& stmt, core::pattern
 		core::pattern::TreePattern& newStructTypePattern);
 
 core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress& expr);
+
+/*
+ * Returns true if the type of expr contains structType
+ */
+bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
+
+/*
+ * creates a pattern that matches mayToBeDerefed as well as ref.deref(mayToBeDerefed)
+ */
+core::pattern::TreePattern addOptionalDeref(const core::pattern::TreePattern& mayToBeDerefed);
+
 } // datalayout
 } // transform
 } // insieme

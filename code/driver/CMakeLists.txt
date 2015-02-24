@@ -4,6 +4,7 @@
 project(insieme_driver CXX)
 
 include(../environment.cmake)
+include(../environment_common.cmake)
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
@@ -42,6 +43,8 @@ set( insieme_libraries
 	insieme_machine_learning
 )
 
+add_custom_target(drivers)
+
 # build executables
 add_definitions( -fopenmp )
 file(GLOB_RECURSE executables src/*.cxx)
@@ -52,10 +55,12 @@ foreach ( exec_file ${executables})
 	# Build dummy executable
 	add_executable( ${exec_name} ${exec_file} ${insieme_driver_incs} ${insieme_driver_defs})
 	add_dependencies( ${exec_name} ${insieme_libraries})
+	add_dependencies(drivers ${exec_name})
 
 	target_link_libraries( ${exec_name} ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${shark_LIB} ${kompex_LIB} gomp dl)
 
 endforeach(exec_file)
+
 
 # add unit test cases
 set ( ut_prefix  ut_driver_ )

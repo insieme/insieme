@@ -346,14 +346,14 @@ namespace backend {
 								info->definition->addDependency(curInfo->definition);
 							}
 						}
-                        
-                        // if we have a function type as template argument, we need to
-                        // avoid that the asterisk is written -> directly take the element type.
-                        if(curInfo->rValueType.isa<c_ast::PointerTypePtr>() && cur.isa<core::FunctionTypePtr>()) {
-                            cType->parameters.push_back(curInfo->rValueType.as<c_ast::PointerTypePtr>()->elementType);
-                        } else {
-                            cType->parameters.push_back(curInfo->rValueType);
-                        }
+
+						// if we have a function type as template argument, we need to
+						// avoid that the asterisk is written -> directly take the element type.
+						if(curInfo->rValueType.isa<c_ast::PointerTypePtr>() && cur.isa<core::FunctionTypePtr>()) {
+							cType->parameters.push_back(curInfo->rValueType.as<c_ast::PointerTypePtr>()->elementType);
+						} else {
+							cType->parameters.push_back(curInfo->rValueType);
+						}
 					}
 				}
 
@@ -802,7 +802,6 @@ namespace backend {
 			addInfo(ptr, res);
 
 			auto& nameMgr = converter.getNameManager();
-//			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
 			core::ClassMetaInfo info = core::getMetaInfo(ptr);
 			auto& funMgr = converter.getFunctionManager();
 
@@ -825,7 +824,7 @@ namespace backend {
 				// fix name of all member functions before converting them
 				auto impl = cur.getImplementation();
 				if (!core::analysis::isPureVirtual(impl)) {
-					nameMgr.setName(impl, cur.getName());
+					nameMgr.setName(core::analysis::normalize(impl), cur.getName());
 				}
 			}
 			for(const core::MemberFunction& cur : info.getMemberFunctions()) {

@@ -59,6 +59,7 @@
 
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
 
 #include "insieme/annotations/omp/omp_annotations.h"
 #include "insieme/annotations/meta_info/meta_infos.h"
@@ -330,12 +331,14 @@ protected:
 					// Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
 				} else if(funName == "omp_get_wtime") {
 					return build.callExpr(build.literal("irt_get_wtime", build.functionType(TypeList(), basic.getDouble())));
-				}
+ 				} else if(funName == "omp_set_num_threads") {
+					auto newCall = build.callExpr(build.literal("irt_set_default_parallel_wi_count", fun->getType()), callExp->getArgument(0));
+ 					return newCall;
+ 				}
 				// OMP Locks --------------------------------------------
 				else if(funName == "omp_init_lock") {
 					ExpressionPtr arg = callExp->getArgument(0);
 					if(analysis::isCallOf(arg, basic.getScalarToArray())) arg = analysis::getArgument(arg, 0);
-					std::cout << "build lock " <<  arg << ":" << arg->getType()<< std::endl;
 					return build.initLock(arg);
 				} else if(funName == "omp_set_lock") {
 					ExpressionPtr arg = callExp->getArgument(0);
@@ -356,16 +359,10 @@ protected:
 		return newNode;
 	}
 
-	bool isLockStructType( TypePtr type) {
-		if (type.isa<core::GenericTypePtr>() && type.as<core::GenericTypePtr>()->getName()->getValue() =="omp_lock_t"){
-			return true;
-		}
-
-		if (type.isa<core::GenericTypePtr>() && type.as<core::GenericTypePtr>()->getName()->getValue() == "_omp_lock_t"){
-			    return true;
-		}
-
-		return false;
+	bool isLockStructType(TypePtr type) {
+		return type.isa<core::GenericTypePtr>() &&
+			(type.as<core::GenericTypePtr>()->getName()->getValue() =="omp_lock_t" 
+			 || type.as<core::GenericTypePtr>()->getName()->getValue() == "_omp_lock_t");
 	}
 
 	// implements OpenMP built-in types by replacing them with the correct IR constructs
@@ -374,7 +371,7 @@ protected:
 
 			if (RefTypePtr  ref = type.isa<core::RefTypePtr>() )
 				if (isLockStructType(ref->getElementType()))
-					return build.refType(basic.getLock());
+					return build.refType(basic.getLock()); 
 
 			if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) type = arr->getElementType();
 			if (isLockStructType(type)) {
@@ -948,7 +945,19 @@ protected:
 		auto paramNode = implementParamClause(newStmtNode, par);
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
-		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+		JobExprPtr jobExp;
+
+		// implement multiversioning for approximate clause
+		if(par->hasApproximate()) {
+			auto target = par->getApproximateTarget();
+			auto replacement = par->getApproximateReplacement();
+			auto approxLambda = core::transform::replaceAllGen(nodeMan, parLambda, target, replacement, false);
+			auto pick = build.pickVariant(ExpressionList{parLambda, approxLambda});
+			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), pick);
+		} else {
+			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+		}
 
         if(par->hasObjective()) {
             implementObjectiveClause(jobExp, par->getObjective());
@@ -1188,15 +1197,17 @@ namespace {
 
 
 tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
-
-	tu::IRTranslationUnit res(mgr);
-
 	// everything has to run through the OMP sema mapper
 	OMPSemaMapper semaMapper(mgr);
 
+	// resulting tu
+	tu::IRTranslationUnit res(mgr);
+
 	// process the contained types ...
 	for(auto& cur : unit.getTypes()) {
-		res.addType(cur.first, semaMapper.map(cur.second));
+		auto mapped = semaMapper.map(cur.second);
+		res.addType(cur.first, mapped);
+		res.addMetaInfo(cur.first, unit.getMetaInfo(cur.first));
 	}
 
 	// ... the functions ...
@@ -1209,7 +1220,7 @@ tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeMan
 		// save result
 		res.addFunction(semaMapper.map(cur.first), newImpl);
 	}
-
+	
 	// ... the globals ...
 	IRBuilder builder(mgr);
 	for(auto& cur : unit.getGlobals()) {
