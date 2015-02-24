@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/iwir/constraint_annotation.h"
+#include "insieme/iwir/annotations/constraint_annotation.h"
 
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/encoder.h"

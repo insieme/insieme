@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/iwir/property_annotation.h"
+#include "insieme/iwir/annotations/property_annotation.h"
 
 #include "insieme/core/ir_node_annotation.h"
 #include "insieme/core/dump/annotations.h"

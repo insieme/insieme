@@ -57,8 +57,6 @@ using namespace insieme::utils::log;
 using namespace insieme::xml;
 using namespace std;
 
-XERCES_CPP_NAMESPACE_USE
-
 class IWIRBuilder {
 	public:
 	//map from taskName to Task node
@@ -970,14 +968,14 @@ class IWIRBuilder {
 		VLOG(2) << xml.convertDomToString();
 
 		//DOM -> IWIR AST
-		XmlElement iwirDom(xml.doc->getDocumentElement(), xml.doc);
+		XmlElement iwirDom(xml);
 
 		//TODO check for toplevel node ? <IWIR ... wfname = ...>
 		this->wfName = iwirDom.getAttr("wfname");
 		VLOG(2) << "wfName:" << this->wfName << std::endl;
 
 		Context ctx;
-		auto children= iwirDom.getChildren();	
+		auto children = iwirDom.getChildren();	
 
 		//only one child -> the toplevel task
 		for(XmlElement c : children) {

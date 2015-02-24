@@ -38,8 +38,8 @@
 #include "insieme/iwir/iwir_linkcollector.h"
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/iwir/property_annotation.h"
-#include "insieme/iwir/constraint_annotation.h"
+#include "insieme/iwir/annotations/property_annotation.h"
+#include "insieme/iwir/annotations/constraint_annotation.h"
 
 namespace insieme {
 namespace iwir {

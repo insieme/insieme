@@ -97,6 +97,7 @@ public:
 	XmlElement(xercesc_3_1::DOMElement* elem);
 	XmlElement(const std::string& name, xercesc_3_1::DOMDocument* doc);
 	XmlElement(xercesc_3_1::DOMElement* base, xercesc_3_1::DOMDocument* doc);
+	XmlElement(const XmlUtil& dom);
 	
 	xercesc_3_1::DOMElement* getBase() const;
 	xercesc_3_1::DOMDocument* getDoc() const;

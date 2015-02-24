@@ -102,6 +102,7 @@ const uint16_t* XStr::unicodeForm() { return fUnicodeForm; }
 XmlElement::XmlElement(DOMElement* elem) : doc(NULL), base(elem) { }
 XmlElement::XmlElement(const string& name, DOMDocument* doc): doc(doc), base(doc->createElement(toUnicode(name))) { }
 XmlElement::XmlElement(DOMElement* elem, DOMDocument* doc) : doc(doc), base(elem) { }
+XmlElement::XmlElement(const XmlUtil& dom) : doc(dom.doc), base(dom.doc->getDocumentElement()) {}
 
 DOMElement* XmlElement::getBase() const {
 	return base;
