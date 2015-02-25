@@ -4,7 +4,7 @@
 project(insieme_xml CXX)
 
 # -------------------------------------------------------------- Xerces library
-option (USE_XML "Build XML support in Insieme" ON) 
+option (USE_XML "Build XML support in Insieme" OFF) 
 
 include(../environment.cmake)
 
