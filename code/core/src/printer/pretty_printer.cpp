@@ -1243,7 +1243,7 @@ namespace {
 
 			ADD_FORMATTER(ext.empty, { OUT("[]"); });
 			ADD_FORMATTER(ext.cons, {
-					const is_encoding_of_type is_encoding_of;
+					const is_encoding_of_type is_encoding_of{};
 					// check whether syntactic sugar is supported
 					if (is_encoding_of(call)) {
 						vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
