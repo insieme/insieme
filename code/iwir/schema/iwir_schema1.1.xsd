@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://shiwa-workflow.eu/IWIR" xmlns:iw="http://shiwa-workflow.eu/IWIR" targetNamespace="http://shiwa-workflow.eu/IWIR" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<!--xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"  elementFormDefault="qualified" attributeFormDefault="unqualified"-->
+	<xs:element name="IWIR">
+		<xs:complexType>
+			<xs:group ref="taskGroup"/>
+			<xs:attribute name="version" use="required">
+				<!-- should be 1.1 -->
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="1.1"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="wfname" type="xs:string" use="required"/>
+		</xs:complexType>
+	</xs:element>
+	<!-- tasks -->
+	<!--tasks:atomic:subworkflow-->
+	<xs:complexType name="taskType">
+		<xs:sequence>
+			<xs:element name="inputPorts"/>
+				<xs:sequence>
+					<xs:sequence>
+						<xs:element name="inputPort" type="portType" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:sequence>
+					<xs:element name="loopPorts" type="loopPortsType" minOccurs="0"/>
+					<xs:choice>
+						<xs:element name="loopCounter" type="loopCounterType" minOccurs="0"/>
+						<xs:element name="loopElements" type="loopElementType"/>
+					</xs:choice>
+				</xs:sequence>
+			<xs:element name="outputPorts"/>
+				<xs:sequence>
+					<xs:element name="outputPort" type="portType" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="unionPorts" type="unionPortsType" minOccurs="0"/>
+				</xs:sequence>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+		<xs:attribute name="tasktype" type="xs:string" use="required"/>
+	</xs:complexType>
+	<!--tasks:block-->
+	<xs:complexType name="blockScopeType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="simpleInputPortsType"/>
+			<xs:element name="body" type="bodyType"/>
+			<xs:element name="outputPorts" type="simpleOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--tasks:ifTask-->
+	<xs:complexType name="ifTaskType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="simpleInputPortsType"/>
+			<xs:element name="condition" type="conditionType"/>
+			<xs:element name="then" type="bodyType"/>
+			<xs:element name="else" type="bodyType" minOccurs="0"/>
+			<xs:element name="outputPorts" type="simpleOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--tasks:whileTask-->
+	<xs:complexType name="whileTaskType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="compInputPortsType"/>
+			<xs:element name="condition" type="conditionType"/>
+			<xs:element name="body" type="bodyType"/>
+			<xs:element name="outputPorts" type="compOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--condition-->
+	<xs:simpleType name="conditionType">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<!--tasks:for-->
+	<xs:complexType name="forTaskType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="compInputPortsTypeA"/>
+			<xs:element name="body" type="bodyType"/>
+			<xs:element name="outputPorts" type="compOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--tasks:forEach-->
+	<xs:complexType name="forEachTaskType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="compInputPortsTypeB"/>
+			<xs:element name="body" type="bodyType"/>
+			<xs:element name="outputPorts" type="compOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--tasks:parallelForEach-->
+	<xs:complexType name="parallelForTaskType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="parInputPortsTypeA"/>
+			<xs:element name="body" type="bodyType"/>
+			<xs:element name="outputPorts" type="simpleCollOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--tasks:parallelForEach-->
+	<xs:complexType name="parallelForEachTaskType">
+		<xs:sequence>
+			<xs:element name="inputPorts" type="parInputPortsTypeB"/>
+			<xs:element name="body" type="bodyType"/>
+			<xs:element name="outputPorts" type="simpleCollOutputPortsType"/>
+			<xs:element name="links" type="linksType"/>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="taskID" use="required"/>
+	</xs:complexType>
+	<!--links-->
+	<xs:complexType name="linksType">
+		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="link">
+				<xs:complexType>
+					<xs:attribute name="from" type="linkID" use="required"/>
+					<xs:attribute name="to" type="linkID" use="required"/>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<!--body-->
+	<xs:complexType name="bodyType">
+		<xs:group ref="taskGroup" minOccurs="1" maxOccurs="unbounded"/>
+	</xs:complexType>
+	<!--taskGroup-->
+	<xs:group name="taskGroup">
+		<xs:choice>
+			<xs:element name="task" type="taskType">
+				<xs:unique name="portKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:outputPorts/iw:outputPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="blockScope" type="blockScopeType">
+				<xs:unique name="blockPortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:outputPorts/iw:outputPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="blockTaskKey">
+					<xs:selector xpath=". | ./iw:body/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="if" type="ifTaskType">
+				<xs:unique name="ifPortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:outputPorts/iw:outputPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="ifTaskKey">
+					<xs:selector xpath=". | ./iw:then/* | ./iw:else/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="while" type="whileTaskType">
+				<xs:unique name="whilePortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:inputPorts/iw:loopPorts/iw:loopPort | ./iw:outputPorts/iw:outputPort |  ./iw:outputPorts/iw:unionPorts/iw:unionPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="whileTaskKey">
+					<xs:selector xpath=". | ./iw:body/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="for" type="forTaskType">
+				<xs:unique name="forPortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:inputPorts/iw:loopPorts/iw:loopPort | ./iw:inputPorts/iw:loopCounter | ./iw:outputPorts/iw:outputPort |  ./iw:outputPorts/iw:unionPorts/iw:unionPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="forTaskKey">
+					<xs:selector xpath=". | ./iw:body/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="forEach" type="forEachTaskType">
+				<xs:unique name="forEachPortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:inputPorts/iw:loopPorts/iw:loopPort | ./iw:inputPorts/iw:loopElements/iw:loopElement | ./iw:outputPorts/iw:outputPort |  ./iw:outputPorts/iw:unionPorts/iw:unionPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="forEachTaskKey">
+					<xs:selector xpath=". | ./iw:body/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="parallelFor" type="parallelForTaskType">
+				<xs:unique name="parallelForPortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:inputPorts/iw:loopCounter | ./iw:outputPorts/iw:outputPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="parallelForTaskKey">
+					<xs:selector xpath=". | ./iw:body/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+			<xs:element name="parallelForEach" type="parallelForEachTaskType">
+				<xs:unique name="parallelForEachPortKey">
+					<xs:selector xpath="./iw:inputPorts/iw:inputPort | ./iw:inputPorts/iw:loopElements/iw:loopElement | ./iw:outputPorts/iw:outputPort"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+				<xs:unique name="parallelForEachTaskKey">
+					<xs:selector xpath=". | ./iw:body/*"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+		</xs:choice>
+	</xs:group>
+	<!-- ports -->
+	<xs:complexType name="portType">
+		<xs:sequence>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="portID" use="required"/>
+		<xs:attribute name="type" use="required">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:pattern value="(collection/)*(string|integer|double|file|boolean)"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="collPortType">
+		<xs:sequence>
+			<xs:group ref="propertiesGroup"/>
+			<xs:group ref="constraintsGroup"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="portID" use="required"/>
+		<xs:attribute name="type" use="required">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:pattern value="(collection/)+(string|integer|double|file|boolean)"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<!--ports:primitives-->
+	<xs:complexType name="simpleInputPortsType">
+		<xs:sequence>
+			<xs:element name="inputPort" type="portType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="simpleOutputPortsType">
+		<xs:sequence>
+			<xs:element name="outputPort" type="portType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="simpleCollOutputPortsType">
+		<xs:sequence>
+			<xs:element name="outputPort" type="collPortType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="loopPortsType">
+		<xs:sequence>
+			<xs:element name="loopPort" type="portType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="unionPortsType">
+		<xs:sequence>
+			<xs:element name="unionPort" type="collPortType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="counterAttType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="|[\-]?[0-9]+"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="loopCounterType">
+		<xs:attribute name="name" type="portID" use="required"/>
+		<xs:attribute name="from" type="counterAttType" use="required"/>
+		<xs:attribute name="to" type="counterAttType" use="required"/>
+		<xs:attribute name="step" type="counterAttType"/>
+	</xs:complexType>
+	<xs:complexType name="loopElementType">
+		<xs:sequence>
+			<xs:element name="loopElement" type="collPortType" minOccurs="1" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<!--ports:compound -->
+	<xs:complexType name="compInputPortsType">
+		<xs:complexContent>
+			<xs:extension base="simpleInputPortsType">
+				<xs:sequence>
+					<xs:element name="loopPorts" type="loopPortsType"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="compInputPortsTypeA">
+		<xs:complexContent>
+			<xs:extension base="compInputPortsType">
+				<xs:sequence>
+					<xs:element name="loopCounter" type="loopCounterType"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="compInputPortsTypeB">
+		<xs:complexContent>
+			<xs:extension base="compInputPortsType">
+				<xs:sequence>
+					<xs:element name="loopElements" type="loopElementType"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="parInputPortsTypeA">
+		<xs:complexContent>
+			<xs:extension base="simpleInputPortsType">
+				<xs:sequence>
+					<xs:element name="loopCounter" type="loopCounterType"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="parInputPortsTypeB">
+		<xs:complexContent>
+			<xs:extension base="simpleInputPortsType">
+				<xs:sequence>
+					<xs:element name="loopElements" type="loopElementType"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="compOutputPortsType">
+		<xs:complexContent>
+			<xs:extension base="simpleOutputPortsType">
+				<xs:sequence>
+					<xs:element name="unionPorts" type="unionPortsType" minOccurs="0"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<!-- properties and constraints -->
+	<!-- instance is unique in group; bypass with group -->
+	<xs:complexType name="propertyAndConstraintType">
+		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:attribute name="value" type="xs:string" use="required"/>
+	</xs:complexType>
+	<xs:group name="propertiesGroup">
+		<xs:sequence>
+			<xs:element name="properties" minOccurs="0">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="property" type="propertyAndConstraintType" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:complexType>
+				<xs:unique name="propKey">
+					<xs:selector xpath="property"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+		</xs:sequence>
+	</xs:group>
+	<xs:group name="constraintsGroup">
+		<xs:sequence>
+			<xs:element name="constraints" minOccurs="0">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="constraint" type="propertyAndConstraintType" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:complexType>
+				<xs:unique name="consKey">
+					<xs:selector xpath="constraint"/>
+					<xs:field xpath="@name"/>
+				</xs:unique>
+			</xs:element>
+		</xs:sequence>
+	</xs:group>
+	<!--regex-->
+	<xs:simpleType name="taskID">
+		<xs:restriction base="xs:string">
+			<!--<xs:pattern value="([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)"/>-->
+			<!--<xs:pattern value="([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*)"/>-->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="portID">
+		<xs:restriction base="xs:string">
+			<!--<xs:pattern value="([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)"/>-->
+			<!--<xs:pattern value="([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*)"/>-->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="linkID">
+		<xs:restriction base="xs:string">
+			<!--<xs:pattern value="([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)|([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*)"/>-->
+			<!--<xs:pattern value="(([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)|([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*))/(([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)|([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*))"/>-->
+			<!--<xs:pattern value="(([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)|([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*))/(([0-9]+)([^0-9\s\\/\(\)]+)([^\s\\/\(\)]*)|([^&quot;\s\\/\(\)0-9])([^\s\\/\(\)]*))/(from|to|step)"/>-->
+			<!--multiple patterns are Ored together-->
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>
