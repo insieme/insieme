@@ -489,7 +489,7 @@ bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
 	return false;
 }
 
-pattern::TreePattern addOptionalDeref(const pattern::TreePattern& mayToBeDerefed) {
+pattern::TreePattern optionalDeref(const pattern::TreePattern& mayToBeDerefed) {
 	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
 }
 

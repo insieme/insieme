@@ -98,7 +98,7 @@ bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
 /*
  * creates a pattern that matches mayToBeDerefed as well as ref.deref(mayToBeDerefed)
  */
-core::pattern::TreePattern addOptionalDeref(const core::pattern::TreePattern& mayToBeDerefed);
+core::pattern::TreePattern optionalDeref(const core::pattern::TreePattern& mayToBeDerefed);
 
 } // datalayout
 } // transform

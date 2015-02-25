@@ -130,13 +130,12 @@ void AosToSoa::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		ExpressionMap structures; // TODO remove
-		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
+		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements);
 
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, structures);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
-		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
 
 		doReplacements(replacements, aosToSoaAllocTypeUpdate);
 

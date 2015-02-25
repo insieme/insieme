@@ -52,15 +52,16 @@ utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJo
 
 class ParSecAtt : public AosToTaos {
 
-	core::ExpressionMap& varsToPropagate;
+	ExprAddressMap& varsToPropagate;
+	std::map<core::NodeAddress, core::NodePtr>& replacements;
 	const core::StructTypePtr& newStructType;
 	const core::StructTypePtr& oldStructType;
 
 	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
 
 public:
-	ParSecAtt(core::NodePtr& toTransform, core::ExpressionMap& varsToPropagate, const core::StructTypePtr& newStructType,
-			const core::StructTypePtr& oldStructType);
+	ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
+			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
 //	virtual ~ParSecAtt() {}
 
 	virtual void transform();

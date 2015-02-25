@@ -263,7 +263,7 @@ TEST(DataLayout, Tuple) {
 			"		c;"
 			"		ref<int<4>> e = a[5].int;"
 			"		ref<twoElem> f = var(a[7]);"
-	//		"		f = *a[7];"
+			"		f = a[7];"
 			"	};"
 			""
 			"	let local = (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, "
@@ -327,7 +327,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();

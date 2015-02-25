@@ -77,8 +77,7 @@ protected:
 			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 
 	virtual void replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements,
-			core::ExpressionMap& structures);
+			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 public:
 	AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
