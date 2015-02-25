@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -612,7 +612,8 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 
 	std::string name;
-	if (tagDecl->getName() != ""){
+	//if we have a name in the tag declaration or we have a c++11 lambda 
+    if (tagDecl->getName() != "" || (llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl) && llvm::cast<clang::CXXRecordDecl>(tagDecl)->isLambda())) {
 		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl),
 									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(),
 									   convFact.getSourceManager());
