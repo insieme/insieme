@@ -100,6 +100,10 @@ bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
  */
 core::pattern::TreePattern optionalDeref(const core::pattern::TreePattern& mayToBeDerefed);
 
+/*
+ * compare if two variables are the same, which is defines as being declared at the same address or being a a literal with the same string value
+ */
+bool compareVariables(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 } // datalayout
 } // transform
 } // insieme

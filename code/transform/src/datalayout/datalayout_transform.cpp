@@ -424,7 +424,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 		const ExpressionAddress& oldVar = vr.first;
 		const ExpressionPtr& newVar = vr.second;
 
-		pattern::TreePattern aosVariable = pattern::atom(oldVar);//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+		pattern::TreePattern aosVariable = pattern::var("oldVar", pattern::atom(oldVar));//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 		pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
 				pattern::any, pattern::aT(pattern::var("variable", aosVariable)) << *pattern::any)), pattern::any);
 		pattern::TreePattern assignToStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
@@ -435,7 +435,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 //				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
 //				pattern::aT(pattern::atom(oldVar))
 				<< *pattern::any);
-		pattern::TreePattern oldVarPattern = pattern::aT(pattern::atom(oldVar));
+		pattern::TreePattern oldVarPattern = pattern::aT(pattern::var("oldVar", pattern::atom(oldVar)));
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
 	//		generateMarshalling(oldToNew.first.as<VariablePtr>(), oldToNew.second.first, builder.intLit(0), builder.intLit(100), oldToNew.second.second);
@@ -443,6 +443,10 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 		pirp::matchAllPairs(assignToStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& match, pattern::AddressMatch am) {
 			ExpressionPtr start, end;
 			if(am.isVarBound("start")) { // assignToStructInLoop
+				ExpressionAddress matchedOldVar = match >> am["oldVar"].getValue().as<ExpressionAddress>();
+				if(!compareVariables(oldVar, matchedOldVar))
+					return;
+
 				start = am["start"].getValue().as<ExpressionPtr>();
 				end = am["end"].getValue().as<ExpressionPtr>();
 			} else { // externalAosCall
@@ -452,8 +456,13 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 					return;
 
 				// check if oldVar is accessed
-				if(!oldVarPattern.match(am["oldVarCandidate"].getValue()))
+				pattern::AddressMatchOpt oldVarInLoop = oldVarPattern.matchAddress(am["oldVarCandidate"].getValue());
+				if(!oldVarInLoop)
 					return;
+				ExpressionAddress matchedOldVar = match >> oldVarInLoop.get()["oldVar"].getValue().as<ExpressionAddress>();
+				if(!compareVariables(oldVar, matchedOldVar))
+					return;
+
 
 //for(std::pair<ExpressionPtr, ExpressionPtr> e : nElems) {
 //	std::cout << "from: " << e.first << " to " << e.second << std::endl;
@@ -498,25 +507,29 @@ std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const Expr
 		const ExpressionAddress& oldVar = vr.first;
 		const ExpressionPtr& newVar = vr.second;
 
-		pattern::TreePattern aosVariable = pattern::atom(oldVar);//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
+		pattern::TreePattern aosVariable = pattern::var("oldVar", pattern::atom(oldVar));//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 		pattern::TreePattern readFromStruct = pirp::assignment(pattern::any, pattern::var("struct", pirp::callExpr(pirp::structType(*pattern::any),
 				pattern::any, pattern::aT(pattern::var("variable", aosVariable)) << *pattern::any)));
 		pattern::TreePattern readFromStructInLoop = pirp::forStmt(pattern::any, pattern::var("start", pattern::any), pattern::var("end", pattern::any),
 				pattern::any, *pattern::any << readFromStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				pattern::aT(pattern::atom(oldVar)) << *pattern::any);
+				pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))) << *pattern::any);
 
 		pirp::matchAllPairs(readFromStructInLoop | externalAosCall, NodeAddress(toTransform), [&](const NodeAddress& node, pattern::AddressMatch am) {
 			ExpressionPtr start, end;
-
 //std::cout << begin << " < " << node << " -> " << (begin < node) << std::endl;
 			if(begin && !(begin < node)) {
 				// do not unmarshall before marshalling
 				return;
 			}
 
+			ExpressionAddress matchedOldVar = node >> am["oldVar"].getValue().as<ExpressionAddress>();
+			if(!compareVariables(oldVar, matchedOldVar))
+				return;
+
 			if(am.isVarBound("start")) { // assignToStructInLoop
+
 				start = am["start"].getValue().as<ExpressionPtr>();
 				end = am["end"].getValue().as<ExpressionPtr>();
 			} else { // externalAosCall
@@ -577,7 +590,8 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 
 //std::cout << "Replacing accesses to " << oldVar << "  " << *oldVar << std::endl;
 
-		pattern::TreePattern structAccessWithOptionalDeref = pattern::var("structAccess", optionalDeref(pattern::aT(pattern::atom(oldVar))));
+		pattern::TreePattern structAccessWithOptionalDeref = pattern::var("structAccess", optionalDeref(pattern::aT(
+				pattern::var("oldVar", pattern::atom(oldVar)))));
 		pattern::TreePattern structArrayElementAccess = pirp::arrayRefElem1D(structAccessWithOptionalDeref, var("index", pattern::any));
 		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(structArrayElementAccess, pattern::var("member", pattern::any)));
 //pattern::TreePattern structMemberAccess1 =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(
@@ -585,7 +599,7 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 
 		pattern::TreePattern assignArrayAccess = declOrAssignment(pattern::var("target", pattern::any), pattern::var("arrayAccess", structArrayElementAccess));
 		pattern::TreePattern structAccess = pattern::var("call", optionalDeref(pirp::refDeref(pirp::arrayRefElem1D(pirp::refDeref(pattern::var("structAccess",
-				pattern::aT(pattern::atom(oldVar)))), var("index", pattern::any)))));
+				pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))))), var("index", pattern::any)))));
 		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("target",
 				pirp::variable(pattern::aT(pirp::refType(pirp::structType(*pattern::any))))), structAccess);
 
@@ -618,9 +632,15 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 					return true;
 				}
 			}
-			pattern::AddressMatchOpt match = assignStructAccess.matchAddress(node);
+			pattern::AddressMatchOpt match = (assignStructAccess | assignArrayAccess).matchAddress(node);
 
 			if(match) {
+				ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+				if(!compareVariables(oldVar, matchedOldVar)) {
+std::cout << "NOT replacing ";
+dumpPretty(node);
+					return false;
+				}
 //std::cout << "\nMatching \n";
 //dumpPretty(node);
 				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
@@ -635,20 +655,20 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 							builder.assign(match.get()["target"].getValue().as<ExpressionPtr>(), inplaceUnmarshalled));
 			}
 
-			match = assignArrayAccess.matchAddress(node);
-
-			if(match) {
-				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
-				ExpressionPtr oldStructAccess = match.get()["structAccess"].getValue().as<ExpressionPtr>();
-				ExpressionPtr inplaceUnmarshalled = generateByValueAccesses(oldVar, newVar, newStructType, index, oldStructAccess);
-
-				if(match.get().isVarBound("decl"))
-					addToReplacements(replacements, match.get().getRoot(), builder.declarationStmt(match.get()["target"].getValue().as<VariablePtr>(),
-							builder.refVar(inplaceUnmarshalled)));
-				if(match.get().isVarBound("assignment"))
-					addToReplacements(replacements, match.get().getRoot(),
-							builder.assign(match.get()["target"].getValue().as<ExpressionPtr>(), inplaceUnmarshalled));
-			}
+//			pattern::AddressMatchOpt match = (structAccess | structArrayElementAccess).matchAddress(node);
+//
+//			if(match) {
+//				ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
+//				ExpressionPtr oldStructAccess = match.get()["structAccess"].getValue().as<ExpressionPtr>();
+//				ExpressionPtr inplaceUnmarshalled = generateByValueAccesses(oldVar, newVar, newStructType, index, oldStructAccess);
+//
+//				if(match.get().isVarBound("decl"))
+//					addToReplacements(replacements, match.get().getRoot(), builder.declarationStmt(match.get()["target"].getValue().as<VariablePtr>(),
+//							builder.refVar(inplaceUnmarshalled)));
+//				if(match.get().isVarBound("assignment"))
+//					addToReplacements(replacements, match.get().getRoot(),
+//							builder.assign(match.get()["target"].getValue().as<ExpressionPtr>(), inplaceUnmarshalled));
+//			}
 
 			return false;
 		});
@@ -697,12 +717,16 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 		const ExpressionAddress& oldVar = vr.first;
 		const ExpressionPtr& newVar = vr.second;
 
-		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)));
+		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))));
 		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar", pirp::variable())),
 				pattern::var("idx"), pattern::var("type")));
 		pattern::TreePattern tupleAssign = pirp::assignment(tupleAccess, structAccess);
 
 		pirp::matchAllPairs(tupleAssign, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
+			ExpressionAddress matchedOldVar = node >> match["oldVar"].getValue().as<ExpressionAddress>();
+			if(!compareVariables(oldVar, matchedOldVar))
+				return;
+
 			ExpressionAddress oldTupleAccess = node >> match["access"].getValue().as<ExpressionAddress>();
 			ExpressionAddress oldTupleVar = getDeclaration(node >> match["tupleVar"].getValue().as<ExpressionAddress>());
 
@@ -797,9 +821,14 @@ void DatalayoutTransformer::updateCopyDeclarations(ExprAddressMap& varReplacemen
 		const ExpressionAddress& oldVar = vr.first;
 //		const ExpressionPtr& newVar = vr.second;
 
-		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()), pattern::aT(pattern::atom(oldVar)));
+		pattern::TreePattern influencedDecl = pirp::declarationStmt(var("influencedVar", pirp::variable()),
+				pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))));
 
 		pirp::matchAllPairs(influencedDecl, toTransform, [&](const NodeAddress& node, pattern::AddressMatch match) {
+			ExpressionAddress matchedOldVar = node >> match["oldVar"].getValue().as<ExpressionAddress>();
+			if(!compareVariables(oldVar, matchedOldVar))
+				return;
+
 			DeclarationStmtAddress decl = node.as<DeclarationStmtAddress>();
 
 			if(replacements.find(decl) != replacements.end()) {

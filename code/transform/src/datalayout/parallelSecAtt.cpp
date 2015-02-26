@@ -169,8 +169,6 @@ void ParSecAtt::transform() {
 			varReplacements[oldVar] = globalVar ?
 					builder.literal(globalVar->getStringValue() + "_soa", newType).as<ExpressionPtr>() :
 					builder.variable(newType).as<ExpressionPtr>();
-
-			std::cout << "this is " << *oldVar << " -> " << *newType << std::endl << std::endl;
 		}
 
 		const std::vector<core::StatementAddress> begin, end;
@@ -183,13 +181,13 @@ void ParSecAtt::transform() {
 		//replace arguments
 		for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
 //			replacements[vr.first] = vr.second;
+//			std::cout << "from " << *vr.first << " to " << *vr.second << std::endl;
 
 			if(vr.first.isa<VariableAddress>())
 				visitDepthFirst(vr.first.getParentAddress(2), [&](const VariableAddress& var) {
-					if(*vr.first == *var) {
-						if(vr.first == getDeclaration(var)) {
-							replacements[var] = vr.second;
-						}
+
+					if(compareVariables(vr.first, var)) {
+						replacements[var] = vr.second;
 					}
 
 				});

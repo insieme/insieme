@@ -279,10 +279,14 @@ StatementList AosToTaos::generateDel(const StatementAddress& stmt, const Express
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
-	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::var("oldVar", pattern::atom(oldVar))));
 	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
 
 	if(match) {
+		ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+		if(!compareVariables(oldVar, matchedOldVar))
+			return deletes;
+
 		IRBuilder builder(mgr);
 		deletes.push_back(core::transform::fixTypes(mgr, match.get().getRoot(), oldVar, newVar, true).as<ExpressionPtr>());
 		deletes.push_back(stmt);
