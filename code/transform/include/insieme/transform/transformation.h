@@ -408,7 +408,7 @@ namespace transform {
 		/**
 		 * A constructor just forwarding parameters to the parent class.
 		 */
-		AbstractTransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
+		AbstractTransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters())
 			: TransformationType(name, desc, connector, paramInfo) {};
 
 	};
