@@ -157,7 +157,7 @@ void irt_inst_event_data_output_single(irt_instrumentation_event_data data, FILE
 }
 
 void irt_inst_event_data_output_all(bool binary_format) {
-	for(int i = 0; i < irt_g_worker_count; ++i)
+	for(uint i = 0; i < irt_g_worker_count; ++i)
 		irt_inst_event_data_output(irt_g_workers[i], binary_format);
 }
 
@@ -320,7 +320,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 		// write number of event name table entries followed by group and event names
 		fwrite(&(irt_g_inst_num_event_types), sizeof(uint32), 1, outputfile);
-		for(int i = 0; i < irt_g_inst_num_event_types; ++i) {
+		for(uint i = 0; i < irt_g_inst_num_event_types; ++i) {
 			fprintf(outputfile, "%-4s", irt_g_instrumentation_group_names[i]);
 			fprintf(outputfile, "%-60s", irt_g_instrumentation_event_names[i]);
 		}
@@ -333,7 +333,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 		fwrite(table->data, sizeof(irt_instrumentation_event_data), table->number_of_elements, outputfile);
 
 	} else {
-		for(int i = 0; i < table->number_of_elements; ++i) {
+		for(uint i = 0; i < table->number_of_elements; ++i) {
 			irt_inst_event_data_output_single(table->data[i], outputfile, false);
 		}
 	}

@@ -254,7 +254,6 @@ TEST(region_instrumentation, parallel) {
 		EXPECT_EQ(reg0->aggregated_wall_time, 0);
 
 		auto workload = [&]() {
-			int32 sum = 0;
 			ir_inst_region_start(0);
 			irt_nanosleep(1e7);
 			ir_inst_region_end(0);
@@ -421,7 +420,7 @@ TEST(region_instrumentation, papi) {
 		EXPECT_EQ(reg0->last_wall_time, 0);
 		EXPECT_EQ(reg0->num_executions, 1);
 
-		printf("res: %f, total instruction count: %llu\n", a, reg0->aggregated_PAPI_TOT_INS);
+		printf("res: %f, total instruction count: %" PRIu64 "\n", a, reg0->aggregated_PAPI_TOT_INS);
 	});
 	irt::shutdown();
 }
@@ -461,16 +460,16 @@ TEST(region_instrumentation, pfor_nested) {
 				ir_inst_region_start(1);
 				ir_inst_region_start(2);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(int j=0; j<iterations; j++) { sum++; }
+					for(uint j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_end(2);
 				ir_inst_region_end(1);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(int j=0; j<iterations; j++) { sum++; }
+					for(uint j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_start(3);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(int j=0; j<iterations; j++) { sum++; }
+					for(uint j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_end(3);
 				ir_inst_region_start(4);
@@ -479,7 +478,7 @@ TEST(region_instrumentation, pfor_nested) {
 				ir_inst_region_end(5);
 				ir_inst_region_start(6);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(int j=0; j<iterations; j++) { sum++; }
+					for(uint j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_end(6);
 				ir_inst_region_start(7);

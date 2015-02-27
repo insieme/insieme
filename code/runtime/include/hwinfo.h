@@ -251,7 +251,7 @@ void irt_hw_dump_info() {
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
 
 	printf("  Cache hierarchy: %u levels\n", hwinfo->mem_hierarchy.levels);
-	for(uint32 i = 0; i < hwinfo->mem_hierarchy.levels; ++i) {
+	for(int32 i = 0; i < hwinfo->mem_hierarchy.levels; ++i) {
 		uint32 number_of_memories = 0;
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j)
 			if(hwinfo->mem_hierarchy.level[i].cache[j].type != PAPI_MH_TYPE_EMPTY)
