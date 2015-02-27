@@ -81,7 +81,7 @@ protected:
 
 	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
 	void collectVariables(const std::pair<core::ExpressionAddress, core::RefTypePtr>& transformRoot,
-			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform, insieme::analysis::VariableScopeMap& scopes);
+			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform);
 	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
 	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::RefTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;

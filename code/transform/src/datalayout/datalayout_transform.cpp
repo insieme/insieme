@@ -180,7 +180,7 @@ DatalayoutTransformer::DatalayoutTransformer(core::NodePtr& toTransform, Candida
 		: mgr(toTransform->getNodeManager()), toTransform(toTransform), candidateFinder(candidateFinder) {}
 
 void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, RefTypePtr>& transformRoot,	ExprAddressSet& toReplaceList,
-		const NodeAddress& toTransform, ia::VariableScopeMap& scopes) {
+		const NodeAddress& toTransform) {
 
 	RefTypePtr structType = transformRoot.second;
 	visitDepthFirst(toTransform, [&](const StatementAddress& stmt) {
@@ -227,6 +227,7 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 					VariableAddress param = pair.second;
 					if(!isRefStruct(param, structType))
 						return;
+
 					if(toReplaceList.find(argVar) != toReplaceList.end()) {
 						toReplaceList.insert(param);
 					}
@@ -287,18 +288,16 @@ std::vector<std::pair<ExprAddressSet, RefTypePtr>> DatalayoutTransformer::create
 	ExprAddressRefTypeMap structs = findCandidates(toTransform);
 	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists;
 
-	ia::VariableScopeMap scopes = ia::mapVariablesToScopes(toTransform);
-
 	for(std::pair<ExpressionAddress, RefTypePtr> candidate : structs) {
 		ExprAddressSet toReplaceList;
 		toReplaceList.insert(candidate.first);
 
 		// fixpoint iteration to capture all variables that new a new versions with new type
 		size_t curNumOfVars = 0;
-//std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() << std::endl;
 		while(curNumOfVars != toReplaceList.size()) {
+//std::cout << "curNumOfVars: " << curNumOfVars << " != " << toReplaceList.size() << std::endl;
 			curNumOfVars = toReplaceList.size();
-			collectVariables(candidate, toReplaceList, toTransform, scopes);
+			collectVariables(candidate, toReplaceList, toTransform);
 		}
 		toReplaceLists.push_back(std::make_pair(toReplaceList, candidate.second));
 
@@ -306,10 +305,10 @@ std::vector<std::pair<ExprAddressSet, RefTypePtr>> DatalayoutTransformer::create
 
 	toReplaceLists = mergeLists(toReplaceLists);
 
-//	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+//	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
 //		std::cout << "\nList: \n";
-//		for(ExpressionPtr tr : toReplaceList.first)
-//			std::cout << *tr->getType() << " " << *tr << std::endl;
+//		for(ExpressionAddress tr : toReplaceList.first)
+//			std::cout << tr << " " << *tr << std::endl;
 //	}
 
 	return toReplaceLists;
@@ -381,7 +380,7 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 					// check if the assignment does an allocation and try to extract the number of elements in that case
 					pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
 					ExpressionPtr nElem;
-					if(match) {
+					if(match && match.get().isVarBound("nElems")) {
 						nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
 						nElems[newVar] = nElem;
 					}
@@ -620,6 +619,9 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 			if(call) {
 				pattern::AddressMatchOpt match = structMemberAccess.matchAddress(node);
 				if(match) {
+					ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+					if(!compareVariables(oldVar, matchedOldVar))
+						return false;
 //std::cout << "\nCall: ";
 //dumpPretty(node);
 					StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
@@ -637,8 +639,6 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 			if(match) {
 				ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
 				if(!compareVariables(oldVar, matchedOldVar)) {
-std::cout << "NOT replacing ";
-dumpPretty(node);
 					return false;
 				}
 //std::cout << "\nMatching \n";

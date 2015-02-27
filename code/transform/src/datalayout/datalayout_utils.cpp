@@ -501,9 +501,6 @@ bool compareVariables(const ExpressionAddress& a, const ExpressionAddress& b) {
 	core::LiteralAddress la = a.isa<core::LiteralAddress>();
 	core::LiteralAddress lb = b.isa<core::LiteralAddress>();
 
-	if((la && !lb) || (!la && lb))
-		return false;
-
 	if(la && lb)
 		return la->getStringValue() == lb->getStringValue();
 
