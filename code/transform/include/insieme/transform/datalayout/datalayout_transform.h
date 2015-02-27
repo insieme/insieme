@@ -81,7 +81,7 @@ protected:
 
 	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
 	void collectVariables(const std::pair<core::ExpressionAddress, core::RefTypePtr>& transformRoot,
-			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform, insieme::analysis::VariableScopeMap& scopes);
+			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform);
 	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
 	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::RefTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;
@@ -121,13 +121,13 @@ protected:
 			core::ExpressionMap& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
-			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess) =0;
 	void replaceAccesses(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
-			std::map<core::NodeAddress,	core::NodePtr>& replacements, core::ExpressionMap& structures);
+			std::map<core::NodeAddress,	core::NodePtr>& replacements);
 	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) =0;
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
@@ -138,7 +138,7 @@ protected:
 			const core::StructTypePtr& newStructType, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void updateCopyDeclarations(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements, core::ExpressionMap& structures);
+			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, const core::transform::TypeHandler& typeOfMemAllocHandler);
 public:

@@ -130,13 +130,12 @@ void AosToSoa::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		ExpressionMap structures; // TODO remove
-		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
+		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements);
 
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, structures);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
-		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
 
 		doReplacements(replacements, aosToSoaAllocTypeUpdate);
 
@@ -289,10 +288,14 @@ StatementList AosToSoa::generateDel(const StatementAddress& stmt, const Expressi
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
-	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::var("oldVar", pattern::atom(oldVar))));
 	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
 
 	if(match) {
+		ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+		if(!compareVariables(oldVar, matchedOldVar))
+			return deletes;
+
 		IRBuilder builder(mgr);
 		for(NamedTypePtr memberType : newStructType->getElements()) {
 			deletes.push_back(builder.refDelete(refAccess(newVar, ExpressionPtr(), memberType->getName())));
