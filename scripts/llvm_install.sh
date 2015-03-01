@@ -102,10 +102,10 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-echo "*******************************************"
-echo "* Removing old compilation and installing "
-echo "*******************************************"
-rm -R $PREFIX/llvm-$VERSION
+#echo "*******************************************"
+#echo "* Removing old compilation and installing "
+#echo "*******************************************"
+#rm -R $PREFIX/llvm-$VERSION
 make clang-only install
 
 cd ../
