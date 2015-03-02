@@ -141,7 +141,7 @@ namespace std {
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& tAnnot) {
 		out << "DataTransformAnnotation:\n";
 
-		out << "\t" << (tAnnot.isSoa() == 0 ? "SOA" : ("Tilesize: " + tAnnot.getTilesize())) << std::endl;
+		out << "\t" << (tAnnot.isSoa() == 0 ? string("SOA") : (format("Tilesize: %u", tAnnot.getTilesize()))) << std::endl;
 
 		return out;
 	}

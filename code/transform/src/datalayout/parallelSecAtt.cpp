@@ -36,6 +36,8 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
 
 #include "insieme/transform/datalayout/parallelSecAtt.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
@@ -46,17 +48,16 @@ namespace transform {
 namespace datalayout {
 
 using namespace core;
-//namespace pirp = pattern::irp;
+namespace pirp = pattern::irp;
 //namespace ia = insieme::analysis;
 ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) {
 	ExprAddressRefTypeMap structs;
 
-	ExpressionMap jobReplacements; // TODO delete
 	IRBuilder builder(mgr);
 
-	for(std::pair<ExpressionPtr, ExpressionPtr> dudu : varsToPropagate) {
-		std::cout << "      things " << dudu.first << std::endl;
-	}
+//	for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
+//		std::cout << "      things " << *dudu.first << std::endl;
+//	}
 	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
 		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
 		if(CallExprAddress call = expr.isa<CallExprAddress>()) {
@@ -64,7 +65,7 @@ ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) 
 				return;
 
 			// check if tuple argument has a member which will be updated
-			ExpressionPtr oldRootVar = getRootVariable(call, call->getArgument(0)).as<ExpressionPtr>();
+			ExpressionAddress oldRootVar = getRootVariable(call, call->getArgument(0)).as<ExpressionAddress>();
 			auto newRootVarIter = varsToPropagate.find(oldRootVar);
 //std::cout << "\nat the tuple member access " << oldRootVar << "\n";
 
@@ -85,28 +86,26 @@ ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) 
 				ExpressionAddress argument = call.getParentAddress(2).isa<CallExprAddress>();
 				CallExprAddress parent = argument.getParentAddress(1).isa<CallExprAddress>();
 				if(!parent){
-					std::cout << "no parent\n";
-										return;
-									}
+					return;
+				}
 
 				LambdaExprAddress lambda = parent->getFunctionExpr().isa<LambdaExprAddress>();
 
 				if(!lambda){
-					std::cout << "no lambda\n";
-										return;
-									}
+					return;
+				}
 
 				for_range(make_paired_range(parent->getArguments(), lambda->getLambda()->getParameters()->getElements()),
 						[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
 					if(pair.first == argument) {// found the argument which will be updated
 						// create replacement for corresponding parameter
-						RefTypePtr newParamType = newType->getElementType().as<ArrayTypePtr>()->getElementType().as<RefTypePtr>();
-						VariablePtr newParam = builder.variable(newParamType);
+//						RefTypePtr newParamType = newType->getElementType().as<ArrayTypePtr>()->getElementType().as<RefTypePtr>();
+//						VariablePtr newParam = builder.variable(newParamType);
 
 						// add corresponding parameter to update list
-						jobReplacements[pair.second] = newParam;
-						structs[pair.second] = newParamType;
-std::cout << ": \nAdding: " << *pair.second << " - " << structs.size() << std::endl;
+						structs[pair.second] = pair.first->getType().as<RefTypePtr>();
+//						varsToPropagate[pair.second] = newParam;
+//std::cout << ": \nAdding: " << pair.second << " " << *pair.second << " - " << structs.size() << std::endl;
 					}
 				});
 			}
@@ -125,19 +124,19 @@ std::cout << ": \nAdding: " << *pair.second << " - " << structs.size() << std::e
 
 			for_range(make_paired_range(parallelCall->getArguments(), parallelLambda->getParameterList()->getElements()),
 					[&](const std::pair<const ExpressionAddress, const VariableAddress>& pair) {
-//std::cout << "Looking for " << pair.first << std::endl;
-				auto newArgIter = varsToPropagate.find(pair.first);
-				if(newArgIter != varsToPropagate.end()) {
-					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
-					structs[pair.second] = newArgIter->second->getType().as<RefTypePtr>();
-std::cout << "Found in VARreplacements: " << pair.first << " -> " << structs.size() << std::endl;
-				}
+				ExpressionAddress newArg = getDeclaration(pair.first);
+//std::cout << "Looking for " << newArg << " " << *newArg << std::endl;
+//				auto newArgIter = varsToPropagate.find(newArg);
+//				if(newArgIter != varsToPropagate.end()) {
+//					structs[pair.second] = newArgIter->second->getType().as<RefTypePtr>();
+//					varsToPropagate[pair.second] = newArgIter->second;
+//std::cout << "Found in VARreplacements: " << newArg << " -> " << structs.size() << std::endl;
+//				}
 
-				newArgIter = jobReplacements.find(pair.first);
-				if(newArgIter != jobReplacements.end()) {
-					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
-					structs[pair.second] = newArgIter->second->getType().as<RefTypePtr>();
-std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << structs.size() << std::endl;
+				auto newArgIter1 = structs.find(newArg);
+				if(newArgIter1 != structs.end()) {
+					structs[pair.second] = newArgIter1->second.as<RefTypePtr>();
+//std::cout << "Found in jobREPLACEMENTS: " << newArg << " -> " << *newArg << std::endl;
 				}
 			});
 		}
@@ -146,44 +145,46 @@ std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << structs.siz
 	return structs;
 }
 
-ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExpressionMap& varsToPropagate, const StructTypePtr& newStructType, const StructTypePtr& oldStructType)
-		: AosToTaos(toTransform), varsToPropagate(varsToPropagate), newStructType(newStructType), oldStructType(oldStructType) {}
+StatementList ParSecAtt::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+	IRBuilder builder(mgr);
+
+	// replace declaration with compound statement containing only the declaration of the new variable and it's initialization
+	StatementList allDecls;
+
+	NodeMap inInitReplacementsInCaseOfNovarInInit;
+	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	// divide initialization size by tilesize
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+
+	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(),
+		inInitReplacementsInCaseOfNovarInInit)));
+
+	return allDecls;
+}
+
+ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<NodeAddress, NodePtr>& replacements,
+		const StructTypePtr& newStructType, const StructTypePtr& oldStructType)
+		: AosToTaos(toTransform), varsToPropagate(varsToPropagate), replacements(replacements), newStructType(newStructType), oldStructType(oldStructType) {}
 
 
 void ParSecAtt::transform() {
 	IRBuilder builder(mgr);
+	const NodeAddress tta(toTransform);
+	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(tta);
 
-	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
+			pattern::any << var("nElems", pattern::any))));
+
 
 	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
-
-		StructTypePtr newStructType = createNewType(oldStructType);
-		ExpressionMap varReplacements;
+		ExprAddressMap varReplacements;
 		ExpressionMap nElems;
-		std::map<NodeAddress, NodePtr> replacements;
 
-		for(ExpressionPtr oldVar : toReplaceList.first) {
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
-					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
+		for(ExpressionAddress oldVar : toReplaceList.first) {
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), oldStructType,
+					newStructType).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
-
-			VariablePtr test = builder.variable(oldVar->getType());
-			std::cout << "this is " << *test << std::endl << std::endl;
-
-//			dumpPretty(core::transform::replaceAll(mgr, toTransform, oldVar, test, false));
-
-//			int cnt = 0;
-//			core::visitDepthFirst(NodeAddress(toTransform), [&](const VariableAddress& var) {
-//				if(*var == *oldVar) {
-//					std::cout << "found " << var << std::endl;
-//					++cnt;
-//				}
-//			});
-
-//			std::cout << "\ncnt: " << cnt << std::endl << std::endl;
-
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -193,6 +194,29 @@ void ParSecAtt::transform() {
 					builder.literal(globalVar->getStringValue() + "_soa", newType).as<ExpressionPtr>() :
 					builder.variable(newType).as<ExpressionPtr>();
 		}
+
+		// replacing the declarations of the old variables with new ones
+		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
+
+		const std::vector<core::StatementAddress> begin, end;
+		//replace array accesses
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+
+		// assignments to the entire struct should be ported to the new struct members
+//TODO	replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
+
+		//replace arguments
+		for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+//			std::cout << "from " << *vr.first << " to " << *vr.second << std::endl;
+
+			if(vr.first.isa<VariableAddress>())
+				visitDepthFirst(vr.first.getParentAddress(2), [&](const VariableAddress& var) {
+					if(compareVariables(vr.first, var)) {
+						replacements[var] = vr.second;
+					}
+				});
+		}
+
 	}
 }
 

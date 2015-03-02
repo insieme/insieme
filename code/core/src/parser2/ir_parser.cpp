@@ -1582,6 +1582,45 @@ namespace parser {
 					}
 			));
 
+
+			// job
+			g.addRule("E", rule(
+					seq("job([", E, "-", E, "][", loop(seq(T, cap(id), " = ", E, opt(seq(",")))), "], ", E,")"),
+					[](Context& cur)->NodePtr {
+						NodeList terms = cur.getTerms();
+						ExpressionPtr rangeLowerBound = terms[0].as<ExpressionPtr>();
+						ExpressionPtr rangeUpperBound = terms[1].as<ExpressionPtr>();
+
+						// collect declarations
+						vector<core::DeclarationStmtPtr> decls;
+						for(unsigned int i = 2u; i < terms.size()-2u; i+=2u) {
+							TypePtr type = cur.getTerm(i).as<TypePtr>();
+							ExpressionPtr value = cur.getTerm(i+1u).as<ExpressionPtr>();
+							DeclarationStmtPtr decl = cur.declarationStmt(type, value);
+
+							// register name within variable manager
+							cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+							// attach name
+							annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
+							decls.push_back(decl);
+						}
+
+						CallExprPtr call = terms[terms.size()-1].as<CallExprPtr>();
+
+						if (!call) {
+							return fail(cur, "Not a call expression!");
+						}
+
+						BindExprPtr bind 	= cur.bindExpr(VariableList(), call);
+						JobExprPtr job		= cur.jobExpr(cur.getThreadNumRange(rangeLowerBound, rangeUpperBound),
+								decls, vector<core::GuardedExprPtr>(), bind);
+
+						return job;
+					}
+			));
+
 			// -- job expressions --
 			g.addRule("E", rule(
 					seq("task", S),

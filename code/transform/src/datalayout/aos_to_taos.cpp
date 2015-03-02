@@ -132,13 +132,12 @@ void AosToTaos::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		ExpressionMap structures;
-		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements);
 
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, structures);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
-		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
 
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
@@ -151,7 +150,7 @@ void AosToTaos::transform() {
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
 //assert(false);
-		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements, structures);
+		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
 
 		doReplacements(replacements, aosToTaosAllocTypeUpdate);
 
@@ -280,10 +279,14 @@ StatementList AosToTaos::generateDel(const StatementAddress& stmt, const Express
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
-	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::var("oldVar", pattern::atom(oldVar))));
 	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
 
 	if(match) {
+		ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+		if(!compareVariables(oldVar, matchedOldVar))
+			return deletes;
+
 		IRBuilder builder(mgr);
 		deletes.push_back(core::transform::fixTypes(mgr, match.get().getRoot(), oldVar, newVar, true).as<ExpressionPtr>());
 		deletes.push_back(stmt);
@@ -323,7 +326,6 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 		StringValuePtr memberName = memberType->getName();
 
 		ExpressionPtr vectorAccess = builder.deref(refAccess(newStructAccess, arrayIdx, memberName, vectorIdx));
-
 		values.push_back(std::make_pair(memberName, vectorAccess));
 	}
 
@@ -331,7 +333,7 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 }
 
 void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
-			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
+			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
 //	ExpressionSet varsToPropagate;
 //	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
@@ -339,12 +341,8 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 //		std::cout << "ölkjasfdökljsfda " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
 ////assert(false);
 //	}
-//	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : structures) {
-//		varsToPropagate.insert(oldToNew.first);
-//		std::cout << "blabla " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
-//	}
 
-	ParSecAtt psa(toTransform, structures, newStructType, oldStructType);
+	ParSecAtt psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
 	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;

@@ -131,12 +131,10 @@ TEST(ConditionTest, InvalidParsing) {
 			ConditionExpr result;
 			bool ok = qi::phrase_parse(f,l,p,qi::space,result);
 
-			/*
 			if (!ok)
 				std::cerr << "invalid input\n";
 			else
 				std::cout << "Successfully parsed - input: " << input << " - result: " << result << "\n";
-			*/
 
 		} catch (const qi::expectation_failure<decltype(f)>& e) {
 			std::cerr << "expectation_failure at '" << std::string(e.first, e.last) << "'\n";

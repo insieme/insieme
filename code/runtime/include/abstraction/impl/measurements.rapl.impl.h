@@ -91,7 +91,7 @@ uint64 _irt_read_rapl_register(void* user_data) {
 	rapl_energy_data current_data = { 0, 0, 0 };
 
 	int32 file = 0;
-	uint64 result = 0;
+	int64 result = 0;
 	double energy_units = -1.0;
 
 	uint32 num_sockets = irt_hw_get_num_sockets();

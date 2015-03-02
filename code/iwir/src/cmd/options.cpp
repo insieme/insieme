@@ -36,6 +36,8 @@
 
 #include "insieme/iwir/cmd/options.h"
 
+#include <iostream>
+
 #include <boost/algorithm/string.hpp>
 
 namespace insieme {
@@ -101,8 +103,8 @@ namespace cmd {
 			// check whether help was requested
 			res.help = map.count("help");
 			if (res.help) {
-				cout << "Usage: " << argv[0] << " [options | infile]" << "\n";
-				cout << desc << "\n";
+				std::cout << "Usage: " << argv[0] << " [options | infile]" << "\n";
+				std::cout << desc << "\n";
 				res.valid = false;
 				return res;
 			}

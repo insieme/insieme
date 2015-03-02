@@ -489,8 +489,22 @@ bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
 	return false;
 }
 
-pattern::TreePattern addOptionalDeref(const pattern::TreePattern& mayToBeDerefed) {
+pattern::TreePattern optionalDeref(const pattern::TreePattern& mayToBeDerefed) {
 	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
+}
+
+bool compareVariables(const ExpressionAddress& a, const ExpressionAddress& b) {
+	// shortcut if addresses don't point to the same node
+	if(*a != *b)
+		return false;
+
+	core::LiteralAddress la = a.isa<core::LiteralAddress>();
+	core::LiteralAddress lb = b.isa<core::LiteralAddress>();
+
+	if(la && lb)
+		return la->getStringValue() == lb->getStringValue();
+
+	return a == getDeclaration(b);
 }
 
 
