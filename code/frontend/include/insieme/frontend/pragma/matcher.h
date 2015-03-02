@@ -357,7 +357,7 @@ struct concat: public val_pair<concat> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const override;
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -377,7 +377,7 @@ struct option: public val_single<option> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const override;
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -388,7 +388,7 @@ struct star: public val_single<star> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const override;
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -433,7 +433,7 @@ struct expr_p: public MappableNode<expr_p> {
 
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 
-	virtual std::ostream& printTo(std::ostream& out) const override;
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 
@@ -508,7 +508,7 @@ struct var_p: public Tok<clang::tok::identifier> {
 	var_p() : Tok<clang::tok::identifier>("", true, true) { }
 	var_p(std::string const& str) : Tok<clang::tok::identifier>(str, true, true) { }
 
-	virtual std::ostream& printTo(std::ostream& out) const override;
+	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 // import token definitions from clang
