@@ -394,6 +394,17 @@ TEST(IWIRTest, ReadIWIR_ForEach2) {
 	VLOG(2) << "---" << std::endl;
 }
 
+TEST(IWIRTest, ReadIWIR_ForEach3) {
+	Logger::get(std::cerr, INFO, 1);
+	
+	auto iwirInput = IWIR_TEST_DIR + "input/forEachTest3.xml";
+
+	NodeManager mgr;
+	VLOG(2) << "---" << std::endl;
+	auto ir = readIWIR(mgr, iwirInput);
+	VLOG(2) << "---" << std::endl;
+}
+
 TEST(IWIRTest, ReadIWIR_ParallelForEach1) {
 	Logger::get(std::cerr, INFO, 1);
 	

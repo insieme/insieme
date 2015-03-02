@@ -1,5 +1,5 @@
-<IWIR version="1.1" wfname="forEach2" xmlns="http://shiwa-workflow.eu/IWIR">
-  <forEach name="forEach2">
+<IWIR version="1.1" wfname="forEach3" xmlns="http://shiwa-workflow.eu/IWIR">
+  <forEach name="forEach3">
     <inputPorts>
       <inputPort name="in1" type="integer"/>
       <loopPorts>
@@ -7,6 +7,7 @@
       </loopPorts>
       <loopElements>
         <loopElement name="le1" type="collection/integer"/>
+        <loopElement name="le2" type="collection/integer"/>
       </loopElements>
     </inputPorts>
     <body>
@@ -38,13 +39,13 @@
       </unionPorts>
     </outputPorts>
     <links>
-      <link from="forEach2/in1" to="atomic1/in1"/>
-      <link from="forEach2/le1" to="atomic1/in2"/>
+      <link from="forEach3/in1" to="atomic1/in1"/>
+      <link from="forEach3/le1" to="atomic1/in2"/>
       <link from="atomic1/out1" to="atomic2/in1"/>
-      <link from="forEach2/le1" to="atomic2/in2"/>
-      <link from="atomic2/out1" to="forEach2/loop1"/>
-      <link from="forEach2/loop1" to="forEach2/union1"/>
-      <link from="forEach2/loop1" to="forEach2/out1"/>
+      <link from="forEach3/le1" to="atomic2/in2"/>
+      <link from="atomic2/out1" to="forEach3/loop1"/>
+      <link from="forEach3/loop1" to="forEach3/union1"/>
+      <link from="forEach3/loop1" to="forEach3/out1"/>
     </links>
   </forEach>
 </IWIR>
