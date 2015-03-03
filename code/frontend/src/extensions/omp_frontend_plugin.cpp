@@ -42,6 +42,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/utils/config.h"
 
 namespace insieme {
 namespace frontend {
@@ -638,6 +639,10 @@ namespace {
 
 
     OmpFrontendPlugin::OmpFrontendPlugin() {
+
+        //Add the required header and macro definitions
+        kidnappedHeaders.push_back(CLANG_SRC_DIR "../include/insieme/frontend/omp/input/");
+        macros.insert(std::make_pair("_OPENMP", ""));
 
                 // Add a handler for #pragma omp region [clause[[,] clause] ...] new-line
                 pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
