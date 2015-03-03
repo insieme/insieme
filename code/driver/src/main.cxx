@@ -64,6 +64,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/polyhedral/scop.h"
 #include "insieme/transform/polyhedral/scoppar.h"
 #include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/transformation.h"
@@ -337,13 +338,30 @@ namespace {
 	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
 	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.UsePM) return program;
-		LOG(DEBUG) << "We will be using the backend: " << options.Backend << std::endl;
-		if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL)) {
-			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl;
-			return program;
+		int ocltransform=0;
+
+		// check whether OpenCL processing has been requested by the user
+		if (options.Backend=="OpenCL.Host.Backend" || options.OpenCL) {
+			if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL))
+				std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl <<
+							 "Not doing polyhedral OpenCL transformation." << std::endl;
+			else {
+				ocltransform=1;
+				LOG(DEBUG) << "We will be using the backend: " << options.Backend << std::endl;
+			}
 		}
 
-		return insieme::transform::polyhedral::SCoPPar(program).apply();
+		// OCL transformations will - for now - happen on the old PM implementation; otherwise we choose the new one
+		if (ocltransform) {
+			std::vector<NodeAddress> scoplist=insieme::analysis::polyhedral::scop::mark(program);
+			scoplist.clear(); // we do not use the scoplist right now, but we may want to refer to it later
+			return insieme::transform::polyhedral::SCoPPar(program).apply();
+		} else {
+			auto scop=insieme::transform::polyhedral::novel::SCoP(program);
+			auto maybe_ir=scop.IR();
+			if (maybe_ir) return *maybe_ir;
+			else return program;
+		}
 	}
 
 	//***************************************************************************************
