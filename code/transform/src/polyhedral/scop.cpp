@@ -47,13 +47,21 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 // constructor
-SCoP::SCoP(ProgramPtr& program): program(boost::optional<ProgramPtr&>(program)) {
-	std::cout << "Hello from Polyhedral Model Nouvelle!" << std::endl;
+SCoP::SCoP(unsigned int valid=2) {
+	std::cout << "Hello from SCoP Constructor Nouvelle!" << std::endl;
+	if (valid<2) obeysDeps=boost::optional<int>(valid); // else we don't know yet
 }
 
-// return the IR of the corresponding polyhedra, if defined
-boost::optional<insieme::core::ProgramPtr&> SCoP::IR() {
-	if (program) return program;
-	else // for now, return empty IR; here, we will generate resulting code on demand and memoize it in var "program"
-		return boost::optional<insieme::core::ProgramPtr&>();
+/// valid returns true if the SCoP does obey all dependences; false otherwise. The validity does not change (as
+/// a new SCoP will be created resulting from a transformation), hence its value should be memoized.
+int SCoP::valid() {
+	// check whether we already have determined the validity of this SCoP; it may be invalid after a
+	// dependence-ignoring transformation
+	// all SCoPs are valid right now, as they are derived from the original program text
+	// once they have been transformed, we need to add code here to check the dependences
+	if (!obeysDeps) {
+		obeysDeps=boost::optional<unsigned int>(1);
+	}
+
+	return *obeysDeps;
 }

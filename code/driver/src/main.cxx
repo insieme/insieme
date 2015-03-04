@@ -64,7 +64,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
-#include "insieme/transform/polyhedral/scop.h"
+#include "insieme/transform/polyhedral/scoplist.h"
 #include "insieme/transform/polyhedral/scoppar.h"
 #include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/transformation.h"
@@ -357,10 +357,9 @@ namespace {
 			scoplist.clear(); // we do not use the scoplist right now, but we may want to refer to it later
 			return insieme::transform::polyhedral::SCoPPar(program).apply();
 		} else {
-			auto scop=insieme::transform::polyhedral::novel::SCoP(program);
-			auto maybe_ir=scop.IR();
-			if (maybe_ir) return *maybe_ir;
-			else return program;
+			auto scoplist=insieme::transform::polyhedral::novel::SCoPList(program);
+			// do some transformation here
+			return scoplist.IR();
 		}
 	}
 

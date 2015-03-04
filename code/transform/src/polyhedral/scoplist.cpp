@@ -34,24 +34,44 @@
  * regarding third party software licenses.
  */
 
-#ifndef NEWSCOP_H
-#define NEWSCOP_H
+#include <cstdlib>
+#include <boost/optional.hpp>
+#include <iostream>
+#include <memory>
+#include <vector>
 
-#include "boost/optional.hpp"
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/transform/polyhedral/scop.h"
+#include "insieme/transform/polyhedral/scoplist.h"
+#include "insieme/utils/logging.h"
 
-namespace insieme { namespace transform { namespace polyhedral { namespace novel {
+using namespace insieme::core;
+using namespace insieme::transform::polyhedral::novel;
 
-class SCoP {
+// constructor
+SCoPList::SCoPList(ProgramPtr& program): program(program) {
+	std::cout << "Hello from SCoPList Constructor Nouvelle!" << std::endl;
+	findSCoPs(program);
+}
 
-	boost::optional<unsigned int> obeysDeps;
+// visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
+void SCoPList::findSCoPs(ProgramPtr& program) {
+	std::cout << "trying to find SCoPs" << std::endl;
+//	SCoPVisitor scopvisitor();
+//	scopvisitor.visit(NodeAddress(program));
 
-public:
-	SCoP(unsigned int valid);
-	int valid();
-};
+	push_back(SCoP(1));
+}
 
-}}}}
+// return the IR of the corresponding polyhedra, if defined
+ProgramPtr& SCoPList::IR() {
+	// generate code only when all SCoPs are valid; otherwise use original program, since we could not optimize
+	// possibly, we could also optimize based on the valid SCoPs, ignoring the other ones (check semantics!)
+	int scopsvalid=1;
+	for (auto it=begin(); it!=end(); it++) scopsvalid&=it->valid();
 
-#endif // NEWSCOP_H
+	// now, if all SCoPs are valid, generate code
+	if (scopsvalid)
+		return program; // currently a noop
+	else
+		return program;
+}

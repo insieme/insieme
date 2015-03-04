@@ -34,24 +34,25 @@
  * regarding third party software licenses.
  */
 
-#ifndef NEWSCOP_H
-#define NEWSCOP_H
+#ifndef SCOPLIST_H
+#define SCOPLIST_H
 
-#include "boost/optional.hpp"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_program.h"
+#include "insieme/transform/polyhedral/scop.h"
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class SCoP {
-
-	boost::optional<unsigned int> obeysDeps;
+class SCoPList: public std::vector<SCoP> {
+	insieme::core::ProgramPtr& program;
 
 public:
-	SCoP(unsigned int valid);
-	int valid();
+	SCoPList(insieme::core::ProgramPtr& program);
+	void findSCoPs(insieme::core::ProgramPtr& program);
+
+	insieme::core::ProgramPtr& IR();
 };
 
 }}}}
 
-#endif // NEWSCOP_H
+#endif // SCOPLIST_H
