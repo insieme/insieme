@@ -115,7 +115,7 @@ namespace {
 	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
-		
+
 		auto nonDecls = utils::set::difference(visitor.usedVars, visitor.declaredVars);
 
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
@@ -1652,6 +1652,18 @@ ExpressionPtr IRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
 	return callExpr(core::analysis::getConstCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstCpp(), ref);
 }
 
+ExpressionPtr IRBuilder::toConstRValCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefConstRValCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	return callExpr(core::analysis::getConstRValCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstRValCpp(), ref);
+}
+
 ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
 	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
 	assert(ref && (analysis::isAnyCppRef(ref->getType())));
@@ -1665,9 +1677,20 @@ ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
 	if (analysis::isCppRef(ref->getType())) {
 		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefCppToIR(), ref);
 	}
-
-	// handle a const reference
-	return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstCppToIR(), ref);
+	// check whether it is a const reference
+	if (analysis::isConstCppRef(ref->getType())) {
+		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstCppToIR(), ref);
+	}
+	// check whether it is a rval reference
+	if (analysis::isRValCppRef(ref->getType())) {
+		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefRValCppToIR(), ref);
+	}
+	// check whether it is a rval reference
+	if (analysis::isConstRValCppRef(ref->getType())) {
+		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstRValCppToIR(), ref);
+	}
+	assert(false && "failed to convert C++ reference to IR reference");
+    return ref;
 }
 
 } // namespace core

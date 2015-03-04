@@ -693,6 +693,11 @@ namespace core {
 		ExpressionPtr toConstCppRef(const ExpressionPtr& ref) const;
 
 		/**
+		 * Converts a given IR reference into a const C++ right side reference.
+		 */
+		ExpressionPtr toConstRValCppRef(const ExpressionPtr& ref) const;
+
+		/**
 		 * Converts a (const) C++ reference in an IR reference.
 		 */
 		ExpressionPtr toIRRef(const ExpressionPtr& ref) const;

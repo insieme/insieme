@@ -447,6 +447,21 @@ bool isUsedToCreateConstRef(const core::StatementPtr& body, const core::Variable
 	return flag;
 }
 
+	//if var is used to create a right side ref
+bool isUsedToCreateRValRef(const core::StatementPtr& body, const core::VariablePtr& var){
+
+	auto& ext = body->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+	bool flag = false;
+	core::visitDepthFirstOnce (body, [&] (const core::CallExprPtr& call){
+		if (core::analysis::isCallOf(call, ext.getRefIRToRValCpp())){
+			if (call[0] == var ){
+				flag = true;
+			}
+		}
+	});
+	return flag;
+}
+
 }
 
 //////////////////////////////////////////////////////////////////
@@ -474,7 +489,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 			// This is a materialize case, the materialize expression is implicit in C++
 			// NOT to use a custom materialize node, turns into the need of distinguish
 			// the cases to explicitly write refVar or not to do so, in the backend
-			if (isUsedToCreateConstRef(body, wrap)){
+			if (isUsedToCreateConstRef(body, wrap) || isUsedToCreateRValRef(body, wrap)) {
 				auto access = builder.refVar(currParam);
 				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
 				core::visitDepthFirstOnce (newBody, transferAnnotations);
@@ -1257,14 +1272,46 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init));
 	}
 
+	// init right side ref with memory location ( T&& a = T; )
+	if (core::analysis::isRValCppRef(elementType) && init->getType().isa<core::RefTypePtr>()) {
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToRValCpp(), init));
+	}
+
+	// init right side ref with memory location ( const T&& a = T; )
+	if (core::analysis::isConstRValCppRef(elementType) && init->getType().isa<core::RefTypePtr>()) {
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstRValCpp(), init));
+	}
+
 	// init const ref with a ref, add constancy ( T& b...; const T& a = b; )
 	if (core::analysis::isConstCppRef(elementType) && core::analysis::isCppRef(init->getType())) {
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), init));
 	}
 
+	// init const ref with a right side ref, add constancy ( T&& b...; const T& a = b; )
+	if (core::analysis::isConstCppRef(elementType) && core::analysis::isRValCppRef(init->getType())) {
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefRValCppToConstCpp(), init));
+	}
+
+	// init const ref with a const right side ref, add constancy ( const T&& b...; const T& a = b; )
+	if (core::analysis::isConstCppRef(elementType) && core::analysis::isConstRValCppRef(init->getType())) {
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstRValCppToConstCpp(), init));
+	}
+
+	// init ref with a right side ref, add constancy ( T&& b...; T& a = b; )
+	if (core::analysis::isCppRef(elementType) && core::analysis::isRValCppRef(init->getType())) {
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefRValCppToCpp(), init));
+	}
+
 	// init const ref with value, extend lifetime  ( const T& x = f() where f returns by value )
 	if (core::analysis::isConstCppRef(elementType) && !init->getType().isa<core::RefTypePtr>()) {
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
+								builder.refVar (init)));
+								//builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init)));
+	}
+
+	// init const ref with value, extend lifetime  ( const T&& x = f() where f returns by value )
+	if (core::analysis::isConstRValCppRef(elementType) && !init->getType().isa<core::RefTypePtr>()) {
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstRValCpp(),
 								builder.refVar (init)));
 								//builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), init)));
 	}
