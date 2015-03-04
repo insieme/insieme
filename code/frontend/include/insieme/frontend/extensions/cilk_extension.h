@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {

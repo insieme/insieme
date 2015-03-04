@@ -38,6 +38,8 @@
 
 #include "insieme/frontend/cilk/cilk_annotation.h"
 #include "insieme/frontend/pragma/handler.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 namespace insieme {
 namespace frontend {
