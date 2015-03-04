@@ -40,6 +40,8 @@
 
 
 
+namespace insieme {
+namespace frontend {
 namespace stmtutils {
 
 using namespace insieme::core;
@@ -63,6 +65,8 @@ using namespace insieme::core;
 						   lhs, rhs );        // LHS and RHS of the operation
 	}
 
-} // end stmtutils namespace
+} // end namespace stmtutils
+} // end namespace frontend
+} // end namespace insieme
 
 

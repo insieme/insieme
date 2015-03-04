@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -57,10 +57,6 @@ class Decl;
 class Expr;
 }
 
-namespace stmtutils {
-    class StmtWrapper;
-}
-
 namespace insieme {
 
 namespace core {
@@ -75,6 +71,10 @@ typedef Pointer<const Node> NodePtr;
 } // end core namespace
 
 namespace frontend {
+
+namespace stmtutils {
+    class StmtWrapper;
+}
 
 namespace conversion {
 class Converter;
