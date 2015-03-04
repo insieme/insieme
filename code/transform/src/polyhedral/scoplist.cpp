@@ -40,8 +40,10 @@
 #include <memory>
 #include <vector>
 
+#include "insieme/core/ir_address.h"
 #include "insieme/transform/polyhedral/scop.h"
 #include "insieme/transform/polyhedral/scoplist.h"
+#include "insieme/transform/polyhedral/scopvisitor.h"
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
@@ -56,10 +58,8 @@ SCoPList::SCoPList(ProgramPtr& program): program(program) {
 // visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
 void SCoPList::findSCoPs(ProgramPtr& program) {
 	std::cout << "trying to find SCoPs" << std::endl;
-//	SCoPVisitor scopvisitor();
-//	scopvisitor.visit(NodeAddress(program));
-
-	push_back(SCoP(1));
+	SCoPVisitor scopvisitor;
+	scopvisitor.visit(NodeAddress(program));
 }
 
 // return the IR of the corresponding polyhedra, if defined

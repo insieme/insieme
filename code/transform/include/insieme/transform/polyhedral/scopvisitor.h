@@ -34,24 +34,24 @@
  * regarding third party software licenses.
  */
 
-#ifndef NEWSCOP_H
-#define NEWSCOP_H
+#ifndef SCOPVISITOR_H
+#define SCOPVISITOR_H
 
-#include "boost/optional.hpp"
-#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_program.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/transform/polyhedral/scop.h"
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class SCoP {
-
-	boost::optional<unsigned int> obeysDeps;
+class SCoPVisitor: public insieme::core::IRVisitor<insieme::transform::polyhedral::novel::SCoP, insieme::core::Address>{
 
 public:
-	SCoP(unsigned int valid=2);
-	int valid();
+	SCoPVisitor();
+	insieme::transform::polyhedral::novel::SCoP visitForStmt(const insieme::core::ForStmtAddress& forStmt);
 };
 
 }}}}
 
-#endif // NEWSCOP_H
+#endif // SCOPVISITOR_H

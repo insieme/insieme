@@ -47,7 +47,7 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 // constructor
-SCoP::SCoP(unsigned int valid=2) {
+SCoP::SCoP(unsigned int valid) {
 	std::cout << "Hello from SCoP Constructor Nouvelle!" << std::endl;
 	if (valid<2) obeysDeps=boost::optional<int>(valid); // else we don't know yet
 }
