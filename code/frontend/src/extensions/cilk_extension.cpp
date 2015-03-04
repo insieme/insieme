@@ -36,14 +36,56 @@
 
 #include "insieme/frontend/extensions/cilk_extension.h"
 
+#include "insieme/frontend/cilk/cilk_annotation.h"
+#include "insieme/frontend/pragma/handler.h"
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
+
+namespace {
+
+	using namespace stmtutils;
+	using namespace insieme::core;
+
+	//returns the pragma function lambda which will add the annotation which is passed as a template argument when called
+	template<typename T>
+	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getMarkerAttachementLambda() {
+		return [] (pragma::MatchObject object, StmtWrapper node) {
+				StmtWrapper res;
+				for(StatementPtr element : node) {
+					StatementPtr tmp;
+					IRBuilder builder(element->getNodeManager());
+					if (element->getNodeCategory() == NC_Statement) {
+						tmp = builder.markerStmt(element.as<StatementPtr>());
+					} else if (element->getNodeCategory() == NC_Expression) {
+						tmp = builder.markerExpr(element.as<ExpressionPtr>());
+					} else {
+						assert(false && "Cannot annotate non statement/expression!");
+					}
+					tmp->attachValue<T>();
+					res.push_back(tmp);
+				}
+				return res;
+		};
+	}
+
+} //end anonymous namespace
+
+
 CilkFrontendPlugin::CilkFrontendPlugin() {
+	//Define the macros which will replace the cilk keywords with inline pragmas
 	macros.insert(std::make_pair("cilk=", ""));
 	macros.insert(std::make_pair("spawn", "_Pragma(\"cilk spawn\")"));
 	macros.insert(std::make_pair("sync", "_Pragma(\"cilk sync\")"));
+
+	//Add pragma handlers which will attach cilk annotations at the correct location
+	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("cilk", "spawn", pragma::tok::eod,
+			getMarkerAttachementLambda<cilk::CilkSpawnMarker>())));
+
+	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("cilk", "sync", pragma::tok::eod,
+			getMarkerAttachementLambda<cilk::CilkSyncMarker>())));
 }
 
 }   //end namespace extensions
