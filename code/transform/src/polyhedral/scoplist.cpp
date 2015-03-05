@@ -49,21 +49,13 @@
 using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
-// constructor
-SCoPList::SCoPList(ProgramPtr& program): program(program) {
+/// Visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
+SCoPList::SCoPList(const insieme::core::ProgramAddress &program): program(program) {
 	std::cout << "Hello from SCoPList Constructor Nouvelle!" << std::endl;
-	findSCoPs(program);
 }
 
-// visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
-void SCoPList::findSCoPs(ProgramPtr& program) {
-	std::cout << "trying to find SCoPs" << std::endl;
-	SCoPVisitor scopvisitor;
-	scopvisitor.visit(NodeAddress(program));
-}
-
-// return the IR of the corresponding polyhedra, if defined
-ProgramPtr& SCoPList::IR() {
+/// Return the IR of the corresponding polyhedra, if defined; otherwise, return the original program
+const ProgramAddress SCoPList::IR() {
 	// generate code only when all SCoPs are valid; otherwise use original program, since we could not optimize
 	// possibly, we could also optimize based on the valid SCoPs, ignoring the other ones (check semantics!)
 	int scopsvalid=1;

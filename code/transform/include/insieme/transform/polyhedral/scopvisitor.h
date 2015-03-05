@@ -37,19 +37,33 @@
 #ifndef SCOPVISITOR_H
 #define SCOPVISITOR_H
 
+#include <stack>
+
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/transform/polyhedral/scop.h"
+#include "insieme/transform/polyhedral/scoplist.h"
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class SCoPVisitor: public insieme::core::IRVisitor<insieme::transform::polyhedral::novel::SCoP, insieme::core::Address>{
+class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address>{
+
+	std::stack<SCoP> scopstack;
+	unsigned int lvl;
 
 public:
-	SCoPVisitor();
-	insieme::transform::polyhedral::novel::SCoP visitForStmt(const insieme::core::ForStmtAddress& forStmt);
+
+	/// The public variable scoplist holds the result from visiting all nodes in a program. It should be
+	/// used/passed/copied, then the SCoPVisitor can be destructed.
+	insieme::transform::polyhedral::novel::SCoPList scoplist;
+
+	SCoPVisitor(const insieme::core::ProgramAddress &node);
+	void visitNode    (const insieme::core::NodeAddress &node);
+	void visitChildren(const insieme::core::NodeAddress &node);
+
+	void visitForStmt (const insieme::core::ForStmtAddress &forStmt);
 };
 
 }}}}

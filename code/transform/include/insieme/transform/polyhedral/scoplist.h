@@ -44,13 +44,12 @@
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
 class SCoPList: public std::vector<SCoP> {
-	insieme::core::ProgramPtr& program;
+	const insieme::core::ProgramAddress program;
 
 public:
-	SCoPList(insieme::core::ProgramPtr& program);
-	void findSCoPs(insieme::core::ProgramPtr& program);
+	SCoPList(const insieme::core::ProgramAddress &program);
 
-	insieme::core::ProgramPtr& IR();
+	const insieme::core::ProgramAddress IR();
 };
 
 }}}}

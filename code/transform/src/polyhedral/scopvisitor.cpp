@@ -46,10 +46,31 @@
 using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
-// constructor
-SCoPVisitor::SCoPVisitor() {}
+/// The constructor initializes class variables and triggers the visit of all nodes in the program.
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): lvl(0), scoplist(node) {
+	visit(node);
+}
 
-SCoP SCoPVisitor::visitForStmt(const ForStmtAddress& forStmt) {
-	std::cout << "Found for() stmt!" << std::endl;
-	return SCoP();
+/// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
+/// all child nodes and call their respective visitor methods.
+void SCoPVisitor::visitNode(const NodeAddress &node) {
+	// process this very node
+	std::cout << lvl << "\tFound node " << node << std::endl;
+	if (node->getNodeType() == NT_CallExpr)
+		ExpressionPtr func=static_address_cast<const CallExpr>(node)->getFunctionExpr();
+	visitChildren(node);
+}
+
+/// Visit all the child nodes of the given node. The given node itself is not taken into account.
+void SCoPVisitor::visitChildren(const NodeAddress &node) {
+	for (auto child: node->getChildList()) visit(child);
+}
+
+/// visitForStmt describes what should happen when a for stmt is encountered within the program.
+/// Is it the outermost for, or is it already nested?
+void SCoPVisitor::visitForStmt(const ForStmtAddress &forStmt) {
+	lvl++;
+	std::cout << "for() stmt @" << forStmt << std::endl;
+	visitChildren(forStmt);
+	lvl--;
 }
