@@ -189,6 +189,17 @@ insieme::core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType*
 	return retTy;
 }
 
+insieme::core::TypePtr Cpp11Plugin::VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact) {
+    core::TypePtr innerTy = convFact.convertType(rvalref->getPointeeType());
+    bool isConst = rvalref->getPointeeType().isConstQualified();
+	core::TypePtr ret;
+    if(isConst)
+        ret = core::analysis::getConstRValCppRef(innerTy);
+    else
+        ret = core::analysis::getRValCppRef(innerTy);
+	return ret;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //  Decls post visit

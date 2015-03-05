@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,45 +29,25 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/cilk/cilk_pragma.h"
+#pragma once
 
-#include "insieme/frontend/cilk/cilk_annotation.h"
-#include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/matcher.h"
-
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {
 namespace frontend {
-namespace cilk {
+namespace extensions {
 
-	/**
-	 * Registers the handlers for Cilk pragmas
-	 */
-	void registerPragmaHandlers(clang::Preprocessor& pp) {
+class CilkFrontendPlugin : public FrontendPlugin {
 
-		clang::PragmaNamespace* cilk = new clang::PragmaNamespace("cilk");
-		pp.AddPragmaHandler(cilk);
+	public:
+		CilkFrontendPlugin();
+};
 
-		// add pragma handlers for spawn and sync operations
-
-		// #pragma cilk spawn
-		cilk->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<CilkPragma<CilkSpawnMarker>>(
-				pp.getIdentifierInfo("spawn"), pragma::tok::eod, "cilk")
-			);
-
-		// #pragma cilk sync
-		cilk->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<CilkPragma<CilkSyncMarker>>(
-				pp.getIdentifierInfo("sync"), pragma::tok::eod, "cilk")
-			);
-
-	}
-
-
-} // end namespace cilk
-} // end namespace frontend
-} // end namespace insieme
+}   //end namespace extensions
+}   //end namespace frontend
+}   //end namespace insieme

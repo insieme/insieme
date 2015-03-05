@@ -111,6 +111,7 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 	 */
 	insieme::core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) ;
 
+    insieme::core::TypePtr VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact);
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               Plugin Hooks
@@ -140,6 +141,8 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 			return VisitAutoType(autoTy, convFact);
 		if (const clang::DecltypeType* declTy =  llvm::dyn_cast<clang::DecltypeType>(type.getTypePtr()))
 			return VisitDecltypeType(declTy, convFact);
+        if (const clang::RValueReferenceType* rvalRef = llvm::dyn_cast<clang::RValueReferenceType>(type.getTypePtr()))
+			return VisitRValueReferenceType(rvalRef, convFact);
 		return nullptr;
 	}
 

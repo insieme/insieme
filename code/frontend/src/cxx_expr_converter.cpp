@@ -392,6 +392,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	if( !ctorDecl->isUserProvided() ) {
+
 		if(	ctorDecl->isDefaultConstructor() ) {
 			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
 			//classes
@@ -427,12 +428,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				//return (retIr = (builder.callExpr(refToResTy, ctor, builder.undefinedVar(refToResTy))));
 			}
 		}
-		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
+		else if( (ctorDecl->isMoveConstructor() || ctorDecl->isCopyConstructor()) && ctorDecl->getParent()->isPOD() ) {
 			//if not userprovided we don't need to add a constructor just create the object to work
 			//with -- for the rest the BE-compiler takes care of
 			return (retIr = Visit(callExpr->getArg(0)));
 		}
 	}
+
+    // if the thing below is an xvalue... just use the inner element
+    if(ctorDecl->isMoveConstructor() || ctorDecl->isCopyConstructor())
+        if(callExpr->getArg(0)->isXValue())
+            return (retIr = Visit(callExpr->getArg(0)));
 
 	// to begin with we translate the constructor as a regular function but with initialization list
 	core::ExpressionPtr ctorFunc = convFact.getCallableExpression(ctorDecl);
@@ -770,7 +776,7 @@ namespace detail{
 				auto decl = (*it).as<core::DeclarationStmtPtr>();
 				res =core::transform::replaceAllGen(res->getNodeManager(), res, decl->getVariable(), decl->getInitialization());
 			}
-			
+
 			return res;
 		}
 } // detail namespace
@@ -833,7 +839,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	else{
 		if (core::encoder::isListType(innerIr->getType())) {
 			vector<core::ExpressionPtr> retList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(innerIr);
-			if (core::encoder::isListType(retList[0]->getType())) 
+			if (core::encoder::isListType(retList[0]->getType()))
 				retList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(retList[0]);
 			for (core::ExpressionPtr& expr : retList){
 				expr = builder.deref(expr);
@@ -844,7 +850,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
-	// inline the list, 
+	// inline the list,
 	return retIr =  detail::inlineExpressionWithCleanups(stmtList);
 }
 

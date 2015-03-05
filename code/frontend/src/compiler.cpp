@@ -309,20 +309,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	this->pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, false, false);
 	/*** VECTOR EXTENSION STUFF END ***/
 
-	// Set OMP define if compiling with OpenMP
-	this->pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SRC_DIR "../include/insieme/frontend/omp/input/",
-		clang::frontend::System,  false, false);
-	if(config.hasOption(ConversionJob::OpenMP)) {
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
-	}
-
-	// add Cilk definitions if required
-	if(config.hasOption(ConversionJob::Cilk)) {
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("cilk=");
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
-	}
-
 	pimpl->m_isCXX = false;
 	if(config.getStandard() == ConversionSetup::C99) {
 		//set default values for C --

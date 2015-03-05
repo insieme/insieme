@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,7 +51,6 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
-#include "insieme/frontend/cilk/cilk_pragma.h"
 #include "insieme/frontend/mpi/mpi_pragma.h"
 #include "insieme/frontend/mpi/mpi_sema.h"
 
@@ -136,9 +135,6 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 	: mMgr(mgr), mFileName(file), setup(setup), mClang(setup, file),  
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
 	{
-
-	//register 'cilk' pragmas
-	cilk::registerPragmaHandlers( mClang.getPreprocessor() );
 
 	// register 'test' pragma
 	TestPragma::registerPragmaHandler( mClang.getPreprocessor() );

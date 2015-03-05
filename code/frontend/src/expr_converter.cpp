@@ -228,13 +228,20 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 	// if is a CPP ref, do not cast, do a transformation
 	if (core::analysis::isCppRef(targetType)) {
 		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), res);
-	}
-	else if (core::analysis::isConstCppRef(targetType)) {
+	} else 	if (core::analysis::isRValCppRef(targetType)) {
+		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToRValCpp(), res);
+	} else if (core::analysis::isConstCppRef(targetType)) {
 		// Note, const refs extend lifetime of values, therefore materialize the value into a ref
 		if (!res->getType().isa<core::RefTypePtr>()) {
 			res = builder.refVar(res);
 		}
 		return builder.toConstCppRef(res);
+	} else if (core::analysis::isConstRValCppRef(targetType)) {
+		// Note, const refs extend lifetime of values, therefore materialize the value into a ref
+		if (!res->getType().isa<core::RefTypePtr>()) {
+			res = builder.refVar(res);
+		}
+		return builder.toConstRValCppRef(res);
 	}
 	else if (core::analysis::isAnyCppRef(type)) {
 		res =  core::analysis::unwrapCppRef(res);
@@ -642,7 +649,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
 
-	// In case we have a K&R C-style declaration (without argument types) 
+	// In case we have a K&R C-style declaration (without argument types)
 	// and a different number of arguments in the call we need to adjust the function type
 	vector<core::TypePtr> typeList = funcTy.getParameterTypeList();
 	if(typeList.size() == 0 && args.size() > 0) {

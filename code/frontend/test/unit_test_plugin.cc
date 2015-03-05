@@ -67,10 +67,12 @@
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
+using namespace insieme::frontend;
 namespace fe = insieme::frontend;
 using namespace fe::pragma;
 
