@@ -13,21 +13,31 @@ file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc )
 
 # add include directory
-include_directories(
-	${CMAKE_CURRENT_SOURCE_DIR}/include
-	${LLVM_HOME}/include
-	${insieme_utils_include_dir}
-	${insieme_core_include_dir}
-	${insieme_analysis_include_dir}
-	${insieme_annotations_include_dir}
-	${insieme_common_include_dir} )
+#include_directories(
+#	${CMAKE_CURRENT_SOURCE_DIR}/include
+#	${LLVM_HOME}/include
+#	${insieme_core_include_dir}
+#	${insieme_utils_include_dir}
+#	${insieme_analysis_include_dir}
+#	${insieme_annotations_include_dir}
+#	${insieme_common_include_dir} 
+#)
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
+target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
+
+#TODO figure out how to get include-dirs from clang/llvm libs
+target_include_directories(insieme_frontend PUBLIC ${LLVM_HOME}/include)
+
+#FIXME frontend/instrumentation_region has dependency to backend/runtime/runtime_extension.h
+#target_include_directories(insieme_frontend PUBLIC ${insieme_backend_include_dir})
+target_link_libraries(insieme_frontend insieme_backend)
 
 # add dependencies
 #add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations insieme_analysis )
 target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
+target_link_libraries(insieme_frontend insieme_core insieme_utils insieme_analysis insieme_annotations)
 
 set ( ut_prefix  ut_fe_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -36,8 +46,8 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	include_directories(${case_name} ${insieme_utils_include_dir})
-    include_directories(${case_name} ${insieme_backend_include_dir})
+	#include_directories(${case_name} ${insieme_utils_include_dir})
+    #include_directories(${case_name} ${insieme_backend_include_dir})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)

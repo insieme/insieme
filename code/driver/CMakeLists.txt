@@ -17,32 +17,34 @@ file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
 
 # Build the driver library
 add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
-
+target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
 # list all include paths
-include_directories( ${insieme_core_include_dir} )
-include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_frontend_include_dir} )
-include_directories( ${insieme_backend_include_dir} )
-include_directories( ${insieme_analysis_include_dir} )
-include_directories( ${insieme_transform_include_dir} )
-include_directories( ${insieme_annotations_include_dir} )
-include_directories( ${insieme_driver_include_dir} )
-include_directories( ${insieme_machine_learning_include_dir} )
-include_directories( ${insieme_common_include_dir} )
+#include_directories( ${insieme_core_include_dir} )
+#include_directories( ${insieme_utils_include_dir} )
+#include_directories( ${insieme_frontend_include_dir} )
+#include_directories( ${insieme_backend_include_dir} )
+#include_directories( ${insieme_analysis_include_dir} )
+#include_directories( ${insieme_transform_include_dir} )
+#include_directories( ${insieme_annotations_include_dir} )
+#include_directories( ${insieme_driver_include_dir} )
+#include_directories( ${insieme_machine_learning_include_dir} )
+#include_directories( ${insieme_common_include_dir} )
+
 
 set( insieme_libraries 
-	insieme_utils 
 	insieme_core 
+	insieme_utils 
 	insieme_frontend 
 	insieme_backend 
-	insieme_annotations 
 	insieme_analysis
 	insieme_transform
+	insieme_annotations 
 	insieme_driver
 	insieme_machine_learning
 )
-
+target_link_libraries(insieme_driver insieme_utils insieme_frontend insieme_backend insieme_analysis insieme_transform insieme_annotations insieme_machine_learning
+)
 add_custom_target(drivers)
 
 # build executables

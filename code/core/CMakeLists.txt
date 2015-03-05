@@ -13,8 +13,8 @@ file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_core_incs 	include/*.h include/*.def include/*.inc )
 
 # list all include paths
-include_directories( ${insieme_core_include_dir} )
-include_directories( ${insieme_utils_include_dir} )
+#include_directories( ${insieme_core_include_dir} )
+#include_directories( ${insieme_utils_include_dir} )
 
 # automatically run the script for generating IRBuilder interface
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
@@ -25,13 +25,18 @@ endif()
          
 # Build the core library
 add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
+target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
+
+#target_include_directories(insieme_core PUBLIC ${insieme_utils_include_dir} )
+
 target_link_libraries(insieme_core gomp)
 
 # add dependencies
-# add_dependencies(insieme_core insieme_utils)
+target_link_libraries(insieme_core insieme_utils)
 
-target_link_libraries( insieme_core ${cudd_LIB}) 
-include_directories( test/include/ )
+target_link_libraries(insieme_core ${cudd_LIB}) 
+
+#include_directories( test/include/ )
 
 set ( ut_prefix  ut_core_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -44,6 +49,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} ${cudd_LIB})
+	target_include_directories(${case_name} PUBLIC test/include/)
 	
 	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0
 	set(VFLAG ${TRUE})

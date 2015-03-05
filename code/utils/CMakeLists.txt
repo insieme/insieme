@@ -16,10 +16,12 @@ file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_utils_incs	include/*.h )
 
 # add include directory
-include_directories(include)
+#include_directories(include)
 
 # build the utils library
 add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_incs} )
+target_include_directories(insieme_utils PUBLIC include)
+
 target_link_libraries(insieme_utils ${Boost_LIBRARIES})
 
 # add boost_filesystem library

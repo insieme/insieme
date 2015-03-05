@@ -10,25 +10,29 @@ file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)
 file(GLOB_RECURSE insieme_backend_incs 	include/*.h include/*.def include/*.inc)
 
 # list all include paths
-include_directories( ${insieme_core_include_dir} )
-include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_annotations_include_dir} )
-include_directories( ${insieme_frontend_include_dir} ) #REMOVE: added only for ocl_standalone_test 
-include_directories( ${insieme_transform_include_dir} )
-include_directories( ${insieme_analysis_include_dir} )
-include_directories( ${insieme_backend_include_dir} )
-include_directories( ${insieme_common_include_dir} )
+#include_directories( ${insieme_backend_include_dir} )
+#include_directories( ${insieme_core_include_dir} )
+#include_directories( ${insieme_utils_include_dir} )
+#include_directories( ${insieme_annotations_include_dir} )
+#include_directories( ${insieme_transform_include_dir} )
+#include_directories( ${insieme_analysis_include_dir} )
+#include_directories( ${insieme_common_include_dir} )
+#include_directories( ${insieme_frontend_include_dir} ) #REMOVE: added only for ocl_standalone_test 
 
 # Build the core library
 add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_backend_incs} )
+target_include_directories(insieme_backend PUBLIC ${insieme_backend_include_dir})
+#fixme common ???
+target_include_directories(insieme_backend PUBLIC ${insieme_common_include_dir})
 
 # add dependencies
 #add_dependencies( insieme_backend insieme_core insieme_annotations insieme_utils )
-#target_link_libraries(insieme_backend insieme_utils)
-#target_link_libraries(insieme_backend insieme_core)
-#target_link_libraries(insieme_backend insieme_annotations)
-#target_link_libraries(insieme_backend insieme_transform)
-#target_link_libraries(insieme_backend insieme_analysis)
+target_link_libraries(insieme_backend insieme_core)
+target_link_libraries(insieme_backend insieme_utils)
+target_link_libraries(insieme_backend insieme_annotations)
+target_link_libraries(insieme_backend insieme_transform)
+target_link_libraries(insieme_backend insieme_analysis)
+#target_link_libraries(insieme_backend insieme_common)
 #target_link_libraries(insieme_backend insieme_frontend) #REMOVE: added only for ocl_standalone_test
 
 set ( ut_prefix  ut_be_ )

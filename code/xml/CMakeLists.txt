@@ -15,51 +15,57 @@ cmake_minimum_required(VERSION 2.6)
 file(GLOB_RECURSE insieme_xml_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_xml_incs 	include/*.h )
 
-list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
+list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake/")
 
-if (USE_XML) 
+# lookup Xerces library
+#lookup_lib( XERCES xerces-c )
 
-	# lookup Xerces library
-	lookup_lib( XERCES xerces-c )
+# list all include paths
+#include_directories( ${insieme_xml_include_dir} )
+#include_directories( ${xerces_INC} )
+#include_directories( ${insieme_annotations_include_dir} )
+#include_directories( ${insieme_utils_include_dir} )
+#include_directories( ${insieme_core_include_dir} )
 
-	# list all include paths
-	include_directories( ${insieme_xml_include_dir} )
-	include_directories( ${insieme_annotations_include_dir} )
-	include_directories( ${insieme_utils_include_dir} )
-	include_directories( ${insieme_core_include_dir} )
+#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/xsd_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/xsd_config.h)
+#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/test_config.h)
 
-	#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/xsd_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/xsd_config.h)
-	#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/test_config.h)
+# Build the xml library
+add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} )
+target_include_directories(insieme_xml PUBLIC ${insieme_xml_include_dir} )
 
-	# Build the core library
-	add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} )
+#target_include_directories(insieme_xml PUBLIC ${xerces_INC} )
+#	include(FindXerces)
+#NOTE: setting xerces_root_dir offers to set custom library
+#set(XERCES_ROOT_DIR ${third_part_libs_home}/xerces-latest/)
+#find_library(xerces NAMES xerces-c HINTS ${third_part_libs_home}/xerces-latest/)
+find_package(Xerces)# NAMES xerces-c HINTS ${third_part_libs_home}/xerces-latest/)
+if(XERCES_FOUND)
+	#include_directories(${XERCES_INCLUDE_DIRS})
+	#target_include_directories(insieme_xml PUBLIC ${XERCES_INCLUDE_DIRS})
+	target_link_libraries(insieme_xml ${XERCES_LIBRARIES})
+else()
+	message(FATAL_ERROR "xerces not found")
+endif(XERCES_FOUND)
 
-	# add dependencies
-	#add_dependencies( insieme_xml insieme_core insieme_utils )
-	target_link_libraries(insieme_xml ${xerces_LIB})
-	#target_link_libraries(insieme_xml ${Boost_LIBRARIES})
+target_link_libraries(insieme_xml insieme_core)
 
-	set ( ut_prefix  ut_xml_ )
-	file(GLOB_RECURSE test_cases test/*.cc)
-	foreach ( case_file ${test_cases})
-		get_filename_component( case_name ${case_file} NAME_WE )
+set ( ut_prefix  ut_xml_ )
+file(GLOB_RECURSE test_cases test/*.cc)
+foreach ( case_file ${test_cases})
+	get_filename_component( case_name ${case_file} NAME_WE )
+
+	set ( case_name ${ut_prefix}${case_name} )
+	add_executable(${case_name} ${case_file})
+	target_link_libraries(${case_name} insieme_annotations)
+	target_link_libraries(${case_name} insieme_utils)
+	target_link_libraries(${case_name} insieme_xml)
+	target_link_libraries(${case_name} ${pthread_LIB})
 	
-		set ( case_name ${ut_prefix}${case_name} )
-		add_executable(${case_name} ${case_file})
-		target_link_libraries(${case_name} insieme_annotations)
-		target_link_libraries(${case_name} insieme_core)
-		target_link_libraries(${case_name} insieme_utils)
-		target_link_libraries(${case_name} insieme_xml)
-		target_link_libraries(${case_name} ${pthread_LIB})
-		target_link_libraries(${case_name} ${xerces_LIB})
-		
-		add_unit_test(${case_name} off)
-	endforeach(case_file)
+	add_unit_test(${case_name} off)
+endforeach(case_file)
 
-	# --- INSTALL --------------------------------------------------------------------
-	if(DO_INSTALL)
-		INSTALL(TARGETS insieme_xml LIBRARY DESTINATION lib)
-	endif(DO_INSTALL)
-endif (USE_XML)
-
-
+# --- INSTALL --------------------------------------------------------------------
+if(DO_INSTALL)
+	INSTALL(TARGETS insieme_xml LIBRARY DESTINATION lib)
+endif(DO_INSTALL)

@@ -28,33 +28,46 @@ include (${insieme_code_dir}/lookup_lib.cmake)
 include (${insieme_code_dir}/add_unit_test.cmake)
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
-set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
-
-set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
-set ( insieme_annotations_include_dir       	${insieme_code_dir}/annotations/include )
+
+set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
+set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
+
+set ( insieme_annotations_src_dir       ${insieme_code_dir}/annotations/src )
+set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
+
+set ( insieme_xml_src_dir            	${insieme_code_dir}/xml/src )
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
+set ( insieme_iwir_src_dir            	${insieme_code_dir}/iwir/src )
 set ( insieme_iwir_include_dir            	${insieme_code_dir}/iwir/include )
+
+set ( insieme_frontend_src_dir       	${insieme_code_dir}/frontend/src )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
+set ( insieme_backend_src_dir       	${insieme_code_dir}/backend/src )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
+set ( insieme_driver_src_dir         	${insieme_code_dir}/driver/src )
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
-set ( insieme_experiments_include_dir       	${insieme_code_dir}/experiments/include )
 
+set ( insieme_analysis_src_dir       	${insieme_code_dir}/analysis/src )
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
+set ( insieme_transform_src_dir       	${insieme_code_dir}/transform/src )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
-set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
 
 set ( insieme_common_include_dir 		${insieme_code_dir}/common/include )
 
+set ( insieme_runtime_src_dir 	        ${insieme_code_dir}/runtime/src )
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
+set ( insieme_machine_learning_src_dir  	${insieme_code_dir}/machine_learning/src )
 set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
 
+#FIXME ONLY IN EXT???
 set ( insieme_plugins_include_dir  		${insieme_code_dir}/plugins/include )
-
+set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
+set ( insieme_experiments_include_dir       	${insieme_code_dir}/experiments/include )
 
 # -------------------------------------------------------------- find location of utilities
 
@@ -154,10 +167,10 @@ lookup_lib( PAPI papi )
 #find_package( Ruby )
 
 # lookup xerces
-if (USE_XML) 
-	lookup_lib( XERCES xerces-c )
-	add_definitions(-DUSE_XML)
-endif (USE_XML) 
+#if (USE_XML) 
+#lookup_lib( XERCES xerces-c )
+#	add_definitions(-DUSE_XML)
+#endif (USE_XML) 
 
 # lookup pthread library
 find_library(pthread_LIB pthread)

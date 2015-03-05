@@ -15,11 +15,11 @@ file(GLOB_RECURSE insieme_machine_learning_incs	include/*.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inputs.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/machine_learning/inputs.h)
 
 # add include directory
-include_directories(
-	${CMAKE_CURRENT_SOURCE_DIR}/include
-	${SHARK_HOME}/include
-	${KOMPEX_HOME}/inc )
-
+#include_directories(
+#	${CMAKE_CURRENT_SOURCE_DIR}/include
+#	${SHARK_HOME}/include
+#	${KOMPEX_HOME}/inc )
+#
 
 set( machine_learning_libraries 
 	insieme_machine_learning
@@ -33,6 +33,14 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 # build the machine learning library
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )
+target_include_directories(insieme_machine_learning PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(insieme_machine_learning PUBLIC ${SHARK_HOME}/include)
+target_include_directories(insieme_machine_learning PUBLIC ${KOMPEX_HOME}/inc )
+target_link_libraries(insieme_machine_learning insieme_utils)
+target_link_libraries(insieme_machine_learning dl)
+target_link_libraries(insieme_machine_learning ${shark_LIB})
+target_link_libraries(insieme_machine_learning ${kompex_LIB})
+
 
 # Build machine learning executables
 add_executable( train_ffnet src/train_ffnet.cxx ${insieme_machine_learning_incs})
@@ -54,7 +62,7 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	include_directories(${case_name} ${insieme_utils_include_dir})
+	#include_directories(${case_name} ${insieme_utils_include_dir})
 	target_link_libraries(${case_name} insieme_machine_learning)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} dl)
