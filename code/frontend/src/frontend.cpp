@@ -66,6 +66,7 @@
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/extensions/instrumentation_region_plugin.h"
 #include "insieme/frontend/extensions/anonymous_rename.h"
+#include "insieme/frontend/extensions/cilk_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -105,6 +106,10 @@ namespace frontend {
 
         if(hasOption(ConversionSetup::OpenMP)) {
             registerFrontendPlugin<extensions::OmpFrontendPlugin>();
+        }
+
+        if(hasOption(ConversionSetup::Cilk)) {
+            registerFrontendPlugin<extensions::CilkFrontendPlugin>();
         }
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
