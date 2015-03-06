@@ -15,6 +15,7 @@ cmake_minimum_required(VERSION 2.6)
 file(GLOB_RECURSE insieme_xml_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_xml_incs 	include/*.h )
 
+#to use FindXerces.cmake
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake/")
 
 # lookup Xerces library
@@ -60,7 +61,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_xml)
-	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name} off)
 endforeach(case_file)

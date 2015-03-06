@@ -5,6 +5,10 @@ project(insieme_frontend CXX)
 
 include(../environment.cmake)
 
+#find clang/llvm libs
+# stroed in clang_LIBS llvm_LIBS
+include(cmake/lookup_clang.cmake)
+
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
@@ -35,9 +39,12 @@ target_include_directories(insieme_frontend PUBLIC ${LLVM_HOME}/include)
 target_link_libraries(insieme_frontend insieme_backend)
 
 # add dependencies
-#add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations insieme_analysis )
-target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
-target_link_libraries(insieme_frontend insieme_core insieme_utils insieme_analysis insieme_annotations)
+target_link_libraries(insieme_frontend ${clang_LIBs})
+target_link_libraries(insieme_frontend ${llvm_LIBs})
+target_link_libraries(insieme_frontend insieme_core)
+target_link_libraries(insieme_frontend insieme_utils)
+target_link_libraries(insieme_frontend insieme_analysis)
+target_link_libraries(insieme_frontend insieme_annotations)
 
 set ( ut_prefix  ut_fe_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -46,8 +53,6 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	#include_directories(${case_name} ${insieme_utils_include_dir})
-    #include_directories(${case_name} ${insieme_backend_include_dir})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
@@ -58,7 +63,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${Boost_SERIALIZATION_LIBRARY})
 	target_link_libraries(${case_name} ${clang_LIBs})
-	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} ${llvm_LIBs})
 	
 	if(${case_name} STREQUAL ut_fe_ocl_host_compiler_test)

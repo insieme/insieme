@@ -41,7 +41,6 @@ foreach ( case_file ${test_cases} )
 	target_link_libraries(${case_name} ${Boost_LIBRARIES})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${Boost_FILESYSTEM_LIBRARY})
-	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} ${luajit_LIB} )
 
 	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0

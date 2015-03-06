@@ -130,8 +130,14 @@ link_directories(${Boost_LIBRARY_DIRS})
 find_package( Perl )
 
 # lookup Google Test libraries
-lookup_lib ( GTEST gtest )
-lookup_lib ( GTEST_MAIN gtest_main )
+set(GTEST_ROOT ${third_part_libs_home}/gtest-latest)
+find_package(GTest REQUIRED)
+if(GTEST_FOUND)
+	set(gtest ${GTEST_LIBRARIES})
+	set(gtest_main ${GTEST_MAIN_LIBRARIES})
+endif()
+#lookup_lib ( GTEST gtest )
+#lookup_lib ( GTEST_MAIN gtest_main )
 
 # lookup ISL library
 lookup_lib( ISL isl )
@@ -173,9 +179,9 @@ lookup_lib( PAPI papi )
 #endif (USE_XML) 
 
 # lookup pthread library
-find_library(pthread_LIB pthread)
+#find_library(pthread_LIB pthread)
 # http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
-#find_package(Threads REQUIRED)
+find_package(Threads REQUIRED)
 # target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
 #profiling
@@ -187,87 +193,7 @@ IF (DO_GOOGLE_PROFILING)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${GPERFTOOLS_HOME}/lib -lprofiler")
 ENDIF ()
 
-# -------------------------------------------------------------- LLVM / CLANG  3.4 libraries
-
-#Fix LLVM path
-if(NOT DEFINED LLVM_HOME)
-	if (NOT $ENV{LLVM_HOME} STREQUAL "")
-		set (LLVM_HOME $ENV{LLVM_HOME})
-	else()
-		set (LLVM_HOME ${third_part_libs_home}/llvm-latest)
-	endif()
-endif()
-
-# FIXME: select only the needed libraries
-set(clang_LList
-	#libclang.a
-	libclangAnalysis.a
-	libclangARCMigrate.a
-	libclangAST.a
-	libclangASTMatchers.a
-	libclangBasic.a
-	libclangCodeGen.a
-	libclangDriver.a
-	libclangEdit.a
-	libclangFrontend.a
-	libclangFrontendTool.a
-	libclangLex.a
-	libclangParse.a
-	libclangRewriteCore.a
-	libclangRewriteFrontend.a
-	libclangSema.a
-	libclangSerialization.a
-	#libclang.so
-	libclangStaticAnalyzerCheckers.a
-	libclangStaticAnalyzerCore.a
-	libclangStaticAnalyzerFrontend.a
-	libclangTooling.a
-)
-	#clangBasic clangSema clangIndex clangDriver clangAST
-	#clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
-
-if(MSVC)
-    # Manual list - TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
-    set( llvm_LList
-       LLVMSystem LLVMCore LLVMCodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMBitReader 
-       LLVMBitWriter LLVMTransformUtils LLVMX86AsmParser LLVMX86AsmPrinter LLVMX86CodeGen
-       LLVMX86Info LLVMX86Disassembler LLVMInstrumentation LLVMInstCombine LLVMScalarOpts 
-       LLVMipo LLVMLinker LLVMAnalysis LLVMipa LLVMExecutionEngine LLVMInterpreter 
-       LLVMJIT LLVMTarget LLVMAsmParser LLVMArchive LLVMSupport LLVMSelectionDAG LLVMMC 
-       LLVMMCDisassembler LLVMMCParser
-    )
-    #set(clang_LList libclang ${clang_LList})
-
-else(MSVC)
-	# On Linux we have a .so file for all LLVM
-	set(llvm_LList  LLVM-3.4 )
-    set(clang_LList clang ${clang_LList})
-endif(MSVC)
-
-
-# Find all llvm libraries
-foreach (name ${llvm_LList})
-    if(MSVC) 
-        set (llvm_${name}_LIB dummy)
-    else()
-		find_library(llvm_${name}_LIB  NAMES ${name}  HINTS ${LLVM_HOME}/lib)
-        set(llvm_LIBs ${llvm_${name}_LIB} ${llvm_LIBs})
-    endif()
-endforeach(name)
-
-
-# Find (all?) clang libraries
-foreach (name ${clang_LList})
-    if(MSVC) 
-        set (clang_${name}_LIB dummy)
-    else()
-		find_library(clang_${name}_LIB  NAMES ${name}  HINTS ${LLVM_HOME}/lib)
-        set(clang_LIBs ${clang_${name}_LIB} ${clang_LIBs})
-    endif()
-endforeach(name)
-
 # ------------------------------------------------------------- configuration for platforms
-
 # Visual Studio customization
 if(MSVC)
 	# enable minimal rebuild

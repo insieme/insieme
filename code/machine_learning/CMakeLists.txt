@@ -44,16 +44,16 @@ target_link_libraries(insieme_machine_learning ${kompex_LIB})
 
 # Build machine learning executables
 add_executable( train_ffnet src/train_ffnet.cxx ${insieme_machine_learning_incs})
-target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable( evaluate_model src/evaluate_model.cxx ${insieme_machine_learning_incs})
-target_link_libraries( evaluate_model ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+target_link_libraries( evaluate_model ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable( train_svm src/train_svm.cxx ${insieme_machine_learning_incs})
-target_link_libraries( train_svm ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+target_link_libraries( train_svm ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable( calculate_pcs src/calculate_pcs.cxx ${insieme_machine_learning_incs})
-target_link_libraries( calculate_pcs ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+target_link_libraries( calculate_pcs ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 set ( ut_prefix  ut_ml_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -69,7 +69,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${shark_LIB})
 	target_link_libraries(${case_name} ${kompex_LIB})
-	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name} )
 endforeach(case_file)

@@ -47,8 +47,6 @@ option (USE_IWIR "Build IWIR support in Insieme" OFF)
 		target_link_libraries(${case_name} insieme_core)
 		target_link_libraries(${case_name} insieme_utils)
 		target_link_libraries(${case_name} insieme_xml)
-		target_link_libraries(${case_name} ${pthread_LIB})
-		#target_link_libraries(${case_name} ${xerces_LIB})
 		
 		add_unit_test(${case_name} off)
 	endforeach(case_file)

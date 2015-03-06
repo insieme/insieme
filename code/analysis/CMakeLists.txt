@@ -69,7 +69,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${gmp_LIB})
 	target_link_libraries(${case_name} ${cloog_LIB})
 	target_link_libraries(${case_name} ${barvinok_LIB})
-	target_link_libraries(${case_name} ${pthread_LIB})
 
 	if(${case_name} STREQUAL ut_analysis_dependence_test)
 		add_unit_test(${case_name} off)
