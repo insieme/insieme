@@ -34,24 +34,43 @@
  * regarding third party software licenses.
  */
 
-#ifndef SCOPPAR_H
-#define SCOPPAR_H
+#include <cstdlib>
+#include <boost/optional.hpp>
+#include <iostream>
+#include <memory>
+#include <vector>
 
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/transform/polyhedral/scopvisitor.h"
+#include "insieme/utils/logging.h"
 
-namespace insieme { namespace transform { namespace polyhedral {
+using namespace insieme::core;
+using namespace insieme::transform::polyhedral::novel;
 
-class SCoPPar {
-	const insieme::core::ProgramPtr& program;
+/// The constructor initializes class variables and triggers the visit of all nodes in the program.
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): lvl(0), scoplist(node) {
+	visit(node);
+}
 
-public:
-	SCoPPar(const insieme::core::ProgramPtr &program);
+/// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
+/// all child nodes and call their respective visitor methods.
+void SCoPVisitor::visitNode(const NodeAddress &node) {
+	// process this very node
+	std::cout << lvl << "\tFound node " << node << std::endl;
+	if (node->getNodeType() == NT_CallExpr)
+		ExpressionPtr func=static_address_cast<const CallExpr>(node)->getFunctionExpr();
+	visitChildren(node);
+}
 
-	const insieme::core::ProgramPtr& apply();
-    unsigned int size(insieme::core::NodePtr n);
-};
+/// Visit all the child nodes of the given node. The given node itself is not taken into account.
+void SCoPVisitor::visitChildren(const NodeAddress &node) {
+	for (auto child: node->getChildList()) visit(child);
+}
 
-}}}
-
-#endif // SCOPPAR_H
+/// visitForStmt describes what should happen when a for stmt is encountered within the program.
+/// Is it the outermost for, or is it already nested?
+void SCoPVisitor::visitForStmt(const ForStmtAddress &forStmt) {
+	lvl++;
+	std::cout << "for() stmt @" << forStmt << std::endl;
+	visitChildren(forStmt);
+	lvl--;
+}

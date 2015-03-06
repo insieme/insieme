@@ -34,24 +34,36 @@
  * regarding third party software licenses.
  */
 
-#ifndef SCOPPAR_H
-#define SCOPPAR_H
+#include <cstdlib>
+#include <boost/optional.hpp>
+#include <iostream>
+#include <memory>
+#include <vector>
 
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/transform/polyhedral/scop.h"
+#include "insieme/transform/polyhedral/scoplist.h"
+#include "insieme/transform/polyhedral/scopvisitor.h"
+#include "insieme/utils/logging.h"
 
-namespace insieme { namespace transform { namespace polyhedral {
+using namespace insieme::core;
+using namespace insieme::transform::polyhedral::novel;
 
-class SCoPPar {
-	const insieme::core::ProgramPtr& program;
+/// Visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
+SCoPList::SCoPList(const insieme::core::ProgramAddress &program): program(program) {
+	std::cout << "Hello from SCoPList Constructor Nouvelle!" << std::endl;
+}
 
-public:
-	SCoPPar(const insieme::core::ProgramPtr &program);
+/// Return the IR of the corresponding polyhedra, if defined; otherwise, return the original program
+const ProgramAddress SCoPList::IR() {
+	// generate code only when all SCoPs are valid; otherwise use original program, since we could not optimize
+	// possibly, we could also optimize based on the valid SCoPs, ignoring the other ones (check semantics!)
+	int scopsvalid=1;
+	for (auto it=begin(); it!=end(); it++) scopsvalid&=it->valid();
 
-	const insieme::core::ProgramPtr& apply();
-    unsigned int size(insieme::core::NodePtr n);
-};
-
-}}}
-
-#endif // SCOPPAR_H
+	// now, if all SCoPs are valid, generate code
+	if (scopsvalid)
+		return program; // currently a noop
+	else
+		return program;
+}

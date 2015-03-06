@@ -34,24 +34,34 @@
  * regarding third party software licenses.
  */
 
-#ifndef SCOPPAR_H
-#define SCOPPAR_H
+#include <cstdlib>
+#include <boost/optional.hpp>
+#include <iostream>
+#include <memory>
+#include <vector>
 
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/transform/polyhedral/scop.h"
+#include "insieme/utils/logging.h"
 
-namespace insieme { namespace transform { namespace polyhedral {
+using namespace insieme::core;
+using namespace insieme::transform::polyhedral::novel;
 
-class SCoPPar {
-	const insieme::core::ProgramPtr& program;
+// constructor
+SCoP::SCoP(unsigned int valid) {
+	std::cout << "Hello from SCoP Constructor Nouvelle!" << std::endl;
+	if (valid<2) obeysDeps=boost::optional<int>(valid); // else we don't know yet
+}
 
-public:
-	SCoPPar(const insieme::core::ProgramPtr &program);
+/// valid returns true if the SCoP does obey all dependences; false otherwise. The validity does not change (as
+/// a new SCoP will be created resulting from a transformation), hence its value should be memoized.
+int SCoP::valid() {
+	// check whether we already have determined the validity of this SCoP; it may be invalid after a
+	// dependence-ignoring transformation
+	// all SCoPs are valid right now, as they are derived from the original program text
+	// once they have been transformed, we need to add code here to check the dependences
+	if (!obeysDeps) {
+		obeysDeps=boost::optional<unsigned int>(1);
+	}
 
-	const insieme::core::ProgramPtr& apply();
-    unsigned int size(insieme::core::NodePtr n);
-};
-
-}}}
-
-#endif // SCOPPAR_H
+	return *obeysDeps;
+}

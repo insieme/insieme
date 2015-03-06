@@ -34,24 +34,24 @@
  * regarding third party software licenses.
  */
 
-#ifndef SCOPPAR_H
-#define SCOPPAR_H
+#ifndef NEWSCOP_H
+#define NEWSCOP_H
 
+#include "boost/optional.hpp"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_program.h"
 
-namespace insieme { namespace transform { namespace polyhedral {
+namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class SCoPPar {
-	const insieme::core::ProgramPtr& program;
+class SCoP {
+
+	boost::optional<unsigned int> obeysDeps;
 
 public:
-	SCoPPar(const insieme::core::ProgramPtr &program);
-
-	const insieme::core::ProgramPtr& apply();
-    unsigned int size(insieme::core::NodePtr n);
+	SCoP(unsigned int valid=2);
+	int valid();
 };
 
-}}}
+}}}}
 
-#endif // SCOPPAR_H
+#endif // NEWSCOP_H

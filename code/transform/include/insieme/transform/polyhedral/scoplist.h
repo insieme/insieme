@@ -34,24 +34,24 @@
  * regarding third party software licenses.
  */
 
-#ifndef SCOPPAR_H
-#define SCOPPAR_H
+#ifndef SCOPLIST_H
+#define SCOPLIST_H
 
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_program.h"
+#include "insieme/transform/polyhedral/scop.h"
 
-namespace insieme { namespace transform { namespace polyhedral {
+namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class SCoPPar {
-	const insieme::core::ProgramPtr& program;
+class SCoPList: public std::vector<SCoP> {
+	const insieme::core::ProgramAddress program;
 
 public:
-	SCoPPar(const insieme::core::ProgramPtr &program);
+	SCoPList(const insieme::core::ProgramAddress &program);
 
-	const insieme::core::ProgramPtr& apply();
-    unsigned int size(insieme::core::NodePtr n);
+	const insieme::core::ProgramAddress IR();
 };
 
-}}}
+}}}}
 
-#endif // SCOPPAR_H
+#endif // SCOPLIST_H
