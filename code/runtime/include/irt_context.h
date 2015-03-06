@@ -48,7 +48,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(context);
+IRT_MAKE_ID_TYPE(context)
 
 typedef void (init_context_fun)(irt_context* context);
 typedef void (cleanup_context_fun)(irt_context* context);

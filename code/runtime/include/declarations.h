@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -60,22 +60,22 @@
 
 /* ------------------------------ channels ----- */
 
-IRT_DECLARE_ID_TYPE(channel);
+IRT_DECLARE_ID_TYPE(channel)
 typedef struct _irt_channel irt_channel;
 
 /* ------------------------------ client app ----- */
 
-IRT_DECLARE_ID_TYPE(client_app);
+IRT_DECLARE_ID_TYPE(client_app)
 typedef struct _irt_client_app irt_client_app;
 
 /* ------------------------------ context ----- */
 
-IRT_DECLARE_ID_TYPE(context);
+IRT_DECLARE_ID_TYPE(context)
 typedef struct _irt_context irt_context;
 
 /* ------------------------------ data items ----- */
 
-IRT_DECLARE_ID_TYPE(data_item);
+IRT_DECLARE_ID_TYPE(data_item)
 typedef struct _irt_data_range irt_data_range;
 typedef struct _irt_data_block irt_data_block;
 typedef struct _irt_data_item irt_data_item;
@@ -87,9 +87,9 @@ typedef struct _irt_error irt_error;
 
 /* ------------------------------ event handling ----- */
 
-IRT_DECLARE_ID_TYPE(wi_event_register);
+IRT_DECLARE_ID_TYPE(wi_event_register)
 typedef struct _irt_wi_event_register irt_wi_event_register;
-IRT_DECLARE_ID_TYPE(wg_event_register);
+IRT_DECLARE_ID_TYPE(wg_event_register)
 typedef struct _irt_wg_event_register irt_wg_event_register;
 
 /* ------------------------------ joinable ----- */
@@ -123,7 +123,7 @@ typedef struct _irt_type irt_type;
 
 /* ------------------------------ work groups ----- */
 
-IRT_DECLARE_ID_TYPE(work_group);
+IRT_DECLARE_ID_TYPE(work_group)
 //typedef uint32 irt_barrier_id;
 typedef uint32 irt_distribute_id;
 typedef struct _irt_work_group irt_work_group;
@@ -131,7 +131,7 @@ typedef struct _irt_wi_wg_membership irt_wi_wg_membership;
 
 /* ------------------------------ work items ----- */
 
-IRT_DECLARE_ID_TYPE(work_item);
+IRT_DECLARE_ID_TYPE(work_item)
 typedef struct _irt_work_item_range irt_work_item_range;
 typedef struct _irt_work_item irt_work_item;
 
@@ -149,7 +149,7 @@ typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
 
 /* ------------------------------ worker ----- */
 
-IRT_DECLARE_ID_TYPE(worker);
+IRT_DECLARE_ID_TYPE(worker)
 typedef struct _irt_affinity_mask irt_affinity_mask;
 typedef struct _irt_worker irt_worker;
 
