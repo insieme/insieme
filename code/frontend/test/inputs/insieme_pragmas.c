@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,27 +29,86 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
-#include <stdlib.h>
+// TODO: find/fix scope issue for nested pragmas!
 
-struct Aos {
-	int a;
-	float b;
-	double c;
-};
+#define LOOP_CODE for(int i = 0; i < 10; ++i) { b = i; }
 
 int main() {
+#pragma insieme mark
+{
+}
+#pragma insieme ignore
+{
+}
+#pragma insieme kernelFile "path/to/imaginary/kernel/file"
+{
+}
+	int a;
+#pragma insieme datarange (a = 0 : 9)
+{
+	a = 0;
+}
+	int b = 0;
 #pragma insieme transform "0"
-	struct Aos* aos = (struct Aos*)malloc(sizeof(struct Aos) * 100);
-
-	for(int i = 0; i < 100; ++i) {
-		int a1 = aos[i].a;
-		double c1 = aos[i].c;
-	}
-
-	free(aos);
+{
+	LOOP_CODE
+}
+#pragma insieme iterations 42
+{
+	LOOP_CODE
+}
+#pragma insieme strip (1,1)
+{
+	LOOP_CODE
+}
+#pragma insieme interchange (1,1)
+{
+	LOOP_CODE
+}
+#pragma insieme tile (1,1)
+{
+	LOOP_CODE
+}
+#pragma insieme unroll (1)
+{
+	LOOP_CODE
+}
+#pragma insieme fuse (1,1)
+{
+	LOOP_CODE
+}
+#pragma insieme split (1,1)
+{
+	LOOP_CODE
+}
+#pragma insieme stamp (1,1)
+{
+	LOOP_CODE
+}
+#pragma insieme reschedule (1)
+{
+	LOOP_CODE
+}
+#pragma insieme parallelize (1)
+{
+	LOOP_CODE
+}
+#pragma insieme rstrip (1)
+{
+	LOOP_CODE
+}
+#pragma insieme fun_unroll (1)
+{
+	LOOP_CODE
+}
+#pragma insieme info id:1(b)
+{
+	LOOP_CODE
+}
+	return 0;
 }

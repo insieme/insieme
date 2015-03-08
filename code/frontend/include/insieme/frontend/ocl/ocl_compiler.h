@@ -156,8 +156,8 @@ public:
 };
 
 // responsible for adding ocl KernelFile annotation
-void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::Converter& fact);
+//void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+//        frontend::conversion::Converter& fact);
 
 
 } //namespace ocl

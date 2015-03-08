@@ -193,24 +193,26 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
     }                                                                                                                                                                                
 }
 
-void MatchObject::print() const {
-    std::cout << "############MATCH OBJECT PRINT############\n";
-    std::cout << "Var list: " << "\n";
-    for(auto cur: varList) {
-        std::cout << "KEY: " << cur.first << " -> ";
-        std::cout << "[" << (cur.second) << "]" << std::endl;
-    }
-    std::cout << "Expr list: " << "\n";
-    for(auto cur: exprList) {
-        std::cout << "KEY: " << cur.first << " -> ";
-        std::cout << "[" << (cur.second) << "]" << std::endl;
-    }
-    std::cout << "String list: " << "\n";
-    for(auto cur: stringList) {
-        std::cout << "KEY: " << cur.first << " -> ";
-        std::cout << "[" << (cur.second) << "]" << std::endl;
-    }
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+//void MatchObject::print() const {
+std::ostream& operator<<(std::ostream& out, const MatchObject& mo) {
+	out << "############MATCH OBJECT PRINT############\n";
+	out << "Var list: " << "\n";
+	for(auto cur: mo.varList) {
+		out << "KEY: " << cur.first << " -> ";
+		out << "[" << (cur.second) << "]" << std::endl;
+	}
+	out << "Expr list: " << "\n";
+	for(auto cur: mo.exprList) {
+		out << "KEY: " << cur.first << " -> ";
+		out << "[" << (cur.second) << "]" << std::endl;
+	}
+	out << "String list: " << "\n";
+	for(auto cur: mo.stringList) {
+		out << "KEY: " << cur.first << " -> ";
+		out << "[" << (cur.second) << "]" << std::endl;
+	}
+	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+	return out;
 }
 
 // ------------------------------------ ParserStack ---------------------------

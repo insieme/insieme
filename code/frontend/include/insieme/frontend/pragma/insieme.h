@@ -78,7 +78,7 @@ public:
  * The pragma 'insieme mark' is used to mark code regions (i.e. function definitions and code blocks)
  * that will be parsed by the compiler.
  */
-class InsiemePragma: public pragma::Pragma {
+/*class InsiemePragma: public pragma::Pragma {
 public:
 	InsiemePragma(const clang::SourceLocation& 	startLoc, 
 				  const clang::SourceLocation& 	endLoc, 
@@ -108,9 +108,9 @@ public:
 				  const pragma::MatchMap& 		mmap)
 		: InsiemePragma(startLoc, endLoc, type, mmap) { }
 
-};
+};*/
 
-struct InsiemeKernelFile: public InsiemePragma {
+/*struct InsiemeKernelFile: public InsiemePragma {
 
     InsiemeKernelFile(const clang::SourceLocation& 	startLoc, 
 					  const clang::SourceLocation& 	endLoc, 
@@ -124,10 +124,10 @@ struct InsiemeKernelFile: public InsiemePragma {
 	}
 private:
 	pragma::MatchMap mmap;
-};
+};*/
 
 
-struct InsiemeDatarange: public InsiemePragma {
+/*struct InsiemeDatarange: public InsiemePragma {
 
     InsiemeDatarange(const clang::SourceLocation& 	startLoc,
 					  const clang::SourceLocation& 	endLoc,
@@ -153,12 +153,12 @@ struct InsiemeDataTransform: public InsiemePragma {
 private:
 	pragma::MatchMap mmap;
 };
+*/
+//void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact);
 
-void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact);
+//void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact);
 
-void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact);
-
-struct InsiemeLoop: public InsiemePragma {
+/*struct InsiemeLoop: public InsiemePragma {
 
     InsiemeLoop(const clang::SourceLocation& 	startLoc,
 					  const clang::SourceLocation& 	endLoc,
@@ -170,10 +170,10 @@ struct InsiemeLoop: public InsiemePragma {
 
 private:
 	pragma::MatchMap mmap;
-};
+};*/
 
-void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::Converter& convFact);
+//void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+//        frontend::conversion::Converter& convFact);
 
 
 

@@ -683,4 +683,3 @@ TEST(PragmaMatcherTest, RecursiveFunctions) {
 		CHECK_LOCATION(decl->getLocEnd(), comp.getSourceManager(), 50, 1);
 	}
 }
-

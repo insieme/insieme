@@ -245,7 +245,9 @@ class MatchObject {
         }
 
         void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
-        void print() const;
+
+        // TODO: change to operator overloading
+        friend std::ostream& operator<<(std::ostream& out, const MatchObject& mo);
 };
 
 typedef std::pair<bool, MatchMap> MatcherResult;

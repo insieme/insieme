@@ -84,245 +84,245 @@ void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc, 
+/*InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc,
 							 const clang::SourceLocation& 	endLoc,
 							 const std::string& 			type, 
 							 const pragma::MatchMap&		mmap) 
 	: Pragma(startLoc, endLoc, type) { }
-
-void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
-    // some utilities
-	auto range              = ~l_paren >> var["var"] >> ~equal >> expr["lb"] >> ~colon >> expr["ub"] >> ~r_paren;
-	// range *(, range)
-	auto range_list   		= range >> *(~comma >> range);
-
-	// define a PragmaNamespace for insieme
-	clang::PragmaNamespace* insieme = new clang::PragmaNamespace("insieme");
-	pp.AddPragmaHandler(insieme);
-
-	// Add an handler for insieme mark pargma:
-	// #pragma insieme mark new-line
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
-			pp.getIdentifierInfo("mark"), eod, "insieme")
-		);
-
-	// Add an handler for insieme ignore pragma:
-	// #pragma insieme ignore new-line
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
-			pp.getIdentifierInfo("ignore"), eod, "insieme")
-		);
-
-    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
-            pp.getIdentifierInfo("kernelFile"), string_literal  >> eod, "insieme")
-        );
-
-    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDatarange>(
-            pp.getIdentifierInfo("datarange"), range_list["ranges"] >> eod, "insieme")
-        );
-
-    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDataTransform>(
-            pp.getIdentifierInfo("transfrom"), string_literal >> eod, "insieme")
-        );
-
-
-
-//*************************************************************************************************
-// Insieme Pragmas for Feature estimations
-//************************************************************************************************/
-
-	// Suggestion for the number of loop iterations. Will be used for feature extraction
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeLoop>(
-			pp.getIdentifierInfo("iterations"), tok::numeric_constant["value"] >> eod, "insieme")
-	);
-
-//*************************************************************************************************
-// Insieme Pragmas for Transformations 
-//************************************************************************************************/
-	
-	// Loop Strip Mining: takes a single integer indicating the strip amount 
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<STRIP>>(
-    	pp.getIdentifierInfo("strip"), 
-			l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> eod, "insieme")
-    );
-
-	// Loop Interchange: contains the index of the loop being interchanged
-	// it must be exactly 2:
-	// 	#pragma insieme interchange (0,2)
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<INTERCHANGE>>(
-    	pp.getIdentifierInfo("interchange"), 
-			l_paren >> (tok::numeric_constant >> ~comma >> 
-						tok::numeric_constant)["values"] >> 
-			r_paren >> eod, "insieme")
-    );
-
-	// Loop Tiling: takes a list of integers constants which specifies the size of the tile size for
-	// each of the dimensions which should be tiled in the loop
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<TILE>>(
-    	pp.getIdentifierInfo("tile"), 
-			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
-			r_paren >> eod, "insieme")
-    );
-
-	// Loop Unrolling: takes a single integer constant which specifies the unrolling factor
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<UNROLL>>(
-    	pp.getIdentifierInfo("unroll"), 
-			l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
-    );
-
-	// Loop Fusion: takes a list of integers constants which specifies the index of the loops 
-	// being fused, the loop needs to be at the same level and the pragma applyied to outer scopes
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<FUSE>>(
-    	pp.getIdentifierInfo("fuse"), 
-			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
-			r_paren >> eod, "insieme")
-    );
-
-	// Loop Fission: takes a list of integers constants which specifies the index of the stmts 
-	// inside the loop which should be placed in different loops stmts
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<SPLIT>>(
-    	pp.getIdentifierInfo("split"), 
-			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
-			r_paren >> eod, "insieme")
-    );
-
-	// Loop Fission: takes a list of integers constants which specifies the index of the stmts 
-	// inside the loop which should be placed in different loops stmts
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<STAMP>>(
-    	pp.getIdentifierInfo("stamp"), 
-			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
-			r_paren >> eod, "insieme")
-    );
-
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RESCHEDULE>>(
-    	pp.getIdentifierInfo("reschedule"), l_paren >> tok::numeric_constant >> r_paren >> eod, "insieme")
-    );
-
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<PARALLELIZE>>(
-    	pp.getIdentifierInfo("parallelize"), l_paren >> tok::numeric_constant >>r_paren >> eod, "insieme")
-    );
-
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RSTRIP>>(
-    	pp.getIdentifierInfo("rstrip"),
-					l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
-    );
-
-	// Recursive Function Unrolling: takes a single integer constant which specifies the unrolling factor
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<REC_FUN_UNROLL>>(
-    	pp.getIdentifierInfo("fun_unroll"),
-			l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
-    );
-
-
-	//===========================================================================================================
-	// Insieme Info
-	//===========================================================================================================
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeInfo>(
-    	pp.getIdentifierInfo("info"), kwd("id") >> colon >> tok::numeric_constant["id"] >>
-					l_paren >> (identifier >> *(~comma >> identifier))["values"] >>r_paren >> eod, "insieme")
-    );
-
-}
-
-
-void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
-
-    insieme::core::NodeAnnotationPtr annot;
-
-    // check if there is a datarange annotation
-    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
-
-   std::for_each(iter.first, iter.second,
-        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
-            const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
-            if(dr) {
-
-            	pragma::MatchMap mmap = dr->getMatchMap();
-
-            	auto ranges = mmap.find("ranges");
-            	if(ranges == mmap.end())
-            		return;
-
-            	annotations::DataRangeAnnotation dataRanges;
+*/
+//void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
+//    // some utilities
+//	auto range              = ~l_paren >> var["var"] >> ~equal >> expr["lb"] >> ~colon >> expr["ub"] >> ~r_paren;
+//	// range *(, range)
+//	auto range_list   		= range >> *(~comma >> range);
+//
+//	// define a PragmaNamespace for insieme
+//	clang::PragmaNamespace* insieme = new clang::PragmaNamespace("insieme");
+//	pp.AddPragmaHandler(insieme);
+//
+//	// Add an handler for insieme mark pargma:
+//	// #pragma insieme mark new-line
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
+//			pp.getIdentifierInfo("mark"), eod, "insieme")
+//		);
+//
+//	// Add an handler for insieme ignore pragma:
+//	// #pragma insieme ignore new-line
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
+//			pp.getIdentifierInfo("ignore"), eod, "insieme")
+//		);
+//
+//    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
+//            pp.getIdentifierInfo("kernelFile"), string_literal  >> eod, "insieme")
+//        );
+//
+//    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDatarange>(
+//            pp.getIdentifierInfo("datarange"), range_list["ranges"] >> eod, "insieme")
+//        );
+//
+//    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDataTransform>(
+//            pp.getIdentifierInfo("transform"), string_literal >> eod, "insieme")
+//        );
+//
+//
+//
+////*************************************************************************************************
+//// Insieme Pragmas for Feature estimations
+////************************************************************************************************/
+//
+//	// Suggestion for the number of loop iterations. Will be used for feature extraction
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeLoop>(
+//			pp.getIdentifierInfo("iterations"), tok::numeric_constant["value"] >> eod, "insieme")
+//	);
+//
+////*************************************************************************************************
+//// Insieme Pragmas for Transformations
+////************************************************************************************************/
+//
+//	// Loop Strip Mining: takes a single integer indicating the strip amount
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<STRIP>>(
+//    	pp.getIdentifierInfo("strip"),
+//			l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> eod, "insieme")
+//    );
+//
+//	// Loop Interchange: contains the index of the loop being interchanged
+//	// it must be exactly 2:
+//	// 	#pragma insieme interchange (0,2)
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<INTERCHANGE>>(
+//    	pp.getIdentifierInfo("interchange"),
+//			l_paren >> (tok::numeric_constant >> ~comma >>
+//						tok::numeric_constant)["values"] >>
+//			r_paren >> eod, "insieme")
+//    );
+//
+//	// Loop Tiling: takes a list of integers constants which specifies the size of the tile size for
+//	// each of the dimensions which should be tiled in the loop
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<TILE>>(
+//    	pp.getIdentifierInfo("tile"),
+//			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >>
+//			r_paren >> eod, "insieme")
+//    );
+//
+//	// Loop Unrolling: takes a single integer constant which specifies the unrolling factor
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<UNROLL>>(
+//    	pp.getIdentifierInfo("unroll"),
+//			l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+//    );
+//
+//	// Loop Fusion: takes a list of integers constants which specifies the index of the loops
+//	// being fused, the loop needs to be at the same level and the pragma applyied to outer scopes
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<FUSE>>(
+//    	pp.getIdentifierInfo("fuse"),
+//			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >>
+//			r_paren >> eod, "insieme")
+//    );
+//
+//	// Loop Fission: takes a list of integers constants which specifies the index of the stmts
+//	// inside the loop which should be placed in different loops stmts
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<SPLIT>>(
+//    	pp.getIdentifierInfo("split"),
+//			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >>
+//			r_paren >> eod, "insieme")
+//    );
+//
+//	// Loop Fission: takes a list of integers constants which specifies the index of the stmts
+//	// inside the loop which should be placed in different loops stmts
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<STAMP>>(
+//    	pp.getIdentifierInfo("stamp"),
+//			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >>
+//			r_paren >> eod, "insieme")
+//    );
+//
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RESCHEDULE>>(
+//    	pp.getIdentifierInfo("reschedule"), l_paren >> tok::numeric_constant >> r_paren >> eod, "insieme")
+//    );
+//
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<PARALLELIZE>>(
+//    	pp.getIdentifierInfo("parallelize"), l_paren >> tok::numeric_constant >>r_paren >> eod, "insieme")
+//    );
+//
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RSTRIP>>(
+//    	pp.getIdentifierInfo("rstrip"),
+//					l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+//    );
+//
+//	// Recursive Function Unrolling: takes a single integer constant which specifies the unrolling factor
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<REC_FUN_UNROLL>>(
+//    	pp.getIdentifierInfo("fun_unroll"),
+//			l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+//    );
+//
+//
+//	//===========================================================================================================
+//	// Insieme Info
+//	//===========================================================================================================
+//	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeInfo>(
+//    	pp.getIdentifierInfo("info"), kwd("id") >> colon >> tok::numeric_constant["id"] >>
+//					l_paren >> (identifier >> *(~comma >> identifier))["values"] >>r_paren >> eod, "insieme")
+//    );
+//
+//}
 
 
-				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
-            		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(
-						convFact.convertStmt(((*I)->get<clang::Stmt*>()))
-					);
-            		core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(
-						convFact.convertStmt(((*++I)->get<clang::Stmt*>()))
-					);
-            		core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(
-						convFact.convertStmt(((*++I)->get<clang::Stmt*>()))
-					);
+//void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
+//
+//    insieme::core::NodeAnnotationPtr annot;
+//
+//    // check if there is a datarange annotation
+//    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+//    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+//
+//   std::for_each(iter.first, iter.second,
+//        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+//            const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
+//            if(dr) {
+//
+//            	pragma::MatchMap mmap = dr->getMatchMap();
+//
+//            	auto ranges = mmap.find("ranges");
+//            	if(ranges == mmap.end())
+//            		return;
+//
+//            	annotations::DataRangeAnnotation dataRanges;
+//
+//
+//				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
+//            		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(
+//						convFact.convertStmt(((*I)->get<clang::Stmt*>()))
+//					);
+//            		core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(
+//						convFact.convertStmt(((*++I)->get<clang::Stmt*>()))
+//					);
+//            		core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(
+//						convFact.convertStmt(((*++I)->get<clang::Stmt*>()))
+//					);
+//
+//            		dataRanges.addRange(annotations::Range(var, lowerBound, upperBound ));
+//            	}
+//                annot = std::make_shared<annotations::DataRangeAnnotation>((dataRanges));
+//            }
+//    });
+//
+//    if(annot)
+//        irNode->addAnnotation(annot);
+//
+//}
 
-            		dataRanges.addRange(annotations::Range(var, lowerBound, upperBound ));
-            	}
-                annot = std::make_shared<annotations::DataRangeAnnotation>((dataRanges));
-            }
-    });
+//void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
+//	insieme::core::NodeAnnotationPtr annot;
+//
+//	// check if there is a datarange annotation
+//	const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+//	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+//
+//	std::for_each(iter.first, iter.second,
+//			[ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+//		const frontend::InsiemeDataTransform* dt = dynamic_cast<const frontend::InsiemeDataTransform*>( &*(curr.second) );
+//		if(dt) {
+//			pragma::MatchMap mmap = dt->getMatchMap();
+//
+//			assert(mmap.size() == 1 && "Insieme DataTransform pragma cannot have more than one argument");
+//			std::string datalayout = *mmap.begin()->second.front()->get<std::string*>();
+//
+//			unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
+//
+//			annotations::DataTransformAnnotation dataTransform(tilesize);
+//			annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);
+//		}
+//	});
+//
+//	if(annot)
+//		irNode->addAnnotation(annot);
+//
+//
+//}
 
-    if(annot)
-        irNode->addAnnotation(annot);
-
-}
-
-void attatchDataTransformAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
-	insieme::core::NodeAnnotationPtr annot;
-
-	// check if there is a datarange annotation
-	const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
-
-	std::for_each(iter.first, iter.second,
-			[ & ](const PragmaStmtMap::StmtMap::value_type& curr){
-		const frontend::InsiemeDataTransform* dt = dynamic_cast<const frontend::InsiemeDataTransform*>( &*(curr.second) );
-		if(dt) {
-			pragma::MatchMap mmap = dt->getMatchMap();
-
-			assert(mmap.size() == 1 && "Insieme DataTransform pragma cannot have more than one argument");
-			std::string datalayout = *mmap.begin()->second.front()->get<std::string*>();
-
-			unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
-
-			annotations::DataTransformAnnotation dataTransform(tilesize);
-			annot = std::make_shared<annotations::DataTransformAnnotation>(dataTransform);
-		}
-	});
-
-	if(annot)
-		irNode->addAnnotation(annot);
-
-
-}
-
-void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
-    insieme::core::NodeAnnotationPtr annot;
-
-    // check if there is a datarange annotation
-    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
-
-    std::for_each(iter.first, iter.second,
-        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
-            const frontend::InsiemeLoop* loop = dynamic_cast<const frontend::InsiemeLoop*>( &*(curr.second) );
-            if(loop) {
-            	pragma::MatchMap mmap = loop->getMatchMap();
-            	auto iter = mmap.find("value");
-
-            	if(iter == mmap.end())
-            		return;
-
-            	size_t n = insieme::utils::numeric_cast<size_t>(*iter->second.front()->get<std::string*>());
-                annot = std::make_shared<annotations::LoopAnnotation>(n);
-            }
-    });
-
-    if(annot) {
-        irNode->addAnnotation(annot);
-    }
-}
+//void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
+//    insieme::core::NodeAnnotationPtr annot;
+//
+//    // check if there is a datarange annotation
+//    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+//    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+//
+//    std::for_each(iter.first, iter.second,
+//        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+//            const frontend::InsiemeLoop* loop = dynamic_cast<const frontend::InsiemeLoop*>( &*(curr.second) );
+//            if(loop) {
+//            	pragma::MatchMap mmap = loop->getMatchMap();
+//            	auto iter = mmap.find("value");
+//
+//            	if(iter == mmap.end())
+//            		return;
+//
+//            	size_t n = insieme::utils::numeric_cast<size_t>(*iter->second.front()->get<std::string*>());
+//                annot = std::make_shared<annotations::LoopAnnotation>(n);
+//            }
+//    });
+//
+//    if(annot) {
+//        irNode->addAnnotation(annot);
+//    }
+//}
 
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
 	std::string intLit = *val->get<std::string*>();

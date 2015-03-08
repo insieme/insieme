@@ -139,9 +139,6 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 	// register 'test' pragma
 	TestPragma::registerPragmaHandler( mClang.getPreprocessor() );
 
-	// register 'insieme' pragma
-	InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
-
 	// register 'mpi' pragma
 	mpi::registerPragmaHandler( mClang.getPreprocessor() );
 

@@ -1206,7 +1206,7 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
 }
 
 
-void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+/*void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
         frontend::conversion::Converter& convFact){
     insieme::core::NodeAnnotationPtr annot;
 
@@ -1224,7 +1224,7 @@ void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* c
 
     if(annot)
         irNode->addAnnotation(annot);
-}
+}*/
 
 
 } //namespace ocl
