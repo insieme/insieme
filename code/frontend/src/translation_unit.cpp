@@ -51,9 +51,6 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
-#include "insieme/frontend/mpi/mpi_pragma.h"
-#include "insieme/frontend/mpi/mpi_sema.h"
-
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclGroup.h"
@@ -141,9 +138,6 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 
 	// register 'insieme' pragma
 	InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
-
-	// register 'mpi' pragma
-	mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
 	// check for frontend plugins pragma handlers
 	// and add user provided pragmas to be handled
