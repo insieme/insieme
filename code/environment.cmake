@@ -247,10 +247,14 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# check for -std=c++0x
 	include(CheckCXXCompilerFlag)
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
-	if(CXX0X_Support)
+	# check for -std=c++11
+	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
+	if(CXX11_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	elseif(CXX0X_Support)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	else()
-		message( "WARNING: --std=c++0x not supported by your compiler!" )
+		message( "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
 	endif()
 
 endif()
