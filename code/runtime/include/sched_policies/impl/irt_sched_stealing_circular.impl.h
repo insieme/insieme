@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -79,7 +79,7 @@ void irt_scheduling_init_worker(irt_worker* self) {
 }
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_YIELD, yielding_wi->id);
 	_irt_cwb_try_push_back(self, yielding_wi);
     _irt_worker_switch_from_wi(self, yielding_wi);
@@ -321,7 +321,7 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	if(!irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pop_index%IRT_CWBUFFER_LENGTH], (intptr_t)wi, (intptr_t)NULL)) {
 		irt_throw_string_error(IRT_ERR_INTERNAL, "***ing ***hog A");
 	}
-	printf("Popped WI %p from front position %lu, post size %ld\n", wi, pop_index, post_size);
+	printf("Popped WI %p from front position %lu, post size %ld\n", (void*) wi, pop_index, post_size);
 	return wi;	
 }
 
@@ -338,7 +338,7 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 	if(!irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pop_index%IRT_CWBUFFER_LENGTH], (intptr_t)wi, (intptr_t)NULL)) {
 		irt_throw_string_error(IRT_ERR_INTERNAL, "***ing ***hog B");
 	}
-	printf("Popped WI %p from back position %lu, post size %ld\n", wi, pop_index, post_size);
+	printf("Popped WI %p from back position %lu, post size %ld\n", (void*) wi, pop_index, post_size);
 	return wi;	
 }
 

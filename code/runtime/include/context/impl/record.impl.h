@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -298,7 +298,7 @@ void irt_cap_print_report() {
 
 		it = cur->region.usage;
 		while (it != NULL) {
-			printf("  Block %d from %p size %u - is pointer: %d\n", it->tag, it->block->base, it->block->size, it->is_pointer[0]);
+			printf("  Block %d from %p size %u - is pointer: %d\n", it->tag, (void*) it->block->base, it->block->size, it->is_pointer[0]);
 			it = it->next;
 		}
 
