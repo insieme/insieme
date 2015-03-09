@@ -46,6 +46,8 @@ class CilkFrontendPlugin : public FrontendPlugin {
 
 	public:
 		CilkFrontendPlugin();
+
+		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu) override;
 };
 
 }   //end namespace extensions
