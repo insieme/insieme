@@ -2,8 +2,8 @@
 macro ( add_unit_test case_name )
 
 	# add dependency to google test libraries
-	target_link_libraries(${case_name} ${gtest_LIB})
-	target_link_libraries(${case_name} ${gtest_main_LIB})
+	target_link_libraries(${case_name} ${gtest})
+	target_link_libraries(${case_name} ${gtest_main})
 	# add dependency to pthread (TODO check gtest if depends on pthread?)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 
