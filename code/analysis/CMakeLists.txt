@@ -9,40 +9,27 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 #ninja job pools setting
+# used to limit maximum of parallel CBA jobs as they need a lot of memory
 if( NOT DEFINED(CBA_JOBS) OR (CBA_JOBS) )
 	set(CBA_JOBS "1" CACHE STRING "number of parallel cba unit test jobs")
 endif()
-
 set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} )
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_analysis_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_analysis_incs 	include/*.h )
 
-# list all include paths
-#include_directories( ${insieme_core_include_dir} )
-#include_directories( ${insieme_utils_include_dir} )
-#include_directories( ${insieme_annotations_include_dir} )
-#include_directories( ${insieme_analysis_include_dir} ) 
-
-# Build the core library
+# Build the analysis library
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} )
 target_include_directories(insieme_analysis PUBLIC ${insieme_analysis_include_dir} )
 target_link_libraries(insieme_analysis insieme_core )
 target_link_libraries(insieme_analysis insieme_utils)
 target_link_libraries(insieme_analysis insieme_annotations)
 
-target_link_libraries( insieme_analysis  
-					   ${isl_LIB} 
-					   ${cloog_LIB} 
-					   ${barvinok_LIB} 
-					   ${gmp_LIB}
-					 ) 
-
-# add extra dependencies for test cases
-#include_directories( ${insieme_transform_include_dir} )
-#include_directories( ${insieme_frontend_include_dir} )
-#include_directories( ${insieme_driver_include_dir} )
+target_link_libraries(insieme_analysis ${isl_LIB})
+target_link_libraries(insieme_analysis ${cloog_LIB}) 
+target_link_libraries(insieme_analysis ${barvinok_LIB})
+target_link_libraries(insieme_analysis ${gmp_LIB})
 
 set ( ut_prefix  ut_analysis_ )
 file(GLOB_RECURSE test_cases test/*.cc)

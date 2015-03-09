@@ -6,7 +6,7 @@ project(insieme_frontend CXX)
 include(../environment.cmake)
 
 #find clang/llvm libs
-# stroed in clang_LIBS llvm_LIBS
+# stored in clang_LIBS llvm_LIBS
 include(cmake/lookup_clang.cmake)
 
 # States that CMake required version must be >= 2.6

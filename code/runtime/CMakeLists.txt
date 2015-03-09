@@ -163,7 +163,9 @@ include_directories(${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLU
 # add meta information include path
 get_filename_component( insieme_runtime_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 get_directory_property( insieme_code_dir DIRECTORY ${insieme_runtime_dir} PARENT_DIRECTORY )
-include_directories( ${insieme_code_dir}/common/include )
+#include_directories( ${insieme_code_dir}/common/include )
+#insieme_common is header-only library
+target_link_libraries(insieme_runtime insieme_common)
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
