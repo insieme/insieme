@@ -52,10 +52,10 @@
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
 	if (t == NULL) {
-		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p",t);
+		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", (void*) t);
 	}
 	else {
-		IRT_ASSERT(pthread_create(t, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", t);
+		IRT_ASSERT(pthread_create(t, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", (void*) t);
 	}
 }
 

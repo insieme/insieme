@@ -105,16 +105,16 @@ static inline void irt_##__type__##_table_insert_impl(irt_##__type__** table, ir
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
 	if(id.cached) { return id.cached; } \
-	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_DEBUG("Looking up %u/%u/%u, hash val %u, in table %p", id.node, id.thread, id.index, hash_val, table); \
+	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_DEBUG("Looking up %u/%u/%u, hash val %u, in table %p", id.node, id.thread, id.index, hash_val, (void*) table); \
 	irt_##__type__* element; \
 	/* No locking required assuming sequential consistency and correctness of requests */ \
 	/* The above is a lie. A vile lie. People have lost their heads for less. */ \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
 	element = table[hash_val]; \
-	IRT_DEBUG_ONLY(if(element)) { IRT_DEBUG("Starting at elem %p, id %u/%u/%u", element, element->id.node, element->id.thread, element->id.index); } \
-	while(element && element->id.full != id.full) { element = element->__next_name__; IRT_DEBUG("Looking at elem %p, id %u/%u/%u", element, element->id.node, element->id.thread, element->id.index); } \
+	IRT_DEBUG_ONLY(if(element)) { IRT_DEBUG("Starting at elem %p, id %u/%u/%u", (void*) element, element->id.node, element->id.thread, element->id.index); } \
+	while(element && element->id.full != id.full) { element = element->__next_name__; IRT_DEBUG("Looking at elem %p, id %u/%u/%u", (void*) element, element->id.node, element->id.thread, element->id.index); } \
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
-	id.cached = element; IRT_DEBUG("Found elem %p\n", element); \
+	id.cached = element; IRT_DEBUG("Found elem %p\n", (void*) element); \
 	return element; \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
@@ -168,7 +168,7 @@ static inline void irt_##__type__##_table_print_impl(FILE* log_file, irt_##__typ
 		} \
 		fprintf(log_file, "Bucket %d: ", i); \
 		while(element) { \
-			fprintf(log_file, "[%d %d %d] (%p) -> ", element->id.node, element->id.thread, element->id.index, element); \
+			fprintf(log_file, "[%d %d %d] (%p) -> ", element->id.node, element->id.thread, element->id.index, (void*) element); \
 			element = element->__next_name__; \
 		} \
 		fprintf(log_file, "(nil)\n"); \

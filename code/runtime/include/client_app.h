@@ -42,7 +42,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(client_app);
+IRT_MAKE_ID_TYPE(client_app)
 
 #define IRT_APP_INIT_CONTEXT_NAME "insieme_init_context"
 #define IRT_APP_CLEANUP_CONTEXT_NAME "insieme_cleanup_context"

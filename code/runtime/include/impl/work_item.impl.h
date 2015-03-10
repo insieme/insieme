@@ -148,7 +148,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children, uint32);
 	}
-	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : (uint32_t*)-1);
+	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", (void*) retval, (void*) self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? (void*) self->cur_wi->num_active_children : NULL);
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
@@ -246,7 +246,7 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 	// (signal received from inlined sibling child)
 	if(*(join_data->joining_wi->num_active_children) > 0) return true;
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
-	IRT_DEBUG(" > %p releasing %p\n", irt_worker_get_current()->finalize_wi, join_data->joining_wi);
+	IRT_DEBUG(" > %p releasing %p\n", (void*) irt_worker_get_current()->finalize_wi, (void*) join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
 	return false;
 }
@@ -284,13 +284,13 @@ void irt_wi_join_all(irt_work_item* wi) {
 		// check if multi-level immediate wi was signaled instead of current wi
 		if(*(wi->num_active_children) != 0) irt_wi_join_all(wi);
 	}
-	IRT_DEBUG(" J %p join_all ended\n", wi);
+	IRT_DEBUG(" J %p join_all ended\n", (void*) wi);
 }
 
 // end --------------------------------------------------------------------------------------------
 
 void irt_wi_end(irt_work_item* wi) {
-	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
+	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", (void*) wi, (void*) irt_worker_get_current());
 	irt_worker* worker = irt_worker_get_current();
 
 	// instrumentation update
@@ -325,7 +325,7 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	irt_inst_region_wi_finalize(wi);
 	
-	IRT_DEBUG(" ! %p end\n", wi);
+	IRT_DEBUG(" ! %p end\n", (void*) wi);
 
 	irt_wi_implementation *wimpl = wi->impl;
 	irt_optimizer_remove_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
@@ -350,7 +350,7 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 		}
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);
-	IRT_DEBUG(" ^ %p finalize\n", wi);
+	IRT_DEBUG(" ^ %p finalize\n", (void*) wi);
 	_irt_wi_recycle(wi, worker);
 }
 
