@@ -144,16 +144,14 @@ void _irt_inst_insert_db_event(irt_worker* worker, irt_instrumentation_event eve
 #endif
 
 void irt_inst_event_data_output_single(irt_instrumentation_event_data data, FILE* outputfile, bool readable) {
-	irt_work_item_id temp_id;
-	temp_id.cached = NULL;
-	temp_id.index = data.index;
-	temp_id.thread = data.thread;
-	temp_id.node = 0;
 	if(readable) {
-		setlocale(LC_ALL, "");
-		fprintf(outputfile, "%s,%'16" PRIu64 ",%20s,%'32" PRIu64 "\n", irt_g_instrumentation_group_names[data.event_id], temp_id.full, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
-	} else
+		fprintf(outputfile, "%s,[%d %d],%20s,%32" PRIu64 "\n", irt_g_instrumentation_group_names[data.event_id], data.thread, data.index, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
+	} else {
+		irt_work_item_id temp_id = irt_work_item_null_id();
+		temp_id.index = data.index;
+		temp_id.thread = data.thread;
 		fprintf(outputfile, "%s,%" PRIu64 ",%s,%" PRIu64 "\n", irt_g_instrumentation_group_names[data.event_id], temp_id.full, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
+	}
 }
 
 void irt_inst_event_data_output_all(bool binary_format) {
@@ -163,10 +161,6 @@ void irt_inst_event_data_output_all(bool binary_format) {
 
 // writes csv files
 void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
-	// necessary for thousands separator
-	//setlocale(LC_ALL, "");
-	//
-	
 	FILE* outputfile = stdout;
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
