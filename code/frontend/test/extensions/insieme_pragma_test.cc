@@ -52,8 +52,13 @@
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/utils/test/test_utils.h"
+#include "insieme/utils/string_utils.h"
+
+#include "../test_utils.inc"
 
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
@@ -84,22 +89,31 @@ TEST(PragmaMatcherTest, checkPragmas) {
 
 TEST(PragmaMatcherTest, checkAnnotations) {
 	NodeManager manager;
-	const ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").execute(manager);
+
+	const auto& tu = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").toIRTranslationUnit(manager);
+	const auto& ir = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
 
 	unsigned expectedCount = 0;
 
-	EXPECT_EQ(expectedCount++, actualCount);
-	visitDepthFirst(program, getCheckingLambda<insieme::annotations::DataRangeAnnotation>());
-	EXPECT_EQ(expectedCount++, actualCount);
-	visitDepthFirst(program, getCheckingLambda<insieme::annotations::DataTransformAnnotation>());
-	EXPECT_EQ(expectedCount++, actualCount);
+	actualCount = 0;
+	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::DataRangeAnnotation>());
+	EXPECT_EQ(1, actualCount);
+	actualCount = 0;
+	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::DataTransformAnnotation>());
+	EXPECT_EQ(1, actualCount);
+	actualCount = 0;
+	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::TransformAnnotation>());
+	EXPECT_EQ(11, actualCount);
+}
 
+TEST(PragmaMatcherTest, checkMark) {
+	NodeManager manager;
+	const ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").execute(manager);
 	auto& entryPoints = program->getEntryPoints();
 	EXPECT_EQ(2, entryPoints.size());
 
 	EXPECT_EQ("muha", insieme::core::annotations::getAttachedName(entryPoints[0]));
 	EXPECT_EQ("main", insieme::core::annotations::getAttachedName(entryPoints[1]));
-
 }
 
 

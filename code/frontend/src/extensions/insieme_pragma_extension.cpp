@@ -52,6 +52,20 @@
 #include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/transform.h"
+#include "insieme/utils/timer.h"
+
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/transformation.h"
+#include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
+#include "insieme/transform/functions/transformations.h"
+
+#include "insieme/core/ir_program.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/annotations/source_location.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {
@@ -59,10 +73,18 @@ namespace extensions {
 
 using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::pragma::tok;
+using namespace stmtutils;
+namespace ia = insieme::annotations;
 
 namespace {
-	using namespace stmtutils;
-	using namespace insieme::core;
+
+	core::annotations::Location getStartLocation(const core::NodePtr& node) {
+
+		if (core::annotations::hasAttachedLocation(node)) {
+			return core::annotations::getAttachedLocation(node);
+		}
+		return core::annotations::Location::getShared();
+	}
 
 	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getDataRangeLambda() {
 		return [] (pragma::MatchObject object, StmtWrapper node) {
@@ -135,7 +157,8 @@ namespace {
 		};
 	}
 
-	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getTransformLambda(insieme::annotations::TransformationHint::Type type) {
+	template<insieme::annotations::TransformationHint::Type type>
+	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getTransformLambda() {
 		return [&] (pragma::MatchObject object, StmtWrapper node) {
 			auto& trg = node.front();
 
@@ -165,6 +188,18 @@ namespace {
 
 			return node;
 		};
+	}
+
+
+			// Check for annotations on IR nodes relative to transformations which should be applied,
+			// and applies them.
+//			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
+//					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
+
+	insieme::core::ProgramPtr InsiemePragmaExtension::IRVisit(insieme::core::ProgramPtr& program) {
+		program = insieme::utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
+				[&]() { return this->applyTransformations(program); } );
+		return program;
 	}
 
 	insieme::frontend::tu::IRTranslationUnit InsiemePragmaExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
@@ -203,6 +238,7 @@ namespace {
 		return tu;
 	}
 
+
 	InsiemePragmaExtension::InsiemePragmaExtension() {
 		// some utilities
 		auto range              = ~l_paren >> var["var"] >> ~equal >> expr["lb"] >> ~colon >> expr["ub"] >> ~r_paren;
@@ -228,42 +264,206 @@ namespace {
 
 		// Insieme pragmas for loop transformations
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "strip",
-				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_STRIP))));
+				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_STRIP>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "interchange",
-				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_INTERCHANGE))));
+				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_INTERCHANGE>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "tile",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_TILE))));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_TILE>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "unroll",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_UNROLL))));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_UNROLL>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "fuse",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_FUSE))));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_FUSE>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "split",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_SPLIT))));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_SPLIT>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "stamp",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_STAMP))));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_STAMP>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "reschedule",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_RESCHEDULE))));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_RESCHEDULE>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "parallelize",
-				l_paren >> tok::numeric_constant["values"] >>r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_PARALLELIZE))));
+				l_paren >> tok::numeric_constant["values"] >>r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::LOOP_PARALLELIZE>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "rstrip",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::REGION_STRIP))));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::REGION_STRIP>())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "fun_unroll",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::REC_FUN_UNROLL))));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda<insieme::annotations::TransformationHint::REC_FUN_UNROLL>())));
 
 		// Insieme pragma for InfoAnnotations TODO TODO TODO
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "info",
 				kwd("id") >> colon >> tok::numeric_constant["id"] >> l_paren >> (identifier >> *(~comma >> identifier))["values"] >> r_paren >> pragma::tok::eod, nullptr)));
 	}
+
+
+	core::ProgramPtr InsiemePragmaExtension::applyTransformations(const core::ProgramPtr& program) {
+	using namespace insieme::transform;
+
+	insieme::utils::map::PointerMap<insieme::core::NodePtr, insieme::core::NodePtr> replacements;
+
+	typedef ia::TransformationHint::ValueVect ValueVect;
+
+	typedef std::shared_ptr<ia::TransformAnnotation> TransformAnnPtr;
+	typedef std::shared_ptr<ia::TransformationHint> HintPtr;
+
+	auto&& transformer = [&]( const core::NodePtr& cur ) {
+		if( const TransformAnnPtr& trans = cur->getAnnotation( ia::TransformAnnotation::KEY ) ) {
+			try {
+				std::vector<TransformationPtr> tr;
+				for_each(trans->getAnnotationList(), [&](const HintPtr& hint) {
+					const ValueVect& values = hint->getValues();
+					switch (hint->getType()) {
+					case ia::TransformationHint::LOOP_INTERCHANGE:
+					{
+						LOG(INFO) << "Applyinig Loop Interchange (" <<  toString(values)
+								  << ") transformation hint at location: "
+								  << "[ " << getStartLocation(cur) << "]";
+
+						assert(values.size() == 2);
+
+						tr.push_back(polyhedral::makeLoopInterchange(values[0], values[1]));
+						break;
+					}
+					case ia::TransformationHint::LOOP_STRIP:
+					{
+						LOG(INFO) << "Applyinig Loop Strip Mining (" << toString(values) << ")"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						assert(values.size() == 2);
+
+						tr.push_back(polyhedral::makeLoopStripMining(values[0], values[1]));
+						break;
+					}
+					case ia::TransformationHint::LOOP_TILE:
+					{
+						LOG(INFO) << "Applyinig Loop Tiling (" << toString(values) << ")"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						tr.push_back(polyhedral::makeLoopTiling(values));
+						break;
+					}
+					case ia::TransformationHint::LOOP_UNROLL:
+					{
+						LOG(INFO) << "Applyinig Loop Unroll (" << toString(values) << ")"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						assert(values.size() == 1 && "Unrolling factor must be a single integer constant");
+
+						tr.push_back(rulebased::makeLoopUnrolling(values.front()));
+						break;
+					}
+					case ia::TransformationHint::LOOP_FUSE:
+					{
+						LOG(INFO) << "Applyinig Loop Fusion (" << toString(values) << ")"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						tr.push_back(polyhedral::makeLoopFusion( values ));
+						break;
+					}
+					case ia::TransformationHint::LOOP_SPLIT:
+					{
+						LOG(INFO) << "Applyinig Loop Fission (" << toString(values) << ")"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						tr.push_back(polyhedral::makeLoopFission( values ));
+						break;
+					}
+					case ia::TransformationHint::LOOP_STAMP:
+					{
+						LOG(INFO) << "Applyinig Loop Stamping (" << values[0] << ",{" << toString(values) << "})"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						tr.push_back(polyhedral::makeLoopStamping(
+									values[0], std::vector<unsigned>(values.begin()+1,values.end())
+								)
+							);
+						break;
+					}
+
+					case ia::TransformationHint::LOOP_RESCHEDULE:
+					{
+						LOG(INFO) << "Applyinig Loop Reschedule "
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						tr.push_back(std::make_shared<polyhedral::LoopReschedule>());
+						break;
+					}
+
+					// LOOP_PARALLELIZE annotation handling
+					case ia::TransformationHint::LOOP_PARALLELIZE:
+					{
+						LOG(INFO) << "Applyinig Loop Parallelization "
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						tr.push_back(std::make_shared<polyhedral::LoopParallelize>());
+						break;
+					}
+
+					// REGION_STRIP annotation handling
+					case ia::TransformationHint::REGION_STRIP:
+					{
+						LOG(INFO) << "Applyinig Region Strip (" << toString(values) << ")"
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+
+						assert(values.size() == 1 && "Region Strip accepts only 1 value");
+						tr.push_back(polyhedral::makeRegionStripMining(values.front()));
+						break;
+					}
+
+					// REC_FUN_UNROLL annotation handling
+					case ia::TransformationHint::REC_FUN_UNROLL:
+					{
+						LOG(INFO) << "Unrolling recursive function according to "
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+						assert(values.size() == 1 && "Function-Unrolling requires exactly 1 value");
+						tr.push_back(functions::makeRecFunUnrolling(values.front()));
+						break;
+					}
+
+					default:
+						LOG(WARNING) << "TransformationHint " << hint->getType() << " not handled." << " (" << insieme::annotations::TransformationHint::LOOP_SPLIT << ")\n";
+					}
+				});
+
+				TransformationPtr pipeline = makePipeline(tr);
+				replacements.insert( std::make_pair(cur, pipeline->apply( cur )) );
+
+			// Add more transformations here
+			} catch(const InvalidTargetException& e) {
+
+				LOG(WARNING) << "Transformation hint from user at position" << " ["
+						  << getStartLocation(cur) << "] "
+						  << "could not be applied for the following reasons: \n\t"
+						  << e.what();
+			}
+		}
+	};
+
+
+	// FIXME filter all the for stmt
+	core::visitDepthFirstOnce(program, core::makeLambdaVisitor( transformer ) );
+
+	return static_pointer_cast<const core::ProgramPtr>(
+			core::transform::replaceAll(program->getNodeManager(), program, replacements, false)
+		);
+
+}
 
 } // extensions
 } // frontend

@@ -36,7 +36,7 @@
 
 // TODO: find/fix scope issue for nested pragmas!
 
-#define LOOP_CODE for(int i = 0; i < 10; ++i) { b = i; }
+
 
 #pragma insieme mark
 int muha() {
@@ -45,6 +45,9 @@ int muha() {
 
 #pragma insieme mark
 int main() {
+	unsigned array1Da[10];
+	unsigned array1Db[10];
+	unsigned array2D[10][10];
 #pragma insieme kernelFile "path/to/imaginary/kernel/file"
 {
 }
@@ -56,59 +59,60 @@ int main() {
 	int b = 0;
 #pragma insieme transform "0"
 {
-	LOOP_CODE
+	for(int i = 0; i < 10; ++i) { b = i; }
 }
 #pragma insieme iterations 42
-{
-	LOOP_CODE
-}
-#pragma insieme strip (1,1)
-{
-	LOOP_CODE
-}
-#pragma insieme interchange (1,1)
-{
-	LOOP_CODE
-}
-#pragma insieme tile (1,1)
-{
-	LOOP_CODE
-}
-#pragma insieme unroll (1)
-{
-	LOOP_CODE
-}
-#pragma insieme fuse (1,1)
-{
-	LOOP_CODE
-}
+	for(int i = 0; i < 10; ++i) { b = i; }
+
+#pragma insieme strip (0,2)
+	for(int i = 0; i < 10; ++i) { b = i; }
+	for(int i = 0; i < 10; ++i) { b = i; }
+
+#pragma insieme interchange (0,1)
+	for(int i = 0; i < 10; ++i) {
+		for(int j = 0; j < 10; ++j) {
+			array2D[i][j] = 0;
+		}
+	}
+
+#pragma insieme tile (0,2)
+	for(int i = 0; i < 10; ++i) {
+		for(int j = 0; j < 10; ++j) {
+			array2D[i][j] = 0;
+		}
+	}
+
+#pragma insieme unroll (2)
+	for(int i = 0; i < 10; ++i) { array1Da[i] = i; }
+
+#pragma insieme fuse (0,1)
+	for(int i = 0; i < 10; ++i) { array1Da[i] = i; }
+	for(int i = 0; i < 10; ++i) { array1Db[i] = i; }
+
 #pragma insieme split (1,1)
-{
-	LOOP_CODE
-}
+	for(int i = 0; i < 10; ++i) { b = i; }
+
 #pragma insieme stamp (1,1)
-{
-	LOOP_CODE
-}
+	for(int i = 0; i < 10; ++i) { b = i; }
+
 #pragma insieme reschedule (1)
-{
-	LOOP_CODE
-}
+	for(int i = 0; i < 10; ++i) { b = i; }
+
 #pragma insieme parallelize (1)
+	for(int i = 0; i < 10; ++i) { b = i; }
+
+#pragma insieme rstrip (2)
 {
-	LOOP_CODE
+	for(int i = 0; i < 10; ++i) { b = i; }
 }
-#pragma insieme rstrip (1)
+#pragma insieme fun_unroll (2)
 {
-	LOOP_CODE
-}
-#pragma insieme fun_unroll (1)
-{
-	LOOP_CODE
+	for(int i = 0; i < 10; ++i) { b = i; }
 }
 #pragma insieme info id:1(b)
 {
-	LOOP_CODE
+	for(int i = 0; i < 10; ++i) { b = i; }
 }
 	return 0;
 }
+

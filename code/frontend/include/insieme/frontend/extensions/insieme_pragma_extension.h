@@ -58,7 +58,9 @@ private:
 	std::function<insieme::frontend::stmtutils::StmtWrapper (const pragma::MatchObject&, insieme::frontend::stmtutils::StmtWrapper)> getMarkLambda();
 public:
 	InsiemePragmaExtension();
+	insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& program);
 	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+	core::ProgramPtr applyTransformations(const core::ProgramPtr& program);
 };
 
 } // extensions
