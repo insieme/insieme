@@ -113,6 +113,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
 	wi->impl = impl;
 	wi->selected_impl_variant = 0;
+	wi->default_parallel_wi_count = 0;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
 	wi->_num_active_children = 0;

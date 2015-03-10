@@ -114,6 +114,11 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	return ret;
 }
 
+void irt_set_default_parallel_wi_count(int num_wis) {
+	IRT_ASSERT(num_wis>0, IRT_ERR_INVALIDARGUMENT, "Invalid default number of wis: %d", num_wis);
+	irt_wi_get_current()->default_parallel_wi_count = num_wis;
+}
+
 irt_joinable irt_task(const irt_parallel_job* job) {
 	irt_worker* target = irt_worker_get_current();
 	IRT_ASSERT(job->max == 1, IRT_ERR_INIT, "Task invalid range");

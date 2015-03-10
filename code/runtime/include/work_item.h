@@ -76,6 +76,7 @@ struct _irt_work_item {
 	irt_context_id context_id;
 	irt_wi_implementation* impl;
 	uint32 selected_impl_variant;
+	uint32 default_parallel_wi_count;
 	irt_work_item_range range;
 	uint32 num_groups;
 	volatile uint32 _num_active_children;
