@@ -40,6 +40,8 @@
 #include <memory>
 #include <vector>
 
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/transform/polyhedral/scopvisitor.h"
 #include "insieme/utils/logging.h"
 
@@ -51,26 +53,66 @@ SCoPVisitor::SCoPVisitor(const ProgramAddress &node): lvl(0), scoplist(node) {
 	visit(node);
 }
 
+/// Debug routine to print the given node and its child nodes.
+void SCoPVisitor::printNode(const NodeAddress &node, std::string id, unsigned int start, int count) {
+	// determine total number of child nodes, and adjust count accordingly
+	auto children=node.getChildAddresses();
+	if (count<0) count=children.size();
+
+	// if requested (start=0), print the node itself with some debug information
+	if (start==0) {
+		if (!id.empty()) id+=": ";
+		std::cout << id << node;
+		// annotations::LocationOpt loc=annotations::getLocation(node); if (loc) std::cout << " @ " << *loc;
+		std::cout << std::endl;
+		start++;
+	}
+
+	// iterate over the requested children to complete the output
+	for (unsigned int n=start-1; n<start-1+count; n++)
+		std::cout << "\t-" << n << "\t" << *children[n] << std::endl;
+	std::cout << std::endl;
+}
+
 /// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
 /// all child nodes and call their respective visitor methods.
 void SCoPVisitor::visitNode(const NodeAddress &node) {
 	// process this very node
-	std::cout << lvl << "\tFound node " << node << std::endl;
-	if (node->getNodeType() == NT_CallExpr)
-		ExpressionPtr func=static_address_cast<const CallExpr>(node)->getFunctionExpr();
+	switch (node->getNodeType()) {
+	case NT_Variable: ; //printNode(node, "found variable"); break;
+	default: ;// do nothing
+	}
 	visitChildren(node);
 }
 
 /// Visit all the child nodes of the given node. The given node itself is not taken into account.
+/// The parameter print indicates whether the nodes should be printed for debug purposes.
 void SCoPVisitor::visitChildren(const NodeAddress &node) {
 	for (auto child: node->getChildList()) visit(child);
 }
 
+void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
+	printNode(expr, "entering fun");
+	visitChildren(expr);
+}
+
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
-void SCoPVisitor::visitForStmt(const ForStmtAddress &forStmt) {
+void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	lvl++;
-	std::cout << "for() stmt @" << forStmt << std::endl;
-	visitChildren(forStmt);
+	printNode(stmt, "for() stmt lvl " + std::to_string(lvl), 0, 3);
+	visitChildren(stmt);
 	lvl--;
+}
+
+/// Visit all the literals so that we can collect constants.
+void SCoPVisitor::visitVariable(const VariableAddress &expr) {
+	printNode(expr, "variable");
+	visitChildren(expr);
+}
+
+/// Visit all the declaration statements so that we can collect variable assignments.
+void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
+	printNode(node, "declaration");
+	visitChildren(node);
 }

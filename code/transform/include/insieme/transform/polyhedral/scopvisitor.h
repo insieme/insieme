@@ -60,10 +60,14 @@ public:
 	insieme::transform::polyhedral::novel::SCoPList scoplist;
 
 	SCoPVisitor(const insieme::core::ProgramAddress &node);
+	void printNode    (const insieme::core::NodeAddress &node, std::string id="", unsigned int start=0, int count=-1);
 	void visitNode    (const insieme::core::NodeAddress &node);
 	void visitChildren(const insieme::core::NodeAddress &node);
 
-	void visitForStmt (const insieme::core::ForStmtAddress &forStmt);
+	void visitLambdaExpr     (const insieme::core::LambdaExprAddress      &expr);
+	void visitForStmt        (const insieme::core::ForStmtAddress         &stmt);
+	void visitVariable       (const insieme::core::VariableAddress        &expr);
+	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
 };
 
 }}}}
