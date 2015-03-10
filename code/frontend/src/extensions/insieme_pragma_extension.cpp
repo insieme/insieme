@@ -179,8 +179,6 @@ namespace {
 
 	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> InsiemePragmaExtension::getMarkLambda() {
 		return [&] (pragma::MatchObject object, StmtWrapper node) {
-			StatementAddress addr = StatementAddress(node.front());
-
 			LambdaExprPtr expr = dynamic_pointer_cast<const LambdaExpr>(node.front());
 			assert(expr && "Insieme mark pragma can only be attached to function declarations!");
 
@@ -209,14 +207,15 @@ namespace {
 			return tu;
 
 		// get IR for checking whether nodes are still valid
-		core::ExpressionPtr singlenode = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
-		IRBuilder builder(singlenode->getNodeManager());
+		core::ExpressionPtr&& singlenode = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
 		assert(singlenode && "Conversion of IRTranslationUnit to IR failed!");
+		IRBuilder builder(singlenode->getNodeManager());
 
 		// check if nodes previously marked as entry points are still valid and add them
 		for(auto it = entryPoints.begin(); it != entryPoints.end(); ++it) {
-			visitBreadthFirst(singlenode, [&](const NodePtr& node){
+			visitBreadthFirstInterruptible(singlenode, [&](const NodePtr& node){
 				ExpressionPtr expr = dynamic_pointer_cast<insieme::core::ExpressionPtr>(node);
+
 				if(!expr)
 					return false;
 				if(*it != expr)
@@ -226,10 +225,13 @@ namespace {
 				assert(lambda && "Non-LambdaExpression marked as entry point!");
 
 				string cname = insieme::core::annotations::getAttachedName(lambda);
+				assert(cname.length() > 0 && "LambdaExpression marked as entry point has no cname annotation!");
+
 				insieme::core::LiteralPtr lit = builder.literal(lambda->getType(), cname);
 				assert(lit && "Could not build literal!");
 
 				tu.addEntryPoints(lit);
+
 				return true;
 			});
 		}
