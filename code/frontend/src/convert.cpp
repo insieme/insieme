@@ -399,9 +399,6 @@ tu::IRTranslationUnit Converter::convert() {
 	} funVisitor(*this, false, count,processed);
 	funVisitor.traverseDeclCtx(declContext);
 
-		const pragma::Pragma& insiemePragma = *pragma;
-		if(!insiemePragma.isDecl()) continue;
-
 	//frontend done
 	if (getConversionSetup().hasOption(ConversionSetup::ProgressBar)) std::cout << std::endl;
 
