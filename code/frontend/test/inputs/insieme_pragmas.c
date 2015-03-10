@@ -45,9 +45,6 @@ int muha() {
 
 #pragma insieme mark
 int main() {
-#pragma insieme ignore
-{
-}
 #pragma insieme kernelFile "path/to/imaginary/kernel/file"
 {
 }

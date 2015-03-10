@@ -195,9 +195,6 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "mark",
 				pragma::tok::eod, getMarkLambda())));
 
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "ignore",
-				pragma::tok::eod, nullptr)));
-
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "kernelFile",
 				string_literal["arg"] >> pragma::tok::eod, getKernelFileLambda())));
 
