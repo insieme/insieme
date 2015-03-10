@@ -328,7 +328,7 @@ unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
 	std::string intLit = *val->get<std::string*>();
 	return insieme::utils::numeric_cast<unsigned>( intLit.c_str() );
 }
-
+/*
 void attach(const clang::SourceLocation& 	startLoc,
 			const clang::SourceLocation 	endLoc,
 			const TransformationType& 		trans, 
@@ -357,14 +357,11 @@ void attach(const clang::SourceLocation& 	startLoc,
 						  break;
 		case PARALLELIZE: type = annotations::TransformationHint::LOOP_PARALLELIZE;
 						  break;
-		
 		case RSTRIP:	  type = annotations::TransformationHint::REGION_STRIP;
 						  break;
-
 		case REC_FUN_UNROLL:
 						  type = annotations::TransformationHint::REC_FUN_UNROLL;
 						  break;
-
 		default:
 						  assert(false && "Transformation name not handled");
 	}
@@ -391,7 +388,7 @@ void attach(const clang::SourceLocation& startLoc,
 {
 	node->addAnnotation( std::make_shared<annotations::Info>(id, values) );
 }
-
+*/
 
 
 } // end frontend namespace

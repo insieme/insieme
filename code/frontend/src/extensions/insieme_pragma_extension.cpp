@@ -51,6 +51,7 @@
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/transform.h"
 
 namespace insieme {
 namespace frontend {
@@ -134,6 +135,23 @@ namespace {
 		};
 	}
 
+	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getTransformLambda(insieme::annotations::TransformationHint::Type type) {
+		return [&] (pragma::MatchObject object, StmtWrapper node) {
+			auto& trg = node.front();
+
+			vector<unsigned> intValues = ::transform(object.getStrings("values"), [](const string& element){ return insieme::utils::numeric_cast<unsigned>(element); });
+
+			if (!trg->hasAnnotation(insieme::annotations::TransformAnnotation::KEY) ) {
+				trg->addAnnotation(std::make_shared<insieme::annotations::TransformAnnotation>());
+			}
+
+			insieme::annotations::TransformAnnotation& ann = *trg->getAnnotation(insieme::annotations::TransformAnnotation::KEY);
+			ann.getAnnotationList().push_back(std::make_shared<insieme::annotations::TransformationHint>(type, intValues));
+
+			return node;
+		};
+	}
+
 } // anonymous
 
 	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> InsiemePragmaExtension::getMarkLambda() {
@@ -210,37 +228,37 @@ namespace {
 
 		// Insieme pragmas for loop transformations
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "strip",
-				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_STRIP))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "interchange",
-				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_INTERCHANGE))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "tile",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_TILE))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "unroll",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_UNROLL))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "fuse",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_FUSE))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "split",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_SPLIT))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "stamp",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_STAMP))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "reschedule",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_RESCHEDULE))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "parallelize",
-				l_paren >> tok::numeric_constant["values"] >>r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> tok::numeric_constant["values"] >>r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::LOOP_PARALLELIZE))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "rstrip",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::REGION_STRIP))));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "fun_unroll",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, nullptr)));
+				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, getTransformLambda(insieme::annotations::TransformationHint::REC_FUN_UNROLL))));
 
 		// Insieme pragma for InfoAnnotations TODO TODO TODO
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "info",

@@ -179,70 +179,70 @@ private:
 
 
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val);
-
-enum TransformationType { 
-	INTERCHANGE,
-	STRIP,
-	TILE, 
-	UNROLL,
-	FUSE, 
-	SPLIT, 
-	STAMP,
-	RESCHEDULE,
-	PARALLELIZE,
-	RSTRIP,
-	REC_FUN_UNROLL
-};
-
-typedef std::vector<unsigned> ValueVect;
-
-void attach(const clang::SourceLocation& startLoc,
-			const clang::SourceLocation endLoc,
-			const TransformationType& trans, 
-		    const ValueVect& values,
-			const core::NodePtr& node, 
-			conversion::Converter& fact);
-
-/**
- * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
- * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an
- * annotation which is handled later in the driver right after the frontend is completed.
- */
-template <TransformationType TransTy>
-struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttachable {
-	
-	typedef ValueVect::const_iterator iterator;
-	
-	InsiemeTransform(const clang::SourceLocation&  startLoc, 
-					 const clang::SourceLocation&  endLoc, 
-					 const std::string& 			type, 
-					 const pragma::MatchMap& 		mmap) : 
-		pragma::Pragma(startLoc, endLoc, type) 
-	{ 
-		auto fit = mmap.find("values");
-
-		for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
-			this->values.push_back( extractIntegerConstant(cur) );
-		});	
-	}
-	
-    virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
-        for(core::StatementPtr element : node) {
-            if((element.isa<core::ForStmtPtr>()) || (TransTy == TransformationType::REC_FUN_UNROLL)) {
-                attach(getStartLocation(), getEndLocation(), TransTy, values, element, fact);
-            }
-        }
-		return node;
-	};
-
-	iterator begin() const { return values.begin(); }
-	iterator end() const { return values.end(); }
-
-	TransformationType getTransformationType() const { return TransTy; }
-
-private:
-	ValueVect values;
-};
+//
+//enum TransformationType {
+//	INTERCHANGE,
+//	STRIP,
+//	TILE,
+//	UNROLL,
+//	FUSE,
+//	SPLIT,
+//	STAMP,
+//	RESCHEDULE,
+//	PARALLELIZE,
+//	RSTRIP,
+//	REC_FUN_UNROLL
+//};
+//
+//typedef std::vector<unsigned> ValueVect;
+//
+//void attach(const clang::SourceLocation& startLoc,
+//			const clang::SourceLocation endLoc,
+//			const TransformationType& trans,
+//		    const ValueVect& values,
+//			const core::NodePtr& node,
+//			conversion::Converter& fact);
+//
+///**
+// * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
+// * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an
+// * annotation which is handled later in the driver right after the frontend is completed.
+// */
+//template <TransformationType TransTy>
+//struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttachable {
+//
+//	typedef ValueVect::const_iterator iterator;
+//
+//	InsiemeTransform(const clang::SourceLocation&  startLoc,
+//					 const clang::SourceLocation&  endLoc,
+//					 const std::string& 			type,
+//					 const pragma::MatchMap& 		mmap) :
+//		pragma::Pragma(startLoc, endLoc, type)
+//	{
+//		auto fit = mmap.find("values");
+//
+//		for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
+//			this->values.push_back( extractIntegerConstant(cur) );
+//		});
+//	}
+//
+//    virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
+//        for(core::StatementPtr element : node) {
+//            if((element.isa<core::ForStmtPtr>()) || (TransTy == TransformationType::REC_FUN_UNROLL)) {
+//                attach(getStartLocation(), getEndLocation(), TransTy, values, element, fact);
+//            }
+//        }
+//		return node;
+//	};
+//
+//	iterator begin() const { return values.begin(); }
+//	iterator end() const { return values.end(); }
+//
+//	TransformationType getTransformationType() const { return TransTy; }
+//
+//private:
+//	ValueVect values;
+//};
 
 
 typedef std::vector<std::string> StrValueVect;
