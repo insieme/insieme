@@ -37,12 +37,16 @@
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
 #include <iostream>
+#include <functional>
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/utils/name_manager.h"
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
@@ -132,6 +136,55 @@ namespace {
 
 } // anonymous
 
+	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> InsiemePragmaExtension::getMarkLambda() {
+		return [&] (pragma::MatchObject object, StmtWrapper node) {
+			StatementAddress addr = StatementAddress(node.front());
+
+			LambdaExprPtr expr = dynamic_pointer_cast<const LambdaExpr>(node.front());
+			assert(expr && "Insieme mark pragma can only be attached to function declarations!");
+
+			entryPoints.push_back(expr);
+
+			return node;
+		};
+	}
+
+	insieme::frontend::tu::IRTranslationUnit InsiemePragmaExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+
+		// if there are no previously marked entry points, there's nothing to be done
+		if(entryPoints.size() < 1)
+			return tu;
+
+		// get IR for checking whether nodes are still valid
+		core::ExpressionPtr singlenode = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
+		IRBuilder builder(singlenode->getNodeManager());
+		assert(singlenode && "Conversion of IRTranslationUnit to IR failed!");
+
+		// check if nodes previously marked as entry points are still valid and add them
+		for(auto it = entryPoints.begin(); it != entryPoints.end(); ++it) {
+			visitBreadthFirst(singlenode, [&](const NodePtr& node){
+				ExpressionPtr expr = dynamic_pointer_cast<insieme::core::ExpressionPtr>(node);
+				if(!expr)
+					return false;
+				if(*it != expr)
+					return false;
+
+				LambdaExprPtr lambda = dynamic_pointer_cast<insieme::core::LambdaExprPtr>(expr);
+				assert(lambda && "Non-LambdaExpression marked as entry point!");
+
+				string cname = insieme::core::annotations::getAttachedName(lambda);
+				insieme::core::LiteralPtr lit = builder.literal(lambda->getType(), cname);
+				assert(lit && "Could not build literal!");
+
+				tu.addEntryPoints(lit);
+				return true;
+			});
+		}
+		entryPoints.clear();
+
+		return tu;
+	}
+
 	InsiemePragmaExtension::InsiemePragmaExtension() {
 		// some utilities
 		auto range              = ~l_paren >> var["var"] >> ~equal >> expr["lb"] >> ~colon >> expr["ub"] >> ~r_paren;
@@ -140,7 +193,7 @@ namespace {
 
 		// Insieme pragmas for OpenCL
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "mark",
-				pragma::tok::eod, nullptr)));
+				pragma::tok::eod, getMarkLambda())));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "ignore",
 				pragma::tok::eod, nullptr)));
@@ -192,7 +245,7 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "fun_unroll",
 				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod, nullptr)));
 
-		// Insieme pragma for ??? TODO TODO TODO
+		// Insieme pragma for InfoAnnotations TODO TODO TODO
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("insieme", "info",
 				kwd("id") >> colon >> tok::numeric_constant["id"] >> l_paren >> (identifier >> *(~comma >> identifier))["values"] >> r_paren >> pragma::tok::eod, nullptr)));
 	}

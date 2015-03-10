@@ -40,6 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
@@ -76,14 +77,14 @@ TEST(PragmaMatcherTest, checkPragmas) {
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", setup);
 
-	EXPECT_EQ(18, tu.getPragmaList().size());
+	EXPECT_EQ(19, tu.getPragmaList().size());
 //	for(const auto& e : tu.getPragmaList())
 //		std::cout << e->getType() << "\n";
 }
 
 TEST(PragmaMatcherTest, checkAnnotations) {
 	NodeManager manager;
-	ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").execute(manager);
+	const ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").execute(manager);
 
 	unsigned expectedCount = 0;
 
@@ -92,7 +93,12 @@ TEST(PragmaMatcherTest, checkAnnotations) {
 	EXPECT_EQ(expectedCount++, actualCount);
 	visitDepthFirst(program, getCheckingLambda<insieme::annotations::DataTransformAnnotation>());
 	EXPECT_EQ(expectedCount++, actualCount);
-	// TODO: check for mark by looking for entry points?
+
+	auto& entryPoints = program->getEntryPoints();
+	EXPECT_EQ(2, entryPoints.size());
+
+	EXPECT_EQ("muha", insieme::core::annotations::getAttachedName(entryPoints[0]));
+	EXPECT_EQ("main", insieme::core::annotations::getAttachedName(entryPoints[1]));
 
 }
 

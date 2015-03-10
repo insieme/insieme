@@ -38,10 +38,13 @@
 
 #define LOOP_CODE for(int i = 0; i < 10; ++i) { b = i; }
 
-int main() {
 #pragma insieme mark
-{
+int muha() {
+	return 0;
 }
+
+#pragma insieme mark
+int main() {
 #pragma insieme ignore
 {
 }
