@@ -214,7 +214,16 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 
 
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
-	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*) wi, (void*)*basestack, func);
+	IRT_DEBUG_ONLY(
+			//dirty hack to print the function pointer in debug output, as function pointers can't be legally casted to void pointers.
+			//This solution may still be undefined behaviour, but it will probably do what it is supposed to do for our debugging purposes
+			union {
+				wi_implementation_func* f;
+				void* pt;
+			} hack;
+			hack.f = func;
+			IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*) wi, (void*)*basestack, hack.pt);
+	)
 	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);
 }
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
