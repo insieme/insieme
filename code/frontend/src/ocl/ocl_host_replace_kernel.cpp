@@ -773,7 +773,6 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 		std::cout << "createProgramWithSource:\n" << dumpPretty(createProgramWithSource) << "\n";
 		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
 				(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
-			std::cout << "replacer: found kernel\n";
 			const string& path = kfa->getKernelPath();
 
 			// check if file has already been added
@@ -787,8 +786,6 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 						kernelEntries.push_back(kernel);
 				});
 			}
-		} else {
-			std::cout << "replacer: did not find kernel\n";
 		}
 	}
 	return kernelEntries;
