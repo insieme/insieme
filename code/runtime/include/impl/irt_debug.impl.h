@@ -42,7 +42,7 @@
 
 void irt_dbg_print_context(irt_context* c) {
 	printf("--------\nIRT context dump:\n");
-	printf("Client app library: %p\n", c->client_app ? c->client_app->library : NULL);
+	printf("Client app library: %p\n", c->client_app ? (void*) c->client_app->library : NULL);
 	printf("Number of instrumentation regions: %u\n", c->num_regions);
 	printf("----\nType table (%u entries):\n", c->type_table_size);
 	for(uint32 i = 0; i<c->type_table_size; ++i) {

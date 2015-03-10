@@ -43,7 +43,6 @@
 #include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"

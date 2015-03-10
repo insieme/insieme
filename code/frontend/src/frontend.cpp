@@ -40,7 +40,6 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
-#include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
@@ -167,11 +166,6 @@ namespace frontend {
 		// convert files to translation units
 		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
 			auto res = convert(manager, file, setup);
-
-			// apply Cilk sema
-			if (setup.hasOption(ConversionSetup::Cilk)) {
-				res = cilk::applySema(res, manager);
-			}
 
 			//FIXME: who takes care of applying MPI sema/OCL
 

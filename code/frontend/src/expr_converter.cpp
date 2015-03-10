@@ -636,7 +636,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
 	core::FunctionTypePtr funcTy = func->getType().as<core::FunctionTypePtr>() ;
 
-	bool needsMPIMarkerNode = false;
 	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'>
 	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
@@ -644,7 +643,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 		//FIXME changing type to fit "free" -- with refDelete
 		funcTy = convFact.convertFunctionType(funcDecl);
 
-		needsMPIMarkerNode = (funcDecl->getNameAsString().compare(0, 4, "MPI_") == 0);
 	}
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
@@ -659,18 +657,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	}
 
 	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
-
-	// In the case this is a call to MPI, attach the loc annotation, handlling of those
-	// statements will be then applied by mpi_sema
-	if (needsMPIMarkerNode) {
-		auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
-
-		// add a marker node because multiple instances of the same MPI call must be distinct
-		irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
-
-		// attach location
-		utils::attachLocationFromClang(irNode, convFact.getSourceManager(), loc.first, loc.second);
-	}
 
 	return irNode;
 }
