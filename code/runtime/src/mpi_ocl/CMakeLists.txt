@@ -6,8 +6,8 @@ cmake_minimum_required(VERSION 2.6)
 
 option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 
-if (NOT third_part_libs_home )
-	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+if (NOT THIRD_PARTY_LIBS_HOME )
+	set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../../include/irt_ocl_mpi_worker.h.in 

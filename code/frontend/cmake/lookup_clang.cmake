@@ -4,7 +4,7 @@ if(NOT DEFINED LLVM_HOME)
 	if (NOT $ENV{LLVM_HOME} STREQUAL "")
 		set (LLVM_HOME $ENV{LLVM_HOME})
 	else()
-		set (LLVM_HOME ${third_part_libs_home}/llvm-latest)
+		set (LLVM_HOME ${THIRD_PARTY_LIBS_HOME}/llvm-latest)
 	endif()
 endif()
 
