@@ -39,7 +39,6 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/annotations/transform.h"
-#include "insieme/annotations/info.h"
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
 
@@ -81,12 +80,6 @@ void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	);
 
 }
-
-unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
-	std::string intLit = *val->get<std::string*>();
-	return insieme::utils::numeric_cast<unsigned>( intLit.c_str() );
-}
-
 
 } // end frontend namespace
 } // end insieme namespace

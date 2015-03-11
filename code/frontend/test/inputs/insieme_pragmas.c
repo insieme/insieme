@@ -111,10 +111,6 @@ int main() {
 {
 	for(int i = 0; i < 10; ++i) { b = i; }
 }
-#pragma insieme info id:1(b)
-{
-	for(int i = 0; i < 10; ++i) { b = i; }
-}
 	return 0;
 }
 

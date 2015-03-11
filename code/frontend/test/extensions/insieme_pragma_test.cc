@@ -82,7 +82,7 @@ TEST(PragmaMatcherTest, checkPragmas) {
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", setup);
 
-	EXPECT_EQ(18, tu.getPragmaList().size());
+	EXPECT_EQ(17, tu.getPragmaList().size());
 //	for(const auto& e : tu.getPragmaList())
 //		std::cout << e->getType() << "\n";
 }

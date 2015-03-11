@@ -316,13 +316,6 @@ namespace {
 				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod,
 				getTransformLambda(ia::TransformationHint::REC_FUN_UNROLL))
 		));
-
-		// InfoAnnotation
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "info",
-				kwd("id") >> colon >> tok::numeric_constant["id"] >> l_paren >> (identifier >> *(~comma >> identifier))["values"] >> r_paren >> pragma::tok::eod,
-				nullptr)
-		));
 	}
 
 

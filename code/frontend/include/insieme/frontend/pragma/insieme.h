@@ -74,54 +74,5 @@ public:
 	static void registerPragmaHandler(clang::Preprocessor& pp);
 };
 
-unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val);
-
-typedef std::vector<std::string> StrValueVect;
-
-void attach(const clang::SourceLocation& startLoc,
-			const clang::SourceLocation endLoc,
-			unsigned id,
-		    const StrValueVect& values,
-			const core::NodePtr& node, 
-			conversion::Converter& fact);
-
-struct InsiemeInfo : public pragma::Pragma, public pragma::AutomaticAttachable {
-	
-	typedef StrValueVect::const_iterator iterator;
-
-	InsiemeInfo(const clang::SourceLocation&  startLoc, 
-				const clang::SourceLocation&  endLoc, 
-				const std::string& 				type, 
-				const pragma::MatchMap& 		mmap) : 
-		pragma::Pragma(startLoc, endLoc, type) 
-	{ 
-		{
-			auto fit = mmap.find("id");
-			assert(fit != mmap.end() && fit->second.size() == 1 && "Id not present in pragma info");
-			id = extractIntegerConstant(fit->second.front());
-		}
-		{
-			auto fit = mmap.find("values");
-			for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
-				this->values.push_back( *cur->get<std::string*>() );
-			});
-		}
-	}
-	
-	virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const {
-        for(auto element : node) {
-    		attach(getStartLocation(), getEndLocation(), id, values, element, fact);
-        }
-		return node;
-	};
-
-	iterator begin() const { return values.begin(); }
-	iterator end() const { return values.end(); }
-
-private:
-	unsigned id;
-	StrValueVect values;
-};
-
 } // End frontend namespace
 } // End insieme namespace
