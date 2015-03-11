@@ -34,7 +34,8 @@ target_link_libraries(insieme_core gomp)
 # add dependencies
 target_link_libraries(insieme_core insieme_utils)
 
-#FIXME/TODO cudd only found here, lookup_lib(cudd) here
+# lookup CUDD library
+lookup_lib( CUDD cudd )
 target_link_libraries(insieme_core ${cudd_LIB}) 
 
 #include_directories( test/include/ )

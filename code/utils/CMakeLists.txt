@@ -27,8 +27,13 @@ target_link_libraries(insieme_utils ${Boost_LIBRARIES})
 # add boost_filesystem library
 target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 
+# lookup LuaJIT library
+lookup_lib( LUAJIT luajit-5.1 )
 # add LuaJIT library
-target_link_libraries( insieme_utils ${luajit_LIB} dl )
+target_link_libraries(insieme_utils ${luajit_LIB})
+target_include_directories(insieme_utils PUBLIC ${luajit_INC})
+
+target_link_libraries(insieme_utils dl)
 
 set ( ut_prefix  ut_util_ )
 file(GLOB_RECURSE test_cases test/*.cc)

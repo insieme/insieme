@@ -126,64 +126,6 @@ find_package( Boost 1.48 QUIET COMPONENTS program_options system filesystem rege
 include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
-# lookup perl
-find_package( Perl )
-
-# lookup Google Test libraries
-set(GTEST_ROOT ${third_part_libs_home}/gtest-latest)
-find_package(GTest REQUIRED)
-if(GTEST_FOUND)
-	set(gtest ${GTEST_LIBRARIES})
-	set(gtest_main ${GTEST_MAIN_LIBRARIES})
-endif()
-#lookup_lib ( GTEST gtest )
-#lookup_lib ( GTEST_MAIN gtest_main )
-
-# lookup ISL library
-lookup_lib( ISL isl )
-
-# lookup cloog library 
-lookup_lib( CLOOG cloog-isl )
-
-# lookup shark library
-lookup_lib( SHARK shark )
-
-# lookup kompex library
-lookup_lib( KOMPEX KompexSQLiteWrapper_Static_d )
-
-# lookup Barvinok library 
-lookup_lib( BARVINOK barvinok )
-
-# lookup GMP library
-lookup_lib( GMP gmp ) 
-
-# lookup MPFR library
-lookup_lib( MPFR mpfr )
-
-# lookup CUDD library
-lookup_lib( CUDD cudd )
-
-# lookup LuaJIT library
-lookup_lib( LUAJIT luajit-5.1 )
-
-# lookup PAPI library
-lookup_lib( PAPI papi )
-
-# lookup ruby
-#find_package( Ruby )
-
-# lookup xerces
-#if (USE_XML) 
-#lookup_lib( XERCES xerces-c )
-#	add_definitions(-DUSE_XML)
-#endif (USE_XML) 
-
-# lookup pthread library
-#find_library(pthread_LIB pthread)
-# http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
-find_package(Threads REQUIRED)
-# target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
-
 #profiling
 IF (DO_GOOGLE_PROFILING)
 	if(NOT DEFINED GPERFTOOLS_HOME)

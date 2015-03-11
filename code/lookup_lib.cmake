@@ -17,11 +17,11 @@ macro ( lookup_lib lib_name lib_file_name)
 		endif()
 	endif()
 	
-	set ( ${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
+	set(${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
 
 	include_directories( SYSTEM ${${lib_name}_HOME}/include )
 	
-	set ( ${lib_name}_INC {${lib_name}_HOME}/include )
+	set(${lib_name_lower_case}_INC ${${lib_name}_HOME}/include )
 
 	if(MSVC) 
 		set (${lib_name_lower_case}_LIB dummy)

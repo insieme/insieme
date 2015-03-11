@@ -14,12 +14,15 @@ file(GLOB_RECURSE insieme_machine_learning_incs	include/*.h)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inputs.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/machine_learning/inputs.h)
 
-# add include directory
-#include_directories(
-#	${CMAKE_CURRENT_SOURCE_DIR}/include
-#	${SHARK_HOME}/include
-#	${KOMPEX_HOME}/inc )
-#
+# lookup pthread library
+find_package(Threads REQUIRED)
+
+# lookup shark library
+lookup_lib( SHARK shark )
+
+# lookup kompex library
+lookup_lib( KOMPEX KompexSQLiteWrapper_Static_d )
+
 
 set( machine_learning_libraries 
 	insieme_machine_learning

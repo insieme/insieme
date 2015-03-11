@@ -46,8 +46,11 @@ if(WIN32)
 		set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}/include")	
 	endif()
 	
-else() #only look for pthread lib on linux
+else() 
+	#only look for pthread lib on linux
 	find_package(Threads REQUIRED)
+
+	#look for papi
 	lookup_lib( PAPI papi )
 endif()
 	
@@ -154,8 +157,14 @@ if ( USE_MPI_OPENCL )
 endif ( USE_MPI_OPENCL )
 
 # lookup Google Test libraries
-lookup_lib ( GTEST gtest )
-lookup_lib ( GTEST_MAIN gtest_main )
+if (third_part_libs_home )
+	set(GTEST_ROOT ${third_part_libs_home}/gtest-latest)
+endif()
+find_package(GTest REQUIRED)
+if(GTEST_FOUND)
+	set(gtest ${GTEST_LIBRARIES})
+	set(gtest_main ${GTEST_MAIN_LIBRARIES})
+endif()
 
 #include_directories(include/ ${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR}) #what's this include/ thing? S. Widerin
 include_directories(${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
@@ -194,6 +203,7 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
+	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
@@ -205,8 +215,8 @@ foreach ( case_file ${test_cases})
 		endif ( USE_MPI_OPENCL )
 	endif()
 	# add dependency to google test libraries
-	target_link_libraries(${case_name} ${gtest_LIB})
-	target_link_libraries(${case_name} ${gtest_main_LIB})
+	target_link_libraries(${case_name} ${gtest})
+	target_link_libraries(${case_name} ${gtest_main})
 		
 	if ( USE_OPENCL )
     		target_link_libraries(${case_name} ${OPENCL_LIBS})
@@ -229,6 +239,7 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} SHARED ${case_file} ${WIN64ASM_OBJ})
+	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
 		target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 		target_link_libraries(${case_name} dl)
@@ -248,7 +259,8 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
-	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
+	add_executable(${case_name} ${case_file} ${WIN65ASM_OBJ})
+	target_link_libraries(${case_name} insieme_common)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)

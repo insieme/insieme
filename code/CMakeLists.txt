@@ -17,6 +17,14 @@ endforeach()
 
 # create global integration test configuration file
 include(environment.cmake)
+
+#FIXME: we have integration-tests relying on gmp/mpfr to be configured in the integration test
+#configuration file... --> there we need to have GMP_HOME/MPFR_HOME to be set...
+# lookup GMP library
+lookup_lib( GMP gmp ) 
+# lookup MPFR library
+lookup_lib( MPFR mpfr ) 
+
 configure_file(integration_test_config.in ${CMAKE_BINARY_DIR}/integration_test_config  @ONLY IMMEDIATE)
 
 #-- Add an Option to toggle the generation of the API documentation

@@ -12,23 +12,14 @@ cmake_minimum_required(VERSION 2.6)
 file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_transform_incs 	include/*.h include/*.def include/*.inc )
 
-# list all include paths
-#include_directories( ${insieme_core_include_dir} )
-#include_directories( ${insieme_utils_include_dir} )
-#include_directories( ${insieme_transform_include_dir} ) 
-#include_directories( ${insieme_annotations_include_dir} )
-#include_directories( ${insieme_analysis_include_dir} ) 
-
 # Build the transform library
 add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs} )
 target_include_directories(insieme_transform PUBLIC ${insieme_transform_include_dir})
+
 target_link_libraries(insieme_transform insieme_core)
 target_link_libraries(insieme_transform insieme_utils)
 target_link_libraries(insieme_transform insieme_annotations)
 target_link_libraries(insieme_transform insieme_analysis)
-
-# add dependencies
-# add_dependencies( insieme_transform insieme_core insieme_utils insieme_analysis)
 
 set ( ut_prefix  ut_transform_ )
 file(GLOB_RECURSE test_cases test/*.cc)

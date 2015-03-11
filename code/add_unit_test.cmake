@@ -1,6 +1,19 @@
 # define macro for adding tests
 macro ( add_unit_test case_name )
 
+	# lookup Google Test libraries
+	if(third_part_libs_home)
+		set(GTEST_ROOT ${third_part_libs_home}/gtest-latest)
+	endif()
+	find_package(GTest REQUIRED)
+	if(GTEST_FOUND)
+		set(gtest ${GTEST_LIBRARIES})
+		set(gtest_main ${GTEST_MAIN_LIBRARIES})
+	endif()
+
+	# lookup pthread library
+	find_package(Threads REQUIRED)
+
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${gtest})
 	target_link_libraries(${case_name} ${gtest_main})
