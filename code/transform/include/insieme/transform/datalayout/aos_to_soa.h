@@ -72,7 +72,7 @@ protected:
 			const core::StructTypePtr& newStructType);
 
 public:
-	AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder);
+	AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
 	virtual ~AosToSoa() {}
 
 	virtual void transform();

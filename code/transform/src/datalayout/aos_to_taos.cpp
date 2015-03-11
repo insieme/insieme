@@ -342,7 +342,7 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 ////assert(false);
 //	}
 
-	ParSecAtt psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
+	ParSecAtt<AosToTaos> psa = ParSecAtt<AosToTaos>(toTransform, varReplacements, replacements, newStructType, oldStructType);
 	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;

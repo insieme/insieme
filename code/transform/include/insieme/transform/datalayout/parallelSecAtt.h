@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
+#include "insieme/transform/datalayout/aos_to_soa.h"
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
@@ -50,7 +51,8 @@ namespace datalayout {
 
 utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
 
-class ParSecAtt : public AosToTaos {
+template<class T>
+class ParSecAtt : public T {
 
 	ExprAddressMap& varsToPropagate;
 	std::map<core::NodeAddress, core::NodePtr>& replacements;
@@ -72,6 +74,9 @@ public:
 
 };
 
+template class ParSecAtt<AosToTaos>;
+template class ParSecAtt<AosToSoa>;
 } // datalayout
 } // transform
 } // insieme
+

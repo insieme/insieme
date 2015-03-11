@@ -49,11 +49,13 @@ namespace datalayout {
 
 using namespace core;
 namespace pirp = pattern::irp;
-//namespace ia = insieme::analysis;
-ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) {
+
+template<class T>
+ExprAddressRefTypeMap ParSecAtt<T>::findCandidates(const NodeAddress& toTransform) {
 	ExprAddressRefTypeMap structs;
 
-	IRBuilder builder(mgr);
+	NodeManager& m = T::mgr;
+	IRBuilder builder(m);
 
 //	for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
 //		std::cout << "      things " << *dudu.first << std::endl;
@@ -61,7 +63,7 @@ ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) 
 	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
 		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
 		if(CallExprAddress call = expr.isa<CallExprAddress>()) {
-			if(!core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getTupleMemberAccess()))
+			if(!core::analysis::isCallOf(call.getAddressedNode(), m.getLangBasic().getTupleMemberAccess()))
 				return;
 
 			// check if tuple argument has a member which will be updated
@@ -145,9 +147,10 @@ ExprAddressRefTypeMap ParSecAtt::findCandidates(const NodeAddress& toTransform) 
 	return structs;
 }
 
-StatementList ParSecAtt::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+template<class T>
+StatementList ParSecAtt<T>::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
-	IRBuilder builder(mgr);
+	IRBuilder builder(T::mgr);
 
 	// replace declaration with compound statement containing only the declaration of the new variable and it's initialization
 	StatementList allDecls;
@@ -157,23 +160,29 @@ StatementList ParSecAtt::generateNewDecl(const ExprAddressMap& varReplacements, 
 	// divide initialization size by tilesize
 	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
 
-	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(),
+	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), T::updateInit(varReplacements, decl->getInitialization(),
 		inInitReplacementsInCaseOfNovarInInit)));
 
 	return allDecls;
 }
 
-ParSecAtt::ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<NodeAddress, NodePtr>& replacements,
+template<class T>
+ParSecAtt<T>::ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<NodeAddress, NodePtr>& replacements,
 		const StructTypePtr& newStructType, const StructTypePtr& oldStructType)
-		: AosToTaos(toTransform), varsToPropagate(varsToPropagate), replacements(replacements), newStructType(newStructType), oldStructType(oldStructType) {}
+		: T(toTransform), varsToPropagate(varsToPropagate), replacements(replacements), newStructType(newStructType), oldStructType(oldStructType) {}
 
+// template initializations
+template ParSecAtt<AosToTaos>::ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
+		const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
 
-void ParSecAtt::transform() {
-	IRBuilder builder(mgr);
-	const NodeAddress tta(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(tta);
+template<class T>
+void ParSecAtt<T>::transform() {
+	NodeManager& m = T::mgr;
+	IRBuilder builder(m);
+	const NodeAddress tta(T::toTransform);
+	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = T::createCandidateLists(tta);
 
-	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
+	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(m.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
 
@@ -182,7 +191,7 @@ void ParSecAtt::transform() {
 		ExpressionMap nElems;
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), oldStructType,
+			TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), oldStructType,
 					newStructType).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
 
@@ -196,11 +205,11 @@ void ParSecAtt::transform() {
 		}
 
 		// replacing the declarations of the old variables with new ones
-		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
+		T::addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 		const std::vector<core::StatementAddress> begin, end;
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+		T::replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
 		// assignments to the entire struct should be ported to the new struct members
 //TODO	replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
