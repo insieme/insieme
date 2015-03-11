@@ -52,7 +52,7 @@ namespace datalayout {
 utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
 
 template<class T>
-class ParSecAtt : public T {
+class ParSecTransform : public T {
 
 	ExprAddressMap& varsToPropagate;
 	std::map<core::NodeAddress, core::NodePtr>& replacements;
@@ -66,7 +66,7 @@ class ParSecAtt : public T {
 			const core::ExpressionPtr& nElems);
 
 public:
-	ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
+	ParSecTransform(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
 			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
 //	virtual ~ParSecAtt() {}
 
@@ -74,8 +74,8 @@ public:
 
 };
 
-template class ParSecAtt<AosToTaos>;
-template class ParSecAtt<AosToSoa>;
+template class ParSecTransform<AosToTaos>;
+template class ParSecTransform<AosToSoa>;
 } // datalayout
 } // transform
 } // insieme

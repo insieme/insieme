@@ -39,7 +39,7 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 
-#include "insieme/transform/datalayout/parallelSecAtt.h"
+#include "insieme/transform/datalayout/parallelSecTransform.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 
@@ -51,7 +51,7 @@ using namespace core;
 namespace pirp = pattern::irp;
 
 template<class T>
-ExprAddressRefTypeMap ParSecAtt<T>::findCandidates(const NodeAddress& toTransform) {
+ExprAddressRefTypeMap ParSecTransform<T>::findCandidates(const NodeAddress& toTransform) {
 	ExprAddressRefTypeMap structs;
 
 	NodeManager& m = T::mgr;
@@ -148,7 +148,7 @@ ExprAddressRefTypeMap ParSecAtt<T>::findCandidates(const NodeAddress& toTransfor
 }
 
 template<class T>
-StatementList ParSecAtt<T>::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList ParSecTransform<T>::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(T::mgr);
 
@@ -167,16 +167,16 @@ StatementList ParSecAtt<T>::generateNewDecl(const ExprAddressMap& varReplacement
 }
 
 template<class T>
-ParSecAtt<T>::ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<NodeAddress, NodePtr>& replacements,
+ParSecTransform<T>::ParSecTransform(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<NodeAddress, NodePtr>& replacements,
 		const StructTypePtr& newStructType, const StructTypePtr& oldStructType)
 		: T(toTransform), varsToPropagate(varsToPropagate), replacements(replacements), newStructType(newStructType), oldStructType(oldStructType) {}
 
 // template initializations
-template ParSecAtt<AosToTaos>::ParSecAtt(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
+template ParSecTransform<AosToTaos>::ParSecTransform(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
 		const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
 
 template<class T>
-void ParSecAtt<T>::transform() {
+void ParSecTransform<T>::transform() {
 	NodeManager& m = T::mgr;
 	IRBuilder builder(m);
 	const NodeAddress tta(T::toTransform);
