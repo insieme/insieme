@@ -21,16 +21,18 @@ macro ( add_unit_test case_name )
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 
 	# take value from environment variable
-	set(USE_VALGRIND ${CONDUCT_MEMORY_CHECKS})
+	set(USE_VALGRIND ON)
 
-	# check whether there was a 2nd argument
+	# check whether there was a optional 2nd argument 
+	# which disables use of valgrind for this particular test
 	if(${ARGC} GREATER 1)
-		# use last argument as a valgrind flag
-		set(USE_VALGRIND ${ARG2})
-	endif(${ARGC} GREATER 1)
+		# use (optional) 2nd argument as a valgrind flag
+		message(STATUS "Disabling Valgrind for ${case_name}")
+		set(USE_VALGRIND ${ARGV1})
+	endif()
 	
 	# add test case
-	if(USE_VALGRIND)
+	if(CONDUCT_MEMORY_CHECKS AND USE_VALGRIND)
 		# no valgrind support in MSVC 
 		if(NOT MSVC)
 			# add valgrind as a test
@@ -47,7 +49,7 @@ macro ( add_unit_test case_name )
 					${CMAKE_CURRENT_BINARY_DIR}
 			)
 		endif(NOT MSVC)
-	else(USE_VALGRIND)
+	else()
 		# use half the NB_PROCESSORS count to parallelize tests
 		if(NOT NB_PROCESSORS)
 			# default = 8 if system query failed
@@ -70,7 +72,7 @@ macro ( add_unit_test case_name )
 		endif(${case_name} MATCHES ".*driver_integration.*")
 
 		# + valgrind as a custom target (only if not explicitly prohibited)
-		if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
+		if ((NOT MSVC) AND USE_VALGRIND)
 			add_custom_target(valgrind_${case_name} 
 				COMMAND valgrind
 					--leak-check=full
@@ -84,7 +86,7 @@ macro ( add_unit_test case_name )
 					${CMAKE_CURRENT_BINARY_DIR}
 			)
 			add_dependencies(valgrind valgrind_${case_name})
-		endif ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
-	endif(USE_VALGRIND)
+		endif()
+	endif()
 endmacro(add_unit_test)
 
