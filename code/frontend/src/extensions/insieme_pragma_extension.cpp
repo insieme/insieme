@@ -89,7 +89,7 @@ namespace {
 	}
 
 	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getTransformLambda(ia::TransformationHint::Type type) {
-		return [&, type] (pragma::MatchObject object, StmtWrapper node) {
+		return [&, type] (const pragma::MatchObject& object, StmtWrapper node) {
 			auto& trg = node.front();
 
 			vector<unsigned> intValues = ::transform(object.getStrings("values"), [](const string& element) {
@@ -164,7 +164,7 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "mark",
 				pragma::tok::eod,
-				[&](pragma::MatchObject object, StmtWrapper node) {
+				[&](const pragma::MatchObject& object, StmtWrapper node) {
 					LambdaExprPtr expr = dynamic_pointer_cast<const LambdaExpr>(node.front());
 					assert(expr && "Insieme mark pragma can only be attached to function declarations!");
 
@@ -178,7 +178,7 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "kernelFile",
 				string_literal["arg"] >> pragma::tok::eod,
-				[](pragma::MatchObject object, StmtWrapper node) {
+				[](const pragma::MatchObject& object, StmtWrapper node) {
 
 					assert(object.getStrings("arg").size() == 1 && "Insieme KernelFile pragma cannot have more than one argument!");
 					ia::ocl::KernelFileAnnotation kernelFile(object.getStrings("arg").front());
@@ -196,7 +196,7 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "datarange",
 				range_list["ranges"] >> pragma::tok::eod,
-				[](pragma::MatchObject object, StmtWrapper node) {
+				[](const pragma::MatchObject& object, StmtWrapper node) {
 					const auto& exprs = object.getExprs("ranges");
 					const auto& vars = object.getVars("ranges");
 					assert(exprs.size() == (vars.size() * 2) && "Mismatching number of variables and expressions in insieme datarange pragma handling");
@@ -222,7 +222,7 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "data_transform",
 				string_literal["arg"] >> pragma::tok::eod,
-				[] (pragma::MatchObject object, StmtWrapper node) {
+				[] (const pragma::MatchObject& object, StmtWrapper node) {
 
 					assert(object.getStrings("arg").size() == 1 && "Insieme DataTransform pragma must have exactly one argument");
 					std::string datalayout = object.getStrings("arg").front();
@@ -240,7 +240,7 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "iterations",
 				tok::numeric_constant["value"] >> pragma::tok::eod,
-				[] (pragma::MatchObject object, StmtWrapper node) {
+				[] (const pragma::MatchObject& object, StmtWrapper node) {
 
 					const size_t n = insieme::utils::numeric_cast<size_t>(object.getStrings("value").front());
 					core::NodeAnnotationPtr annot = std::make_shared<ia::LoopAnnotation>(n);

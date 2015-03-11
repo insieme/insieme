@@ -198,16 +198,20 @@ class MatchObject {
     public:
         MatchObject() : called(false) { }
 
-        const VarList& getVars(const std::string& s) {
-            return varList[s];
+        const VarList getVars(const std::string& s) const {
+        	if(varList.find(s) == varList.end())
+        		return VarList();
+            return varList.at(s);
         }
-        const ExprList& getExprs(const std::string& s) {
-            return exprList[s];
+        const ExprList getExprs(const std::string& s) const {
+        	if(exprList.find(s) == exprList.end())
+        		return ExprList();
+            return exprList.at(s);
         }
 
 		const core::ExpressionPtr getSingleExpr(const std::string& key) {
-			auto fitV = getVars(key);
-			auto fitE = getExprs(key);
+			const auto fitV = getVars(key);
+			const auto fitE = getExprs(key);
 
 			if(fitE.empty() && fitV.empty())
 				return core::ExpressionPtr();
@@ -215,38 +219,38 @@ class MatchObject {
 			// we have an expression
 			if(fitV.empty()) {
 				assert(fitE.size() == 1);
-				return fitE[0];
+				return fitE.at(0);
 			}
 			// we have a variable
 			if(fitE.empty()) {
 				assert(fitV.size() == 1);
-				return fitV[0];
+				return fitV.at(0);
 			}
 			assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
 			return core::ExpressionPtr();
 		}
 
-        const StringList& getStrings(const std::string& k) {
-            return stringList[k];
+        const StringList getStrings(const std::string& k) const {
+        	if(stringList.find(k) == stringList.end())
+        		return StringList();
+            return stringList.at(k);
         }
-        const std::string& getString(const std::string& k) {
-            if(stringList[k].size() < 1) 
-                stringList[k].push_back("");
-
-            return stringList[k].front();
+        const std::string getString(const std::string& k) const {
+		if(stringList.find(k) == stringList.end())
+			return std::string();
+            return getStrings(k).front();
         }
 
-        bool stringValueExists(const std::string& k) {
+        bool stringValueExists(const std::string& k) const {
             return (stringList.find(k) != stringList.end());
         }
 
-        bool empty() {
+        bool empty() const {
             return (varList.empty() && exprList.empty() && stringList.empty());
         }
 
         void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
 
-        // TODO: change to operator overloading
         friend std::ostream& operator<<(std::ostream& out, const MatchObject& mo);
 };
 
