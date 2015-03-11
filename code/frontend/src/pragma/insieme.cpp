@@ -82,11 +82,5 @@ void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 }
 
-unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
-	std::string intLit = *val->get<std::string*>();
-	return insieme::utils::numeric_cast<unsigned>( intLit.c_str() );
-}
-
-
 } // end frontend namespace
 } // end insieme namespace
