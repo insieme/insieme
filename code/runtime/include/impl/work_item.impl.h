@@ -110,15 +110,15 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		irt_wi_implementation* impl, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
-	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
+	wi->parent_id = irt_work_item_null_id();
 	wi->impl = impl;
 	wi->selected_impl_variant = 0;
+	wi->parent_num_active_children = NULL;
 	wi->default_parallel_wi_count = 0;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
 	wi->_num_active_children = 0;
 	wi->num_active_children = &(wi->_num_active_children);
-	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
 	if(params != NULL) {
 		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
@@ -136,6 +136,12 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
 	wi->wg_memberships = NULL;
+	// if this WI has a parent (which means it's not the entry point) migrate some values
+	if(self->cur_wi) { 
+		wi->parent_id = self->cur_wi->id;
+		wi->parent_num_active_children = self->cur_wi->num_active_children;
+		wi->default_parallel_wi_count = self->cur_wi->default_parallel_wi_count;
+	}
 #ifdef IRT_ASTEROIDEA_STACKS
 	wi->stack_available = false;
 #endif //IRT_ASTEROIDEA_STACKS

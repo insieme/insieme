@@ -94,8 +94,14 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	irt_joinable ret;
 	ret.wg_id = retwg->id;
 	uint32 num_threads = (job->max/2+job->min/2);
-	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_degree_of_parallelism;
 	num_threads -= num_threads%job->mod;
+	if(job->max >= IRT_SANE_PARALLEL_MAX) {
+		num_threads = irt_g_degree_of_parallelism;	
+		irt_work_item* cur_wi = irt_wi_get_current();
+		if(cur_wi && cur_wi->default_parallel_wi_count != 0) {
+			num_threads = cur_wi->default_parallel_wi_count;
+		}
+	}
 	if(num_threads<job->min) num_threads = job->min;
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
 	irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0], &(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]));
