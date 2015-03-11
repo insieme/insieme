@@ -2,8 +2,8 @@
 macro ( add_unit_test case_name )
 
 	# lookup Google Test libraries
-	if(third_part_libs_home)
-		set(GTEST_ROOT ${third_part_libs_home}/gtest-latest)
+	if(THIRD_PARTY_LIBS_HOME)
+		set(GTEST_ROOT ${THIRD_PARTY_LIBS_HOME}/gtest-latest)
 	endif()
 	find_package(GTest REQUIRED)
 	if(GTEST_FOUND)

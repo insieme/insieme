@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ mpfr_home=@MPFR_HOME@
 gmp_home=@GMP_HOME@
 
 # third party libraries
-third_part_libs_home=@third_part_libs_home@
+third_party_libs_home=@THIRD_PARTY_LIBS_HOME@
 
 # result comparison script
 sortdiff=@insieme_root_dir@/test/sortdiff

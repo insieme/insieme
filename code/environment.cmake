@@ -24,6 +24,9 @@ endif()
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 
+#custom findxxx modules
+list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
+
 include (${insieme_code_dir}/lookup_lib.cmake)
 include (${insieme_code_dir}/add_unit_test.cmake)
 
@@ -55,7 +58,6 @@ set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_src_dir       	${insieme_code_dir}/transform/src )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
-
 set ( insieme_common_include_dir 		${insieme_code_dir}/common/include )
 
 set ( insieme_runtime_src_dir 	        ${insieme_code_dir}/runtime/src )
@@ -77,8 +79,8 @@ if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC)
 endif()
 
 # ------------------------------------------------------------- configuration for platforms
-if(MSVC)   # Windows Visual Studio
-
+if(MSVC)
+  # Windows Visual Studio
   # MSVC can compile insieme statical only
   if(NOT LINKING_TYPE)
 	set(LINKING_TYPE STATIC)
@@ -88,10 +90,10 @@ if(MSVC)   # Windows Visual Studio
   set(Boost_USE_STATIC_LIBS ON)
   # Use MT Boost
   set(Boost_USE_MULTITHREADED ON)
-
   set(DO_INSTALL FALSE)
 
-else(MSVC) # Linux or Cygwin/MinGW
+else(MSVC) 
+	# Linux or Cygwin/MinGW
 
     # Default is here: shared linking
     if(NOT LINKING_TYPE)
@@ -106,11 +108,11 @@ endif(MSVC)
 # --------------------------------------------------------------------- including libraries
 
 # set up third-part library home
-if (NOT third_part_libs_home )
+if (NOT THIRD_PARTY_LIBS_HOME )
 	if ( DEFINED INSIEME_LIBS_HOME ) 
-		set ( third_part_libs_home ${INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+		set ( THIRD_PARTY_LIBS_HOME ${INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
 	else()
-		set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+		set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
 	endif()
 endif()
 
@@ -119,12 +121,14 @@ if ( NOT DEFINED BOOST_ROOT )
 	if ( NOT $ENV{BOOST_ROOT} EQUAL "" )
 		set ( BOOST_ROOT $ENV{BOOST_ROOT} CACHE PATH "Boost installation directory." )
 	else()
-		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
+		set ( BOOST_ROOT "${THIRD_PARTY_LIBS_HOME}/boost-latest" CACHE PATH "Boost installation directory." )
 	endif()
 endif()
 find_package( Boost 1.48 QUIET COMPONENTS program_options system filesystem regex serialization )
-include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
-link_directories(${Boost_LIBRARY_DIRS})
+#everybody wants boost (except runtime...) so everybody gets it
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})	 #we use SYSTEM to include boost-header as system header (-isystem) to suppress warnings found in boost code
+#the linking should be done specifically
+#link_directories(${Boost_LIBRARY_DIRS})
 
 #profiling
 IF (DO_GOOGLE_PROFILING)
@@ -158,11 +162,13 @@ if(MSVC)
 			string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
 		endif(${flag_var} MATCHES "/MD")
 	endforeach(flag_var)
+
+	# enable warnings
+	add_definitions( /W4 )
 endif()
 
-# enable C++0x support within gcc (if supported)
+#--------------------------- GCC -------------------------
 if (CMAKE_COMPILER_IS_GNUCXX)
-
 	# add general flags
 	add_definitions( -fshow-column )
 	add_definitions( -fdiagnostics-show-option )
@@ -186,8 +192,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 
-	# check for -std=c++0x
 	include(CheckCXXCompilerFlag)
+	# check for -std=c++0x
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
 	# check for -std=c++11
 	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
@@ -198,25 +204,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	else()
 		message( "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
 	endif()
-
 endif()
-
-if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
-	# add general flags
-	add_definitions( -Wall )
-	
-  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
-	
-	include(CheckCXXCompilerFlag)
-	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
-	
-	if(CXX0X_Support)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	else()
-		message( "WARNING: --std=c++0x not supported by your compiler!" )
-	endif()
-endif ()
 
 # enable C99 support within gcc
 if (CMAKE_COMPILER_IS_GNUC)
@@ -225,11 +213,11 @@ if (CMAKE_COMPILER_IS_GNUC)
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -O0 -fPIC")
   
-  # add flags for release mode
-  set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
+	# add flags for release mode
+	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 
 	include(CheckCCompilerFlag)
-  check_c_compiler_flag( -std=c99 C99_Support )
+	check_c_compiler_flag( -std=c99 C99_Support )
 	if(C99_Support)
 		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 	else()
@@ -237,10 +225,29 @@ if (CMAKE_COMPILER_IS_GNUC)
 	endif()
 endif()
 
-# enable warnings
-if(MSVC) 
-	add_definitions( /W4 )
-endif()
+#--------------------------- Intel Compiler -------------------------
+if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
+	# add general flags
+	add_definitions( -Wall )
+	
+  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
+	
+	include(CheckCXXCompilerFlag)
+	# check for -std=c++0x
+	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
+	# check for -std=c++11
+	check_cxx_compiler_flag( -std=c++11 CXX11_Support )
+	if(CXX11_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	elseif(CXX0X_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	else()
+		message( "WARNING: --std=c++0x not supported by your compiler!" )
+	endif()
+endif ()
+
+
 
 
 # --------------------------------------------------------- Runtime
@@ -251,7 +258,6 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 # set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
 
 # -------------------------------------------------------------- determines insieme version
-
 find_package(Git)
 if(GIT_FOUND)
 	# deduce the code version using git describe
