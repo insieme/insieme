@@ -93,14 +93,14 @@ TEST(PragmaMatcherTest, checkAnnotations) {
 	const auto& tu = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").toIRTranslationUnit(manager);
 	const auto& ir = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
 
-	unsigned expectedCount = 0;
-
 	actualCount = 0;
 	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::DataRangeAnnotation>());
 	EXPECT_EQ(1, actualCount);
+
 	actualCount = 0;
 	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::DataTransformAnnotation>());
 	EXPECT_EQ(1, actualCount);
+
 	actualCount = 0;
 	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::TransformAnnotation>());
 	EXPECT_EQ(11, actualCount);

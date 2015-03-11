@@ -48,9 +48,11 @@ int main() {
 	unsigned array1Da[10];
 	unsigned array1Db[10];
 	unsigned array2D[10][10];
+
+	int x = 0, y = 0;
 #pragma insieme kernelFile "path/to/imaginary/kernel/file"
-{
-}
+	x = muha();
+
 	int a;
 #pragma insieme datarange (a = 0 : 9)
 {
