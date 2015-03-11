@@ -220,7 +220,7 @@ namespace {
 
 		// data transformations
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "transform",
+				PragmaHandler("insieme", "data_transform",
 				string_literal["arg"] >> pragma::tok::eod,
 				[] (pragma::MatchObject object, StmtWrapper node) {
 

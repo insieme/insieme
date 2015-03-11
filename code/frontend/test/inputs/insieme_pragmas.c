@@ -59,7 +59,7 @@ int main() {
 	a = 0;
 }
 	int b = 0;
-#pragma insieme transform "0"
+#pragma insieme data_transform "0"
 {
 	for(int i = 0; i < 10; ++i) { b = i; }
 }
