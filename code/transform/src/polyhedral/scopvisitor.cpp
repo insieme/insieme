@@ -53,35 +53,33 @@ SCoPVisitor::SCoPVisitor(const ProgramAddress &node): lvl(0), scoplist(node) {
 	visit(node);
 }
 
-/// Debug routine to print the given node and its child nodes.
-void SCoPVisitor::printNode(const NodeAddress &node, std::string id, unsigned int start, int count) {
+/// Debug routine to print the given node and its immediate children. The node address is the only mandatory
+/// argument; the other arguments are a textual description, and a start index and a node count. The start index
+/// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
+/// n means the n-th child node. The count gives the number of child nodes which should be printed;
+/// 0 means print only the given node, 1 means print only one child node, etc.
+void SCoPVisitor::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
 	// determine total number of child nodes, and adjust count accordingly
 	auto children=node.getChildAddresses();
 	if (count<0) count=children.size();
 
 	// if requested (start=0), print the node itself with some debug information
 	if (start==0) {
-		if (!id.empty()) id+=": ";
-		std::cout << id << node;
-		// annotations::LocationOpt loc=annotations::getLocation(node); if (loc) std::cout << " @ " << *loc;
-		std::cout << std::endl;
+		if (!descr.empty()) descr=" ("+descr+")";
+		std::cout << node.getNodeType() << descr << ": " << node << std::endl;
 		start++;
 	}
 
 	// iterate over the requested children to complete the output
 	for (unsigned int n=start-1; n<start-1+count; n++)
-		std::cout << "\t-" << n << "\t" << *children[n] << std::endl;
+		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
 	std::cout << std::endl;
 }
 
 /// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
 /// all child nodes and call their respective visitor methods.
 void SCoPVisitor::visitNode(const NodeAddress &node) {
-	// process this very node
-	switch (node->getNodeType()) {
-	case NT_Variable: ; //printNode(node, "found variable"); break;
-	default: ;// do nothing
-	}
+	// visit all children unconditionally
 	visitChildren(node);
 }
 
@@ -91,28 +89,33 @@ void SCoPVisitor::visitChildren(const NodeAddress &node) {
 	for (auto child: node->getChildList()) visit(child);
 }
 
+/// When visiting visitLambdaExpr, we encountered a function call. Apart from declarations, this is another
+/// possibility to instantiate variables, so we need to gather all variables from the closure here.
 void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
-	printNode(expr, "entering fun");
+	static unsigned int id=0;
+	static unsigned int funclvl=0;
+	if (id++==5) printNode(expr, "fct " + std::to_string(id) + ", lvl " + std::to_string(funclvl));
+	funclvl++;
 	visitChildren(expr);
+	funclvl--;
 }
 
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	lvl++;
-	printNode(stmt, "for() stmt lvl " + std::to_string(lvl), 0, 3);
+	printNode(stmt, "lvl " + std::to_string(lvl), 0, 3);
 	visitChildren(stmt);
 	lvl--;
 }
 
 /// Visit all the literals so that we can collect constants.
 void SCoPVisitor::visitVariable(const VariableAddress &expr) {
-	printNode(expr, "variable");
 	visitChildren(expr);
 }
 
 /// Visit all the declaration statements so that we can collect variable assignments.
 void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	printNode(node, "declaration");
+	printNode(node);
 	visitChildren(node);
 }
