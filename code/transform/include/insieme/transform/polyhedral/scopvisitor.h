@@ -48,8 +48,9 @@
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address>{
+class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address> {
 
+	std::stack<std::vector<insieme::core::VariableAddress> > varstack;
 	std::stack<SCoP> scopstack;
 	unsigned int lvl;
 
@@ -59,14 +60,17 @@ public:
 	/// used/passed/copied, then the SCoPVisitor can be destructed.
 	insieme::transform::polyhedral::novel::SCoPList scoplist;
 
+	// helper routines for general use in other methods (except for constructor; do not keep track of state)
 	SCoPVisitor(const insieme::core::ProgramAddress &node);
-	void printNode    (const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
-	void visitNode    (const insieme::core::NodeAddress &node);
-	void visitChildren(const insieme::core::NodeAddress &node);
+	void printNode           (const insieme::core::NodeAddress            &node,
+							  std::string descr="", unsigned int start=0, int count=-1);
+	void visitNode           (const insieme::core::NodeAddress            &node);
+	void visitChildren       (const insieme::core::NodeAddress            &node);
 
+	// visitors which will build up the SCoP stack (and keep track of other state)
 	void visitLambdaExpr     (const insieme::core::LambdaExprAddress      &expr);
 	void visitForStmt        (const insieme::core::ForStmtAddress         &stmt);
-	void visitVariable       (const insieme::core::VariableAddress        &expr);
+	void visitParameters     (const insieme::core::ParametersAddress      &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
 };
 

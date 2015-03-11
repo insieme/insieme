@@ -49,7 +49,8 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// The constructor initializes class variables and triggers the visit of all nodes in the program.
-SCoPVisitor::SCoPVisitor(const ProgramAddress &node): lvl(0), scoplist(node) {
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()), lvl(0),
+	scoplist(node) {
 	visit(node);
 }
 
@@ -79,6 +80,9 @@ void SCoPVisitor::printNode(const NodeAddress &node, std::string descr, unsigned
 /// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
 /// all child nodes and call their respective visitor methods.
 void SCoPVisitor::visitNode(const NodeAddress &node) {
+	// some debug output
+	//if (node.getNodeType()==NT_Lambda) printNode(node);
+
 	// visit all children unconditionally
 	visitChildren(node);
 }
@@ -92,11 +96,18 @@ void SCoPVisitor::visitChildren(const NodeAddress &node) {
 /// When visiting visitLambdaExpr, we encountered a function call. Apart from declarations, this is another
 /// possibility to instantiate variables, so we need to gather all variables from the closure here.
 void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
-	static unsigned int id=0;
+	// initialize and print debug output
 	static unsigned int funclvl=0;
-	if (id++==5) printNode(expr, "fct " + std::to_string(id) + ", lvl " + std::to_string(funclvl));
+	// printNode(expr, "lvl " + std::to_string(funclvl));
+
+	// after entering a function, we need to allocate a new variable vector on our variable vector stack
 	funclvl++;
+	varstack.push(std::vector<VariableAddress>());
 	visitChildren(expr);
+
+	// after we have visited all children, we can remove the topmost variable vector from the stack, and
+	// decrease the function nesting level again
+	varstack.pop();
 	funclvl--;
 }
 
@@ -109,13 +120,20 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	lvl--;
 }
 
-/// Visit all the literals so that we can collect constants.
-void SCoPVisitor::visitVariable(const VariableAddress &expr) {
-	visitChildren(expr);
+/// Visit lambda parameters so that we can add them to the list of available variables/SCoP parameters.
+/// LambdaExpr { FunctionType, Variable, LambdaDefinition {
+///                                      LambdaBinding {
+///                                      Variable Lambda {
+///                                               FunctionType Parameters CompoundStmt }}}}
+void SCoPVisitor::visitParameters(const ParametersAddress &node) {
+	std::vector<VariableAddress> &vec=varstack.top();
+	for (auto c: node.getChildAddresses()) vec.push_back(c.as<VariableAddress>());
+	visitChildren(node);
 }
 
 /// Visit all the declaration statements so that we can collect variable assignments.
 void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	printNode(node);
+	//std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
+	varstack.top().push_back(node.getAddressOfChild(0).as<VariableAddress>());
 	visitChildren(node);
 }
