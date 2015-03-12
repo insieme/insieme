@@ -443,7 +443,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	// to begin with we translate the constructor as a regular function but with initialization list
 	core::ExpressionPtr ctorFunc = convFact.getCallableExpression(ctorDecl);
 
-	// update parameter list with a class-typed parameter in the first possition
+	// update parameter list with a class-typed parameter in the first position
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 
 	// reconstruct Arguments list, fist one is a scope location for the object

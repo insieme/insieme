@@ -155,7 +155,6 @@ int main() {
 
 	dumpPretty(program);
 
-	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 	// check for four function calls
 	TreePattern pattern =
 			irp::callExpr(

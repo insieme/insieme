@@ -204,7 +204,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
 
-	// Deal with transfromation pragmas
+	// Deal with transformation pragmas
 	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
     // call frontend plugin post visitors

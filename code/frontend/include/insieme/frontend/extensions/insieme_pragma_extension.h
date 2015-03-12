@@ -39,9 +39,10 @@
 #include <vector>
 #include <functional>
 
+#include "insieme/core/ir_node.h"
+
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace frontend {

@@ -506,9 +506,9 @@ struct kwd: public Tok<clang::tok::identifier> {
 };
 
 /**
- * A var is an identifier which we have to resolve to get the actual variable identifer
+ * A var is an identifier which we have to resolve to get the actual variable identifier
  * This is an hack which has been done to solve the problem with OpenMP regions which receive an
- * identifer as name and this could be arbitrary
+ * identifier as name and this could be arbitrary
  */
 struct var_p: public Tok<clang::tok::identifier> {
 	var_p() : Tok<clang::tok::identifier>("", true, true) { }

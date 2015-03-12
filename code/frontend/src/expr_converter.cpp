@@ -1145,9 +1145,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			opFunc = gen.getOperator(lhsTy, op);
 		}
 
-	} else {
-		// check if there is a kernelFile annotation
-//		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
 	frontend_assert(opFunc) << "no operation code set\n"

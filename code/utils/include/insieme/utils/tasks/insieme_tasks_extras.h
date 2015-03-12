@@ -44,11 +44,11 @@ namespace utils{
 
 
 /**
- * wrap class for reductionr:
+ * wrap class for reduction:
  *  a reduction is defined over a collection, we operate over an input type, and we have to
  *  compute a single unique output. 
- *  in order to use, we need to fullfill some requirements
- *  -  (T, S) - > S  is the prototype of the isolated operation to perform over a sigle element,
+ *  in order to use, we need to fulfill some requirements
+ *  -  (T, S) - > S  is the prototype of the isolated operation to perform over a single element,
  *  -  this function needs to be provided of an identity element over the operator.
  *  -  the input data will be a collection of data to be reduced
  *  -  the output has to be a single value of type S
@@ -83,21 +83,21 @@ namespace utils{
 
 			// matrix reduction, create a matrix with same rows as workers
 			//	an undefined number of rows will perform operation on one extra element
-			//	to map non divisivible workloads
+			//	to map non-divisible workloads
 			//
 			//		<--------
 			//		<--------
 			//		<-------
 			//		<-------
 			//
-			// after this we reduce the first colum
+			// after this we reduce the first column
 			//
 			// 		^-------
 			// 		|-------
 			// 		|-------
 			// 		|----
 			//
-			// 	result is in the 0,0 possition
+			// 	result is in the 0,0 position
 
 
 
@@ -186,22 +186,4 @@ namespace utils{
 
 } // namespace
 } // namespace
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

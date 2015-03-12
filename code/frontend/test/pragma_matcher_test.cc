@@ -67,7 +67,7 @@ namespace fe = insieme::frontend;
 namespace {
 
     /**
-     *  Checks given match object for all indentifiers
+     *  Checks given match object for all identifiers
      *  that are contained in the expression or variable list of
      *  the match object.
      */
@@ -83,10 +83,10 @@ namespace {
 }
 
 
-TEST(PragmaMatcherTest, PragmaPossitions) {
+TEST(PragmaMatcherTest, PragmaPositions) {
 
-	// This test checks that everithing is allright with the pragmas matching
-	// we experienced some issues related to finding the possition of the pragma when using macros
+	// This test checks that everything is alright with the pragma matching
+	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 
@@ -160,7 +160,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		const clang::Stmt* stmt = p->getStatement();
 
         EXPECT_TRUE ( llvm::isa<clang::NullStmt>(stmt));
-//      we dont check injected stmt possition, might be wrong
+//      we don't check injected stmt position, might be wrong
 //		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 12, 2);
 //		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 14, 14);
 	}
@@ -266,10 +266,10 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 	}
 }
 
-TEST(PragmaMatcherTest, PragmaPossitions2) {
+TEST(PragmaMatcherTest, PragmaPositions2) {
 
-	// This test checks that everithing is allright with the pragmas matching
-	// we experienced some issues related to finding the possition of the pragma when using macros
+	// This test checks that everything is alright with the pragma matching
+	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 

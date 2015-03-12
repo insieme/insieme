@@ -36,8 +36,10 @@
 
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/utils/string_utils.h"
 #include "insieme/frontend/convert.h"
+
+#include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -53,8 +55,6 @@
 
 #include <llvm/Support/raw_ostream.h>
 
-//#include <glog/logging.h>
-#include "insieme/utils/logging.h"
 #include <boost/algorithm/string/join.hpp>
 
 
@@ -193,7 +193,6 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
     }                                                                                                                                                                                
 }
 
-//void MatchObject::print() const {
 std::ostream& operator<<(std::ostream& out, const MatchObject& mo) {
 	out << "############MATCH OBJECT PRINT############\n";
 	out << "Var list: " << "\n";
@@ -245,7 +244,7 @@ const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const {
 
 /**
  * This function is used to report an error occurred during the pragma matching. Clang utilities are used
- * to report the carret location of the error.
+ * to report the caret location of the error.
  */
 void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 	using namespace insieme::frontend::utils;

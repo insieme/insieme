@@ -1205,28 +1205,6 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
     return mProgram;
 }
 
-
-/*void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::Converter& convFact){
-    insieme::core::NodeAnnotationPtr annot;
-
-    // check if there is a kernelFile annotation
-    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
-
-    std::for_each(iter.first, iter.second,
-        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
-            const frontend::InsiemeKernelFile* kf = dynamic_cast<const frontend::InsiemeKernelFile*>( &*(curr.second) );
-            if(kf) {
-                annot = std::make_shared<annotations::ocl::KernelFileAnnotation>(annotations::ocl::KernelFileAnnotation(kf->getPath()));
-            }
-    });
-
-    if(annot)
-        irNode->addAnnotation(annot);
-}*/
-
-
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

@@ -36,20 +36,21 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_program.h"
-
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
 
-#include "insieme/frontend/translation_unit.h"
-#include "insieme/frontend/compiler.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/utils/config.h"
-#include "insieme/frontend/pragma/handler.h"
-
+#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/frontend/compiler.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/pragma/handler.h"
+
+#include "insieme/frontend/translation_unit.h"
+#include "insieme/frontend/utils/source_locations.h"
+
+#include "insieme/utils/config.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
