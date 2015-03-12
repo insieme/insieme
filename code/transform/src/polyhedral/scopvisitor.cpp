@@ -81,7 +81,7 @@ void SCoPVisitor::printNode(const NodeAddress &node, std::string descr, unsigned
 /// all child nodes and call their respective visitor methods.
 void SCoPVisitor::visitNode(const NodeAddress &node) {
 	// some debug output
-	//if (node.getNodeType()==NT_Lambda) printNode(node);
+	//if (node.getNodeType()==NT_CompoundStmt) printNode(node);
 
 	// visit all children unconditionally
 	visitChildren(node);
@@ -116,6 +116,8 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	lvl++;
 	printNode(stmt, "lvl " + std::to_string(lvl), 0, 3);
+	std::cout << "\tknown vars:"; for (auto v: varstack.top()) std::cout << " " << *v; std::cout << std::endl;
+	printNode(stmt, "", 4, 1);
 	visitChildren(stmt);
 	lvl--;
 }
