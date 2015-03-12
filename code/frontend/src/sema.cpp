@@ -49,8 +49,6 @@
 
 #include "insieme/utils/logging.h"
 
-//FIXME debug
-#include "insieme/frontend/pragma/insieme.h"
 
 using namespace clang;
 using namespace insieme::frontend;

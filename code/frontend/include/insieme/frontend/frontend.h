@@ -461,6 +461,16 @@ namespace frontend {
 
 		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
+		 * Automatically determines whether the supplied program contains multiple entry points.
+		 *
+		 * @param manager the node manager to be used for building the IR
+		 * @return the resulting, converted program
+		 * @throws an exception if the conversion fails.
+		 */
+		core::ProgramPtr execute(core::NodeManager& manager) const;
+
+		/**
+		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
 		 *
 		 * @param manager the node manager to be used for building the IR
 		 * @param fullApp a flag determining whether the result is expected to be a full application (entered via
@@ -468,7 +478,18 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp = true) const;
+		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp) const;
+
+		/**
+		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
+		 *
+		 * @param manager the node manager to be used for building the IR
+		 * @param program the partially processed program without any post-processing steps
+		 * @param the conversion setup holding any post-processing steps to be applied (i.e. plugins)
+		 * @return the resulting, converted program
+		 * @throws an exception if the conversion fails.
+		 */
+		core::ProgramPtr execute(core::NodeManager& manager, core::ProgramPtr& program, ConversionSetup& setup) const;
 
 		/**
 		 * Triggers the conversion of the files covered by this job into a translation unit.

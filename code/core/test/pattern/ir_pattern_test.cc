@@ -682,6 +682,18 @@ TEST(PatternTests, VarUsage) {
 //	std::cout << "z=" << res->getVarBinding("z") << "\n";
 }
 
+TEST(PatternTests, PFor) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}").as<ForStmtPtr>();
+	CallExprPtr pforStmt = builder.pfor(forStmt);
+
+	TreePattern pattern = irp::pfor();
+
+	EXPECT_PRED2(isMatch, pattern, pforStmt);
+}
+
 } // end namespace pattern
 } // end namespace core
 } // end namespace insieme

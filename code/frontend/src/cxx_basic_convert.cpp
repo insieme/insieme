@@ -45,7 +45,6 @@
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"

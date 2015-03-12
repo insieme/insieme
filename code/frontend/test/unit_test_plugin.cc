@@ -66,7 +66,6 @@
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 using namespace insieme::core;

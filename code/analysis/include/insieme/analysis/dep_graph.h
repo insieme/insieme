@@ -116,7 +116,7 @@ typedef std::vector<DependenceInstance> DependenceList;
 /**
  * Data structure utilized to store the dependencies within a SCoP region. The internal
  * representation is based on boost.graph representation. Once the dependence graph of a SCoP is
- * build it is kept as read-only object. In order to modify the dependencies code transfromations
+ * build it is kept as read-only object. In order to modify the dependencies code transformations
  * should be applied to the original code and the new dependence graph recreated on demand.
  */
 struct DependenceGraph : public utils::Printable {

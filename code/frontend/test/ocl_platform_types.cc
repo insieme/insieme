@@ -60,7 +60,6 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/extensions/pragma_test_extension.h"
 
 #include "test_utils.inc"

@@ -283,6 +283,12 @@ namespace irp {
 		return jobExpr(threadNumRange, anyList, anyList, defaultExpr);
 	}
 
+	inline TreePattern pfor(const TreePattern& group = any, const TreePattern& start = any, const TreePattern& end = any, const TreePattern& step = any, const TreePattern& body = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getUnit(); }),
+				lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getPFor(); }),
+				single(group) << single(start) << single(end) << single(step) << single(body));
+	}
+
 	/**
 	 * Creates a pattern matching loops on the given level.
 	 */

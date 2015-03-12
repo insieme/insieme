@@ -67,6 +67,7 @@
 #include "insieme/frontend/extensions/anonymous_rename.h"
 #include "insieme/frontend/extensions/cilk_extension.h"
 #include "insieme/frontend/extensions/pragma_test_extension.h"
+#include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -104,6 +105,7 @@ namespace frontend {
 		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
 		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
 		registerFrontendPlugin<extensions::TestPragma>();
+		registerFrontendPlugin<extensions::InsiemePragmaExtension>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
             registerFrontendPlugin<extensions::OmpFrontendPlugin>();
@@ -187,13 +189,47 @@ namespace frontend {
 		return singleTu;
 	}
 
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, core::ProgramPtr& program, ConversionSetup& setup) const {
+		// strip of OMP annotation since those may contain references to local nodes
+		core::visitDepthFirstOnce(program, [](const core::NodePtr& cur) {
+			cur->remAnnotation(omp::BaseAnnotation::KEY);
+		});
+
+        // maybe a visitor wants to manipulate the IR translation unit
+        for(auto plugin : setup.getPlugins())
+            program = plugin->IRVisit(program);
+
+		// return instance within global manager
+		return core::transform::utils::migrate(program, manager);
+	}
+
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
+	    ConversionSetup setup = *this;
+
+		// plugin initialization
+		setup.frontendPluginInit();
+
+		// create a temporary manager
+	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
+//		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
+
+		// load and merge all files into a single translation unit
+		auto unit = toIRTranslationUnit(tmpMgr);
+		core::ProgramPtr res;
+
+		if(unit.getEntryPoints().size() > 1)
+			res = tu::resolveEntryPoints(tmpMgr, unit);
+		else
+			res = tu::toProgram(tmpMgr, unit);
+
+		return execute(manager, res, setup);
+	}
+
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
 
-
 		// plugin initialization
-            setup.frontendPluginInit();
-
+		setup.frontendPluginInit();
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -211,17 +247,7 @@ namespace frontend {
 			res = oclHostCompiler.compile();
 		}
 */
-		// strip of OMP annotation since those may contain references to local nodes
-		core::visitDepthFirstOnce(res, [](const core::NodePtr& cur) {
-			cur->remAnnotation(omp::BaseAnnotation::KEY);
-		});
-
-        // maybe a visitor wants to manipulate the IR translation unit
-        for(auto plugin : setup.getPlugins())
-            res = plugin->IRVisit(res);
-
-		// return instance within global manager
-		return core::transform::utils::migrate(res, manager);
+		return execute(manager, res, setup);
 	}
 
 	bool ConversionJob::isCxx() const {

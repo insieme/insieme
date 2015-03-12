@@ -65,7 +65,6 @@
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 
@@ -443,7 +442,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	// to begin with we translate the constructor as a regular function but with initialization list
 	core::ExpressionPtr ctorFunc = convFact.getCallableExpression(ctorDecl);
 
-	// update parameter list with a class-typed parameter in the first possition
+	// update parameter list with a class-typed parameter in the first position
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 
 	// reconstruct Arguments list, fist one is a scope location for the object
