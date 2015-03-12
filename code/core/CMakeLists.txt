@@ -35,8 +35,11 @@ target_link_libraries(insieme_core gomp)
 target_link_libraries(insieme_core insieme_utils)
 
 # lookup CUDD library
-lookup_lib( CUDD cudd )
-target_link_libraries(insieme_core ${cudd_LIB}) 
+#lookup_lib( CUDD cudd )
+#target_link_libraries(insieme_core ${cudd_LIB}) 
+find_package(CUDD)
+target_link_libraries(insieme_core ${CUDD_LIBRARIES}) 
+target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 
 #include_directories( test/include/ )
 
@@ -49,7 +52,7 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} ${cudd_LIB})
+	target_link_libraries(${case_name} ${CUDD_LIBRARIES})
 	target_include_directories(${case_name} PUBLIC test/include/)
 	
 	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0

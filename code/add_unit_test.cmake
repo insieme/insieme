@@ -2,21 +2,13 @@
 macro ( add_unit_test case_name )
 
 	# lookup Google Test libraries
-	if(THIRD_PARTY_LIBS_HOME)
-		set(GTEST_ROOT ${THIRD_PARTY_LIBS_HOME}/gtest-latest)
-	endif()
 	find_package(GTest REQUIRED)
-	if(GTEST_FOUND)
-		set(gtest ${GTEST_LIBRARIES})
-		set(gtest_main ${GTEST_MAIN_LIBRARIES})
-	endif()
+	# add dependency to google test libraries
+	target_link_libraries(${case_name} ${GTEST_LIBRARIES})
+	target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARIES}})
 
 	# lookup pthread library
 	find_package(Threads REQUIRED)
-
-	# add dependency to google test libraries
-	target_link_libraries(${case_name} ${gtest})
-	target_link_libraries(${case_name} ${gtest_main})
 	# add dependency to pthread (TODO check gtest if depends on pthread?)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 

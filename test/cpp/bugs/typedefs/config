@@ -1,1 +1,1 @@
-includes=${gmp_home}/include
+includes=${gmp_include_dir}

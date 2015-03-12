@@ -21,9 +21,12 @@ include(environment.cmake)
 #FIXME: we have integration-tests relying on gmp/mpfr to be configured in the integration test
 #configuration file... --> there we need to have GMP_HOME/MPFR_HOME to be set...
 # lookup GMP library
-lookup_lib( GMP gmp ) 
+#lookup_lib( GMP gmp ) 
+find_package(GMP)
+
 # lookup MPFR library
-lookup_lib( MPFR mpfr ) 
+#lookup_lib( MPFR mpfr ) 
+find_package(MPFR)
 
 configure_file(integration_test_config.in ${CMAKE_BINARY_DIR}/integration_test_config  @ONLY IMMEDIATE)
 

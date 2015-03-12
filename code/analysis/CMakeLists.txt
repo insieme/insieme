@@ -27,24 +27,38 @@ target_link_libraries(insieme_analysis insieme_utils)
 target_link_libraries(insieme_analysis insieme_annotations)
 
 # lookup ISL library
-lookup_lib( ISL isl )
-target_include_directories(insieme_analysis PUBLIC ${isl_INC})
-target_link_libraries(insieme_analysis ${isl_LIB})
+#lookup_lib( ISL isl )
+#target_include_directories(insieme_analysis PUBLIC ${isl_INC})
+#target_link_libraries(insieme_analysis ${isl_LIB})
+find_package(ISL)
+target_include_directories(insieme_analysis PUBLIC ${ISL_INCLUDE_DIRS})
+target_link_libraries(insieme_analysis ${ISL_LIBRARIES})
 
 # lookup cloog library 
-lookup_lib( CLOOG cloog-isl )
-target_include_directories(insieme_analysis PUBLIC ${cloog_INC})
-target_link_libraries(insieme_analysis ${cloog_LIB}) 
+#lookup_lib( CLOOG cloog-isl )
+#target_include_directories(insieme_analysis PUBLIC ${cloog_INC})
+#target_link_libraries(insieme_analysis ${cloog_LIB}) 
+find_package(CLOOG)
+target_include_directories(insieme_analysis PUBLIC ${CLOOG_INCLUDE_DIRS})
+target_link_libraries(insieme_analysis ${CLOOG_LIBRARIES}) 
 
 # lookup Barvinok library 
-lookup_lib( BARVINOK barvinok )
-target_include_directories(insieme_analysis PUBLIC ${barvinok_INC})
-target_link_libraries(insieme_analysis ${barvinok_LIB})
+#lookup_lib( BARVINOK barvinok )
+#target_include_directories(insieme_analysis PUBLIC ${barvinok_INC})
+#target_link_libraries(insieme_analysis ${barvinok_LIB})
+find_package(BARVINOK)
+target_include_directories(insieme_analysis PUBLIC ${BARVINOK_INCLUDE_DIRS})
+target_link_libraries(insieme_analysis ${BARVINOK_LIBRARIES})
+
 
 # lookup GMP library
-lookup_lib( GMP gmp ) 
-target_include_directories(insieme_analysis PUBLIC ${gmp_INC})
-target_link_libraries(insieme_analysis ${gmp_LIB})
+#lookup_lib( GMP gmp ) 
+#target_include_directories(insieme_analysis PUBLIC ${gmp_INC})
+#target_link_libraries(insieme_analysis ${gmp_LIB})
+find_package(GMP) 
+target_include_directories(insieme_analysis PUBLIC ${GMP_INCLUDE_DIRS})
+target_link_libraries(insieme_analysis ${GMP_LIBRARIES})
+
 
 set ( ut_prefix  ut_analysis_ )
 file(GLOB_RECURSE test_cases test/*.cc)

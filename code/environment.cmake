@@ -3,13 +3,18 @@
 #
 
 # Configuration:
-#   $ENV{XERCES_HOME}           Both
-#   $ENV{GLOG_HOME}             Linux
 #   LINKING_TYPE                Linux
 #   LLVM_HOME/$ENV{LLVM_HOME}   Both
 
-
-# -------------------------------------------------------------- define some code locations
+#	GTEST_ROOT    				as env-var or cmake-var
+#	GMP_ROOT    				as env-var or cmake-var
+#	MPFR_ROOT    				as env-var or cmake-var
+#	XERCES_ROOT    				as env-var or cmake-var
+#	CUDD_ROOT    				as env-var or cmake-var
+#	SHARK_ROOT    				as env-var or cmake-var
+#	KOMPEX_ROOT    				as env-var or cmake-var
+#	ISL_ROOT    				as env-var or cmake-var
+#	PAPI_ROOT    				as env-var or cmake-var
 
 ENABLE_LANGUAGE(C)
 ENABLE_LANGUAGE(CXX)
@@ -27,6 +32,7 @@ get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 #custom findxxx modules
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
+# -------------------------------------------------------------- define some code locations
 include (${insieme_code_dir}/lookup_lib.cmake)
 include (${insieme_code_dir}/add_unit_test.cmake)
 
@@ -108,13 +114,139 @@ endif(MSVC)
 # --------------------------------------------------------------------- including libraries
 
 # set up third-part library home
-if (NOT THIRD_PARTY_LIBS_HOME )
+if (NOT DEFINED THIRD_PARTY_LIBS_HOME )
 	if ( DEFINED INSIEME_LIBS_HOME ) 
 		set ( THIRD_PARTY_LIBS_HOME ${INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
 	else()
 		set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
 	endif()
 endif()
+
+# - gtest 
+# when GTEST_ROOT is set, cmakes FindGTest looks in GTEST_ROOT
+if( NOT DEFINED GTEST_ROOT )
+	if ( DEFINED ENV{GTEST_ROOT})
+		set(GTEST_ROOT $ENV{GTEST_ROOT} CACHE PATH "GTEST installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/gtest-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/gtest-latest")
+			set(GTEST_ROOT "${THIRD_PARTY_LIBS_HOME}/gtest-latest" CACHE PATH "GTEST installation directory." )
+		endif()
+	endif()
+endif()
+
+
+# - gmp 
+# when GMP_ROOT is set we use the given location, otherwise we rely on cmakes magic
+if( NOT DEFINED GMP_ROOT )
+	if ( DEFINED ENV{GMP_ROOT})
+		set(GMP_ROOT $ENV{GMP_ROOT} CACHE PATH "GMP installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/gmp-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/gmp-latest")
+			set(GMP_ROOT "${THIRD_PARTY_LIBS_HOME}/gmp-latest" CACHE PATH "GMP installation directory." )
+		endif()
+	endif()
+endif()
+
+# - mpfr
+if( NOT DEFINED MPFR_ROOT )
+	if ( DEFINED ENV{MPFR_ROOT})
+		set(MPFR_ROOT $ENV{MPFR_ROOT} CACHE PATH "MPFR installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/mpfr-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/mpfr-latest")
+			set(MPFR_ROOT "${THIRD_PARTY_LIBS_HOME}/mpfr-latest" CACHE PATH "MPFR installation directory." )
+		endif()
+	endif()
+endif()
+
+# - shark
+if( NOT DEFINED SHARK_ROOT )
+	if ( DEFINED ENV{SHARK_ROOT})
+		set(SHARK_ROOT $ENV{SHARK_ROOT} CACHE PATH "SHARK installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/shark-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/shark-latest")
+			set(SHARK_ROOT "${THIRD_PARTY_LIBS_HOME}/shark-latest" CACHE PATH "SHARK installation directory." )
+		endif()
+	endif()
+endif()
+
+# - kompex
+if( NOT DEFINED KOMPEX_ROOT )
+	if ( DEFINED ENV{KOMPEX_ROOT})
+		set(KOMPEX_ROOT $ENV{KOMPEX_ROOT} CACHE PATH "KOMPEX installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/kompex-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/kompex-latest")
+			set(KOMPEX_ROOT "${THIRD_PARTY_LIBS_HOME}/kompex-latest" CACHE PATH "KOMPEX installation directory." )
+		endif()
+	endif()
+endif()
+
+
+# - cudd
+if( NOT DEFINED CUDD_ROOT )
+	if ( DEFINED ENV{CUDD_ROOT})
+		set(CUDD_ROOT $ENV{CUDD_ROOT} CACHE PATH "CUDD installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/cudd-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/cudd-latest")
+			set(CUDD_ROOT "${THIRD_PARTY_LIBS_HOME}/cudd-latest" CACHE PATH "CUDD installation directory." )
+		endif()
+	endif()
+endif()
+
+# - isl
+if( NOT DEFINED ISL_ROOT )
+	if ( DEFINED ENV{ISL_ROOT})
+		set(ISL_ROOT $ENV{ISL_ROOT} CACHE PATH "ISL installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/isl-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/isl-latest")
+			set(ISL_ROOT "${THIRD_PARTY_LIBS_HOME}/isl-latest" CACHE PATH "ISL installation directory." )
+		endif()
+	endif()
+endif()
+
+# - barvinok
+if( NOT DEFINED BARVINOK_ROOT )
+	if ( DEFINED ENV{BARVINOK_ROOT})
+		set(BARVINOK_ROOT $ENV{BARVINOK_ROOT} CACHE PATH "BARVINOK installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/barvinok-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/barvinok-latest")
+			set(BARVINOK_ROOT "${THIRD_PARTY_LIBS_HOME}/barvinok-latest" CACHE PATH "BARVINOK installation directory." )
+		endif()
+	endif()
+endif()
+
+# - cloog
+if( NOT DEFINED CLOOG_ROOT )
+	if ( DEFINED ENV{CLOOG_ROOT})
+		set(CLOOG_ROOT $ENV{CLOOG_ROOT} CACHE PATH "CLOOG installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/cloog-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/cloog-latest")
+			set(CLOOG_ROOT "${THIRD_PARTY_LIBS_HOME}/cloog-latest" CACHE PATH "CLOOG installation directory." )
+		endif()
+	endif()
+endif()
+
+# - luajit
+if( NOT DEFINED LUAJIT_ROOT )
+	if ( DEFINED ENV{LUAJIT_ROOT})
+		set(LUAJIT_ROOT $ENV{LUAJIT_ROOT} CACHE PATH "LUAJIT installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/luajit-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/luajit-latest")
+			set(LUAJIT_ROOT "${THIRD_PARTY_LIBS_HOME}/luajit-latest" CACHE PATH "LUAJIT installation directory." )
+		endif()
+	endif()
+endif()
+
+# - papi
+if( NOT DEFINED PAPI_ROOT )
+	if ( DEFINED ENV{PAPI_ROOT})
+		set(PAPI_ROOT $ENV{PAPI_ROOT} CACHE PATH "PAPI installation directory." )
+	else()
+		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/papi-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/papi-latest")
+			set(PAPI_ROOT "${THIRD_PARTY_LIBS_HOME}/papi-latest" CACHE PATH "PAPI installation directory." )
+		endif()
+	endif()
+endif()
+
 
 # - boost
 if ( NOT DEFINED BOOST_ROOT )
