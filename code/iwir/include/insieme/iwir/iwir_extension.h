@@ -102,7 +102,8 @@ class CollectionTypeExtension : public core::lang::Extension {
 public:
 	LANG_EXT_TYPE(Collection, "collection<'elemTy>");
 	LANG_EXT_LITERAL(CollectionSize,	"collection.size", "(collection<'elemTy>) -> int<4>");
-	LANG_EXT_LITERAL(ShortestCollection,	"shortest.collection", "(vector<collection<'elemTy>, #l>) -> int<4>");
+	LANG_EXT_LITERAL(ShortestCollection,	"shortest.collection", "(list<ref<collection<'elemTy>>>) -> int<4>");
+	//LANG_EXT_LITERAL(ShortestCollection,	"shortest.collection", "(vector<collection<'elemTy>, #l>) -> int<4>");
 	LANG_EXT_LITERAL(RefCollectionSize, "ref.collection.size", "(ref<collection<'elemTy>>) -> int<4>");
 	LANG_EXT_LITERAL(RefCollectionAppend, "ref.collection.append", "(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>");
 	LANG_EXT_LITERAL(CollectionAt,		"collection.at", "(collection<'elemTy>, int<4>) -> 'elemTy");

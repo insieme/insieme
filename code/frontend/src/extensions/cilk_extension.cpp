@@ -37,6 +37,7 @@
 #include "insieme/frontend/extensions/cilk_extension.h"
 
 #include "insieme/frontend/cilk/cilk_annotation.h"
+#include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
@@ -88,6 +89,11 @@ CilkFrontendPlugin::CilkFrontendPlugin() {
 
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("cilk", "sync", pragma::tok::eod,
 			getMarkerAttachementLambda<cilk::CilkSyncMarker>())));
+}
+
+tu::IRTranslationUnit CilkFrontendPlugin::IRVisit(tu::IRTranslationUnit& tu) {
+	//We'll let the Cilk sema do the actual work here for every TU
+	return cilk::applySema(tu, tu.getNodeManager());
 }
 
 }   //end namespace extensions

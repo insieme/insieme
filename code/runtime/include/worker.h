@@ -53,7 +53,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(worker);
+IRT_MAKE_ID_TYPE(worker)
 
 typedef enum _irt_worker_state {
 	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_SLEEPING, 

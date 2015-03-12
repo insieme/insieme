@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,47 +29,42 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once 
+#include <gtest/gtest.h>
 
-#include <vector>
+#define IRT_LIBRARY_MAIN
+#define IRT_LIBRARY_NO_MAIN_FUN
+#include "irt_library.hxx"
 
-namespace insieme {
-namespace core {
+TEST(DefaultParallelWiCountTest, Simple) {
+	irt::init(4);
+	irt::run([]() {
+		irt_set_default_parallel_wi_count(2);
+		irt::parallel([]{
+			EXPECT_EQ(2, irt::group_size());
+		});
 
-// forward declarations
-class Program;
-class Node;
-class CallExpr;
+		irt_set_default_parallel_wi_count(6);
+		irt::parallel([]{
+			EXPECT_EQ(6, irt::group_size());
+		});
+	});
+	irt::shutdown();
+}
 
-template <class T>
-class Pointer;
-
-template <class T>
-class Address;
-
-typedef Pointer<const Program> ProgramPtr;
-typedef Pointer<const Node> NodePtr;
-typedef Pointer<const CallExpr> CallExprPtr;
-
-typedef Address<const Node> NodeAddress;
-typedef Address<const CallExpr> CallExprAddress;
-
-} // end core namespace
-
-namespace frontend {
-namespace mpi {
-
-typedef std::vector<core::CallExprAddress> MPICalls;
-
-MPICalls extractMPICalls( const core::NodeAddress& node);
-
-core::ProgramPtr handleMPICalls( const core::ProgramPtr& program , bool tag);
-
-} // end mpi namespace
-} // end frontend namespace 
-} // end insieme namespace
+TEST(DefaultParallelWiCountTest, Nested) {
+	irt::init(4);
+	irt::run([]() {
+		irt_set_default_parallel_wi_count(3);
+		irt::parallel([]{
+			irt::parallel([]{
+				EXPECT_EQ(3, irt::group_size());
+			});
+		});
+	});
+	irt::shutdown();
+}

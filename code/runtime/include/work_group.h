@@ -47,7 +47,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(work_group);
+IRT_MAKE_ID_TYPE(work_group)
 
 struct _irt_work_group {
 	irt_work_group_id id;

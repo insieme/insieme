@@ -76,6 +76,10 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
  */
 irt_joinable irt_parallel(const irt_parallel_job* job);
 
+/** Sets the default parallel wi count for the current wi to num_wis.
+ */
+void irt_set_default_parallel_wi_count(int num_wis);
+
 /** From a job description structure, generates a single work item to perform the job.
  *  No group is created.
  *  The return value is a pointer to a work item.
@@ -111,6 +115,5 @@ static inline void ir_inst_region_start(irt_inst_region_id id) {
 static inline void ir_inst_region_end(irt_inst_region_id id) {
 	irt_inst_region_end(id);
 }
-
 
 #endif // ifndef __GUARD_IR_INTERFACE_H
