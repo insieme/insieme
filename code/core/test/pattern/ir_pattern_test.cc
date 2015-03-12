@@ -685,10 +685,8 @@ TEST(PatternTests, VarUsage) {
 TEST(PatternTests, PFor) {
 	NodeManager manager;
 	IRBuilder builder(manager);
-	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
-	auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
-	ForStmtPtr forStmt = ps("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}").as<ForStmtPtr>();
+	ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}").as<ForStmtPtr>();
 	CallExprPtr pforStmt = builder.pfor(forStmt);
 
 	TreePattern pattern = irp::pfor();
