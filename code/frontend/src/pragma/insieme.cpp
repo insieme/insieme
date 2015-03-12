@@ -57,31 +57,6 @@ namespace frontend {
 using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::pragma::tok;
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TestPragma::TestPragma(const clang::SourceLocation& startLoc, 
-					   const clang::SourceLocation& endLoc,
-					   const std::string& 			type, 
-					   const pragma::MatchMap& 		mmap) 
-
-	: Pragma(startLoc, endLoc, type) 
-{
-
-	pragma::MatchMap::const_iterator fit = mmap.find("expected");
-	if(fit != mmap.end()) {
-		expected = *fit->second.front()->get<std::string*>();
-	}
-}
-
-void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
-
-	pp.AddPragmaHandler(
-		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
-			pp.getIdentifierInfo("test"), string_literal["expected"] >> eod
-		)
-	);
-
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc, 

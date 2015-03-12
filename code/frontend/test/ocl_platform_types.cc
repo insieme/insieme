@@ -68,7 +68,7 @@
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
-namespace fe = insieme::frontend;
+using namespace insieme::frontend::extensions;
 using namespace clang;
 
 void checkSemanticErrors(const NodePtr& node) {
@@ -104,23 +104,23 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/ocl_host_types.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/ocl_host_types.c");
 
-	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	NodeManager mgr;
-	fe::ConversionSetup setup;
+	insieme::frontend::ConversionSetup setup;
 	setup.frontendPluginInit();
-	fe::conversion::Converter convFactory( mgr, tu, setup);
+	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
+		const TestPragma& tp = static_cast<const TestPragma&>(*(*it));
 
 		if(tp.isStatement()) {
-			StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking

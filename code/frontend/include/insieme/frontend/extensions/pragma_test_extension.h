@@ -67,14 +67,16 @@ namespace extensions {
  *
  * checks if the conversion of the C statement matches the one specified by the user
  */
-class TestPragmaPlugin: public FrontendPlugin {
+class TestPragma: public insieme::frontend::pragma::Pragma, public FrontendPlugin {
 	std::string expected;
 
 	std::function<stmtutils::StmtWrapper(const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)>
 	getMarkerAttachmentLambda();
 
 public:
-	TestPragmaPlugin();
+	TestPragma();
+	TestPragma(const clang::SourceLocation &s1, const clang::SourceLocation &s2, const std::string &str,
+			   const pragma::MatchMap &mm);
 	std::string getExpected() const { return expected; }
 };
 

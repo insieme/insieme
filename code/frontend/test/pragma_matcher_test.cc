@@ -38,27 +38,27 @@
 #include <vector>
 #include <memory>
 
-#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
-
-#include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/compiler.h"
-#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/utils/config.h"
-
+#include "insieme/frontend/extensions/omp_frontend_plugin.h"
+#include "insieme/frontend/extensions/pragma_test_extension.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/extensions/omp_frontend_plugin.h"
+#include "insieme/frontend/translation_unit.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/utils/config.h"
+
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 
 using namespace insieme::frontend;
+using namespace insieme::frontend::extensions;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
-namespace fe = insieme::frontend;
 
 #define CHECK_LOCATION(loc, srcMgr, line, col) \
 	EXPECT_EQ((size_t)line, utils::Line(loc, srcMgr)); \
@@ -109,7 +109,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 22);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"first\"");
 
 		// pragma associated to a statement
@@ -130,7 +130,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 46, 21);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"macro\"");
 
 		// pragma associated to a statement
@@ -152,7 +152,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 49, 20);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"solo\"");
 
 		// pragma associated to a statement
@@ -173,7 +173,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 55, 24);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"function\"");
 
 		// pragma associated to a function
@@ -193,7 +193,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 66, 19);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"two lines\"");
 
 		EXPECT_TRUE(p->isStatement());
@@ -215,7 +215,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 74, 19);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"one\"");
 
 		EXPECT_TRUE(p->isStatement());
@@ -234,7 +234,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 75, 19);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"two\"");
 
 		EXPECT_TRUE(p->isStatement());
@@ -253,7 +253,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 76, 21);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"three\"");
 
 		EXPECT_TRUE(p->isStatement());
@@ -291,7 +291,7 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 9);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"first\"");
 
 		EXPECT_TRUE(p->isStatement());
@@ -311,7 +311,7 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 47, 10);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"second\"");
 
 		EXPECT_TRUE(p->isStatement());
@@ -331,7 +331,7 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 51, 9);
 
 		EXPECT_EQ(p->getType(), "test");
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*p);
+		const TestPragma& tp = static_cast<const TestPragma&>(*p);
 		EXPECT_EQ(tp.getExpected(), "\"third\"");
 
 		EXPECT_TRUE(p->isStatement());

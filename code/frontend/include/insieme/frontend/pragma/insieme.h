@@ -53,28 +53,6 @@ class Converter;
 } // end convert namespace
 
 /**
- * Custom pragma used for testing purposes;
- *
- * #pragma test "insieme-IR"
- * C stmt
- *
- * checks if the conversion of the C statement matches the one specified by the user
- */
-class TestPragma: public pragma::Pragma {
-	std::string expected;
-
-public:
-	TestPragma(const clang::SourceLocation& startLoc, 
-			   const clang::SourceLocation& endLoc, 
-			   const std::string&			type, 	
-			   const pragma::MatchMap& 		mmap);
-
-	std::string getExpected() const { return expected; }
-
-	static void registerPragmaHandler(clang::Preprocessor& pp);
-};
-
-/**
  * The pragma 'insieme mark' is used to mark code regions (i.e. function definitions and code blocks)
  * that will be parsed by the compiler.
  */

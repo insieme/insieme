@@ -103,7 +103,7 @@ namespace frontend {
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
 		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
 		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
-		registerFrontendPlugin<extensions::TestPragmaPlugin>();
+		registerFrontendPlugin<extensions::TestPragma>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
             registerFrontendPlugin<extensions::OmpFrontendPlugin>();

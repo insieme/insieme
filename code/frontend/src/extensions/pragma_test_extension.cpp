@@ -55,7 +55,7 @@ namespace extensions {
 using namespace insieme::frontend::pragma;
 
 std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
-TestPragmaPlugin::getMarkerAttachmentLambda() {
+TestPragma::getMarkerAttachmentLambda() {
 	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
 		stmtutils::StmtWrapper res;
 		const std::string want="expected";
@@ -65,7 +65,14 @@ TestPragmaPlugin::getMarkerAttachmentLambda() {
 	};
 }
 
-TestPragmaPlugin::TestPragmaPlugin() {
+TestPragma::TestPragma(): Pragma(clang::SourceLocation(), clang::SourceLocation(), "", MatchMap()) {
+	pragmaHandlers.push_back
+			(std::make_shared<PragmaHandler>
+			 (PragmaHandler("expected", "test", tok::eod, getMarkerAttachmentLambda())));
+}
+
+TestPragma::TestPragma(const clang::SourceLocation& s1, const clang::SourceLocation& s2, const string& str,
+					   const insieme::frontend::pragma::MatchMap& mm): Pragma(s1, s2, str, mm) {
 	pragmaHandlers.push_back
 			(std::make_shared<PragmaHandler>
 			 (PragmaHandler("expected", "test", tok::eod, getMarkerAttachmentLambda())));
