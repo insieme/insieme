@@ -133,9 +133,6 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
 	{
 
-	// register 'test' pragma
-	TestPragma::registerPragmaHandler( mClang.getPreprocessor() );
-
 	// register 'insieme' pragma
 	InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
 
