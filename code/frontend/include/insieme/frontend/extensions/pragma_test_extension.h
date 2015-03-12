@@ -34,22 +34,50 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef PRAGMA_TEST_EXTENSION_H
+#define PRAGMA_TEST_EXTENSION_H
 
+#include <functional>
+#include <string>
+
+#include "insieme/core/ir_node.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/pragma/matcher.h"
+
+namespace clang {
+class Preprocessor;
+}
 
 namespace insieme {
 namespace frontend {
+namespace conversion {
+
+class Converter;
+
+} // end convert namespace
+
 namespace extensions {
 
-class CilkFrontendPlugin : public FrontendPlugin {
+/**
+ * Custom pragma used for testing purposes;
+ *
+ * #pragma test "insieme-IR"
+ * C stmt
+ *
+ * checks if the conversion of the C statement matches the one specified by the user
+ */
+class TestPragmaPlugin: public FrontendPlugin {
+	std::string expected;
 
-	public:
-		CilkFrontendPlugin();
+	std::function<stmtutils::StmtWrapper(const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)>
+	getMarkerAttachmentLambda();
 
-		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
+public:
+	TestPragmaPlugin();
+	std::string getExpected() const { return expected; }
 };
 
-}   //end namespace extensions
-}   //end namespace frontend
-}   //end namespace insieme
+}}}
+
+#endif // PRAGMA_TEST_EXTENSION_H

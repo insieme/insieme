@@ -34,22 +34,41 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
+#include "insieme/annotations/data_annotations.h"
+#include "insieme/annotations/info.h"
+#include "insieme/annotations/loop_annotations.h"
+#include "insieme/annotations/transform.h"
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/extensions/pragma_test_extension.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class CilkFrontendPlugin : public FrontendPlugin {
+using namespace insieme::frontend::pragma;
 
-	public:
-		CilkFrontendPlugin();
+std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
+TestPragmaPlugin::getMarkerAttachmentLambda() {
+	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
+		stmtutils::StmtWrapper res;
+		const std::string want="expected";
+		if (object.stringValueExists(want))
+			expected = object.getString(want);
+		return res;
+	};
+}
 
-		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
-};
+TestPragmaPlugin::TestPragmaPlugin() {
+	pragmaHandlers.push_back
+			(std::make_shared<PragmaHandler>
+			 (PragmaHandler("expected", "test", tok::eod, getMarkerAttachmentLambda())));
+}
 
-}   //end namespace extensions
-}   //end namespace frontend
-}   //end namespace insieme
+}}}

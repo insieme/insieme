@@ -66,6 +66,7 @@
 #include "insieme/frontend/extensions/instrumentation_region_plugin.h"
 #include "insieme/frontend/extensions/anonymous_rename.h"
 #include "insieme/frontend/extensions/cilk_extension.h"
+#include "insieme/frontend/extensions/pragma_test_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -102,6 +103,7 @@ namespace frontend {
         registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
 		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
 		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
+		registerFrontendPlugin<extensions::TestPragmaPlugin>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
             registerFrontendPlugin<extensions::OmpFrontendPlugin>();
