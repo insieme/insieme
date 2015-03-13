@@ -34,48 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/data_annotations.h"
-#include "insieme/annotations/loop_annotations.h"
-#include "insieme/annotations/transform.h"
-#include "insieme/core/annotations/source_location.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/pragma_test_extension.h"
-#include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/utils/numeric_cast.h"
+#pragma once
+
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-using namespace insieme::frontend::pragma;
+/**
+ * This is the frontend cleanup tool.
+ * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
+ * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
+ * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
+ */
+class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
+		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+        stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
+};
 
-std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
-TestPragma::getMarkerAttachmentLambda() {
-	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
-		std::cout << "pragma executed" << std::endl;
+} // extensions
+} // frontend
+} // insieme
 
-		stmtutils::StmtWrapper res;
-		const std::string want="expected";
-		if (object.stringValueExists(want))
-			expected = object.getString(want);
-		return res;
-	};
-}
-
-TestPragma::TestPragma(): Pragma(clang::SourceLocation(), clang::SourceLocation(), "", MatchMap()) {
-	pragmaHandlers.push_back
-			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
-}
-
-TestPragma::TestPragma(const clang::SourceLocation& s1, const clang::SourceLocation& s2, const string& str,
-					   const insieme::frontend::pragma::MatchMap& mm): Pragma(s1, s2, str, mm) {
-	pragmaHandlers.push_back
-			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
-}
-
-}}}

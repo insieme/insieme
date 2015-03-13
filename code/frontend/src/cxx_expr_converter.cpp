@@ -1021,9 +1021,9 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
-	//call frontend plugin visitors
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		retIr = plugin->Visit(expr, convFact);
+	//call frontend extension visitors
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+		retIr = extension->Visit(expr, convFact);
 		if(retIr)
 			break;
     }
@@ -1036,9 +1036,9 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
 
-    // call frontend plugin post visitors
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retIr = plugin->PostVisit(expr, retIr, convFact);
+    // call frontend extension post visitors
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retIr = extension->PostVisit(expr, retIr, convFact);
 	}
 
 	// attach location annotation

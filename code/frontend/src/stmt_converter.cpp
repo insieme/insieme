@@ -857,10 +857,10 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "C";
 
-    //iterate frontend plugin list and check if a plugin wants to convert the stmt
+    //iterate frontend extension list and check if a extension wants to convert the stmt
     stmtutils::StmtWrapper retStmt;
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retStmt = plugin->Visit(stmt, convFact);
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retStmt = extension->Visit(stmt, convFact);
 		if(retStmt.size())
 			break;
 	}
@@ -876,9 +876,9 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
     // Deal with transformation pragmas
 	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
-    // call frontend plugin post visitors
-    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
+    // call frontend extension post visitors
+    for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retStmt = extension->PostVisit(stmt, retStmt, convFact);
     }
 
     return retStmt;

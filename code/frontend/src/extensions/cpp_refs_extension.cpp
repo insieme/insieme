@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/cpp_refs.h"
+#include "insieme/frontend/extensions/cpp_refs_extension.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
@@ -48,8 +48,9 @@
 
 #include "insieme/utils/assert.h"
 
- namespace insieme {
- namespace frontend {
+namespace insieme {
+namespace frontend {
+namespace extensions {
 
 namespace {
    typedef std::map<core::LambdaExprPtr, core::LambdaExprPtr> memberReplace_t;
@@ -70,7 +71,7 @@ namespace {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){
+insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu){
 
 	// only cpp
 	if (!tu.isCXX()) return tu;
@@ -181,5 +182,6 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanup::IRVisit(insieme::fronte
 	return tu;
 }
 
+} // extensions
 } // frontend
 } // insieme

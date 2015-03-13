@@ -52,7 +52,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 using namespace insieme;
 using namespace insieme::frontend;
@@ -68,9 +68,9 @@ bool progVisited 	 = false;
 
 insieme::core::NodeManager manager;
 
-class ClangTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
+class ClangTestExtension : public insieme::frontend::extensions::FrontendExtension {
 public:
-    ClangTestPlugin(int N=0) {
+    ClangTestExtension(int N=0) {
         if(N==0) {
             macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
             injectedHeaders.push_back("injectedHeader.h");
@@ -178,16 +178,16 @@ public:
 
 /**
  *  This test checks if the user provided
- *  clang plugin registration works correctly.
+ *  clang extension registration works correctly.
  */
 TEST(ClangStage, Initialization) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>();
+    job.registerFrontendExtension<ClangTestExtension>();
 
-	// register the frontend plugin
-	EXPECT_EQ(1, job.getPlugins().size());
+	// register the frontend extension
+	EXPECT_EQ(1, job.getExtensions().size());
 }
 
 /**
@@ -198,7 +198,7 @@ TEST(ClangStage, Conversion) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>();
+    job.registerFrontendExtension<ClangTestExtension>();
 
 	EXPECT_FALSE(typeVisited);
 	EXPECT_FALSE(stmtVisited);
@@ -223,7 +223,7 @@ TEST(PreClangStage, Macros) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>();
+    job.registerFrontendExtension<ClangTestExtension>();
     //execute job
     auto program = job.execute(mgr);
   	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
@@ -234,14 +234,14 @@ TEST(PreClangStage, Macros) {
 }
 
 /**
- *  This test checks if the user plugin
+ *  This test checks if the user extension
  *  header injection is working correctly.
  */
 TEST(PreClangStage, HeaderInjection) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>();
+    job.registerFrontendExtension<ClangTestExtension>();
     //execute job
     auto program = job.execute(mgr);
   	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
@@ -252,7 +252,7 @@ TEST(PreClangStage, HeaderInjection) {
 }
 
 /**
- *  This test checks if the user plugin
+ *  This test checks if the user extension
  *  header injection is working correctly.
  *  We try to kidnap stdio.h and provide our
  *  implementation, that defines the magicFunction
@@ -261,7 +261,7 @@ TEST(PreClangStage, HeaderKidnapping) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>(1);
+    job.registerFrontendExtension<ClangTestExtension>(1);
     //execute job
     auto program = job.execute(mgr);
   	auto targetCode = insieme::backend::sequential::SequentialBackend::getDefault()->convert(program);
@@ -272,7 +272,7 @@ TEST(PreClangStage, HeaderKidnapping) {
 }
 
 /**
- *  This test checks if the user plugin
+ *  This test checks if the user extension
  *  IR visitor (tu and program) is working
  *  correctly.
  */
@@ -280,7 +280,7 @@ TEST(PostClangStage, IRVisit) {
 	//initialization
 	insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>();
+    job.registerFrontendExtension<ClangTestExtension>();
     //execute job
     progVisited = false;
     tuVisited = false;
@@ -292,7 +292,7 @@ TEST(PostClangStage, IRVisit) {
 }
 
 /**
- *  This test checks if the user plugin
+ *  This test checks if the user extension
  *  pragma handler is working correctly.
  *  for normal pragmas, deattached pragmas
  *  and stmts with multiple pragmas
@@ -301,7 +301,7 @@ TEST(PragmaHandlerTest, PragmaTest) {
     //initialization
     insieme::core::NodeManager mgr;
     insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/simple.c");
-    job.registerFrontendPlugin<ClangTestPlugin>(2);
+    job.registerFrontendExtension<ClangTestExtension>(2);
     //execute job
     //checks also if handling for stmts that are
     //attached with multiple pragmas is working
@@ -333,7 +333,7 @@ TEST(PragmaHandlerTest, PragmaTest) {
 	int funcsPre, funsPost;
 	int typesPre, typesPost;
 
-struct DeclVistors : public insieme::frontend::extensions::FrontendPlugin {
+struct DeclVistors : public insieme::frontend::extensions::FrontendExtension {
 
     virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* decl, frontend::conversion::Converter& convFact, bool symbolic) {
         funcsPre++;
@@ -377,8 +377,8 @@ TEST(DeclsStage, MatchVisits) {
 	funcsPre = funsPost = 0;
 	typesPre = typesPost = 0;
 
-	// register plugin
-    job.registerFrontendPlugin<DeclVistors>();
+	// register extension
+    job.registerFrontendExtension<DeclVistors>();
 
     //execute job
     auto program = job.execute(mgr);

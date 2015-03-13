@@ -34,28 +34,54 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef PRAGMA_TEST_EXTENSION_H
+#define PRAGMA_TEST_EXTENSION_H
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include <functional>
+#include <string>
+
+#include "insieme/core/ir_node.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/pragma/matcher.h"
+
+namespace clang {
+class Preprocessor;
+}
 
 namespace insieme {
 namespace frontend {
+namespace conversion {
 
-namespace cleanup {
-	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
-}
+class Converter;
+
+} // end convert namespace
+
+namespace extensions {
 
 /**
- * This plugin removes obviously superfluous code, including
- * - assignments
- * - variable declarations
- * - empty control flow
- * It uses a fixed point iteration and is quite slow
+ * Custom pragma used for testing purposes;
+ *
+ * #pragma test "insieme-IR"
+ * C stmt
+ *
+ * checks if the conversion of the C statement matches the one specified by the user
  */
-class SuperfluousCleanup : public insieme::frontend::extensions::FrontendPlugin {
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+class TestPragmaExtension: public insieme::frontend::pragma::Pragma, public FrontendExtension {
+	std::string expected;
+
+	std::function<stmtutils::StmtWrapper(const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)>
+	getMarkerAttachmentLambda();
+
+public:
+	TestPragmaExtension();
+	TestPragmaExtension(const clang::SourceLocation &s1, const clang::SourceLocation &s2, const std::string &str,
+			   const pragma::MatchMap &mm);
+	std::string getExpected() const { return expected; }
 };
 
-
+} // extensions
 } // frontend
 } // insieme
+
+#endif // PRAGMA_TEST_EXTENSION_H

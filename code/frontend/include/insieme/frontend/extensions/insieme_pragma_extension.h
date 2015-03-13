@@ -41,7 +41,7 @@
 
 #include "insieme/core/ir_node.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 namespace insieme {
@@ -52,7 +52,7 @@ namespace extensions {
  *
  * This extension handles "insieme" pragmas
  */
-class InsiemePragmaExtension: public FrontendPlugin {
+class InsiemePragmaExtension: public FrontendExtension {
 private:
 	vector<insieme::core::NodePtr> entryPoints;
 

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/frontend_cleanup.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
@@ -73,7 +73,9 @@
 
 namespace insieme {
 namespace frontend {
-	namespace {
+namespace extensions {
+
+namespace {
 
 		/**
 		 * here the little trick, the translation unit is converted into a single expression to guarantee the
@@ -234,9 +236,8 @@ namespace frontend {
 
 	} // anonymous namespace
 
-
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
+	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog){
 		/////////////////////////////////////////////////////////////////////////////////////
 		//		DEBUG
 		//			some code to fish bugs
@@ -277,7 +278,7 @@ namespace frontend {
 	}
 
 
-    insieme::frontend::tu::IRTranslationUnit FrontendCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+    insieme::frontend::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
 
 		tu = applyCleanup(tu, refDerefCleanup);
 		tu = applyCleanup(tu, castCleanup);
@@ -418,7 +419,7 @@ namespace {
 
 } // annonymous namespace
 
-    stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
+    stmtutils::StmtWrapper FrontendCleanupExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
 		stmtutils::StmtWrapper newStmts;
 
 		//////////////////////////////////////////////////////////////
@@ -578,5 +579,6 @@ namespace {
 		return newStmts;
 	}
 
+} // extensions
 } // frontend
 } // insieme

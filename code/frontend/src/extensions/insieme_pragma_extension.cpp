@@ -51,7 +51,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/tu/ir_translation_unit_io.h"

@@ -41,7 +41,7 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/pragma_test_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -71,7 +71,7 @@ TEST(TypeCast, FileTest) {
 
 		Converter convFactory( mgr, tu);
 
-		const TestPragma& tp = static_cast<const TestPragma&>(*(*it));
+		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement())
 			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );

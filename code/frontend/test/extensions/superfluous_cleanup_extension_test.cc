@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/frontend/extensions/superfluous_cleanup.h"
+#include "insieme/frontend/extensions/superfluous_cleanup_extension.h"
 
 #include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/ir_visitor.h"
@@ -73,7 +73,7 @@ TEST(SuperfluousCleanup, Simple) {
 	ASSERT_TRUE(program);
 
 	auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
-	auto cleaned = cleanup::removeObviouslySuperfluousCode(lambdaExp);
+	auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
 	//dumpPretty(lambdaExp);
 	//dumpPretty(cleaned);
 
@@ -106,7 +106,7 @@ TEST(SuperfluousCleanup, EnclosingLoops) {
 	ASSERT_TRUE(program);
 
 	auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
-	auto cleaned = cleanup::removeObviouslySuperfluousCode(lambdaExp);
+	auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
 	//dumpPretty(lambdaExp);
 	//dumpPretty(cleaned);
 
@@ -179,7 +179,7 @@ int main() {
 		EXPECT_TRUE(code);
 
 		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
-		auto cleaned = cleanup::removeObviouslySuperfluousCode(lambdaExp);
+		auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
 		//dumpPretty(lambdaExp);
 		//dumpPretty(cleaned);	
 

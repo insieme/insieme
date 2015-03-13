@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
 
@@ -51,9 +51,9 @@ namespace extensions {
  * This extension allows for the manual instrumentation of marked regions
  * using "#pragma instrumentation region id(N)"
  */
-class InstrumentationRegionPlugin : public FrontendPlugin {
+class InstrumentationRegionExtension : public FrontendExtension {
 public:
-	InstrumentationRegionPlugin() : FrontendPlugin() {
+	InstrumentationRegionExtension() : FrontendExtension() {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>("instrumentation", "region", 
 			pragma::kwd("id") >> tok::l_paren >> tok::expr["id"] >> tok::r_paren >> tok::eod,
 			[](MatchObject match, stmtutils::StmtWrapper node) {

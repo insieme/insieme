@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 #include "insieme/frontend/stmt_converter.h"
 
@@ -46,10 +46,11 @@ namespace extensions {
 
 using namespace insieme;
 
-class ASMExtension : public insieme::frontend::extensions::FrontendPlugin {
+class ASMExtension : public insieme::frontend::extensions::FrontendExtension {
     virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
 };
 
-} //namespace plugin
-} //namespace frontnt
-} //namespace extensions
+} // extensions
+} // frontend
+} // insieme
+

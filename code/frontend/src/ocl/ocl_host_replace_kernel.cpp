@@ -188,7 +188,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	ConversionJob kernelJob(path, includeDirs);
-	kernelJob.registerFrontendPlugin<extensions::OclKernelPlugin>();
+	kernelJob.registerFrontendExtension<extensions::OclKernelExtension>();
 	kernelJob.setDefinition("INSIEME", "");
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));

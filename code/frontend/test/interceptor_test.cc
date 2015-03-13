@@ -136,7 +136,7 @@ TEST(Interception, SimpleInterception) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
@@ -188,7 +188,7 @@ TEST(Interception, SimpleFunction1) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 
 	auto retTy = builder.getLangBasic().getUnit(); 
@@ -222,7 +222,7 @@ TEST(Interception, SimpleFunction2) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
@@ -271,7 +271,7 @@ TEST(Interception, Types) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 
 	{
@@ -344,7 +344,7 @@ TEST(Interception, TypesIntercepted) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 
 	{
@@ -408,7 +408,7 @@ TEST(Interception, AttachedHeader) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 

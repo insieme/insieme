@@ -609,8 +609,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 
     core::NodePtr result = nullptr;
-    for(auto plugin : this->getConversionSetup().getPlugins()) {
-        result = plugin->Visit(valDecl, *this);
+    for(auto extension : this->getConversionSetup().getExtensions()) {
+        result = extension->Visit(valDecl, *this);
         if(core::ExpressionPtr re = result.isa<core::ExpressionPtr>()) {
             varDeclMap[valDecl] = re;
             break;
@@ -718,8 +718,8 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		}
 	}
 
-	for(auto plugin : this->getConversionSetup().getPlugins()) {
-		plugin->PostVisit(valDecl, varDeclMap[valDecl], *this);
+	for(auto extension : this->getConversionSetup().getExtensions()) {
+		extension->PostVisit(valDecl, varDeclMap[valDecl], *this);
 	}
 
 	VLOG(2) << varDeclMap[valDecl];
@@ -1074,8 +1074,8 @@ core::ExpressionPtr Converter::createCallExprFromBody(const core::StatementPtr& 
 core::ExpressionPtr Converter::createCallExprFromBody(const stmtutils::StmtWrapper& irStmts, const core::TypePtr& retType, bool lazy){
 
 	stmtutils::StmtWrapper retStmts = irStmts;
-    for(auto plugin : getConversionSetup().getPlugins())
-        retStmts = plugin->PostVisit(static_cast<clang::Stmt*>(nullptr), retStmts, *this);
+    for(auto extension : getConversionSetup().getExtensions())
+        retStmts = extension->PostVisit(static_cast<clang::Stmt*>(nullptr), retStmts, *this);
 
 	return builder.createCallExprFromBody(stmtutils::tryAggregateStmts(builder, retStmts), retType, lazy);
 }
@@ -1449,8 +1449,8 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	core::TypePtr res = nullptr;
-    for(auto plugin : this->getConversionSetup().getPlugins()) {
-        core::NodePtr result = plugin->Visit(decl, *this);
+    for(auto extension : this->getConversionSetup().getExtensions()) {
+        core::NodePtr result = extension->Visit(decl, *this);
         if(result) {
             res = result.as<core::TypePtr>();
 			typeCache[decl->getTypeForDecl()->getCanonicalTypeInternal ()] = res;
@@ -1474,8 +1474,8 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 		}
 	}
 
-	for(auto plugin : this->getConversionSetup().getPlugins()) {
-        plugin->PostVisit(decl, res, *this);
+	for(auto extension : this->getConversionSetup().getExtensions()) {
+        extension->PostVisit(decl, res, *this);
     }
 
 }
@@ -1849,18 +1849,18 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	}
 
 	core::NodePtr result = nullptr;
-    for(auto plugin : this->getConversionSetup().getPlugins()) {
-        result = plugin->Visit(funcDecl, *this, symbolic);
+    for(auto extension : this->getConversionSetup().getExtensions()) {
+        result = extension->Visit(funcDecl, *this, symbolic);
         if(core::ExpressionPtr res = result.isa<core::ExpressionPtr>()) {
-            //if plugin does not return a symbol, create the symbol
-            //and check if the plugin returned a lambda expr.
+            //if extension does not return a symbol, create the symbol
+            //and check if the extension returned a lambda expr.
             //add this lambda expr to the ir tu and fill the lambda cacheF
             if(core::LiteralPtr symb = res.isa<core::LiteralPtr>()) {
                 addToLambdaCache(funcDecl, symb);
             } else {
                 auto funcTy = convertFunctionType(funcDecl);
                 core::LiteralPtr symbol = builder.literal(funcTy, utils::buildNameForFunction(funcDecl));
-                assert(res.isa<core::LambdaExprPtr>() && "if the plugin does not return a symbol it must return a lambda expresion");
+                assert(res.isa<core::LambdaExprPtr>() && "if the extension does not return a symbol it must return a lambda expresion");
                 addToLambdaCache(funcDecl, symbol);
                 getIRTranslationUnit().addFunction(symbol, res.as<core::LambdaExprPtr>());
             }
@@ -1883,8 +1883,8 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
     core::ExpressionPtr expr = result.as<core::ExpressionPtr>();
 
-    for(auto plugin : this->getConversionSetup().getPlugins()) {
-        auto ret = plugin->PostVisit(funcDecl, expr, *this, symbolic);
+    for(auto extension : this->getConversionSetup().getExtensions()) {
+        auto ret = extension->PostVisit(funcDecl, expr, *this, symbolic);
         if(ret) {
             expr=ret.as<core::ExpressionPtr>();
         }

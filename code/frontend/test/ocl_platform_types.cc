@@ -60,7 +60,7 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/pragma_test_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
 
 #include "test_utils.inc"
 
@@ -109,14 +109,14 @@ TEST(StmtConversion, FileTest) {
 
 	NodeManager mgr;
 	insieme::frontend::ConversionSetup setup;
-	setup.frontendPluginInit();
+	setup.frontendExtensionInit();
 	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-		const TestPragma& tp = static_cast<const TestPragma&>(*(*it));
+		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement()) {
 			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
