@@ -106,6 +106,10 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	});
 }
 
+NodePtr append(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements) {
+	return insert(manager, target, statements, target->getChildList().size());
+}
+
 
 NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement) {
 

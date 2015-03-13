@@ -71,6 +71,16 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index);
 
 /**
+ * A utility function to append a list of statements to a compound statement block.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement within which the element should be inserted
+ * @param statements the statements to be inserted
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr append(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements);
+
+/**
  * A utility function to insert a statement before another statement.
  * If the target statement is contained within a compound statement the supplied statement will be inserted,
  * otherwise a new compound statement will be generated
