@@ -80,7 +80,7 @@ namespace {
 
 // Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
 ///
-void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, InsiemeSema& sema, bool dumpCFG) {
+void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSema& sema) {
 
 	Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();
@@ -105,7 +105,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	ParserProxy::discard();  // FIXME
 
 	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
-	if(dumpCFG) {
+	if(false) {
 		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
 		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
 			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
@@ -157,7 +157,7 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		}
 	}
 
-	parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
+	parseClangAST(mClang, &emptyCons, mSema);
 
     // all pragmas should now have either a decl or a stmt attached.
     // it can be the case that a pragma is at the end of a file

@@ -57,6 +57,8 @@ using namespace insieme::frontend::pragma;
 std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
 TestPragma::getMarkerAttachmentLambda() {
 	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
+		std::cout << "pragma executed" << std::endl;
+
 		stmtutils::StmtWrapper res;
 		const std::string want="expected";
 		if (object.stringValueExists(want))
@@ -68,14 +70,14 @@ TestPragma::getMarkerAttachmentLambda() {
 TestPragma::TestPragma(): Pragma(clang::SourceLocation(), clang::SourceLocation(), "", MatchMap()) {
 	pragmaHandlers.push_back
 			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("expected", "test", tok::eod, getMarkerAttachmentLambda())));
+			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
 }
 
 TestPragma::TestPragma(const clang::SourceLocation& s1, const clang::SourceLocation& s2, const string& str,
 					   const insieme::frontend::pragma::MatchMap& mm): Pragma(s1, s2, str, mm) {
 	pragmaHandlers.push_back
 			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("expected", "test", tok::eod, getMarkerAttachmentLambda())));
+			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
 }
 
 }}}
