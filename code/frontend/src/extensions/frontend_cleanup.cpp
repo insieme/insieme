@@ -52,6 +52,7 @@
 #include "insieme/core/pattern/rule.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/ir_generator.h"
+#include "insieme/core/pattern/pattern_utils.h"
 
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
@@ -270,7 +271,40 @@ namespace frontend {
 //
 //	//	abort();
 //
+		auto& mgr = prog->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		const auto& build = core::IRBuilder(mgr);
+		namespace icp = insieme::core::pattern;
+		namespace irp = insieme::core::pattern::irp;
 
+		// if entry point returns int ensure that it has a return statement
+		auto eplist = prog->getEntryPoints();
+		// we only need to care about C programs which do not have a return because of C semantics on "main"
+		if(eplist.size() == 1) {
+			auto eP = prog->getEntryPoints()[0];
+			if(eP.isa<core::LambdaExprPtr>()) {
+				auto lambdaExp = eP.as<core::LambdaExprPtr>();
+				auto funType = lambdaExp->getFunctionType();
+				if(basic.isInt(funType->getReturnType())) {
+					icp::TreePattern compoundPattern = icp::outermost(icp::var("compound", irp::compoundStmt(icp::anyList)));
+					
+					auto optCompoundMatch = compoundPattern.matchAddress(core::LambdaExprAddress(lambdaExp));
+					if(optCompoundMatch) {
+						icp::AddressMatch compoundMatch = optCompoundMatch.get();
+						auto compound = compoundMatch.getVarBinding("compound").getFlattened()[0].as<core::CompoundStmtAddress>();
+						
+						icp::TreePattern compoundPattern = irp::compoundStmt(icp::empty | icp::single(!irp::returnStmt(icp::any)) | (icp::anyList << !irp::returnStmt(icp::any)));
+						if(compoundPattern.match(compound)) {
+							// outermost compound does not contain return, add it
+							auto newRoot = core::transform::append(mgr, compound, toVector<core::StatementPtr>(build.returnStmt(build.intLit(0)))).as<core::ExpressionPtr>();
+							prog = core::Program::remEntryPoint(mgr, prog, eP);
+							prog = core::Program::addEntryPoint(mgr, prog, newRoot);
+						}
+					}
+
+				} 
+			}
+		}
 
 
 		return prog;
