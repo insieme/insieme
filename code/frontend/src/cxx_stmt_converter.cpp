@@ -42,8 +42,6 @@
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
 
-#include "insieme/frontend/pragma/insieme.h"
-
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
@@ -203,7 +201,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
 
-	// Deal with transfromation pragmas
+	// Deal with transformation pragmas
 	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
     // call frontend plugin post visitors

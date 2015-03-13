@@ -46,7 +46,6 @@
 #include "insieme/frontend/extensions/omp_frontend_plugin.h"
 #include "insieme/frontend/extensions/pragma_test_extension.h"
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/utils/config.h"
@@ -85,8 +84,8 @@ namespace {
 
 TEST(PragmaMatcherTest, DISABLED_PragmaPositions) {
 
-	// This test checks that everithing is allright with the pragmas matching
-	// we experienced some issues related to finding the possition of the pragma when using macros
+	// This test checks that everything is alright with the pragma matching
+	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 	ConversionSetup setup;
@@ -159,7 +158,7 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions) {
 		const clang::Stmt* stmt = p->getStatement();
 
         EXPECT_TRUE ( llvm::isa<clang::NullStmt>(stmt));
-//      we dont check injected stmt possition, might be wrong
+//      we don't check injected stmt position, might be wrong
 //		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 12, 2);
 //		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 14, 14);
 	}
@@ -268,8 +267,8 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions) {
 
 TEST(PragmaMatcherTest, DISABLED_PragmaPositions2) {
 
-	// This test checks that everithing is allright with the pragmas matching
-	// we experienced some issues related to finding the possition of the pragma when using macros
+	// This test checks that everything is alright with the pragma matching
+	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
 	ConversionSetup setup;

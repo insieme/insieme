@@ -160,7 +160,9 @@ TRANSFORMATION_TYPE(
  */
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 
-/** LoopTiling: Loop tiling is obtained by applying strip mining consecutively and then interchanging the loops */
+/** LoopTiling: Loop tiling is obtained by applying strip mining consecutively and then interchanging the loops
+ * TODO: Arguments 0 or 1 can lead to loop nests being completely removed. This needs to be fixed.
+ * */
 struct LoopTiling: public Transformation<LoopTiling> {
 
 	typedef std::vector<unsigned> TileVect;
@@ -243,7 +245,7 @@ inline TransformationPtr makeLoopFusion( const LoopFusion::LoopIndexVect& loops)
 }
 
 /**
- * LoopFusion: 
+ * LoopFission:
  */
 struct LoopFission : public Transformation<LoopFission> {
 

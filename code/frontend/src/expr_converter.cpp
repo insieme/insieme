@@ -49,8 +49,6 @@
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 
-#include "insieme/frontend/pragma/insieme.h"
-
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
@@ -1131,9 +1129,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			opFunc = gen.getOperator(lhsTy, op);
 		}
 
-	} else {
-		// check if there is a kernelFile annotation
-		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
 	frontend_assert(opFunc) << "no operation code set\n"

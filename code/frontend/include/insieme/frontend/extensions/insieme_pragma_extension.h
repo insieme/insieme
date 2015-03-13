@@ -34,16 +34,52 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
-#include "insieme/core/forward_decls.h"
+#include <vector>
+#include <functional>
+
+#include "insieme/core/ir_node.h"
+
+#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 namespace insieme {
-namespace driver {
-namespace pragma {
+namespace frontend {
+namespace extensions {
 
-core::ProgramPtr applyTransformations(const core::ProgramPtr& program);
+/**
+ *
+ * This extension handles "insieme" pragmas
+ */
+class InsiemePragmaExtension: public FrontendPlugin {
+private:
+	vector<insieme::core::NodePtr> entryPoints;
 
-} // end pragma namespace
-} // end driver namespace
-} // end insieme namespace
+public:
+	/**
+	 * Registers all "insieme" pragmas and their handlers
+	 */
+	InsiemePragmaExtension();
+
+	/**
+	 * Used for processing previously established TransformationAnnotation objects
+	 */
+	insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& program);
+
+	/**
+	 * Used for adding previously identified entry points
+	 */
+	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+
+	/**
+	 * Visits the entire program to look for and process transformation annotations
+	 * @param program the program which to check for TransformationAnnotation objects
+	 * @return the transformed program
+	 */
+	core::ProgramPtr applyTransformations(const core::ProgramPtr& program);
+};
+
+} // extensions
+} // frontend
+} // insieme

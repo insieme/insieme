@@ -38,7 +38,6 @@
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
 #include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma::tok;

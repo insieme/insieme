@@ -50,7 +50,6 @@
 
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/frontend/extensions/frontend_plugin.h"

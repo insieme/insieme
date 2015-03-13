@@ -55,7 +55,6 @@
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/analysis/prunable_decl_visitor.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -398,19 +397,6 @@ tu::IRTranslationUnit Converter::convert() {
 		}
 	} funVisitor(*this, false, count,processed);
 	funVisitor.traverseDeclCtx(declContext);
-
-	// handle entry points (marked using insieme pragmas)
-	for(pragma::PragmaPtr pragma : translationUnit.getPragmaList()) {
-		// only interested in insieme-mark pragmas
-		if (pragma->getType() != "insieme::mark") continue;
-		const pragma::Pragma& insiemePragma = *pragma;
-		if(!insiemePragma.isDecl()) continue;
-
-		// this is a declaration, if it's a function add it to the entry points of the program
-		const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
-		assert(funcDecl && "Pragma insieme only valid for function declarations.");
-		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
-	}
 
 	//frontend done
 	if (getConversionSetup().hasOption(ConversionSetup::ProgressBar)) std::cout << std::endl;

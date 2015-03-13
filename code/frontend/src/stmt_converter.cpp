@@ -43,7 +43,6 @@
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/utils/container_utils.h"
@@ -92,11 +91,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 
 		auto retStmt = convFact.convertVarDecl(varDecl);
 		if (core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()){
-			// check if there is a kernelFile annotation
-			ocl::attatchOclAnnotation(decl->getInitialization(), declStmt, convFact);
-			// handle eventual Data Transformation pragmas attached to the Clang node
-			attatchDataTransformAnnotation(decl, declStmt, convFact);
-
 			retList.push_back( decl );
 		}
 		else{
@@ -111,9 +105,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 		auto retStmt = convFact.convertVarDecl(varDecl).as<core::DeclarationStmtPtr>();
-		// handle eventual Data Transformation pragmas attached to the Clang node
-		attatchDataTransformAnnotation(retStmt, declStmt, convFact);
-
 		retList.push_back( retStmt );
 	}
 	return retList;
@@ -265,9 +256,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		core::ForStmtPtr forIr = loopAnalysis.getLoop(body);
 		frontend_assert(forIr && "Created for statement is not valid");
 
-		// add annotations
-		attatchDatarangeAnnotation(forIr, forStmt, convFact);
-		attatchLoopAnnotation(forIr, forStmt, convFact);
 		retStmt.push_back( forIr );
 
 		// incorporate statements do be done after loop and we are done
@@ -796,8 +784,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitCompoundStmt(clang::Compou
 
 	retIr = builder.compoundStmt(stmtList);
 
-	// check for datarange pragma
-	attatchDatarangeAnnotation(retIr, compStmt, convFact);
 	return retIr;
 }
 
@@ -887,7 +873,7 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
 
-    // Deal with transfromation pragmas
+    // Deal with transformation pragmas
 	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
     // call frontend plugin post visitors

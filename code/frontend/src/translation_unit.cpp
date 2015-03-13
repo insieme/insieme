@@ -46,7 +46,6 @@
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -132,9 +131,6 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 	: mMgr(mgr), mFileName(file), setup(setup), mClang(setup, file),  
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
 	{
-
-	// register 'insieme' pragma
-	InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
 
 	// check for frontend plugins pragma handlers
 	// and add user provided pragmas to be handled

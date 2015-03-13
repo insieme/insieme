@@ -59,7 +59,6 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;

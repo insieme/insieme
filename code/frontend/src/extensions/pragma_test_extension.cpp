@@ -35,7 +35,6 @@
  */
 
 #include "insieme/annotations/data_annotations.h"
-#include "insieme/annotations/info.h"
 #include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/transform.h"
 #include "insieme/core/annotations/source_location.h"
@@ -43,7 +42,6 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/extensions/pragma_test_extension.h"
 #include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/utils/numeric_cast.h"

@@ -46,7 +46,6 @@
 #include "insieme/utils/config.h"
 
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"

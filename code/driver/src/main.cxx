@@ -63,7 +63,6 @@
 #include "insieme/core/ir_statistic.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/driver/cmd/main_options.h"
-#include "insieme/driver/pragma/pragma_transformer.h"
 #include "insieme/driver/printer/dot_printer.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -473,11 +472,6 @@ int main(int argc, char** argv) {
 
 			// Load known function semantics from the function database
 			anal::loadFunctionSemantics(program->getNodeManager());
-
-			// Check for annotations on IR nodes relative to transformations which should be applied,
-			// and applies them.
-			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
-					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
 
 			// after reading in the source files, we need to do backend selection
 			if (!options.Backend.empty()) {
