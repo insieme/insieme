@@ -271,7 +271,16 @@ namespace {
 //		});
 //
 //	//	abort();
-//
+
+
+		//////////////////////////////////////////////////////////////////////
+		// Assure return statements for "Main" functions typed as int
+		// ==========================================================
+		//
+		// In C, it's allowed for the main function to by typed as () -> int, but not actually contain a "return x".
+		// Since in the backend we move that function to a "normal" one, this will generate a warning in the BE compiler.
+		// We fix this by generating a "return 0" in that case.
+		//
 		auto& mgr = prog->getNodeManager();
 		auto& basic = mgr.getLangBasic();
 		const auto& build = core::IRBuilder(mgr);
