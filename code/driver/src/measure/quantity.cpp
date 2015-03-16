@@ -154,7 +154,7 @@ namespace measure {
 			case percent: return Prefix(-100);
 			default: 	  return Prefix(1);
 			}
-			assert(false && "Should not be reachable!");
+			assert_fail() << "Should not be reachable!";
 			return Prefix();
 		}
 
@@ -167,7 +167,7 @@ namespace measure {
 			case celsius:	return toVector(Unit::Term("celsius",1));
 			case percent:	return Unit::Terms();	// empty!
 			}
-			assert(false && "Unsupported known unit!");
+			assert_fail() << "Unsupported known unit!";
 			return Unit::Terms();
 		}
 

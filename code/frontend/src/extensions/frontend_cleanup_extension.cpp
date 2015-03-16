@@ -338,7 +338,7 @@ namespace {
 				core::LambdaExprPtr func = pair.second;
 
 				core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
-				assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
+				assert_eq(retType, func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
 				core::IRBuilder builder(func->getNodeManager());
 				const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
@@ -410,7 +410,7 @@ namespace {
 
 	core::StatementPtr collectAssignments (const core::StatementPtr& stmt, const core::NodePtr& feAssign, core::StatementPtr& lastExpr, core::StatementList& preProcess, bool isCXX){
 
-			assert(stmt && "no stmt, no fun");
+			assert_true(stmt) << "no stmt, no fun";
 			core::IRBuilder builder (stmt->getNodeManager());
 
 			// the maper should never leave the first nested scope

@@ -46,6 +46,7 @@
 #include <cassert>
 
 #include "insieme/utils/unused.h"
+#include "insieme/utils/assert.h"
 
 #include "ReClaM/FFNet.h"
 #include "ReClaM/Svm.h"
@@ -326,7 +327,7 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert(file.is_open() && "Cannot open input file in MyC_SVM::load");
+		assert_true(file.is_open()) << "Cannot open input file in MyC_SVM::load";
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);
@@ -339,7 +340,7 @@ public:
 	}
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+		assert_true(file.is_open()) << "Cannot open output file in MyC_SVM::save";
 
 		svm.SaveSVMModel(file);
 		file.close();
@@ -443,7 +444,7 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert(file.is_open() && "Cannot open input file in MyEpsilon_SVM::load");
+		assert_true(file.is_open()) << "Cannot open input file in MyEpsilon_SVM::load";
 
 		svm.LoadSVMModel(file);
 		shark = Epsilon_SVM(&svm, 0.0, 0.0);
@@ -456,7 +457,7 @@ public:
 	}
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
+		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
 
 		svm.SaveSVMModel(file);
 		file.close();
@@ -566,10 +567,10 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::load");
+		assert_true(file.is_open()) << "Cannot open input file in MyEpsilon_SVM::load";
 
 		__unused bool worked = svm.LoadSVMModel(file);
-		assert(worked && "Cannot load multi class SVM");
+		assert_true(worked) << "Cannot load multi class SVM";
 
 		shark = AllInOneMcSVM(&svm, 1.0);
 
@@ -583,10 +584,10 @@ public:
 
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
+		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
 
 		__unused bool worked = svm.SaveSVMModel(file);
-		assert(worked && "Cannot save multi class SVM");
+		assert_true(worked) << "Cannot save multi class SVM";
 
 		file.close();
 	}
@@ -696,7 +697,7 @@ public:
 	}
 	virtual void load(const char* path) {
 /*		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
+		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);*/
@@ -708,7 +709,7 @@ public:
 	}
 	void save(const char* path) {
 /*		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
+		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
 
 		shark.getSVM()->SaveSVMModel(file);
 		file.close();*/
