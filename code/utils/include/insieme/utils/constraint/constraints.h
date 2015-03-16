@@ -474,7 +474,7 @@ namespace constraint {
 			TypedVariable<L> b;
 		public:
 			Subset(const TypedVariable<L>& a, const TypedVariable<L>& b)
-				: a(a), b(b) { assert(a != b); }
+				: a(a), b(b) { assert_ne(a, b); }
 			Variables getInputs() const {
 				return toVector<Variable>(a);
 			}

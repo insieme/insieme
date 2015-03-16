@@ -77,11 +77,11 @@ namespace pattern {
 
 		template<typename... Args>
 		Tree(char id, Args && ... args) : id(id), subTrees(toVector<TreePtr>(args...)) {
-			assert(id != VALUE_ID && "Value ID must not be used!");
+			assert_ne(id, VALUE_ID) << "Value ID must not be used!";
 		}
 
 		Tree(const TreeList& children, int id) : id(id), subTrees(children) {
-			assert(id != VALUE_ID && "Value ID must not be used!");
+			assert_ne(id, VALUE_ID) << "Value ID must not be used!";
 		}
 
 		virtual ~Tree() {};

@@ -584,9 +584,9 @@ namespace core {
 		 * invalid.
 		 */
 		Ptr<const Type> getObjectType() const {
-			assert(isConstructor() || isDestructor() || isMemberFunction());
-			assert(!getParameterTypes().empty());
-			assert(getParameterType(0)->getNodeType() == NT_RefType);
+			assert_true(isConstructor() || isDestructor() || isMemberFunction());
+			assert_false(getParameterTypes().empty());
+			assert_eq(getParameterType(0)->getNodeType(), NT_RefType);
 			static const auto caster = typename Ptr<const RefType>::StaticCast();
 			return caster.template operator()<const RefType>(getParameterType(0))->getElementType();
 		}
@@ -1030,7 +1030,7 @@ namespace core {
 	#define IR_NAMED_COMPOSITE_TYPE(NAME) \
 		class NAME : public NamedCompositeType { \
 			NAME(const NodeList& children) : NamedCompositeType(NT_ ## NAME, children) { \
-				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
+				assert_true(checkChildList(children)) << "Invalid composition of Child-Nodes discovered!"; \
 			} \
 		\
 		protected: \
@@ -1153,7 +1153,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			assert(getParents()->empty() && "Unions must not be derived!");
+			assert_true(getParents()->empty()) << "Unions must not be derived!";
 			return out << "union<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
 		}
 
