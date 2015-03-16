@@ -72,10 +72,8 @@ set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 set ( insieme_machine_learning_src_dir  	${insieme_code_dir}/machine_learning/src )
 set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
 
-#FIXME ONLY IN EXT???
-set ( insieme_plugins_include_dir  		${insieme_code_dir}/plugins/include )
+# only in ext repo
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
-set ( insieme_experiments_include_dir       	${insieme_code_dir}/experiments/include )
 
 # -------------------------------------------------------------- find location of utilities
 
