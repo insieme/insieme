@@ -51,13 +51,14 @@ namespace datalayout {
 
 utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
 
-template<class T>
-class ParSecTransform : public T {
-
+template<class Baseclass>
+class ParSecTransform : public Baseclass {
+protected:
 	ExprAddressMap& varsToPropagate;
 	std::map<core::NodeAddress, core::NodePtr>& replacements;
 	const core::StructTypePtr& newStructType;
 	const core::StructTypePtr& oldStructType;
+	std::vector<core::LambdaExprAddress> globalLambdas;
 
 	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
 
@@ -74,6 +75,7 @@ public:
 
 };
 
+template class ParSecTransform<DatalayoutTransformer>;
 template class ParSecTransform<AosToTaos>;
 template class ParSecTransform<AosToSoa>;
 } // datalayout

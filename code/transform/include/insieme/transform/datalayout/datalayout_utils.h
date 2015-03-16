@@ -91,9 +91,14 @@ core::StatementPtr allocTypeUpdate(const core::StatementPtr& stmt, core::pattern
 core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress& expr);
 
 /*
- * Returns true if the type of expr contains structType
+ * Returns true if the type of expr is of ref type and contains structType
  */
 bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
+
+/*
+ * Returns true if contains contains type
+ */
+bool containsType(const core::TypePtr& contains, const core::TypePtr type);
 
 /*
  * creates a pattern that matches mayToBeDerefed as well as ref.deref(mayToBeDerefed)
