@@ -858,14 +858,6 @@ namespace {
 					}) << "]";
 				}
 				out << "{"; increaseIndent(); this->newLine();
-				for_each(node->getGuardedExprs()->getElements(), [&](const GuardedExprPtr& cur) {
-					out << "if ";
-					this->visit(cur->getGuard());
-					out << " do: ";
-					this->visit(cur->getExpression());
-					this->newLine();
-				});
-				out << "default: ";
 				this->visit(node->getDefaultExpr());
 				decreaseIndent(); this->newLine(); out << "}";
 		});

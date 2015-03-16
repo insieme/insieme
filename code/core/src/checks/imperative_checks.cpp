@@ -186,14 +186,7 @@ namespace {
 			// add local variables to set of declared variables ..
 			declaredVariables.insert(localVars.begin(), localVars.end());
 
-			// .. and check job branches specifications
-			for(GuardedExprAddress jobExp : cur->getGuardedExprs()) {
-				// check both guards and expressions for each
-				visit(jobExp->getGuard());
-				visit(jobExp->getExpression());
-			}
-
-			// ... as well as default expr
+			// .. and check the body
 			visit(cur->getDefaultExpr());
 
 			// restore context scope

@@ -1331,7 +1331,7 @@ using insieme::core::pattern::anyList;
 				auto pfor = builder.pfor(body, builder.intLit(0), builder.deref(firstSizeVar));
 				auto parLambda = insieme::core::transform::extractLambda(manager, pfor);
 				auto range = builder.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
-				auto jobExp = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+				auto jobExp = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
 				auto parallelCall = builder.callExpr(basic.getParallel(), jobExp);
 				auto mergeCall = builder.callExpr(basic.getMerge(), parallelCall);
 

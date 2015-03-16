@@ -278,8 +278,6 @@ AST_TERMINAL(Expressions, Support)
 AST_TERMINAL(Parameters, Support)
 
 AST_TERMINAL(DeclarationStmts, Support)
-AST_TERMINAL(GuardedExpr, Support)
-AST_TERMINAL(GuardedExprs, Support)
 
 //
 // --- Marker ---
