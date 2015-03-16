@@ -49,7 +49,7 @@
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 #include "insieme/utils/printable.h"
 
@@ -157,10 +157,10 @@ namespace frontend {
 		unsigned flags;
 
         /**
-         *  A map that contains all user plugins
+         *  A map that contains all user extensions
          */
-         typedef std::shared_ptr<extensions::FrontendPlugin> FrontendPluginPtr;
-         std::list<FrontendPluginPtr> plugins;
+         typedef std::shared_ptr<extensions::FrontendExtension> FrontendExtensionPtr;
+         std::list<FrontendExtensionPtr> extensions;
 
 	public:
 
@@ -266,14 +266,14 @@ namespace frontend {
 		}
 
 		/**
-		 * Adds a single regular expression string to the intercetion set
+		 * Adds a single regular expression string to the interception set
 		 */
 		void addInterceptedNameSpacePattern(const string& pattern) {
 			this->interceptedNameSpacePatterns.insert(pattern);
 		}
 
 		/**
-		 * Adds a single regular expression string to the intercetion set
+		 * Adds a single regular expression string to the interception set
 		 */
 		template<typename List>
 		void addInterceptedNameSpacePatterns(const List& patterns) {
@@ -347,26 +347,26 @@ namespace frontend {
 		bool isCxx(const path& file) const;
 
         /**
-         *  Frontend plugin initialization method
+         *  Frontend extension initialization method
          */
-        void frontendPluginInit();
+        void frontendExtensionInit();
 
         /**
-         *  Register a new frontend plugin
+         *  Register a new frontend extension
          */
         template <class T, class ... Args>
-        void registerFrontendPlugin(const Args& ... args) {
-			plugins.push_back(std::make_shared<T>(args ...));
-			for(auto kidnappedHeader : plugins.back()->getKidnappedHeaderList()) {
+        void registerFrontendExtension(const Args& ... args) {
+			extensions.push_back(std::make_shared<T>(args ...));
+			for(auto kidnappedHeader : extensions.back()->getKidnappedHeaderList()) {
 				addSystemHeadersDirectory(kidnappedHeader);
 			}
         };
 
         /**
-         *  Return the list of frontend plugins
+         *  Return the list of frontend extensions
          */
-        const std::list<FrontendPluginPtr> getPlugins() const {
-            return plugins;
+        const std::list<FrontendExtensionPtr> getExtensions() const {
+            return extensions;
         };
 	};
 
@@ -420,7 +420,7 @@ namespace frontend {
 		}
 
 		/**
-		 * Adds an additonal file to this conversion job.
+		 * Adds an additional file to this conversion job.
 		 */
 		void addFile(const path& file) {
 			files.push_back(file);
@@ -485,7 +485,7 @@ namespace frontend {
 		 *
 		 * @param manager the node manager to be used for building the IR
 		 * @param program the partially processed program without any post-processing steps
-		 * @param the conversion setup holding any post-processing steps to be applied (i.e. plugins)
+		 * @param the conversion setup holding any post-processing steps to be applied (i.e. extensions)
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */

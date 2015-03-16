@@ -66,7 +66,7 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.registerFrontendPlugin<frontend::extensions::OclKernelPlugin>();
+	job.registerFrontendExtension<frontend::extensions::OclKernelExtension>();
 	core::ProgramPtr program = job.execute(manager, false);
 	LOG(INFO) << "Done.";
 

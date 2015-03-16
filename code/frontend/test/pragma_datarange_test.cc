@@ -67,7 +67,7 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 	NodeManager manager;
 
 	ConversionSetup setup;
-	setup.frontendPluginInit();
+	setup.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_datarange.c", setup);
 

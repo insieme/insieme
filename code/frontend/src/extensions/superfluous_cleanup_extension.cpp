@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/superfluous_cleanup.h"
+#include "insieme/frontend/extensions/superfluous_cleanup_extension.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
@@ -69,6 +69,7 @@
 
 namespace insieme {
 namespace frontend {
+namespace extensions {
 namespace cleanup {
 
 namespace {
@@ -302,10 +303,11 @@ void removeObviouslySuperfluousCode(tu::IRTranslationUnit& trans) {
 }
 }
 
-insieme::frontend::tu::IRTranslationUnit SuperfluousCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+insieme::frontend::tu::IRTranslationUnit SuperfluousCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
 		cleanup::removeObviouslySuperfluousCode(tu);
 		return tu;
 }
 
+} // extensions
 } // frontend
 } // insieme

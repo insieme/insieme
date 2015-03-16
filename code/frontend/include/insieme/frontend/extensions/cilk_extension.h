@@ -36,16 +36,16 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class CilkFrontendPlugin : public FrontendPlugin {
+class CilkFrontendExtension : public FrontendExtension {
 
 	public:
-		CilkFrontendPlugin();
+		CilkFrontendExtension();
 
 		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
 };

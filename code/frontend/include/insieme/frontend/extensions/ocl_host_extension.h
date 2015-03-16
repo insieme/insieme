@@ -39,7 +39,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include "insieme/core/pattern/pattern.h"
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -47,22 +47,22 @@ namespace extensions {
 
 // extension for OpenCl host files
 
-class OclHostPlugin : public FrontendPlugin {
+class OclHostExtension : public FrontendExtension {
 	const std::vector<boost::filesystem::path>& includeDirs;
 public:
-	OclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);
+	OclHostExtension(const std::vector<boost::filesystem::path>& includeDirs);
 private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
 
 // extension for icl host files
 
-class IclHostPlugin : public FrontendPlugin {
+class IclHostExtension : public FrontendExtension {
 	const std::vector<boost::filesystem::path>& includeDirs;
 	core::pattern::TreePattern iclRunKernel;
 
 public:
-	IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs);
+	IclHostExtension(const std::vector<boost::filesystem::path>& includeDirs);
 private:
     virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                    insieme::frontend::conversion::Converter& convFact);
@@ -71,6 +71,6 @@ private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
 
-} //namespace plugin
+} //namespace extension
 } //namespace frontend
-} //namespace extensions
+} //namespace insieme

@@ -1738,8 +1738,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitAtomicExpr(const clang::Atomi
 core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		retIr = plugin->Visit(expr, convFact);
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+		retIr = extension->Visit(expr, convFact);
 		if(retIr)
 			break;
     }
@@ -1753,9 +1753,9 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
 
-    // call frontend plugin post visitors
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retIr = plugin->PostVisit(expr, retIr, convFact);
+    // call frontend extension post visitors
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retIr = extension->PostVisit(expr, retIr, convFact);
 	}
 
 	// attach location annotation

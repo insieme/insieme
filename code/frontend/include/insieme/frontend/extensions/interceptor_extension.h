@@ -35,7 +35,7 @@
  */
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/interceptor.h"
@@ -44,9 +44,9 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
+class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
 
-	//Plugin Hooks
+	// Extension Hooks
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
 
     virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic);
@@ -67,10 +67,10 @@ class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
 	public:
 
-	InterceptorPlugin(const std::set<std::string>& patterns) : interceptor(patterns) {}
+	InterceptorExtension(const std::set<std::string>& patterns) : interceptor(patterns) {}
 
 };
 
-}
-}
-}
+} // extensions
+} // frontend
+} // insieme

@@ -62,7 +62,7 @@ TEST(Cilk, Pragmas) {
 
 	ConversionSetup setup;
 	setup.setOption(ConversionSetup::Cilk);
-	setup.frontendPluginInit();
+	setup.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", setup);
 
 	const auto& pl = tu.getPragmaList();

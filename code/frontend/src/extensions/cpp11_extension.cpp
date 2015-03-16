@@ -73,7 +73,7 @@ namespace extensions {
 /**
  *			Cxx11 default init expression
  */
-insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr,
+insieme::core::ExpressionPtr Cpp11Extension::VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr,
 												insieme::frontend::conversion::Converter& convFact) {
     return convFact.convertExpr(initExpr->getExpr());
 }
@@ -82,7 +82,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXDefaultInitExpr (const clang::
 /**
  *			Cxx11 null pointer
  */
-insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
+insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
 												 insieme::frontend::conversion::Converter& convFact){
 	auto builder = convFact.getIRBuilder();
 	insieme::core::ExpressionPtr retIr;
@@ -94,7 +94,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitCXXNullPtrLiteralExpr	(const clan
 /**
  *  			Cxx11 lambda expression
  */
-insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr Cpp11Extension::VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) {
 	//auto builder = convFact.getIRBuilder();
 	auto& mgr = convFact.getNodeManager();
 	insieme::core::ExpressionPtr retIr;
@@ -127,7 +127,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitLambdaExpr (const clang::LambdaEx
 /**
  *  			Cxx11 size of pack expression
  */
-insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr Cpp11Extension::VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact) {
 	//sizeOf... returns size_t --> use unsigned int
 	core::ExpressionPtr retExpr = convFact.getIRBuilder().uintLit(sizeOfPackExpr->getPackLength());
 	return retExpr;
@@ -137,7 +137,7 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitSizeOfPackExpr(const clang::SizeO
 /**
  *  			Cxx11 init list expression
  */
-insieme::core::ExpressionPtr Cpp11Plugin::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr Cpp11Extension::VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact) {
     //get the sub expression of the std init list expression
     auto expr = initList->getSubExpr();
     auto builder = convFact.getIRBuilder();
@@ -175,21 +175,21 @@ insieme::core::ExpressionPtr Cpp11Plugin::VisitInitListExpr(const clang::CXXStdI
 /**
  * auto type
  */
-insieme::core::TypePtr Cpp11Plugin::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr Cpp11Extension::VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) {
 	return convFact.convertType(autoTy->getDeducedType());
 }
 
 /**
  * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations.
  */
-insieme::core::TypePtr Cpp11Plugin::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr Cpp11Extension::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
 	insieme::core::TypePtr retTy;
 	assert(declTy->getUnderlyingExpr());
 	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
 	return retTy;
 }
 
-insieme::core::TypePtr Cpp11Plugin::VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr Cpp11Extension::VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact) {
     core::TypePtr innerTy = convFact.convertType(rvalref->getPointeeType());
     bool isConst = rvalref->getPointeeType().isConstQualified();
 	core::TypePtr ret;
@@ -203,7 +203,7 @@ insieme::core::TypePtr Cpp11Plugin::VisitRValueReferenceType(const clang::RValue
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //  Decls post visit
-core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact, bool symbolic) {
+core::ExpressionPtr Cpp11Extension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact, bool symbolic) {
 	if(!symbolic) {
 		if (const clang::CXXMethodDecl* method= llvm::dyn_cast<clang::CXXMethodDecl>(decl)){
 		// we need to substitute any captured usage name by the reference to the local copy
@@ -286,7 +286,7 @@ core::ExpressionPtr Cpp11Plugin::FuncDeclPostVisit(const clang::FunctionDecl* de
 }
 
 
-stmtutils::StmtWrapper Cpp11Plugin::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) {
+stmtutils::StmtWrapper Cpp11Extension::VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) {
 	auto builder = convFact.getIRBuilder();
 
 	const clang::DeclStmt* rangeStmt 		= frStmt->getRangeStmt ();
@@ -320,6 +320,6 @@ stmtutils::StmtWrapper Cpp11Plugin::VisitCXXForRangeStmt(const clang::CXXForRang
 	return res;
 }
 
-} //namespace plugin
-} //namespace frontnt
-} //namespace extensions
+} //namespace extension
+} //namespace frontend
+} //namespace insieme

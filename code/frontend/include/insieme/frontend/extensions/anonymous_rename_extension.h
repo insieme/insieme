@@ -36,11 +36,11 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 
- namespace insieme {
- namespace frontend {
+namespace insieme {
+namespace frontend {
 namespace extensions {
 
 using namespace insieme;
@@ -48,11 +48,11 @@ using namespace insieme;
 /**
  *
  * This is the frontend cleanup tool.
- * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate suff in an "correct" but not optimal way just because is the straight forward aproach.
- * instead of trying to fix this everywhere, is much more convinient to clean up afterwars, reduces complexity of code
+ * it is a NON-OPTIONAL pass which removes artifacts the frontend might generate.
+ * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
+ * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
  */
-class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
+class AnonymousRenameExtension : public insieme::frontend::extensions::FrontendExtension {
 
 	core::NodeMap renamedTypeDefinitions;
 	core::NodeMap renamedTypeDeclarations;
@@ -83,7 +83,7 @@ class AnonymousRename : public insieme::frontend::extensions::FrontendPlugin {
 					core::GenericTypePtr gen = builder.genericType(name);
 
 					core::TypePtr definition = symb;
-					// if target is an annonymous type, we create a new type with the name of the typedef
+					// if target is an anonymous type, we create a new type with the name of the typedef
 					//if (namedType->getName()->getValue().substr(0,5) == "_anon"){
 					if (namedType->getName()->getValue() == ""){
                         //guarantee that the second typedef does not change the name again

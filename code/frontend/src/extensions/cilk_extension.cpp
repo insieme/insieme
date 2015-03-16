@@ -77,7 +77,7 @@ namespace {
 } //end anonymous namespace
 
 
-CilkFrontendPlugin::CilkFrontendPlugin() {
+CilkFrontendExtension::CilkFrontendExtension() {
 	//Define the macros which will replace the cilk keywords with inline pragmas
 	macros.insert(std::make_pair("cilk=", ""));
 	macros.insert(std::make_pair("spawn", "_Pragma(\"cilk spawn\")"));
@@ -91,7 +91,7 @@ CilkFrontendPlugin::CilkFrontendPlugin() {
 			getMarkerAttachementLambda<cilk::CilkSyncMarker>())));
 }
 
-tu::IRTranslationUnit CilkFrontendPlugin::IRVisit(tu::IRTranslationUnit& tu) {
+tu::IRTranslationUnit CilkFrontendExtension::IRVisit(tu::IRTranslationUnit& tu) {
 	//We'll let the Cilk sema do the actual work here for every TU
 	return cilk::applySema(tu, tu.getNodeManager());
 }

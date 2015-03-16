@@ -97,7 +97,7 @@ namespace extensions {
     };
 
     /**
-     *  This class is the base class for user provided frontend plugins
+     *  This class is the base class for user provided frontend extensions
      *  It basically consists of four stages. The pre clang stage contains
      *  three methods that are called by the insieme frontend to receive
      *  user provided macros, injected headers and headers that should be
@@ -106,7 +106,7 @@ namespace extensions {
      *  translation unit after the conversion is done. Pragmas can be registered
      *  to support user provided pragma handling.
      */
-	class FrontendPlugin {
+	class FrontendExtension {
     protected:
         typedef std::map<std::string,std::string> macroMap;
         typedef std::vector<std::string> headerVec;
@@ -117,7 +117,7 @@ namespace extensions {
         headerVec kidnappedHeaders;
 
 	public:
-        virtual ~FrontendPlugin(){}
+        virtual ~FrontendExtension(){}
 
         /*****************PRE CLANG STAGE*****************/
         /**
@@ -142,7 +142,7 @@ namespace extensions {
         /*****************CLANG STAGE*****************/
         /**
          *  User provided clang expr visitor. Will be called before clang expression
-         *  is visted by the insieme visitor. If non nullptr is returned the clang expression
+         *  is visited by the insieme visitor. If non nullptr is returned the clang expression
          *  won't be visited by the insieme converter anymore.
          *  @param expr clang expression
          *  @param convFact insieme conversion factory
@@ -152,7 +152,7 @@ namespace extensions {
 
         /**
          *  User provided clang type visitor. Will be called before clang type
-         *  is visted by the insieme visitor. If non nullptr is returned the clang type
+         *  is visited by the insieme visitor. If non nullptr is returned the clang type
          *  won't be visited by the insieme converter anymore.
          *  @param type clang type
          *  @param convFact insieme conversion factory
@@ -162,7 +162,7 @@ namespace extensions {
 
         /**
          *  User provided clang stmt visitor. Will be called before clang stmt
-         *  is visted by the insieme visitor. If non empty IR stmt list is
+         *  is visited by the insieme visitor. If non empty IR stmt list is
          *  returned the clang stmt won't be visited by the insieme converter anymore.
          *  @param stmt clang stmt
          *  @param convFact insieme conversion factory
@@ -172,9 +172,9 @@ namespace extensions {
 
         /**
          *  User provided clang decl visitor. Will be called before clang decl
-         *  is visted by the insieme decl visitors. If the plugin returns an IR expression
+         *  is visited by the insieme decl visitors. If the extension returns an IR expression
          *  or an IR type the standard visitors are not called. This method mustn't be
-         *  overriden, because this method delegates the declaration to the right plugin decl visitor.
+         *  overriden, because this method delegates the declaration to the right extension decl visitor.
          *  @param decl clang decl
          *  @param convFact insieme conversion factory
          *  @return NodePtr that can either be an expression or a type
@@ -183,7 +183,7 @@ namespace extensions {
 
         /**
          *  User provided clang type decl visitor. Will be called before clang type decl
-         *  is visted by the insieme type decl visitor. If the plugin returns an IR type
+         *  is visited by the insieme type decl visitor. If the extension returns an IR type
          *  the standard visitor is not called.
          *  @param decl clang type decl
          *  @param convFact insieme conversion factory
@@ -193,7 +193,7 @@ namespace extensions {
 
         /**
          *  User provided clang function decl visitor. Will be called before clang function decl
-         *  is visted by the insieme function decl visitor. If the plugin returns an IR expression
+         *  is visited by the insieme function decl visitor. If the extension returns an IR expression
          *  the standard visitor is not called.
          *  @param decl clang function decl
          *  @param convFact insieme conversion factory
@@ -203,7 +203,7 @@ namespace extensions {
 
         /**
          *  User provided clang value decl visitor. Will be called before clang value decl
-         *  is visted by the insieme value decl visitor. If the plugin returns an IR expression
+         *  is visited by the insieme value decl visitor. If the extension returns an IR expression
          *  the standard visitor is not called.
          *  @param decl clang value decl
          *  @param convFact insieme conversion factory
@@ -213,7 +213,7 @@ namespace extensions {
 
         /**
          *  User provided clang expr visitor. Will be called after clang expression
-         *  was visted by the insieme visitor. IR code can be modifed after standard
+         *  was visited by the insieme visitor. IR code can be modified after standard
          *  conversion took place.
          *  @param expr clang expression
          *  @param irExpr converted clang expression
@@ -225,7 +225,7 @@ namespace extensions {
 
         /**
          *  User provided clang type visitor. Will be called after clang type
-         *  was visted by the insieme visitor. IR code can be modifed after standard
+         *  was visited by the insieme visitor. IR code can be modified after standard
          *  conversion took place.
          *  @param type clang type
          *  @param irType converted clang type
@@ -237,7 +237,7 @@ namespace extensions {
 
         /**
          *  User provided clang stmt visitor. Will be called after clang stmt
-         *  was visted by the insieme visitor. IR code can be modifed after standard
+         *  was visited by the insieme visitor. IR code can be modified after standard
          *  conversion took place.
          *  @param stmt clang stmt
          *  @param irStmt converted clang stmt
@@ -249,7 +249,7 @@ namespace extensions {
 
         /**
          *  User provided post clang decl visitor. Will be called after clang decl
-         *  was visted by the insieme visitor and returns a modified IR type or
+         *  was visited by the insieme visitor and returns a modified IR type or
          *  expression. This method mustn't be overriden because it is used to
          *  delegate the declaration to the right visitor.
          *  @param decl clang decl
@@ -262,7 +262,7 @@ namespace extensions {
 
         /**
          *  User provided post clang type decl visitor. Will be called after clang decl
-         *  was visted by the insieme type decl visitor and returns a modified IR type.
+         *  was visited by the insieme type decl visitor and returns a modified IR type.
          *  @param decl clang type decl
          *  @param type IR TypePtr
          *  @param convFact insieme conversion factory
@@ -273,7 +273,7 @@ namespace extensions {
 
         /**
          *  User provided post clang function decl visitor. Will be called after clang decl
-         *  was visted by the insieme function decl visitor and returns a modified IR expression.
+         *  was visited by the insieme function decl visitor and returns a modified IR expression.
          *  @param decl clang function decl
          *  @param type IR ExpressionPtr
          *  @param convFact insieme conversion factory
@@ -284,7 +284,7 @@ namespace extensions {
 
         /**
          *  User provided post clang value decl visitor. Will be called after clang decl
-         *  was visted by the insieme value decl visitor and returns a modified IR expression.
+         *  was visited by the insieme value decl visitor and returns a modified IR expression.
          *  @param decl clang value decl
          *  @param type IR ExpressionPtr
          *  @param convFact insieme conversion factory
@@ -298,18 +298,18 @@ namespace extensions {
         /**
          *  User provided IR visitor. Will be called after clang to IR conversion took
          *  place. Takes the whole insieme program (that contains all translation units)
-         *  as an argument and returns a modifed or non modifed program.
+         *  as an argument and returns a modified or non modified program.
          *  @param prog insieme program
-         *  @return modifed insieme program. If prog is returned no modification is done
+         *  @return modified insieme program. If prog is returned no modification is done
          */
         virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
 
         /**
          *  User provided IR visitor. Will be called after clang to IR conversion took
-         *  place. Takes one translation units as an argument and returns a modifed
-         *  or non modifed translation unit.
+         *  place. Takes one translation units as an argument and returns a modified
+         *  or non modified translation unit.
          *  @param tu insieme translation unit
-         *  @return modifed insieme translation unit. If tu is returned no modification is done
+         *  @return modified insieme translation unit. If tu is returned no modification is done
          */
 		virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 

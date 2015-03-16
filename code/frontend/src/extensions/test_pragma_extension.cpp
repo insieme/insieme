@@ -34,52 +34,50 @@
  * regarding third party software licenses.
  */
 
-#ifndef PRAGMA_TEST_EXTENSION_H
-#define PRAGMA_TEST_EXTENSION_H
-
-#include <functional>
-#include <string>
-
-#include "insieme/core/ir_node.h"
-#include "insieme/frontend/extensions/frontend_plugin.h"
-#include "insieme/frontend/pragma/handler.h"
+#include "insieme/annotations/data_annotations.h"
+#include "insieme/annotations/loop_annotations.h"
+#include "insieme/annotations/transform.h"
+#include "insieme/core/annotations/source_location.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/matcher.h"
-
-namespace clang {
-class Preprocessor;
-}
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
 namespace frontend {
-namespace conversion {
-
-class Converter;
-
-} // end convert namespace
-
 namespace extensions {
 
-/**
- * Custom pragma used for testing purposes;
- *
- * #pragma test "insieme-IR"
- * C stmt
- *
- * checks if the conversion of the C statement matches the one specified by the user
- */
-class TestPragma: public insieme::frontend::pragma::Pragma, public FrontendPlugin {
-	std::string expected;
+using namespace insieme::frontend::pragma;
 
-	std::function<stmtutils::StmtWrapper(const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)>
-	getMarkerAttachmentLambda();
+std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
+TestPragmaExtension::getMarkerAttachmentLambda() {
+	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
+		std::cout << "pragma executed" << std::endl;
 
-public:
-	TestPragma();
-	TestPragma(const clang::SourceLocation &s1, const clang::SourceLocation &s2, const std::string &str,
-			   const pragma::MatchMap &mm);
-	std::string getExpected() const { return expected; }
-};
+		stmtutils::StmtWrapper res;
+		const std::string want="expected";
+		if (object.stringValueExists(want))
+			expected = object.getString(want);
+		return res;
+	};
+}
 
-}}}
+TestPragmaExtension::TestPragmaExtension(): Pragma(clang::SourceLocation(), clang::SourceLocation(), "", MatchMap()) {
+	pragmaHandlers.push_back
+			(std::make_shared<PragmaHandler>
+			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
+}
 
-#endif // PRAGMA_TEST_EXTENSION_H
+TestPragmaExtension::TestPragmaExtension(const clang::SourceLocation& s1, const clang::SourceLocation& s2, const string& str,
+					   const insieme::frontend::pragma::MatchMap& mm): Pragma(s1, s2, str, mm) {
+	pragmaHandlers.push_back
+			(std::make_shared<PragmaHandler>
+			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
+}
+
+} // extensions
+} // frontend
+} // insieme

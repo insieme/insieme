@@ -50,7 +50,7 @@
 
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/omp_frontend_plugin.h"
+#include "insieme/frontend/extensions/omp_frontend_extension.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/frontend/tu/ir_translation_unit_io.h"
@@ -82,7 +82,7 @@ TEST(InsiemePragmaTest, checkPragmas) {
 	NodeManager manager;
 
 	ConversionSetup setup;
-	setup.frontendPluginInit();
+	setup.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", setup);
 

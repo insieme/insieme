@@ -93,7 +93,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 			return stmt;
 	}
 
-	// return by value ALWAYS, will fix this in a second pass (check cpp_ref plugin)
+	// return by value ALWAYS, will fix this in a second pass (check cpp_ref extension)
 	//   - var(undefined (Obj))
 	//   - ctor(undefined(Obj))
 	//   - vx (where type is ref<Obj<..>>)
@@ -187,8 +187,8 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 
     //iterate clang handler list and check if a handler wants to convert the stmt
     stmtutils::StmtWrapper retStmt;
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retStmt = plugin->Visit(stmt, convFact);
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retStmt = extension->Visit(stmt, convFact);
 		if(retStmt.size())
 			break;
 	}
@@ -204,9 +204,9 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	// Deal with transformation pragmas
 	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
-    // call frontend plugin post visitors
-    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
+    // call frontend extension post visitors
+    for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retStmt = extension->PostVisit(stmt, retStmt, convFact);
     }
 
 	return  retStmt;

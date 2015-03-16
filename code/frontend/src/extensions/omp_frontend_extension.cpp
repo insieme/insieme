@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/omp_frontend_plugin.h"
+#include "insieme/frontend/extensions/omp_frontend_extension.h"
 
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -638,7 +638,7 @@ namespace {
 }
 
 
-    OmpFrontendPlugin::OmpFrontendPlugin() {
+    OmpFrontendExtension::OmpFrontendExtension() {
 
         //Add the required header and macro definitions
         kidnappedHeaders.push_back(CLANG_SRC_DIR "../include/insieme/frontend/omp/input/");
@@ -1060,11 +1060,11 @@ namespace {
 
 
     /**
-     *  Insieme frontend plugin IR visitor. This needs to be done to find all thread_private variables.
+     *  Insieme frontend extension IR visitor. This needs to be done to find all thread_private variables.
      *  All thread_private variables are annotated with the threadprivate annotation and finally
      *  the omp sema is called.
      */
-	insieme::frontend::tu::IRTranslationUnit OmpFrontendPlugin::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+	insieme::frontend::tu::IRTranslationUnit OmpFrontendExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
 
 	    for(auto& pair : tu.getGlobals()) {
             if(std::find (thread_privates.begin(), thread_privates.end(), pair.first) != thread_privates.end()) {

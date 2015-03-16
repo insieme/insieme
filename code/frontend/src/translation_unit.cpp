@@ -132,12 +132,12 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
 	{
 
-	// check for frontend plugins pragma handlers
+	// check for frontend extensions pragma handlers
 	// and add user provided pragmas to be handled
 	// by insieme
 	std::map<std::string,clang::PragmaNamespace *> pragmaNamespaces;
-	for(auto plugin : setup.getPlugins()) {
-		for(auto ph : plugin->getPragmaHandlers()) {
+	for(auto extension : setup.getExtensions()) {
+		for(auto ph : extension->getPragmaHandlers()) {
 			std::string name = ph->getName();
 			// if the pragma namespace is not registered already
 			// create and register it and store it in the map of pragma namespaces
