@@ -63,7 +63,7 @@ file(GLOB_RECURSE test_cases test/*.cc)
 # get measure unit tests, to be excluded if papi is not present
 file(GLOB_RECURSE measure_test_cases test/measure*.cc)
 
-find_package(PAPI)
+insieme_find_package(PAPI)
 if(NOT PAPI_FOUND)
 	#measure test run a runtime-thingy which sould use papi if available
 	# if papi is not available the measure thest will fail therefore exclude measuretest if papi is not

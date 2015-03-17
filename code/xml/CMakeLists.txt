@@ -40,14 +40,10 @@ target_include_directories(insieme_xml PUBLIC ${insieme_xml_include_dir} )
 #NOTE: setting xerces_root_dir offers to set custom library
 #set(XERCES_ROOT_DIR ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
 #find_library(xerces NAMES xerces-c HINTS ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
-find_package(Xerces)# NAMES xerces-c HINTS ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
-if(XERCES_FOUND)
-	#include_directories(${XERCES_INCLUDE_DIRS})
-	#target_include_directories(insieme_xml PUBLIC ${XERCES_INCLUDE_DIRS})
-	target_link_libraries(insieme_xml ${XERCES_LIBRARIES})
-else()
-	message(FATAL_ERROR "xerces not found")
-endif(XERCES_FOUND)
+insieme_find_package(Xerces)# NAMES xerces-c HINTS ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
+target_link_libraries(insieme_xml ${Xerces_LIBRARIES})
+#insieme_link_libraries(target libname libversion)
+#insieme_link_libraries(insieme_xml Xerces)
 
 target_link_libraries(insieme_xml insieme_core)
 

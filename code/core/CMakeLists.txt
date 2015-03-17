@@ -37,7 +37,7 @@ target_link_libraries(insieme_core insieme_utils)
 # lookup CUDD library
 #lookup_lib( CUDD cudd )
 #target_link_libraries(insieme_core ${cudd_LIB}) 
-find_package(CUDD)
+insieme_find_package(CUDD)
 target_link_libraries(insieme_core ${CUDD_LIBRARIES}) 
 target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 

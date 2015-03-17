@@ -16,11 +16,13 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inputs.h.in ${CMAKE_CURRENT_SOU
 
 # lookup shark library
 #lookup_lib( SHARK shark )
-find_package(SHARK)
+#find_package(SHARK)
+insieme_find_package(SHARK)
 
 # lookup kompex library
 #lookup_lib( KOMPEX KompexSQLiteWrapper_Static_d )
-find_package(KOMPEX)
+#find_package(KOMPEX)
+insieme_find_package(KOMPEX)
 
 # build the machine learning library
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )

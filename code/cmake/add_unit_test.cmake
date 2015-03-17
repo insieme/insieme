@@ -1,11 +1,14 @@
 # define macro for adding tests
 macro ( add_unit_test case_name )
 
+    include(../cmake/insieme_find_package.cmake)
+
 	# lookup Google Test libraries
-	find_package(GTest REQUIRED)
+	#find_package(GTest REQUIRED)
+	insieme_find_package(GTest)
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${GTEST_LIBRARIES})
-	target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARIES}})
+	target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARIES})
 
 	# lookup pthread library
 	find_package(Threads REQUIRED)

@@ -12,11 +12,11 @@ option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 
 
 if (NOT THIRD_PARTY_LIBS_HOME )
-	set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+	set ( THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
-include(../lookup_lib.cmake)
-include(../add_unit_test.cmake)
+include(../cmake/lookup_lib.cmake)
+include(../cmake/add_unit_test.cmake)
 include(../environment_common.cmake)
 
 #to find the custom modules (for find_package)

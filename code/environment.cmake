@@ -33,8 +33,9 @@ get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
 # -------------------------------------------------------------- define some code locations
-include (${insieme_code_dir}/lookup_lib.cmake)
-include (${insieme_code_dir}/add_unit_test.cmake)
+include (${insieme_code_dir}/cmake/lookup_lib.cmake)
+include (${insieme_code_dir}/cmake/add_unit_test.cmake)
+include (${insieme_code_dir}/cmake/insieme_find_package.cmake)
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
@@ -113,14 +114,15 @@ endif(MSVC)
 
 # --------------------------------------------------------------------- including libraries
 
-# set up third-part library home
-if (NOT DEFINED THIRD_PARTY_LIBS_HOME )
-	if ( DEFINED INSIEME_LIBS_HOME ) 
-		set ( THIRD_PARTY_LIBS_HOME ${INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
-	else()
-		set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
-	endif()
+# set up insieme lib home
+if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
+	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home" )
 endif()
+
+if ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
+	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+endif()
+
 
 # - gtest 
 # when GTEST_ROOT is set, cmakes FindGTest looks in GTEST_ROOT
@@ -246,7 +248,6 @@ if( NOT DEFINED PAPI_ROOT )
 		endif()
 	endif()
 endif()
-
 
 # - boost
 if ( NOT DEFINED BOOST_ROOT )
