@@ -156,7 +156,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-    job.registerFrontendPlugin<fe::extensions::OclKernelPlugin>();
+    job.registerFrontendExtension<fe::extensions::OclKernelExtension>();
 
     LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
     core::ProgramPtr program = job.execute(manager, false);

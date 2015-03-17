@@ -36,23 +36,27 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
+namespace extensions {
+
+namespace cleanup {
+	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
+}
 
 /**
- * This is the frontend cleanup tool.
- * it is a NOT OPTIONAL pass which removes artifacts the frontend might generate.
- * frontend might generate stuff in an "correct" but not optimal way just because is the straight forward approach.
- * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
+ * This extension removes obviously superfluous code, including
+ * - assignments
+ * - variable declarations
+ * - empty control flow
+ * It uses a fixed point iteration and is quite slow
  */
-class FrontendCleanup : public insieme::frontend::extensions::FrontendPlugin {
-		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+class SuperfluousCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
         insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-        stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
 };
 
-
+} // extensions
 } // frontend
 } // insieme

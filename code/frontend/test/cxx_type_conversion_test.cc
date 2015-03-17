@@ -401,7 +401,7 @@ TEST(TypeConversion, FileTest) {
 // 		CXXConversionFactory convFactory( mgr, prog );
 // 		convFactory.setTranslationUnit(tu);
 // 
-// 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+// 		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
 // 
 // 		if(tp.isStatement())
 // 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );

@@ -67,9 +67,8 @@ TEST(JobSupport, LocalDeclarations) {
 	VariablePtr localVar = builder.variable(basic.getInt4(), 1);
 	VariablePtr captured = builder.variable(basic.getInt4(), 2);
 	DeclarationStmtsPtr localDecls = builder.declarationStmts(toVector(builder.declarationStmt(localVar, builder.intLit(12))));
-	GuardedExprsPtr guardedExpr = builder.guardedExprs(toVector<GuardedExprPtr>());
 	ExpressionPtr jobBody = builder.wrapLazy(builder.add(localVar, captured));
-	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, localDecls, guardedExpr, jobBody);
+	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, localDecls, jobBody);
 
 
 	// step 2: execute job

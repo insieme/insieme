@@ -36,51 +36,53 @@
 
 #pragma once
 
-#include "insieme/transform/datalayout/datalayout_transform.h"
+#include "insieme/transform/datalayout/parallelSecTransform.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-
 namespace transform {
 namespace datalayout {
 
-class AosToSoa : public DatalayoutTransformer {
-protected:
-
-	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
+class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
+	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) {return oldType;}
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr());
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) {return core::StatementList();}
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
 			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr());
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) {return core::StatementList();}
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
-			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
+			const core::ExpressionPtr& end, const core::StructTypePtr& structType) {return core::StatementPtr();}
 
 	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
-			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
+			const core::ExpressionPtr& end, const core::StructTypePtr& structType) {return core::StatementPtr();}
 
 	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
-			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess);
+			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess) {return oldVar;}
 
 	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
-			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
+			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) {return oldVar;}
 
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar,
-			const core::StructTypePtr& newStructType);
+			const core::StructTypePtr& newStructType) {return core::StatementList();}
 
 	virtual void replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements);
+			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements) {}
 
 public:
-	AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
-	virtual ~AosToSoa() {}
+	ParSecSoa(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
+			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType) :
+		ParSecTransform<DatalayoutTransformer>(toTransform, varsToPropagate, replacements, newStructType, oldStructType) {}
+//	virtual ~ParSecAtt() {}
 
 	virtual void transform();
+
 };
 
 } // datalayout
 } // transform
 } // insieme
+

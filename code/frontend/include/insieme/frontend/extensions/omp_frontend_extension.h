@@ -29,43 +29,32 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once
 
 #include "insieme/frontend/extensions/frontend_extension.h"
+
+#include "insieme/frontend/pragma/matcher.h"
+
+using namespace insieme::frontend;
+using namespace insieme::frontend::pragma::tok;
+using namespace insieme::frontend::pragma;
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-
-// extension for OpenCl kernel files
-
-class OclKernelExtension : public FrontendExtension {
+class OmpFrontendExtension : public FrontendExtension {
+    std::list<core::ExpressionPtr> thread_privates;
 public:
-	OclKernelExtension() : FrontendExtension() {
-		injectedHeaders.push_back("./ocl_device.h");
-	}
-
-private:
-	core::ExpressionPtr 				 Visit(const clang::Expr* expr, conversion::Converter& convFact);
-
-    core::TypePtr 						 Visit(const clang::QualType& type, conversion::Converter& convFact);
-
-    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, 
-															insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::TypePtr 		 TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, 
-														   insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, 
-														   insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
-
-    virtual core::ProgramPtr 			 IRVisit(core::ProgramPtr& prog);
+    OmpFrontendExtension();
+	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 
-} //namespace extensions
-} //namespace frontend
-} //namespace insieme
+}   //end namespace extensions
+}   //end namespace frontend
+}   //end namespace insieme
+

@@ -36,16 +36,25 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/utils/config.h"
+
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
 
 using namespace insieme;
 
-class GemsclaimPlugin : public insieme::frontend::extensions::FrontendPlugin {
+class GemsclaimExtension : public insieme::frontend::extensions::FrontendExtension {
 
 public:
-        GemsclaimPlugin() {
+        GemsclaimExtension() {
                 kidnappedHeaders.push_back(GEM_SYSTEM_HEADER_REPLACEMENTS_DIR);
 			    macros["_GEM"] = "";
         }
 };
+
+} // extensions
+} // frontend
+} // insieme

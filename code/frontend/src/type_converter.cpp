@@ -732,16 +732,16 @@ core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
     core::TypePtr irType;
 
     //iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-	    irType = plugin->Visit(type, convFact);
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+	    irType = extension->Visit(type, convFact);
         if(irType) break;
 	}
 
     if(!irType)
         irType = convertImpl(type);
 
-    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        irType = plugin->PostVisit(type, irType, convFact);
+    for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        irType = extension->PostVisit(type, irType, convFact);
     }
 
 	return irType;

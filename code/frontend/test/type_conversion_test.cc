@@ -52,7 +52,7 @@
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/type_converter.h"
-#include "insieme/frontend/extensions/pragma_test_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -499,7 +499,7 @@ TEST(TypeConversion, FileTest) {
 
 
 	insieme::frontend::ConversionSetup setup;
-	setup.frontendPluginInit();
+	setup.frontendExtensionInit();
 	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
@@ -509,7 +509,7 @@ TEST(TypeConversion, FileTest) {
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 
-		const TestPragma& tp = static_cast<const TestPragma&>(*(*it));
+		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement()) {
 			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();

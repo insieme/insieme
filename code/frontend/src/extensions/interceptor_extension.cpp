@@ -42,7 +42,7 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-	insieme::core::ExpressionPtr InterceptorPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 
 		if (const clang::CXXConstructExpr* ctorExpr =  llvm::dyn_cast<clang::CXXConstructExpr>(expr)){
 			auto ctorDecl = ctorExpr->getConstructor ();
@@ -72,7 +72,7 @@ namespace extensions {
 			if(funcDecl) {
 				if(name.empty()) name = funcDecl->getQualifiedNameAsString();
 				if(getInterceptor().isIntercepted(name)) {
-					VLOG(2) << "interceptorplugin\n";
+					VLOG(2) << "interceptorextension\n";
 					//returns a callable expression
 					return getInterceptor().intercept(funcDecl, convFact, declRefExpr->hasExplicitTemplateArgs(), name);
 				}
@@ -105,19 +105,19 @@ namespace extensions {
 		return nullptr;
 	}
 
-    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
+    core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         // check whether function should be intercected
         if( getInterceptor().isIntercepted(funcDecl) ) {
             auto irExpr = getInterceptor().intercept(funcDecl, convFact);
-            VLOG(2) << "interceptorplugin" << irExpr;
+            VLOG(2) << "interceptorextension" << irExpr;
             return irExpr;
         }
     	return nullptr;
 	}
 
-    core::TypePtr InterceptorPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+    core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 		if(getInterceptor().isIntercepted(type)) {
-			VLOG(2) << "interceptorplugin\n";
+			VLOG(2) << "interceptorextension\n";
 			auto res = getInterceptor().intercept(type, convFact);
 			//convFact.addToTypeCache(type, res);
 			return res;
@@ -125,7 +125,7 @@ namespace extensions {
 		return nullptr;
 	}
 
-    core::ExpressionPtr InterceptorPlugin::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
+    core::ExpressionPtr InterceptorExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl) ) {
 
 			if (getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
@@ -177,7 +177,7 @@ namespace extensions {
 		}
         return nullptr;
 	}
-    core::TypePtr InterceptorPlugin::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
+    core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
 
 		if (llvm::isa<clang::TypedefDecl>(decl)){
 			if (getInterceptor().isIntercepted(decl->getQualifiedNameAsString())) {
@@ -216,7 +216,7 @@ namespace extensions {
      *  class A { private: struct X{}; public: A(X x=X()) {} };
      *  int main() { A a; }
      */
-    core::ExpressionPtr InterceptorPlugin::PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact){
+    core::ExpressionPtr InterceptorExtension::PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact){
 
         if(const clang::CXXConstructExpr* call = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
             //only do this for intercepted types and only if we have an IR ctor call

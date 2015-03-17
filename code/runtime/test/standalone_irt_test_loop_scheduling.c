@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -63,15 +63,15 @@ void insieme_wi_test_implementation(irt_work_item* wi);
 void insieme_wi_loop_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation_variant g_insieme_wi_test_variants[] = {
-	{ &insieme_wi_test_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_test_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation_variant g_insieme_wi_loop_variants[] = {
-	{ &insieme_wi_loop_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_loop_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
@@ -124,21 +124,21 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy static10 = {IRT_STATIC_CHUNKED, 1024, 10};
+	irt_loop_sched_policy static10 = {IRT_STATIC_CHUNKED, 1024, .param.chunk_size = 10};
 	irt_wg_set_loop_scheduling_policy(wg, &static10);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy dynamic10 = {IRT_DYNAMIC_CHUNKED, 1024, 2};
+	irt_loop_sched_policy dynamic10 = {IRT_DYNAMIC_CHUNKED, 1024, .param.chunk_size = 2};
 	irt_wg_set_loop_scheduling_policy(wg, &dynamic10);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy guided10 = {IRT_GUIDED_CHUNKED, 1024, 10};
+	irt_loop_sched_policy guided10 = {IRT_GUIDED_CHUNKED, 1024, .param.chunk_size = 10};
 	irt_wg_set_loop_scheduling_policy(wg, &guided10);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);

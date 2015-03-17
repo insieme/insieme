@@ -36,14 +36,14 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
+class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 
 
 	/**
@@ -114,7 +114,7 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
     insieme::core::TypePtr VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact);
 
 //////////////////////////////////////////////////////////////////////////////////////
-//               Plugin Hooks
+//               Extension Hooks
 
 	virtual stmtutils::StmtWrapper Visit (const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
 		if (const clang::CXXForRangeStmt* fr =  llvm::dyn_cast<clang::CXXForRangeStmt>(stmt))
@@ -154,6 +154,6 @@ class Cpp11Plugin : public insieme::frontend::extensions::FrontendPlugin {
 
 };
 
-} //namespace plugin
-} //namespace frontnt
 } //namespace extensions
+} //namespace frontend
+} //namespace insieme

@@ -82,18 +82,6 @@ class Converter;
 
 namespace pragma {
 
-/**
- * Defines an interface which pragmas which would like to be automatically transferred to the
- * generated IR must implement. If not the user is responsable of handling the attachment of pragmas
- * to the IR nodes.
- */
-struct AutomaticAttachable {
-
-	virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const = 0;
-
-	virtual ~AutomaticAttachable() { }
-};
-
 // ------------------------------------ Pragma ---------------------------
 /**
  * Defines a generic pragma which contains the location (start,end), and the
@@ -187,27 +175,27 @@ private:
 typedef std::shared_ptr<Pragma> PragmaPtr;
 typedef std::vector<PragmaPtr> 	PragmaList;
 
-// ------------------------------------ FrontendPluginPragma ---------------------------
-class FrontendPluginPragma : public Pragma {
+// ------------------------------------ FrontendExtensionPragma ---------------------------
+class FrontendExtensionPragma : public Pragma {
  private:
      pragma::MatchMap mMap;
      pragma::MatchObject m;
      const std::function<stmtutils::StmtWrapper (const MatchObject&, stmtutils::StmtWrapper)> f;
  public:
-     FrontendPluginPragma(const clang::SourceLocation& startLoc,
+     FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string&             type) : Pragma(startLoc, endLoc, type) {
-                             assert(false && "frontend pragma plugin cannot be created without a function.");
+                             assert(false && "frontend pragma extension cannot be created without a function.");
                           }
 
-     FrontendPluginPragma(const clang::SourceLocation& startLoc,
+     FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string&             type,
                           const MatchMap&                mmap) : Pragma(startLoc, endLoc, type) {
-                             assert(false && "frontend pragma plugin cannot be created without a function.");
+                             assert(false && "frontend pragma extension cannot be created without a function.");
                           }
 
-     FrontendPluginPragma(const clang::SourceLocation& startLoc,
+     FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string& type,
                           const MatchMap& mmap,
@@ -306,7 +294,7 @@ public:
                     ActOnPragma<T>( pragma_name.str(), mmap, startLoc, endLoc);
             } else {
                 static_cast<InsiemeSema&>(ParserProxy::get().getParser()->getActions()).
-                    ActOnFrontendPluginPragma( pragma::PragmaPtr(new pragma::FrontendPluginPragma(startLoc, endLoc, pragma_name.str(), mmap, func)) );
+                    ActOnFrontendExtensionPragma( pragma::PragmaPtr(new pragma::FrontendExtensionPragma(startLoc, endLoc, pragma_name.str(), mmap, func)) );
             }
 			return;
 		}

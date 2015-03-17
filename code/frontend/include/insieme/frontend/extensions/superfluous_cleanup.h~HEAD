@@ -34,27 +34,28 @@
  * regarding third party software licenses.
  */
 
+#pragma once
 
 #include "insieme/frontend/extensions/frontend_plugin.h"
 
-#include "insieme/frontend/pragma/matcher.h"
-
-using namespace insieme::frontend;
-using namespace insieme::frontend::pragma::tok;
-using namespace insieme::frontend::pragma;
-
 namespace insieme {
 namespace frontend {
-namespace extensions {
 
-class OmpFrontendPlugin : public FrontendPlugin {
-    std::list<core::ExpressionPtr> thread_privates;
-public:
-    OmpFrontendPlugin();
-	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+namespace cleanup {
+	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
+}
+
+/**
+ * This plugin removes obviously superfluous code, including
+ * - assignments
+ * - variable declarations
+ * - empty control flow
+ * It uses a fixed point iteration and is quite slow
+ */
+class SuperfluousCleanup : public insieme::frontend::extensions::FrontendPlugin {
+        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 
-}   //end namespace extensions
-}   //end namespace frontend
-}   //end namespace insieme
 
+} // frontend
+} // insieme

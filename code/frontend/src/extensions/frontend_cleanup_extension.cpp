@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/extensions/frontend_cleanup.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
@@ -52,6 +52,7 @@
 #include "insieme/core/pattern/rule.h"
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/ir_generator.h"
+#include "insieme/core/pattern/pattern_utils.h"
 
 #include "insieme/annotations/c/decl_only.h"
 #include "insieme/annotations/c/include.h"
@@ -73,7 +74,9 @@
 
 namespace insieme {
 namespace frontend {
-	namespace {
+namespace extensions {
+
+namespace {
 
 		/**
 		 * here the little trick, the translation unit is converted into a single expression to guarantee the
@@ -234,9 +237,8 @@ namespace frontend {
 
 	} // anonymous namespace
 
-
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	insieme::core::ProgramPtr FrontendCleanup::IRVisit(insieme::core::ProgramPtr& prog){
+	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog){
 		/////////////////////////////////////////////////////////////////////////////////////
 		//		DEBUG
 		//			some code to fish bugs
@@ -269,15 +271,57 @@ namespace frontend {
 //		});
 //
 //	//	abort();
-//
 
+
+		//////////////////////////////////////////////////////////////////////
+		// Assure return statements for "Main" functions typed as int
+		// ==========================================================
+		//
+		// In C, it's allowed for the main function to by typed as () -> int, but not actually contain a "return x".
+		// Since in the backend we move that function to a "normal" one, this will generate a warning in the BE compiler.
+		// We fix this by generating a "return 0" in that case.
+		//
+		auto& mgr = prog->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		const auto& build = core::IRBuilder(mgr);
+		namespace icp = insieme::core::pattern;
+		namespace irp = insieme::core::pattern::irp;
+
+		// if entry point returns int ensure that it has a return statement
+		auto eplist = prog->getEntryPoints();
+		// we only need to care about C programs which do not have a return because of C semantics on "main"
+		if(eplist.size() == 1) {
+			auto eP = prog->getEntryPoints()[0];
+			if(eP.isa<core::LambdaExprPtr>()) {
+				auto lambdaExp = eP.as<core::LambdaExprPtr>();
+				auto funType = lambdaExp->getFunctionType();
+				if(basic.isInt(funType->getReturnType())) {
+					icp::TreePattern compoundPattern = icp::outermost(icp::var("compound", irp::compoundStmt(icp::anyList)));
+					
+					auto optCompoundMatch = compoundPattern.matchAddress(core::LambdaExprAddress(lambdaExp));
+					if(optCompoundMatch) {
+						icp::AddressMatch compoundMatch = optCompoundMatch.get();
+						auto compound = compoundMatch.getVarBinding("compound").getFlattened()[0].as<core::CompoundStmtAddress>();
+						
+						icp::TreePattern compoundPattern = irp::compoundStmt(icp::empty | icp::single(!irp::returnStmt(icp::any)) | (icp::anyList << !irp::returnStmt(icp::any)));
+						if(compoundPattern.match(compound)) {
+							// outermost compound does not contain return, add it
+							auto newRoot = core::transform::append(mgr, compound, toVector<core::StatementPtr>(build.returnStmt(build.intLit(0)))).as<core::ExpressionPtr>();
+							prog = core::Program::remEntryPoint(mgr, prog, eP);
+							prog = core::Program::addEntryPoint(mgr, prog, newRoot);
+						}
+					}
+
+				} 
+			}
+		}
 
 
 		return prog;
 	}
 
 
-    insieme::frontend::tu::IRTranslationUnit FrontendCleanup::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
+    insieme::frontend::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
 
 		tu = applyCleanup(tu, refDerefCleanup);
 		tu = applyCleanup(tu, castCleanup);
@@ -418,7 +462,7 @@ namespace {
 
 } // annonymous namespace
 
-    stmtutils::StmtWrapper FrontendCleanup::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
+    stmtutils::StmtWrapper FrontendCleanupExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmts, conversion::Converter& convFact){
 		stmtutils::StmtWrapper newStmts;
 
 		//////////////////////////////////////////////////////////////
@@ -578,5 +622,6 @@ namespace {
 		return newStmts;
 	}
 
+} // extensions
 } // frontend
 } // insieme

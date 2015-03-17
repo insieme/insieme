@@ -55,18 +55,18 @@
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
-#include "insieme/frontend/extensions/cpp_refs.h"
-#include "insieme/frontend/extensions/frontend_cleanup.h"
+#include "insieme/frontend/extensions/cpp_refs_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/frontend/extensions/crosscompilation_extension.h"
-#include "insieme/frontend/extensions/omp_frontend_plugin.h"
-#include "insieme/frontend/extensions/instrumentation_region_plugin.h"
-#include "insieme/frontend/extensions/anonymous_rename.h"
+#include "insieme/frontend/extensions/omp_frontend_extension.h"
+#include "insieme/frontend/extensions/instrumentation_region_extension.h"
+#include "insieme/frontend/extensions/anonymous_rename_extension.h"
 #include "insieme/frontend/extensions/cilk_extension.h"
-#include "insieme/frontend/extensions/pragma_test_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
 namespace insieme {
@@ -91,66 +91,66 @@ namespace frontend {
 		return standard == Cxx03 || standard == Cxx98 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
 
-    //register frontend plugins
-    //be CAREFUL with the order of the plugins
-    //if a plugin is stateful (e.g., OMP plugin)
+    //register frontend extensions
+    //be CAREFUL with the order of the extensions
+    //if a extension is stateful (e.g., OMP extension)
     //insieme might generates malformed code.
     //Example: anonymous record type replacements 
     //done before omp threadprivate handling.
-    void ConversionSetup::frontendPluginInit() {
-        registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptedNameSpacePatterns());
-        registerFrontendPlugin<VariadicArgumentsPlugin>();
-        registerFrontendPlugin<extensions::ASMExtension>();
-        registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
-		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
-		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
-		registerFrontendPlugin<extensions::TestPragma>();
-		registerFrontendPlugin<extensions::InsiemePragmaExtension>();
+    void ConversionSetup::frontendExtensionInit() {
+        registerFrontendExtension<extensions::InterceptorExtension>(getInterceptedNameSpacePatterns());
+        registerFrontendExtension<extensions::VariadicArgumentsExtension>();
+        registerFrontendExtension<extensions::ASMExtension>();
+        registerFrontendExtension<extensions::CppRefsCleanupExtension>();   //FIXME: make it only if cpp
+		registerFrontendExtension<extensions::BuiltinFunctionExtension>();
+		registerFrontendExtension<extensions::InstrumentationRegionExtension>();
+		registerFrontendExtension<extensions::TestPragmaExtension>();
+		registerFrontendExtension<extensions::InsiemePragmaExtension>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
-            registerFrontendPlugin<extensions::OmpFrontendPlugin>();
+            registerFrontendExtension<extensions::OmpFrontendExtension>();
         }
 
         if(hasOption(ConversionSetup::Cilk)) {
-            registerFrontendPlugin<extensions::CilkFrontendPlugin>();
+            registerFrontendExtension<extensions::CilkFrontendExtension>();
         }
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
-            registerFrontendPlugin<GemsclaimPlugin>();
+            registerFrontendExtension<extensions::GemsclaimExtension>();
         }
 
         if(!getCrossCompilationSystemHeadersDir().empty()) {
-            registerFrontendPlugin<CrossCompilationPlugin>(getCrossCompilationSystemHeadersDir());
+            registerFrontendExtension<extensions::CrossCompilationExtension>(getCrossCompilationSystemHeadersDir());
         }
 
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
-            registerFrontendPlugin<extensions::SemanticCheckPlugin>();
+            registerFrontendExtension<extensions::SemanticCheckExtension>();
         }
 
         if(flags & OpenCL) {
-        	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
+        	registerFrontendExtension<extensions::OclHostExtension>(includeDirs);
 		}
        
         if(flags & lib_icl) {
-        	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
+        	registerFrontendExtension<extensions::IclHostExtension>(includeDirs);
 		}
 
-		registerFrontendPlugin<FrontendCleanup>();
-		registerFrontendPlugin<extensions::AnonymousRename>();
+		registerFrontendExtension<extensions::FrontendCleanupExtension>();
+		registerFrontendExtension<extensions::AnonymousRenameExtension>();
 	}
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
         if(standard == Cxx11)
-                registerFrontendPlugin<extensions::Cpp11Plugin>();
+                registerFrontendExtension<extensions::Cpp11Extension>();
     }
 
 
 	tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
-		// plugin initialization
-		setup.frontendPluginInit();
+		// extension initialization
+		setup.frontendExtensionInit();
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
@@ -174,8 +174,8 @@ namespace frontend {
 			//FIXME: who takes care of applying MPI sema/OCL
 
             // maybe a visitor wants to manipulate the IR program
-            for(auto plugin : setup.getPlugins())
-                res = plugin->IRVisit(res);
+            for(auto extension : setup.getExtensions())
+                res = extension->IRVisit(res);
 
 			// done
 			return res;
@@ -196,8 +196,8 @@ namespace frontend {
 		});
 
         // maybe a visitor wants to manipulate the IR translation unit
-        for(auto plugin : setup.getPlugins())
-            program = plugin->IRVisit(program);
+        for(auto extension : setup.getExtensions())
+            program = extension->IRVisit(program);
 
 		// return instance within global manager
 		return core::transform::utils::migrate(program, manager);
@@ -206,8 +206,8 @@ namespace frontend {
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
-		// plugin initialization
-		setup.frontendPluginInit();
+		// extension initialization
+		setup.frontendExtensionInit();
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -228,8 +228,8 @@ namespace frontend {
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
 
-		// plugin initialization
-		setup.frontendPluginInit();
+		// extension initialization
+		setup.frontendExtensionInit();
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
