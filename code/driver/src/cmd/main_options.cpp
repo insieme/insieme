@@ -171,7 +171,7 @@ namespace cmd {
 		// forward flags
 		job.setOption(frontend::ConversionJob::OpenMP, OpenMP);
 		job.setOption(frontend::ConversionJob::OpenCL, OpenCL);
-		job.setOption(frontend::ConversionJob::lib_icl, lib_icl);
+		job.setOption(frontend::ConversionJob::Lib_icl, lib_icl);
 		job.setOption(frontend::ConversionJob::Cilk, Cilk);
 		job.setOption(frontend::ConversionJob::WinCrossCompile, WinCrossCompile);
 		job.setOption(frontend::ConversionJob::GemCrossCompile, GemCrossCompile);

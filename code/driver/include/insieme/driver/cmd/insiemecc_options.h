@@ -56,6 +56,18 @@ namespace cmd {
 		class OptionParser;
 	}
 
+	// holds all settings that are not part of a ConversionJob
+	struct Settings {
+
+#define FLAG(_name__, _id__, _description__) \
+			bool _id__;
+//			#include "insieme/driver/cmd/insiemecc_options.def"
+#define OPTION( _name__, _id__, _type__, _default_value__, _description__) \
+			_type__ _id__;
+			#include "insieme/driver/cmd/insiemecc_options.def"
+
+	};
+
 	/**
 	 * A standard command line option utility which can be extended and customized for
 	 * individual needs.
@@ -69,20 +81,20 @@ namespace cmd {
 		bool valid;
 
 		/**
-		 * A flag indicating whether the help option -h was provided. In this case
-		 * the options would also be not valid.
+		 * A flag indicating whether the executable should exit without errors.
+		 * This occurs for example when requesting the version or usage.
 		 */
-		bool help;
+		bool gracefulExit;
+
+		/**
+		 * Holds all settings for setting up compilation
+		 */
+		Settings settings;
 
 		/**
 		 * The configuration of the frontend encapsulated into an conversion job.
 		 */
 		insieme::frontend::ConversionJob job;
-
-		/**
-		 * The output file - every executable is producing some.
-		 */
-		string outFile;
 
 		/**
 		 * Parses the given command line options.
@@ -98,11 +110,13 @@ namespace cmd {
 		 * A constructor for this class.
 		 */
 		Options(const insieme::frontend::ConversionJob& job)
-			: valid(true), help(false), job(job) {}
+			: valid(true), gracefulExit(false), settings(Settings{}), job(job) {}
 
 	};
 
 	namespace detail {
+
+	typedef shared_ptr<insieme::frontend::extensions::FrontendExtension> FrontendExtensionPtr;
 
 		class OptionParser {
 
@@ -132,6 +146,11 @@ namespace cmd {
 			 */
 			vector<parser_step> parser_steps;
 
+			/**
+			 * A list of frontend extensions that offer command line parameters.
+			 */
+			vector<FrontendExtensionPtr> frontendExtensions;
+
 		public:
 
 			/**
@@ -149,6 +168,17 @@ namespace cmd {
 			 * @param description the description of the parameter to be shown in the help message
 			 */
 			OptionParser& operator()(const string& name, char symbol, bool& flag, const char* description);
+
+			/**
+			 * Allows to add a flag to the program options using a convenient syntax.
+			 *
+			 * @param name the name of the flag to be added
+			 * @param symbol the one-letter shortcut of the flag
+			 * @param target the target to be used for storing whether the flag has been set or not
+			 * @param description the description of the parameter to be shown in the help message
+			 */
+			template<typename T, typename ... Args>
+			OptionParser& registerFrontendExtension(const Args& ... args);
 
 			/**
 			 * Allows to add additional program options using a convenient syntax.
@@ -198,3 +228,4 @@ namespace cmd {
 } // end namespace cmd_options
 } // end namespace driver
 } // end namespace insieme
+

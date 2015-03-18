@@ -53,14 +53,20 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
-#include "insieme/driver/cmd/options.h"
+#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/object_file_utils.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
+
+#include "insieme/utils/timer.h"
 
 
 using namespace std;
+using namespace insieme;
 
 namespace fs = boost::filesystem;
 
@@ -71,55 +77,155 @@ namespace dr = insieme::driver;
 namespace cp = insieme::utils::compiler;
 namespace cmd = insieme::driver::cmd;
 
+//****************************************************************************************
+//                BENCHMARK CORE: Perform some performance benchmarks
+//****************************************************************************************
+void benchmarkCore(core::NodeManager& mgr, const core::NodePtr& program) {
+	Logger::setLevel(INFO);
 
+	int count = 0;
+	// Benchmark pointer-based visitor
+	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Pointer ",
+		[&]() {
+			core::visitDepthFirst(program,
+				core::makeLambdaVisitor([&](const core::NodePtr& cur) { count++; }, true)
+			);
+		}
+	);
+	LOG(INFO) << "Number of nodes: " << count;
 
+	// Benchmark address based visitor
+	utils::Timer visitAddrTime("");
+	count = 0;
+	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address ",
+		[&]() {
+			core::visitDepthFirst(core::ProgramAddress(program),
+				core::makeLambdaVisitor([&](const core::NodeAddress& cur) { count++; }, true)
+			);
+		}
+	);
+	LOG(INFO) << "Number of nodes: " << count;
+
+	// Benchmark empty-substitution operation
+	count = 0;
+	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address ",
+		[&]() {
+			core::NodeMapping* h;
+			auto mapper = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
+				count++;
+				return cur->substitute(mgr, *h);
+			});
+			h = &mapper;
+			mapper.map(0,program);
+		}
+	);
+	LOG(INFO) << "Number of modifications: " << count;
+
+	// Benchmark empty-substitution operation (non-types only)
+	count = 0;
+	utils::measureTimeFor<INFO>("Benchmark.NodeSubstitution.Non-Types ",
+		[&]() {
+			core::NodeMapping* h2;
+			auto mapper2 = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
+				if (cur->getNodeCategory() == core::NC_Type) {
+					return cur;
+				}
+				count++;
+				return cur->substitute(mgr, *h2);
+			});
+			h2 = &mapper2;
+			mapper2.map(0,program);
+		}
+	);
+	LOG(INFO) << "Number of modifications: " << count;
+}
+/*
+/// Polyhedral Model Extraction: Start analysis for SCoPs and prints out stats
+	void markSCoPs(core::ProgramPtr& program, const cmd::Options& options) {
+		using namespace insieme::analysis::polyhedral::scop;
+
+		// find SCoPs in our current program
+		std::vector<core::NodeAddress> scoplist = utils::measureTimeFor<std::vector<core::NodeAddress>, INFO>("IR.SCoP.Analysis ",
+			[&]() -> std::vector<core::NodeAddress> { return mark(program); });
+
+		size_t numStmtsInScops = 0, loopNests = 0, maxLoopNest = 0;
+
+		// loop over all SCoP annotations we have discovered
+		std::for_each(scoplist.begin(), scoplist.end(),	[&](std::list<core::NodeAddress>::value_type& cur){
+			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
+
+			// only print SCoPs which contain statement, at the user's request
+			if(reg.getScop().size() == 0)
+				return;
+
+			std::cout << reg.getScop();
+
+			// count number of statements covered by SCoPs
+			numStmtsInScops += reg.getScop().size();
+
+			// count maximum and average loop nesting level
+			size_t loopNest = reg.getScop().nestingLevel();
+			if(loopNest > maxLoopNest)
+				maxLoopNest=loopNest;
+			loopNests += loopNest;
+		});
+
+//		LOG(INFO) << std::setfill(' ') << std::endl
+//				  << "SCoP Analysis" << std::endl
+//				  << "\t# of SCoPs: " << sl.size() << std::endl
+//				  << "\t# of stmts within SCoPs: " << numStmtsInScops << std::endl
+//				  << "\tavg stmts per SCoP: " << std::setprecision(2) << (double)numStmtsInScops/sl.size() << std::endl
+//				  << "\tavg loop nests per SCoP: " << std::setprecision(2) << (double)loopNests/sl.size() << std::endl
+//				  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
+	}
+
+	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
+	const core::ProgramPtr SCoPTransformation(const core::ProgramPtr& program, const cmd::Options& options) {
+		int ocltransform=0;
+
+		// check whether OpenCL processing has been requested by the user
+		if (options.Backend=="OpenCL.Host.Backend" || options.OpenCL) {
+			if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL))
+				std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl <<
+							 "Not doing polyhedral OpenCL transformation." << std::endl;
+			else {
+				ocltransform=1;
+				LOG(DEBUG) << "We will be using the backend: " << options.Backend << std::endl;
+			}
+		}
+
+		// OCL transformations will - for now - happen on the old PM implementation; otherwise we choose the new one
+		if (ocltransform) {
+			std::vector<core::NodeAddress> scoplist=insieme::analysis::polyhedral::scop::mark(program);
+			scoplist.clear(); // we do not use the scoplist right now, but we may want to refer to it later
+			return insieme::transform::polyhedral::SCoPPar(program).apply();
+		} else {
+			auto scoplist=insieme::transform::polyhedral::novel::SCoPVisitor(ProgramAddress(program)).scoplist;
+			// do some transformation here
+			return scoplist.IR().getAddressedNode();
+		}
+	}
+*/
 int main(int argc, char** argv) {
 	// filter logging messages
 	Logger::setLevel(ERROR);
 
-//	// for debugging
-//	std::cout << "Arguments: \n";
-//	for(int i=0; i<argc; i++) {
-//		std::cout << "\t" << argv[i] << "\n";
-//	}
-//	std::cout << "\n";
-
 	// Step 1: parse input parameters
-	//		This part is application specific and need to be customized. Within this
+	//		This part is application specific and needs to be customized. Within this
 	//		example a few standard options are considered.
-	bool compileOnly;
-	bool runIRChecks;
-    bool optimize;
-    bool debug;
-	string tuCodeFile;		// a file to dump the TU code
-	string irCodeFile;		// a file to dump IR code to
-	string trgCodeFile;		// a file to dump the generated target code
- 	cmd::Options options = cmd::Options::parse(argc, argv)
-		// one extra parameter to limit the compiler to creating an .o file
-		("compile", 	'c', 	compileOnly, 	"compilation only")
-        ("strict-semantic", 'S', runIRChecks,   "semantic checks")
-        ("full-optimization", 'O',      optimize,   "full optimization")
-        ("debug-information", 'g',      debug,   "produce debug information")
-		("tu-code", 	tuCodeFile, 	string(""), "dump translation unit code")
-		("ir-code", 	irCodeFile, 	string(""), "dump IR code")
-		("trg-code", 	trgCodeFile, 	string(""), "dump target code")
-	;
 
-	//indicates that a shared object files should be created
-	bool createSharedObject = options.outFile.find(".so")!=std::string::npos;
+ 	cmd::Options options = cmd::Options::parse(argc, argv);
 
-    //enable semantic check extension if needed
-    options.job.setOption(fe::ConversionSetup::StrictSemanticChecks, runIRChecks);
+	//indicates that a shared object file should be created
+	bool createSharedObject = options.settings.outFile.string().find(".so") != std::string::npos;
 
-	// disable cilk, omp, ocl support for insiemecc
-	options.job.setOption(fe::ConversionJob::Cilk, false);
-    // turn off openmp frontend if -fopenmp is not provided
-    if (options.job.getFFlags().find("-fopenmp") == options.job.getFFlags().end())
-    	options.job.setOption(fe::ConversionJob::OpenMP, false);
-	options.job.setOption(fe::ConversionJob::OpenCL, false);
-	options.job.setOption(fe::ConversionJob::lib_icl, false);
+	// if options are invalid, exit non-zero
+	if(!options.valid)
+		return 1;
 
-	if (!options.valid) return (options.help)?0:1;
+	// if help was specified, exit with zero
+	if(options.gracefulExit)
+		return 0;
 
 	// Step 2: filter input files
 	vector<fe::path> inputs;
@@ -160,17 +266,17 @@ int main(int argc, char** argv) {
 	}));
 
 	// if it is compile only or if it should become an object file => save it
-	if (compileOnly || createSharedObject) {
+	if(options.settings.compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
-		dr::saveLib(res, options.outFile);
-		return dr::isInsiemeLib(options.outFile) ? 0 : 1;
+		dr::saveLib(res, options.settings.outFile);
+		return dr::isInsiemeLib(options.settings.outFile) ? 0 : 1;
 	}
 
 	// dump the translation unit file (if needed for de-bugging)
-	if (tuCodeFile != "") {
+	if(!options.settings.dumpTU.empty()) {
 		std::cout << "Converting Translation Unit ...\n";
 		auto tu = options.job.toIRTranslationUnit(mgr);
-		std::ofstream out(tuCodeFile);
+		std::ofstream out(options.settings.dumpTU.string());
 		out << tu;
 	}
 
@@ -179,13 +285,18 @@ int main(int argc, char** argv) {
 	// convert src file to target code
     auto program = options.job.execute(mgr);
 
+    if(options.settings.benchmarkCore) {
+    	std::cout << "benchmarking" << "\n";
+    	benchmarkCore(mgr, program);
+    }
+
 	// dump IR code
-	if (irCodeFile != "") {
-		std::ofstream out(irCodeFile);
+	if(!options.settings.dumpIR.empty()) {
+		std::ofstream out(options.settings.dumpIR.string());
 		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
 	}
 
-	if (runIRChecks) {
+	if(options.job.hasOption(fe::ConversionSetup::StrictSemanticChecks)) {
 		std::cout << "Running semantic checks ...\n";
 		auto list = co::checks::check(program);
 		if (!list.empty()){
@@ -230,11 +341,11 @@ int main(int argc, char** argv) {
 	//		system. Backends targeting alternative platforms may be present in the
 	//		backend modul as well.
 	cout << "Creating target code ...\n";
-	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
+	auto targetCode = be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, options.job.hasOption(fe::ConversionJob::GemCrossCompile))->convert(program);
 
 	// dump source file if requested
-	if (trgCodeFile != "") {
-		std::ofstream out(trgCodeFile);
+	if(!options.settings.dumpTRG.empty()) {
+		std::ofstream out(options.settings.dumpTRG.string());
 		out << *targetCode;
 	}
 
@@ -278,18 +389,18 @@ int main(int argc, char** argv) {
     //FIXME: Add support for -O1, -O2, ... 
     //if an optimization flag is set (e.g. -O3) 
     //set this flag in the backend compiler
-    if (optimize)
+    if(options.settings.fullOptimization)
         compiler.addFlag("-O3");
-    if (debug)
+    if (options.settings.debug)
         compiler.addFlag("-g3");
 
     //check if the c++11 standard was set when calling insieme
     //if yes, use the same standard in the backend compiler
-    if (options.job.getStandard() == fe::ConversionSetup::Standard::Cxx11) {
+    if(options.job.getStandard() == fe::ConversionSetup::Standard::Cxx11) {
         compiler.addFlag("-std=c++0x");
     }
     
-	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
+	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 
 	// done
 	return (success)?0:1;
