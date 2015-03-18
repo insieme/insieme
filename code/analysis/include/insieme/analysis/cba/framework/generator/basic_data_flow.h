@@ -955,14 +955,14 @@ namespace cba {
 				case NT_Parameters: {
 
 					// this should not be the end
-					assert(!parent.isRoot());
+					assert_false(parent.isRoot());
 
 //					// obtain the set containing all the potential predecessor of the current call in the cba
 //					auto predecessor_ctxt = cba.getVar(pred, ctxt.callContext.back());
 
 					// get containing callee (lambda or bind)
 					Callee callee(parent.getParentInstance());
-					assert(callee.isLambda() || callee.isBind());
+					assert_true(callee.isLambda() || callee.isBind());
 
 					// get all callers
 					const vector<Caller>& callers = cba.getCallSiteManager().getCaller(callee);

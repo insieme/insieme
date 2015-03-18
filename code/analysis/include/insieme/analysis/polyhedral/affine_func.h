@@ -183,7 +183,7 @@ public:
 		coeffs(coeffs.begin(), coeffs.end()), 
 		sep( iterVec.getIteratorNum() ) 
 	{
-		assert(coeffs.size() == iterVec.size());
+		assert_eq(coeffs.size(), iterVec.size());
 	}
 
 	/**
@@ -198,7 +198,7 @@ public:
 		coeffs(coeffs.begin(), coeffs.end()), 
 		sep( iterVec.getIteratorNum() ) 
 	{
-		assert(coeffs.size() == iterVec.size());
+		assert_eq(coeffs.size(), iterVec.size());
 	}
 
 	// This constructor is defined private because client of this class should not 
