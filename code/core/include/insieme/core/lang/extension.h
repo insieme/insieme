@@ -63,6 +63,11 @@ namespace lang {
 
 		NodeManager& manager;
 
+		/**
+		 * A map with all named types, literals and derived constructs defined within this extension
+		 */
+		mutable std::map<string, NodePtr> extensionIrNames;
+
 	protected:
 
 		/**
@@ -70,6 +75,12 @@ namespace lang {
 		 * given manager.
 		 */
 		Extension(NodeManager& manager) : manager(manager) {}
+
+		void addNamedIrExtension(const string name, const NodePtr node) const {
+			if (!name.empty()) {
+				extensionIrNames.insert(std::make_pair(name, node));
+			}
+		}
 
 	public:
 		/**
@@ -84,6 +95,13 @@ namespace lang {
 		 */
 		NodeManager& getNodeManager() const {
 			return manager;
+		}
+
+		/**
+		 * Returns a map with all the named IR extensions defined by this extension
+		 */
+		const std::map<string, NodePtr>& getNamedIrExtensions() const {
+			return extensionIrNames;
 		}
 	};
 
@@ -116,18 +134,31 @@ namespace lang {
 	 * implementation.
 	 *
 	 * @param NAME the name of the type literal to be added
+	 * @param IR_NAME the name used to reference this type within this extension and in parsed code
 	 * @param TYPE the IR type to be represented as a string
 	 */
-	#define LANG_EXT_TYPE(NAME,TYPE) \
+	#define LANG_EXT_TYPE_WITH_NAME(NAME, IR_NAME, TYPE) \
 		private: \
-			mutable insieme::core::TypePtr lit_ ## NAME; \
+			const insieme::core::TypePtr type_##NAME = create##NAME(); \
 		public: \
-			const insieme::core::TypePtr& get ## NAME () const { \
-				if (!lit_##NAME) { \
-					lit_ ## NAME = insieme::core::lang::getType(getNodeManager(), TYPE); \
-				} \
-				return lit_##NAME; \
+			const insieme::core::TypePtr create##NAME() const { \
+				const insieme::core::TypePtr result = insieme::core::lang::getType(getNodeManager(), TYPE, getNamedIrExtensions()); \
+				addNamedIrExtension(IR_NAME, result); \
+				return result; \
+			} \
+			const insieme::core::TypePtr& get##NAME() const { \
+				return type_##NAME; \
 			}
+
+	/**
+	 * A macro supporting the simple declaration and definition of a type within a language extension
+	 * implementation.
+	 *
+	 * @param NAME the name of the type literal to be added
+	 * @param TYPE the IR type to be represented as a string
+	 */
+	#define LANG_EXT_TYPE(NAME, TYPE) \
+		LANG_EXT_TYPE_WITH_NAME(NAME, "", TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a type within a language extension
