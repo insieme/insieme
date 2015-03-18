@@ -1,0 +1,32 @@
+
+let int = int<4>;
+
+let two = lit("2" : intTypeParam<2>);
+let three= lit("3" : intTypeParam<3>);
+let eight= lit("8" : intTypeParam<8>);
+let ten = lit("10" : intTypeParam<10>);
+
+let toUint = lit("to.uint":(intTypeParam<#n>) -> uint<8>);
+let initUndef = lit("vector.init.undefined":(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>);
+
+let arrayView = lit("array.view":(ref<array<'elem,1>>, int<8>) -> ref<array<'elem, 1>>);
+let reinterpret = lit("ref.reinterpret":(ref<'a>, type<'b>) -> ref<'b>);
+let toint = lit("uint.to.int":(uint<#a>, intTypeParam<#b>) -> int<#b>);
+
+unit main() {
+
+	// an atomic increment
+	let vector_unif = ('elem value, intTypeParam<#a> size) -> vector<'elem,#a>{
+        ref<vector<'elem, #a>> res = var(initUndef(lit('elem), param(#a)));
+        for (uint<8> i = 0ul .. toUint(param(#a))){
+            res[i] = value;
+        }
+        return *res;
+	};
+
+    ref<vector<int, 2>> v = var(vector_unif(0, two));
+    ref<vector<int, 3>> v = var(vector_unif(0, three));
+    ref<vector<int, 8>> v = var(vector_unif(0, eight));
+    ref<vector<int, 10>>v = var(vector_unif(0, ten));
+
+}

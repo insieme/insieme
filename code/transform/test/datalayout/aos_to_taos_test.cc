@@ -350,7 +350,7 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(61, numberOfCompoundStmts(code));
+	EXPECT_EQ(77, numberOfCompoundStmts(code));
 	EXPECT_EQ(6, countMarshalledAccesses(code));
 	EXPECT_EQ(0, countMarshalledAssigns(code));
 }
