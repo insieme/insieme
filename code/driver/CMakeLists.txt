@@ -18,6 +18,11 @@ file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
 add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
 target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
+# lookup Boost library
+insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_driver SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+#target_link_libraries(insieme_driver ${Boost_PROGRAM_OPTIONS_LIBRARY})
+
 target_link_libraries(insieme_driver insieme_utils) 
 target_link_libraries(insieme_driver insieme_frontend) 
 target_link_libraries(insieme_driver insieme_backend) 

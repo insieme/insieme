@@ -18,16 +18,6 @@ file(GLOB_RECURSE insieme_xml_incs 	include/*.h )
 #to use FindXerces.cmake
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake/")
 
-# lookup Xerces library
-#lookup_lib( XERCES xerces-c )
-
-# list all include paths
-#include_directories( ${insieme_xml_include_dir} )
-#include_directories( ${xerces_INC} )
-#include_directories( ${insieme_annotations_include_dir} )
-#include_directories( ${insieme_utils_include_dir} )
-#include_directories( ${insieme_core_include_dir} )
-
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/xsd_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/xsd_config.h)
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/test_config.h)
 
@@ -35,15 +25,13 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake/")
 add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} )
 target_include_directories(insieme_xml PUBLIC ${insieme_xml_include_dir} )
 
-#target_include_directories(insieme_xml PUBLIC ${xerces_INC} )
-#	include(FindXerces)
-#NOTE: setting xerces_root_dir offers to set custom library
-#set(XERCES_ROOT_DIR ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
-#find_library(xerces NAMES xerces-c HINTS ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
-insieme_find_package(Xerces)# NAMES xerces-c HINTS ${THIRD_PARTY_LIBS_HOME}/xerces-latest/)
+# lookup Boost library
+#insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+#target_include_directories(insieme_xml SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+
+# lookup Xerces library
+insieme_find_package(Xerces)
 target_link_libraries(insieme_xml ${Xerces_LIBRARIES})
-#insieme_link_libraries(target libname libversion)
-#insieme_link_libraries(insieme_xml Xerces)
 
 target_link_libraries(insieme_xml insieme_core)
 

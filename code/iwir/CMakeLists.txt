@@ -21,6 +21,10 @@ target_link_libraries(insieme_iwir insieme_core)
 target_link_libraries(insieme_iwir insieme_annotations)
 target_link_libraries(insieme_iwir insieme_utils)
 
+# lookup Boost library
+insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_iwir SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+
 #iwir unit tests
 set ( ut_prefix  ut_iwir_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -52,6 +56,5 @@ foreach ( exec_file ${executables})
 	target_link_libraries( ${exec_name} insieme_annotations)
 	target_link_libraries( ${exec_name} insieme_xml)
 	target_link_libraries( ${exec_name} insieme_iwir)
-)
 
 endforeach(exec_file)

@@ -25,6 +25,10 @@ target_link_libraries(insieme_annotations insieme_utils)
 #insieme_common is a header-only target
 target_link_libraries(insieme_annotations insieme_common)
 
+# lookup Boost library
+insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_annotations SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+
 set ( ut_prefix  ut_annotations_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})

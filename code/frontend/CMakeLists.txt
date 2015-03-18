@@ -38,6 +38,12 @@ target_include_directories(insieme_frontend PUBLIC ${LLVM_HOME}/include)
 #target_include_directories(insieme_frontend PUBLIC ${insieme_backend_include_dir})
 target_link_libraries(insieme_frontend insieme_backend)
 
+# lookup Boost library
+insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+#target_link_libraries(insieme_frontend ${Boost_PROGRAM_OPTIONS_LIBRARY})
+
+
 # add dependencies
 target_link_libraries(insieme_frontend ${clang_LIBS})
 target_link_libraries(insieme_frontend ${llvm_LIBS})

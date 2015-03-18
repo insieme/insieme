@@ -59,7 +59,7 @@ else()
 	#look for papi
 	#lookup_lib( PAPI papi )
 	if (THIRD_PARTY_LIBS_HOME )
-		set(PAPI_ROOT_DIR ${THIRD_PARTY_LIBS_HOME}/papi-latest)
+		set(PAPI_ROOT ${THIRD_PARTY_LIBS_HOME}/papi-latest)
 	endif()
 	find_package(PAPI)
 	if(PAPI_FOUND)

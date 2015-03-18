@@ -14,27 +14,33 @@ file(GLOB_RECURSE insieme_machine_learning_incs	include/*.h)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inputs.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/machine_learning/inputs.h)
 
-# lookup shark library
-#lookup_lib( SHARK shark )
-#find_package(SHARK)
-insieme_find_package(SHARK)
-
-# lookup kompex library
-#lookup_lib( KOMPEX KompexSQLiteWrapper_Static_d )
-#find_package(KOMPEX)
-insieme_find_package(KOMPEX)
-
 # build the machine learning library
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )
 target_include_directories(insieme_machine_learning PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(insieme_machine_learning insieme_utils)
 target_link_libraries(insieme_machine_learning dl)
+
+# lookup shark library
+#find_package(SHARK)
+insieme_find_package(SHARK)
+
 #target_link_libraries(insieme_machine_learning ${shark_LIB})
 target_include_directories(insieme_machine_learning PUBLIC ${SHARK_INCLUDE_DIRS})
 target_link_libraries(insieme_machine_learning ${SHARK_LIBRARIES})
+
+# lookup kompex library
+#find_package(KOMPEX)
+insieme_find_package(KOMPEX)
+
 #target_link_libraries(insieme_machine_learning ${kompex_LIB})
 target_include_directories(insieme_machine_learning PUBLIC ${KOMPEX_INCLUDE_DIRS})
 target_link_libraries(insieme_machine_learning ${KOMPEX_LIBRARIES})
+
+# lookup Boost library
+insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_machine_learning SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+#target_link_libraries(insieme_machine_learning ${Boost_PROGRAM_OPTIONS_LIBRARY})
+
 
 # Build machine learning executables
 add_executable( train_ffnet src/train_ffnet.cxx ${insieme_machine_learning_incs})

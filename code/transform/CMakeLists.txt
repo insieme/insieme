@@ -16,6 +16,10 @@ file(GLOB_RECURSE insieme_transform_incs 	include/*.h include/*.def include/*.in
 add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs} )
 target_include_directories(insieme_transform PUBLIC ${insieme_transform_include_dir})
 
+# lookup Boost library
+insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_transform SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+
 target_link_libraries(insieme_transform insieme_core)
 target_link_libraries(insieme_transform insieme_utils)
 target_link_libraries(insieme_transform insieme_annotations)

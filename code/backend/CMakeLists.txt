@@ -15,6 +15,10 @@ target_include_directories(insieme_backend PUBLIC ${insieme_backend_include_dir}
 #fixme common ???
 target_include_directories(insieme_backend PUBLIC ${insieme_common_include_dir})
 
+# lookup Boost library
+insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_backend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+
 target_link_libraries(insieme_backend insieme_core)
 target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_annotations)

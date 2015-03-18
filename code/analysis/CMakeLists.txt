@@ -50,7 +50,6 @@ insieme_find_package(BARVINOK)
 target_include_directories(insieme_analysis PUBLIC ${BARVINOK_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${BARVINOK_LIBRARIES})
 
-
 # lookup GMP library
 #lookup_lib( GMP gmp ) 
 #target_include_directories(insieme_analysis PUBLIC ${gmp_INC})
@@ -59,6 +58,9 @@ insieme_find_package(GMP)
 target_include_directories(insieme_analysis PUBLIC ${GMP_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${GMP_LIBRARIES})
 
+# lookup Boost library
+insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+target_include_directories(insieme_analysis SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 set ( ut_prefix  ut_analysis_ )
 file(GLOB_RECURSE test_cases test/*.cc)

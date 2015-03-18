@@ -1,11 +1,11 @@
-#
-# This file sets up some general variables and include paths for the build environment
-#
+# This file sets up some general variables and paths to find libraries (modules have to lookup them
+# selves) for the build environment
 
 # Configuration:
 #   LINKING_TYPE                Linux
 #   LLVM_HOME/$ENV{LLVM_HOME}   Both
 
+#	BOOST_ROOT    				as env-var or cmake-var
 #	GTEST_ROOT    				as env-var or cmake-var
 #	GMP_ROOT    				as env-var or cmake-var
 #	MPFR_ROOT    				as env-var or cmake-var
@@ -24,7 +24,6 @@ if (GCC_INCLUDE_DIR)
 	include_directories( ${GCC_INCLUDE_DIR} )
 endif()
 
-
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
@@ -33,9 +32,9 @@ get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
 # -------------------------------------------------------------- define some code locations
-include (${insieme_code_dir}/cmake/lookup_lib.cmake)
-include (${insieme_code_dir}/cmake/add_unit_test.cmake)
 include (${insieme_code_dir}/cmake/insieme_find_package.cmake)
+include (${insieme_code_dir}/cmake/default_library_configuration.cmake)
+include (${insieme_code_dir}/cmake/add_unit_test.cmake)
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
@@ -43,41 +42,40 @@ set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
 
-set ( insieme_annotations_src_dir       ${insieme_code_dir}/annotations/src )
+set ( insieme_annotations_src_dir			${insieme_code_dir}/annotations/src )
 set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
 
-set ( insieme_xml_src_dir            	${insieme_code_dir}/xml/src )
+set ( insieme_xml_src_dir					${insieme_code_dir}/xml/src )
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
-set ( insieme_iwir_src_dir            	${insieme_code_dir}/iwir/src )
+set ( insieme_iwir_src_dir					${insieme_code_dir}/iwir/src )
 set ( insieme_iwir_include_dir            	${insieme_code_dir}/iwir/include )
 
-set ( insieme_frontend_src_dir       	${insieme_code_dir}/frontend/src )
+set ( insieme_frontend_src_dir				${insieme_code_dir}/frontend/src )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
-set ( insieme_backend_src_dir       	${insieme_code_dir}/backend/src )
+set ( insieme_backend_src_dir				${insieme_code_dir}/backend/src )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
-set ( insieme_driver_src_dir         	${insieme_code_dir}/driver/src )
+set ( insieme_driver_src_dir				${insieme_code_dir}/driver/src )
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
 
-set ( insieme_analysis_src_dir       	${insieme_code_dir}/analysis/src )
+set ( insieme_analysis_src_dir				${insieme_code_dir}/analysis/src )
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
-set ( insieme_transform_src_dir       	${insieme_code_dir}/transform/src )
+set ( insieme_transform_src_dir				${insieme_code_dir}/transform/src )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
-set ( insieme_common_include_dir 		${insieme_code_dir}/common/include )
+set ( insieme_common_include_dir			${insieme_code_dir}/common/include )
 
-set ( insieme_runtime_src_dir 	        ${insieme_code_dir}/runtime/src )
+set ( insieme_runtime_src_dir				${insieme_code_dir}/runtime/src )
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
 set ( insieme_machine_learning_src_dir  	${insieme_code_dir}/machine_learning/src )
-set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
+set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )
 
 # only in ext repo
 set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
 
 # -------------------------------------------------------------- find location of utilities
-
 find_program(TIME_EXECUTABLE time)
 if(${TIME_EXECUTABLE} STREQUAL "TIME_EXECUTABLE-NOTFOUND" AND NOT MSVC) 
 	message(FATAL_ERROR "Unable to locate time utility!")
@@ -111,7 +109,6 @@ endif(MSVC)
 
 
 # --------------------------------------------------------------------- including libraries
-
 # set up insieme lib home
 if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
 	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home" )
@@ -121,147 +118,7 @@ if ( DEFINED ENV{INSIEME_LIBS_HOME} )
 	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
 endif()
 
-
-# - gtest 
-# when GTEST_ROOT is set, cmakes FindGTest looks in GTEST_ROOT
-if( NOT DEFINED GTEST_ROOT )
-	if ( DEFINED ENV{GTEST_ROOT})
-		set(GTEST_ROOT $ENV{GTEST_ROOT} CACHE PATH "GTEST installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/gtest-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/gtest-latest")
-			set(GTEST_ROOT "${THIRD_PARTY_LIBS_HOME}/gtest-latest" CACHE PATH "GTEST installation directory." )
-		endif()
-	endif()
-endif()
-
-
-# - gmp 
-# when GMP_ROOT is set we use the given location, otherwise we rely on cmakes magic
-if( NOT DEFINED GMP_ROOT )
-	if ( DEFINED ENV{GMP_ROOT})
-		set(GMP_ROOT $ENV{GMP_ROOT} CACHE PATH "GMP installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/gmp-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/gmp-latest")
-			set(GMP_ROOT "${THIRD_PARTY_LIBS_HOME}/gmp-latest" CACHE PATH "GMP installation directory." )
-		endif()
-	endif()
-endif()
-
-# - mpfr
-if( NOT DEFINED MPFR_ROOT )
-	if ( DEFINED ENV{MPFR_ROOT})
-		set(MPFR_ROOT $ENV{MPFR_ROOT} CACHE PATH "MPFR installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/mpfr-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/mpfr-latest")
-			set(MPFR_ROOT "${THIRD_PARTY_LIBS_HOME}/mpfr-latest" CACHE PATH "MPFR installation directory." )
-		endif()
-	endif()
-endif()
-
-# - shark
-if( NOT DEFINED SHARK_ROOT )
-	if ( DEFINED ENV{SHARK_ROOT})
-		set(SHARK_ROOT $ENV{SHARK_ROOT} CACHE PATH "SHARK installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/shark-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/shark-latest")
-			set(SHARK_ROOT "${THIRD_PARTY_LIBS_HOME}/shark-latest" CACHE PATH "SHARK installation directory." )
-		endif()
-	endif()
-endif()
-
-# - kompex
-if( NOT DEFINED KOMPEX_ROOT )
-	if ( DEFINED ENV{KOMPEX_ROOT})
-		set(KOMPEX_ROOT $ENV{KOMPEX_ROOT} CACHE PATH "KOMPEX installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/kompex-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/kompex-latest")
-			set(KOMPEX_ROOT "${THIRD_PARTY_LIBS_HOME}/kompex-latest" CACHE PATH "KOMPEX installation directory." )
-		endif()
-	endif()
-endif()
-
-
-# - cudd
-if( NOT DEFINED CUDD_ROOT )
-	if ( DEFINED ENV{CUDD_ROOT})
-		set(CUDD_ROOT $ENV{CUDD_ROOT} CACHE PATH "CUDD installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/cudd-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/cudd-latest")
-			set(CUDD_ROOT "${THIRD_PARTY_LIBS_HOME}/cudd-latest" CACHE PATH "CUDD installation directory." )
-		endif()
-	endif()
-endif()
-
-# - isl
-if( NOT DEFINED ISL_ROOT )
-	if ( DEFINED ENV{ISL_ROOT})
-		set(ISL_ROOT $ENV{ISL_ROOT} CACHE PATH "ISL installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/isl-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/isl-latest")
-			set(ISL_ROOT "${THIRD_PARTY_LIBS_HOME}/isl-latest" CACHE PATH "ISL installation directory." )
-		endif()
-	endif()
-endif()
-
-# - barvinok
-if( NOT DEFINED BARVINOK_ROOT )
-	if ( DEFINED ENV{BARVINOK_ROOT})
-		set(BARVINOK_ROOT $ENV{BARVINOK_ROOT} CACHE PATH "BARVINOK installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/barvinok-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/barvinok-latest")
-			set(BARVINOK_ROOT "${THIRD_PARTY_LIBS_HOME}/barvinok-latest" CACHE PATH "BARVINOK installation directory." )
-		endif()
-	endif()
-endif()
-
-# - cloog
-if( NOT DEFINED CLOOG_ROOT )
-	if ( DEFINED ENV{CLOOG_ROOT})
-		set(CLOOG_ROOT $ENV{CLOOG_ROOT} CACHE PATH "CLOOG installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/cloog-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/cloog-latest")
-			set(CLOOG_ROOT "${THIRD_PARTY_LIBS_HOME}/cloog-latest" CACHE PATH "CLOOG installation directory." )
-		endif()
-	endif()
-endif()
-
-# - luajit
-if( NOT DEFINED LUAJIT_ROOT )
-	if ( DEFINED ENV{LUAJIT_ROOT})
-		set(LUAJIT_ROOT $ENV{LUAJIT_ROOT} CACHE PATH "LUAJIT installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/luajit-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/luajit-latest")
-			set(LUAJIT_ROOT "${THIRD_PARTY_LIBS_HOME}/luajit-latest" CACHE PATH "LUAJIT installation directory." )
-		endif()
-	endif()
-endif()
-
-# - papi
-if( NOT DEFINED PAPI_ROOT )
-	if ( DEFINED ENV{PAPI_ROOT})
-		set(PAPI_ROOT $ENV{PAPI_ROOT} CACHE PATH "PAPI installation directory." )
-	else()
-		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/papi-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/papi-latest")
-			set(PAPI_ROOT "${THIRD_PARTY_LIBS_HOME}/papi-latest" CACHE PATH "PAPI installation directory." )
-		endif()
-	endif()
-endif()
-
-# - boost
-if ( NOT DEFINED BOOST_ROOT )
-	if ( NOT $ENV{BOOST_ROOT} EQUAL "" )
-		set ( BOOST_ROOT $ENV{BOOST_ROOT} CACHE PATH "Boost installation directory." )
-	else()
-		set ( BOOST_ROOT "${THIRD_PARTY_LIBS_HOME}/boost-latest" CACHE PATH "Boost installation directory." )
-	endif()
-endif()
-find_package( Boost 1.48 QUIET COMPONENTS program_options system filesystem regex serialization )
-#everybody wants boost (except runtime...) so everybody gets it
-include_directories(SYSTEM ${Boost_INCLUDE_DIRS})	 #we use SYSTEM to include boost-header as system header (-isystem) to suppress warnings found in boost code
-#the linking should be done specifically
-#link_directories(${Boost_LIBRARY_DIRS})
-
-#profiling
+#------------------------------------------------------------- profiling
 IF (DO_GOOGLE_PROFILING)
 	if(NOT DEFINED GPERFTOOLS_HOME)
 		set (GPERFTOOLS_HOME $ENV{GPERFTOOLS_HOME})
@@ -377,9 +234,6 @@ if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
 endif ()
-
-
-
 
 # --------------------------------------------------------- Runtime
 # -D_XOPEN_SOURCE=700 is required to get recent pthread features with -std=c99
