@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,15 +43,15 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	core::TypePtr getType(core::NodeManager& manager, const string& type) {
+	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {
 		// build type
-		TypePtr res = parser::parse_type(manager, type, false);
+		TypePtr res = parser::parse_type(manager, type, false, definitions);
 		assert(res && "Unable to parse given type!");
 		return res;
 	}
 
-	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value) {
-		return core::Literal::get(manager, getType(manager, type), value);
+	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value, const std::map<string, NodePtr>& definitions) {
+		return Literal::get(manager, getType(manager, type, definitions), value);
 	}
 
 

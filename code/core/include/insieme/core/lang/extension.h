@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -93,9 +93,10 @@ namespace lang {
 	 *
 	 * @param manager the node manager to be used for creating the type
 	 * @param type the string to be parsed
+	 * @param definitions a map of already existing named definitions used during parsing
 	 * @return the requested type
 	 */
-	core::TypePtr getType(core::NodeManager& manager, const string& type);
+	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
 
 	/**
 	 * A utility simplifying the creation of literals within language extensions.
@@ -104,9 +105,10 @@ namespace lang {
 	 * @param manager the node manager to be used for creating the resulting literal
 	 * @param type the type of the resulting literal, encoded as a string
 	 * @param value the value of the resulting literal
+	 * @param definitions a map of already existing named definitions used during parsing
 	 * @return the requested literal
 	 */
-	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value);
+	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value, const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
 
 
 	/**
