@@ -34,6 +34,24 @@
  * regarding third party software licenses.
  */
 
+/**
+While the other header files adxintrin.h, emmintrin.h, ia32intrin.h and xmmintrin.h have been taken literally
+from the GCC source code, this file defines all the __builtins that are available in GCC but not in Clang. Clang
+implements fewer builtins than GCC by purpose, as the Clang developers claim that the vector operations _mm_*
+should be used instead. These vector operations are also available within GCC. See
+   http://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions   for a general discussion and
+   http://clang.llvm.org/builtins.py   for a script to convert builtins to vector operations).
+
+To make a long story short, if your program uses some of these functions found below, you should seriously think of
+adapting your program to the new standards. Do NOT use any of the __builtin_* functions in your code! It is not
+portable across compilers and/or architectures.
+
+However, as we are using GCC in the backend, we want Clang to have GCC semantics. Hence, we load the GCC header
+files adxintrin.h, emmintrin.h, ia32intrin.h and xmmintrin.h when generating the Clang AST, and thus we also need
+declarations for GCC __builtins so that Clang will not complain; without these declarations, Clang cannot possibly
+know that the builtins are known during the code generation phase.
+*/
+
 typedef double __v2df __attribute__ ((__vector_size__ (16)));
 typedef int __v4si __attribute__ ((__vector_size__ (16)));
 typedef float __v4sf __attribute__ ((__vector_size__ (16)));
