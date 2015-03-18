@@ -56,6 +56,38 @@ namespace cmd {
 		class OptionParser;
 	}
 
+	enum BackendEnum {
+		Runtime = 0,
+		Sequential,
+		OpenCL,
+		Pthreads
+	};
+
+	struct BackendHint {
+		BackendEnum backend;
+
+		/**
+		 * allow direct comparison with BackendEnum
+		 */
+		bool operator==(const BackendEnum e) const {
+			return (this->backend == e);
+		}
+
+		friend std::ostream& operator<<(std::ostream& out, const BackendHint& b);
+
+	};
+
+	std::ostream& operator<<(std::ostream& out, const BackendHint& b) {
+		switch(b.backend) {
+			case BackendEnum::Runtime: out << "runtime"; break;
+			case BackendEnum::Sequential: out << "sequential"; break;
+			case BackendEnum::OpenCL: out << "opencl"; break;
+			case BackendEnum::Pthreads: out << "pthreads"; break;
+			default: out << "unknown";
+		}
+		return out;
+	}
+
 	// holds all settings that are not part of a ConversionJob
 	struct Settings {
 
@@ -95,6 +127,11 @@ namespace cmd {
 		 * The configuration of the frontend encapsulated into an conversion job.
 		 */
 		insieme::frontend::ConversionJob job;
+
+		/**
+		 * The backend to be used if code generation is requested.
+		 */
+		BackendHint backendHint;
 
 		/**
 		 * Parses the given command line options.

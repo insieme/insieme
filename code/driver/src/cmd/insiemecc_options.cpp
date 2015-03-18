@@ -39,6 +39,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <string>
+#include <iostream>
 #include "insieme/utils/version.h"
 
 namespace insieme {
@@ -94,7 +95,7 @@ namespace cmd {
 			bpo::variables_map map;
 			bpo::store(bpo::basic_command_line_parser<char>(argc, argv)
 				.options(desc)
-				.style(bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise)
+				.style((bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise) ^ bpo::command_line_style::allow_guessing)
 				.positional(pos)
 				.allow_unregistered()
 				.run(), map);
@@ -126,8 +127,8 @@ namespace cmd {
 
 			// check whether help was requested
 			if(res.settings.help) {
-				cout << "Usage: " << argv[0] << " [options | infile]" << "\n";
-				cout << desc << "\n";
+				std::cout << "Usage: " << argv[0] << " [options | infile]" << "\n";
+				std::cout << desc << "\n";
 				// no non-zero exit code when requesting help!
 				res.gracefulExit = true;
 				return res;
@@ -135,9 +136,10 @@ namespace cmd {
 
 			// check whether version was requested
 			if(res.settings.version) {
-				cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << "\n" <<
+				std::cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << "\n" <<
 						"Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2015, " <<
-						"University of Innsbruck\n";
+						"University of Innsbruck\n" <<
+						"http://www.insieme-compiler.org\n";
 				// no non-zero exit code when requesting version!
 				res.gracefulExit = true;
 				return res;
@@ -147,7 +149,7 @@ namespace cmd {
 			if(!res.settings.inFiles.empty()) {
 				res.job.setFiles(res.settings.inFiles);
 			} else {
-				cout << "No input files provided!\n";
+				std::cerr << "No input files provided!\n";
 				res.valid = false;
 				return res;
 			}
@@ -230,7 +232,7 @@ namespace cmd {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
 				assert(res.job.isCxx());
 			} else {
-				std::cout << "Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
+				std::cerr << "Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
 				res.valid = false;
 				return res;
 			}
@@ -242,7 +244,6 @@ namespace cmd {
 				res.job.setInterceptedHeaderDirs(res.settings.interceptIncludes);
             }
 
-
             //f flags
 			for(auto optFlag : res.settings.optimizationFlags) {
 				std::string&& s = "-f" + optFlag;
@@ -253,6 +254,18 @@ namespace cmd {
 			for(auto cur : parser_steps) {
 				res.valid = cur(map) && res.valid;
 			}
+
+			// prepare for setting up backend
+			if(res.settings.backend == "runtime" || res.settings.backend == "run")
+				res.backendHint.backend = BackendEnum::Runtime;
+			else if(res.settings.backend == "sequential" || res.settings.backend == "seq")
+				res.backendHint.backend = BackendEnum::Sequential;
+			else if(res.settings.backend == "opencl" || res.settings.backend == "ocl" )
+				res.backendHint.backend = BackendEnum::OpenCL;
+			else if(res.settings.backend == "pthreads" || res.settings.backend == "pthread")
+				res.backendHint.backend = BackendEnum::Pthreads;
+			else
+				std::cerr << "Unsupported backend: " << res.settings.backend << " - supported: sequential | runtime | ocl | pthreads\n";
 
 			// done
 			return res;
