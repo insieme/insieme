@@ -173,7 +173,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
 	job.addIncludeDirectory(PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/");
 
-	job.setOption(fe::ConversionJob::lib_icl);
+	job.setOption(fe::ConversionJob::Lib_icl);
 	job.setDefinition("INSIEME", "");
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";

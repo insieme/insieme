@@ -76,7 +76,7 @@ TEST(ocl_hostKernel, vecadd_bare) {
 
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
 	// finally, do the conversion
 	auto program = job.execute(manager);
@@ -102,7 +102,7 @@ TEST(ocl_hostKernel, vecadd) {
 
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	auto program = job.execute(manager);
@@ -133,7 +133,7 @@ TEST(ocl_hostKernel, matmul) {
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
 	//job.setOption(insieme::frontend::ConversionJob::OpenCL);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	auto program = job.execute(manager);

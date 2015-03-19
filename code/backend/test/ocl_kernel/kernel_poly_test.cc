@@ -75,7 +75,7 @@ TEST(KernelPoly, RangeTest) {
 
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
 	LOG(INFO) << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "vec_add.c" << "' to IR...\n";
 
