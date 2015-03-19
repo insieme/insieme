@@ -79,6 +79,15 @@ namespace lang {
 		 */
 		Extension(NodeManager& manager) : manager(manager) {}
 
+		/**
+		 * Checks if the given name is not already in use.
+		 * Will fail an assertion in case the name is already in use.
+		 */
+		void checkIrNameNotAlreadyInUse(const string& irName) const;
+
+		/**
+		 * Adds a new mapping to the list of named mappings in this extension.
+		 */
 		void addNamedIrExtension(const string name, const NodePtr node) const {
 			if (!name.empty()) {
 				extensionIrNames.insert(std::make_pair(name, node));
@@ -145,6 +154,7 @@ namespace lang {
 			const insieme::core::TypePtr type_##NAME = create##NAME(); \
 			 \
 			const insieme::core::TypePtr create##NAME() const {\
+				checkIrNameNotAlreadyInUse(IR_NAME); \
 				const insieme::core::TypePtr result = insieme::core::lang::getType(getNodeManager(), TYPE, getNamedIrExtensions()); \
 				addNamedIrExtension(IR_NAME, result); \
 				return result; \
@@ -181,6 +191,7 @@ namespace lang {
 			const insieme::core::LiteralPtr lit_##NAME = create##NAME(); \
 			 \
 			const insieme::core::LiteralPtr create##NAME() const { \
+				checkIrNameNotAlreadyInUse(IR_NAME); \
 				const insieme::core::LiteralPtr result = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE, getNamedIrExtensions()); \
 				addNamedIrExtension(IR_NAME, result); \
 				return result; \
@@ -216,6 +227,7 @@ namespace lang {
 			const insieme::core::ExpressionPtr expr_##NAME = create##NAME(); \
 			 \
 			const insieme::core::ExpressionPtr create##NAME() const { \
+				checkIrNameNotAlreadyInUse(IR_NAME); \
 				insieme::core::IRBuilder builder(getNodeManager()); \
 				const insieme::core::ExpressionPtr result = builder.normalize(builder.parseExpr(SPEC, getNamedIrExtensions())).as<insieme::core::ExpressionPtr>(); \
 				insieme::core::lang::markAsDerived(result, #NAME); \

@@ -39,9 +39,42 @@
 #include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/ir_expressions.h"
 
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/assert.h"
+
+#include <string>
+#include <map>
+
 namespace insieme {
 namespace core {
 namespace lang {
+
+	void Extension::checkIrNameNotAlreadyInUse(const string& irName) const {
+		//only check for the existence of this name only if we define a new one
+		if (irName.empty()) {
+			return;
+		}
+
+		const auto& namedExtensions = getNamedIrExtensions();
+		//first check the names defined in this extension here
+		if (namedExtensions.find(irName) != namedExtensions.end()) {
+			assert_true(false) << "IR_NAME \"" << irName << "\" already in use in this extension";
+		}
+
+		//then try to parse the given name as an expression
+		try {
+			const insieme::core::IRBuilder& builder(getNodeManager());
+			builder.parseExpr(irName, namedExtensions);
+			//if the parsing succeeded, then there already exists some literal or derived with that name
+			assert_true(false) << "IR_NAME \"" << irName << "\" already in use";
+
+		} catch (const insieme::core::parser::IRParserException& ex) {
+			//nothing to do in here
+		}
+
+		//TODO also cover type names somehow
+	}
 
 	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {
 		// build type
@@ -53,7 +86,6 @@ namespace lang {
 	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value, const std::map<string, NodePtr>& definitions) {
 		return Literal::get(manager, getType(manager, type, definitions), value);
 	}
-
 
 } // end namespace lang
 } // end namespace core
