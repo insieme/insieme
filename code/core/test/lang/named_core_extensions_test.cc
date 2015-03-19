@@ -64,15 +64,17 @@ namespace lang {
 
 	public:
 
-		LANG_EXT_TYPE_WITH_NAME(SimpleNamedType, "SimpleNamedType", "struct { 'a foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeUsingBelow, "NamedTypeUsingBelow", "struct { NamedType foo; }")
 
-		LANG_EXT_TYPE_WITH_NAME(SimpleNamedTypeReusingUnknown, "SimpleNamedTypeReusingUnknown", "struct { FooType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedType, "NamedType", "struct { 'a foo; }")
 
-		LANG_EXT_TYPE_WITH_NAME(SimpleNamedTypeReusingKnown, "SimpleNamedTypeReusingKnown", "struct { SimpleNamedType foo; }")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingUnknown, "NamedTypeReusingUnknown", "struct { FooType foo; }")
 
-		LANG_EXT_LITERAL_WITH_NAME(SimpleNamedLiteralUnknown, "SimpleNamedLiteralUnknown", "named_lit_unknown", "(FooType)->unit")
+		LANG_EXT_TYPE_WITH_NAME(NamedTypeReusingKnown, "NamedTypeReusingKnown", "struct { NamedType foo; }")
 
-		LANG_EXT_LITERAL_WITH_NAME(SimpleNamedLiteral, "SimpleNamedLiteral", "named_lit", "(SimpleNamedType)->unit")
+		LANG_EXT_LITERAL_WITH_NAME(NamedLiteralUnknown, "NamedLiteralUnknown", "named_lit_unknown", "(FooType)->unit")
+
+		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {
@@ -85,10 +87,10 @@ namespace lang {
 		EXPECT_TRUE(definedNames.find("NotRegisteredName") == definedNames.end());
 
 		//Lookup a registered type
-		EXPECT_TRUE(definedNames.find("SimpleNamedType")->second == extension.getSimpleNamedType());
+		EXPECT_TRUE(definedNames.find("NamedType")->second == extension.getNamedType());
 
 		//Lookup a registered literal
-		EXPECT_TRUE(definedNames.find("SimpleNamedLiteral")->second == extension.getSimpleNamedLiteral());
+		EXPECT_TRUE(definedNames.find("NamedLiteral")->second == extension.getNamedLiteral());
 	}
 
 	TEST(NamedCoreExtensionTest, NamedTypes) {
@@ -96,16 +98,20 @@ namespace lang {
 
 		auto& extension = manager.getLangExtension<NamedCoreExtensionTestExtension>();
 
-		auto& simpleNamedType = extension.getSimpleNamedType();
-		EXPECT_EQ("struct<foo:'a>", toString(*simpleNamedType));
+		auto& namedType = extension.getNamedType();
+		EXPECT_EQ("struct<foo:'a>", toString(*namedType));
+
+		//Test for the re-use of a named extension which is defined below the current one and therefore won't be found
+		auto& namedTypeUsingBelow = extension.getNamedTypeUsingBelow();
+		EXPECT_EQ("struct<foo:NamedType>", toString(*namedTypeUsingBelow));
 
 		//Test for the re-use of an unknown named extension
-		auto& simpleNamedTypeReusingUnknown = extension.getSimpleNamedTypeReusingUnknown();
-		EXPECT_EQ("struct<foo:FooType>", toString(*simpleNamedTypeReusingUnknown));
+		auto& namedTypeReusingUnknown = extension.getNamedTypeReusingUnknown();
+		EXPECT_EQ("struct<foo:FooType>", toString(*namedTypeReusingUnknown));
 
 		//Test for correct handling of a known named extension
-		auto& simpleNamedTypeReusingKnown = extension.getSimpleNamedTypeReusingKnown();
-		EXPECT_EQ("struct<foo:struct<foo:'a>>", toString(*simpleNamedTypeReusingKnown));
+		auto& namedTypeReusingKnown = extension.getNamedTypeReusingKnown();
+		EXPECT_EQ("struct<foo:struct<foo:'a>>", toString(*namedTypeReusingKnown));
 	}
 
 	TEST(NamedCoreExtensionTest, NamedLiterals) {
@@ -114,14 +120,14 @@ namespace lang {
 		auto& extension = manager.getLangExtension<NamedCoreExtensionTestExtension>();
 
 		//Test for the re-use of an unknown named extension
-		auto& simpleNamedLiteralUnknown = extension.getSimpleNamedLiteralUnknown();
-		EXPECT_EQ("named_lit_unknown", toString(*simpleNamedLiteralUnknown));
-		EXPECT_EQ("((FooType)->unit)", toString(*simpleNamedLiteralUnknown.getType()));
+		auto& namedLiteralUnknown = extension.getNamedLiteralUnknown();
+		EXPECT_EQ("named_lit_unknown", toString(*namedLiteralUnknown));
+		EXPECT_EQ("((FooType)->unit)", toString(*namedLiteralUnknown.getType()));
 
 		//Test for correct handling of a known named extension
-		auto& simpleNamedLiteral = extension.getSimpleNamedLiteral();
-		EXPECT_EQ("named_lit", toString(*simpleNamedLiteral));
-		EXPECT_EQ("((struct<foo:'a>)->unit)", toString(*simpleNamedLiteral.getType()));
+		auto& namedLiteral = extension.getNamedLiteral();
+		EXPECT_EQ("named_lit", toString(*namedLiteral));
+		EXPECT_EQ("((struct<foo:'a>)->unit)", toString(*namedLiteral.getType()));
 	}
 
 } // end namespace lang
