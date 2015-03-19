@@ -37,18 +37,16 @@
 # some configuration options 
 compiler[ref_c_compile]=gcc
 compiler[ref_c++_compile]=g++
-compiler[insiemecc_c_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_c++_compile]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[main_c_sema]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_c++_sema]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_run_convert]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_run_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_run_compile]=gcc
-compiler[main_run_c++_compile]=g++
-compiler[main_seq_convert]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/main
-compiler[main_seq_compile]=gcc
-compiler[main_seq_c++_compile]=g++
+compiler[insiemecc_c_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_c++_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_run_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_run_c++_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_run_compile]=gcc
+compiler[insiemecc_run_c++_compile]=g++
+compiler[insiemecc_seq_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_seq_compile]=gcc
+compiler[insiemecc_seq_c++_compile]=g++
 
 # frontend code interception configuration seed
 intercepted_name_spaces=
@@ -74,5 +72,5 @@ sortdiff=@insieme_root_dir@/test/sortdiff
 time_executable=@TIME_EXECUTABLE@
 
 # setup insieme runtime compiler flags
-use_libmath[main_run_compile]=1
-use_libpthread[main_run_compile]=1
+use_libmath[insiemecc_run_compile]=1
+use_libpthread[insiemecc_run_compile]=1
