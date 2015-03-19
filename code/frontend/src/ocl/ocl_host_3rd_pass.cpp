@@ -451,7 +451,7 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 			assert(!!decl && "Kernel has illegal local memory argument");
 			if(arg == decl->getVariable()) {
 				// will be declared inside wrapper function
-//				assert(false);
+//				assert_fail();
 				local = true;
 			}
 		});

@@ -382,7 +382,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 	AffineConstraintPtr visitNegConstraint(const NegAffineConstraint& ucc) {
 		// Because the constraint containing a distance vector is a basic_set, 
 		// there should not be any negations in this constraint 
-		assert(false);
+		assert_fail();
 		return AffineConstraintPtr();
 	}
 
@@ -502,7 +502,7 @@ void DependenceGraph::dumpDOT(std::ostream& out) const {
 			case dep::WAR: out << "color=orange";  break;
 			case dep::WAW: out << "color=brown";   break;
 			case dep::RAR: out << "color=green";   break;
-			default: assert(false);
+			default: assert_fail();
 		}
 		out << "]";
 	};

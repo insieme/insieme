@@ -259,7 +259,7 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 			assert (ir_expr && "Retrieve of user information within ISL set failed");
 			return ir_expr;
 		} 
-		assert(false);
+		assert_fail();
 		// We need to create a new Variable to represent this specific iterator/parameter
 		return core::IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
 	};

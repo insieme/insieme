@@ -221,22 +221,22 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 			// templated parameters are values wich spetialize the template, because of their value nature,
 			// they should be encapsulated as types to fit in the typing of the parent type
 				VLOG(2) << "arg: integral";
-				assert(false);
+				assert_fail();
 				break;
 			}
 			case clang::TemplateArgument::Null: {
 				VLOG(2) << "arg: NULL";
-				assert(false);
+				assert_fail();
 				break;
 			}
 			case clang::TemplateArgument::Declaration: {
 				VLOG(2) << "arg: DECL";
-				assert(false);
+				assert_fail();
 				break;
 			}
 			case clang::TemplateArgument::NullPtr: {
 				 VLOG(2) << "arg: nullptr";
-				assert(false);
+				assert_fail();
 				break;
 			}
 			case clang::TemplateArgument::Template: {
@@ -248,12 +248,12 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
 				VLOG(2) << "arg: template expansion";
-				assert(false);
+				assert_fail();
 				break;
 			}
 			case clang::TemplateArgument::Pack: {
 				VLOG(2) << "arg: pack";
-				assert(false);
+				assert_fail();
 				break;
 			}
 		}

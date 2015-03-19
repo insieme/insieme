@@ -394,7 +394,7 @@ public:
 			case clast_bin_div: out << '/'; break;
 			case clast_bin_mod:	out << '%'; break;
 			default: 
-				assert(false);
+				assert_fail();
 			}
 		}
 		PRINT_CLOOG_INT(out, binExpr->RHS);

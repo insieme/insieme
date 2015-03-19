@@ -623,7 +623,7 @@ namespace features {
 				std::stringstream msg;
 				msg << "Unsupported memory location: " << *target << " of type " << target->getType();
 				std::cout << "Encountered problem: " << msg.str() << "\n";
-				assert(false);
+				assert_fail();
 				return 0;
 			}
 
@@ -862,7 +862,7 @@ namespace features {
 
 			core::NodePtr visitNode(const core::NodePtr& node) {
 				std::cout << "Error - visiting " << node->getNodeType() << "\n";
-				assert(false);
+				assert_fail();
 				return node;
 			}
 

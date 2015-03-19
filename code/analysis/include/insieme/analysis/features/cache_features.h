@@ -38,6 +38,7 @@
 
 #include <array>
 
+#include "insieme/utils/assert.h"
 #include "insieme/core/forward_decls.h"
 #include "insieme/analysis/features/feature.h"
 
@@ -208,7 +209,7 @@ namespace features {
 			}
 
 			void load(uint64_t base) {
-				assert(!contains(base) && "Should not be called if position is contained!");
+				assert_false(contains(base)) << "Should not be called if position is contained!";
 
 				// replace LRU line
 				lru->base = base;

@@ -106,9 +106,8 @@ struct Element : public utils::Printable {
 	  diffAddr(diffAddr),
 	  type(type) 
 	{
-		assert( (!diffAddr || (diffAddr && diffAddr.getRootNode() == viewPtr)) && 
-				"Diff must always be relative to analysis stmt"
-			  ); 
+		assert_true(!diffAddr || (diffAddr && diffAddr.getRootNode() == viewPtr))
+			<< "Diff must always be relative to analysis stmt"; 
 	}
 
 	inline const Type& getType() const { return type; }
@@ -234,10 +233,10 @@ struct Address : public utils::Printable {
 	Address& operator=(const Address&) = default;
 
 	/** 
-	 * Retrieve the CFG block to which this address referes to 
+	 * Retrieve the CFG block to which this address refers to 
 	 */
 	inline const cfg::Block& getBlock() const {
-		assert(block && "Trying to access an invalid cfg address");
+		assert_true(block) << "Trying to access an invalid cfg address";
 		return *block; 
 	}
 
@@ -250,7 +249,7 @@ struct Address : public utils::Printable {
 	inline bool isValid() const { return addr.isValid(); }
 
 	/**
-	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses 
+	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses)
 	 */
 	inline core::NodePtr getAddressedNode() const { return addr.getAddressedNode(); }
 
@@ -372,14 +371,14 @@ public:
 
 		// increment this iterator only if we are not at the end
 		inline BlockIterator<IterT> operator++() {
-			assert(iter != end && "Incrementing an invalid iterator"); 
+			assert_true(iter != end) << "Incrementing an invalid iterator"; 
 			++iter;
 			return *this;
 		}
 
 		// increment this iterator only if we are not at the end
 		inline BlockIterator<IterT> operator+=(unsigned id) {
-			assert(iter != end && "Incrementing an invalid iterator"); 
+			assert_true(iter != end) << "Incrementing an invalid iterator"; 
 			for(size_t i=0; i<id; i++) ++iter;
 			return *this;
 		}
@@ -391,13 +390,13 @@ public:
 
 		// Returns a reference to the block referenced by this iterator
 		inline const cfg::BlockPtr& operator*() const {
-			assert(iter != end && "Iterator out of scope");
+			assert_true(iter != end) << "Iterator out of scope"; 
 			return cfg->getBlockPtr(*iter);
 		}
 
 		// Returns a reference to the block referenced by this iterator
 		inline const cfg::Block* operator->() const {
-			assert(iter != end && "Iterator out of scope");
+			assert_true(iter != end) << "Iterator out of scope";
 			return &cfg->getBlock(*iter);
 		}
 	};
@@ -528,7 +527,7 @@ public:
 
 	inline GraphBounds getNodeBounds(const core::NodePtr& root) {
 		auto fit = subGraphs.find(root);
-		assert( fit != subGraphs.end() );
+		assert_true(fit != subGraphs.end());
 		return fit->second;
 	}
 
@@ -610,7 +609,7 @@ struct Block :
 
 	/// Setters and getters for the terminator element
 	inline const Terminator& terminator() const { 
-		assert(hasTerminator() && "trying to access invalid terminator");
+		assert_true(hasTerminator()) << "trying to access invalid terminator";
 		return *term; 
 	}
 	inline void setTerminator(const Terminator& t) {
@@ -647,12 +646,12 @@ struct Block :
 	}
 
 	inline Element& operator[](size_t idx) {
-		assert(idx < size() && "Out of bound array access");
+		assert_lt(idx, size()) << "Out of bound array access";
 		return stmtList[size()-1-idx];
 	}
 
 	inline const Element& operator[](size_t idx) const {
-		assert(idx < size() && "Out of bound array access");
+		assert_lt(idx, size()) << "Out of bound array access";
 		return stmtList[size()-1-idx];
 	}
 
@@ -728,7 +727,7 @@ struct CallBlock: public Block {
 	}
 
 	inline const RetBlock& getReturnBlock() const { 
-		assert(ret && "Return block for this CALL block not set."); 
+		assert_true(ret) << "Return block for this CALL block not set."; 
 		return *ret; 
 	}
 

@@ -1169,7 +1169,7 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 			// use the host variable because CL_MEM_USE_HOST_PTR was set
 			cl_mems[lhsVar] = var;
 			// TODO check if err argument has been passed and set variable to 0
-			assert(false);
+			assert_fail();
 			ret = builder.getNoOp();
 		} else {
 			if(!alreadyThere) {

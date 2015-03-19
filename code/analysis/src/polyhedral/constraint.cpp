@@ -314,7 +314,7 @@ getDomainBounds(const core::VariablePtr iter, const DisjunctionList& disjunction
 				ubs.back().push_back( cur ); 
 				return;
 			}
-			assert(false);
+			assert_fail();
 		});
 
 		if (!lbs.back().empty()) { lbs.push_back( ConjunctionList() ); }

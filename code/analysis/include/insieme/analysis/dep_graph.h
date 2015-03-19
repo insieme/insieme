@@ -289,7 +289,7 @@ public:
 };
 
 inline const core::StatementAddress& DependenceGraph::getStatementAddress(const VertexTy& v) const {
-	assert( v < size() && "Vertex id is not part of the graph" );
+	assert_true( v < size()) << "Vertex id is not part of the graph";
 	return graph[v]->m_addr;
 }
 

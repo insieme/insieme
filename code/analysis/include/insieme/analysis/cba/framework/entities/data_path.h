@@ -142,7 +142,7 @@ namespace cba {
 				}
 
 				// now the length is equally long
-				assert(length == other.length);
+				assert_eq(length, other.length);
 
 				// implement lexicographical order
 				return *head < *other.head || (*head == *other.head && lessIndex(other));
@@ -404,7 +404,7 @@ namespace cba {
 			if (extension.isNarrow()) {
 				extension.visit([&](const detail::DataPathElement& cur){ moveDown(cur); });
 			} else {
-				assert(extension.isExpand());
+				assert_true(extension.isExpand());
 				extension.visit([&](const detail::DataPathElement& cur) { moveUp(cur); });
 			}
 
@@ -477,7 +477,7 @@ namespace cba {
 			if (extension.isNarrow()) {
 				extension.visit([&](const detail::DataPathElement& cur){ moveUp(cur); });
 			} else {
-				assert(extension.isExpand());
+				assert_true(extension.isExpand());
 				extension.visit([&](const detail::DataPathElement& cur) { moveDown(cur); });
 			}
 

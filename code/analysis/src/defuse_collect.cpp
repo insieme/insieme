@@ -62,7 +62,7 @@ std::string Ref::useTypeToStr(const UseType& usage) {
 	case Ref::DEF: 		return "DEF"; 
 	case Ref::USE:		return "USE"; 
 	case Ref::UNKNOWN:	return "UNKNOWN"; 
-	default:			assert(false);
+	default:			assert_fail();
 	}
 	return "-unknown-";
 }
@@ -73,7 +73,7 @@ std::string Ref::refTypeToStr(const RefType& type) {
 	case Ref::ARRAY:	return "ARRAY"; 
 	case Ref::MEMBER:	return "MEMBER"; 
 	case Ref::CALL: 	return "CALL"; 
-	default:  			assert(false);
+	default:  			assert_fail();
 	}
 	return "-unknown-";
 }

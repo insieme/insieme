@@ -151,7 +151,7 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	 return Piecewise();
 
 	default:
-		assert(false);
+		assert_fail();
 		return Piecewise();
 	}
 	//}
@@ -217,7 +217,7 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 			assert(false && "Arrays with multiple displacements are not yet supported");
 		}
 		default:
-			assert(false);
+			assert_fail();
 			return core::ExpressionPtr();
 	}
 }

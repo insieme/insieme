@@ -360,13 +360,13 @@ namespace dump {
 				auto paramInfos = type->getParameterInfo();
 				if (paramInfos->isAtomic()) {
 					// consume opening bracket
-					if (*(cur++) != "(") { /* TODO: throw exception */ assert(false); };
+					if (*(cur++) != "(") { /* TODO: throw exception */ assert_fail(); };
 
 					// load value
 					parameter::Value value = resolveValue(cur, end, paramInfos);
 
 					// consume closing bracket
-					if (*(cur++) != ")") { /* TODO: throw exception */ assert(false); };
+					if (*(cur++) != ")") { /* TODO: throw exception */ assert_fail(); };
 
 					// build transformation
 					return type->createTransformation(value);

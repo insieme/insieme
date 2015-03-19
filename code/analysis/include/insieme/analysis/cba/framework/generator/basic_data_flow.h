@@ -1295,7 +1295,7 @@ namespace cba {
 
 		void visitNode(const NodeInstance& node, const Context& ctxt, Constraints& constraints) {
 			std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
-			assert(false);
+			assert_fail();
 		}
 
 	protected:
@@ -1344,7 +1344,7 @@ namespace cba {
 			if (!bind) return false;
 
 			// and the expression must be bound
-			assert(bind->getCall() == call);
+			assert_eq(bind->getCall(), call);
 			if (!bind->isBoundExpression(expr)) return false;
 
 			// test whether bind is free (not statically bound)

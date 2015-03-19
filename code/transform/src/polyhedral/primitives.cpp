@@ -294,7 +294,7 @@ std::pair<DisjunctionList, DisjunctionList> getDomainBounds(IterationVector& ite
 				ubs.back().push_back( makeCombiner(AffineConstraint(f, c.getType()))); 
 				return;
 			}
-			assert(false);
+			assert_fail();
 		});
 		if (!lbs.back().empty()) { lbs.push_back( ConjunctionList() ); }
 		if (!ubs.back().empty()) { ubs.push_back( ConjunctionList() ); }
