@@ -179,25 +179,40 @@ namespace lang {
 			}
 
 	/**
-	 * A macro supporting the simple declaration and definition of a type within a language extension
+	 * A macro supporting the simple declaration and definition of a literal within a language extension
 	 * implementation.
 	 *
-	 * @param NAME the name of the type literal to be added
-	 * @param TYPE the IR type to be represented as a string
+	 * @param NAME the name of the literal to be added
+	 * @param IR_NAME the name used to reference this literal within this extension and in parsed code
+	 * @param VALUE the value of this literal
+	 * @param TYPE the IR type of the literal
 	 */
-	#define LANG_EXT_LITERAL(NAME,VALUE,TYPE) \
+	#define LANG_EXT_LITERAL_WITH_NAME(NAME, IR_NAME, VALUE, TYPE) \
 		private: \
-			mutable insieme::core::LiteralPtr lit_ ## NAME; \
+			const insieme::core::LiteralPtr lit_##NAME = create##NAME(); \
 		public: \
-			const insieme::core::LiteralPtr& get ## NAME () const { \
-				if (!lit_##NAME) { \
-					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE); \
-				} \
+			const insieme::core::LiteralPtr create##NAME() const { \
+				const insieme::core::LiteralPtr result = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE, getNamedIrExtensions()); \
+				addNamedIrExtension(IR_NAME, result); \
+				return result; \
+			} \
+			const insieme::core::LiteralPtr& get##NAME() const { \
 				return lit_##NAME; \
 			} \
-			const bool is ## NAME (const insieme::core::NodePtr& node) const { \
-				return node && (*node == *get ## NAME()); \
+			const bool is##NAME(const insieme::core::NodePtr& node) const { \
+				return node && (*node == *get##NAME()); \
 			}
+
+	/**
+	 * A macro supporting the simple declaration and definition of a literal within a language extension
+	 * implementation.
+	 *
+	 * @param NAME the name of the literal to be added
+	 * @param VALUE the value of this literal
+	 * @param TYPE the IR type of the literal
+	 */
+	#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) \
+		LANG_EXT_LITERAL_WITH_NAME(NAME, "", VALUE, TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
