@@ -43,6 +43,7 @@
 #include "insieme/analysis/dfa/domain.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme { 
 namespace analysis { 
@@ -73,8 +74,8 @@ struct LatticeImpl {
 	LatticeImpl(const Dom& domain, const element_type& top, const element_type& bottom) : 
 		domainSet(domain), m_top(top), m_bottom(bottom) 
 	{
-		assert(dfa::contains(domainSet, m_top) && "Top element is not part of the lattice");
-		assert(dfa::contains(domainSet, m_bottom) && "Bottom element is not part of the lattice");
+		assert_true(dfa::contains(domainSet, m_top)) << "Top element is not part of the lattice";
+		assert_true(dfa::contains(domainSet, m_bottom)) << "Bottom element is not part of the lattice";
 	}
 
 	/**
@@ -144,18 +145,18 @@ struct LowerSemilattice : public virtual detail::LatticeImpl<Dom> {
 	}
 
 	element_type meet(const element_type& lhs, const element_type& rhs) const {
-		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
-				"Operands of the meet (^) operator are not part of the lattice, operation not defined");
+		assert_true(Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs)) <<
+				"Operands of the meet (^) operator are not part of the lattice, operation not defined";
 
 		element_type ret = meet_impl(lhs, rhs);
 
-		assert( is_weaker_than(ret, lhs) && is_weaker_than(ret, rhs)  && 
-				"Error satisfying post-conditions of meet (^) operator");
+		assert_true(is_weaker_than(ret, lhs) && is_weaker_than(ret, rhs)) << 
+				"Error satisfying post-conditions of meet (^) operator";
 
 		/**
 		 * Check whether the returned element is still an element of this lattice
 		 */	
-		assert( isLatticeElement(ret) && "Error: generated element is not part of the lattice");
+		assert_true(isLatticeElement(ret)) << "Error: generated element is not part of the lattice";
 		return ret;
 	}
 
@@ -223,18 +224,18 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<Dom> {
 	}
 
 	element_type join(const element_type& lhs, const element_type& rhs) const {
-		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
-				"Operands of the join (v) operator are not part of the lattice, operation not defined");
+		assert_true(Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs)) << 
+				"Operands of the join (v) operator are not part of the lattice, operation not defined";
 
 		element_type ret = join_impl(lhs, rhs);
 		
-		assert( is_stronger_than(ret, lhs) && is_stronger_than(ret, rhs)  &&
-				"Error satisfying post-conditions of join (v) operator");
+		assert_true(is_stronger_than(ret, lhs) && is_stronger_than(ret, rhs)) <<
+				"Error satisfying post-conditions of join (v) operator";
 
 		/**
 		 * Check whether the returned element is still an element of this lattice
 		 */	
-		assert( isLatticeElement(ret) && "Error: generated element is not part of the lattice");
+		assert_true(isLatticeElement(ret)) << "Error: generated element is not part of the lattice";
 
 		return ret;
 	}

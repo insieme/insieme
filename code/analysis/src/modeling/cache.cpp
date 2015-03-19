@@ -95,7 +95,7 @@ MapPtr<> buildCacheModel(CtxPtr<>& ctx, size_t block_size, size_t cache_size, si
 
 	// num_blocks  = cache_size / block_size
 	size_t num_blocks = cache_size / block_size / associativity;
-	assert(num_blocks > 0 && "Parameters for cache architecture not valid");
+	assert_gt(num_blocks, 0) << "Parameters for cache architecture not valid";
 	
 	std::string num_blocks_str = utils::numeric_cast<std::string>(num_blocks);
 	// BLOCK[i] -> SET[j] : exists a = [i/num_blocks] j = i - a*num_blocks and j > 0 and j < num_blocks

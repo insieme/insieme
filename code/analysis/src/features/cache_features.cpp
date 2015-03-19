@@ -560,7 +560,7 @@ namespace features {
 							static_pointer_cast<core::VariablePtr>(target)->getId());
 				}
 
-				assert(nodeType == core::NT_CallExpr && "Need to be some derived value!");
+				assert_eq(nodeType, core::NT_CallExpr) << "Need to be some derived value!";
 
 				const auto& call = static_pointer_cast<core::CallExprPtr>(target);
 				const auto& fun = call->getFunctionExpr();
@@ -752,7 +752,7 @@ namespace features {
 			}
 
 			core::SwitchStmtPtr visitSwitchStmt(const core::SwitchStmtPtr& stmt) {
-				assert(false && "Sorry, not implemented!");
+				assert_not_implemented();
 				return core::SwitchStmtPtr();
 			}
 

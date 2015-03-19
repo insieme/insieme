@@ -84,9 +84,9 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 	// this function. Because by looking to an expression we cannot determine if a variable is an
 	// iterator or a parameter we assume that variables in this expression which do not appear in
 	// the iteration domain are parameters.
-	for_each( terms.begin(), terms.end(), [&](const Formula::Term& cur){ 
+	for_each( terms.begin(), terms.end(), [&](const Formula::Term& cur) { 
 		const Product& prod = cur.first;
-		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
+		assert_le(prod.getFactors().size(), 1) << "Not a linear expression";
 
 		if ( !prod.isOne() ) {
 			core::ExpressionPtr&& var = removeSugar(prod.getFactors().front().first);
@@ -105,7 +105,7 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 	coeffs.resize(iterVec.size());
 	for_each( terms.begin(), terms.end(), [&](const Formula::Term& cur){ 
 		const Product& prod = cur.first;
-		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
+		assert_le(prod.getFactors().size(), 1) << "Not a linear expression";
 
 		assert (cur.second.isInteger());
 		if ( prod.isOne() ) {
@@ -161,17 +161,17 @@ bool AffineFunction::operator<(const AffineFunction& other) const {
 		auto thisIt = begin(), thisEnd = end();
 		__unused auto otherIt = other.begin(), otherEnd = other.end();
 
-		assert((std::distance(thisIt, thisEnd) == std::distance(otherIt, otherEnd)) && 
-				"size of 2 iterators differs");
+		assert_eq(std::distance(thisIt, thisEnd), std::distance(otherIt, otherEnd))  
+				<< "size of 2 iterators differs";
 
 		while(thisIt != thisEnd) {
-			assert((*thisIt).first == (*otherIt).first);
+			assert_true((*thisIt).first == (*otherIt).first);
 			if ((*thisIt).second > (*otherIt).second)
 				return false;
 			if ((*thisIt).second < (*otherIt).second) 
 				return true;
 			
-			assert((*thisIt).second == (*otherIt).second);
+			assert_true((*thisIt).second == (*otherIt).second);
 			++thisIt; ++otherIt;
 		}
 		// If we end up here it means the 2 functions have same coefficients 
@@ -197,7 +197,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 	core::ExpressionPtr ret;
 	for_each(filtered.first, filtered.second, [&] (const AffineFunction::Term& t) {
 		core::ExpressionPtr currExpr;
-		assert(t.second != 0 && "0 coefficient not filtered out correctly");
+		assert_eq(t.second, 0) << "0 coefficient not filtered out correctly";
 
 		if (t.first.getType() != Element::CONST) {
 			core::ExpressionPtr expr = static_cast<const Expr&>(t.first).getExpr();
@@ -205,7 +205,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 			if (expr->getType()->getNodeType() == core::NT_RefType) {
 				expr = builder.deref( expr );
 			}
-			assert(expr->getType()->getNodeType() != core::NT_RefType && "Operand cannot be of Ref Type");
+			assert_ne(expr->getType()->getNodeType(), core::NT_RefType) << "Operand cannot be of Ref Type";
 
 			// Check whether the expression is of type signed int
 			if ( !mgr.getLangBasic().isInt4( expr->getType() ) ) {
@@ -262,7 +262,7 @@ struct Printer : public utils::Printable {
 		if(isEmpty) {
 			// If the we didn't produce any output it means the affine constraint is all zeros,
 			// print the constant part to visualize the real value
-			assert(af.getCoeff(Constant()) == 0);
+			assert_eq(af.getCoeff(Constant()), 0);
 			out << 0;
 		}
 	}
@@ -339,10 +339,10 @@ void AffineFunction::setCoeff(size_t idx, int coeff) {
 
 		// Perform checks and update internal representation
 		if( idx < iterVec.getIteratorNum() ) {
-			assert(new_coeffs.size() == coeffs.size()+(idx-(sep-1)));
+			assert_eq(new_coeffs.size(), coeffs.size()+(idx-(sep-1)));
 			sep = idx+1;
 		} else {				
-			assert(new_coeffs.size() == coeffs.size()+(idx-(coeffs.size()-2)));
+			assert_eq(new_coeffs.size(), coeffs.size()+(idx-(coeffs.size()-2)));
 		}
 
 		coeffs = new_coeffs;
@@ -410,7 +410,7 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 }
 
 AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {
-	assert(iterVec.size() >= this->iterVec.size());
+	assert_ge(iterVec.size(), this->iterVec.size());
 	
 	IndexTransMap idxMapCpy = idxMap;
 	if ( idxMap.empty() ) {
@@ -450,7 +450,7 @@ AffineFunction::operator core::arithmetic::Formula() const {
 			res = res + (Value(expr) * cur.second);
 			return;
 		}
-		assert(cur.first.getType() == Element::CONST);
+		assert_eq(cur.first.getType(), Element::CONST);
 		res = res + Formula(cur.second);
 	});
 

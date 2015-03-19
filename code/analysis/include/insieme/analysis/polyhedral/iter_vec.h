@@ -101,7 +101,7 @@ class Expr : public Element {
 public:
 	Expr(const Type& type, const core::ExpressionPtr& expr) : Element(type),  expr(expr) { } 
 
-	inline const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
+	inline const core::ExpressionPtr& getExpr() const { assert_true(expr); return expr; } 
 
 	virtual ~Expr() { }
 };
@@ -264,11 +264,11 @@ public:
 	 * In the case the iterator is already present, the index of the element is returned. 
 	 */
 	inline size_t add(const Iterator& iter) { 
-		assert((getIdxFrom(iter, iters) != -1 || getIdx(iter) == -1) && "Variable already among the iterators");
+		assert_true((getIdxFrom(iter, iters) != -1 || getIdx(iter) == -1)) << "Variable already among the iterators";
 		return addTo(iter, iters); 
 	}
 	inline size_t add(const Parameter& param) { 
-		assert((getIdxFrom(param, params) != -1 || getIdx(param) == -1) && "Variable exists among the iterators");
+		assert_true((getIdxFrom(param, params) != -1 || getIdx(param) == -1)) << "Variable exists among the iterators";
 		return addTo(param, params) + iters.size(); 
 	}
 
@@ -292,8 +292,7 @@ public:
 		if (var->getNodeType() == core::NT_Variable) {
 			int idx = getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) );
 			if ( idx != -1 ) {
-				assert(getIdx( Parameter(var) ) == -1 && 
-						"Variable is both among the iterators and parameters.");
+				assert_eq(getIdx(Parameter(var)), -1) << "Variable is both among the iterators and parameters.";
 				return idx;
 			}
 		}
