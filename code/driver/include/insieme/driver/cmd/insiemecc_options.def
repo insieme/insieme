@@ -38,12 +38,17 @@
 #define FLAG( NAME, ID, DESCRIPTION )
 #endif
 
+#ifndef PARAMETER
+#define PARAMETER( NAME, ID, ARG_TYPE, DEFAULT_VALUE, DESCRIPTION )
+#endif
+
 #ifndef OPTION
 #define OPTION( NAME, ID, ARG_TYPE, DEFAULT_VALUE, DESCRIPTION )
 #endif
 
 FLAG("benchmark-core", 			benchmarkCore, 				"benchmarking of some standard core operations on the intermediate representation")
 FLAG("check-sema", 				checkSema,					"Run semantic checks on the generated IR")
+FLAG("check-sema-only", 		checkSemaOnly,				"Run semantic checks on the generated IR and stop afterwards")
 FLAG("compile,c", 				compileOnly, 				"compilation only")
 FLAG("debug-information,g", 	debug, 						"produce debug information")
 FLAG("estimate-effort", 		estimateEffort,				"Enables generation of the effort estimation function")
@@ -58,12 +63,17 @@ FLAG("no-warnings", 			noWarnings, 				"inhibit all warnings")
 FLAG("progress", 				progress, 					"show progress bar for frontend conversion process")
 FLAG("show-stats",				showStatistics, 			"Computes statistics regarding the composition of the IR")
 FLAG("use-pm",					usePM,						"Perform code transformations using the Polyhedral Model")
-//FLAG("strict-semantics", 		strictSemantics,			"semantic checks")
 FLAG("version", 				version, 					"print version string")
 FLAG("win-cross-compile", 		winCrossCompile,			"Set cross compilation for a Windows target")
+FLAG("dump-cfg",				dumpCFG,    				"Print dot graph of the CFG")
+FLAG("dump-ir", 				dumpIR, 					"dump intermediate representation")
+FLAG("dump-trg", 				dumpTRG, 					"dump target code")
+FLAG("dump-tu", 				dumpTU, 					"dump translation unit")
 
-OPTION("backend",				backend,					std::string,						"runtime", 							"Backend selection")
-OPTION("ocl-code",				dumpOclKernel,				frontend::path,						"a.cl", 							"dump OpenCL kernel")
+PARAMETER("backend",				backend,					std::string,						"runtime", 							"Backend selection")
+PARAMETER("outfile,o", 				outFile, 					frontend::path, 					"a.out", 							"output file")
+PARAMETER("std", 					standard,					std::string, 						"auto", 							"language standard")
+
 OPTION("cross-compile-dir", 	crossCompileDir, 			std::string, 						std::string(),						"Set system header directory for cross compilation.")
 OPTION("definitions,D", 		definitions,				std::vector<std::string>, 			std::vector<std::string>(), 		"definition(s)")
 OPTION("fopt", 					optimizationFlags,			std::vector<std::string>, 			std::vector<std::string>(), 		"optimization flags")
@@ -71,25 +81,14 @@ OPTION("include-path,I", 		includePaths, 				std::vector<frontend::path>, 		std:
 OPTION("input-file", 			inFiles, 					std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"input file(s)")
 OPTION("intercept-include", 	interceptIncludes,			std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"intercepted include file(s)")
 OPTION("intercept", 			intercept,					std::vector<std::string>, 			std::vector<std::string>(), 		"regular expression(s) to be intercepted")
-OPTION("ir-code", 				dumpIR, 					frontend::path, 					"a.ir", 							"dump intermediate representation")
 OPTION("isystem", 				systemIncludePaths, 		std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"additional system include search path(s)")
 OPTION("library-file,l", 		libraryFiles,				std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"linker flag(s)/file(s)")
 OPTION("library-path,L", 		libraryPaths,				std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"library search path(s)")
 OPTION("log-level",				logLevel,					std::string,						"ERROR", 							"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
-OPTION("outfile,o", 			outFile, 					frontend::path, 					"a.out", 							"output file")
-OPTION("std", 					standard,					std::string, 						"auto", 							"language standard")
-OPTION("trg-code", 				dumpTRG, 					frontend::path, 					"a.c", 								"dump target code")
-OPTION("tu-code", 				dumpTU, 					frontend::path, 					"a.tu", 							"dump translation unit")
-OPTION("verbose,v",				verbosity,					int,								0, 									"Set log verbosity")
+OPTION("ocl-code",				dumpOclKernel,				frontend::path,						"a.cl", 							"dump OpenCL kernel")
 OPTION("optimization,O", 		optimization, 				std::string,						std::string(),						"optimization flag")
-
-/*
-// output options
-//FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
-
-// backend selection
-OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph of the CFG")
-*/
+OPTION("verbose,v",				verbosity,					int,								0, 									"Set log verbosity")
 
 #undef FLAG
+#undef PARAMETER
 #undef OPTION

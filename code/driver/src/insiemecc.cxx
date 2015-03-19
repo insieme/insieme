@@ -52,6 +52,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "insieme/analysis/cfg.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -126,7 +127,9 @@ void showStatistics(const core::ProgramPtr& program) {
 //****************************************************************************************
 //                BENCHMARK CORE: Perform some performance benchmarks
 //****************************************************************************************
-void benchmarkCore(core::NodeManager& mgr, const core::NodePtr& program) {
+void benchmarkCore(const core::NodePtr& program) {
+
+	core::NodeManager& mgr = program->getNodeManager();
 
 	openBoxTitle("Core Benchmarking");
 
@@ -188,10 +191,30 @@ void benchmarkCore(core::NodeManager& mgr, const core::NodePtr& program) {
 	closeBox();
 }
 
+//****************************************************************************************
+//            DUMP CFG: build the CFG of the program and dumps it into a file
+//****************************************************************************************
+void dumpCFG(const NodePtr& program, const std::string& outFile) {
+	using namespace insieme::analysis;
+	if(outFile.empty()) { return; }
+
+	utils::Timer timer();
+	CFGPtr graph = utils::measureTimeFor<CFGPtr, INFO>("Build.CFG", [&]() {
+		return CFG::buildCFG<OneStmtPerBasicBlock>(program);
+	});
+
+	utils::measureTimeFor<INFO>( "Visit.CFG", [&]() {
+			std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
+			dotFile << *graph;
+		}
+	);
+}
+
 //***************************************************************************************
 // 					SEMA: Performs semantic checks on the IR
 //***************************************************************************************
-void checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
+int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
+	int retval = 0;
 
 	using namespace insieme::core::printer;
 
@@ -238,17 +261,18 @@ void checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 
 	// In the case of semantic errors, quit
 	if ( !list.getErrors().empty() ) {
-		cerr << "---- Semantic errors encountered - compilation aborted!! ----\n";
-		exit(1);
+		cerr << "---- Semantic errors encountered!! ----\n";
+		retval = 1;
 	}
 
 	closeBox();
+	return retval;
 }
 
 //***************************************************************************************
 //		Polyhedral Model Extraction: Start analysis for SCoPs and prints out stats
 //***************************************************************************************
-void markSCoPs(core::ProgramPtr& program, const cmd::Options& options) {
+void markSCoPs(core::ProgramPtr& program) {
 	using namespace insieme::analysis::polyhedral::scop;
 
 	// find SCoPs in our current program
@@ -395,13 +419,13 @@ int main(int argc, char** argv) {
 	// indicates that a shared object file should be created
 	bool createSharedObject = fs::extension(options.settings.outFile) == ".so";
 
-std::cout << "Libs:    " << libs << "\n";
-std::cout << "Inputs:  " << inputs << "\n";
-std::cout << "ExtLibs: " << extLibs << "\n";
-std::cout << "OutFile: " << options.settings.outFile << "\n";
-std::cout << "Compile Only: " << options.settings.compileOnly << "\n";
-std::cout << "SharedObject: " << createSharedObject << "\n";
-std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
+//std::cout << "Libs:    " << libs << "\n";
+//std::cout << "Inputs:  " << inputs << "\n";
+//std::cout << "ExtLibs: " << extLibs << "\n";
+//std::cout << "OutFile: " << options.settings.outFile << "\n";
+//std::cout << "Compile Only: " << options.settings.compileOnly << "\n";
+//std::cout << "SharedObject: " << createSharedObject << "\n";
+//std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
 
 	// update input files
 	options.job.setFiles(inputs);
@@ -425,12 +449,14 @@ std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
 	}
 
 	// dump the translation unit file (if needed for de-bugging)
-	if(!options.settings.dumpTU.empty()) {
+	if(options.settings.dumpTU) {
 		std::cout << "Converting Translation Unit ...\n";
 		auto tu = options.job.toIRTranslationUnit(mgr);
-		std::ofstream out(options.settings.dumpTU.string());
+		std::ofstream out(options.settings.outFile.string());
 		out << tu;
+		return 0;
 	}
+
 
 	std::cout << "Extracting executable ...\n";
 
@@ -441,71 +467,46 @@ std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
     if(options.settings.checkSema)
     	checkSema(program, errors);
 
+    if(options.settings.checkSemaOnly) {
+    	std::cout << "#################################### check sema only\n";
+    	return checkSema(program, errors);
+    }
+
+    if(options.settings.dumpCFG) {
+    	dumpCFG(program, options.settings.outFile.string());
+    	return 0;
+    }
+
     if(options.settings.showStatistics)
     	showStatistics(program);
 
     if(options.settings.benchmarkCore)
-    	benchmarkCore(mgr, program);
+    	benchmarkCore(program);
+
+    if(options.settings.markScop)
+    	markSCoPs(program);
+
+    if(options.settings.usePM)
+    	SCoPTransformation(program, options);
 
 	// dump IR code
-	if(!options.settings.dumpIR.empty()) {
+	if(options.settings.dumpIR) {
 		LOG(INFO) << "Dumping Translation Unit";
-		std::ofstream out(options.settings.dumpIR.string());
+		std::ofstream out(options.settings.outFile.string());
 		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
-	}
-
-	if(options.job.hasOption(fe::ConversionSetup::StrictSemanticChecks)) {
-		std::cout << "Running semantic checks ...\n";
-		auto list = co::checks::check(program);
-		if (!list.empty()){
-			auto errors = list.getAll();
-			std::sort(errors.begin(), errors.end());
-			for_each(errors, [&](const co::checks::Message& cur) {
-				std::cout << cur << std::endl;
-				co::NodeAddress address = cur.getOrigin();
-				stringstream ss;
-				unsigned contextSize = 1;
-				do {
-
-					ss.str("");
-					ss.clear();
-					co::NodePtr&& context = address.getParentNode(
-							min((unsigned)contextSize, address.getDepth()-contextSize)
-						);
-					ss << co::printer::PrettyPrinter(context, co::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
-
-				} while(ss.str().length() < 40 && contextSize++ < 5);
-
-				// find enclosing function
-				auto fun = address;
-				while(!fun.isRoot() && fun->getNodeType() != co::NT_LambdaExpr) {
-					fun = fun.getParentAddress();
-				}
-				if (fun->getNodeType() == co::NT_LambdaExpr) {
-					std::cout << "\tContext:\n" << co::printer::PrettyPrinter(fun,co::printer::PrettyPrinter::PRINT_DEREFS |
-													co::printer::PrettyPrinter::PRINT_CASTS |
-													co::printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE) << std::endl; 
-					if(!co::annotations::hasNameAttached(fun)) {
-						std::cout << " Function originaly named: " << co::annotations::getAttachedName(fun)<< std::endl;
-					}
-				}
-			});
-		}
+		return 0;
 	}
 
 	// Step 3: produce output code
-	//		This part converts the processed code into C-99 target code using the
-	//		backend producing parallel code to be executed using the Insieme runtime
-	//		system. Backends targeting alternative platforms may be present in the
-	//		backend modul as well.
 	cout << "Creating target code ...\n";
 	backend::BackendPtr backend = getBackend(program, options);
 	auto targetCode = backend->convert(program);
 
 	// dump source file if requested
-	if(!options.settings.dumpTRG.empty()) {
-		std::ofstream out(options.settings.dumpTRG.string());
+	if(options.settings.dumpTRG) {
+		std::ofstream out(options.settings.outFile.string());
 		out << *targetCode;
+		return 0;
 	}
 
 

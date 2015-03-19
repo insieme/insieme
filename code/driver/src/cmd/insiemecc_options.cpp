@@ -63,10 +63,14 @@ namespace cmd {
 			desc.add_options()
 #define FLAG(_name__, _id__, _description__) \
 			( _name__, _description__)
-#define OPTION(_name__, _id__, _type__, _default_value__, _description__) \
+#define PARAMETER(_name__, _id__, _type__, _default_value__, _description__) \
 			( _name__, bpo::value< _type__ >()->default_value(_default_value__), _description__)
+#define OPTION(_name__, _id__, _type__, _default_value__, _description__) \
+			( _name__, bpo::value< _type__ >()->implicit_value(_default_value__), _description__)
 #include "insieme/driver/cmd/insiemecc_options.def"
 			;
+
+
 
 		}
 
@@ -112,13 +116,16 @@ namespace cmd {
 			tempName = string(_name__); \
 			tempName = tempName.substr(0, tempName.find(",")); \
 			res.settings._id__ = map.count(tempName.c_str());
+#define PARAMETER(_name__, _id__, _type__, _default_value__, _description__) \
+			tempName = string(_name__); \
+			tempName = tempName.substr(0, tempName.find(",")); \
+			if(map.count(tempName.c_str())) \
+				res.settings._id__ = map[tempName.c_str()].as<_type__>();
 #define OPTION(_name__, _id__, _type__, _default_value__, _description__) \
 			tempName = string(_name__); \
 			tempName = tempName.substr(0, tempName.find(",")); \
 			if(map.count(tempName.c_str())) \
-				res.settings._id__ = map[tempName.c_str()].as<_type__>(); \
-/*			else \
-				res.settings._id__ = _default_value__;*/
+				res.settings._id__ = map[tempName.c_str()].as<_type__>();
 #include "insieme/driver/cmd/insiemecc_options.def"
 
 			// assume valid options until indicated otherwise

@@ -94,6 +94,8 @@ namespace cmd {
 #define FLAG(_name__, _id__, _description__) \
 			bool _id__;
 //			#include "insieme/driver/cmd/insiemecc_options.def"
+#define PARAMETER( _name__, _id__, _type__, _default_value__, _description__) \
+			_type__ _id__;
 #define OPTION( _name__, _id__, _type__, _default_value__, _description__) \
 			_type__ _id__;
 			#include "insieme/driver/cmd/insiemecc_options.def"
