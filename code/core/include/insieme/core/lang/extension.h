@@ -203,23 +203,35 @@ namespace lang {
 	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
 	 *
 	 * @param NAME the name of the language construct
+	 * @param IR_NAME the name used to reference this derived within this extension and in parsed code
+	 * @param SPEC the implementation of the derived construct (using INSPIRE)
+	 */
+	#define LANG_EXT_DERIVED_WITH_NAME(NAME, IR_NAME, SPEC) \
+		private: \
+			const insieme::core::ExpressionPtr expr_##NAME = create##NAME(); \
+		public: \
+			const insieme::core::ExpressionPtr create##NAME() const { \
+				insieme::core::IRBuilder builder(getNodeManager()); \
+				const insieme::core::ExpressionPtr result = builder.normalize(builder.parseExpr(SPEC, getNamedIrExtensions())).as<insieme::core::ExpressionPtr>(); \
+				insieme::core::lang::markAsDerived(result, #NAME); \
+				addNamedIrExtension(IR_NAME, result); \
+				return result; \
+			} \
+			const insieme::core::ExpressionPtr& get##NAME() const { \
+				return expr_##NAME; \
+			} \
+			const bool is##NAME(const insieme::core::NodePtr& node) const { \
+				return node && (*node == *get ## NAME()); \
+			}
+
+	/**
+	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
+	 *
+	 * @param NAME the name of the language construct
 	 * @param SPEC the implementation of the derived construct (using INSPIRE)
 	 */
 	#define LANG_EXT_DERIVED(NAME, SPEC) \
-		private: \
-			mutable insieme::core::ExpressionPtr expr_ ## NAME; \
-		public: \
-			const insieme::core::ExpressionPtr& get ## NAME () const { \
-				if (!expr_##NAME) { \
-					insieme::core::IRBuilder builder(getNodeManager()); \
-					expr_ ## NAME = builder.normalize(builder.parseExpr(SPEC)).as<insieme::core::ExpressionPtr>(); \
-					insieme::core::lang::markAsDerived(expr_ ## NAME, #NAME); \
-				} \
-				return expr_##NAME; \
-			} \
-			const bool is ## NAME (const insieme::core::NodePtr& node) const { \
-				return node && (*node == *get ## NAME()); \
-			}
+		LANG_EXT_DERIVED_WITH_NAME(NAME, "", SPEC)
 
 } // end namespace lang
 } // end namespace core

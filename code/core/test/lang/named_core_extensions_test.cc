@@ -75,6 +75,10 @@ namespace lang {
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteralUnknown, "NamedLiteralUnknown", "named_lit_unknown", "(FooType)->unit")
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
+
+		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "let foo = FooType in (foo x)->foo { return x; }")
+
+		LANG_EXT_DERIVED_WITH_NAME(NamedDerived, "NamedDerived", "let foo = NamedType in (foo x)->foo { return x; }")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {
@@ -91,6 +95,9 @@ namespace lang {
 
 		//Lookup a registered literal
 		EXPECT_TRUE(definedNames.find("NamedLiteral")->second == extension.getNamedLiteral());
+
+		//Lookup a registered derived
+		EXPECT_TRUE(definedNames.find("NamedDerived")->second == extension.getNamedDerived());
 	}
 
 	TEST(NamedCoreExtensionTest, NamedTypes) {
@@ -128,6 +135,22 @@ namespace lang {
 		auto& namedLiteral = extension.getNamedLiteral();
 		EXPECT_EQ("named_lit", toString(*namedLiteral));
 		EXPECT_EQ("((struct<foo:'a>)->unit)", toString(*namedLiteral.getType()));
+	}
+
+	TEST(NamedCoreExtensionTest, NamedDerived) {
+		NodeManager manager;
+
+		auto& extension = manager.getLangExtension<NamedCoreExtensionTestExtension>();
+
+		//Test for the re-use of an unknown named extension
+		auto& namedDerivedUnknown = extension.getNamedDerivedUnknown();
+		EXPECT_EQ("rec v0.{v0=fun(FooType v1) {return v1;}}", toString(*namedDerivedUnknown));
+		EXPECT_EQ("((FooType)->FooType)", toString(*namedDerivedUnknown.getType()));
+
+		//Test for correct handling of a known named extension
+		auto& namedDerived = extension.getNamedDerived();
+		EXPECT_EQ("rec v0.{v0=fun(struct<foo:'a> v1) {return v1;}}", toString(*namedDerived));
+		EXPECT_EQ("((struct<foo:'a>)->struct<foo:'a>)", toString(*namedDerived.getType()));
 	}
 
 } // end namespace lang
