@@ -45,6 +45,9 @@
 
 #include "insieme/core/lang/lang.h"
 
+#include <string>
+#include <map>
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -159,24 +162,6 @@ namespace lang {
 	 */
 	#define LANG_EXT_TYPE(NAME, TYPE) \
 		LANG_EXT_TYPE_WITH_NAME(NAME, "", TYPE)
-
-	/**
-	 * A macro supporting the simple declaration and definition of a type within a language extension
-	 * implementation.
-	 *
-	 * @param NAME the name of the type literal to be added
-	 * @param TYPE the IR type to be represented as a string
-	 */
-	#define LANG_EXT_NAMED_TYPE(NAME,TYPE,CNAME) \
-		private: \
-			mutable insieme::core::TypePtr lit_ ## NAME; \
-		public: \
-			const insieme::core::TypePtr& get ## NAME () const { \
-				if (!lit_##NAME) { \
-					lit_ ## NAME = annotations::c::attachCName(insieme::core::lang::getType(getNodeManager(), TYPE), CNAME);\
-				} \
-				return lit_##NAME; \
-			}
 
 	/**
 	 * A macro supporting the simple declaration and definition of a literal within a language extension
