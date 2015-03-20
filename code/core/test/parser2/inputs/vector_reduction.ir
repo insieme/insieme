@@ -10,7 +10,6 @@ unit main() {
         return a + b;
     };
 
-	// an atomic increment
 	let vectorReduce = (vector<'a,#n> v, 'b init, ('b, 'a) -> 'b f) -> 'b {
         ref<'b> res = var(init);
         for (uint i = 0u .. toUint(param(#n))){
