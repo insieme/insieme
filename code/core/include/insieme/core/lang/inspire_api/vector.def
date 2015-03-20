@@ -45,13 +45,14 @@ GROUP(Pointwise, VectorPointwise, VectorPointwiseUnary)
 // deprecated
 LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
-DERIVED(VectorInitUniform,    	"vector.init.uniform",  "('elem value, intTypeParam<#a> size) -> vector<'elem,#a>{"
-                                                        "    ref<vector<'elem, #a>> res = var(vector.init.undefined(lit('elem), param(#a)));"
-                                                        "    for (uint<8> i = 0ul .. to.uint(param(#a))){"
-                                                        "        res[i] = value;"
-                                                        "    }"
-                                                        "    return *res;"
-                                                        "}")
+LITERAL(VectorInitUniform,    	"vector.init.uniform",  "('elem, intTypeParam<#a> ) -> vector<'elem,#a>")
+//DERIVED(VectorInitUniform,    	"vector.init.uniform",  "('elem value, intTypeParam<#a> size) -> vector<'elem,#a>{"
+//                                                        "    ref<vector<'elem, #a>> res = var(vector.init.undefined(lit('elem), size));"
+//                                                        "    for (uint<8> i = 0ul .. to.uint(size)){"
+//                                                        "        res[i] = value;"
+//                                                        "    }"
+//                                                        "    return *res;"
+//                                                        "}")
 
 //TODO: I would love to convert this, but i find no way to manipulate lists in IR
 LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")

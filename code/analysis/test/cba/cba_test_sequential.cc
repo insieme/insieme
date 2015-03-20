@@ -1979,7 +1979,7 @@ namespace cba {
 		IRBuilder builder(mgr);
 
 		std::map<string, NodePtr> symbols;
-		symbols["c"] = builder.literal("c", builder.getlangbasic().getbool());
+		symbols["c"] = builder.literal("c", builder.getLangBasic().getBool());
 
 
 		auto in = builder.parseStmt(

@@ -17,8 +17,8 @@ unit main() {
 
 	// an atomic increment
 	let vector_unif = ('elem value, intTypeParam<#a> size) -> vector<'elem,#a>{
-        ref<vector<'elem, #a>> res = var(initUndef(lit('elem), param(#a)));
-        for (uint<8> i = 0ul .. toUint(param(#a))){
+        ref<vector<'elem, #a>> res = var(initUndef(lit('elem), size));
+        for (uint<8> i = 0ul .. toUint(size)){
             res[i] = value;
         }
         return *res;
