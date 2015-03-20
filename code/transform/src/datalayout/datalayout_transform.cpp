@@ -125,8 +125,6 @@ ExprAddressRefTypeMap findAllSuited(const NodeAddress& toTransform) {
 		TypePtr varType = structVar->getType();
 		RefTypePtr structType = nm["structType"].getValue().as<RefTypePtr>();
 //std::cout << "\nadding " << structVar << " " << *structVar << std::endl;
-		if(match.getParentAddress(1)->getNodeType() == NT_DeclarationStmts)
-			return; // do not consider variables which are part of declaration statements
 
 		if(tupleType.match(varType)) {
 			return; // tuples are not candidates since only one field needs to be altered.
@@ -259,7 +257,7 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplacements, ExpressionAddress init, NodeMap& backupReplacements,
 		StringValuePtr fieldName) {
 	// check for marshalled variables in init expression
-	std::pair<ExpressionPtr, ExpressionPtr> varInInit;
+	std::pair<ExpressionPtr, StatementPtr> varInInit;
 	visitBreadthFirstInterruptible(init, [&](const ExpressionAddress& currVar) {
 		auto check = varReplacements.find(getDeclaration(currVar));
 		if(check != varReplacements.end()) {
@@ -273,7 +271,8 @@ ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplace
 		// replace accesses to old variable with accesses to field in new variable
 		ExpressionMap localReplacement;
 		IRBuilder builder(mgr);
-		localReplacement[varInInit.first] = fieldName ? builder.accessMember(varInInit.second, fieldName) : varInInit.second;
+		localReplacement[varInInit.first] = fieldName ?
+				builder.accessMember(varInInit.second.as<ExpressionPtr>(), fieldName) : varInInit.second.as<ExpressionPtr>();
 
 		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init.getAddressedNode(), localReplacement, true);
 
@@ -370,9 +369,9 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 		visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
 
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
@@ -419,9 +418,9 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 	IRBuilder builder(mgr);
 	std::vector<StatementAddress> marshalled;
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 
 		pattern::TreePattern aosVariable = pattern::var("oldVar", pattern::atom(oldVar));//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 		pattern::TreePattern assignToStruct = pirp::assignment(pattern::var("struct", pirp::callExpr(pirp::refType(pirp::structType(*pattern::any)),
@@ -502,9 +501,9 @@ std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const Expr
 	std::vector<StatementAddress> unmarshallingPoints;
 	StatementAddress begin = beginV.empty() ? StatementAddress() : beginV.front();
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 
 		pattern::TreePattern aosVariable = pattern::var("oldVar", pattern::atom(oldVar));//pirp::variable(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))));
 		pattern::TreePattern readFromStruct = pirp::assignment(pattern::any, pattern::var("struct", pirp::callExpr(pirp::structType(*pattern::any),
@@ -583,9 +582,9 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 		const std::vector<StatementAddress>& begin, const std::vector<StatementAddress>& end, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 
 //std::cout << "Replacing accesses to " << oldVar << "  " << *oldVar << std::endl;
 
@@ -685,9 +684,9 @@ void DatalayoutTransformer::updateScalarStructAccesses(NodePtr& toTransform) {
 void DatalayoutTransformer::addNewDel(const ExprAddressMap& varReplacements, const NodeAddress& toTransform, const StructTypePtr& newStructType,
 		std::map<NodeAddress, NodePtr>& replacements) {
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 		IRBuilder builder(mgr);
 
 		visitDepthFirstInterruptible(toTransform, [&](const ExpressionAddress& call)->bool {
@@ -716,10 +715,10 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 	IRBuilder builder(mgr);
 	ExprAddressMap tupleVars;
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 
 		pattern::TreePattern structAccess =  pattern::var("structAccess", pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))));
 		pattern::TreePattern tupleAccess = pattern::var("access", pirp::tupleRefElem(pattern::aT(pattern::var("tupleVar", pirp::variable())),
@@ -751,7 +750,7 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 
 				tupleVars[oldTupleVar] = newTupleVar;
 			} else {
-				newTupleVar = tupleVars[oldTupleVar];
+				newTupleVar = tupleVars[oldTupleVar].as<ExpressionPtr>();
 			}
 
 
@@ -784,10 +783,10 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 	}
 
 	//replace all occurrences of the selected tuples
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : tupleVars) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : tupleVars) {
 
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second;
+		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
 
 
 		if(DeclarationStmtAddress decl = oldVar.getParentAddress().isa<DeclarationStmtAddress>()) { //update init expression
@@ -820,7 +819,7 @@ void DatalayoutTransformer::updateCopyDeclarations(ExprAddressMap& varReplacemen
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 
 		const ExpressionAddress& oldVar = vr.first;
 //		const ExpressionPtr& newVar = vr.second;
@@ -922,7 +921,7 @@ std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vect
 			auto varCheck = varsToReplace.find(match.get()["variable"].getValue().as<ExpressionAddress>());
 			if(varCheck != varsToReplace.end()) {
 				oldVar = varCheck->first;
-				newVar = varCheck->second;
+				newVar = varCheck->second.as<ExpressionPtr>();
 
 				ExpressionPtr newArg = core::transform::fixTypesGen(mgr, arg.getAddressedNode(), oldVar, newVar, false);
 				indicesToNewArgs[idx] = newArg;
@@ -944,7 +943,7 @@ ExpressionPtr VariableAdder::updateArgument(const ExpressionAddress& oldArg) {
 		auto varCheck = varsToReplace.find(oldVarDecl);
 		if(varCheck != varsToReplace.end()) {
 			ExpressionAddress oldVar = varCheck->first;
-			ExpressionPtr newVar = varCheck->second;
+			ExpressionPtr newVar = varCheck->second.as<ExpressionPtr>();
 
 			newArg = core::transform::fixTypesGen(mgr, oldArg.getAddressedNode(), oldVar, newVar, false);
 		}
@@ -972,10 +971,10 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 //	std::cout << "to replace: " << vr.first << " " << *vr.first << std::endl;
 //}
 	NodeAddress srcAddr = NodeAddress(src);
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varsToReplace) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varsToReplace) {
 		// update current address
 		ExpressionAddress oldVar = vr.first;
-		ExpressionPtr newVar = vr.second;
+		ExpressionPtr newVar = vr.second.as<ExpressionPtr>();
 		if(oldVar.getDepth() > 5) {
 			// if the variable's parent is a lambda it means it is part of a call to a subfunction -> add the new variable to the call
 			if(LambdaAddress lambda = oldVar.getParentAddress(2).isa<LambdaAddress>()) {
@@ -1040,14 +1039,14 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 
 	ExprAddressMap tmp;
 	// update addresses in the replacement list
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : varsToReplace) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varsToReplace) {
 		tmp[vr.first.switchRoot(srcAddr)] = vr.second;
 	}
 
 //TODO check if needed
 	//varsToReplace = tmp;
 	varsToReplace.clear();
-	for(std::pair<ExpressionAddress, ExpressionPtr> vr : tmp) {
+	for(std::pair<ExpressionAddress, StatementPtr> vr : tmp) {
 		varsToReplace[vr.first] = vr.second;
 	}
 

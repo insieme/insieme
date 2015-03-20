@@ -64,7 +64,7 @@ struct VariableMap : public std::map<core::ExpressionAddress, ValueType, Variabl
 struct ExprAddressSet : public std::set<core::ExpressionAddress, VariableComparator> {};
 
 typedef VariableMap<core::RefTypePtr> ExprAddressRefTypeMap;
-typedef VariableMap<core::ExpressionPtr> ExprAddressMap;
+typedef VariableMap<core::StatementPtr> ExprAddressMap;
 //typedef std::set<core::ExpressionAddress> ExprAddressSet;
 typedef std::function<ExprAddressRefTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
