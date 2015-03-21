@@ -117,7 +117,7 @@ dumpPretty(lambda);
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprAddress job = expr.isa<JobExprAddress>()) {
-			CallExprAddress parallelCall = job->getBody().isa<BindExprAddress>()->getCall();
+			CallExprAddress parallelCall = job->getDefaultExpr().isa<BindExprAddress>()->getCall();
 
 			if(!parallelCall)
 				return;
