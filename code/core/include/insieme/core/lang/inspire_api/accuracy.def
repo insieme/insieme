@@ -34,44 +34,14 @@
  * regarding third party software licenses.
  */
 
-#ifndef TYPE
-#define TYPE(_id, _spec)
-#endif
-#ifndef LITERAL
-#define LITERAL(_id, _name, _spec)
-#endif
-#ifndef DERIVED
-#define DERIVED(_id, _name, _code) LITERAL(_id, _name, fail)
-#endif
-#ifndef GROUP
-#define GROUP(_id, ...)
-#endif
-#ifndef OPERATOR
-#define OPERATOR(_id, _str)
-#endif
-#ifndef OPERATION
-#define OPERATION(_type, _op, _name, _spec)
-#endif
-#ifndef DERIVED_OP
-#define DERIVED_OP(_type, _op, _name, _spec)
-#endif
-#ifndef SUB_TYPE
-#define SUB_TYPE(_subtype, _supertype)
-#endif
+// Accuracy defining functions ----------------------------------------------------------------------------------------
+GROUP(Accuracy, AccuracyHighBinary, AccuracyBestEffortBinary, AccuracyFastBinary, AccuracyHighUnary, AccuracyBestEffortUnary, AccuracyFastUnary)
 
-#include "insieme/core/lang/inspire_api/basic.def"
-#include "insieme/core/lang/inspire_api/vector.def"
-#include "insieme/core/lang/inspire_api/parallel.def"
-#include "insieme/core/lang/inspire_api/accuracy.def"
-#include "insieme/core/lang/inspire_api/deprecated.def"
+DERIVED(AccuracyHighBinary,       "accuracy.high",          "(('a, 'a)=>'b f) -> ('a, 'a)=>'b { return f; }")
+DERIVED(AccuracyBestEffortBinary, "accuracy.besteffort",    "(('a, 'a)=>'b f) -> ('a, 'a)=>'b { return f; }")
+DERIVED(AccuracyFastBinary,       "accuracy.fast",          "(('a, 'a)=>'b f) -> ('a, 'a)=>'b { return f; }")
+DERIVED(AccuracyHighUnary,       "accuracy.high.unary",     "(('a, 'a)=>'b f) -> ('a, 'a)=>'b { return f; }")
+DERIVED(AccuracyBestEffortUnary, "accuracy.besteffort.unary", "(('a, 'a)=>'b f) -> ('a, 'a)=>'b { return f; }")
+DERIVED(AccuracyFastUnary,       "accuracy.fast.unary",     "(('a, 'a)=>'b f) -> ('a, 'a)=>'b { return f; }")
 
 
-
-#undef TYPE
-#undef LITERAL
-#undef DERIVED
-#undef GROUP
-#undef OPERATOR
-#undef OPERATION
-#undef DERIVED_OP
-#undef SUB_TYPE
