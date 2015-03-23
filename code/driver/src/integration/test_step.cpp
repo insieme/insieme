@@ -203,8 +203,8 @@ namespace integration {
 					cmd << " --check-sema-only";
 
 					// also dump IR
-//					std::string irFile=executionDirectory + "/" + test.getBaseName() + ".ir";
-					cmd << " --dump-ir "; // << irFile;
+					std::string irFile = executionDirectory + "/" + test.getBaseName() + ".ir";
+					cmd << " --dump-ir " << irFile;
 
 					// add include directories
 					for(const auto& cur : test.getIncludeDirs()) {
@@ -244,8 +244,8 @@ namespace integration {
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
 					// run it
-//					return runner.runCommand(name, set, props, cmd.str(),set.irFile);
-					return runner.runCommand(name, set, props, cmd.str(),set.stdOutFile);
+					return runner.runCommand(name, set, props, cmd.str(),irFile);
+//					return runner.runCommand(name, set, props, cmd.str(),set.stdOutFile);
 				}, deps,COMPILE);
 			}
 
@@ -259,11 +259,17 @@ namespace integration {
 					// start with executable
 					cmd << props["compiler"];
 
-					// source-to-source compilation only
-					cmd << " --dump-trg";
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
 
 					// determine backend
 					string be = getBackendKey(backend);
+
+					// source-to-source compilation only
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
+					cmd << " --dump-trg-only " << set.outputFile;
+
 					cmd << " --backend " << be;
 
 					// add include directories
@@ -300,12 +306,8 @@ namespace integration {
 					}
 					cmd<<" ";
 
-					string executionDirectory=test.getDirectory().string();
-					if(!set.executionDir.empty())
-						executionDirectory=set.executionDir;
 	
-					// set output file, stdOut file and stdErr file
-					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
+					// set stdOut file and stdErr file
 					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
