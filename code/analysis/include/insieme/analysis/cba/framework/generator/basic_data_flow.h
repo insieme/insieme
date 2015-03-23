@@ -522,7 +522,7 @@ namespace cba {
 				for(const auto& j : job_set) {
 
 					// get set of job-bodies
-					auto body = cba.getVar(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
+					auto body = cba.getVar(C, j.getCreationPoint()->getBody(), j.getContext());
 
 					// register body
 					if (!::contains(bodies, body)) {
@@ -709,7 +709,7 @@ namespace cba {
 					for(const auto& j : job_set) {
 
 						// get set of job-bodies
-						auto body = cba.getVar(C, j.getCreationPoint()->getDefaultExpr(), j.getContext());
+						auto body = cba.getVar(C, j.getCreationPoint()->getBody(), j.getContext());
 
 						// register body
 						if (!::contains(bodies, body)) {

@@ -465,26 +465,17 @@ TEST(ExpressionsTest, JobExpr) {
 	TypePtr intType = manager.getLangBasic().getUIntGen();
 	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.getLangBasic().getUnit());
 
-	VariablePtr p1 = Variable::get(manager, intType, 10);
-	VariablePtr p2 = Variable::get(manager, intType, 20);
-	vector<VariablePtr> params = toVector(p1,p2);
-
 	ExpressionPtr body = Variable::get(manager, funType);
 
-	vector<DeclarationStmtPtr> localDeclarations;
-	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
-	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
-
 	ExpressionPtr range = builder.getThreadNumRange(1,40);
-	JobExprPtr job = builder.jobExpr(range, localDeclarations, body);
+	JobExprPtr job = builder.jobExpr(range, body);
 
 	// check hash codes, children and cloning
 	TypePtr type = manager.getLangBasic().getJob();
 	vector<NodePtr> childList;
 	childList.push_back(job->getType());
 	childList.push_back(range);
-	childList.push_back(job->getLocalDecls());
-	childList.push_back(job->getDefaultExpr());
+	childList.push_back(job->getBody());
 
 	basicExprTests(job, type, childList);
 }

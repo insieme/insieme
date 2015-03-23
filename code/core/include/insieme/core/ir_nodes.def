@@ -277,8 +277,6 @@ AST_TERMINAL(CatchClause, Support)
 AST_TERMINAL(Expressions, Support)
 AST_TERMINAL(Parameters, Support)
 
-AST_TERMINAL(DeclarationStmts, Support)
-
 //
 // --- Marker ---
 //

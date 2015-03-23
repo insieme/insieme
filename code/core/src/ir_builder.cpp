@@ -993,9 +993,15 @@ BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& c
 	return bindExpr(type, parameters(params), call);
 }
 
-JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const ExpressionPtr& defaultExpr) const {
+JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const {
 	GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
-	return jobExpr(type, threadNumRange, declarationStmts(localDecls), defaultExpr);
+	return jobExpr(type, threadNumRange, body);
+}
+
+JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const {
+	GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+	const ExpressionPtr threadNumRange  = getThreadNumRange(rangeLowerBound, rangeUpperBound);
+	return jobExpr(type, threadNumRange, body);
 }
 
 namespace {
@@ -1017,8 +1023,7 @@ JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
 	ExpressionPtr jobBody =
 			(isJobBody(stmt))?stmt.as<ExpressionPtr>():transform::extractLambda(manager, stmt);
 
-	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads),
-			vector<DeclarationStmtPtr>(), jobBody);
+	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads), jobBody);
 }
 
 MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {

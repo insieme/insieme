@@ -1323,7 +1323,7 @@ namespace core {
 	/**
 	 * The accessor associated to a job expression.
 	 */
-	IR_NODE_ACCESSOR(JobExpr, Expression, GenericType, Expression, DeclarationStmts, Expression)
+	IR_NODE_ACCESSOR(JobExpr, Expression, GenericType, Expression, Expression)
 
 		/**
 		 * Obtains a reference to the expression determining the range for the number of threads.
@@ -1331,17 +1331,9 @@ namespace core {
 		IR_NODE_PROPERTY(Expression, ThreadNumRange, 1);
 
 		/**
-		 * Obtains a reference to the list of local declarations. Variables being locally declared
-		 * are bound to the life-time of the job. During the execution of the job, those
-		 * variables might be accessed at any time. During the initialization, those values might
-		 * be initialized using syntactically local values.
-		 */
-		IR_NODE_PROPERTY(DeclarationStmts, LocalDecls, 2);
-
-		/**
 		 * Obtains a reference to the expression evaluated in parallel.
 		 */
-		IR_NODE_PROPERTY(Expression, DefaultExpr, 3);
+		IR_NODE_PROPERTY(Expression, Body, 2);
 	};
 
 	/**
@@ -1365,14 +1357,12 @@ namespace core {
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param type the type of the resulting job expression
 		 * @param range the thread number range to be used for the construction
-		 * @param localDecls the list of local declarations to be used for the construction
 		 * @param def the body expression to be evaluated
 		 * @return the requested type instance managed by the given manager
 		 */
 		static JobExprPtr get(NodeManager& manager, const GenericTypePtr& type,
-				const ExpressionPtr& range, const DeclarationStmtsPtr& localDecls,
-				const ExpressionPtr& def) {
-			return manager.get(JobExpr(type, range, localDecls, def));
+				const ExpressionPtr& range, const ExpressionPtr& def) {
+			return manager.get(JobExpr(type, range, def));
 		}
 
 	};

@@ -852,13 +852,8 @@ namespace {
 				out << "(";
 				this->visit(node->getThreadNumRange());
 				out << ")";
-				if (!node->getLocalDecls().empty()) {
-					out << "[" << ::join(", ", node->getLocalDecls(), [&](std::ostream&, const DeclarationStmtPtr& cur) {
-						this->visit(cur);
-					}) << "]";
-				}
 				out << "{"; increaseIndent(); this->newLine();
-				this->visit(node->getDefaultExpr());
+				this->visit(node->getBody());
 				decreaseIndent(); this->newLine(); out << "}";
 		});
 

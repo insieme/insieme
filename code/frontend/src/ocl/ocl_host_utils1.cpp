@@ -486,8 +486,6 @@ std::string whatIs(NodePtr node) {
 	NTtoString(Expressions)
 	NTtoString(Parameters)
 
-	NTtoString(DeclarationStmts)
-
 	//
 	// --- Marker ---
 	//

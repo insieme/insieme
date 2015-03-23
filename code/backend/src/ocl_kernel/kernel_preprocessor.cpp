@@ -111,9 +111,10 @@ namespace ocl_kernel {
 
 			// collect list of initialization values
 			std::vector<core::ExpressionPtr> initValues;
-			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
-				initValues.push_back(cur->getInitialization());
-			});
+// FIXME get rid of localDecls
+//			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
+//				initValues.push_back(cur->getInitialization());
+//			});
 
 			// fix address spaces for each parameter
 			AddressSpaceMap res;
@@ -183,14 +184,15 @@ namespace ocl_kernel {
 		VariableMap& mapBodyVars(VariableMap& res, const core::JobExprPtr& job) {
 
 			// compute variable map recursively
-			core::BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getDefaultExpr());
+			core::BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getBody());
 			mapBodyVars(res, bind->getCall());
 
 			// compute local local-declaration mapping
 			VariableMap cur;
-			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& decl) {
-				cur[decl->getVariable()] = decl->getInitialization();
-			});
+// FIXME get rid of localDecls
+//			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& decl) {
+//				cur[decl->getVariable()] = decl->getInitialization();
+//			});
 
 			// compose result of sub-tree and call
 			return compose(res, cur);
@@ -218,12 +220,12 @@ namespace ocl_kernel {
 			}
 
 			core::JobExprPtr job = static_pointer_cast<const core::JobExpr>(core::analysis::getArgument(body, 0));
-			return getKernelCore(static_pointer_cast<const core::BindExpr>(job->getDefaultExpr()));
+			return getKernelCore(static_pointer_cast<const core::BindExpr>(job->getBody()));
 		}
 
 
 		core::StatementPtr getKernelCore(const core::LambdaExprPtr& lambda) {
-			return getKernelCore(static_pointer_cast<const core::BindExpr>(getGlobalJob(lambda)->getDefaultExpr()));
+			return getKernelCore(static_pointer_cast<const core::BindExpr>(getGlobalJob(lambda)->getBody()));
 		}
 
 

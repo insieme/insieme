@@ -333,7 +333,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		}
 
-std::cout << "\nFailing at " << node << " -  " << access << std::endl;
+//std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
 //	visitAccessPtr = &visitAccess;

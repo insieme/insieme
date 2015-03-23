@@ -149,7 +149,7 @@ public:
 			if(BASIC.isParallel(fun)){
 				const JobExprPtr job = static_pointer_cast<const JobExpr>(call->getArgument(0));
 
-				BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getDefaultExpr());
+				BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getBody());
 				LambdaExprPtr bindLambda = static_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr());
 
 				//use only the first statement = parallel of the outer parallel

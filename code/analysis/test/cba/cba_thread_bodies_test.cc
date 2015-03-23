@@ -77,7 +77,7 @@ namespace cba {
 
 		auto res = analysis.getValuesOf(code[1], T);
 		ASSERT_EQ(1u, res.size());
-		EXPECT_EQ("{body@0-1-2-3-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]}", toString(res));
+		EXPECT_EQ("{body@0-1-2-2-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]}", toString(res));
 		EXPECT_TRUE(res.begin()->getBody().isa<CallExprPtr>());
 	}
 
@@ -112,8 +112,8 @@ namespace cba {
 		EXPECT_EQ(2u, res.size());
 		auto resStr = toString(res);
 
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-3-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-3-2::[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-2-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-2-2::[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");
 
 //		createDotDump(analysis);
 	}
@@ -153,8 +153,8 @@ namespace cba {
 		EXPECT_EQ(2u, res.size());
 		auto resStr = toString(res);
 
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
-		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 
 
 		auto res2 = analysis.getValuesOf(code[4], T);
@@ -202,8 +202,8 @@ namespace cba {
 		EXPECT_EQ(2u, res.begin()->size());
 		auto resStr = toString(res);
 
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
-		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 
 //		createDotDump(analysis);
 	}

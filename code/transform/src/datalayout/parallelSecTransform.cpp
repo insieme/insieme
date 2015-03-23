@@ -117,7 +117,7 @@ dumpPretty(lambda);
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprAddress job = expr.isa<JobExprAddress>()) {
-			CallExprAddress parallelCall = job->getDefaultExpr().isa<BindExprAddress>()->getCall();
+			CallExprAddress parallelCall = job->getBody().isa<BindExprAddress>()->getCall();
 
 			if(!parallelCall)
 				return;
@@ -190,7 +190,6 @@ void ParSecTransform<Baseclass>::transform() {
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(m.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
-
 
 	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		ExprAddressMap varReplacements;

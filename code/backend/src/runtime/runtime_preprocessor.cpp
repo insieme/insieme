@@ -360,27 +360,17 @@ namespace runtime {
 
 			// collect parameters to be captured by the job
 
-			// add local declarations
+			// add captured variables
 			core::TypeList list;
-			core::VariableSet jobLocalVars;
 			core::ExpressionList capturedValues;
 			utils::map::PointerMap<core::VariablePtr, unsigned> varIndex;
-			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
-				varIndex.insert(std::make_pair(cur->getVariable(), list.size()));
-				list.push_back(cur->getVariable()->getType());
-				jobLocalVars.insert(cur->getVariable());
-				capturedValues.push_back(cur->getInitialization());
-			});
 
-			// and captured variables
-			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job, jobLocalVars);
+			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job);
 			for_each(capturedVars, [&](const core::VariablePtr& cur) {
 				varIndex.insert(std::make_pair(cur, list.size()));
 				list.push_back(cur->getType());
 				capturedValues.push_back(cur);
 			});
-
-			core::TypePtr unit = basic.getUnit();
 
 			// create variable replacement map
 			core::TupleTypePtr tupleType = builder.tupleType(list);
@@ -394,6 +384,8 @@ namespace runtime {
 						toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, varType)));
 				varReplacements.insert(std::make_pair(cur.first, access));
 			});
+
+			core::TypePtr unit = basic.getUnit();
 
 			auto fixVariables = [&](const core::ExpressionPtr& cur)->core::ExpressionPtr {
 				return core::transform::replaceVarsGen(manager, cur, varReplacements);
@@ -413,10 +405,10 @@ namespace runtime {
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
-			if (core::analysis::isCallOf(job->getDefaultExpr(), basic.getPick())) {
+			if (core::analysis::isCallOf(job->getBody(), basic.getPick())) {
 
 				// ---- default only but various variants ------
-				auto alternatives = job->getDefaultExpr().as<core::CallExprPtr>()->getArgument(0);
+				auto alternatives = job->getBody().as<core::CallExprPtr>()->getArgument(0);
 				auto impls = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(alternatives);
 
 				assert(!impls.empty() && "There must be at least one implementation!");
@@ -433,7 +425,7 @@ namespace runtime {
 
 				// create function processing the job (forming the entry point)
 
-                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(job->getDefaultExpr()));
+                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(job->getBody()));
 
 				// build implementation
 				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);

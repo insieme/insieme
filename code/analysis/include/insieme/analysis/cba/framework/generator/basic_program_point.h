@@ -790,7 +790,7 @@ namespace cba {
 				const JobExprInstance& jobExpr = job.getCreationPoint();
 
 				// get set containing list of bodies
-				auto C_body = cba.getVar(C, jobExpr->getDefaultExpr(), job.getContext());
+				auto C_body = cba.getVar(C, jobExpr->getBody(), job.getContext());
 
 				// get list of body functions
 				newDependencies.push_back(C_body);

@@ -99,13 +99,13 @@ void KernelData::appendArguments(std::pair<std::vector<core::VariablePtr>, std::
 void KernelData::appendShared(vector<core::DeclarationStmtPtr>& sharedList, OCL_SCOPE scope) {
 
     if(globalRangeUsed)
-         SHARE(sharedList, globalRange);
+         DECLARE(sharedList, globalRange);
 
      if(numGroupsUsed || scope == OCL_GLOBAL_JOB)
-         SHARE(sharedList, numGroups);
+         DECLARE(sharedList, numGroups);
 
      if(localRangeUsed || scope != OCL_LOCAL_PAR)
-         SHARE(sharedList, localRange);
+         DECLARE(sharedList, localRange);
 }
 
 core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionPtr idx) {
@@ -474,7 +474,7 @@ public:
 
 						// store capture list of function (if existent)
 						ArgList args;
-						core::VariableList bindArgs;;
+						core::VariableList bindArgs;
 
 						if(bind) {
 							args.first = fun->getParameterList()->getElements();
@@ -730,8 +730,8 @@ class OclMapper : public core::transform::CachedNodeMapping {
     const core::IRBuilder& builder;
 
 private:
-    template <typename T>
-    void appendToVector(std::vector<T>& outVec, std::vector<T>& inVec) {
+    template <typename T, typename U>
+    void appendToVector(std::vector<T>& outVec, std::vector<U>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             outVec.push_back(*I);
         }
@@ -745,7 +745,7 @@ private:
             switch (*I) {
             case CONSTANT: outVec.push_back(conVec.at(con++)); break;
             case GLOBAL: outVec.push_back(gloVec.at(glo++)); break;
-            case LOCAL: outVec.push_back(locVec.at(loc++)); break;
+            case LOCAL: outVec.push_back(locVec.at(loc++)); loc++; break;
             case PRIVATE: outVec.push_back(priVec.at(pri++)); break;
             }
         }
@@ -776,7 +776,12 @@ private:
 
     void createDeclarations(vector<core::DeclarationStmtPtr>& outVec, std::vector<core::VariablePtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            SHARE(outVec, *I);
+            DECLARE(outVec, *I);
+        }
+    }
+    void createDeclarations(vector<core::StatementPtr>& outVec, std::vector<core::VariablePtr>& inVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+            DECLARE(outVec, *I);
         }
     }
 
@@ -787,6 +792,23 @@ private:
             outVec.push_back(builder.declarationStmt((*I)->getVariable(), initVal));
             // update inVec with new variables, but the old initialization values
             (*I) = builder.declarationStmt(initVal, (*I)->getInitialization());
+        }
+    }
+    
+    // creates new declaration for all variables in the input vector and stores it in the output vector
+    // The elements of the input vector are declared and initialized with fresh memory which's size will be stored as a
+    // variable of type uint<8> in inVec
+    void createLocalAllocations(vector<core::StatementPtr>& outVec, std::vector<core::VariablePtr>& inVec) {
+        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
+    		core::VariablePtr arg = *I;
+    		core::TypePtr elemTy = I->getType().as<core::RefTypePtr>()->getElementType().as<core::ArrayTypePtr>()->getElementType();
+    		core::VariablePtr sizeVar = builder.variable(BASIC.getUInt8());
+    		core::ExpressionPtr lmSize = builder.div(sizeVar, builder.callExpr(BASIC.getSizeof(), builder.getTypeLiteral(elemTy)));
+    		core::DeclarationStmtPtr localMemDecl = builder.declarationStmt(arg, builder.refVar(builder.callExpr(BASIC.getArrayCreate1D(),
+    				builder.getTypeLiteral(elemTy), lmSize)));
+    		outVec.push_back(localMemDecl);
+
+    		*I = sizeVar;
         }
     }
 
@@ -840,7 +862,7 @@ private:
 
 
 
-    core::ExpressionPtr genBindExpr(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
+    core::ExpressionPtr genFunCall(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
             constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
         // define and init all arguments
 
@@ -865,7 +887,7 @@ private:
 
         core::FunctionTypePtr funType = builder.functionType(argTypes, builder.getNodeManager().getLangBasic().getUnit());
 
-
+//        return builder.callExpr(builder.lambdaExpr(funType, arguments.first, body), arguments.second);
         return builder.bindExpr(std::vector<core::VariablePtr>(), builder.callExpr(builder.lambdaExpr(funType, arguments.first, body), arguments.second));
     }
 
@@ -984,24 +1006,6 @@ public:
                 KernelMapper kernelMapper(builder, kd);
 
 
-                // update the type of the function
-                core::FunctionTypePtr newFuncType;
-                if(core::FunctionTypePtr funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-                    core::TypePtr retTy = funcType->getReturnType();
-
-                    //check return type
-                    assert(retTy->getNodeManager().getLangBasic().isUnit(retTy) && "Return type of kernel functions must be void.");
-
-                    core::TypeList args = funcType->getParameterTypes()->getElements();
-                    args.push_back(kd.globalRange->getType());
-                    args.push_back(kd.localRange->getType());
-
-                    // function returns unit
-                    newFuncType = builder.functionType(args, BASIC.getUnit());
-                } else {
-                    assert(funcType && "Function has unexpected type");
-                }
-
             	std::shared_ptr<insieme::annotations::DataRangeAnnotation> datarange;
                 core::CompoundStmtPtr oldBody = func->getBody();
                 for_each(oldBody->getStatements(), [&](core::StatementPtr elem){
@@ -1034,81 +1038,68 @@ public:
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
-                    core::ExpressionPtr localParFct = genBindExpr(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
-
-                    vector<core::DeclarationStmtPtr> localJobShared;
-
-                    createDeclarations(localJobShared, constantArgs);
-                    createDeclarations(localJobShared, globalArgs);
-                    createDeclarations(localJobShared, localArgs);
-                    // in-body local variables
-                    appendToVector(localJobShared, kernelMapper.getLocalDeclarations());
-                    // catch loop boundaries
-                    kd.appendShared(localJobShared, OCL_LOCAL_JOB);
-                    // TODO catch global variables
+                    core::ExpressionPtr localParFct = genFunCall(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
                     // calculate localRange[0] * localRange[1] * localRange[2] to use as maximum number of threads
                     core::ExpressionPtr localRangeProduct = vecProduct(kd.localRange, 3);
 
                     // min and max number of threads is equal
-                    core::CallExprPtr localThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), localRangeProduct, localRangeProduct);
+                    // create body for local job, containing the kernel function
+                    core::JobExprPtr localJob = builder.jobExpr(localRangeProduct, localRangeProduct, localParFct);
 
-                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localJobShared, localParFct);
-
-                    expr.clear();
-                    //construct vector of arguments for local parallel
-
-//                    expr.push_back(localRangeProduct);
-//                    expr.push_back(localRangeProduct); // min and max threads are equal
-
-                    expr.push_back(localJob);
 
                     core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().getLangBasic().getThreadGroup(),
-                            builder.getNodeManager().getLangBasic().getParallel(), expr);
+                            builder.getNodeManager().getLangBasic().getParallel(), localJob);
 
+                    // elements of the body of the global scope, called once per group
                     std::vector<core::StatementPtr> gobalBodyStmts;
+
+                    // declarations of __local variables passed as arguments
+//                    createDeclarations(gobalBodyStmts, localArgs);
+                    createLocalAllocations(gobalBodyStmts, localArgs);
+ //                   createDeclarations(gobalBodyStmts, privateArgs);
+                    // declarations of __local variables declared inside the kernel
+                    appendToVector(gobalBodyStmts, kernelMapper.getLocalDeclarations());
+
                     gobalBodyStmts.push_back(localPar);
+
+                    // add a merge all to merge the work items of each group
                     expr.clear();
                     core::CallExprPtr merge = builder.callExpr(BASIC.getMergeAll(), expr);
                     gobalBodyStmts.push_back(merge);
+                    // create body containing the declaration of local variables as well as the parallel call and job for the work items of each group and their merge
                     core::StatementPtr globalParBody = builder.compoundStmt(gobalBodyStmts);
 
-
                     // build expression to be used as body of global job
-                    core::ExpressionPtr globalParFct = genBindExpr(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
+                    core::ExpressionPtr globalParFct = genFunCall(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
                             privateArgs);
 
-                    // catch all arguments which are shared in global range
-                    vector<core::DeclarationStmtPtr> globalJobShared;
-
-                    createDeclarations(globalJobShared, constantArgs);
-                    createDeclarations(globalJobShared, globalArgs);
-                    // catch loop boundaries
-                    kd.appendShared(globalJobShared, OCL_GLOBAL_JOB);
+//                    createDeclarations(globalJobShared, constantArgs);
+//                    createDeclarations(globalJobShared, globalArgs);
+//                    // catch loop boundaries
+//                    kd.appendShared(globalJobShared, OCL_GLOBAL_JOB);
                     // TODO catch global variables
 
                     // calculate groupRange[0] * groupRange[1] * groupRange[2] to use as maximum number of threads
                     core::ExpressionPtr globalRangeProduct = vecProduct(kd.numGroups, 3);
 
                     // min and max number of threads is equal
-                    core::CallExprPtr globalThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), globalRangeProduct, globalRangeProduct);
-
-                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalJobShared, globalParFct);
+                    core::JobExprPtr globalJob = builder.jobExpr(globalRangeProduct, globalRangeProduct, globalParFct);
 
                     expr.clear();
-                    //construct vector of arguments for local parallel
 
                     expr.push_back(globalJob);
 
-                    core::CallExprPtr globalPar = builder.callExpr(builder.getNodeManager().getLangBasic().getThreadGroup(), builder.getNodeManager().getLangBasic().getParallel(), expr);
+                    core::CallExprPtr globalPar = builder.callExpr(builder.getNodeManager().getLangBasic().getThreadGroup(),
+                    		builder.getNodeManager().getLangBasic().getParallel(), expr);
 
-                    // construct updated param list
+
                     core::VariableList newParams;
                     appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
 
-                    newParams.push_back(kd.globalRange); // add global range to parameters
-
                     std::vector<core::StatementPtr> newBodyStmts;
+
+                    newParams.push_back(kd.globalRange); // add global range to parameters
 
                     // add local range to parameters
                     if(!workGroupSizeDefined)
@@ -1140,6 +1131,13 @@ public:
                     newBodyStmts.push_back(globalPar);
                     newBodyStmts.push_back(merge);
 
+                    // construct updated param list
+					core::TypeList argTys;
+					for(core::VariablePtr param : newParams)
+						argTys.push_back(param->getType());
+  					// function returns unit
+                    core::FunctionTypePtr newFuncType = builder.functionType(argTys, BASIC.getUnit());
+
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
                     // get address spaces of variables in body
@@ -1160,7 +1158,6 @@ public:
                     	datarange->replace(builder.getNodeManager(), params, newParams);
                     	newFunc->addAnnotation(datarange);
                     }
-
 
                     return newFunc;
                 }
