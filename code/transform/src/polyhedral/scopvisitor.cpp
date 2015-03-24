@@ -41,6 +41,7 @@
 #include <vector>
 
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/transform/polyhedral/scopvisitor.h"
 #include "insieme/utils/logging.h"
@@ -49,7 +50,7 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// The constructor initializes class variables and triggers the visit of all nodes in the program.
-SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()), lvl(0),
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()), fornests(0),
 	scoplist(node) {
 	visit(node);
 }
@@ -88,38 +89,55 @@ void SCoPVisitor::visitNode(const NodeAddress &node) {
 }
 
 /// Visit all the child nodes of the given node. The given node itself is not taken into account.
-/// The parameter print indicates whether the nodes should be printed for debug purposes.
+/// Hence, this subroutine can only be used in the case you want to traverse all children unconditionally. When
+/// visiting single child nodes, you cannot use this function to do the work.
 void SCoPVisitor::visitChildren(const NodeAddress &node) {
 	for (auto child: node->getChildList()) visit(child);
+}
+
+/// Convert the given expression (Literal or CallExpr) to an affine formula, if possible.
+/// If this conversion is not possible, return an empty element.
+boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAddress &addr) {
+	boost::optional<arithmetic::Formula> maybe;
+	try {
+		auto formula=arithmetic::toFormula(addr.getAddressedNode());
+		if (formula.isLinear()) maybe=boost::optional<arithmetic::Formula>(formula);
+	} catch (...) { }
+	return maybe;
 }
 
 /// When visiting visitLambdaExpr, we encountered a function call. Apart from declarations, this is another
 /// possibility to instantiate variables, so we need to gather all variables from the closure here.
 void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
-	// initialize and print debug output
-	static unsigned int funclvl=0;
-	// printNode(expr, "lvl " + std::to_string(funclvl));
-
 	// after entering a function, we need to allocate a new variable vector on our variable vector stack
-	funclvl++;
 	varstack.push(std::vector<VariableAddress>());
 	visitChildren(expr);
 
 	// after we have visited all children, we can remove the topmost variable vector from the stack, and
 	// decrease the function nesting level again
 	varstack.pop();
-	funclvl--;
 }
 
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
-	lvl++;
-	printNode(stmt, "lvl " + std::to_string(lvl), 0, 3);
-	std::cout << "\tknown vars:"; for (auto v: varstack.top()) std::cout << " " << *v; std::cout << std::endl;
-	printNode(stmt, "", 4, 1);
-	visitChildren(stmt);
-	lvl--;
+	// when we encounter a for loop, first increase the loop nesting level, and then copy the currently available
+	// variables, since variable modifications in the for loop cannot be seen outside the for loop
+	fornests++;
+	varstack.push(varstack.top());
+	auto decl=stmt.getAddressOfChild(0);
+	visit(decl); // visit declaration to add variable to the list of known variables
+	auto    lb  =parseAffine(decl.getAddressOfChild(1).as<ExpressionAddress>()),
+			ub  =parseAffine(stmt.getAddressOfChild(1).as<ExpressionAddress>()),
+			incr=parseAffine(stmt.getAddressOfChild(2).as<ExpressionAddress>());
+	if (lb && ub && incr) std::cout << "lb: " << *lb << "; ub: " << *ub << "; incr: " << *incr << std::endl;
+	else std::cout << "Loop parameters are not affine" << std::endl;
+
+	// process all the children, and — when done — remove the scope modifications and lessen the nesting level again
+	printNode(stmt, "for nesting lvl " + std::to_string(fornests-1));
+	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
+	varstack.pop();
+	fornests--;
 }
 
 /// Visit lambda parameters so that we can add them to the list of available variables/SCoP parameters.

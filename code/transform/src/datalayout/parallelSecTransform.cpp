@@ -57,7 +57,7 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 	NodeManager& m = Baseclass::mgr;
 	IRBuilder builder(m);
 
-for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
+for(std::pair<ExpressionAddress, StatementPtr> dudu : varsToPropagate) {
 	std::cout << "      things " << *dudu.first << std::endl;
 }
 	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
@@ -72,7 +72,7 @@ for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
 //std::cout << "\nat the tuple member access " << oldRootVar << "\n";
 
 			if(newRootVarIter != varsToPropagate.end()) { // tuple has been updated, check if it was the current field
-				ExpressionPtr newRootVar = newRootVarIter->second;
+				ExpressionPtr newRootVar = newRootVarIter->second.as<ExpressionPtr>();
 
 				RefTypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
 						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>()).as<RefTypePtr>();
@@ -228,7 +228,7 @@ std::cout << "NT: " << newStructType << " var " << *oldVar << std::endl;
 //		}
 
 		//replace arguments
-		for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+		for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 //			std::cout << "from " << *vr.first << " to " << *vr.second << std::endl;
 
 			if(vr.first.isa<VariableAddress>())

@@ -398,7 +398,7 @@ std::cout << ": \nAdding: " << *pair.second << " - " << newParamType << std::end
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprPtr job = expr.isa<JobExprPtr>()) {
-			CallExprPtr parallelCall = job->getDefaultExpr().isa<BindExprPtr>()->getCall();
+			CallExprPtr parallelCall = job->getBody().isa<BindExprPtr>()->getCall();
 
 			if(!parallelCall)
 				return;

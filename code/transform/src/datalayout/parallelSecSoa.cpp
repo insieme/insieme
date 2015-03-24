@@ -96,7 +96,7 @@ std::cout << "NT: " << newStructType << " var " << *oldVar << std::endl;
 //		}
 
 		//replace arguments
-		for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+		for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 //			std::cout << "from " << *vr.first << " to " << *vr.second << std::endl;
 
 			if(vr.first.isa<VariableAddress>())

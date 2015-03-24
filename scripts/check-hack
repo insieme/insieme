@@ -1,0 +1,25 @@
+#!/usr/bin/perl -w
+
+use Data::Dumper;
+
+sub filename {
+    my @c=split('/', $_[0]);
+    return $c[-1];
+}
+
+# we need to have the full file path to hack.h as the first arguments - check it
+die "usage: $0 path/to/hack.h\n" unless $ARGV[0] && -r $ARGV[0];
+
+# initialize a map with the builtins missing in Clang and their equivalents
+my %clangmap;
+open($file, "curl -s http://clang.llvm.org/builtins.py |") or die;
+while (<$file>) {
+    $clangmap{$1}=$2 if /'(__builtin_.*)': '(.*)'/;
+}
+
+# print Dumper(\%clangmap);
+
+foreach (keys %clangmap) {
+    `grep -s $_ $ARGV[0]`;
+    print "$_ not found in ".filename($ARGV[0])."\n" if $?;
+}
