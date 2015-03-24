@@ -328,22 +328,9 @@ namespace integration {
 			gccFlags["use_gnu99"]="--std=gnu99";
 			gccFlags["use_gnu90"]="--std=gnu90";
 
-			std::map<string,string> mainFlags;
-			mainFlags["use_libmath"]="";
-			mainFlags["use_libpthread"]="";
-			mainFlags["use_omp"]="--omp-sema";
-			mainFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
-			mainFlags["use_o3"]="";
-			mainFlags["use_c"]="";
-			mainFlags["use_gnu99"]="";
-			mainFlags["use_gnu90"]="";
-			mainFlags["use_cpp"]="--std=c++03";
-			mainFlags["use_cpp11"]="--std=c++11";
-
 			std::map<string,string> insiemeccFlags;
 			insiemeccFlags["use_libmath"]="";
 			insiemeccFlags["use_libpthread"]="";
-			//insiemeccFlags["use_omp"]="--omp-sema";
 			insiemeccFlags["use_omp"]="-fopenmp";
 			insiemeccFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
 			insiemeccFlags["use_o3"]="-O3";
@@ -359,7 +346,6 @@ namespace integration {
 			gccFlags["standardFlags"]+=" -fpermissive";
 
 			propFlags["g++"]=gccFlags;
-			propFlags["main"]=mainFlags;
 			propFlags["insiemecc"]=insiemeccFlags;
 
 			boost::filesystem::path comp(properties.get("compiler",step));
@@ -384,13 +370,6 @@ namespace integration {
 				if(propVal.compare("0")==0 and flagMap.count(key)!=1)
 					std::cout<<"WARNING: Property "<<key<<" ignored!"<<std::endl;
 			}
-
-			// interception configuration
-			//if (comp.filename().string()=="main" || 
-			//	comp.filename().string()=="insiemecc") {
-			//	compArgs.push_back("--intercept " + toString(join(" ", properties.get<vector<string>>("intercepted_name_spaces"))));
-			//	compArgs.push_back("--intercept-include " + toString(join(" ", properties.get<vector<string>>("intercepted_header_file_dirs"))));
-//			}
 
 			// add remaining flags
 			compArgs.push_back(properties.get("compFlags",step));

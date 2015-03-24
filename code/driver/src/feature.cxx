@@ -48,7 +48,7 @@
 
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/driver/cmd/options.h"
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 	/**
 	 * This executable is accepting some program code and extracting a set of
@@ -119,7 +119,7 @@
 
 		// process handle command line arguments
 		cmd::Options options = cmd::Options::parse(argc, argv);
-		if (!options.valid) return (options.help)?0:1;
+		if (!options.valid) return (options.settings.help)?0:1;
 
 
 		// loading features
