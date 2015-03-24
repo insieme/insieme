@@ -71,7 +71,7 @@ public:
 
     virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
 		after->addAnnotation(ptr);
 		return true;
 	}
@@ -112,7 +112,7 @@ public:
 
 	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// just always copy annotation
-		assert(&*ptr == this && "Annotation pointer should reference this instance!");
+		assert_true(&*ptr == this) << "Annotation pointer should reference this instance!";
 		after->addAnnotation(ptr);
 		return false;		
 	}
@@ -203,7 +203,7 @@ public:
 
 	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// just always copy annotation
-		assert(&*ptr == this && "Annotation pointer should reference this instance!");
+		assert_true(&*ptr == this) << "Annotation pointer should reference this instance!";
 		after->addAnnotation(ptr);
 		return false;
 	}
@@ -228,7 +228,7 @@ public:
 
     bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
     	// always copy the annotation
-    	assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+    	assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
     	after->addAnnotation(ptr);
     	return true;
     }

@@ -425,7 +425,7 @@ std::map<core::VariablePtr, core::VariableList> ScopRegion::collectLocalVars(con
 /** Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level and cache all the
 scattering info at this level */
 void ScopRegion::resolve() {
-	assert(valid && "Error Try to resolve an invalid SCoP");
+	assert_true(valid) << "Error Try to resolve an invalid SCoP";
 
 	// If the region has been already resolved, we simply return the cached result
 	if ( isResolved() ) { return; }

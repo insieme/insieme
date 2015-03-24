@@ -66,7 +66,7 @@ namespace annotations {
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
 			return std::make_shared<annotation_type>(NameTag(encoder::toValue<string>(node)));
 		}
 	};
