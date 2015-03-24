@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1233,7 +1233,7 @@ namespace detail {
 		return std::make_shared<Action<capture>>(term);
 	}
 
-	TermPtr varScop(const TermPtr& term) {
+	TermPtr varScope(const TermPtr& term) {
 		// define action event handler
 		struct var_scope_handler : public detail::actions {
 			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
@@ -1246,7 +1246,7 @@ namespace detail {
 		return std::make_shared<Action<var_scope_handler>>(term);
 	}
 
-	TermPtr newScop(const TermPtr& term) {
+	TermPtr newScope(const TermPtr& term) {
 		// define action event handler
 		struct new_scope_handler : public detail::actions {
 			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
@@ -1259,7 +1259,7 @@ namespace detail {
 		return std::make_shared<Action<new_scope_handler>>(term);
 	}
 
-	TermPtr symScop(const TermPtr& term) {
+	TermPtr symScope(const TermPtr& term) {
 		// define action event handler
 		struct new_scope_handler : public detail::actions {
 			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {

@@ -746,7 +746,7 @@ namespace parser {
 			));
 
 			// allow a let to be used with a type
-			g.addRule("T", rule(symScop(seq(let,"in",T)), forward));
+			g.addRule("T", rule(symScope(seq(let,"in",T)), forward));
 
 			// --------------- add literal rules ---------------
 
@@ -1497,7 +1497,7 @@ namespace parser {
 
 
 			// -- let expression --
-			g.addRule("E", rule(symScop(seq(let,"in",E)), forward));
+			g.addRule("E", rule(symScope(seq(let,"in",E)), forward));
 
 
 			struct register_param : public detail::actions {
@@ -1516,7 +1516,7 @@ namespace parser {
 
 			// function expressions
 			g.addRule("E", rule(
-					newScop(seq("(", list(param,","), ")->", T, S)),
+					newScope(seq("(", list(param,","), ")->", T, S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1655,7 +1655,7 @@ namespace parser {
 
 			// -- constructors --
 			g.addRule("E", rule(
-					newScop(seq(classType, "::(", list(param, ","), ") ", S)),
+					newScope(seq(classType, "::(", list(param, ","), ") ", S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1671,7 +1671,7 @@ namespace parser {
 
 			// -- constructors --
 			g.addRule("E", rule(
-					newScop(seq("~", classType, "::()", S)),
+					newScope(seq("~", classType, "::()", S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1687,7 +1687,7 @@ namespace parser {
 
 			// -- member function --
 			g.addRule("E", rule(
-					newScop(seq(classType, "::(", list(param, ","), ")->", T, S)),
+					newScope(seq(classType, "::(", list(param, ","), ")->", T, S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1831,7 +1831,7 @@ namespace parser {
 
 			// compound statement
 			g.addRule("S", rule(
-					varScop(seq("{", loop(S, Token::createSymbol(';')), "}")),
+					varScope(seq("{", loop(S, Token::createSymbol(';')), "}")),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						StatementList list;		// filter out no-ops
@@ -1915,7 +1915,7 @@ namespace parser {
 
 			// try-catch
 			g.addRule("S", rule(
-					seq("try", S, loop(varScop(seq("catch(", varDecl, ")", S)))),
+					seq("try", S, loop(varScope(seq("catch(", varDecl, ")", S)))),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 
@@ -1960,7 +1960,7 @@ namespace parser {
 
 			// for loop without step size
 			g.addRule("S", rule(
-					varScop(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
+					varScope(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 						TypePtr type = terms[0].as<TypePtr>();

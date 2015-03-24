@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1138,11 +1138,11 @@ namespace detail {
 
 	TermPtr cap(const TermPtr& term);
 
-	TermPtr varScop(const TermPtr& term);
+	TermPtr varScope(const TermPtr& term);
 
-	TermPtr newScop(const TermPtr& term);
+	TermPtr newScope(const TermPtr& term);
 
-	TermPtr symScop(const TermPtr& term);
+	TermPtr symScope(const TermPtr& term);
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
 		return std::make_shared<NonTerminal>(nonTerminal);
