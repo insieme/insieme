@@ -134,7 +134,7 @@ TEST(LangBasic, DefinitionTest) {
 #define LITERAL(_id, _name, _spec) CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id()));
 #define DERIVED(_id, _name, _code) CHECK(_id); EXPECT_TRUE(isDerived(gen.get##_id()));
 
-#include "insieme/core/lang/lang.def"
+#include "insieme/core/lang/inspire_api/lang.def"
 
 #undef DERIVED
 #undef LITERAL

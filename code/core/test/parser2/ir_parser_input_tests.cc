@@ -69,6 +69,7 @@ namespace parser {
 	TEST_P(IRParserTest, ReadFileTest) {
 
 		string file = ROOT_DIR + string(GetParam());
+        std::cout << "Testing: "<< GetParam() << std::endl;
 
 		SCOPED_TRACE(file);
 
@@ -86,6 +87,7 @@ namespace parser {
 
 		// it should have produced a result
 		ASSERT_TRUE(res);
+        //dumpColor(res);
 
 		// run semantic checks on files
 		auto msg = checks::check(res);
