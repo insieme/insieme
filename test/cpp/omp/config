@@ -1,2 +1,2 @@
 use_omp=1
-excludeSteps="insiemecc_c_sema","ref_c_compile","ref_c_execute","ref_c_check","insiemecc_run_check","insiemecc_run_convert","insiemecc_run_compile","insiemecc_run_execute","insiemecc_seq_convert","insiemecc_seq_compile","insiemecc_seq_execute","insiemecc_seq_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check"
+excludeSteps="insiemecc_c_sema","ref_c_compile","ref_c_execute","ref_c_check","insiemecc_run_c_check","insiemecc_run_c_convert","insiemecc_run_c_compile","insiemecc_run_c_execute","insiemecc_seq_c_convert","insiemecc_seq_c_compile","insiemecc_seq_c_execute","insiemecc_seq_c_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check"

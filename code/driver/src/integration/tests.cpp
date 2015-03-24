@@ -64,7 +64,7 @@ namespace integration {
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
 			job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
-			std::string step="insiemecc_run_convert";
+			std::string step="insiemecc_run_c_convert";
 			if (testCase.isCXX11()){
 				job.setStandard(frontend::ConversionSetup::Cxx11);
 				step="insiemecc_run_c++_convert";

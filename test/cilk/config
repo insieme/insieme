@@ -1,4 +1,4 @@
 compFlags[insiemecc_c_sema]=--cilk
 compFlags[insiemecc_c++_sema]=--cilk
-compFlags[insiemecc_run_convert]=--cilk
-compFlags[insiemecc_seq_convert]=--cilk
+compFlags[insiemecc_run_c_convert]=--cilk
+compFlags[insiemecc_seq_c_convert]=--cilk

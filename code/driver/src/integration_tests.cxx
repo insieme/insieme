@@ -254,9 +254,9 @@ int main(int argc, char** argv) {
 
 	// setup highlighted tests:
 	std::set<std::string> highlight;
-	highlight.insert("insiemecc_seq_execute");
+	highlight.insert("insiemecc_seq_c_execute");
 	highlight.insert("insiemecc_seq_c++_execute");
-	highlight.insert("insiemecc_run_execute");
+	highlight.insert("insiemecc_run_c_execute");
 	highlight.insert("insiemecc_run_c++_execute");
 	highlight.insert("ref_c_execute");
 	highlight.insert("ref_c++_execute");
