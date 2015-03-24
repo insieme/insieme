@@ -244,11 +244,6 @@ namespace transform {
 				}
 
 
-				// pick branch (not supported yet)
-				if (!job->getGuardedExprs().empty()) {
-					throw NotSequentializableException("Sequentializing job expressions exposing guards not yet supported.");
-				}
-
 				ExpressionPtr branch = job->getDefaultExpr();
 
 				// convert selected branch into a lazy expression

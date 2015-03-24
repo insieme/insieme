@@ -1449,9 +1449,6 @@ ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	static const ExpressionPtr fail;
 	NodeManager& mgr = job.getNodeManager();
 
-	// make sure there are no guarded statements
-	if (!job->getGuardedExprs().empty()) return fail;
-
 	// also, there must not be a re-distribute call => can not be supported
 	if (analysis::contains(job->getDefaultExpr(), mgr.getLangBasic().getRedistribute())) return fail;
 

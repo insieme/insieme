@@ -37,8 +37,10 @@
 #ifndef SCOPVISITOR_H
 #define SCOPVISITOR_H
 
+#include <boost/optional.hpp>
 #include <stack>
 
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_statements.h"
@@ -52,7 +54,7 @@ class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address>
 
 	std::stack<std::vector<insieme::core::VariableAddress> > varstack;
 	std::stack<SCoP> scopstack;
-	unsigned int lvl;
+	unsigned int fornests;
 
 public:
 
@@ -66,6 +68,7 @@ public:
 							  std::string descr="", unsigned int start=0, int count=-1);
 	void visitNode           (const insieme::core::NodeAddress            &node);
 	void visitChildren       (const insieme::core::NodeAddress            &node);
+	boost::optional<insieme::core::arithmetic::Formula> parseAffine(const insieme::core::ExpressionAddress &expr);
 
 	// visitors which will build up the SCoP stack (and keep track of other state)
 	void visitLambdaExpr     (const insieme::core::LambdaExprAddress      &expr);

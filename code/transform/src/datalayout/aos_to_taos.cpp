@@ -342,7 +342,7 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 ////assert_fail();
 //	}
 
-	ParSecTransform<AosToTaos> psa = ParSecTransform<AosToTaos>(toTransform, varReplacements, replacements, newStructType, oldStructType);
+	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
 	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;
@@ -398,7 +398,7 @@ std::cout << ": \nAdding: " << *pair.second << " - " << newParamType << std::end
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprPtr job = expr.isa<JobExprPtr>()) {
-			CallExprPtr parallelCall = job->getDefaultExpr().isa<BindExprPtr>()->getCall();
+			CallExprPtr parallelCall = job->getBody().isa<BindExprPtr>()->getCall();
 
 			if(!parallelCall)
 				return;

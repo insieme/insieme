@@ -1576,7 +1576,7 @@ namespace parser {
 
 						BindExprPtr bind 	= cur.bindExpr(VariableList(), call);
 						JobExprPtr job		= cur.jobExpr(cur.getThreadNumRange(rangeLowerBound, rangeUpperBound),
-								vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), bind);
+								vector<core::DeclarationStmtPtr>(), bind);
 
 						return job;
 					}
@@ -1615,7 +1615,7 @@ namespace parser {
 
 						BindExprPtr bind 	= cur.bindExpr(VariableList(), call);
 						JobExprPtr job		= cur.jobExpr(cur.getThreadNumRange(rangeLowerBound, rangeUpperBound),
-								decls, vector<core::GuardedExprPtr>(), bind);
+								decls, bind);
 
 						return job;
 					}

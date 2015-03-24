@@ -1031,8 +1031,6 @@ public:
 
                    std::vector<core::ExpressionPtr> expr;
 
-                   vector<core::GuardedExprPtr> noGuardedStatementsNeeded;
-
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
@@ -1055,7 +1053,7 @@ public:
                     // min and max number of threads is equal
                     core::CallExprPtr localThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), localRangeProduct, localRangeProduct);
 
-                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localJobShared, noGuardedStatementsNeeded, localParFct);
+                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localJobShared, localParFct);
 
                     expr.clear();
                     //construct vector of arguments for local parallel
@@ -1095,7 +1093,7 @@ public:
                     // min and max number of threads is equal
                     core::CallExprPtr globalThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), globalRangeProduct, globalRangeProduct);
 
-                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalJobShared, noGuardedStatementsNeeded, globalParFct);
+                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalJobShared, globalParFct);
 
                     expr.clear();
                     //construct vector of arguments for local parallel

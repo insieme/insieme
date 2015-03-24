@@ -64,7 +64,7 @@ struct VariableMap : public std::map<core::ExpressionAddress, ValueType, Variabl
 struct ExprAddressSet : public std::set<core::ExpressionAddress, VariableComparator> {};
 
 typedef VariableMap<core::RefTypePtr> ExprAddressRefTypeMap;
-typedef VariableMap<core::ExpressionPtr> ExprAddressMap;
+typedef VariableMap<core::StatementPtr> ExprAddressMap;
 //typedef std::set<core::ExpressionAddress> ExprAddressSet;
 typedef std::function<ExprAddressRefTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
@@ -120,6 +120,8 @@ protected:
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
 			core::ExpressionMap& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
+	virtual core::TypePtr generateNewTupleType(const core::TypePtr& oldTupleVarType, const core::StructTypePtr& newStructType,
+			const core::TypePtr& oldStructType);
 	void updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
@@ -140,9 +142,12 @@ protected:
 	void updateCopyDeclarations(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
+	virtual void replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements) =0;
+
 	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, const core::transform::TypeHandler& typeOfMemAllocHandler);
 public:
-	DatalayoutTransformer(core::NodePtr& toTransform, CandidateFinder candidateFinder);
+	DatalayoutTransformer(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
 	virtual ~DatalayoutTransformer() {}
 
 	virtual void transform() =0;
