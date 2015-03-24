@@ -70,8 +70,6 @@ namespace cmd {
 #include "insieme/driver/cmd/insiemecc_options.def"
 			;
 
-
-
 		}
 
 
@@ -156,7 +154,7 @@ namespace cmd {
 			if(!res.settings.inFiles.empty()) {
 				res.job.setFiles(res.settings.inFiles);
 			} else {
-				std::cerr << "No input files provided!\n";
+				std::cerr << "Error: No input files provided!\n";
 				res.valid = false;
 				return res;
 			}
@@ -174,9 +172,6 @@ namespace cmd {
 
 			// --------------- Job Settings ---------------
 
-			// enable semantic check extension if needed
-//			res.job.setOption(fe::ConversionSetup::StrictSemanticChecks, map.count("strict-semantic"));
-
 			res.job.setOption(fe::ConversionJob::OpenMP, res.settings.openMP);
 			res.job.setOption(fe::ConversionJob::Cilk, res.settings.cilk);
 			res.job.setOption(fe::ConversionJob::OpenCL, res.settings.openCL);
@@ -185,6 +180,10 @@ namespace cmd {
 			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
 			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
 			res.job.setOption(fe::ConversionJob::GemCrossCompile, res.settings.gemCrossCompile);
+
+			// TODO: Remove this warning once the opencl frontend is fixed
+			if(res.job.hasOption(fe::ConversionJob::OpenCL))
+				std::cerr << "Warning: OpenCL frontend support still experimental, consider switching to ICL frontend.\n";
 
 			// check for libraries and add LD_LIBRARY_PATH entries to lib search path
 			std::vector<frontend::path> ldpath;
@@ -239,7 +238,7 @@ namespace cmd {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
 				assert(res.job.isCxx());
 			} else {
-				std::cerr << "Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
+				std::cerr << "Error: Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
 				res.valid = false;
 				return res;
 			}
@@ -263,17 +262,25 @@ namespace cmd {
 			}
 
 			// prepare for setting up backend
-			if(res.settings.backend == "runtime" || res.settings.backend == "run")
+			if(res.settings.backend == "runtime" || res.settings.backend == "run") {
 				res.backendHint.backend = BackendEnum::Runtime;
-			else if(res.settings.backend == "sequential" || res.settings.backend == "seq")
+			} else if(res.settings.backend == "sequential" || res.settings.backend == "seq") {
 				res.backendHint.backend = BackendEnum::Sequential;
-			else if(res.settings.backend == "opencl" || res.settings.backend == "ocl" )
+			} else if(res.settings.backend == "opencl" || res.settings.backend == "ocl" ) {
 				res.backendHint.backend = BackendEnum::OpenCL;
-			else if(res.settings.backend == "pthreads" || res.settings.backend == "pthread")
+			} else if(res.settings.backend == "pthreads" || res.settings.backend == "pthread") {
 				res.backendHint.backend = BackendEnum::Pthreads;
-			else
-				std::cerr << "Unsupported backend: " << res.settings.backend << " - supported: sequential | runtime | ocl | pthreads\n";
+			} else {
+				std::cerr << "Error: Unsupported backend: " << res.settings.backend << " - supported: sequential | runtime | ocl | pthreads\n";
+				res.valid = false;
+				return res;
+			}
 
+			if(!res.settings.dumpOclKernel.empty() && res.backendHint.backend != BackendEnum::OpenCL) {
+				std::cerr << "Error: OpenCL kernel dump requires OpenCL backend (current backend selected: " << res.backendHint << ")\n";
+				res.valid = false;
+				return res;
+			}
 			// done
 			return res;
 

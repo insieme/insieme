@@ -361,18 +361,10 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 			return false;
 		}();
 
-		// check if a path to dump the binary representation of the kernel is passed (form:
-		// -b ocl:PATH)
-		std::string kernelDumpPath;
-		size_t idx = options.settings.backend.find(":");
-		if(idx != std::string::npos) {
-			kernelDumpPath = options.settings.backend.substr(idx + 1, options.settings.backend.size());
-		}
-
 		if(host)
-			return be::ocl_host::OCLHostBackend::getDefault(kernelDumpPath);
+			return be::ocl_host::OCLHostBackend::getDefault(options.settings.dumpOclKernel.string());
 		else
-			return be::ocl_kernel::OCLKernelBackend::getDefault(kernelDumpPath);
+			return be::ocl_kernel::OCLKernelBackend::getDefault(options.settings.dumpOclKernel.string());
 	}
 
 	if(options.backendHint == cmd::BackendEnum::Sequential)
@@ -449,12 +441,11 @@ int main(int argc, char** argv) {
 	}
 
 	// dump the translation unit file (if needed for de-bugging)
-	if(options.settings.dumpTU) {
-		std::cout << "Converting Translation Unit ...\n";
+	if(!options.settings.dumpTU.empty()) {
+		std::cout << "Dumping Translation Unit ...\n";
 		auto tu = options.job.toIRTranslationUnit(mgr);
-		std::ofstream out(options.settings.outFile.string());
+		std::ofstream out(options.settings.dumpTU.string());
 		out << tu;
-		return 0;
 	}
 
 
@@ -464,18 +455,14 @@ int main(int argc, char** argv) {
     auto program = options.job.execute(mgr);
 
     core::checks::MessageList errors;
-    if(options.settings.checkSema)
-    	checkSema(program, errors);
-
-    if(options.settings.checkSemaOnly) {
-    	std::cout << "#################################### check sema only\n";
-    	return checkSema(program, errors);
+    if(options.settings.checkSema || options.settings.checkSemaOnly) {
+    	int retval = checkSema(program, errors);
+    	if(options.settings.checkSemaOnly)
+    		return retval;
     }
 
-    if(options.settings.dumpCFG) {
-    	dumpCFG(program, options.settings.outFile.string());
-    	return 0;
-    }
+    if(!options.settings.dumpCFG.empty())
+    	dumpCFG(program, options.settings.dumpCFG.string());
 
     if(options.settings.showStatistics)
     	showStatistics(program);
@@ -490,23 +477,27 @@ int main(int argc, char** argv) {
     	SCoPTransformation(program, options);
 
 	// dump IR code
-	if(options.settings.dumpIR) {
-		LOG(INFO) << "Dumping Translation Unit";
-		std::ofstream out(options.settings.outFile.string());
+	if(!options.settings.dumpIR.empty()) {
+		std::cout << "Dumping intermediate representation ...\n";
+		std::ofstream out(options.settings.dumpIR.string());
 		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
-		return 0;
 	}
 
 	// Step 3: produce output code
-	cout << "Creating target code ...\n";
+	std::cout << "Creating target code ...\n";
 	backend::BackendPtr backend = getBackend(program, options);
 	auto targetCode = backend->convert(program);
 
-	// dump source file if requested
-	if(options.settings.dumpTRG) {
-		std::ofstream out(options.settings.outFile.string());
+	// dump source file if requested, exit if requested
+	fe::path filePath = options.settings.dumpTRG;
+	if(!options.settings.dumpTRGOnly.empty())
+		filePath = options.settings.dumpTRGOnly;
+	if(!filePath.empty()) {
+		std::cout << "Dumping target code ...\n";
+		std::ofstream out(filePath.string());
 		out << *targetCode;
-		return 0;
+		if(!options.settings.dumpTRGOnly.empty())
+			return 0;
 	}
 
 
@@ -515,8 +506,6 @@ int main(int argc, char** argv) {
 	//		executable.
 	//		if any of the translation units is has cpp belongs to cpp code, we'll use the
 	//		cpp compiler, C otherwise
-	cout << "Building binaries ...\n";
-
 	cp::Compiler compiler =
 			(options.job.isCxx())
 				? cp::Compiler::getDefaultCppCompiler()
@@ -565,7 +554,7 @@ int main(int argc, char** argv) {
         compiler.addFlag("-std=c++0x");
     }
     
-    LOG(INFO) << "Compiling binary ...";
+    std::cout << "Compiling binary ...\n";
 
 	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 
