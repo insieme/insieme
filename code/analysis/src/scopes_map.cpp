@@ -60,7 +60,7 @@ namespace {
 		void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
 
 			NodeAddress scope = declStmt.getFirstParentOfType(NT_CompoundStmt);
-			assert(scope && "Impossible to find surrounding compound stmt for declaration");
+			assert_true(scope) << "Impossible to find surrounding compound stmt for declaration";
 			scopeMap.insert( std::make_pair(declStmt->getVariable(), scope.as<CompoundStmtAddress>()) );
 
 		}

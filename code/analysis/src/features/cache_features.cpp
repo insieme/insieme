@@ -150,8 +150,8 @@ namespace features {
 //				}
 //
 //				// ensure that this var is not a reference variable
-//				assert(var->getType()->getNodeType() != core::NT_RefType && "All reference variables have to be known!");
-//				assert(false && "Trying to read undefined variable!");
+//				assert_true(var->getType()->getNodeType() != core::NT_RefType && "All reference variables have to be known!");
+//				assert_true(false && "Trying to read undefined variable!");
 //				return 0;
 //			}
 //
@@ -168,7 +168,7 @@ namespace features {
 //
 //				// unable to process other literals
 //				std::cerr << "Unsupported literal: " << *lit << " of type " << *type << "\n";
-//				assert(false && "Unsupported literal encountered!");
+//				assert_true(false && "Unsupported literal encountered!");
 //				return 0;
 //			}
 //
@@ -198,13 +198,13 @@ namespace features {
 //					default: break;
 //					}
 //
-//					assert(false && "Unsupported arithmetic operator!");
+//					assert_true(false && "Unsupported arithmetic operator!");
 //				}
 //
 //				// deal with increment / decrement operators
 //				if (numOps == 1 && basic.isArithOp(fun)) {
 //
-//					assert(call->getArgument(0)->getNodeType() != core::NT_Variable
+//					assert_true(call->getArgument(0)->getNodeType() != core::NT_Variable
 //							&& "Can only increment variables!");
 //
 //					core::VariablePtr var = static_pointer_cast<core::VariablePtr>(call->getArgument(0));
@@ -217,7 +217,7 @@ namespace features {
 //					default: break;
 //					}
 //
-//					assert(false && "Unsupported arithmetic operator!");
+//					assert_true(false && "Unsupported arithmetic operator!");
 //				}
 //
 //				// deal with comparison operators
@@ -264,7 +264,7 @@ namespace features {
 //				}
 //
 //				std::cerr << "Unsupported operator encountered: " << *call << " of type " << *call->getType() << "\n";
-//				assert(false && "Unsupported operator encountered!");
+//				assert_true(false && "Unsupported operator encountered!");
 //				return 0;
 //			}
 //
@@ -317,7 +317,7 @@ namespace features {
 //
 //			void processAccess(const core::ExpressionPtr& target, SimulationContext& context) {
 //
-//				assert(target->getType()->getNodeType() == core::NT_RefType && "Cannot access non-reference type!");
+//				assert_true(target->getType()->getNodeType() == core::NT_RefType && "Cannot access non-reference type!");
 //
 //				// simulate memory access
 //				int64_t location = getAddress(target, context);

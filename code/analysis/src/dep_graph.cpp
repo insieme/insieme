@@ -103,14 +103,14 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	std::copy(srcNest.begin(), srcNest.end(), std::back_inserter(distVecSkel));
 	std::copy(sinkNest.begin()+idx, sinkNest.end(), std::back_inserter(distVecSkel));
 	LOG(DEBUG) << toString(distVecSkel);
-	assert(distVecSkel.size() == size);
+	assert_eq(distVecSkel.size(), size);
 
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_in, NULL);
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_out, NULL);
 
  	isl_set* deltas = isl_map_deltas( isl_map_from_basic_map( isl_basic_map_copy( bmap ) ) );
 
-	assert(deltas && isl_set_n_basic_set(deltas) == 1);
+	assert_true(deltas && isl_set_n_basic_set(deltas) == 1);
 
 	IslSet set( ctx, isl_union_set_from_set(deltas) );
 	set.simplify();
@@ -161,7 +161,7 @@ std::string depTypeToStr(const dep::DependenceType& dep) {
 	case WAR: return "WAR";
 	case WAW: return "WAW";
 	case RAR: return "RAR";
-	default : assert( false && "Dependence type not supported");
+	default : assert_not_implemented();
 	}
 	return "-unknown-";
 }
@@ -219,10 +219,8 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr,
 	// Assign the ID and relative stmts to each node of the graph
 	typename boost::graph_traits<Graph>::vertex_iterator vi, vi_end;
 	for (tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
-		assert(*vi == scop[*vi].id &&
-				"Assigned ID in the dependence graph doesn't correspond to" 
-				" statement ID assigned inside this SCoP"
-			  );
+		assert_eq(*vi, scop[*vi].id)
+			<< "Assigned ID in the dependence graph doesn't correspond to statement ID assigned inside this SCoP";
 		graph[*vi] = std::make_shared<Stmt>( *this, *vi ); 
 		graph[*vi]->m_addr = scop[*vi].getAddr();
 	}
@@ -269,7 +267,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 										bool transitive_closure) 
 {
 	polyhedral::scop::mark(root);	// add scop annotation if necessary
-	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
+	assert_true(root->hasAnnotation(scop::ScopRegion::KEY)) << "IR statement must be a SCoP";
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 	
 	return extractDependenceGraph(root->getNodeManager(), scop, type, transitive_closure);
@@ -363,10 +361,9 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 					int coeff = af.getCoeff(cur);
 					if (!coeff) { return; }
 					
-					assert(coeff == 1 && "The coefficient value is not unitary as expected");
-					assert(!found && "More than 1 iterator have unary coefficient");
+					assert_eq(coeff, 1) << "The coefficient value is not unitary as expected";
+					assert_false(found) << "More than 1 iterator have unary coefficient";
 					found = true;
-		 			// assert(!distVec[iterVec.getIdx(cur)] && "Expected a NULL pointer");
 					// reset the value of the coefficient 
 					af.setCoeff(cur, 0);
 
@@ -387,7 +384,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 	}
 
 	AffineConstraintPtr visitBinConstraint(const BinAffineConstraint& bcc) {
-		assert(bcc.isConjunction() && "This is not possible");
+		assert_true(bcc.isConjunction()) << "This is not possible";
 
 		AffineConstraintPtr lhs = visit(bcc.getLHS());
 		AffineConstraintPtr rhs = visit(bcc.getRHS());
@@ -409,7 +406,6 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 	DistanceVectorExtractor dve(iterVec, mgr, skel);
 	AffineConstraintPtr&& res = dve.visit(cons);
 
-	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
 	utils::CombinerPtr<core::arithmetic::Formula> cf;
 	if (res) {
 		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(res);

@@ -83,9 +83,8 @@ std::string Ref::refTypeToStr(const RefType& type) {
 Ref::Ref(const RefType& type, const core::ExpressionAddress& var, const UseType& usage) : 
 	 baseExpr(var), type(type), usage(usage) 
 { 
-	assert(var->getType()->getNodeType() == core::NT_RefType && 
-			"TYpe of base expression must be of RefType"
-		); 
+	assert_eq(var->getType()->getNodeType(), core::NT_RefType)  
+		<< "Type of base expression must be of RefType"; 
 }
 
 std::ostream& Ref::printTo(std::ostream& out) const {
@@ -139,7 +138,7 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 		subTy = callExpr->getArgument(0)->getType();	
 	} else if( core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() )) {
 		const core::TypePtr& refType = callExpr->getArgument(0)->getType();
-		assert(refType.isa<core::RefTypePtr>());
+		assert_true(refType.isa<core::RefTypePtr>());
 		subTy = refType.as<core::RefTypePtr>()->getElementType();
 	}
 
@@ -237,12 +236,12 @@ class DefUseCollect : public core::IRVisitor<void, core::Address> {
 			return;
 		}
 		if ( refType == Ref::CALL ) {
-			assert(var->getNodeType() == core::NT_CallExpr && "Expected call expression");
+			assert_eq(var->getNodeType(), core::NT_CallExpr) << "Expected call expression";
 			refSet.push_back( std::make_shared<CallRef>(AS_CALLEXPR_ADDR(var), usage) );
 			return;
 		}
 
-		assert(var->getNodeType() == core::NT_Variable && "Expected scalar variable");
+		assert_eq(var->getNodeType(), core::NT_Variable) << "Expected scalar variable";
 		refSet.push_back( std::make_shared<ScalarRef>(AS_VAR_ADDR(var), usage) );
 	}
 
@@ -278,12 +277,12 @@ public:
 		{
 			//FIXME correct for DEFUSE?
 			visit( callExpr->getArgument(0) ); // arg(0)
-			//assert(false && "cppRef in defUse");
+			//assert_fail() << "cppRef in defUse";
 			return;
 		}
 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
-			assert( usage != Ref::DEF && "Nested assignment operations" );
+			assert_true(usage != Ref::DEF) << "Nested assignment operations";
 			usage = Ref::DEF;
 			visit( callExpr->getArgument(0) ); // arg(0)
 			usage = Ref::USE;
@@ -315,7 +314,7 @@ public:
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayView()) ) 
 		{
 			usage = Ref::USE;
-			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+			assert_eq(callExpr->getArguments().size(), 2) << "Malformed expression";
 			
 			// Visit the index expression
 			idxStack.push( SubscriptContext() );
@@ -323,7 +322,7 @@ public:
 			idxStack.pop();
 	
 			usage = saveUsage; // restore the previous usage 
-			assert(idxStack.size() > 0);
+			assert_gt(idxStack.size(), 0);
 			SubscriptContext& subCtx = idxStack.top();
 			// if the start of the subscript expression is not set, this is the start
 			if (!subCtx.first) { subCtx.first = callExpr; }

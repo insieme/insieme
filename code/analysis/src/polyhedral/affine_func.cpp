@@ -197,7 +197,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 	core::ExpressionPtr ret;
 	for_each(filtered.first, filtered.second, [&] (const AffineFunction::Term& t) {
 		core::ExpressionPtr currExpr;
-		assert_eq(t.second, 0) << "0 coefficient not filtered out correctly";
+		assert_ne(t.second, 0) << "0 coefficient not filtered out correctly";
 
 		if (t.first.getType() != Element::CONST) {
 			core::ExpressionPtr expr = static_cast<const Expr&>(t.first).getExpr();

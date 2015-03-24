@@ -95,7 +95,7 @@ struct ConstraintCloner : public utils::RecConstraintVisitor<AffineFunction, Aff
 			src = &c.getFunction().getIterationVector();
 			transMap = transform( trg, *src );
 		}
-		assert(c.getFunction().getIterationVector() == *src);
+		assert_true(c.getFunction().getIterationVector() == *src);
 
 		return makeCombiner( toBase(c, trg, transMap) ); 
 	}
@@ -107,7 +107,7 @@ struct ConstraintCloner : public utils::RecConstraintVisitor<AffineFunction, Aff
 	AffineConstraintPtr visitBinConstraint(const BinAffineConstraint& bcc) {
 		AffineConstraintPtr lhs = visit(bcc.getLHS());
 		AffineConstraintPtr rhs = visit(bcc.getRHS());
-		assert(lhs && rhs && "Wrong conversion of lhs and rhs of binary constraint");
+		assert_true(lhs && rhs) << "Wrong conversion of lhs and rhs of binary constraint";
 
 		return AffineConstraintPtr( std::make_shared<BinAffineConstraint>( bcc.getType(), lhs, rhs ) );
 	}
@@ -125,7 +125,7 @@ struct IterVecExtractor : public utils::RecConstraintVisitor<AffineFunction, voi
 		if (iterVec == NULL) {
 			iterVec = &thisIterVec;
 		} 
-		assert(*iterVec == thisIterVec); // FIXME use exceptions for this
+		assert_true(*iterVec == thisIterVec); // FIXME use exceptions for this
 	}
 };
 
@@ -152,14 +152,14 @@ struct ConstraintConverter : public utils::RecConstraintVisitor<AffineFunction, 
 		}
 	
 		ret = builder.callExpr( mgr.getLangBasic().getOperator(mgr.getLangBasic().getInt4(), op), ret, builder.intLit(0));
-		assert( mgr.getLangBasic().isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
+		assert_true(mgr.getLangBasic().isBool(ret->getType())) << "Type of a constraint must be of boolean type";
 
 		return ret;
 	}
 
 	core::ExpressionPtr visitNegConstraint(const NegAffineConstraint& ucc) {
 		core::ExpressionPtr&& sub = visit(ucc.getSubConstraint());
-		assert(sub && "Conversion of sub constraint went wrong");
+		assert_true(sub) << "Conversion of sub constraint went wrong";
 		return builder.callExpr( mgr.getLangBasic().getBoolLNot(), sub);
 	}
 
@@ -168,7 +168,7 @@ struct ConstraintConverter : public utils::RecConstraintVisitor<AffineFunction, 
 		core::ExpressionPtr lhs = visit( bcc.getLHS() );
 		core::ExpressionPtr rhs = visit( bcc.getRHS() );
 
-		assert(lhs && rhs && "Conversion of sub constraint went wrong");
+		assert_true(lhs && rhs) << "Conversion of sub constraint went wrong";
 
 		core::lang::BasicGenerator::Operator op;
 		switch (bcc.getType()) {
@@ -179,7 +179,7 @@ struct ConstraintConverter : public utils::RecConstraintVisitor<AffineFunction, 
 		core::ExpressionPtr&& ret = builder.callExpr( mgr.getLangBasic().getOperator(mgr.getLangBasic().getBool(), op), 
 				lhs, builder.createCallExprFromBody(builder.returnStmt(rhs), mgr.getLangBasic().getBool(), true) 
 			);
-		assert( mgr.getLangBasic().isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
+		assert_true(mgr.getLangBasic().isBool(ret->getType())) << "Type of a constraint must be of boolean type";
 
 		return ret;
 	}
@@ -215,7 +215,7 @@ struct CopyFromVisitor : public utils::RecConstraintVisitor<AffineFunction, Affi
 
 		AffineConstraintPtr lhs = visit( bcc.getLHS() );
 		AffineConstraintPtr rhs = visit( bcc.getRHS() );
-		assert(lhs && rhs && "Conversion of sub constraint went wrong");
+		assert_true(lhs && rhs) << "Conversion of sub constraint went wrong";
 
 		return bcc.getType() == BinAffineConstraint::OR ? lhs or rhs : lhs and rhs; 
 	}
@@ -251,12 +251,12 @@ AffineConstraintPtr cloneConstraint(const IterationVector& trgVec, const AffineC
 }
 
 const IterationVector& extractIterationVector(const AffineConstraintPtr& constraint) {
-	assert( constraint && "Passing an empty constraint" );
+	assert_true(constraint) << "Passing an empty constraint";
 
 	IterVecExtractor ive;
 	ive.visit(constraint);
 
-	assert(ive.iterVec != NULL);
+	assert_true(ive.iterVec != NULL);
 	return *ive.iterVec;
 }
 

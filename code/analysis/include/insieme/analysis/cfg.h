@@ -748,7 +748,7 @@ struct RetBlock: public Block {
 	RetBlock(const CFG& cfg): Block(cfg, RET), call(NULL) { }
 
 	inline const CallBlock& getCallBlock() const { 
-		assert(call && "Call block for this RET block not set.");
+		assert_true(call) << "Call block for this RET block not set.";
 		return *call; 
 	}
 	inline void setCallBlock(CallBlock& call) { this->call = &call; }
