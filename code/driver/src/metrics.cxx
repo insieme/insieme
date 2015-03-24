@@ -106,34 +106,28 @@ int main(int argc, char** argv) {
 	auto steps = tf::getTestSteps(options);
 	
 	//define some conflicting steps, so either c or c++ is executed (not both of them)
-	conflictingSteps["insiemecc_c++_check"]="insiemecc_c_check";
-	conflictingSteps["insiemecc_c++_compile"]="insiemecc_c_compile";
-	conflictingSteps["insiemecc_c++_execute"]="insiemecc_c_execute";
-	conflictingSteps["main_c++_sema"]="main_c_sema";
-	conflictingSteps["main_run_c++_check"]="main_run_check";
-	conflictingSteps["main_run_c++_execute"]="main_run_execute";
-	conflictingSteps["main_run_c++_compile"]="main_run_compile";
-	conflictingSteps["main_run_c++_convert"]="main_run_convert";
-	conflictingSteps["main_seq_c++_check"]="main_seq_check";
-	conflictingSteps["main_seq_c++_compile"]="main_seq_compile";
-	conflictingSteps["main_seq_c++_convert"]="main_seq_convert";
-	conflictingSteps["main_seq_c++_execute"]="main_seq_execute";
+	conflictingSteps["insiemecc_c++_sema"]="insiemecc_c_sema";
+	conflictingSteps["insiemecc_run_c++_check"]="insiemecc_run_check";
+	conflictingSteps["insiemecc_run_c++_execute"]="insiemecc_run_execute";
+	conflictingSteps["insiemecc_run_c++_compile"]="insiemecc_run_compile";
+	conflictingSteps["insiemecc_run_c++_convert"]="insiemecc_run_convert";
+	conflictingSteps["insiemecc_seq_c++_check"]="insiemecc_seq_check";
+	conflictingSteps["insiemecc_seq_c++_compile"]="insiemecc_seq_compile";
+	conflictingSteps["insiemecc_seq_c++_convert"]="insiemecc_seq_convert";
+	conflictingSteps["insiemecc_seq_c++_execute"]="insiemecc_seq_execute";
 	conflictingSteps["ref_c++_check"]="ref_c_check";
 	conflictingSteps["ref_c++_compile"]="ref_c_compile";
 	conflictingSteps["ref_c++_execute"]="ref_c_execute";
 
-	conflictingSteps["insiemecc_c_check"]="insiemecc_c++_check";
-	conflictingSteps["insiemecc_c_compile"]="insiemecc_c++_compile";
-	conflictingSteps["insiemecc_c_execute"]="insiemecc_c++_execute";
-	conflictingSteps["main_c_sema"]="main_c++_sema";
-	conflictingSteps["main_run_check"]="main_run_c++_check";
-	conflictingSteps["main_run_execute"]="main_run_c++_execute";
-	conflictingSteps["main_run_compile"]="main_run_c++_compile";
-	conflictingSteps["main_run_convert"]="main_run_c++_convert";
-	conflictingSteps["main_seq_check"]="main_seq_c++_check";
-	conflictingSteps["main_seq_compile"]="main_seq_c++_compile";
-	conflictingSteps["main_seq_convert"]="main_seq_c++_convert";
-	conflictingSteps["main_seq_execute"]="main_seq_c++_execute";
+	conflictingSteps["insiemecc_c_sema"]="insiemecc_c++_sema";
+	conflictingSteps["insiemecc_run_check"]="insiemecc_run_c++_check";
+	conflictingSteps["insiemecc_run_execute"]="insiemecc_run_c++_execute";
+	conflictingSteps["insiemecc_run_compile"]="insiemecc_run_c++_compile";
+	conflictingSteps["insiemecc_run_convert"]="insiemecc_run_c++_convert";
+	conflictingSteps["insiemecc_seq_check"]="insiemecc_seq_c++_check";
+	conflictingSteps["insiemecc_seq_compile"]="insiemecc_seq_c++_compile";
+	conflictingSteps["insiemecc_seq_convert"]="insiemecc_seq_c++_convert";
+	conflictingSteps["insiemecc_seq_execute"]="insiemecc_seq_c++_execute";
 	conflictingSteps["ref_c_check"]="ref_c++_check";
 	conflictingSteps["ref_c_compile"]="ref_c++_compile";
 	conflictingSteps["ref_c_execute"]="ref_c++_execute";
@@ -152,33 +146,29 @@ int main(int argc, char** argv) {
 
 	// setup highlighted tests:
 	std::set<std::string> highlight;
-	highlight.insert("main_seq_execute");
-	highlight.insert("main_seq_c++_execute");
+	highlight.insert("insiemecc_seq_execute");
+	highlight.insert("insiemecc_seq_c++_execute");
 	highlight.insert("ref_c++_execute");
 	highlight.insert("ref_c_execute");
 
 	for(int i=1;i<options.statThreads;i*=2){
-		highlight.insert(std::string("main_run_execute_")+std::to_string(i));
-		highlight.insert(std::string("main_run_c++_execute_")+std::to_string(i));
+		highlight.insert(std::string("insiemecc_run_execute_")+std::to_string(i));
+		highlight.insert(std::string("insiemecc_run_c++_execute_")+std::to_string(i));
 		highlight.insert(std::string("ref_c_execute_")+std::to_string(i));
 		highlight.insert(std::string("ref_c++_execute_")+std::to_string(i));
-		highlight.insert(std::string("insiemecc_c_execute_")+std::to_string(i));
-		highlight.insert(std::string("insiemecc_c++_execute_")+std::to_string(i));
 	}
-	highlight.insert(std::string("main_run_execute_")+std::to_string(options.statThreads));
-	highlight.insert(std::string("main_run_c++_execute_")+std::to_string(options.statThreads));
+	highlight.insert(std::string("insiemecc_run_execute_")+std::to_string(options.statThreads));
+	highlight.insert(std::string("insiemecc_run_c++_execute_")+std::to_string(options.statThreads));
 	highlight.insert(std::string("ref_c_execute_")+std::to_string(options.statThreads));
 	highlight.insert(std::string("ref_c++_execute_")+std::to_string(options.statThreads));
-	highlight.insert(std::string("insiemecc_c_execute_")+std::to_string(options.statThreads));
-	highlight.insert(std::string("insiemecc_c++_execute_")+std::to_string(options.statThreads));
 
 	if(options.scheduling){
-		highlight.insert(std::string("main_run_execute_dyn_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("main_run_c++_execute_dyn_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("main_run_execute_stat_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("main_run_c++_execute_stat_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("main_run_execute_guid_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("main_run_c++_execute_guid_")+std::to_string(options.statThreads));
+		highlight.insert(std::string("insiemecc_run_execute_dyn_")+std::to_string(options.statThreads));
+		highlight.insert(std::string("insiemecc_run_c++_execute_dyn_")+std::to_string(options.statThreads));
+		highlight.insert(std::string("insiemecc_run_execute_stat_")+std::to_string(options.statThreads));
+		highlight.insert(std::string("insiemecc_run_c++_execute_stat_")+std::to_string(options.statThreads));
+		highlight.insert(std::string("insiemecc_run_execute_guid_")+std::to_string(options.statThreads));
+		highlight.insert(std::string("insiemecc_run_c++_execute_guid_")+std::to_string(options.statThreads));
 	}
 
 	//check if backup file exists, read results

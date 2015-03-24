@@ -64,10 +64,10 @@ namespace integration {
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
 			job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
-			std::string step="main_run_convert";
+			std::string step="insiemecc_run_convert";
 			if (testCase.isCXX11()){
 				job.setStandard(frontend::ConversionSetup::Cxx11);
-				step="main_run_c++_convert";
+				step="insiemecc_run_c++_convert";
 			}
 
 			// add pre-processor definitions
