@@ -459,9 +459,6 @@ namespace integration {
 					// start with executable
 					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
 
-					//tweak lang string for c test cases
-					if(l==C)
-						langstr="_";
 					// pipe result to output file
 					if(numThreads)
 						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
