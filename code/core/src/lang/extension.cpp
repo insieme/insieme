@@ -59,7 +59,7 @@ namespace lang {
 		const auto& namedExtensions = getNamedIrExtensions();
 		//first check the names defined in this extension here
 		if (namedExtensions.find(irName) != namedExtensions.end()) {
-			assert_true(false) << "IR_NAME \"" << irName << "\" already in use in this extension";
+			assert_fail() << "IR_NAME \"" << irName << "\" already in use in this extension";
 		}
 
 		//then try to parse the given name as an expression
@@ -67,13 +67,11 @@ namespace lang {
 			const insieme::core::IRBuilder& builder(getNodeManager());
 			builder.parseExpr(irName, namedExtensions);
 			//if the parsing succeeded, then there already exists some literal or derived with that name
-			assert_true(false) << "IR_NAME \"" << irName << "\" already in use";
+			assert_fail() << "IR_NAME \"" << irName << "\" already in use";
 
 		} catch (const insieme::core::parser::IRParserException& ex) {
 			//nothing to do in here
 		}
-
-		//TODO also cover type names somehow
 	}
 
 	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {

@@ -51,14 +51,8 @@ namespace lang {
 	//Helper extension used to test the named extensions system
 	class NamedCoreExtensionTestExtension : public core::lang::Extension {
 
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
 		friend class core::NodeManager;
 
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
 		NamedCoreExtensionTestExtension(core::NodeManager& manager)
 				: core::lang::Extension(manager) {}
 
@@ -153,6 +147,29 @@ namespace lang {
 		EXPECT_EQ("((struct<foo:'a>)->struct<foo:'a>)", toString(*namedDerived.getType()));
 	}
 
+
+
+	//Helper extension used to test assertion when using a name twice
+	class NamedCoreExtensionTestDuplicatedExtension : public core::lang::Extension {
+
+		friend class core::NodeManager;
+
+		NamedCoreExtensionTestDuplicatedExtension(core::NodeManager& manager)
+				: core::lang::Extension(manager) {}
+
+	public:
+
+		LANG_EXT_TYPE_WITH_NAME(NamedType, "NamedType", "struct { 'a foo; }")
+
+		//Note the re-use of the same IR_NAME
+		LANG_EXT_TYPE_WITH_NAME(NamedType2, "NamedType", "struct { 'a foo; }")
+	};
+
+	TEST(NamedCoreExtensionTest, AssertNameCollision) {
+		NodeManager manager;
+
+		ASSERT_DEATH(manager.getLangExtension<NamedCoreExtensionTestDuplicatedExtension>(), "IR_NAME \"NamedType\" already in use in this extension");
+	}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
