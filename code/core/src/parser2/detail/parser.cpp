@@ -34,7 +34,11 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/core/ir_node.h"
+#include "insieme/core/lang/extension.h"
 #include "insieme/core/parser2/detail/parser.h"
+
+#include "insieme/utils/assert.h"
 
 #include <sstream>
 #include <iterator>
@@ -1270,6 +1274,38 @@ namespace detail {
 			}
 		};
 		return std::make_shared<Action<new_scope_handler>>(term);
+	}
+
+	TermPtr usingScope(const TermPtr& term) {
+		// define action event handler
+		struct using_scope_handler : public detail::actions {
+
+			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				//first check the terms we matched
+				assert_true(begin != end) << "Context doesn't seem to provide any of the sub-terms we are expecting";
+				const TokenIter& extensionNameToken = begin + 1;
+				assert_true(extensionNameToken != end) << "Context doesn't seem to provide the extension name";
+
+				//extract the name of the extension we are supposed to use and load the extension with this name
+				const string& extensionName = extensionNameToken->getLexeme().substr(1, extensionNameToken->getLexeme().length() - 2);
+				const lang::Extension& extension = context.getNodeManager().getLangExtensionByName(extensionName);
+
+				//push a new scope in which the loaded extension will be valid
+				context.getSymbolManager().pushScope(true);
+
+				//finally add all named constructs defined by this extension to the current context
+				auto& symManager = context.getSymbolManager();
+				for(const std::pair<string, NodePtr>& cur : extension.getNamedIrExtensions()) {
+					//TODO check for already existing name here and assert if found
+					symManager.add(cur.first, cur.second);
+				}
+			}
+			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				//pop the scope with the extension
+				context.getSymbolManager().popScope();
+			}
+		};
+		return std::make_shared<Action<using_scope_handler>>(term);
 	}
 
 } // end namespace detail

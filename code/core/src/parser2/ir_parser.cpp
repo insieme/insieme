@@ -2044,6 +2044,14 @@ namespace parser {
 					}
 			));
 
+			// using statement
+			g.addRule("S", rule(
+					usingScope(seq("using", any(Token::String_Literal), "in", S)),
+					[](Context& context)->NodePtr {
+						return context.getTerms().back().as<StatementPtr>();
+					}
+			));
+
 			// -- top level program code --
 
 			g.addRule("A", rule(

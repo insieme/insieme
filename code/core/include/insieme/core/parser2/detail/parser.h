@@ -85,10 +85,18 @@ namespace detail {
 			// the currently registered symbols on some level
 			vector<std::pair<TokenRange, NodePtr>> symbols;
 
+			//additional tokens loaded in this scope with the "using" construct
+			std::set<vector<Token>> symbolTokens;
+
 			Scope(bool nested = false) : nested(nested) {};
 
 			void add(const TokenRange& range, const NodePtr& node) {
 				symbols.push_back(std::make_pair(range, node));
+			}
+
+			void add(const string& name, const NodePtr& node) {
+				auto inserted = symbolTokens.insert(toVector(Token::createIdentifier(name)));
+				add(utils::range<vector<Token>::const_iterator>(inserted.first->begin(), inserted.first->end()), node);
 			}
 
 			NodePtr lookup(const TokenRange& range) const {
@@ -145,6 +153,10 @@ namespace detail {
 
 		void add(const TokenRange& range, const NodePtr& node) {
 			scopeStack.back().add(range, node);
+		}
+
+		void add(const string& name, const NodePtr& node) {
+			scopeStack.back().add(name, node);
 		}
 
 		bool replace(const TokenRange& range, const NodePtr& node) {
@@ -1143,6 +1155,8 @@ namespace detail {
 	TermPtr newScope(const TermPtr& term);
 
 	TermPtr symScope(const TermPtr& term);
+
+	TermPtr usingScope(const TermPtr& term);
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
 		return std::make_shared<NonTerminal>(nonTerminal);

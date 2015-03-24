@@ -61,6 +61,15 @@ namespace lang {
 	 *
 	 * Extensions should not directly be created. Instead, extensions should be created
 	 * using the corresponding factory method of the NodeManager.
+	 *
+	 * One can define named IR extensions by using the macros with the _WITH_NAME suffix
+	 * provided. Those can be used to create named types, literal and derived constructs.
+	 * Note that names used to identify these have to be unique - not just within this
+	 * extension but also across all other extensions.
+	 *
+	 * Each new extension should be registered with a unique name in the ExtensionRegistry.
+	 * This name can then be used to reference all the named constructs defined within
+	 * this extension in arbitrary IR code during parsing, as well as in other extensions.
 	 */
 	class Extension : private boost::noncopyable {
 

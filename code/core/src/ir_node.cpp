@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,6 +46,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/extension_registry.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -235,6 +236,11 @@ namespace core {
 
 	NodeManager::NodeManager(unsigned initialFreshID)
 		: data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }
+
+	const lang::Extension& NodeManager::getLangExtensionByName(const string& extensionName) {
+		const lang::ExtensionRegistry& registry = lang::ExtensionRegistry::getInstance();
+		return registry.getExtensionFactory(extensionName)(*this);
+	}
 
 	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager)
 		: root(manager), basic(new lang::BasicGenerator(manager)) {};
