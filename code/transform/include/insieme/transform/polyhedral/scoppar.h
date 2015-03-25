@@ -43,12 +43,12 @@
 namespace insieme { namespace transform { namespace polyhedral {
 
 class SCoPPar {
-    insieme::core::ProgramPtr& program;
+	const insieme::core::ProgramPtr& program;
 
 public:
-    SCoPPar(insieme::core::ProgramPtr& program);
+	SCoPPar(const insieme::core::ProgramPtr &program);
 
-    insieme::core::ProgramPtr& apply();
+	const insieme::core::ProgramPtr& apply();
     unsigned int size(insieme::core::NodePtr n);
 };
 

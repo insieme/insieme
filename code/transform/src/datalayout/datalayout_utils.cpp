@@ -263,7 +263,7 @@ ExpressionAddress removeRefVar(ExpressionAddress refVar) {
 
 TypePtr removeRef(TypePtr refTy) {
 	if(RefTypePtr r = refTy.isa<RefTypePtr>())
-		return r->getElementType();
+		return removeRef(r->getElementType());
 	return refTy;
 }
 
@@ -483,10 +483,13 @@ bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
 
 	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
 
-	if(containsStructType.match(type))
-		return true;
+	return containsStructType.match(type);
+}
 
-	return false;
+bool containsType(const TypePtr& contains, const TypePtr type) {
+	pattern::TreePattern innerType = pattern::aT(pattern::atom(type));
+
+	return innerType.match(contains);
 }
 
 pattern::TreePattern optionalDeref(const pattern::TreePattern& mayToBeDerefed) {

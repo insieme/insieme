@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ namespace extensions {
 
 //
 //	To IR:
-//	the idea is to create a literal function call wich reproduces the generic variadic asm function call
+//	the idea is to create a literal function call which reproduces the generic variadic asm function call
 //
 //		the asm stmt has the following form:
 //		asm (
@@ -77,8 +77,8 @@ namespace extensions {
 //
 //		where:
 //
-//		TEMPLATE:  is a string containig the asembler templated instructions list
-//		OUTPUTS, INPUTS: are a coma separated list of pairs string - variable:    "some text"(VAR) ,  ... 
+//		TEMPLATE:  is a string containing the assembler templated instructions list
+//		OUTPUTS, INPUTS: are a comma separated list of pairs string - variable:    "some text"(VAR) ,  ...
 //		CLOBBLER: are a list of registers which will be modified by the asm execution (comma separated list of strings)
 //
 
@@ -135,6 +135,6 @@ stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::co
 	return ret;
 }
 
-} //namespace plugin
-} //namespace frontnt
-} //namespace extensions
+} //namespace extension
+} //namespace frontend
+} //namespace insieme

@@ -53,7 +53,7 @@ using namespace insieme::transform::polyhedral;
 
 
 // constructor
-SCoPPar::SCoPPar(ProgramPtr& program): program(program) {}
+SCoPPar::SCoPPar(const ProgramPtr& program): program(program) {}
 
 /** Return the size of the SCoP, given as n. The number itself is irrelevant, only relative sizes matter. Currently,
 this function will return the number of statements but future implementation may return the number of loop instances,
@@ -68,7 +68,7 @@ unsigned int SCoPPar::size(NodePtr n) {
 }
 
 /// will transform the sequential program to an OpenCL program
-ProgramPtr& SCoPPar::apply() {
+const ProgramPtr& SCoPPar::apply() {
 	// gather SCoPs and save them for later processing
 	std::vector<NodeAddress> scops=Scop::getScops(program);
 	if (scops.empty()) scops=insieme::analysis::polyhedral::scop::mark(program);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1318,105 +1318,12 @@ namespace core {
 
 
 
-	// ------------------------------------- Guarded Expression -----------------------------------
-
-	/**
-	 * The accessor associated to a guarded expression.
-	 */
-	IR_NODE_ACCESSOR(GuardedExpr, Support, LambdaExpr, Expression)
-
-		/**
-		 * Obtains a reference to the lambda defining the guard.
-		 */
-		IR_NODE_PROPERTY(LambdaExpr, Guard, 0);
-
-		/**
-		 * Obtains a reference to the guarded expression.
-		 */
-		IR_NODE_PROPERTY(Expression, Expression, 1);
-
-	};
-
-	/**
-	 * The entity used to represent a guarded expression. A guarded expression
-	 * is a pair of a guard (represented by a lambda) and the expression being
-	 * computed in case the guard is triggering - if used within a job of course.
-	 */
-	IR_NODE(GuardedExpr, Support)
-	protected:
-
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << *getGuard() << "," << *getExpression() << ")";
-		}
-
-	public:
-
-		/**
-		 * This static factory method constructing a new guarded expression based
-		 * on the given guard and expression.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param guard the guard to be used within the resulting node
-		 * @param expr the expression to be guarded within the resulting node
-		 * @return the requested node instance managed by the given manager
-		 */
-		static GuardedExprPtr get(NodeManager& manager, const LambdaExprPtr& guard, const ExpressionPtr& expr) {
-			return manager.get(GuardedExpr(guard, expr));
-		}
-
-	};
-
-
-
-
-	// ------------------------------------- Guarded Expressions -----------------------------------
-
-	/**
-	 * The accessor associated to a list of guarded expressions.
-	 */
-	IR_LIST_NODE_ACCESSOR(GuardedExprs, Support, GuardedExpressions, GuardedExpr)
-	};
-
-	/**
-	 * A node type representing a list of guarded expressions.
-	 */
-	IR_NODE(GuardedExprs, Support)
-	protected:
-
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
-		}
-
-	public:
-
-		/**
-		 * This static factory method allows to construct a list of guarded expressions based
-		 * on the given expressions.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param exprs the list of guarded expressions to be included
-		 * @return the requested instance managed by the given manager
-		 */
-		static GuardedExprsPtr get(NodeManager& manager, const vector<GuardedExprPtr>& exprs) {
-			return manager.get(GuardedExprs(convertList(exprs)));
-		}
-	};
-
-
-
-
 	// ------------------------------------- Job Expression -----------------------------------
 
 	/**
 	 * The accessor associated to a job expression.
 	 */
-	IR_NODE_ACCESSOR(JobExpr, Expression, GenericType, Expression, DeclarationStmts, GuardedExprs, Expression)
+	IR_NODE_ACCESSOR(JobExpr, Expression, GenericType, Expression, DeclarationStmts, Expression)
 
 		/**
 		 * Obtains a reference to the expression determining the range for the number of threads.
@@ -1432,15 +1339,9 @@ namespace core {
 		IR_NODE_PROPERTY(DeclarationStmts, LocalDecls, 2);
 
 		/**
-		 * Obtains a reference to the list of guarded expressions.
+		 * Obtains a reference to the expression evaluated in parallel.
 		 */
-		IR_NODE_PROPERTY(GuardedExprs, GuardedExprs, 3);
-
-		/**
-		 * Obtains a reference to the default expression evaluated in case none of the guarded expressions
-		 * is triggered.
-		 */
-		IR_NODE_PROPERTY(Expression, DefaultExpr, 4);
+		IR_NODE_PROPERTY(Expression, DefaultExpr, 3);
 	};
 
 	/**
@@ -1465,14 +1366,13 @@ namespace core {
 		 * @param type the type of the resulting job expression
 		 * @param range the thread number range to be used for the construction
 		 * @param localDecls the list of local declarations to be used for the construction
-		 * @param guardedExpr the list of guarded expressions to be used for the construction
-		 * @param def the default expression to be evaluated in case none of the guarded expressions triggers
+		 * @param def the body expression to be evaluated
 		 * @return the requested type instance managed by the given manager
 		 */
 		static JobExprPtr get(NodeManager& manager, const GenericTypePtr& type,
 				const ExpressionPtr& range, const DeclarationStmtsPtr& localDecls,
-				const GuardedExprsPtr& guardedExpr, const ExpressionPtr& def) {
-			return manager.get(JobExpr(type, range, localDecls, guardedExpr, def));
+				const ExpressionPtr& def) {
+			return manager.get(JobExpr(type, range, localDecls, def));
 		}
 
 	};

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -122,10 +122,10 @@ namespace annotations {
 	 *
 	 * @param node the node to attach a location to
 	 * @param file the source file to be referenced
-	 * @param startLine start possition line number
-	 * @param startColumn start possition column number
-	 * @param endLine end possition line number
-	 * @param endColumn end possition column number
+	 * @param startLine start position line number
+	 * @param startColumn start position column number
+	 * @param endLine end position line number
+	 * @param endColumn end position column number
 	 * @return the node handed in
 	 */
 	const NodePtr& attachLocation(const NodePtr& node, const string& file, unsigned startLine, unsigned startColumn, unsigned endLine, unsigned endColumn);

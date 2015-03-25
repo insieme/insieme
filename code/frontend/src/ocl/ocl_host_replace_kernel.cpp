@@ -188,7 +188,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	ConversionJob kernelJob(path, includeDirs);
-	kernelJob.registerFrontendPlugin<extensions::OclKernelPlugin>();
+	kernelJob.registerFrontendExtension<extensions::OclKernelExtension>();
 	kernelJob.setDefinition("INSIEME", "");
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));
@@ -770,6 +770,7 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 	std::vector<ExpressionPtr> kernelEntries;
 
 	if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(createProgramWithSource))) {
+		std::cout << "createProgramWithSource:\n" << dumpPretty(createProgramWithSource) << "\n";
 		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
 				(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
 			const string& path = kfa->getKernelPath();

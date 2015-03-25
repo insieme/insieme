@@ -49,8 +49,6 @@
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 
-#include "insieme/frontend/pragma/insieme.h"
-
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
@@ -228,13 +226,20 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 	// if is a CPP ref, do not cast, do a transformation
 	if (core::analysis::isCppRef(targetType)) {
 		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), res);
-	}
-	else if (core::analysis::isConstCppRef(targetType)) {
+	} else 	if (core::analysis::isRValCppRef(targetType)) {
+		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToRValCpp(), res);
+	} else if (core::analysis::isConstCppRef(targetType)) {
 		// Note, const refs extend lifetime of values, therefore materialize the value into a ref
 		if (!res->getType().isa<core::RefTypePtr>()) {
 			res = builder.refVar(res);
 		}
 		return builder.toConstCppRef(res);
+	} else if (core::analysis::isConstRValCppRef(targetType)) {
+		// Note, const refs extend lifetime of values, therefore materialize the value into a ref
+		if (!res->getType().isa<core::RefTypePtr>()) {
+			res = builder.refVar(res);
+		}
+		return builder.toConstRValCppRef(res);
 	}
 	else if (core::analysis::isAnyCppRef(type)) {
 		res =  core::analysis::unwrapCppRef(res);
@@ -629,7 +634,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
 	core::FunctionTypePtr funcTy = func->getType().as<core::FunctionTypePtr>() ;
 
-	bool needsMPIMarkerNode = false;
 	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'>
 	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
@@ -637,12 +641,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 		//FIXME changing type to fit "free" -- with refDelete
 		funcTy = convFact.convertFunctionType(funcDecl);
 
-		needsMPIMarkerNode = (funcDecl->getNameAsString().compare(0, 4, "MPI_") == 0);
 	}
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
 
-	// In case we have a K&R C-style declaration (without argument types) 
+	// In case we have a K&R C-style declaration (without argument types)
 	// and a different number of arguments in the call we need to adjust the function type
 	vector<core::TypePtr> typeList = funcTy.getParameterTypeList();
 	if(typeList.size() == 0 && args.size() > 0) {
@@ -652,18 +655,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	}
 
 	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
-
-	// In the case this is a call to MPI, attach the loc annotation, handlling of those
-	// statements will be then applied by mpi_sema
-	if (needsMPIMarkerNode) {
-		auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
-
-		// add a marker node because multiple instances of the same MPI call must be distinct
-		irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
-
-		// attach location
-		utils::attachLocationFromClang(irNode, convFact.getSourceManager(), loc.first, loc.second);
-	}
 
 	return irNode;
 }
@@ -1138,9 +1129,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			opFunc = gen.getOperator(lhsTy, op);
 		}
 
-	} else {
-		// check if there is a kernelFile annotation
-		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
 
 	frontend_assert(opFunc) << "no operation code set\n"
@@ -1750,8 +1738,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitAtomicExpr(const clang::Atomi
 core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		retIr = plugin->Visit(expr, convFact);
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+		retIr = extension->Visit(expr, convFact);
 		if(retIr)
 			break;
     }
@@ -1765,9 +1753,9 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
 
-    // call frontend plugin post visitors
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retIr = plugin->PostVisit(expr, retIr, convFact);
+    // call frontend extension post visitors
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retIr = extension->PostVisit(expr, retIr, convFact);
 	}
 
 	// attach location annotation

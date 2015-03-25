@@ -346,7 +346,7 @@ namespace core {
 		}
 
 		// Create a job expression
-		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const;
+		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const ExpressionPtr& defaultExpr) const;
 		JobExprPtr jobExpr(const StatementPtr& stmt, int numThreads = -1) const;
 
 		// Create a marker expression
@@ -691,6 +691,11 @@ namespace core {
 		 * Converts a given IR reference into a const C++ reference.
 		 */
 		ExpressionPtr toConstCppRef(const ExpressionPtr& ref) const;
+
+		/**
+		 * Converts a given IR reference into a const C++ right side reference.
+		 */
+		ExpressionPtr toConstRValCppRef(const ExpressionPtr& ref) const;
 
 		/**
 		 * Converts a (const) C++ reference in an IR reference.

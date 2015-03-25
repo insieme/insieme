@@ -40,6 +40,7 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
+#include "insieme/transform/datalayout/parallelSecSoa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 namespace insieme {
@@ -136,6 +137,8 @@ void AosToSoa::transform() {
 		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
 		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
+
+		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
 
 		doReplacements(replacements, aosToSoaAllocTypeUpdate);
 
@@ -256,6 +259,24 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionAddress& oldVar, co
 
 }
 
+//TypePtr AosToSoa::generateNewTupleType(const TypePtr& oldTupleVarType,const StructTypePtr& newStructType, const TypePtr& oldStructType) {
+//	TypeList newTupleTypeElements;
+//
+//std::cout << "otvt: " << oldStructType << std::endl;
+//	TupleTypePtr oldTupleType = removeRef(oldTupleVarType).as<TupleTypePtr>();
+//	for(TypePtr elemTy : oldTupleType->getElements()) {
+//std::cout << "type: " << elemTy << " is the thing " << containsType(elemTy, oldStructType) << std::endl;
+//		if(containsType(elemTy, oldStructType)) {
+//			newTupleTypeElements.push_back(core::transform::replaceAllGen(mgr, elemTy, oldStructType, newStructType, true));
+//std::cout << "new: " << newTupleTypeElements.back();
+//		} else
+//			newTupleTypeElements.push_back(elemTy);
+//	}
+//
+//	IRBuilder builder(mgr);
+//	return core::transform::replaceAllGen(mgr, oldTupleVarType, oldTupleType, builder.tupleType(newTupleTypeElements));
+//}
+
 ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
 		const ExpressionPtr& structAccess) {
 	IRBuilder builder(mgr);
@@ -308,7 +329,12 @@ StatementList AosToSoa::generateDel(const StatementAddress& stmt, const Expressi
 
 }
 
+void AosToSoa::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
+	ParSecSoa psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
+	psa.transform();
+}
 } // datalayout
 } // transform
 } // insieme

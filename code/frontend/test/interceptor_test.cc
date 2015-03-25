@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,7 +61,6 @@
 
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
@@ -137,7 +136,7 @@ TEST(Interception, SimpleInterception) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
@@ -189,7 +188,7 @@ TEST(Interception, SimpleFunction1) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 
 	auto retTy = builder.getLangBasic().getUnit(); 
@@ -223,7 +222,7 @@ TEST(Interception, SimpleFunction2) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
@@ -272,7 +271,7 @@ TEST(Interception, Types) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 
 	{
@@ -345,7 +344,7 @@ TEST(Interception, TypesIntercepted) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 
 	{
@@ -409,7 +408,7 @@ TEST(Interception, AttachedHeader) {
 	fe::ConversionJob job(src);
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
 	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendPlugin<fe::extensions::InterceptorPlugin>(job.getInterceptedNameSpacePatterns());
+	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
 	auto tu = job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 

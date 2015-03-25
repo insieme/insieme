@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,7 @@ namespace {
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
 
-// uniform initialization of 3D vecotr of type uint<4>
+// uniform initialization of 3D vector of type uint<4>
 /*#define INT3DVECINIT(strVal)  builder.vectorExpr(toVector<core::ExpressionPtr>(builder.literal(BASIC.getInt4(), strVal), \
                               builder.literal(BASIC.getInt4(), strVal), builder.literal(BASIC.getInt4(), strVal)))
 */
@@ -68,7 +68,7 @@ namespace {
                                     list.second.push_back(val); }
 
 
-// store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
+// store a the variable var in vector vec and overwrites var with a new variable. The mapping from the old to the new one is store in list
 #define ADD_ARG(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
                                     vec.first.push_back(var); \
                                     vec.second.push_back(tmp); \
@@ -154,11 +154,6 @@ public:
 
     core::ProgramPtr getProgram() { return mProgram; }
 };
-
-// responsible for adding ocl KernelFile annotation
-void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::Converter& fact);
-
 
 } //namespace ocl
 } //namespace frontend

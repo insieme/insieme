@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -198,16 +198,20 @@ class MatchObject {
     public:
         MatchObject() : called(false) { }
 
-        const VarList& getVars(const std::string& s) {
-            return varList[s];
+        const VarList getVars(const std::string& s) const {
+        	if(varList.find(s) == varList.end())
+        		return VarList();
+            return varList.at(s);
         }
-        const ExprList& getExprs(const std::string& s) {
-            return exprList[s];
+        const ExprList getExprs(const std::string& s) const {
+        	if(exprList.find(s) == exprList.end())
+        		return ExprList();
+            return exprList.at(s);
         }
 
 		const core::ExpressionPtr getSingleExpr(const std::string& key) {
-			auto fitV = getVars(key);
-			auto fitE = getExprs(key);
+			const auto fitV = getVars(key);
+			const auto fitE = getExprs(key);
 
 			if(fitE.empty() && fitV.empty())
 				return core::ExpressionPtr();
@@ -215,37 +219,39 @@ class MatchObject {
 			// we have an expression
 			if(fitV.empty()) {
 				assert(fitE.size() == 1);
-				return fitE[0];
+				return fitE.at(0);
 			}
 			// we have a variable
 			if(fitE.empty()) {
 				assert(fitV.size() == 1);
-				return fitV[0];
+				return fitV.at(0);
 			}
 			assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
 			return core::ExpressionPtr();
 		}
 
-        const StringList& getStrings(const std::string& k) {
-            return stringList[k];
+        const StringList getStrings(const std::string& k) const {
+        	if(stringList.find(k) == stringList.end())
+        		return StringList();
+            return stringList.at(k);
         }
-        const std::string& getString(const std::string& k) {
-            if(stringList[k].size() < 1) 
-                stringList[k].push_back("");
-
-            return stringList[k].front();
+        const std::string getString(const std::string& k) const {
+		if(stringList.find(k) == stringList.end())
+			return std::string();
+            return getStrings(k).front();
         }
 
-        bool stringValueExists(const std::string& k) {
+        bool stringValueExists(const std::string& k) const {
             return (stringList.find(k) != stringList.end());
         }
 
-        bool empty() {
+        bool empty() const {
             return (varList.empty() && exprList.empty() && stringList.empty());
         }
 
         void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
-        void print() const;
+
+        friend std::ostream& operator<<(std::ostream& out, const MatchObject& mo);
 };
 
 typedef std::pair<bool, MatchMap> MatcherResult;
@@ -500,9 +506,9 @@ struct kwd: public Tok<clang::tok::identifier> {
 };
 
 /**
- * A var is an identifier which we have to resolve to get the actual variable identifer
+ * A var is an identifier which we have to resolve to get the actual variable identifier
  * This is an hack which has been done to solve the problem with OpenMP regions which receive an
- * identifer as name and this could be arbitrary
+ * identifier as name and this could be arbitrary
  */
 struct var_p: public Tok<clang::tok::identifier> {
 	var_p() : Tok<clang::tok::identifier>("", true, true) { }

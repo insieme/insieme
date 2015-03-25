@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/core/checks/full_check.h"
 #include <map>
 #include <set>
@@ -50,7 +50,7 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class SemanticCheckPlugin : public FrontendPlugin {
+class SemanticCheckExtension : public FrontendExtension {
 
     //I know that this is done super nicely
     //std::map<int, const core::NodePtr> irnodelist;
@@ -64,7 +64,7 @@ class SemanticCheckPlugin : public FrontendPlugin {
 
 
 public:
-    SemanticCheckPlugin() : current(0), eE(0), tE(0) { }
+    SemanticCheckExtension() : current(0), eE(0), tE(0) { }
 
     virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                        insieme::frontend::conversion::Converter& convFact) {
@@ -289,6 +289,6 @@ public:
 
 };
 
-}
-}
-}
+} // extensions
+} // frontend
+} // insieme

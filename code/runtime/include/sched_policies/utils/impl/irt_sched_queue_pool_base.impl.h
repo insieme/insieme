@@ -52,7 +52,7 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* args) {
 	if(irt_g_worker_count == 1 || target->sched_data.queue.size > irt_g_worker_count+15) {
 		//printf("WO %d lazy: queued %d, address: %p\n", target->id.index, target->sched_data.queue.size,
-		//	&target->sched_data.queue.size);
+		//	(void*) &target->sched_data.queue.size);
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
 	}

@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 	//indicates that a shared object files should be created
 	bool createSharedObject = options.outFile.find(".so")!=std::string::npos;
 
-    //enable semantic check plugin if needed
+    //enable semantic check extension if needed
     options.job.setOption(fe::ConversionSetup::StrictSemanticChecks, runIRChecks);
 
 	// disable cilk, omp, ocl support for insiemecc

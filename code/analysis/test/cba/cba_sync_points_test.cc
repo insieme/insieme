@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -105,8 +105,8 @@ namespace cba {
 		EXPECT_PRED2(containsSubString, resStr, "I0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program start
 		EXPECT_PRED2(containsSubString, resStr, "O0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the program end
 		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// the thread spawn operation
-		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the thread
 
 //		createDotDump(analysis);
 	}
@@ -147,11 +147,11 @@ namespace cba {
 		EXPECT_PRED2(containsSubString, resStr, "T0-1@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the 1. thread spawn operation
 		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");				// the 2. thread spawn operation
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 1. thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the 1. thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-1-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 1. thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-1-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the end of the 1. thread
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 2. thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the end of the 2. thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-3-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the begin of the 2. thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-3-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the end of the 2. thread
 
 //		createDotDump(analysis);
 	}
@@ -196,13 +196,13 @@ namespace cba {
 		EXPECT_PRED2(containsSubString, resStr, "T0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// spawning the first thread
 		EXPECT_PRED2(containsSubString, resStr, "T0-3@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// spawning the second thread
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the first thread
-		EXPECT_PRED2(containsSubString, resStr, "T0-2-2-4-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the first thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");					// the end of the first thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-2-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the first thread
+		EXPECT_PRED2(containsSubString, resStr, "T0-2-2-3-2-1-2-0-1-2-1@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the first thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-2-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");					// the end of the first thread
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the begin of the second thread
-		EXPECT_PRED2(containsSubString, resStr, "T0-3-2-4-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the second thread
-		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-4-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the end of the second thread
+		EXPECT_PRED2(containsSubString, resStr, "I0-3-2-3-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the begin of the second thread
+		EXPECT_PRED2(containsSubString, resStr, "T0-3-2-3-2-1-2-0-1-2-0@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");		// the channel operation in the second thread
+		EXPECT_PRED2(containsSubString, resStr, "O0-3-2-3-2@[[0,0],[<2,[0,0],0>,<0,[0,0],0>]]");					// the end of the second thread
 
 //		createDotDump(analysis);
 	}
@@ -241,11 +241,11 @@ namespace cba {
 		EXPECT_PRED2(containsSubString, resStr, "T0-0-2@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");	// spawning the thread group
 		EXPECT_PRED2(containsSubString, resStr, "T0-0@[[0,0],[<0,[0,0],0>,<0,[0,0],0>]]");		// merging the thread group
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the thread group - thread 0
-		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-4-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the end of the thread group - thread 0
+		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the begin of the thread group - thread 0
+		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-3-2@[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");				// the end of the thread group - thread 0
 
-		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-4-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the begin of the thread group - thread 1
-		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-4-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the end of the thread group - thread 1
+		EXPECT_PRED2(containsSubString, resStr, "I0-0-2-2-3-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the begin of the thread group - thread 1
+		EXPECT_PRED2(containsSubString, resStr, "O0-0-2-2-3-2@[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");				// the end of the thread group - thread 1
 
 //		createDotDump(code);
 	}

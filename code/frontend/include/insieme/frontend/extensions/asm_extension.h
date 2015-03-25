@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 #include "insieme/frontend/stmt_converter.h"
 
@@ -46,10 +46,11 @@ namespace extensions {
 
 using namespace insieme;
 
-class ASMExtension : public insieme::frontend::extensions::FrontendPlugin {
+class ASMExtension : public insieme::frontend::extensions::FrontendExtension {
     virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
 };
 
-} //namespace plugin
-} //namespace frontnt
-} //namespace extensions
+} // extensions
+} // frontend
+} // insieme
+

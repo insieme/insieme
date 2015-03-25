@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,10 +46,13 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
 using namespace insieme;
 
-
-core::ExpressionPtr VariadicArgumentsPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+core::ExpressionPtr VariadicArgumentsExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 	const clang::VAArgExpr*  vaargexpr = (llvm::isa<clang::VAArgExpr>(expr)) ? llvm::cast<clang::VAArgExpr>(expr) : nullptr;
 	if(vaargexpr)
 	{
@@ -69,7 +72,7 @@ core::ExpressionPtr VariadicArgumentsPlugin::Visit(const clang::Expr* expr, insi
 	return nullptr;
 }
 
-core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+core::ExpressionPtr  VariadicArgumentsExtension::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
 												   insieme::frontend::conversion::Converter& convFact) {
 	const clang::CallExpr* callexpr = (llvm::isa<clang::CallExpr>(expr)) ? llvm::cast<clang::CallExpr>(expr) : nullptr;
 
@@ -119,7 +122,7 @@ core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr,
 	return irExpr;
 }
 
-core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+core::TypePtr  VariadicArgumentsExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 	if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
 		if(tt->getDecl()->getNameAsString().find("va_list") != std::string::npos) {
 			auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
@@ -131,7 +134,7 @@ core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::QualType& type, insie
 	return nullptr;
 }
 
-core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
+core::TypePtr  VariadicArgumentsExtension::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
 											 insieme::frontend::conversion::Converter& convFact) {
 
 	 // build the right function type for variadic functions, we have to extend the parameter list with an extra TYPE
@@ -162,7 +165,7 @@ core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::QualType& type, c
 	return irType;
 }
 
-insieme::core::ExpressionPtr VariadicArgumentsPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
+insieme::core::ExpressionPtr VariadicArgumentsExtension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
 	if(!symbolic) {
 		if(decl->isVariadic())
 		{
@@ -199,7 +202,7 @@ insieme::core::ExpressionPtr VariadicArgumentsPlugin::FuncDeclPostVisit(const cl
 	return nullptr;
 }
 
-insieme::core::ProgramPtr  VariadicArgumentsPlugin::IRVisit(insieme::core::ProgramPtr& prog){
+insieme::core::ProgramPtr  VariadicArgumentsExtension::IRVisit(insieme::core::ProgramPtr& prog){
 
 	core::IRBuilder builder (prog->getNodeManager());
 	core::NodeManager& mgr = prog->getNodeManager();
@@ -248,3 +251,6 @@ insieme::core::ProgramPtr  VariadicArgumentsPlugin::IRVisit(insieme::core::Progr
 	return prog;
 }
 
+} // extensions
+} // frontend
+} // insieme

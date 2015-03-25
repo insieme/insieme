@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -373,7 +373,7 @@ public:
 	}
 
 	/**
-	 * convert type declaration, it triggers the plugins and converts the represented type
+	 * convert type declaration, it triggers the extensions and converts the represented type
 	 * fills the translation unit with this type
 	 * @param typeDecl: the type declaration itself
 	 */

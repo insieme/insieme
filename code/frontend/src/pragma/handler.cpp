@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -119,7 +119,7 @@ stmtutils::StmtWrapper attachPragma(    const stmtutils::StmtWrapper& 			node,
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
 				ret = pragma->attachTo(node, fact);
 				return;
-             } else if(auto pragma = dynamic_cast<pragma::FrontendPluginPragma*>(&*(curr.second))) {
+             } else if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
                  ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
                  return;
              }
@@ -145,7 +145,7 @@ stmtutils::StmtWrapper attachPragma(const stmtutils::StmtWrapper& 			node,
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
 				ret = pragma->attachTo(node, fact);
 				return;
-             } else if(auto pragma = dynamic_cast<pragma::FrontendPluginPragma*>(&*(curr.second))) {
+             } else if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
                  ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
                  return;
              }

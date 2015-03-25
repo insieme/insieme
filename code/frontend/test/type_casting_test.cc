@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,7 +41,7 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -56,16 +56,14 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
-
-namespace fe = insieme::frontend;
-
+using namespace insieme::frontend::extensions;
 
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
 	
-	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
@@ -73,7 +71,7 @@ TEST(TypeCast, FileTest) {
 
 		Converter convFactory( mgr, tu);
 
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
+		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement())
 			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );

@@ -36,17 +36,25 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/utils/config.h"
 
 using namespace insieme;
 
-class CrossCompilationPlugin : public insieme::frontend::extensions::FrontendPlugin {
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
+class CrossCompilationExtension : public insieme::frontend::extensions::FrontendExtension {
 
 public:
-        CrossCompilationPlugin(const std::string& systemHeadersDir) {
+        CrossCompilationExtension(const std::string& systemHeadersDir) {
                 kidnappedHeaders.push_back(systemHeadersDir);
 
                 #include "insieme/frontend/extensions/crosscompilation_macros.inl"
         }
 };
+
+} // extensions
+} // frontend
+} // insieme

@@ -42,7 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
-#include "insieme/transform/datalayout/parallelSecAtt.h"
+#include "insieme/transform/datalayout/parallelSecTransform.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/utils/annotation.h"
@@ -342,7 +342,7 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 ////assert(false);
 //	}
 
-	ParSecAtt psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
+	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
 	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;

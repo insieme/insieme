@@ -49,7 +49,7 @@
 #include "impl/worker.impl.h"
 #include "wi_implementation.h"
 
-IRT_DEFINE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+IRT_DEFINE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS)
 
 static inline irt_context* irt_context_get_current() {
 	return irt_context_table_lookup(irt_worker_get_current()->cur_context);

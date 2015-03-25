@@ -121,7 +121,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		VLOG(2) << (expr);
 		VLOG(2) << "####### Expr Type: #######" ;
 		VLOG(2) << (exprTy);
-		VLOG(2) << "####### cast Type: #######" ;
+		VLOG(2) << "####### cast result Type: #######" ;
 		VLOG(2) << (targetTy);
 		VLOG(2)  << "####### clang: #######" << std::endl;
 		castExpr->dump();
@@ -204,6 +204,9 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		{
 			if (core::analysis::isCppRef(exprTy)){
 				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
+			}
+			if (core::analysis::isRValCppRef(exprTy)){
+				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefRValCppToConstCpp(), expr);
 			}
 
 			// types equality has been already checked, if is is a NoOp is because clang identifies

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,9 +51,7 @@ namespace core {
 	using std::map;
 
 	std::ostream& JobExpr::printTo(std::ostream& out) const {
-		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] ("
-			<< join(", ", getGuardedExprs()->getElements(), print<deref<NodePtr>>())
-			<< (getGuardedExprs()->empty()?"":", ") << "default: " << *getDefaultExpr() << ")";
+		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] (" << *getDefaultExpr() << ")";
 		return out;
 	}
 

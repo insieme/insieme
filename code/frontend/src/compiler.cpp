@@ -250,8 +250,8 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
     // ******************** FRONTEND PLUGIN ********************
 	// this must be the first call of addpath otherwise
 	// the user kidnapped header files won't be recognized
-	for(auto plugin : config.getPlugins()) {
-        for(auto kidnappedHeader : plugin->getKidnappedHeaderList()) {
+	for(auto extension : config.getExtensions()) {
+        for(auto kidnappedHeader : extension->getKidnappedHeaderList()) {
             pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::System, false, false);  
         }
 	}
@@ -272,8 +272,8 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
     // ******************** FRONTEND PLUGIN ********************
     // ADD INJECTED HEADERS
-    for (auto plugin : config.getPlugins()) {
-        for(auto header : plugin->getInjectedHeaderList()) {
+    for (auto extension : config.getExtensions()) {
+        for(auto header : extension->getInjectedHeaderList()) {
             this->pimpl->clang.getPreprocessorOpts().Includes.push_back(header);
         }
     }
@@ -287,8 +287,8 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
     // ******************** FRONTEND PLUGIN ********************
 	// ADD FRONTEND PLUGIN PROVIDED MACRO DEFINITIONS
-    for(auto plugin : config.getPlugins()) {
-        for (auto it = plugin->getMacroList().cbegin(); it != plugin->getMacroList().cend(); ++it) {
+    for(auto extension : config.getExtensions()) {
+        for (auto it = extension->getMacroList().cbegin(); it != extension->getMacroList().cend(); ++it) {
             string def = (*it).first;
             if (!(*it).second.empty()) def = def + "=" + (*it).second;
             this->pimpl->clang.getPreprocessorOpts().addMacroDef(def);
@@ -308,20 +308,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	//		intrinsic to use depending on the used compiler the correct casts
 	this->pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SRC_DIR "../include/insieme/frontend/builtin_headers/",	clang::frontend::System, false, false);
 	/*** VECTOR EXTENSION STUFF END ***/
-
-	// Set OMP define if compiling with OpenMP
-	this->pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SRC_DIR "../include/insieme/frontend/omp/input/",
-		clang::frontend::System,  false, false);
-	if(config.hasOption(ConversionJob::OpenMP)) {
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
-	}
-
-	// add Cilk definitions if required
-	if(config.hasOption(ConversionJob::Cilk)) {
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("cilk=");
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
-	}
 
 	pimpl->m_isCXX = false;
 	if(config.getStandard() == ConversionSetup::C99) {

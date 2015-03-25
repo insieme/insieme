@@ -464,32 +464,19 @@ TEST(ExpressionsTest, JobExpr) {
 
 	TypePtr intType = manager.getLangBasic().getUIntGen();
 	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.getLangBasic().getUnit());
-	FunctionTypePtr guardType = FunctionType::get(manager, toVector<TypePtr>(intType, intType), manager.getLangBasic().getBool());
-
-	ExpressionPtr handlerA = Variable::get(manager, funType);
-	ExpressionPtr handlerB = Variable::get(manager, funType);
-	ExpressionPtr handlerC = Variable::get(manager, funType);
 
 	VariablePtr p1 = Variable::get(manager, intType, 10);
 	VariablePtr p2 = Variable::get(manager, intType, 20);
 	vector<VariablePtr> params = toVector(p1,p2);
 
-	LambdaExprPtr guardA = builder.lambdaExpr(guardType, params, builder.returnStmt(builder.boolLit(false)));
-	LambdaExprPtr guardB = builder.lambdaExpr(guardType, params, builder.returnStmt(builder.boolLit(true)));
-	LambdaExprPtr guardC = builder.lambdaExpr(guardType, params, builder.returnStmt(builder.eq(p1,p2)));
-	ExpressionPtr defaultHandler = Variable::get(manager, funType);
-
-	vector<GuardedExprPtr> exprs;
-	exprs.push_back(builder.guardedExpr(guardA, handlerA));
-	exprs.push_back(builder.guardedExpr(guardB, handlerB));
-	exprs.push_back(builder.guardedExpr(guardC, handlerC));
+	ExpressionPtr body = Variable::get(manager, funType);
 
 	vector<DeclarationStmtPtr> localDeclarations;
 	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
 	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
 
 	ExpressionPtr range = builder.getThreadNumRange(1,40);
-	JobExprPtr job = builder.jobExpr(range, localDeclarations, exprs, defaultHandler);
+	JobExprPtr job = builder.jobExpr(range, localDeclarations, body);
 
 	// check hash codes, children and cloning
 	TypePtr type = manager.getLangBasic().getJob();
@@ -497,7 +484,6 @@ TEST(ExpressionsTest, JobExpr) {
 	childList.push_back(job->getType());
 	childList.push_back(range);
 	childList.push_back(job->getLocalDecls());
-	childList.push_back(job->getGuardedExprs());
 	childList.push_back(job->getDefaultExpr());
 
 	basicExprTests(job, type, childList);

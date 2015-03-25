@@ -110,14 +110,15 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		irt_wi_implementation* impl, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
-	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
+	wi->parent_id = irt_work_item_null_id();
 	wi->impl = impl;
 	wi->selected_impl_variant = 0;
+	wi->parent_num_active_children = NULL;
+	wi->default_parallel_wi_count = 0;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
 	wi->_num_active_children = 0;
 	wi->num_active_children = &(wi->_num_active_children);
-	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
 	if(params != NULL) {
 		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
@@ -135,6 +136,12 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
 	wi->wg_memberships = NULL;
+	// if this WI has a parent (which means it's not the entry point) migrate some values
+	if(self->cur_wi) { 
+		wi->parent_id = self->cur_wi->id;
+		wi->parent_num_active_children = self->cur_wi->num_active_children;
+		wi->default_parallel_wi_count = self->cur_wi->default_parallel_wi_count;
+	}
 #ifdef IRT_ASTEROIDEA_STACKS
 	wi->stack_available = false;
 #endif //IRT_ASTEROIDEA_STACKS
@@ -148,7 +155,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children, uint32);
 	}
-	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : (uint32_t*)-1);
+	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", (void*) retval, (void*) self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? (void*) self->cur_wi->num_active_children : NULL);
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
@@ -246,7 +253,7 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 	// (signal received from inlined sibling child)
 	if(*(join_data->joining_wi->num_active_children) > 0) return true;
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
-	IRT_DEBUG(" > %p releasing %p\n", irt_worker_get_current()->finalize_wi, join_data->joining_wi);
+	IRT_DEBUG(" > %p releasing %p\n", (void*) irt_worker_get_current()->finalize_wi, (void*) join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
 	return false;
 }
@@ -284,13 +291,13 @@ void irt_wi_join_all(irt_work_item* wi) {
 		// check if multi-level immediate wi was signaled instead of current wi
 		if(*(wi->num_active_children) != 0) irt_wi_join_all(wi);
 	}
-	IRT_DEBUG(" J %p join_all ended\n", wi);
+	IRT_DEBUG(" J %p join_all ended\n", (void*) wi);
 }
 
 // end --------------------------------------------------------------------------------------------
 
 void irt_wi_end(irt_work_item* wi) {
-	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
+	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", (void*) wi, (void*) irt_worker_get_current());
 	irt_worker* worker = irt_worker_get_current();
 
 	// instrumentation update
@@ -325,7 +332,7 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	irt_inst_region_wi_finalize(wi);
 	
-	IRT_DEBUG(" ! %p end\n", wi);
+	IRT_DEBUG(" ! %p end\n", (void*) wi);
 
 	irt_wi_implementation *wimpl = wi->impl;
 	irt_optimizer_remove_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
@@ -350,7 +357,7 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 		}
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);
-	IRT_DEBUG(" ^ %p finalize\n", wi);
+	IRT_DEBUG(" ^ %p finalize\n", (void*) wi);
 	_irt_wi_recycle(wi, worker);
 }
 

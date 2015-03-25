@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -69,6 +69,16 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
  * @return the root node of the modified AST tree (according to the root of the address)
  */
 NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index);
+
+/**
+ * A utility function to append a list of statements to a compound statement block.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the compound statement within which the element should be inserted
+ * @param statements the statements to be inserted
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr append(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements);
 
 /**
  * A utility function to insert a statement before another statement.

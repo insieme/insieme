@@ -48,47 +48,40 @@
 // (context will be extended when smaller)
 #define MIN_CONTEXT 40
 
-#include "insieme/core/ir_statistic.h"
-#include "insieme/core/checks/full_check.h"
-#include "insieme/core/printer/pretty_printer.h"
-
+#include "insieme/analysis/cfg.h"
+#include "insieme/analysis/func_sema.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/scopregion.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/backend/backend.h"
+#include "insieme/backend/ocl_host/host_backend.h"
+#include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/sequential/sequential_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_backend.h"
-#include "insieme/backend/ocl_host/host_backend.h"
-
-#include "insieme/annotations/ocl/ocl_annotations.h"
-
-#include "insieme/transform/ir_cleanup.h"
-#include "insieme/transform/connectors.h"
-#include "insieme/transform/filter/standard_filter.h"
-#include "insieme/transform/polyhedral/scoppar.h"
-#include "insieme/transform/polyhedral/transformations.h"
-#include "insieme/transform/transformation.h"
-
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/logging.h"
-#include "insieme/utils/timer.h"
-#include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/version.h"
-
-#include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_statistic.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/driver/cmd/main_options.h"
+#include "insieme/driver/printer/dot_printer.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
-
+#include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/polyhedral/scoplist.h"
+#include "insieme/transform/polyhedral/scoppar.h"
+#include "insieme/transform/polyhedral/scopvisitor.h"
+#include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/transform/transformation.h"
+#include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/config.h"
-#include "insieme/driver/printer/dot_printer.h"
-#include "insieme/driver/pragma/pragma_transformer.h"
-#include "insieme/driver/cmd/main_options.h"
-
-#include "insieme/analysis/cfg.h"
-
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/analysis/func_sema.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
+#include "insieme/utils/timer.h"
+#include "insieme/utils/version.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -308,7 +301,6 @@ namespace {
 		size_t numStmtsInScops=0, loopNests=0, maxLoopNest=0;
 
 		// loop over all SCoP annotations we have discovered
-		// TODO: use class SCoPMetric (not yet introduced)
 		std::for_each(scoplist.begin(), scoplist.end(),	[&](std::list<NodeAddress>::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 
@@ -335,15 +327,31 @@ namespace {
 	}
 
 	/// Polyhedral Model Transformation: check command line option and schedule relevant transformations
-	ProgramPtr& SCoPTransformation(ProgramPtr& program, const CommandLineOptions& options) {
+	const ProgramPtr SCoPTransformation(const ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.UsePM) return program;
-		LOG(DEBUG) << "We will be using the backend: " << options.Backend << std::endl;
-		if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL)) {
-			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl;
-			return program;
+		int ocltransform=0;
+
+		// check whether OpenCL processing has been requested by the user
+		if (options.Backend=="OpenCL.Host.Backend" || options.OpenCL) {
+			if ((options.Backend=="OpenCL.Host.Backend") ^ (options.OpenCL))
+				std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl <<
+							 "Not doing polyhedral OpenCL transformation." << std::endl;
+			else {
+				ocltransform=1;
+				LOG(DEBUG) << "We will be using the backend: " << options.Backend << std::endl;
+			}
 		}
 
-		return insieme::transform::polyhedral::SCoPPar(program).apply();
+		// OCL transformations will - for now - happen on the old PM implementation; otherwise we choose the new one
+		if (ocltransform) {
+			std::vector<NodeAddress> scoplist=insieme::analysis::polyhedral::scop::mark(program);
+			scoplist.clear(); // we do not use the scoplist right now, but we may want to refer to it later
+			return insieme::transform::polyhedral::SCoPPar(program).apply();
+		} else {
+			auto scoplist=insieme::transform::polyhedral::novel::SCoPVisitor(ProgramAddress(program)).scoplist;
+			// do some transformation here
+			return scoplist.IR().getAddressedNode();
+		}
 	}
 
 	//***************************************************************************************
@@ -464,11 +472,6 @@ int main(int argc, char** argv) {
 
 			// Load known function semantics from the function database
 			anal::loadFunctionSemantics(program->getNodeManager());
-
-			// Check for annotations on IR nodes relative to transformations which should be applied,
-			// and applies them.
-			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
-					[&]() { return insieme::driver::pragma::applyTransformations(program); } );
 
 			// after reading in the source files, we need to do backend selection
 			if (!options.Backend.empty()) {

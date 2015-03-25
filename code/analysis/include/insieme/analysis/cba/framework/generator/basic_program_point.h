@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -788,7 +788,6 @@ namespace cba {
 				// obtain body of job
 				const Job<Context>& job = *jobs.begin();
 				const JobExprInstance& jobExpr = job.getCreationPoint();
-				assert_true(jobExpr->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
 
 				// get set containing list of bodies
 				auto C_body = cba.getVar(C, jobExpr->getDefaultExpr(), job.getContext());

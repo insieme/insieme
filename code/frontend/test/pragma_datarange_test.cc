@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,27 +29,28 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_program.h"
-
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
 
-#include "insieme/frontend/translation_unit.h"
-#include "insieme/frontend/compiler.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/utils/config.h"
-#include "insieme/frontend/pragma/handler.h"
-
+#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/frontend/compiler.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/pragma/handler.h"
+
+#include "insieme/frontend/translation_unit.h"
+#include "insieme/frontend/utils/source_locations.h"
+
+#include "insieme/utils/config.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -65,7 +66,10 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 
 	NodeManager manager;
 
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_datarange.c");
+	ConversionSetup setup;
+	setup.frontendExtensionInit();
+
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_datarange.c", setup);
 
 	EXPECT_NE(tu.pragmas_begin(), tu.pragmas_end());
 /*

@@ -48,7 +48,6 @@
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/pragma/handler.h"
 
 #include "insieme/core/annotations/naming.h"
@@ -1032,8 +1031,6 @@ public:
 
                    std::vector<core::ExpressionPtr> expr;
 
-                   vector<core::GuardedExprPtr> noGuardedStatementsNeeded;
-
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
@@ -1056,7 +1053,7 @@ public:
                     // min and max number of threads is equal
                     core::CallExprPtr localThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), localRangeProduct, localRangeProduct);
 
-                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localJobShared, noGuardedStatementsNeeded, localParFct);
+                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localJobShared, localParFct);
 
                     expr.clear();
                     //construct vector of arguments for local parallel
@@ -1096,7 +1093,7 @@ public:
                     // min and max number of threads is equal
                     core::CallExprPtr globalThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), globalRangeProduct, globalRangeProduct);
 
-                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalJobShared, noGuardedStatementsNeeded, globalParFct);
+                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalJobShared, globalParFct);
 
                     expr.clear();
                     //construct vector of arguments for local parallel
@@ -1204,28 +1201,6 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
         assert(newProg && "OclCompiler corrupted the program");
     return mProgram;
 }
-
-
-void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::Converter& convFact){
-    insieme::core::NodeAnnotationPtr annot;
-
-    // check if there is a kernelFile annotation
-    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
-
-    std::for_each(iter.first, iter.second,
-        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
-            const frontend::InsiemeKernelFile* kf = dynamic_cast<const frontend::InsiemeKernelFile*>( &*(curr.second) );
-            if(kf) {
-                annot = std::make_shared<annotations::ocl::KernelFileAnnotation>(annotations::ocl::KernelFileAnnotation(kf->getPath()));
-            }
-    });
-
-    if(annot)
-        irNode->addAnnotation(annot);
-}
-
 
 } //namespace ocl
 } //namespace frontend

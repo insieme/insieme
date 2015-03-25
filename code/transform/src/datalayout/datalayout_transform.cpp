@@ -707,6 +707,10 @@ void DatalayoutTransformer::addNewDel(const ExprAddressMap& varReplacements, con
 	}
 }
 
+TypePtr DatalayoutTransformer::generateNewTupleType(const TypePtr& oldTupleVarType, const StructTypePtr& newStructType, const TypePtr& oldStructType) {
+	return core::transform::replaceAllGen(mgr, oldTupleVarType, oldStructType, newStructType, true);
+}
+
 void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
@@ -734,7 +738,7 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 			TypeAddress oldComponentType = node >> match["type"].getValue().as<LiteralAddress>()->getType();
 			ExpressionAddress idx = node >> match["idx"].getValue().as<ExpressionAddress>();
 
-			TypePtr newTupleType = core::transform::replaceAllGen(mgr, oldTupleVarType, oldStructType, newStructType, true);
+			TypePtr newTupleType = generateNewTupleType(oldTupleVarType, newStructType, oldStructType);
 
 			ExpressionPtr newTupleVar;
 
@@ -876,6 +880,8 @@ void DatalayoutTransformer::doReplacements(const std::map<NodeAddress, NodePtr>&
 //	dumpPretty(node);
 //	std::cout << "++++++++++++++++++++++++++++++\n";
 //});
+
+
 	ExpressionMap structures;
 //	if(!structures.empty())
 //		toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);

@@ -413,7 +413,7 @@ namespace runtime {
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
-			if (job->getGuardedExprs().empty() && core::analysis::isCallOf(job->getDefaultExpr(), basic.getPick())) {
+			if (core::analysis::isCallOf(job->getDefaultExpr(), basic.getPick())) {
 
 				// ---- default only but various variants ------
 				auto alternatives = job->getDefaultExpr().as<core::CallExprPtr>()->getArgument(0);
@@ -429,23 +429,11 @@ namespace runtime {
 				}
 
 			} else {
-
-				// general case with guards, yet many variants
+				// general case when body is no Pick
 
 				// create function processing the job (forming the entry point)
-				core::StatementList body;
-				core::StatementPtr returnStmt = builder.returnStmt(basic.getUnitConstant());
-				for(auto it = job->getGuardedExprs().begin(); it != job->getGuardedExprs().end(); ++it) {
-					const core::GuardedExprPtr& cur = *it;
-					core::ExpressionPtr condition = fixVariables(cur->getGuard());
-					core::ExpressionPtr branch = fixBranch(cur->getExpression());
-					body.push_back(builder.ifStmt(condition, builder.compoundStmt(branch, returnStmt)));
-				}
 
-				// add default branch
-				body.push_back(fixBranch(job->getDefaultExpr()));
-
-                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
+                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(job->getDefaultExpr()));
 
 				// build implementation
 				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);

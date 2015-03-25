@@ -54,7 +54,6 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-//#include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
@@ -64,24 +63,25 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/tu/ir_translation_unit.h"
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
-#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
+using namespace insieme::frontend;
 namespace fe = insieme::frontend;
 using namespace fe::pragma;
 
 
-class UnitTestPlugin : public insieme::frontend::extensions::FrontendPlugin {
+class UnitTestExtension : public insieme::frontend::extensions::FrontendExtension {
 
 	std::map<NodePtr, std::string> symbolicTests;
 	std::map<NodePtr, std::string> resolvedTests;
 
 public:
-	UnitTestPlugin() {
+	UnitTestExtension() {
 		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
 		auto unitTestSymbolicPragma = insieme::frontend::extensions::PragmaHandler("unittest", "symbolic", tok::string_literal["expected"] >> tok::eod,
 			[&](MatchObject mo, stmtutils::StmtWrapper node) {
@@ -368,7 +368,7 @@ TEST(TypeConversion, C99_BuiltinTypes) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
 	job.setStandard(fe::ConversionSetup::C99);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 	
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -413,7 +413,7 @@ TEST(TypeConversion, CPP03_BuiltinTypes) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
 	job.setStandard(fe::ConversionSetup::Cxx03);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -461,7 +461,7 @@ TEST(TypeConversion, CPP11_BuiltinTypes) {
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
 	job.setStandard(fe::ConversionSetup::Cxx11);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -495,7 +495,7 @@ TEST(TypeConversion, ComplexType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 	
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -560,7 +560,7 @@ TEST(TypeConversion, ArrayType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 	
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -592,7 +592,7 @@ TEST(TypeConversion, FunctionType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -626,7 +626,7 @@ TEST(TypeConversion, SIMDVectorType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -656,7 +656,7 @@ TEST(TypeConversion, PointerType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -684,7 +684,7 @@ TEST(TypeConversion, StructType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -696,7 +696,7 @@ TEST(TypeConversion, StructType) {
 	auto resolve = [&](const core::NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
+		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement()) {
             StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
@@ -749,7 +749,7 @@ TEST(TypeConversion, RecStructType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);
@@ -797,7 +797,7 @@ TEST(TypeConversion, EnumType) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	fe::ConversionJob job(src);
-	job.registerFrontendPlugin<UnitTestPlugin>();
+	job.registerFrontendExtension<UnitTestExtension>();
 
 	//start conversion
 	auto tu = job.toIRTranslationUnit(mgr);

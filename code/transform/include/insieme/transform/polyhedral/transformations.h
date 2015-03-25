@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -160,7 +160,9 @@ TRANSFORMATION_TYPE(
  */
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 
-/** LoopTiling: Loop tiling is obtained by applying strip mining consecutively and then interchanging the loops */
+/** LoopTiling: Loop tiling is obtained by applying strip mining consecutively and then interchanging the loops
+ * TODO: Arguments 0 or 1 can lead to loop nests being completely removed. This needs to be fixed.
+ * */
 struct LoopTiling: public Transformation<LoopTiling> {
 
 	typedef std::vector<unsigned> TileVect;
@@ -243,7 +245,7 @@ inline TransformationPtr makeLoopFusion( const LoopFusion::LoopIndexVect& loops)
 }
 
 /**
- * LoopFusion: 
+ * LoopFission:
  */
 struct LoopFission : public Transformation<LoopFission> {
 
