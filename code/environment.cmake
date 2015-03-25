@@ -32,9 +32,10 @@ get_filename_component( insieme_root_dir ${insieme_code_dir} PATH )
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 
 # -------------------------------------------------------------- define some code locations
-include (${insieme_code_dir}/cmake/insieme_find_package.cmake)
-include (${insieme_code_dir}/cmake/default_library_configuration.cmake)
-include (${insieme_code_dir}/cmake/add_unit_test.cmake)
+
+#find them in CMAKE_MODULE_PATH
+include(insieme_find_package)
+include(add_unit_test)
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
@@ -109,12 +110,10 @@ endif(MSVC)
 
 
 # --------------------------------------------------------------------- including libraries
-# set up insieme lib home
+# set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var 
 if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
 	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home" )
-endif()
-
-if ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
+elseif ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
 	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
 endif()
 
@@ -190,7 +189,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	elseif(CXX0X_Support)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	else()
-		message( "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
+		message(WARNING "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -209,7 +208,7 @@ if (CMAKE_COMPILER_IS_GNUC)
 	if(C99_Support)
 		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 	else()
-		message( "WARNING: --std=c99 not supported by your compiler!" )
+		message(WARNING  "WARNING: --std=c99 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -231,7 +230,7 @@ if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
 	elseif(CXX0X_Support)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	else()
-		message( "WARNING: --std=c++0x not supported by your compiler!" )
+		message(WARNING  "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
 endif ()
 

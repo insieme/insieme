@@ -1,7 +1,21 @@
-# Try to find the GMP librairies
-#  GMP_FOUND - system has GMP lib
-#  GMP_INCLUDE_DIR - the GMP include directory
-#  GMP_LIBRARIES - Libraries needed to use GMP
+# Try to find GMP headers and libraries.
+#
+# Usage of this module as follows:
+#
+# find_package(GMP)
+#
+# Variables used by this module, they can change the default behaviour and need
+# to be set before calling find_package:
+#
+# GMP_ROOT Set this variable to the root installation of
+# libpapi if the module has problems finding the
+# proper installation path.
+#
+# Variables defined by this module:
+#
+# GMP_FOUND System has GMP libraries and headers
+# GMP_LIBRARIES The GMP library
+# GMP_INCLUDE_DIRS The location of GMP headers
 
 # Get hint from environment variable (if any)
 if(NOT GMP_ROOT AND DEFINED ENV{GMP_ROOT})
@@ -15,12 +29,11 @@ if(GMP_ROOT)
   set(GMP_LIBRARY_PATH PATHS "${GMP_ROOT}/lib" NO_DEFAULT_PATH)
 endif()
 
-find_path(GMP_INCLUDE_DIR NAMES gmp.h HINTS ${GMP_INCLUDE_PATH})
+find_path(GMP_INCLUDE_DIRS NAMES gmp.h HINTS ${GMP_INCLUDE_PATH})
 find_library(GMP_LIBRARIES NAMES gmp libgmp HINTS ${GMP_LIBRARY_PATH})
 find_library(GMPXX_LIBRARIES NAMES gmpxx libgmpxx HINTS ${GMP_LIBRARY_PATH})
-MESSAGE(STATUS "GMP libs: " ${GMP_LIBRARIES} " " ${GMPXX_LIBRARIES} )
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(GMP DEFAULT_MSG GMP_INCLUDE_DIRS GMP_LIBRARIES)
 
-mark_as_advanced(GMP_INCLUDE_DIR GMP_LIBRARIES)
+mark_as_advanced(GMP_INCLUDE_DIRS GMP_LIBRARIES)

@@ -3,10 +3,10 @@
 #
 project(insieme_annotations CXX)
 
-include(../environment.cmake)
+#include(../environment.cmake)
 
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+# States that CMake required version must be >= 2.8
+cmake_minimum_required(VERSION 2.8)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_annotations_srcs 	src/*.cpp )
@@ -29,18 +29,18 @@ target_link_libraries(insieme_annotations insieme_common)
 insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_annotations SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
-set ( ut_prefix  ut_annotations_ )
+set(ut_prefix  ut_annotations )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}${case_name} )
+	set ( case_name ${ut_prefix}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	
-	add_unit_test(${case_name})
+	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------

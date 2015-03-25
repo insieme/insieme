@@ -1,11 +1,20 @@
 # define macro for adding tests
-macro ( add_unit_test case_name )
+macro ( add_unit_test case_name ut_prefix )
 
-    include(../cmake/insieme_find_package.cmake)
+	#check if target for test suite already exists
+	if(NOT TARGET ${ut_prefix})
+		add_custom_target(${ut_prefix})
+	endif()
+
+	add_dependencies(${ut_prefix} ${case_name})
+
+	#rely on CMAKE_MODULE_PATH being set correctly
+    include(insieme_find_package)
 
 	# lookup Google Test libraries
 	#find_package(GTest REQUIRED)
 	insieme_find_package(GTest)
+
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${GTEST_LIBRARIES})
 	target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARIES})
@@ -22,8 +31,10 @@ macro ( add_unit_test case_name )
 	# which disables use of valgrind for this particular test
 	if(${ARGC} GREATER 1)
 		# use (optional) 2nd argument as a valgrind flag
-		message(STATUS "Disabling Valgrind for ${case_name}")
-		set(USE_VALGRIND ${ARGV1})
+		set(USE_VALGRIND ${ARGV2})
+		if(NOT ${USE_VALGRIND})
+			message(STATUS "Disabling Valgrind for ${case_name}")
+		endif()
 	endif()
 	
 	# add test case
@@ -81,6 +92,7 @@ macro ( add_unit_test case_name )
 					${CMAKE_CURRENT_BINARY_DIR}
 			)
 			add_dependencies(valgrind valgrind_${case_name})
+			add_dependencies(valgrind_${case_name} ${case_name})
 		endif()
 	endif()
 endmacro(add_unit_test)

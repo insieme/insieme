@@ -3,10 +3,10 @@
 #
 project(insieme_transform CXX)
 
-include(../environment.cmake)
+#include(../environment.cmake)
 
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+# States that CMake required version must be >= 2.8
+cmake_minimum_required(VERSION 2.8)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
@@ -25,12 +25,12 @@ target_link_libraries(insieme_transform insieme_utils)
 target_link_libraries(insieme_transform insieme_annotations)
 target_link_libraries(insieme_transform insieme_analysis)
 
-set ( ut_prefix  ut_transform_ )
+set ( ut_prefix  ut_transform )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}${case_name} )	
+	set ( case_name ${ut_prefix}_${case_name} )	
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
@@ -38,7 +38,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_analysis)
 	
-	add_unit_test(${case_name})
+	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------

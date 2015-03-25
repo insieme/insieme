@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
+
+#Target directory for the 3rd-party libraries
 set(insieme_lib ~/libs)
 
 include(ProcessorCount)
 ProcessorCount(SLOTS)
 
+#The version of the libraries to be installed
 set(gmp_version 6.0.0)
 set(gmp_subversion a)
 set(mpfr_version 3.1.2)

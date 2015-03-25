@@ -3,10 +3,10 @@
 #
 project(insieme_analysis CXX)
 
-include(../environment.cmake)
+#include(../environment.cmake)
 
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+# States that CMake required version must be >= 2.8
+cmake_minimum_required(VERSION 2.8)
 
 #ninja job pools setting
 # used to limit maximum of parallel CBA jobs as they need a lot of memory
@@ -27,33 +27,21 @@ target_link_libraries(insieme_analysis insieme_utils)
 target_link_libraries(insieme_analysis insieme_annotations)
 
 # lookup ISL library
-#lookup_lib( ISL isl )
-#target_include_directories(insieme_analysis PUBLIC ${isl_INC})
-#target_link_libraries(insieme_analysis ${isl_LIB})
 insieme_find_package(ISL)
 target_include_directories(insieme_analysis PUBLIC ${ISL_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${ISL_LIBRARIES})
 
 # lookup cloog library 
-#lookup_lib( CLOOG cloog-isl )
-#target_include_directories(insieme_analysis PUBLIC ${cloog_INC})
-#target_link_libraries(insieme_analysis ${cloog_LIB}) 
 insieme_find_package(CLOOG)
 target_include_directories(insieme_analysis PUBLIC ${CLOOG_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${CLOOG_LIBRARIES}) 
 
 # lookup Barvinok library 
-#lookup_lib( BARVINOK barvinok )
-#target_include_directories(insieme_analysis PUBLIC ${barvinok_INC})
-#target_link_libraries(insieme_analysis ${barvinok_LIB})
 insieme_find_package(BARVINOK)
 target_include_directories(insieme_analysis PUBLIC ${BARVINOK_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${BARVINOK_LIBRARIES})
 
 # lookup GMP library
-#lookup_lib( GMP gmp ) 
-#target_include_directories(insieme_analysis PUBLIC ${gmp_INC})
-#target_link_libraries(insieme_analysis ${gmp_LIB})
 insieme_find_package(GMP) 
 target_include_directories(insieme_analysis PUBLIC ${GMP_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${GMP_LIBRARIES})
@@ -62,12 +50,12 @@ target_link_libraries(insieme_analysis ${GMP_LIBRARIES})
 insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_analysis SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
-set ( ut_prefix  ut_analysis_ )
+set ( ut_prefix  ut_analysis )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 
-	set ( case_name ${ut_prefix}${case_name} )
+	set ( case_name ${ut_prefix}_${case_name} )
 	add_executable(${case_name} ${case_file})
 
 	#ninja job pools
@@ -83,20 +71,20 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_backend)
 
-	target_link_libraries(${case_name} ${isl_LIB})
-	target_link_libraries(${case_name} ${gmp_LIB})
-	target_link_libraries(${case_name} ${cloog_LIB})
-	target_link_libraries(${case_name} ${barvinok_LIB})
+	target_link_libraries(${case_name} ${ISL_LIBRARIES})
+	target_link_libraries(${case_name} ${GMP_LIBRARIES})
+	target_link_libraries(${case_name} ${GLOOG_LIBRARIES})
+	target_link_libraries(${case_name} ${BARVINOK_LIBRARIES})
 
 	if(${case_name} STREQUAL ut_analysis_dependence_test)
-		add_unit_test(${case_name} off)
+		add_unit_test(${case_name} ${ut_prefix} off)
 	elseif(${case_name} STREQUAL ut_analysis_cba_full_scale_integration_test)
-		add_unit_test(${case_name} off)
+		add_unit_test(${case_name} ${ut_prefix} off)
 		target_link_libraries(${case_name} insieme_driver)
 	elseif(${case_name} STREQUAL ut_analysis_cache_features_test)
-		add_unit_test(${case_name} off)
+		add_unit_test(${case_name} ${ut_prefix} off)
 	else()
-		add_unit_test(${case_name})
+		add_unit_test(${case_name} ${ut_prefix})
 	endif()
 
 endforeach(case_file)

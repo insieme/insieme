@@ -3,62 +3,59 @@
 #
 project(insieme_frontend CXX)
 
-include(../environment.cmake)
-
-#find clang/llvm libs
-# stored in clang_LIBS llvm_LIBS
-include(cmake/lookup_clang.cmake)
-
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc )
-
-# add include directory
-#include_directories(
-#	${CMAKE_CURRENT_SOURCE_DIR}/include
-#	${LLVM_HOME}/include
-#	${insieme_core_include_dir}
-#	${insieme_utils_include_dir}
-#	${insieme_analysis_include_dir}
-#	${insieme_annotations_include_dir}
-#	${insieme_common_include_dir} 
-#)
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
 
 #TODO figure out how to get include-dirs from clang/llvm libs
-target_include_directories(insieme_frontend PUBLIC ${LLVM_HOME}/include)
+target_include_directories(insieme_frontend PUBLIC ${LLVM_ROOT}/include)
 
 #FIXME frontend/instrumentation_region has dependency to backend/runtime/runtime_extension.h
 #target_include_directories(insieme_frontend PUBLIC ${insieme_backend_include_dir})
 target_link_libraries(insieme_frontend insieme_backend)
 
 # lookup Boost library
-insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(Boost serialization filesystem system) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-#target_link_libraries(insieme_frontend ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(insieme_frontend ${Boost_SERIALIZATION_LIBRARY})
+target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
+target_link_libraries(insieme_frontend ${Boost_SYSTEM_LIBRARY})
 
+# lookup LLVM/CLANG library+header
+insieme_find_package(LLVM)
+target_link_libraries(insieme_frontend ${LLVM_LIBRARIES})
+target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
+target_link_libraries(insieme_frontend ${CLANG_LIBRARIES})
+target_include_directories(insieme_frontend PUBLIC ${CLANG_INCLUDE_DIRS})
 
 # add dependencies
-target_link_libraries(insieme_frontend ${clang_LIBS})
-target_link_libraries(insieme_frontend ${llvm_LIBS})
 target_link_libraries(insieme_frontend insieme_core)
 target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_analysis)
 target_link_libraries(insieme_frontend insieme_annotations)
 
-set ( ut_prefix  ut_fe_ )
+
+set ( ut_prefix  ut_fe )
+
+# add custom target for ut_fe test suite
+add_custom_target(${ut_prefix})
+
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}${case_name} )
+	set ( case_name ${ut_prefix}_${case_name} )
 	add_executable(${case_name} ${case_file})
+
+	#dependency on test suit target
+	add_dependencies(${ut_prefix} ${case_name})
+
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
@@ -66,15 +63,16 @@ foreach ( case_file ${test_cases})
     target_link_libraries(${case_name} insieme_analysis)
     target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_annotations)
-	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${Boost_SERIALIZATION_LIBRARY})
-	target_link_libraries(${case_name} ${clang_LIBS})
-	target_link_libraries(${case_name} ${llvm_LIBS})
+	target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
+	target_link_libraries(insieme_frontend ${Boost_SYSTEM_LIBRARY})
+	target_link_libraries(${case_name} ${CLANG_LIBRARIES})
+	target_link_libraries(${case_name} ${LLVM_LIBRARIES})
 	
 	if(${case_name} STREQUAL ut_fe_ocl_host_compiler_test)
-		add_unit_test(${case_name} off)
+		add_unit_test(${case_name} ${ut_prefix} off)
 	else()
-		add_unit_test(${case_name})
+		add_unit_test(${case_name} ${ut_prefix}) 
 	endif()
 endforeach(case_file)
 

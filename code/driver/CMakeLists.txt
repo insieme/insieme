@@ -1,13 +1,12 @@
 #
-# Builds the insieme default driver
+# Builds the various insieme driver
 #
 project(insieme_driver CXX)
 
-include(../environment.cmake)
 include(../environment_common.cmake)
 
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+# States that CMake required version must be >= 2.8
+cmake_minimum_required(VERSION 2.8)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
@@ -21,7 +20,7 @@ target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 # lookup Boost library
 insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_driver SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
-#target_link_libraries(insieme_driver ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(insieme_driver ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 target_link_libraries(insieme_driver insieme_utils) 
 target_link_libraries(insieme_driver insieme_frontend) 
@@ -61,12 +60,12 @@ foreach ( exec_file ${executables})
 
 endforeach(exec_file)
 
+# integrations_tests uses insiemecc - so there is a dependency
+add_dependencies(integration_tests insiemecc)
 
 # add unit test cases
-set ( ut_prefix  ut_driver_ )
+set ( ut_prefix  ut_driver )
 file(GLOB_RECURSE test_cases test/*.cc)
-# get measure unit tests, to be excluded if papi is not present
-file(GLOB_RECURSE measure_test_cases test/measure*.cc)
 
 insieme_find_package(PAPI)
 if(NOT PAPI_FOUND)
@@ -74,13 +73,16 @@ if(NOT PAPI_FOUND)
 	# if papi is not available the measure thest will fail therefore exclude measuretest if papi is not
 	# available
 	message(STATUS "Excluding measure tests")
+
+	# get measure unit tests, to be excluded if papi is not present
+	file(GLOB_RECURSE measure_test_cases test/measure*.cc)
 	list(REMOVE_ITEM test_cases ${measure_test_cases})
 endif()
 
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}${case_name} )
+	set ( case_name ${ut_prefix}_${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_driver) 
 	target_link_libraries(${case_name} insieme_core) 
@@ -94,7 +96,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} dl)
 
-	add_unit_test(${case_name} off)
+	add_unit_test(${case_name} ${ut_prefix} off)
 endforeach(case_file)
 
 

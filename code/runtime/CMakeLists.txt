@@ -2,7 +2,7 @@
 # Builds the insieme runtime
 #
 project(insieme_runtime C CXX)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
 #user configurable options
 if (WIN32)
@@ -15,15 +15,18 @@ if (NOT THIRD_PARTY_LIBS_HOME )
 	set ( THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
-include(../cmake/lookup_lib.cmake)
-include(../cmake/add_unit_test.cmake)
-include(../environment_common.cmake)
-
 #to find the custom modules (for find_package)
 #TODO better path
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/../cmake/")
+
+#find them in CMAKE_MODULE_PATH
+include(default_library_configuration)
+include(insieme_find_package)
+include(add_unit_test)
+
+include(../environment_common.cmake)
 
 # for win64 we need to add a assembly object file to each target, see below.
 # For all other platforms this var is empty. This safes a lot of if clauses througout this file
@@ -57,14 +60,7 @@ else()
 	find_package(Threads REQUIRED)
 
 	#look for papi
-	#lookup_lib( PAPI papi )
-	if (THIRD_PARTY_LIBS_HOME )
-		set(PAPI_ROOT ${THIRD_PARTY_LIBS_HOME}/papi-latest)
-	endif()
-	find_package(PAPI)
-	if(PAPI_FOUND)
-		include_directories(${PAPI_INCLUDE_PATH})
-	endif()
+	insieme_find_package(PAPI)
 endif()
 	
 # set compiler flags for gcc
@@ -88,9 +84,9 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 	endif()
 	
 	if(C99_Support)
-	       	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
 	else()
-		message( "WARNING: --std=gnu99 not supported by your compiler!" )
+		message(WARNING "WARNING: --std=gnu99 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -155,6 +151,7 @@ if(NOT WIN32 OR USE_PTHREADS) #if(NOT MSVC OR USE_PTHREADS)
 	target_link_libraries(insieme_runtime ${CMAKE_THREAD_LIBS_INIT})
 endif()
 if(NOT WIN32) #if(NOT MSVC)
+	target_include_directories(insieme_runtime PRIVATE ${PAPI_INCLUDE_DIRS})
 	target_link_libraries(insieme_runtime dl rt m ${PAPI_LIBRARIES})
 endif()
 
@@ -169,42 +166,36 @@ if ( USE_MPI_OPENCL )
 	target_link_libraries(insieme_runtime ${MPI_C_LIBRARIES} )
 endif ( USE_MPI_OPENCL )
 
-# lookup Google Test libraries
-if (THIRD_PARTY_LIBS_HOME )
-	set(GTEST_ROOT ${THIRD_PARTY_LIBS_HOME}/gtest-latest)
-endif()
-find_package(GTest REQUIRED)
-if(GTEST_FOUND)
-	set(gtest ${GTEST_LIBRARIES})
-	set(gtest_main ${GTEST_MAIN_LIBRARIES})
-endif()
-
 #include_directories(include/ ${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR}) #what's this include/ thing? S. Widerin
-include_directories(${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+include_directories(${PTHREAD_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
 
 # add meta information include path
 get_filename_component( insieme_runtime_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 get_directory_property( insieme_code_dir DIRECTORY ${insieme_runtime_dir} PARENT_DIRECTORY )
 #include_directories( ${insieme_code_dir}/common/include )
+
 #insieme_common is header-only library
 target_link_libraries(insieme_runtime insieme_common)
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
-if (NOT MEMORY_CHECK_SETUP)
+if(NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
 
-	# add -all-valgrind target
-	add_custom_target(valgrind)
+	if(NOT TARGET valgrind)
+		# the valgrind target was not added before
+		# happens when we build runtime only
+		# add -all-valgrind target
+		add_custom_target(valgrind)
+	endif()
 
-endif (NOT MEMORY_CHECK_SETUP)
+endif()
 
 # mark as defined
 set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 
-
 # handle gtest unit tests
-set ( ut_prefix  ut_rt_ )
+set(ut_prefix  ut_rt )
 file(GLOB_RECURSE test_cases test/*.cc)
 # get energy unit tests, to be removed if papi and msr module are not present
 file(GLOB_RECURSE energy_test_cases test/energy*.cc)
@@ -214,35 +205,32 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}${case_name} )
+	set ( case_name ${ut_prefix}_${case_name} )
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
+		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
 		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES})
 			target_link_libraries(${case_name} ${MPI_LIBRARIES})
 		endif ( USE_MPI_OPENCL )
 	endif()
-	# add dependency to google test libraries
-	target_link_libraries(${case_name} ${gtest})
-	target_link_libraries(${case_name} ${gtest_main})
 		
 	if ( USE_OPENCL )
-    		target_link_libraries(${case_name} ${OPENCL_LIBS})
+		target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )
 	
 	# disable valgrind for parallel test cases
-	set(VFLAG ${TRUE})
+	set(VFLAG true)
 	if(case_name MATCHES ".*_par")
 		set(VFLAG FALSE)
 	endif(case_name MATCHES ".*_par")
 	
-	#add_unit_test(${case_name} ${VFLAG})
-	add_unit_test(${case_name} FALSE)
+	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
 	
 endforeach(case_file)
 
@@ -257,6 +245,7 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} m)
+		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
 		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES} )
@@ -279,6 +268,7 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
+		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
 		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES} )

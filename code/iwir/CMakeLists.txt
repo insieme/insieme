@@ -1,9 +1,9 @@
 #Build the IWIR frontend
 project(insieme_iwir CXX) 
 
-include(../environment.cmake)
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+#include(../environment.cmake)
+# States that CMake required version must be >= 2.8
+cmake_minimum_required(VERSION 2.8)
 
 file(GLOB_RECURSE insieme_iwir_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_iwir_incs 	include/*.h )
@@ -22,24 +22,27 @@ target_link_libraries(insieme_iwir insieme_annotations)
 target_link_libraries(insieme_iwir insieme_utils)
 
 # lookup Boost library
-insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(Boost program_options filesystem system) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_iwir SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(insieme_iwir ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(insieme_iwir ${Boost_FILESYSTEM_LIBRARY})
+target_link_libraries(insieme_iwir ${Boost_SYSTEM_LIBRARY})
 
 #iwir unit tests
-set ( ut_prefix  ut_iwir_ )
+set ( ut_prefix  ut_iwir )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 
-	set(case_name ${ut_prefix}${case_name} )
+	set(case_name ${ut_prefix}_${case_name} )
 	add_executable(${case_name} ${case_file})
+	target_link_libraries(${case_name} insieme_xml)
 	target_link_libraries(${case_name} insieme_iwir)
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} insieme_xml)
 	
-	add_unit_test(${case_name} off)
+	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
 
 #iwir driver
@@ -50,11 +53,11 @@ foreach ( exec_file ${executables})
 	# Build driver executable
 	add_executable(${exec_name} ${exec_file} ${insieme_iwir_incs} )
 
-	target_link_libraries( ${exec_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+	target_link_libraries( ${exec_name} insieme_iwir)
+	target_link_libraries( ${exec_name} insieme_xml)
 	target_link_libraries( ${exec_name} insieme_utils)
 	target_link_libraries( ${exec_name} insieme_core)
 	target_link_libraries( ${exec_name} insieme_annotations)
-	target_link_libraries( ${exec_name} insieme_xml)
-	target_link_libraries( ${exec_name} insieme_iwir)
+	target_link_libraries( ${exec_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 endforeach(exec_file)
