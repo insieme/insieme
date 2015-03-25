@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -1022,31 +1022,31 @@ namespace detail {
 //		std::cout << "TermInfo: " << info << "\n";
 
 		// accepted pairs should be ...
-		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('(')));
-		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(')')));
-		EXPECT_EQ(Token::createSymbol(')'), info.getClosingParenthese(Token::createSymbol('(')));
+		EXPECT_TRUE(info.isLeftParenthesis(Token::createSymbol('(')));
+		EXPECT_TRUE(info.isRightParenthesis(Token::createSymbol(')')));
+		EXPECT_EQ(Token::createSymbol(')'), info.getClosingParenthesis(Token::createSymbol('(')));
 
-		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('[')));
-		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(']')));
-		EXPECT_EQ(Token::createSymbol(']'), info.getClosingParenthese(Token::createSymbol('[')));
+		EXPECT_TRUE(info.isLeftParenthesis(Token::createSymbol('[')));
+		EXPECT_TRUE(info.isRightParenthesis(Token::createSymbol(']')));
+		EXPECT_EQ(Token::createSymbol(']'), info.getClosingParenthesis(Token::createSymbol('[')));
 
-		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('|')));
-		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('|')));
-		EXPECT_EQ(Token::createSymbol('|'), info.getClosingParenthese(Token::createSymbol('|')));
+		EXPECT_TRUE(info.isLeftParenthesis(Token::createSymbol('|')));
+		EXPECT_TRUE(info.isRightParenthesis(Token::createSymbol('|')));
+		EXPECT_EQ(Token::createSymbol('|'), info.getClosingParenthesis(Token::createSymbol('|')));
 
-		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('+')));
-		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('-')));
-		EXPECT_EQ(Token::createSymbol('-'), info.getClosingParenthese(Token::createSymbol('+')));
+		EXPECT_TRUE(info.isLeftParenthesis(Token::createSymbol('+')));
+		EXPECT_TRUE(info.isRightParenthesis(Token::createSymbol('-')));
+		EXPECT_EQ(Token::createSymbol('-'), info.getClosingParenthesis(Token::createSymbol('+')));
 
 		// the one that should be excluded since opener and closer are re-used
-		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('~')));
-		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('~')));
+		EXPECT_FALSE(info.isLeftParenthesis(Token::createSymbol('~')));
+		EXPECT_FALSE(info.isRightParenthesis(Token::createSymbol('~')));
 
-		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('*')));
-		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('/')));
+		EXPECT_FALSE(info.isLeftParenthesis(Token::createSymbol('*')));
+		EXPECT_FALSE(info.isRightParenthesis(Token::createSymbol('/')));
 
-		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('%')));
-		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('.')));
+		EXPECT_FALSE(info.isLeftParenthesis(Token::createSymbol('%')));
+		EXPECT_FALSE(info.isRightParenthesis(Token::createSymbol('.')));
 
 	}
 

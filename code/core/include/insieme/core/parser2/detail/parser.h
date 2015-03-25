@@ -965,34 +965,34 @@ namespace detail {
 		private:
 
 			// identified pairs of terminals
-			std::set<Token> leftParenthese;
-			std::set<Token> rightParenthese;
-			std::map<Token,Token> parenthesePairs;
+			std::set<Token> leftParenthesis;
+			std::set<Token> rightParenthesis;
+			std::map<Token,Token> parenthesisPairs;
 
 		public:
 
-			void addParenthese(const Token& open, const Token& close) {
-				leftParenthese.insert(open);
-				rightParenthese.insert(close);
-				parenthesePairs[open] = close;
+			void addParentheses(const Token& open, const Token& close) {
+				leftParenthesis.insert(open);
+				rightParenthesis.insert(close);
+				parenthesisPairs[open] = close;
 			}
 
-			bool isLeftParenthese(const Token& token) const {
-				return leftParenthese.find(token) != leftParenthese.end();
+			bool isLeftParenthesis(const Token& token) const {
+				return leftParenthesis.find(token) != leftParenthesis.end();
 			}
 
-			bool isRightParenthese(const Token& token) const {
-				return rightParenthese.find(token) != rightParenthese.end();
+			bool isRightParenthesis(const Token& token) const {
+				return rightParenthesis.find(token) != rightParenthesis.end();
 			}
 
-			const Token& getClosingParenthese(const Token& open) const {
-				auto pos = parenthesePairs.find(open);
-				assert(pos != parenthesePairs.end());
+			const Token& getClosingParenthesis(const Token& open) const {
+				auto pos = parenthesisPairs.find(open);
+				assert(pos != parenthesisPairs.end());
 				return pos->second;
 			}
 
-			bool hasParenthesePairs() const {
-				return !parenthesePairs.empty();
+			bool hasParenthesisPairs() const {
+				return !parenthesisPairs.empty();
 			}
 
 			std::ostream& printTo(std::ostream& out) const;
@@ -1107,7 +1107,7 @@ namespace detail {
 
 		void updateTermInfo() const;
 
-		bool checkParenthese(const TokenIter& begin, const TokenIter& end) const;
+		bool checkParentheses(const TokenIter& begin, const TokenIter& end) const;
 	};
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -71,7 +71,7 @@ TEST(C_AST, Basic) {
 	sum = add(sum, x);
 	EXPECT_EQ("x + y + x", toC(sum));
 
-	sum = add(sum, parenthese(add(x,y)));
+	sum = add(sum, parentheses(add(x,y)));
 	EXPECT_EQ("x + y + x + (x + y)", toC(sum));
 
 }

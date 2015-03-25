@@ -97,31 +97,31 @@ namespace parser {
 
 		template<typename Target>
 		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token, bool angleBackets = false) {
-			vector<Token> parenthese;
+			vector<Token> parentheses;
 			for(TokenIter cur = begin; cur != end; ++cur) {
 
 				// early check to allow searching for open / close tokens
-				if (parenthese.empty() && *cur == token) {
+				if (parentheses.empty() && *cur == token) {
 					return cur;
 				}
 
-				if (info.isLeftParenthese(*cur)) {
-					parenthese.push_back(info.getClosingParenthese(*cur));
+				if (info.isLeftParenthesis(*cur)) {
+					parentheses.push_back(info.getClosingParenthesis(*cur));
 				}
 
-				// special handling for enabling the parenthese pair < >
+				// special handling for enabling the parenthesis pair < >
 				if (angleBackets && *cur == '<') {
-					parenthese.push_back(Token::createSymbol('>'));
+					parentheses.push_back(Token::createSymbol('>'));
 				}
 
-				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
+				if (info.isRightParenthesis(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
 					// if this is not matching => return end (no next token)
-					if (parenthese.empty() || parenthese.back() != *cur) {
+					if (parentheses.empty() || parentheses.back() != *cur) {
 						return end;
 					}
-					parenthese.pop_back();
+					parentheses.pop_back();
 				}
-				if (!parenthese.empty()) {
+				if (!parentheses.empty()) {
 					continue;
 				}
 
@@ -134,8 +134,8 @@ namespace parser {
 
 
 		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep, bool angleBackets = false) {
-			assert(!info.isLeftParenthese(Token::createSymbol(sep)));
-			assert(!info.isRightParenthese(Token::createSymbol(sep)));
+			assert(!info.isLeftParenthesis(Token::createSymbol(sep)));
+			assert(!info.isRightParenthesis(Token::createSymbol(sep)));
 
 			TokenIter start = range.begin();
 			TokenIter end = range.end();
