@@ -91,10 +91,10 @@ int main(int argc, char** argv) {
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
 	std::cout << format("#                 Insieme version: %-43s #\n", tf::getGitVersion());
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
-	if(options.num_repeditions==1)
+	if(options.num_repetitions==1)
 		std::cout << format("#                           Running %3d benchmark(s)                           #\n", cases.size());
 	else
-		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repeditions);
+		std::cout << format("#                Running %3d benchmark(s) %3d repetitions                      #\n", cases.size(),options.num_repetitions);
 	std::cout <<        "#------------------------------------------------------------------------------#\n";
 
 
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
-	setup.clean=options.clean;
+	setup.clean=!options.no_clean;
 	setup.perf=options.perf;
 	setup.load_miss=options.load_miss;
 	setup.store_miss=options.store_miss;
@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
 
 	        if(execute) {
 	            map<TestStep,vector<TestResult>> curRes;
-	            for(int rep=0;rep<options.num_repeditions;rep++){
+	            for(int rep=0;rep<options.num_repetitions;rep++){
 	                for(const auto& step : list) {
 	                    auto res = step.run(setup, cur, runner);
 	                    curRes[step].push_back(res);
@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
 					line <<  colorize.bold() << colorize.blue();
 				}
 
-				if(curRes.second.deviationAvailable() && options.num_repeditions>1)
+				if(curRes.second.deviationAvailable() && options.num_repetitions>1)
 					line << "# " << curRes.first.getName() <<
 						format(colOffset.c_str(),format("[%.3f secs (+/- %.3f), %.3f MB (+/- %.3f)]",curRes.second.getRuntime(), curRes.second.getRuntimeDev(),
 						curRes.second.getMemory()/1024/1024,curRes.second.getMemoryDev()/1024/1024)) << colorize.reset() << "\n";
@@ -284,7 +284,7 @@ int main(int argc, char** argv) {
 
 				success = success && curRes.second.wasSuccessfull();
 			}
-			if(options.clean && execute) {
+			if(!options.no_clean && execute) {
 				curRes.second.clean();
 			}
 
@@ -438,13 +438,13 @@ namespace {
 		}
 		res.scheduling=map.count("scheduling");
 		res.mockrun = map.count("mock");
-		res.clean=true;
+		res.no_clean=false;
 		res.statistics=true;
 		res.color=true;
 		res.panic_mode = map.count("panic");
 		res.num_threads = 1;
 		res.force=map.count("force");
-		res.num_repeditions = map["repeat"].as<int>();
+		res.num_repetitions = map["repeat"].as<int>();
 		res.statThreads=map["threads"].as<int>();
 		res.overwrite=!map.count("no-overwrite");
 		res.use_median=map.count("use-median");
