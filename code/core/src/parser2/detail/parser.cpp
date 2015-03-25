@@ -169,24 +169,24 @@ namespace detail {
 			}
 
 			// compute list of candidate-split-points
-			vector<Token> parentheseStack;
+			vector<Token> parenthesisStack;
 			for(auto it = begin; it != end; ++it) {
 				const Token& cur = *it;
 
 				// if current token is an opener => put closer on the stack
-				if (info.isLeftParenthese(cur)) {
+				if (info.isLeftParenthesis(cur)) {
 					// check whether this is a right-parentheses as well (e.g. $ .. $ )
-					if (!info.isRightParenthese(cur) || parentheseStack.empty() || parentheseStack.back() != cur) {
+					if (!info.isRightParenthesis(cur) || parenthesisStack.empty() || parenthesisStack.back() != cur) {
 						// it is not a right-parentheses or it is not the expected one
-						parentheseStack.push_back(info.getClosingParenthese(cur));
+						parenthesisStack.push_back(info.getClosingParenthesis(cur));
 						continue;
 					}
 				}
 
 				// check whether it is a closer
-				if (info.isRightParenthese(cur)) {
-					if (!parentheseStack.empty() && parentheseStack.back() == cur) {
-						parentheseStack.pop_back();	// all fine
+				if (info.isRightParenthesis(cur)) {
+					if (!parenthesisStack.empty() && parenthesisStack.back() == cur) {
+						parenthesisStack.pop_back();	// all fine
 					} else {
 						// nothing more will be matched - parentheses not balanced
 						break;	// no need to continue search for candidates
@@ -194,12 +194,12 @@ namespace detail {
 				}
 
 				// check whether iterator is inside a nested expression
-				if (!parentheseStack.empty()) {
+				if (!parenthesisStack.empty()) {
 					continue;	// jup, still inside => no candidate
 				}
 
 				// so, there is nothing on the stack ..
-				assert(parentheseStack.empty());
+				assert(parenthesisStack.empty());
 
 				// we are getting closer - check whether we are within the search range
 				if (it+1 < lowerLimit) {
@@ -380,12 +380,12 @@ namespace detail {
 				const Token& cur = tokens[i];
 
 				// if current token is an opener => put closer on the stack
-				if (info.isLeftParenthese(cur)) {
-					parentheseStack.push_back(info.getClosingParenthese(cur));
+				if (info.isLeftParenthesis(cur)) {
+					parentheseStack.push_back(info.getClosingParenthesis(cur));
 				}
 
 				// check whether it is a closer
-				if (info.isRightParenthese(cur)) {
+				if (info.isRightParenthesis(cur)) {
 					if (!parentheseStack.empty() && parentheseStack.back() == cur) {
 						parentheseStack.pop_back();	// all fine
 					} else {
@@ -401,7 +401,7 @@ namespace detail {
 
 				// check whether iterator is inside a nested expression
 				//		- if searched head node is start of parentheses pair we still have to continue
-				bool isOpenToken = info.isLeftParenthese(cur) && headTerminal->match(context, tokens.begin() + i, tokens.begin() + i +1);
+				bool isOpenToken = info.isLeftParenthesis(cur) && headTerminal->match(context, tokens.begin() + i, tokens.begin() + i +1);
 				if (!(parentheseStack.empty() || (isOpenToken && parentheseStack.size() == 1u))) {
 					continue;	// jup, still inside => no candidate
 				}
@@ -823,7 +823,7 @@ namespace detail {
 	namespace {
 
 		template<typename TokenIter>
-		bool checkParenthese(const Token& start, const Token& end, const TokenIter& tbegin, const TokenIter& tend) {
+		bool checkParentheses(const Token& start, const Token& end, const TokenIter& tbegin, const TokenIter& tend) {
 			// search through range for start token
 			for(auto a = tbegin; a != tend; ++a) {
 				if (*a != start) continue;
@@ -870,8 +870,8 @@ namespace detail {
 		const Token& end = pair.second;
 
 		// search forward and backward direction
-		return	checkParenthese(start, end, tokenSeq.begin(), tokenSeq.end()) &&
-				checkParenthese(end, start, tokenSeq.rbegin(), tokenSeq.rend());
+		return	checkParentheses(start, end, tokenSeq.begin(), tokenSeq.end()) &&
+				checkParentheses(end, start, tokenSeq.rbegin(), tokenSeq.rend());
 
 	}
 
@@ -967,7 +967,7 @@ namespace detail {
 					[](std::ostream& out, const pair<string,Sets>& cur) {
 						out << cur.first << ": \t" << cur.second.startSet << " ... " << cur.second.endSet << " : " << cur.second.followSet;
 				}) << "\n TerminalPairs: \n\t" <<
-				join("\n\t", parenthesePairs,
+				join("\n\t", parenthesisPairs,
 					[](std::ostream& out, const pair<Token,Token>& cur) {
 						out << cur.first.getLexeme() << " " << cur.second.getLexeme();
 				}) << "\n}";
@@ -979,7 +979,7 @@ namespace detail {
 		auto tokens = lex(code);
 
 		// step 2) check parenthesis - if not properly nested, it is wrong!
-		if (!checkParenthese(tokens.begin(), tokens.end())) {
+		if (!checkParentheses(tokens.begin(), tokens.end())) {
 			if (throwOnFail) throw ParseException("Unbalanced parentheses encountered!");
 			return NodePtr(); // parenthesis not properly nested!
 		}
@@ -1198,24 +1198,24 @@ namespace detail {
 			// if all sequences support the current pair ...
 			auto support = [&](const SequencePtr& seq) { return seq->supportsPair(cur); };
 			if (all(sequences, support)) {
-				info.addParenthese(cur.first, cur.second); // .. we can add it to the result
+				info.addParentheses(cur.first, cur.second); // .. we can add it to the result
 			}
 		}
 	}
 
-	bool Grammar::checkParenthese(const TokenIter& begin, const TokenIter& end) const {
+	bool Grammar::checkParentheses(const TokenIter& begin, const TokenIter& end) const {
 		const TermInfo& info = getTermInfo();
-		if (!info.hasParenthesePairs()) {
+		if (!info.hasParenthesisPairs()) {
 			return true;	// nothing to check
 		}
 
 		// check proper nesting
 		vector<Token> parentheseStack;
 		for(const Token& cur : range(begin, end)) {
-			if (info.isLeftParenthese(cur)) {
-				parentheseStack.push_back(info.getClosingParenthese(cur));
+			if (info.isLeftParenthesis(cur)) {
+				parentheseStack.push_back(info.getClosingParenthesis(cur));
 			}
-			if (info.isRightParenthese(cur)) {
+			if (info.isRightParenthesis(cur)) {
 				if (parentheseStack.empty() || parentheseStack.back() != cur) {
 					return false;		// not matching parentheses
 				}
