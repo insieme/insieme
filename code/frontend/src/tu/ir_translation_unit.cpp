@@ -44,6 +44,7 @@
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -128,7 +129,7 @@ namespace tu {
 			res.addEntryPoints(cur);
 		}
 
-		// copy meta infos 
+		// copy meta infos
 		for(auto cur : getMetaInfos()) {
 			res.addMetaInfo(cur.first, cur.second);
 		}
@@ -165,8 +166,8 @@ namespace tu {
 		for(auto cur : b.getEntryPoints()) {
 			res.addEntryPoints(cur);
 		}
-		
-		// copy meta infos 
+
+		// copy meta infos
 		for(auto cur : b.getMetaInfos()) {
 			res.addMetaInfo(cur.first, cur.second);
 		}
@@ -203,7 +204,7 @@ namespace tu {
 
 			NodeManager& mgr;
 
-			IRBuilder builder;
+			FrontendIRBuilder builder;
 
 			NodeMap symbolMap;
 
@@ -609,7 +610,7 @@ namespace tu {
 				}
 			}
 
-			core::IRBuilder builder(internalMainFunc->getNodeManager());
+			core::FrontendIRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
 			// check all used literals if they are used as global and the global type is vector
@@ -715,21 +716,21 @@ namespace tu {
 		auto mm = metaInfos.find(classType);
 		if(mm != metaInfos.end()) {
 			auto metaInfoList = mm->second;
-			
-			//merge metaInfos into one 
+
+			//merge metaInfos into one
 			for(auto m : metaInfoList) {
 				metaInfo = core::merge(metaInfo, m);
 			}
 		}
 
-		if(symbolic) 
+		if(symbolic)
 			return metaInfo;
-		
-		auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();	
+
+		auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();
 
 		// encode meta info into pure IR
 		auto encoded = core::encoder::toIR(getNodeManager(), metaInfo);
-			
+
 		// resolve meta info
 		auto resolved = core::encoder::toValue<ClassMetaInfo>(this->resolve(encoded).as<core::ExpressionPtr>());
 		return resolved;
@@ -778,7 +779,7 @@ namespace tu {
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
-		
+
 		// search for entry point
 		Resolver resolver(mgr, a);
 		core::IRBuilder builder(mgr);
