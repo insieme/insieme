@@ -103,7 +103,7 @@ Integration tests can be executed using the custom runner compiled in the build 
 ```
 ./code/driver/integration_tests
 ```
-Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the Insieme developer documentation. The mock run (``-m```) will give you an idea of the actual commands being invoked.
+Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the Insieme developer documentation. The mock run (``-m``) will give you an idea of the actual commands being invoked.
 
 ### Compiling Application Codes
 
