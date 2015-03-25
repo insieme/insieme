@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -86,7 +87,7 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insiem
 		core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
 		assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
-		core::IRBuilder builder(func->getNodeManager());
+		core::FrontendIRBuilder builder(func->getNodeManager());
 		const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 		const core::lang::IRppExtensions& ext = func->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 

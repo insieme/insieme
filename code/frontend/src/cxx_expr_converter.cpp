@@ -246,7 +246,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	LOG_EXPR_CONVERSION(callExpr, ret);
 	// TODO: static methods
 
-	const core::IRBuilder& builder = convFact.builder;
+	const core::FrontendIRBuilder& builder = convFact.builder;
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	if (!methodDecl){
@@ -373,7 +373,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(callExpr, retIr);
-	const core::IRBuilder& builder = convFact.builder;
+	const core::FrontendIRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
     const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();

@@ -103,7 +103,7 @@ protected:
 	Converter& convFact;
 
 	core::NodeManager& 					mgr;
-	const core::IRBuilder& 				builder;
+	const core::FrontendIRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
 	core::ExpressionPtr wrapVariable(const clang::Expr* expr);
