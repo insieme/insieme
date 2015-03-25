@@ -96,6 +96,34 @@ namespace lang {
 		EXPECT_EQ("AP({{struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>);}; complex v1 = undefined(type<complex>);})", toString(builder.normalize(parser::parse(manager, "{ using \"ext.complex\" in { complex a; } complex b;}"))));
 	}
 
+
+
+	//Helper extension used to test the check for already existing named constructs in the parser
+	class NamedCoreExtensionParserTestExtension : public core::lang::Extension {
+
+		friend class core::NodeManager;
+
+		NamedCoreExtensionParserTestExtension(core::NodeManager& manager)
+				: core::lang::Extension(manager) {}
+
+	public:
+
+		LANG_EXT_TYPE_WITH_NAME(NamedType, "complex", "struct { NamedType foo; }")
+	};
+
+	TEST(NamedCoreExtensionParserTest, ParserAlreadyExistingName) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		const auto& existingNames = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getNamedIrExtensions();
+
+		//As I passed the extension with the name "complex" already defined this should be expanded
+		EXPECT_EQ("AP({struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>);})", toString(builder.normalize(parser::parse(manager, "{ complex a; }", false, existingNames))));
+
+		//now when I load the complex extension which defines the same name again I should run into an assertion
+		ASSERT_DEATH(parser::parse(manager, "using \"ext.complex\" in { complex a; }", false, existingNames), "The name \"complex\" introduced by extension \"ext.complex\" is already existing");
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

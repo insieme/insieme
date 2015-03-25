@@ -1296,7 +1296,9 @@ namespace detail {
 				//finally add all named constructs defined by this extension to the current context
 				auto& symManager = context.getSymbolManager();
 				for(const std::pair<string, NodePtr>& cur : extension.getNamedIrExtensions()) {
-					//TODO check for already existing name here and assert if found
+					if (symManager.lookup(cur.first)) {
+						assert_fail() << "The name \"" << cur.first << "\" introduced by extension \"" << extensionName << "\" is already existing";
+					}
 					symManager.add(cur.first, cur.second);
 				}
 			}

@@ -177,6 +177,12 @@ namespace detail {
 			return NodePtr(); // .. nothing found
 		}
 
+		NodePtr lookup(const string& name) const {
+			const auto& identifierVector = toVector(Token::createIdentifier(name));
+			const auto& range = utils::range<vector<Token>::const_iterator>(identifierVector.begin(), identifierVector.end());
+			return lookup(range);
+		}
+
 		Backup backup() const {
 			return Backup(*this);
 		}
