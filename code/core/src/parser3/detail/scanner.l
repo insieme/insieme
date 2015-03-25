@@ -36,6 +36,8 @@ long    [0-9]+l
 uint    [0-9]+u
 int     [0-9]+
 blank   [ \t]
+paramvar #[a-zA-Z]
+
 
 %{
   // Code run each time a pattern is matched.
@@ -78,6 +80,14 @@ blank   [ \t]
 "\""     return inspire_parser::make_DQUOTE(loc);
 "\'"     return inspire_parser::make_QUOTE(loc);
 
+"&"     return inspire_parser::make_BAND(loc);
+"|"     return inspire_parser::make_BOR(loc);
+"^"     return inspire_parser::make_BXOR(loc);
+
+"&&"     return inspire_parser::make_LAND(loc);
+"||"     return inspire_parser::make_LOR(loc);
+"!"      return inspire_parser::make_LNOT(loc);
+
 "<"      return inspire_parser::make_LT(loc);
 ">"      return inspire_parser::make_GT(loc);
 "<="     return inspire_parser::make_LEQ(loc);
@@ -85,7 +95,6 @@ blank   [ \t]
 "=="     return inspire_parser::make_EQ(loc);
 "!="     return inspire_parser::make_NEQ(loc);
 
-"!"      return inspire_parser::make_LNOT(loc);
 
 "="      return inspire_parser::make_ASSIGN(loc);
 "?"      return inspire_parser::make_QMARK(loc);
@@ -100,16 +109,24 @@ blank   [ \t]
 ".."     return inspire_parser::make_RANGE(loc);
 "."      return inspire_parser::make_DOT(loc);
 
-"let"    return inspire_parser::make_LET(loc);
-"auto"   return inspire_parser::make_AUTO(loc);
-"if"     return inspire_parser::make_IF(loc);
-"else"   return inspire_parser::make_ELSE(loc);
-"for"    return inspire_parser::make_FOR(loc);
-"while"  return inspire_parser::make_WHILE(loc);
-"return" return inspire_parser::make_RETURN(loc);
-"true"   return inspire_parser::make_BOOL(yytext, loc);
+"#inf"    return inspire_parser::make_INFINITE(loc);
+"let"     return inspire_parser::make_LET(loc);
+"auto"    return inspire_parser::make_AUTO(loc);
+"if"      return inspire_parser::make_IF(loc);
+"else"    return inspire_parser::make_ELSE(loc);
+"for"     return inspire_parser::make_FOR(loc);
+"while"   return inspire_parser::make_WHILE(loc);
+"return"  return inspire_parser::make_RETURN(loc);
+"true"    return inspire_parser::make_BOOL(yytext, loc);
 "false"   return inspire_parser::make_BOOL(yytext, loc);
+"struct"  return inspire_parser::make_STRUCT(loc);
+"union"   return inspire_parser::make_UNION(loc);
 
+
+{paramvar} {
+    // skip # char
+  return inspire_parser::make_PARAMVAR(yytext+1, loc);
+}
 
 
 {stringlit}      {

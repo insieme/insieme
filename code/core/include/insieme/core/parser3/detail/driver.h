@@ -87,12 +87,18 @@ public:
     StatementPtr parseStmt ();
     ExpressionPtr parseExpression ();
 
+    // tools
+    ExpressionPtr findSymbol(const location& l, const std::string& name) const;
+    TypePtr findType(const location& l, const std::string& name) const;
+
+    ExpressionPtr getOperand(ExpressionPtr expr);
+    ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
+    TypePtr genGenericType(const location& l, const std::string& name, const TypeList& papas, const TypeList& params, const IntParamList& iparamlist);
+    TypePtr genFuncTypeType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
+
     // Error handling.
     void error (const location& l, const std::string& m) const;
     void error (const std::string& m) const;
-
-    ExpressionPtr findSymbol(const location& l, const std::string& name) const;
-    TypePtr findType(const location& l, const std::string& name) const;
 };
 
 } // namespace detail
