@@ -4,15 +4,21 @@
 #include <iostream>
 #include <map>
 
-#include "insieme/core/parser3/detail/nodes.hpp"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_builder.h"
+
+
 #include "inspire_parser.hpp"
 #include "insieme/core/parser3/detail/scanner.h"
+
+
 
 
 // FLex is still a primitive tool using macros:
 // Tell Flex the lexer's prototype ...
 # define YY_DECL \
-  insieme::core::parser3::detail::inspire_parser::symbol_type yylex (insieme::core::parser3::detail::inspire_driver& driver)
+  insieme::core::parser3::detail::inspire_parser::symbol_type yylex (insieme::core::parser3::detail::inspire_driver& driver, \
+                                                                     insieme::core::parser3::detail::inspire_parser::symbol_type** start_token)
 // ... and declare it for the parser's sake.
 YY_DECL;
 
@@ -28,7 +34,7 @@ namespace detail{
  *  it is useful to keep track of the let bindings
  */
 class DeclarationContext{
-    using ctx_map_type = std::map<std::string, NNode*>;
+    using ctx_map_type = std::map<std::string, NodePtr>;
 
     std::vector<ctx_map_type> scope_stack;
     ctx_map_type global_scope;
@@ -41,13 +47,13 @@ public:
         scope_stack.pop_back();
     }
 
-    void add_symb(const std::string& name, NNode* node){
+    void add_symb(const std::string& name, NodePtr node){
         if (scope_stack.empty()) global_scope.insert({name, node});
         else  scope_stack.back().insert({name, node});
     }
 
-    NNode* find(const std::string& name){
-        ctx_map_type::iterator mit;
+    NodePtr find(const std::string& name) const{
+        ctx_map_type::const_iterator mit;
         for (auto it = scope_stack.rbegin(); it != scope_stack.rend(); ++it){
             if ((mit = it->find(name)) != it->end()) return mit->second;
         }
@@ -63,21 +69,30 @@ class inspire_driver
 {
     scanner_wrapper* scanner;    
 public:
-    inspire_driver (const std::string& f, NodeKeeper& nk);
+    inspire_driver (const std::string& f, NodeManager& nk);
     virtual ~inspire_driver ();
 
-    NodeKeeper& nodeKeeper;
+    NodeManager& mgr;
+    IRBuilder builder;
     std::string file;
     const std::string& str;       
-    NNode* result;
+    NodePtr result;
 
     DeclarationContext scopes;
 
-    int parse ();
+    location glob_loc;
+
+    NodePtr parseProgram ();
+    TypePtr parseType ();
+    StatementPtr parseStmt ();
+    ExpressionPtr parseExpression ();
 
     // Error handling.
-    void error (const location& l, const std::string& m);
-    void error (const std::string& m);
+    void error (const location& l, const std::string& m) const;
+    void error (const std::string& m) const;
+
+    ExpressionPtr findSymbol(const location& l, const std::string& name) const;
+    TypePtr findType(const location& l, const std::string& name) const;
 };
 
 } // namespace detail
