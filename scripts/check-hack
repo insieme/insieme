@@ -2,23 +2,25 @@
 
 use Data::Dumper;
 
+# return the last component (file name) from a complete path
 sub filename {
     my @c=split('/', $_[0]);
     return $c[-1];
 }
 
-# we need to have the full file path to hack.h as the first arguments - check it
+# we need to have the full file path to hack.h as the first argument - check it
 die "usage: $0 path/to/hack.h\n" unless $ARGV[0] && -r $ARGV[0];
 
-# initialize a map with the builtins missing in Clang and their equivalents
+# initialize a map with GCC builtins missing in Clang
 my %clangmap;
-open($file, "curl -s http://clang.llvm.org/builtins.py |") or die;
+open($file, "curl -s http://clang.llvm.org/builtins.py |")
+    or die "Could not read list of builtins from Clang web site";
 while (<$file>) {
     $clangmap{$1}=$2 if /'(__builtin_.*)': '(.*)'/;
 }
+close($file);
 
-# print Dumper(\%clangmap);
-
+# check which of the builtins are not included in our hack.h and print these
 foreach (keys %clangmap) {
     `grep -s $_ $ARGV[0]`;
     print "$_ not found in ".filename($ARGV[0])."\n" if $?;
