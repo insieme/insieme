@@ -57,7 +57,7 @@ namespace lang {
 		NodeManager manager;
 
 		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.unknown_extension\" in complex a;"),
-				"Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of ExtensionRegistry");)
+				"Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of ExtensionRegistry"););
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserSingleStatement) {
@@ -139,7 +139,7 @@ namespace lang {
 
 		//now when I load the complex extension which defines the same name again I should run into an assertion
 		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.complex\" in { complex a; }", false, existingNames),
-				"The name \"complex\" introduced by extension \"ext.complex\" is already existing");)
+				"The name \"complex\" introduced by extension \"ext.complex\" is already existing"););
 	}
 
 } // end namespace lang

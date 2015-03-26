@@ -170,7 +170,7 @@ namespace lang {
 	TEST(NamedCoreExtensionTest, AssertNameCollisionDeathTest) {
 		NodeManager manager;
 
-		assert_decl(ASSERT_DEATH(manager.getLangExtension<NamedCoreExtensionTestDuplicatedExtension>(), "IR_NAME \"NamedType\" already in use in this extension");)
+		assert_decl(ASSERT_DEATH(manager.getLangExtension<NamedCoreExtensionTestDuplicatedExtension>(), "IR_NAME \"NamedType\" already in use in this extension"););
 	}
 } // end namespace lang
 } // end namespace core
