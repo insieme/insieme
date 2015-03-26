@@ -66,7 +66,7 @@ endif()
 # set compiler flags for gcc
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
-
+	
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fPIC")
   
@@ -77,20 +77,23 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 	include(CheckCCompilerFlag)
-	check_c_compiler_flag( --std=gnu99 C99_Support )
+	check_c_compiler_flag( -std=gnu99 C99_Support )
+	check_c_compiler_flag( -std=c11   C11_Support )
 	
-	if(NOT WIN32)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp") #as one gtest uses openmp
-	endif()
-	
+
 	#Compile with C11 and all warnings enabled, pedantic and warnings treated as errors for GCC>=4.9
+	#to avoid a problem with 4.8 and C11 we only want c11 with 4.9
 	if (CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 4.9)
-		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=c11")
+		set(WE_HAVE_GCC_49 TRUE)
+	endif()
+
+	if(C11_Support AND WE_HAVE_GCC_49)
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
 		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
 	elseif(C99_Support)
-		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 	else()
-		message(WARNING "WARNING: --std=gnu99 not supported by your compiler!" )
+		message(WARNING "WARNING: -std=gnu99 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -150,11 +153,13 @@ if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
-#link libraries for the insieme_runtime target
-if(NOT WIN32 OR USE_PTHREADS) #if(NOT MSVC OR USE_PTHREADS)
+#link pthread libraries for the insieme_runtime target
+if(NOT WIN32 OR USE_PTHREADS) 
 	target_link_libraries(insieme_runtime ${CMAKE_THREAD_LIBS_INIT})
 endif()
-if(NOT WIN32) #if(NOT MSVC)
+
+#papi header+libraries
+if(NOT WIN32) 
 	target_include_directories(insieme_runtime PRIVATE ${PAPI_INCLUDE_DIRS})
 	target_link_libraries(insieme_runtime dl rt m ${PAPI_LIBRARIES})
 endif()
@@ -170,13 +175,7 @@ if ( USE_MPI_OPENCL )
 	target_link_libraries(insieme_runtime ${MPI_C_LIBRARIES} )
 endif ( USE_MPI_OPENCL )
 
-#include_directories(include/ ${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR}) #what's this include/ thing? S. Widerin
 include_directories(${PTHREAD_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
-
-# add meta information include path
-get_filename_component( insieme_runtime_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
-get_directory_property( insieme_code_dir DIRECTORY ${insieme_runtime_dir} PARENT_DIRECTORY )
-#include_directories( ${insieme_code_dir}/common/include )
 
 #insieme_common is header-only library
 target_link_libraries(insieme_runtime insieme_common)
@@ -192,19 +191,39 @@ if(NOT MEMORY_CHECK_SETUP)
 		# add -all-valgrind target
 		add_custom_target(valgrind)
 	endif()
-
+	# mark as defined
+	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif()
 
-# mark as defined
-set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
-
+# --------------------------------------------------------- Unit tests ---------------
 # handle gtest unit tests
 set(ut_prefix  ut_rt )
 file(GLOB_RECURSE test_cases test/*.cc)
 # get energy unit tests, to be removed if papi and msr module are not present
 file(GLOB_RECURSE energy_test_cases test/energy*.cc)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+include(CheckCXXCompilerFlag)
+# check for -std=c++0x
+check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
+# check for -std=c++11
+check_cxx_compiler_flag( -std=c++11 CXX11_Support )
+
+#carefull! the unit tests are compiled with g++ so the runtime code is compiled as well as c++
+#this gives problems with anonymous structs as they are not supported by C++/C (before C11)
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+
+if(CXX11_Support)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(CXX0X_Support)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+	message(WARNING "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
+endif()
+
+# runtime unit tests use openmp
+if(NOT WIN32)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+endif()
 
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
@@ -216,11 +235,12 @@ foreach ( case_file ${test_cases})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
+
+		#papi header+libraries
 		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
 		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES})
-			target_link_libraries(${case_name} ${MPI_LIBRARIES})
 		endif ( USE_MPI_OPENCL )
 	endif()
 		
@@ -249,6 +269,8 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} m)
+
+		#papi header+libraries
 		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
 		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
@@ -265,13 +287,15 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
-	add_executable(${case_name} ${case_file} ${WIN65ASM_OBJ})
+	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} insieme_common)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
+		
+		#papi header+libraries
 		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
 		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )

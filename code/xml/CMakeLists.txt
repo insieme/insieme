@@ -12,9 +12,6 @@ cmake_minimum_required(VERSION 2.8)
 file(GLOB_RECURSE insieme_xml_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_xml_incs 	include/*.h )
 
-#to use FindXerces.cmake
-list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
-
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/xsd_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/xsd_config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/test_config.h)
 
@@ -29,6 +26,7 @@ target_link_libraries(insieme_xml ${Xerces_LIBRARIES})
 
 target_link_libraries(insieme_xml insieme_core)
 
+# setup unit tests
 set ( ut_prefix  ut_xml )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})

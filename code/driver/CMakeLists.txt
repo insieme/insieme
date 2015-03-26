@@ -34,7 +34,9 @@ target_link_libraries(insieme_driver insieme_machine_learning)
 add_custom_target(drivers)
 
 # build executables
-add_definitions( -fopenmp )
+#some drivers use openmp
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+
 file(GLOB_RECURSE executables src/*.cxx)
 foreach ( exec_file ${executables})
 
@@ -70,7 +72,7 @@ file(GLOB_RECURSE test_cases test/*.cc)
 insieme_find_package(PAPI)
 if(NOT PAPI_FOUND)
 	#measure test run a runtime-thingy which sould use papi if available
-	# if papi is not available the measure thest will fail therefore exclude measuretest if papi is not
+	# if papi is not available the measure test will fail therefore exclude measuretest if papi is not
 	# available
 	message(STATUS "Excluding measure tests")
 

@@ -40,10 +40,8 @@ target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_analysis)
 target_link_libraries(insieme_frontend insieme_annotations)
 
-
-set ( ut_prefix  ut_fe )
-
 # add custom target for ut_fe test suite
+set ( ut_prefix  ut_fe )
 add_custom_target(${ut_prefix})
 
 file(GLOB_RECURSE test_cases test/*.cc)

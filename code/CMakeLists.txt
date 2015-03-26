@@ -47,6 +47,12 @@ elseif(BUILD_IWIR)
 
 elseif(BUILD_CLANG)
 	# Build compiler c/c++ FE + core + backend + runtime 
+	
+	# CAREFULL we want to setup runtime before environment.cmake to avoid problems with Werror/Wall/
+	# pedantic when compiling runtime unittests as runtime has C features which are not supported by
+	# C++ -> therefore Werror/Wall/pedantic shows them as error
+	add_subdirectory(runtime)
+
 	include(environment.cmake)
 
 	add_subdirectory(common)
@@ -59,7 +65,6 @@ elseif(BUILD_CLANG)
 	add_subdirectory(backend)
 	add_subdirectory(driver)
 	add_subdirectory(machine_learning)
-	add_subdirectory(runtime)
 
 	#Configure the integration test
 	set(CONFIG_INTEGRATION_TESTS TRUE)
@@ -69,11 +74,17 @@ else()
 	get_filename_component( curdir ${CMAKE_CURRENT_LIST_FILE} PATH )
 	file(GLOB children RELATIVE ${curdir} ${curdir}/*)
 
+	# CAREFULL we want to setup runtime before environment.cmake to avoid problems with Werror/Wall/
+	# pedantic when compiling runtime unittests as runtime has C features which are not supported by
+	# C++ -> therefore Werror/Wall/pedantic shows them as error
+	add_subdirectory(runtime)
+
 	include(environment.cmake)
 	
-	# include _all_ modules
+	# include _all_ modules (but runtime is handled in before -> because of certain Wall problems)
 	foreach( child ${children} )
-		if ( EXISTS ${curdir}/${child}/CMakeLists.txt )
+		if ( EXISTS ${curdir}/${child}/CMakeLists.txt 
+			AND NOT (${child} STREQUAL runtime))
 			add_subdirectory( ${child} )
 		endif()
 	endforeach()

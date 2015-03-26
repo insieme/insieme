@@ -13,7 +13,7 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../../include/irt_ocl_mpi_worker.h.in 
 			   ${CMAKE_CURRENT_SOURCE_DIR}/../../include/irt_ocl_mpi_worker.h)
 
-find_library(pthread_LIB pthread)
+find_package(Threads REQUIRED)
 	
 # set compiler flags for gcc
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -53,7 +53,7 @@ file(GLOB_RECURSE worker_srcs 	irt_ocl_mpi_worker.c )
 # find MPI
 find_package(MPI REQUIRED)
 
-include_directories(${MPI_INCLUDE_PATH} ${PTHREAD_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+include_directories(${MPI_C_INCLUDE_PATH} ${PTHREAD_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
 
 # We also search for OpenCL in the SDK default location
 if ( USE_OPENCL )
@@ -73,5 +73,5 @@ else ( USE_OPENCL )
 endif( USE_OPENCL )
 
 # create the worker target
-add_executable(worker ${worker_srcs} ${MPI_INCLUDE_PATH} ${WIN64ASM_OBJ})
-target_link_libraries(worker ${OPENCL_LIBS} ${MPI_LIBRARIES} ${MPI_COMPILE_FLAGS} ${MPI_LINK_FLAGS} ${pthread_LIB})
+add_executable(worker ${worker_srcs} ${MPI_C_INCLUDE_PATH} ${WIN64ASM_OBJ})
+target_link_libraries(worker ${OPENCL_LIBS} ${MPI_C_LIBRARIES} ${MPI_C_COMPILE_FLAGS} ${MPI_C_LINK_FLAGS} ${CMAKE_THREAD_LIBS_INIT})
