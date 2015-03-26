@@ -97,31 +97,31 @@ namespace parser {
 
 		template<typename Target>
 		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token, bool angleBackets = false) {
-			vector<Token> parenthese;
+			vector<Token> parentheses;
 			for(TokenIter cur = begin; cur != end; ++cur) {
 
 				// early check to allow searching for open / close tokens
-				if (parenthese.empty() && *cur == token) {
+				if (parentheses.empty() && *cur == token) {
 					return cur;
 				}
 
-				if (info.isLeftParenthese(*cur)) {
-					parenthese.push_back(info.getClosingParenthese(*cur));
+				if (info.isLeftParenthesis(*cur)) {
+					parentheses.push_back(info.getClosingParenthesis(*cur));
 				}
 
-				// special handling for enabling the parenthese pair < >
+				// special handling for enabling the parenthesis pair < >
 				if (angleBackets && *cur == '<') {
-					parenthese.push_back(Token::createSymbol('>'));
+					parentheses.push_back(Token::createSymbol('>'));
 				}
 
-				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
+				if (info.isRightParenthesis(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
 					// if this is not matching => return end (no next token)
-					if (parenthese.empty() || parenthese.back() != *cur) {
+					if (parentheses.empty() || parentheses.back() != *cur) {
 						return end;
 					}
-					parenthese.pop_back();
+					parentheses.pop_back();
 				}
-				if (!parenthese.empty()) {
+				if (!parentheses.empty()) {
 					continue;
 				}
 
@@ -134,8 +134,8 @@ namespace parser {
 
 
 		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep, bool angleBackets = false) {
-			assert(!info.isLeftParenthese(Token::createSymbol(sep)));
-			assert(!info.isRightParenthese(Token::createSymbol(sep)));
+			assert(!info.isLeftParenthesis(Token::createSymbol(sep)));
+			assert(!info.isRightParenthesis(Token::createSymbol(sep)));
 
 			TokenIter start = range.begin();
 			TokenIter end = range.end();
@@ -746,7 +746,7 @@ namespace parser {
 			));
 
 			// allow a let to be used with a type
-			g.addRule("T", rule(symScop(seq(let,"in",T)), forward));
+			g.addRule("T", rule(symScope(seq(let,"in",T)), forward));
 
 			// --------------- add literal rules ---------------
 
@@ -1497,7 +1497,7 @@ namespace parser {
 
 
 			// -- let expression --
-			g.addRule("E", rule(symScop(seq(let,"in",E)), forward));
+			g.addRule("E", rule(symScope(seq(let,"in",E)), forward));
 
 
 			struct register_param : public detail::actions {
@@ -1516,7 +1516,7 @@ namespace parser {
 
 			// function expressions
 			g.addRule("E", rule(
-					newScop(seq("(", list(param,","), ")->", T, S)),
+					newScope(seq("(", list(param,","), ")->", T, S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1655,7 +1655,7 @@ namespace parser {
 
 			// -- constructors --
 			g.addRule("E", rule(
-					newScop(seq(classType, "::(", list(param, ","), ") ", S)),
+					newScope(seq(classType, "::(", list(param, ","), ") ", S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1671,7 +1671,7 @@ namespace parser {
 
 			// -- constructors --
 			g.addRule("E", rule(
-					newScop(seq("~", classType, "::()", S)),
+					newScope(seq("~", classType, "::()", S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1687,7 +1687,7 @@ namespace parser {
 
 			// -- member function --
 			g.addRule("E", rule(
-					newScop(seq(classType, "::(", list(param, ","), ")->", T, S)),
+					newScope(seq(classType, "::(", list(param, ","), ")->", T, S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1831,7 +1831,7 @@ namespace parser {
 
 			// compound statement
 			g.addRule("S", rule(
-					varScop(seq("{", loop(S, Token::createSymbol(';')), "}")),
+					varScope(seq("{", loop(S, Token::createSymbol(';')), "}")),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						StatementList list;		// filter out no-ops
@@ -1915,7 +1915,7 @@ namespace parser {
 
 			// try-catch
 			g.addRule("S", rule(
-					seq("try", S, loop(varScop(seq("catch(", varDecl, ")", S)))),
+					seq("try", S, loop(varScope(seq("catch(", varDecl, ")", S)))),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 
@@ -1960,7 +1960,7 @@ namespace parser {
 
 			// for loop without step size
 			g.addRule("S", rule(
-					varScop(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
+					varScope(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 						TypePtr type = terms[0].as<TypePtr>();
@@ -2041,6 +2041,14 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionList params = convertList<ExpressionPtr>(cur.getTerms());
 						return cur.print(cur.getSubRange(0)[0].getLexeme(), params);
+					}
+			));
+
+			// using statement
+			g.addRule("S", rule(
+					usingScope(seq("using", seq(any(Token::String_Literal), loop(seq(",", any(Token::String_Literal)))), "in", S)),
+					[](Context& context)->NodePtr {
+						return context.getTerms().back().as<StatementPtr>();
 					}
 			));
 
