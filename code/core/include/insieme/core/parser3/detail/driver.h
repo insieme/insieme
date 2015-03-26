@@ -67,6 +67,15 @@ public:
 // Conducting the whole scanning and parsing of Calc++.
 class inspire_driver
 {
+
+    struct t_error{
+        location l;
+        std::string msg;
+        t_error(const location& l, const std::string& msg)
+        :l(l), msg(msg) {}
+    };
+    mutable std::vector<t_error> errors;
+
     scanner_wrapper* scanner;    
 public:
     inspire_driver (const std::string& f, NodeManager& nk);
@@ -97,8 +106,9 @@ public:
     TypePtr genFuncTypeType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
 
     // Error handling.
-    void error (const location& l, const std::string& m) const;
-    void error (const std::string& m) const;
+    void error (const location& l, const std::string& m)const;
+    void error (const std::string& m)const;
+    void print_errors(std::ostream& out = std::cout)const;
 };
 
 } // namespace detail

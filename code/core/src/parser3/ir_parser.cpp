@@ -39,42 +39,46 @@
 #include <sstream>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_visitor.h"
-
-#include "insieme/core/parser2/detail/parser.h"
-#include "insieme/core/annotations/naming.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
-#include "insieme/core/transform/manipulation.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/encoder/lists.h"
-
-#include "insieme/utils/numeric_cast.h"
+#include "insieme/core/parser3/detail/driver.h"
 
 namespace insieme {
 namespace core {
 namespace parser3 {
 
+using namespace detail;
+
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        return NodePtr();
+        inspire_driver driver(code, manager);
+        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        return driver.parseProgram();
     }
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        return TypePtr();
+        inspire_driver driver(code, manager);
+        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        return driver.parseType();
     }
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        return ExpressionPtr();
+        inspire_driver driver(code, manager);
+        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        return driver.parseExpression();
     }
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        return StatementPtr();
+        inspire_driver driver(code, manager);
+        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        return driver.parseStmt();
     }
 
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        return ProgramPtr();
+        inspire_driver driver(code, manager);
+        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        return driver.parseProgram();
     }
 
 	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){

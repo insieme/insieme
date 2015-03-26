@@ -22,50 +22,65 @@ namespace detail{
 
     ProgramPtr inspire_driver::parseProgram ()
     {
-      scanner->scan_begin ();
-      auto ssymb = inspire_parser::make_FULL_PROGRAM(glob_loc);
-      auto* ptr = &ssymb;
-      inspire_parser parser (*this, &ptr);
-      int res = parser.parse ();
-      scanner->scan_end ();
-      if (!res) return nullptr;
-      return result.as<ProgramPtr>();
+        scanner->scan_begin ();
+        auto ssymb = inspire_parser::make_FULL_PROGRAM(glob_loc);
+        auto* ptr = &ssymb;
+
+        std::cout << "parse program "<< std::endl;
+        inspire_parser parser (*this, &ptr);
+        int fail = parser.parse ();
+        scanner->scan_end ();
+        std::cout << "parse program done: "<< fail <<std::endl;
+        if (fail) {
+            print_errors();
+            return nullptr;
+        }
+        return result.as<ProgramPtr>();
     }
 
     TypePtr inspire_driver::parseType ()
     {
-      scanner->scan_begin ();
-      auto ssymb = inspire_parser::make_TYPE_ONLY(glob_loc);
-      auto* ptr = &ssymb;
-      inspire_parser parser (*this, &ptr);
-      int res = parser.parse ();
-      scanner->scan_end ();
-      if (!res) return nullptr;
-      return result.as<TypePtr>();
+        scanner->scan_begin ();
+        auto ssymb = inspire_parser::make_TYPE_ONLY(glob_loc);
+        auto* ptr = &ssymb;
+        inspire_parser parser (*this, &ptr);
+        int fail = parser.parse ();
+        scanner->scan_end ();
+        if (fail) {
+            print_errors();
+            return nullptr;
+        }
+        return result.as<TypePtr>();
     }
 
     StatementPtr inspire_driver::parseStmt ()
     {
-      scanner->scan_begin ();
-      auto ssymb = inspire_parser::make_STMT_ONLY(glob_loc);
-      auto* ptr = &ssymb;
-      inspire_parser parser (*this, &ptr);
-      int res = parser.parse ();
-      scanner->scan_end ();
-      if (!res) return nullptr;
-      return result.as<StatementPtr>();
+        scanner->scan_begin ();
+        auto ssymb = inspire_parser::make_STMT_ONLY(glob_loc);
+        auto* ptr = &ssymb;
+        inspire_parser parser (*this, &ptr);
+        int fail = parser.parse ();
+        scanner->scan_end ();
+        if (fail) {
+            print_errors();
+            return nullptr;
+        }
+        return result.as<StatementPtr>();
     }
 
     ExpressionPtr inspire_driver::parseExpression ()
     {
-      scanner->scan_begin ();
-      auto ssymb = inspire_parser::make_EXPRESSION_ONLY(glob_loc);
-      auto* ptr = &ssymb;
-      inspire_parser parser (*this, &ptr);
-      int res = parser.parse ();
-      scanner->scan_end ();
-      if (!res) return nullptr;
-      return result.as<ExpressionPtr>();
+        scanner->scan_begin ();
+        auto ssymb = inspire_parser::make_EXPRESSION_ONLY(glob_loc);
+        auto* ptr = &ssymb;
+        inspire_parser parser (*this, &ptr);
+        int fail = parser.parse ();
+        scanner->scan_end ();
+        if (fail) {
+            print_errors();
+            return nullptr;
+        }
+        return result.as<ExpressionPtr>();
     }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -86,6 +101,12 @@ namespace detail{
 
     TypePtr inspire_driver::findType(const location& l, const std::string& name)  const{
         auto x = scopes.find(name);
+
+        // keyword types (is this the right place?) 
+        if (!x) {
+            if (name == "unit") return builder.getLangBasic().getUnit();
+        }
+
         if (!x) {
             error(l, format("the symbol %s was not declared in this context", name));
             return nullptr; 
@@ -171,25 +192,57 @@ namespace detail{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     void inspire_driver::error (const location& l, const std::string& m)const {
-      std::cerr << l << ": " << m << std::endl;
-      //int lineb = l.begin.line;
-      //int linee = l.end.line;
-      int colb = l.begin.column;
-      int cole = l.end.column;
 
-      //TODO: multiline?
-
-      std::cerr << "  => " << str << std::endl;
-      std::cerr << "     ";
-      for (int i =0; i < colb-1; ++i) std::cerr << " ";
-      std::cerr << "^";
-      for (int i =0; i < cole - colb -1; ++i) std::cerr << "~";
-      std::cerr << std::endl;
+      errors.push_back(t_error(l, m));
     }
 
 
     void inspire_driver::error (const std::string& m)const {
       std::cerr << m << std::endl;
+    }
+
+namespace {
+    std::vector<std::string> split_string(const std::string& s){
+        std::vector<std::string> res;
+        std::string delim = "\n";
+
+        auto start = 0U;
+        auto end = s.find(delim);
+        while (end != std::string::npos)
+        {
+            res.push_back( s.substr(start, end - start) );
+            start = end + delim.length();
+            end = s.find(delim, start);
+        }
+        return res;
+    }
+}
+
+    void inspire_driver::print_errors(std::ostream& out)const {
+
+        auto buffer = split_string(str);
+        int line = 1;
+        for (const auto& err : errors){
+
+            int lineb = err.l.begin.line;
+            int linee = err.l.end.line;
+
+            for (; line< lineb; ++line); // PRINT FULL FILE:  //  out << buffer[line] << std::endl;
+
+            out << "ERROR: " << err.l << " " << err.msg;
+
+            out << buffer[line] << std::endl;
+            for (; line< linee; ++line); out << buffer[line-1] << std::endl;
+
+            int colb = err.l.begin.column;
+            int cole = err.l.end.column;
+
+            for (int i =0; i < colb-1; ++i) std::cerr << " ";
+            out << "^";
+            for (int i =0; i < cole - colb -1; ++i) std::cerr << "~";
+            out << std::endl;
+
+        }
     }
 
 

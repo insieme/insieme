@@ -64,6 +64,7 @@ paramvar #[a-zA-Z]
   loc.step ();
 %}
 
+"//"+.*    loc.step ();
 {blank}+   loc.step ();
 [\n]+      loc.lines (yyleng); loc.step ();
 "-"      return inspire_parser::make_MINUS(loc);

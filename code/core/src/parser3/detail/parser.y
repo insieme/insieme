@@ -198,12 +198,19 @@ declarations : /* empty */ { }
              | "let" "indentifier" "=" type ";" {  driver.scopes.add_symb($2, $4); }
              | "let" "identifier" "=" type ";" declarations { driver.scopes.add_symb($2, $4); }
 
-program : "identifier" "(" variable_list ")" "->" type "{" statement "}" {
-                            std::cout << "program" << std::endl;
-						    ExpressionPtr main = driver.builder.lambdaExpr($6, $8, $3);
+program : type "identifier" "(" variable_list ")" "{" statement "}" {
+                            TypeList paramTys;
+                            for (const auto& var : $4) paramTys.push_back(var.getType());
+                            FunctionTypePtr funcType = driver.builder.functionType(paramTys, $1); 
+						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, $7);
 						    $$ = driver.builder.createProgram(toVector(main));
                         }
-                     ;
+        | type "identifier" "(" ")" "{" statement "}" {
+                            FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $1); 
+						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, VariableList(), $6);
+						    $$ = driver.builder.createProgram(toVector(main));
+                        }
+        ;
 
 variable_list : var_decl { $$.push_back($1); }
               | var_decl "," variable_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
