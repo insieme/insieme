@@ -44,6 +44,8 @@
 
 #include "insieme/core/lang/complex_extension.h"
 
+#include "insieme/utils/assert.h"
+
 #include <string>
 #include <map>
 
@@ -51,10 +53,11 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(NamedCoreExtensionParserTest, ParserAsserts) {
+	TEST(NamedCoreExtensionParserTest, ParserAssertsDeathTest) {
 		NodeManager manager;
 
-		ASSERT_DEATH(parser::parse(manager, "using \"ext.unknown_extension\" in complex a;"), "Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of ExtensionRegistry");
+		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.unknown_extension\" in complex a;"),
+				"Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of ExtensionRegistry");)
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserSingleStatement) {
@@ -125,7 +128,7 @@ namespace lang {
 		LANG_EXT_TYPE_WITH_NAME(NamedType, "complex", "struct { NamedType foo; }")
 	};
 
-	TEST(NamedCoreExtensionParserTest, ParserAlreadyExistingName) {
+	TEST(NamedCoreExtensionParserTest, ParserAlreadyExistingNameDeathTest) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -135,7 +138,8 @@ namespace lang {
 		EXPECT_EQ("AP({struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>);})", toString(builder.normalize(parser::parse(manager, "{ complex a; }", false, existingNames))));
 
 		//now when I load the complex extension which defines the same name again I should run into an assertion
-		ASSERT_DEATH(parser::parse(manager, "using \"ext.complex\" in { complex a; }", false, existingNames), "The name \"complex\" introduced by extension \"ext.complex\" is already existing");
+		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.complex\" in { complex a; }", false, existingNames),
+				"The name \"complex\" introduced by extension \"ext.complex\" is already existing");)
 	}
 
 } // end namespace lang
