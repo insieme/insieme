@@ -77,7 +77,7 @@ namespace lang {
 	}
 
 	const string& getConstructName(const NodePtr& node) {
-		assert(isDerived(node) && "Node not marked as being a derived construct!");
+		assert_true(isDerived(node)) << "Node not marked as being a derived construct!";
 		return node->getAttachedValue<DerivedTag>().name;
 	}
 

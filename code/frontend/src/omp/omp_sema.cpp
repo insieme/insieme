@@ -145,7 +145,7 @@ protected:
 				}
 				else {
 					std::cout << "Annotated Node: " << *node << "\n";
-					assert(0 && "OMP annotation on non-marker node.");
+					assert_fail() << "OMP annotation on non-marker node.";
 				}
 			}
 			//LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
@@ -181,7 +181,7 @@ protected:
 					newNode = handleThreadprivate(newNode);
 				} else {
 					LOG(ERROR) << "Unhandled OMP annotation: " << *subAnn;
-					assert(0);
+					assert_fail();
 				}
 			});
 			//LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
@@ -254,14 +254,14 @@ protected:
 			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
 				// if parallel, pop a var list
 				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
-					assert(sharedVarStack.size() > 0 && "leaving omp parallel: shared var stack corrupted");
+					assert_gt(sharedVarStack.size(), 0) << "leaving omp parallel: shared var stack corrupted";
 					sharedVarStack.pop();
 				}
 			} );
 		}
 		// check stack integrity when leaving program
 		if(node.isa<ProgramPtr>()) {
-			assert(sharedVarStack.size() == 0 && "ending omp translation: shared var stack corrupted");
+			assert_eq(sharedVarStack.size(), 0) << "ending omp translation: shared var stack corrupted";
 		}
 	}
 
@@ -352,7 +352,7 @@ protected:
 				// Unhandled OMP functions
 				else if(funName.substr(0, 4) == "omp_") {
 					LOG(ERROR) << "Function name: " << funName;
-					assert(false && "Unknown OpenMP function");
+					assert_fail() << "Unknown OpenMP function";
 				}
 			}
 		}
@@ -491,7 +491,7 @@ protected:
 			ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
 			return accessExpr;
 		}
-		assert(false && "OMP threadprivate annotation on non-member / non-call / non-literal");
+		assert_fail() << "OMP threadprivate annotation on non-member / non-call / non-literal";
 		return NodePtr();
 	}
 
@@ -545,7 +545,7 @@ protected:
 //				break;
 			default:
 				LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(clause->getReduction().getOperator());
-				assert(false && "Unsupported reduction operator");
+				assert_fail() << "Unsupported reduction operator";
 			}
 			replacements.push_back(operation);
 		});
@@ -556,7 +556,7 @@ protected:
 	ExpressionPtr getReductionInitializer(Reduction::Operator op, const TypePtr& type) {
 		ExpressionPtr ret;
 		RefTypePtr rType = dynamic_pointer_cast<const RefType>(type);
-		assert(rType && "OMP reduction on non-reference type");
+		assert_true(rType) << "OMP reduction on non-reference type";
 		switch(op) {
 		case Reduction::PLUS:
 		case Reduction::MINUS:
@@ -576,7 +576,7 @@ protected:
 			break;
 		default:
 			LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(op);
-			assert(false && "Unsupported reduction operator");
+			assert_fail() << "Unsupported reduction operator";
 		}
 		return ret;
 	}
@@ -1118,7 +1118,7 @@ protected:
 	NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
 		CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
 		if(!call) cerr << printer::PrettyPrinter(stmtNode) << std::endl;
-		assert(call && "Unhandled OMP atomic");
+		assert_true(call) << "Unhandled OMP atomic";
 		auto at = build.atomicAssignment(call);
 		//std::cout << "ATOMIC: \n" << printer::PrettyPrinter(at, printer::PrettyPrinter::NO_LET_BINDINGS);
 		return at;
@@ -1184,7 +1184,7 @@ namespace {
 		visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) { 
 			const string& gname = lit->getStringValue();
 			if(gname.find("global_omp") != 0) return;
-			assert(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
+			assert_true(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
 
 			// add lock to global list
 			unit.addGlobal(lit);
@@ -1229,7 +1229,7 @@ tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeMan
 
 		// if it is an access to a thread-private value
 		if (CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
-			assert(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
+			assert_true(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
 			newGlobal = call[0];		// take first argument
 		}
 

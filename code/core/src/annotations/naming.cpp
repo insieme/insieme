@@ -78,7 +78,7 @@ namespace annotations {
 	}
 
 	const string& getAttachedName(const NodePtr& node) {
-		assert(hasNameAttached(node) && "Does not have a name annotation!");
+		assert_true(hasNameAttached(node)) << "Does not have a name annotation!";
 		return node->getAttachedValue<NameTag>().name;
 	}
 

@@ -178,7 +178,7 @@ namespace detail {
 		}
 
 		void popScope() {
-			assert(!scopeStack.empty());
+			assert_false(scopeStack.empty());
 			scopeStack.pop_back();
 		}
 	};
@@ -812,7 +812,7 @@ namespace detail {
 
 		Alternative(const vector<TermPtr>& alternatives)
 			: alternatives(alternatives) {
-			assert(alternatives.size() > 1);
+			assert_gt(alternatives.size(), 1);
 			updateLimit();
 		}
 
@@ -1019,7 +1019,7 @@ namespace detail {
 
 		const TermInfo& getTermInfo() const {
 			if (!infoValid) updateTermInfo();
-			assert(infoValid);
+			assert_true(infoValid);
 			return info;
 		}
 

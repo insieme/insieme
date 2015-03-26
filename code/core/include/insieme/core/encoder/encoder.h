@@ -354,7 +354,7 @@ namespace encoder {
 
 		struct create_expr_type {
 			core::TypePtr operator()(core::NodeManager& manager) const {
-				assert(false && "Not applicable in the general case!");
+				assert_fail() << "Not applicable in the general case!";
 				throw InvalidExpression("Cannot define generic type for all expressions!");
 			}
 			create_expr_type() {}

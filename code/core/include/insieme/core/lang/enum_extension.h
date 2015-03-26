@@ -115,7 +115,7 @@ namespace lang {
          * @return TypePtr that contains the enumeration name literal
          */
 		std::string getEnumName(const TypePtr& type) const {
-            assert(isEnumType(type) && "this is no enumeration type");
+            assert_true(isEnumType(type)) << "this is no enumeration type";
             core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
             return gt->getFamilyName();
 		}

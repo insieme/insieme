@@ -402,7 +402,7 @@ namespace frontend {
 		 */
 		ConversionJob(const vector<path>& files, const vector<path>& includeDirs = vector<path>())
 			: ConversionSetup(includeDirs), files(files) {
-			assert(!files.empty());
+			assert_false(files.empty());
 
             // The user defined headers path is extended with c source files directories
             auto inc = ConversionSetup::getIncludeDirectories();

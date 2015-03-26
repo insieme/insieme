@@ -157,7 +157,7 @@ public:
 		 * Release the pointer from the unique_ptr container so it does not get removed
 		 */
 		inline void release_block_ptr() {
-			assert (!pending() && "Cannot release, the blcok has not been inserted into the CFG");
+			assert_false(pending()) << "Cannot release, the blcok has not been inserted into the CFG";
 			std::get<0>(*this).release();
 		}
 
@@ -175,7 +175,7 @@ public:
 
 		inline BlockInfo& operator=(BlockInfo&& other) {
 
-			assert (((pending() && curr_block()->empty()) || !pending()) && "Block is dirty!" ) ;
+			assert_true(((pending() && curr_block()->empty()) || !pending())) << "Block is dirty!";
 			if (!pending()) { release_block_ptr(); }
 
 			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>::operator=(std::move(other));

@@ -198,7 +198,7 @@ struct CopyFromVisitor : public utils::RecConstraintVisitor<AffineFunction, Affi
 
 		AffineFunction func = rcc.getConstraint().getFunction();
 		int coeff = func.getCoeff(src);
-		assert ( coeff != 0 );
+		assert_ne(coeff, 0);
 	
 		func.setCoeff(dest, coeff);
 		func.setCoeff(src, 0);

@@ -92,7 +92,7 @@ namespace c_ast {
 
 		void setManager(CNodeManager* mgr) { manager = mgr; }
 		CNodeManager* getManager() const {
-			assert(manager && "Manager uninitialized!");
+			assert_true(manager) << "Manager uninitialized!";
 			return manager;
 		}
 

@@ -155,7 +155,7 @@ ExprAddressRefTypeMap findPragma(const NodeAddress& toTransform) {
 				TypePtr varType = structVar->getType();
 
 				pattern::MatchOpt match = structTypePattern.matchPointer(varType);
-				assert(match && "Pragma-marked variable does not have valid struct type");
+				assert_true(match) << "Pragma-marked variable does not have valid struct type";
 
 				RefTypePtr structType = match.get()["structType"].getValue().as<RefTypePtr>();
 
@@ -408,7 +408,7 @@ ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const ExpressionP
 	// backup, simply take the first which is there and hope for the best
 	if(!numElements && !nElems.empty()) numElements = nElems.begin()->second;
 
-	assert(numElements && "Cannot determine number of elements for (un)marshalling");
+	assert_true(numElements) << "Cannot determine number of elements for (un)marshalling";
 
 	return numElements;
 }
@@ -866,7 +866,7 @@ void DatalayoutTransformer::doReplacements(const std::map<NodeAddress, NodePtr>&
 //			std::cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 			if(*replacement.first.getRootNode()  != *toTransform) {
 				dumpPretty(replacement.first);
-				assert(false && "Replacement target has a wrong root");
+				assert_fail() << "Replacement target has a wrong root";
 			}
 		}
 

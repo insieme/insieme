@@ -75,7 +75,7 @@ bool isArrayType(const TypePtr& cur) {
 LambdaDefinitionAddress findEnclosingLambdaDefinition(const NodeAddress& addr) {
 	NodeAddress parent = addr;
 	while( (parent = parent.getParentAddress(1)) && (parent->getNodeType() != NT_LambdaDefinition) ) ;
-	assert(parent);
+	assert_true(parent);
 	return parent.as<LambdaDefinitionAddress>();
 }
 
@@ -171,7 +171,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 			lambdaVar = funcExpr.as<LambdaExprPtr>()->getVariable();
 		}
 
-		assert(lambdaDef && lambda && lambdaVar);
+		assert_true(lambdaDef && lambda && lambdaVar);
 
 		/**
 		 * If we never visited this lambda then we analyze it to determine the following properties:

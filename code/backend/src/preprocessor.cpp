@@ -436,7 +436,7 @@ namespace backend {
 
 				// handle vector->array
 				if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
-					if (!ref) { assert(ref && "Cannot convert implicitly to array value!"); }
+					if (!ref) { assert_true(ref) << "Cannot convert implicitly to array value!"; }
 					// conversion needed
 					newArgs[i] = builder.callExpr(basic.getRefVectorToRefArray(), newArgs[i]);
 					changed = true;

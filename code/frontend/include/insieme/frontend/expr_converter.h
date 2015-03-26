@@ -242,7 +242,7 @@ public:
 	//convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
 	//return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
 	//}
-	//assert(false && "SizeOfAlignOfExpr not yet supported");
+	//assert_fail() << "SizeOfAlignOfExpr not yet supported";
 	//}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -800,7 +800,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// If the case statement is not a compound statement, the ScopRegion annotation will
 			// not be inserted by default. Therefore we add the annotation to simplify the
 			// resolution of the SCoP when the analysis is invoked
-			assert (stmtAddr->hasAnnotation(scop::ScopRegion::KEY));
+			assert_true(stmtAddr->hasAnnotation(scop::ScopRegion::KEY));
 
 			AffineFunction af(ret, arithmetic::toFormula(switchStmt->getSwitchExpr()) -
 							  arithmetic::toFormula(exprAddr.getAddressedNode()));
@@ -830,7 +830,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// If the case statement is not a compound statement, the ScopRegion annotation will
 			// not be inserted by default. Therefore we add the annotation to simplify the
 			// resolution of the SCoP when the analysis is invoked
-			assert (defAddr->hasAnnotation(scop::ScopRegion::KEY));
+			assert_true(defAddr->hasAnnotation(scop::ScopRegion::KEY));
 
 			ret = merge(ret, iv);
 			scops.push_back(SubScop(defAddr, defaultCons));
@@ -851,7 +851,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			}
 
 		}
-		assert (ex);
+		assert_true(ex);
 		RETHROW_EXCEPTION(NotASCoP, *ex, "", switchStmt.getAddressedNode());
 	}
 
@@ -1081,7 +1081,7 @@ IterationVector ScopVisitor::visitLambda(const LambdaAddress& lambda) {
 		StatementAddress addr = AS_STMT_ADDR(lambda->getBody());  /*getBody()*/
 		bodyIV = visitStmt(addr);
 
-		assert (addr->hasAnnotation(scop::ScopRegion::KEY));
+		assert_true(addr->hasAnnotation(scop::ScopRegion::KEY));
 		assert_eq(subScops.size(), 1) << "A Lambda cannot have more than one sub SCoP";
 
 		lambda->addAnnotation(

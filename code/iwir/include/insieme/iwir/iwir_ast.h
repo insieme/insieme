@@ -139,7 +139,7 @@ class Node : public insieme::utils::Printable {
 	NodeType getNodeType() const { return nodeType; }
 	void setManager(NodeManager* mgr) { manager = mgr; }
 	NodeManager* getManager() const { 
-		assert(manager); 
+		assert_true(manager); 
 		return manager; 
 	}
 	

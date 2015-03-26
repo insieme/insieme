@@ -753,7 +753,7 @@ namespace measure {
 //		}
 //
 //		region::Region limitExecutions(const region::Region& region, unsigned maxIterations) {
-//			assert(maxIterations != 0 && "Need to be executed at least once!");
+//			assert_ne(maxIterations, 0) << "Need to be executed at least once!";
 //
 //			// if there is no context we cannot find a loop to limit
 //			if (region.isRoot()) { return region; }
@@ -1013,7 +1013,7 @@ namespace measure {
 					// work directory is already in use => use another one
 					workdir = bfs::path(".") / format("work_dir_%s_%d", executable.c_str(), counter++);
 				}
-				assert(bfs::exists(workdir) && "Working-Directory already present!");
+				assert_true(bfs::exists(workdir)) << "Working-Directory already present!";
 
 				// setup runtime system metric selection
 				std::map<string,string> mod_env = env;

@@ -42,12 +42,14 @@
  * ignored. In those cases, variables declared using the 'assert_decl' macro will not be declared.
  */
 
+#include <iostream>
+
 #ifdef assert
 #undef assert
 #endif
 #define assert(_BLA) static_assert(false, "You should use insieme assertions only! (insieme::utils::assert_*)")
 
-#ifdef NDEBUG
+#if defined(NDEBUG)
 
 	#define _assert_ignore if(false) std::cerr << ""
 

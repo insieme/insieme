@@ -105,9 +105,9 @@ namespace c_ast {
 		}
 
 		void bindFragment(const string& name, const CodeFragmentPtr& fragment) {
-			assert(contains(fragments, fragment.ptr) && "Cannot bind fragment not maintained by this manager!");
+			assert_true(contains(fragments, fragment.ptr)) << "Cannot bind fragment not maintained by this manager!";
 			__unused auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
-			assert(res.second && "Name already in use!!");
+			assert_true(res.second) << "Name already in use!!";
 		}
 
 	};

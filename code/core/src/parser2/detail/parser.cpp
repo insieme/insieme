@@ -195,7 +195,7 @@ namespace detail {
 				}
 
 				// so, there is nothing on the stack ..
-				assert(parentheseStack.empty());
+				assert_true(parentheseStack.empty());
 
 				// we are getting closer - check whether we are within the search range
 				if (it+1 < lowerLimit) {
@@ -233,7 +233,7 @@ namespace detail {
 			}
 
 			// check that head is a non-terminal entry and not an epsilon
-			assert(!pattern.front()->isTerminal());
+			assert_false(pattern.front()->isTerminal());
 			assert(!dynamic_pointer_cast<Empty>(pattern.front()));
 			auto curVar = *pattern.begin();
 
@@ -317,9 +317,9 @@ namespace detail {
 
 		Result matchInfixSequence(Context& context, const utils::range<SubSeqIter>& sequence, const utils::range<TokenIter>& tokens, bool leftAssociative, vector<SubRange>& ranges) {
 			// some pre-condition (checking that sequence is an infix sequence)
-			assert(!sequence.empty());
+			assert_false(sequence.empty());
 			assert(sequence.size() % 2 == 1); 			// uneven number of entries for infix
-			assert(!(sequence.begin()->terminal));
+			assert_false((sequence.begin()->terminal));
 			assert(!((sequence.end()-1)->terminal));
 
 			// -- recursively build up sub-range list --
@@ -340,7 +340,7 @@ namespace detail {
 
 			// find match for next terminal
 			auto& terminal = sequence[1];
-			assert(terminal.terminal);
+			assert_true(terminal.terminal);
 
 			// derive filters for before/after
 			const TokenSet& before = context.grammar.getSequenceEndSet(sequence[0]);
@@ -517,9 +517,9 @@ namespace detail {
 		}
 
 		// Now there should only be an infix pattern (head and tail is non-terminal)
-		assert(!pattern.empty());
+		assert_false(pattern.empty());
 		assert(pattern.size() % 2 == 1);
-		assert(!pattern.begin()->terminal);
+		assert_false(pattern.begin()->terminal);
 		assert(!(pattern.end()-1)->terminal);
 
 		// use recursive matching algorithm
@@ -938,7 +938,7 @@ namespace detail {
 		}
 
 		std::ostream& TokenSet::printTo(std::ostream& out) const {
-			assert(Token::Symbol == 1 && Token::String_Literal == 9 && "If this changes, check this code!");
+			assert_true(Token::Symbol == 1 && Token::String_Literal == 9) << "If this changes, check this code!";
 
 			out << "{";
 

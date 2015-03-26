@@ -154,7 +154,7 @@ Rewriter::CodeModification::CodeModification(const SourceLocation& locStart,
 	  code(code), 
 	  type(type) 
 {
-	assert(locStart.isValid());
+	assert_true(locStart.isValid());
 	if(locEnd.isValid())
 		assert(locStart.getFileName() == fileName && locEnd.getFileName() == fileName);
 }

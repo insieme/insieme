@@ -145,7 +145,7 @@ class TaskGraph {
 				break;
 
 			default:
-				assert(false);
+				assert_fail();
 		}
 
 		if(links) {

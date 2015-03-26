@@ -282,7 +282,7 @@ void IterationVector::iterator::inc(size_t n) {
 }
 
 const Element& IterationVector::iterator::operator*() const {  
-	assert (valid && "Iterator not valid"); 
+	assert_true(valid) << "Iterator not valid"; 
 
 	if (iterIt != iterVec.iters.end())
 		return *iterIt;

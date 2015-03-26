@@ -563,7 +563,7 @@ private:
 				manager.getLangBasic().getUnit() :
 				getSmallestCommonSuperType(returnTypes);
 
-		assert(returnType && "Cannot find a common supertype of all return statements");
+		assert_true(returnType) << "Cannot find a common supertype of all return statements";
 
 		// construct new function type
 		FunctionTypePtr funType = builder.functionType(extractTypes(newParams), returnType);
@@ -752,7 +752,7 @@ private:
 
 		LOG(ERROR) << fun;
 		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
-		assert(false && "Unsupported call-target encountered - sorry!");
+		assert_fail() << "Unsupported call-target encountered - sorry!";
 		return call;
 	}
 
@@ -761,7 +761,7 @@ private:
 		auto fun = call->getFunctionExpr();
 
 		// should only be called for built-in functions
-		assert(manager.getLangBasic().isBuiltIn(fun));
+		assert_true(manager.getLangBasic().isBuiltIn(fun));
 
 		// use type inference for the return type
 		if(manager.getLangBasic().isCompositeRefElem(fun)) {
@@ -856,7 +856,7 @@ private:
 				manager.getLangBasic().getUnit() :
 				getSmallestCommonSuperType(returnTypes);
 
-		assert(callTy && "Cannot find a common supertype of all return statements");
+		assert_true(callTy) << "Cannot find a common supertype of all return statements";
 
 		// assemble new lambda
 		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
@@ -934,7 +934,7 @@ public:
 
 	TypeVariableReplacer(NodeManager& manager, const SubstitutionOpt& substitution)
 		: manager(manager), substitution(substitution) {
-		assert(substitution && !substitution->empty() && "Substitution must not be empty!");
+		assert_true(substitution && !substitution->empty()) << "Substitution must not be empty!";
 	}
 
 private:
@@ -1433,7 +1433,7 @@ NodePtr fixInterfaces(NodeManager& mgr, NodePtr root) {
 }
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
-	assert(root && "Root must not be a null pointer!");
+	assert_true(root) << "Root must not be a null pointer!";
 
 	// check whether there is something to do
 	if (!substitution || substitution->empty()) {
@@ -1450,7 +1450,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 	typedef std::pair<NodeAddress, NodePtr> Replacement;
 
 	// check preconditions
-	assert(!replacements.empty() && "Replacements must not be empty!");
+	assert_false(replacements.empty()) << "Replacements must not be empty!";
 
 	assert(all(replacements, [&](const Replacement& cur) {
 		return cur.first.isValid() && cur.second;
@@ -1476,7 +1476,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 }
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
-	assert( toReplace.isValid() && "Invalid node address provided!");
+	assert_true(toReplace.isValid()) << "Invalid node address provided!";
 
 	// short-cut for replacing the root
 	if (toReplace.isRoot()) return replacement;

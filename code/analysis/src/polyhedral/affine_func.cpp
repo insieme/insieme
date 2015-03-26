@@ -107,12 +107,12 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 		const Product& prod = cur.first;
 		assert_le(prod.getFactors().size(), 1) << "Not a linear expression";
 
-		assert (cur.second.isInteger());
+		assert_true(cur.second.isInteger());
 		if ( prod.isOne() ) {
 			coeffs.back() = cur.second.getNumerator();
 		} else {
 			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
-			assert (idx != -1);
+			assert_ne(idx, -1);
 			coeffs[idx] = cur.second.getNumerator();
 		}
 	});
@@ -362,7 +362,7 @@ void AffineFunction::setCoeff(const core::VariablePtr& var, int coeff) {
 int AffineFunction::getCoeff(const Element& elem) const {
 	int idx = iterVec.getIdx(elem);
 	// In the case the variable is not in the iteration vector, throw an exception
-	assert (idx != -1 && "Element not in iteration vector");
+	assert_ne(idx, -1) << "Element not in iteration vector";
 	return getCoeff( idx );
 }
 

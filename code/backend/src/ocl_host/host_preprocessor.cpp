@@ -210,7 +210,7 @@ using insieme::core::pattern::anyList;
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
-				assert(false && "Sizeof not present :(");
+				assert_fail() << "Sizeof not present :(";
 
             // case of a buffer that is not "size" long.
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
@@ -224,7 +224,7 @@ using insieme::core::pattern::anyList;
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
-				assert(false && "Sizeof not present :(");
+				assert_fail() << "Sizeof not present :(";
 
             // case of a buffer that is not "size" long.
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
@@ -369,7 +369,7 @@ using insieme::core::pattern::anyList;
 			transformTypeToItsSize(dataToTransfer.nonSplittableFromDevice);
 
 			std::ofstream os(filename);
-			assert(os.is_open() && "Could not open file to write data to transfer");
+			assert_true(os.is_open()) << "Could not open file to write data to transfer";
 			if(dataToTransfer.splittalbeToDevice )
 				os << printer::PrettyPrinter(dataToTransfer.splittalbeToDevice) << std::endl;
 			else
@@ -1362,7 +1362,7 @@ using insieme::core::pattern::anyList;
 			}
 		});
 
-		assert(!foundErrors && "Semantic errors when generating the splitting");
+		assert_false(foundErrors) << "Semantic errors when generating the splitting";
 
 		return code2;
 	}

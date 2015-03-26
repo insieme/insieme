@@ -75,7 +75,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 	// if there is still no match, try the paths of the input files
 	if (check.fail()) {
-		assert(job.getFiles().size() == 1u);
+		assert_eq(job.getFiles().size(), 1u);
 		string ifp = job.getFiles()[0].string();
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
@@ -248,7 +248,7 @@ const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, con
 	TypePtr type;
 	ExpressionPtr size;
 	o2i.extractSizeFromSizeof(sizeArg, size, type);
-	assert(size && type && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
+	assert_true(size && type) << "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.";
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
@@ -275,7 +275,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	if (idxExpr.isa<core::CallExprPtr>() && gen.isScalarCast(idxExpr.as<core::CallExprPtr>()->getFunctionExpr())){
 		idx = idxExpr.as<core::CallExprPtr>()->getArgument(0).isa<core::LiteralPtr>();
 	}
-	assert(idx && "idx MUST be a literal");
+	assert_true(idx) << "idx MUST be a literal";
 
 	VariablePtr tuple = builder.variable(kernel->getType());
 	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
@@ -292,7 +292,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		TypePtr type;
 		ExpressionPtr hostPtr;
 		o2i.extractSizeFromSizeof(sizeArg, size, type);
-		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+		assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
 
 		// refresh variables used in the generation of the local variable
 		VariableMap varMapping;
@@ -383,7 +383,7 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
 			// extract the type to be allocated
 			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
-			assert(type && "Type could not be extracted!");
+			assert_true(type) << "Type could not be extracted!";
 
 			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
 				size = builder.literal(BASIC.getUInt8(), "1");
@@ -625,7 +625,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 
 			hostPtr = node->getArgument(3);
 			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
-				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+				assert_false(copyPtr) << "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer";
 				if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
 					hostPtr = builder.callExpr(BASIC.getRefVar(), c->getSubExpression());
 				}
@@ -827,7 +827,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 							TypePtr type;
 
 							o2i.extractSizeFromSizeof(sizeArg, size, type);
-							assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+							assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
 
 							// declare a new variable to be used as argument
 							VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
@@ -1065,7 +1065,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 					type = field->getType();
 				});
 			} else
-				assert(fieldLit && "If the clKernel variable is inside a struct, the fieldName of it has to be passed to handleClCreateKernel");
+				assert_true(fieldLit) << "If the clKernel variable is inside a struct, the fieldName of it has to be passed to handleClCreateKernel";
 		}
 	}
 
@@ -1275,7 +1275,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					if(paramIt != lambda->getParameterList().end()) // should always be true, only for security reasons
 						++paramIt;
 					else
-						assert(false && "This parameter is unexpecetdly not inside the lambdas parameter list");
+						assert_fail() << "This parameter is unexpecetdly not inside the lambdas parameter list";
 				});
 			}
 		}
@@ -1298,7 +1298,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 							const TypePtr& newType = newCall->getType();
 							const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
-							assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
+							assert_true(struct_) << "First argument of compostite.ref.elem has unexpected type, should be a struct variable";
 							VariablePtr newStruct;
 							// check if struct is already part of the replacement map
 							if(cl_mems.find(struct_) != cl_mems.end()) {
@@ -1308,7 +1308,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 								newStruct = struct_;
 
 							LiteralPtr id = dynamic_pointer_cast<const Literal>(lhsCall->getArgument(1));
-							assert(id && "Second argument of composite.ref.elem has unexpected type, should be a literal");
+							assert_true(id) << "Second argument of composite.ref.elem has unexpected type, should be a literal";
 							StringValuePtr toChange = builder.stringValue(id->getStringValue());
 							StructTypePtr structType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct));
 							StructType::Entries entries = structType->getEntries(); // actual fields of the struct

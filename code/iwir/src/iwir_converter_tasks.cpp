@@ -232,7 +232,7 @@ CONVERTER(BlockScope) {
 			//declare channel for tasks inputports
 			for_each(task->inputPorts->begin(), task->inputPorts->end(),
 				[&](Port* ip) { 
-					assert(ip);
+					assert_true(ip);
 
 					//declare and create channel -- before everything else in blockscope
 					auto fit = varMap.find( {task, ip} );
@@ -266,7 +266,7 @@ CONVERTER(BlockScope) {
 			//declare channel for tasks outputports
 			for_each(task->outputPorts->begin(), task->outputPorts->end(),
 				[&](Port* op) { 
-					assert(op);
+					assert_true(op);
 
 					//declare and create channel -- before everything else in blockscope
 					auto fit = varMap.find( {task, op} );
@@ -319,7 +319,7 @@ CONVERTER(BlockScope) {
 	//declare channels for BS_IP and provide linking stmts
 	for_each(node->inputPorts->begin(), node->inputPorts->end(),
 		[&](Port* ip) {
-			assert(ip);
+			assert_true(ip);
 
 			//declare and create channel -- before everything else in blockscope
 			auto fit = varMap.find( {node, ip} );
@@ -348,7 +348,7 @@ CONVERTER(BlockScope) {
 	//declare channels for BS_OP and provide linking stmts
 	for_each(node->outputPorts->begin(), node->outputPorts->end(),
 		[&](Port* op) {
-			assert(op);
+			assert_true(op);
 
 			//declare and create channel -- before everything else in blockscope
 			auto fit = varMap.find( {node, op} );
@@ -452,7 +452,7 @@ CONVERTER(BlockScope) {
 
 		core::VariablePtr fromChan = portToChannel[fromPort];
 		VLOG(2) << "Mux - from: " << *fromPort;
-		assert(fromChan);
+		assert_true(fromChan);
 		
 		muxSymbols["from"] = fromChan;
 		core::DeclarationStmtPtr tempDecl = irBuilder.parseStmt("auto temp = channel.recv(from);", muxSymbols).as<core::DeclarationStmtPtr>();
@@ -462,7 +462,7 @@ CONVERTER(BlockScope) {
 		for(Port* toPort : toPorts) {
 			VLOG(2)<< "Mux - To: " << *toPort;
 			core::VariablePtr toChan = portToChannel[toPort];
-			assert(toChan);
+			assert_true(toChan);
 			
 			muxSymbols["to"] = toChan;
 			core::StatementPtr sendStmt = irBuilder.parseStmt("channel.send(to, temp);", muxSymbols);
@@ -909,7 +909,7 @@ CONVERTER(WhileTask) {
 				//link to init the loopPort
 				initLoopLinks.push_back(linkStmt);
 			} else {
-				assert(false);
+				assert_fail();
 			}
 		}
 
@@ -985,7 +985,7 @@ CONVERTER(ForTask) {
 	auto fromCounter = CONVERT_LOOPCOUNTER(node->fromCounter, context);	
 	VLOG(2) << "FromCounter " << fromCounter;
 
-	assert(node->toCounter);	
+	assert_true(node->toCounter);	
 	auto toCounter = CONVERT_LOOPCOUNTER(node->toCounter, context);
 	VLOG(2) << "ToCounter " << toCounter;
 
@@ -1067,7 +1067,7 @@ CONVERTER(ForTask) {
 				//links from some inputport of the forTask to one of loopCounter/[to,from,step]
 				loopCounterLinks.push_back(linkStmt);
 			} else {
-				assert(false);
+				assert_fail();
 			}
 		}
 
@@ -1092,7 +1092,7 @@ CONVERTER(ForTask) {
 	forBodyStmts.insert(forBodyStmts.end(), loopLinks.begin(), loopLinks.end());
 
 	core::CompoundStmtPtr forBody = irBuilder.compoundStmt(forBodyStmts);
-	assert(forBody);
+	assert_true(forBody);
 
 	core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, forBody);
 
@@ -1158,7 +1158,7 @@ CONVERTER(ParallelForTask) {
 	auto fromCounter = CONVERT_LOOPCOUNTER(node->fromCounter, context);	
 	VLOG(2) << "FromCounter " << fromCounter;
 
-	assert(node->toCounter);	
+	assert_true(node->toCounter);	
 	auto toCounter = CONVERT_LOOPCOUNTER(node->toCounter, context);
 	VLOG(2) << "ToCounter " << toCounter;
 
@@ -1256,7 +1256,7 @@ CONVERTER(ParallelForTask) {
 				//links from some inputport of the forTask to one of loopCounter/[to,from,step]
 				loopCounterLinks.push_back(linkStmt);
 			} else {
-				assert(false);
+				assert_fail();
 			}
 		}
 
@@ -1272,7 +1272,7 @@ CONVERTER(ParallelForTask) {
 	core::VariablePtr iterVar = counter.as<core::VariablePtr>(); 
 
 	core::CompoundStmtPtr forBody = irBuilder.compoundStmt(stmts);
-	assert(forBody);
+	assert_true(forBody);
 
 	//replace "leIterator" literal in forBody with iterator variable
 	//NOTE when we see a link for to a outputPort we create a "leIterator" literal in Link-converter
@@ -1413,7 +1413,7 @@ CONVERTER(ForEachTask) {
 				//link to init the loopPort
 				initLoopLinks.push_back(linkStmt);
 			} else {
-				assert(false);
+				assert_fail();
 			}
 		}
 
@@ -1468,7 +1468,7 @@ CONVERTER(ForEachTask) {
 			core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(irMgr, elements)
 		);
 	} else {
-		assert(false && "not implemented");
+		assert_not_implemented();
 	}
 
 	core::ExpressionPtr step = irBuilder.intLit(1); 
@@ -1479,7 +1479,7 @@ CONVERTER(ForEachTask) {
 	forBodyStmts.insert(forBodyStmts.end(), loopLinks.begin(), loopLinks.end());
 
 	core::CompoundStmtPtr forBody = irBuilder.compoundStmt(forBodyStmts);
-	assert(forBody);
+	assert_true(forBody);
 
 	//replace "leIterator" literal in forBody with iterator variable
 	//NOTE when we see a link for a loopElement we create a "leIterator" literal in Link-converter
@@ -1663,7 +1663,7 @@ CONVERTER(ParallelForEachTask) {
 			core::encoder::toIR<ExpressionList,core::encoder::DirectExprListConverter>(irMgr, elements)
 		);
 	} else {
-		assert(false && "not implemented");
+		assert_not_implemented();
 	}
 
 	core::ExpressionPtr step = irBuilder.intLit(1); 
@@ -1671,7 +1671,7 @@ CONVERTER(ParallelForEachTask) {
 	core::VariablePtr iterVar = irBuilder.variable(irBuilder.getLangBasic().getInt4());
 
 	core::CompoundStmtPtr forBody = irBuilder.compoundStmt(stmts);
-	assert(forBody);
+	assert_true(forBody);
 
 	//replace "leIterator" literal in forBody with iterator variable
 	//NOTE when we see a link for a loopElement we create a "leIterator" literal in Link-converter

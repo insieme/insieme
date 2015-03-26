@@ -86,7 +86,7 @@ ProgramPtr HostCompiler::compile() {
 	HostMapper oclHostMapper(builder, mProgram, job);
 
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
-	assert(interProg && "First pass of OclHostCompiler corrupted the program");
+	assert_true(interProg) << "First pass of OclHostCompiler corrupted the program";
 
 	if(oclHostMapper.getnKernels() == 0) {
 		LOG(INFO) << "No OpenCL kernel functions found";
@@ -116,7 +116,7 @@ ProgramPtr HostCompiler::compile() {
 	 mProgram = newProg;
 	 return newProg;
 	 } else
-	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
+	 assert_true(newProg) << "Second pass of OclHostCompiler corrupted the program";
 	 */
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
@@ -223,9 +223,9 @@ ProgramPtr HostCompiler::compile() {
 		h = &cleaner;
 		mProgram = h->map(0, mProgram);
 	} else
-		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
+		assert_true(newProg) << "Third pass of OclHostCompiler corrupted the program";
 
-	assert(mProgram && "OclHostCompiler corrupted the program");
+	assert_true(mProgram) << "OclHostCompiler corrupted the program";
 
 	return mProgram;
 }

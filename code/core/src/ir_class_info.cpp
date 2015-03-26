@@ -89,7 +89,7 @@ namespace core {
 
 		// check constructor type
 		assert(constructor->getType().isa<FunctionTypePtr>() && constructor->getType().as<FunctionTypePtr>()->isConstructor());
-		assert(checkObjectType(constructor));
+		assert_true(checkObjectType(constructor));
 
 		// add new constructor
 		this->constructors.push_back(core::analysis::normalize(constructor));
@@ -99,10 +99,10 @@ namespace core {
 	}
 
 	void ClassMetaInfo::setDestructor(const ExpressionPtr& destructor) {
-		assert(!destructor || destructor->getNodeType() == NT_Literal || destructor->getNodeType() == NT_LambdaExpr);
+		assert_true(!destructor || destructor->getNodeType() == NT_Literal || destructor->getNodeType() == NT_LambdaExpr);
 
 		// check destructor type
-		assert(!destructor || (destructor->getType().isa<FunctionTypePtr>() && destructor->getType().as<FunctionTypePtr>()->isDestructor()));
+		assert_true(!destructor || (destructor->getType().isa<FunctionTypePtr>() && destructor->getType().as<FunctionTypePtr>()->isDestructor()));
 		assert(!destructor || checkObjectType(destructor));
 
 		// update destructor
@@ -131,7 +131,7 @@ namespace core {
 		// check member function type
 		assert(function.getImplementation()->getType()->getNodeType() == NT_FunctionType);
 		assert(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
-		assert(checkObjectType(function.getImplementation()));
+		assert_true(checkObjectType(function.getImplementation()));
 
 		// if duplicates, retur, but check if we are incorporating a different implementation
 		if(hasMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst())) {
@@ -170,7 +170,7 @@ namespace core {
 		assert(lambda->getType()->getNodeType() == NT_FunctionType);
 
 		FunctionTypePtr funType = lambda->getType().as<FunctionTypePtr>();
-		assert(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction());
+		assert_true(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction());
 
 		TypePtr typeA = getClassType();
 		if (!typeA) return true; // everything is allowed if object type is not fixed yet
@@ -235,7 +235,7 @@ namespace core {
 
 			// update the object type of functions
 			if (auto fun = in.isa<LambdaExprPtr>()) {
-				assert(!fun->getParameterList().empty());
+				assert_false(fun->getParameterList().empty());
 
 				VariableMap replacement;
 				replacement[fun->getParameterList()->getElement(0)] = newParam;
@@ -414,7 +414,7 @@ namespace core {
 	}
 
 	const ClassMetaInfo& getMetaInfo(const TypePtr& type) {
-		assert(analysis::isObjectType(type) && "Meta-Information may only be attached to object types!");
+		assert_true(analysis::isObjectType(type)) << "Meta-Information may only be attached to object types!";
 
 		// check whether meta-information is present
 		if (!type->hasAttachedValue<ClassMetaInfo>()) {
@@ -427,7 +427,7 @@ namespace core {
 	}
 
 	void setMetaInfo(const TypePtr& type, const ClassMetaInfo& info) {
-		assert(analysis::isObjectType(type) && "Meta-Information may only be attached to object types!");
+		assert_true(analysis::isObjectType(type)) << "Meta-Information may only be attached to object types!";
 		assert_true(!info.getClassType() || *info.getClassType() == *type)
 			<< "Target Type: " << *type << "\n"
 			<< "Class Type: " << (info.getClassType() ? toString(*info.getClassType()) : "-unknown-") << "\n";

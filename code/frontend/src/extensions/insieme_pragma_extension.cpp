@@ -121,7 +121,7 @@ namespace {
 
 		// get IR for checking whether nodes are still valid
 		core::ExpressionPtr&& singlenode = frontend::tu::toIR(tu.getNodeManager(), tu);
-		assert(singlenode && "Conversion of IRTranslationUnit to IR failed!");
+		assert_true(singlenode) << "Conversion of IRTranslationUnit to IR failed!";
 		IRBuilder builder(singlenode->getNodeManager());
 
 		// check if nodes previously marked as entry points are still valid and add them
@@ -135,13 +135,13 @@ namespace {
 					return false;
 
 				LambdaExprPtr lambda = dynamic_pointer_cast<core::LambdaExprPtr>(expr);
-				assert(lambda && "Non-LambdaExpression marked as entry point!");
+				assert_true(lambda) << "Non-LambdaExpression marked as entry point!";
 
 				string cname = core::annotations::getAttachedName(lambda);
-				assert(cname.length() > 0 && "LambdaExpression marked as entry point has no cname annotation!");
+				assert_gt(cname.length(), 0) << "LambdaExpression marked as entry point has no cname annotation!";
 
 				core::LiteralPtr lit = builder.literal(lambda->getType(), cname);
-				assert(lit && "Could not build literal!");
+				assert_true(lit) << "Could not build literal!";
 
 				tu.addEntryPoints(lit);
 
@@ -165,7 +165,7 @@ namespace {
 				pragma::tok::eod,
 				[&](const pragma::MatchObject& object, StmtWrapper node) {
 					LambdaExprPtr expr = dynamic_pointer_cast<const LambdaExpr>(node.front());
-					assert(expr && "Insieme mark pragma can only be attached to function declarations!");
+					assert_true(expr) << "Insieme mark pragma can only be attached to function declarations!";
 
 					entryPoints.push_back(expr);
 
@@ -183,9 +183,9 @@ namespace {
 					ia::ocl::KernelFileAnnotation kernelFile(object.getStrings("arg").front());
 					core::NodeAnnotationPtr annot = std::make_shared<ia::ocl::KernelFileAnnotation>(kernelFile);
 					auto& callExprPtr = dynamic_pointer_cast<const CallExprPtr>(node.front());
-					assert(callExprPtr && "Insieme KernelFile pragma must be attached to a valid assignment CallExpression!");
+					assert_true(callExprPtr) << "Insieme KernelFile pragma must be attached to a valid assignment CallExpression!";
 					auto& arguments = callExprPtr->getArguments();
-					assert(arguments.size() == 2 && "Insieme KernelFile pragma must be attached to a valid assignment CallExpression with exactly 2 arguments!");
+					assert_eq(arguments.size(), 2) << "Insieme KernelFile pragma must be attached to a valid assignment CallExpression with exactly 2 arguments!";
 					arguments[1].addAnnotation(annot);
 
 					return node;
@@ -338,7 +338,7 @@ namespace {
 							case ia::TransformationHint::LOOP_INTERCHANGE: {
 								LOG(INFO) << "Applying Loop Interchange (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
 
-								assert(values.size() == 2 && "Loop Interchange requires two integer arguments!");
+								assert_eq(values.size(), 2) << "Loop Interchange requires two integer arguments!";
 
 								tr.push_back(polyhedral::makeLoopInterchange(values[0], values[1]));
 								break;
@@ -346,7 +346,7 @@ namespace {
 							case ia::TransformationHint::LOOP_STRIP: {
 								LOG(INFO) << "Applying Loop Strip Mining (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
 
-								assert(values.size() == 2 && "Loop Strip Mining requires two integer arguments!");
+								assert_eq(values.size(), 2) << "Loop Strip Mining requires two integer arguments!";
 
 								tr.push_back(polyhedral::makeLoopStripMining(values[0], values[1]));
 								break;
@@ -360,7 +360,7 @@ namespace {
 							case ia::TransformationHint::LOOP_UNROLL: {
 								LOG(INFO) << "Applying Loop Unroll (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
 
-								assert(values.size() == 1 && "Loop Unrolling requires a single integer argument");
+								assert_eq(values.size(), 1) << "Loop Unrolling requires a single integer argument";
 
 								tr.push_back(rulebased::makeLoopUnrolling(values.front()));
 								break;
@@ -398,7 +398,7 @@ namespace {
 							case ia::TransformationHint::REGION_STRIP: {
 								LOG(INFO) << "Applying Region Strip (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
 
-								assert(values.size() == 1 && "Region Strip requires a single integer argument");
+								assert_eq(values.size(), 1) << "Region Strip requires a single integer argument";
 
 								tr.push_back(polyhedral::makeRegionStripMining(values.front()));
 								break;
@@ -406,7 +406,7 @@ namespace {
 							case ia::TransformationHint::REC_FUN_UNROLL: {
 								LOG(INFO) << "Unrolling recursive function according to transformation hint at location: [" << getStartLocation(cur) << "]";
 
-								assert(values.size() == 1 && "Function-Unrolling requires a single integer argument");
+								assert_eq(values.size(), 1) << "Function-Unrolling requires a single integer argument";
 
 								tr.push_back(functions::makeRecFunUnrolling(values.front()));
 								break;

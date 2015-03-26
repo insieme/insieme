@@ -75,7 +75,7 @@ namespace transform {
 					// a function reducing the level expression by 1
 					auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
 						auto formula = arithmetic::toFormula(level);
-						assert(formula.isConstant() && "Accessing thread-group using non-constant level index not supported!");
+						assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
 						if (formula.isZero()) return ExpressionPtr();
 						return arithmetic::toIR(level->getNodeManager(), formula-1);
 					};

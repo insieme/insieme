@@ -159,7 +159,7 @@ vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRec
 // a ConstantArrayType or a VariableArrayType.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
-	assert(false && "DependentSizedArrayType not yet handled!");
+	assert_fail() << "DependentSizedArrayType not yet handled!";
 	return core::TypePtr();
 }
 
@@ -259,7 +259,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 		}
     }
 
-	assert(templTy->isSugared()&& "no idea what to do with non sugar");
+	assert_true(templTy->isSugared()) << "no idea what to do with non sugar";
  	return	retTy = convFact.convertType(templTy->desugar());
 }
 
@@ -270,7 +270,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationT
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert(false && "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR");
+	assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR";
 	return retTy;
 }
 
@@ -281,7 +281,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitInjectedClassNameType(const Inje
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert(false && "InjectedClassNameType not yet handled!");
+	assert_fail() << "InjectedClassNameType not yet handled!";
 	return retTy;
 }
 
@@ -304,7 +304,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const 
 	//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
 
 	//START_LOG_TYPE_CONVERSION(substTy);
-	//assert(false && "SubstTemplateTypeParmType not yet handled!");
+	//assert_fail() << "SubstTemplateTypeParmType not yet handled!";
 	retTy = convFact.convertType( substTy->getReplacementType() );
 	return retTy;
 }
@@ -316,7 +316,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert(false && "TemplateTypeParmType should not show off, can you explain to me how are you planing to handle this in IR?");
+	assert_fail() << "TemplateTypeParmType should not show off, can you explain to me how are you planing to handle this in IR?";
 	return retTy;
 }
 

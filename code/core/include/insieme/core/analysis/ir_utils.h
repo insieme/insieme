@@ -220,7 +220,7 @@ static inline bool isTypeLiteral(const NodePtr& node) {
  * @return the represented type
  */
 static inline TypePtr getRepresentedType(const TypePtr& type) {
-	assert(isTypeLiteralType(type));
+	assert_true(isTypeLiteralType(type));
 	return static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
 }
 
@@ -271,7 +271,7 @@ static inline bool isIntTypeParamLiteral(const NodePtr& node) {
  * @return the extracted int-type parameter
  */
 static inline IntTypeParamPtr getRepresentedTypeParam(const TypePtr& type) {
-	assert(isIntTypeParamType(type));
+	assert_true(isIntTypeParamType(type));
 	return type.as<GenericTypePtr>()->getIntTypeParameter()[0];
 }
 

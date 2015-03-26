@@ -97,7 +97,7 @@ void SThread::setCompleted() {
 
 unsigned WINAPI SThread::startThread(LPVOID pVoid) {
 	SThread* aThread = static_cast<SThread*> (pVoid);
-	assert(aThread);
+	assert_true(aThread);
 	aThread->result = aThread->run();
 	aThread->setCompleted();
 	return reinterpret_cast<unsigned>(aThread->result);
@@ -146,7 +146,7 @@ SThread::SThread() :
 void* SThread::startThreadRunnable(void* pVoid) {
 	// thread start function when a Runnable is involved
 	SThread* runnableThread = static_cast<SThread*> (pVoid);
-	assert(runnableThread);
+	assert_true(runnableThread);
 	runnableThread->result = runnableThread->runnable->run();
 	runnableThread->setCompleted();
 	return runnableThread->result;
@@ -154,7 +154,7 @@ void* SThread::startThreadRunnable(void* pVoid) {
 void* SThread::startThread(void* pVoid) {
 	// thread start function when no Runnable is involved
 	SThread* aThread = static_cast<SThread*> (pVoid);
-	assert(aThread);
+	assert_true(aThread);
 	aThread->result = aThread->run();
 	aThread->setCompleted();
 	return aThread->result;

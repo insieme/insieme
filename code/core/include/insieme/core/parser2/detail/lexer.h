@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 /**
  * Within this header file the lexer-part of the INSPIRE parser is defined.
@@ -168,7 +169,7 @@ namespace detail {
 		 * @return an identifier token for the given text
 		 */
 		static Token createIdentifier(const string& lexeme) {
-			assert(!lexeme.empty());
+			assert_false(lexeme.empty());
 			return Token(Identifier, lexeme);
 		}
 
@@ -179,7 +180,7 @@ namespace detail {
 		 * @return a keyword token for the given text
 		 */
 		static Token createKeyword(const string& lexeme) {
-			assert(!lexeme.empty());
+			assert_false(lexeme.empty());
 			return Token(Keyword, lexeme);
 		}
 
@@ -192,8 +193,8 @@ namespace detail {
 		 * @return the requested token instance
 		 */
 		static Token createLiteral(Type type, const string& lexeme) {
-			assert(!lexeme.empty());
-			assert(Bool_Literal <= type && type <= String_Literal);
+			assert_false(lexeme.empty());
+			assert_true(Bool_Literal <= type && type <= String_Literal);
 			return Token(type, lexeme);
 		}
 

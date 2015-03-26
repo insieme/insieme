@@ -58,7 +58,7 @@ namespace c {
 //   ==== this code is for the general case
 			if (hasIncludeAttached (before)) {
 				if (after.isa<core::StructTypePtr>() && after.as<core::StructTypePtr>()->getName()->getValue() == "A")
-					assert (false);
+					assert_fail();
 
 				attachInclude (after,  getAttachedInclude(before));
 				return true;
@@ -111,7 +111,7 @@ namespace c {
 	}
 
 	const string& getAttachedInclude(const NodePtr& node) {
-		assert(hasIncludeAttached(node) && "Does not have a Include annotation!");
+		assert_true(hasIncludeAttached(node)) << "Does not have a Include annotation!";
 		return node->getAttachedValue<IncludeTag>().include;
 	}
 

@@ -134,7 +134,7 @@ TEST(StmtConversion, FileTest) {
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
 				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
-				assert(expr);
+				assert_true(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
 
 				// do semantics checking

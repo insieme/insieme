@@ -93,7 +93,7 @@ void printNodes(const insieme::core::Address<const insieme::core::Node> n,
     Is called from postProcessSCoP, as well as recursively.
 */
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
-	assert ( scop->hasAnnotation(scop::ScopRegion::KEY) );
+	assert_true(scop->hasAnnotation(scop::ScopRegion::KEY));
 
 	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY );
 	const std::vector<scop::Stmt>& stmts = region.getDirectRegionStmts();

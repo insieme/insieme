@@ -240,7 +240,7 @@ namespace backend {
 			if (funType->isConstructor()) {
 
 				vector<c_ast::NodePtr> args = c_call->arguments;
-				assert(!args.empty());
+				assert_false(args.empty());
 
 				const auto& basic = call->getNodeManager().getLangBasic();
 				auto location = args[0];
@@ -281,7 +281,7 @@ namespace backend {
 
 				// obtain object
 				vector<c_ast::NodePtr> args = c_call->arguments;
-				assert(args.size() == 1u);
+				assert_eq(args.size(), 1u);
 				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
 
 				// extract class type
@@ -297,7 +297,7 @@ namespace backend {
 			if (funType->isMemberFunction()) {
 
 				vector<c_ast::NodePtr> args = c_call->arguments;
-				assert(!args.empty());
+				assert_false(args.empty());
 
 				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
 				args.erase(args.begin());
@@ -427,7 +427,7 @@ namespace backend {
 
 			// check result
 			assert_true(lambda && lambda != fun) << "Lambda-Instantiation failed!" << "\nType: " << *lambda->getType(); // << "\nLambda: " << *lambda;
-			assert(!core::analysis::isGeneric(lambda->getType()) && "Still generic!");
+			assert_false(core::analysis::isGeneric(lambda->getType())) << "Still generic!";
 
 			// produce new call expression
 			auto res = core::CallExpr::get(manager, call->getType(), lambda, call->getArguments());
@@ -546,7 +546,7 @@ namespace backend {
         }
 		default:
 			LOG(FATAL) << "Encountered unsupported node: " << *fun;
-			assert(false && "Unexpected Node Type!");
+			assert_fail() << "Unexpected Node Type!";
 			return c_ast::ExpressionPtr();
 		}
 
@@ -665,7 +665,7 @@ namespace backend {
 				info = resolveBind(static_pointer_cast<const core::BindExpr>(expression)); break;
 			default:
 				// this should not happen ...
-				assert(false && "Unsupported node type encountered!");
+				assert_fail() << "Unsupported node type encountered!";
 				return new ElementInfo();
 			}
 
@@ -1018,14 +1018,14 @@ namespace backend {
 						classDecl->ctors.push_back(cManager->create<c_ast::ConstructorPrototype>(ctor));
 					} else if (funType.isDestructor()) {
 						// add destructor
-						assert(!classDecl->dtor && "Destructor already defined!");
+						assert_false(classDecl->dtor) << "Destructor already defined!";
 						auto dtor = cManager->create<c_ast::Destructor>(classDecl->name, info->function);
 						auto decl = cManager->create<c_ast::DestructorPrototype>(dtor);
 						decl->isVirtual = isVirtual;
 						classDecl->dtor = decl;
 					} else {
 						// add member function
-						assert(funType.isMemberFunction());
+						assert_true(funType.isMemberFunction());
 						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
 						auto decl = cManager->create<c_ast::MemberFunctionPrototype>(mfun);
 
@@ -1067,7 +1067,7 @@ namespace backend {
 
 				// peel function and create function definition
 				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getVariable());
-				assert(!unrolled->isRecursive() && "Peeled function must not be recursive!");
+				assert_false(unrolled->isRecursive()) << "Peeled function must not be recursive!";
 
 				// resolve function ... now with body
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
@@ -1137,7 +1137,7 @@ namespace backend {
 			}
 
 			bool valuesDerivedFromParametersOnly(const core::VariablePtr& thisVar, const core::VariableList& params, const core::CallExprPtr& call) {
-				assert(getAccessedField(thisVar, call) && "not an access!");
+				assert_true(getAccessedField(thisVar, call)) << "not an access!";
 
 				// collect values
 				core::ExpressionList values;
@@ -1278,7 +1278,7 @@ namespace backend {
 				void visitNode(const core::NodeAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
 					std::cerr << "Node of type " << cur->getNodeType() << " should not be reachable!\n";
-					assert(false && "Must not be reached!");
+					assert_fail() << "Must not be reached!";
 				}
 
 			};
@@ -1317,7 +1317,7 @@ namespace backend {
 
 				std::cerr << "\n\n --------------------- ASSERTION ERROR -------------------\n";
 				std::cerr << "Node of type " << node->getNodeType() << " should not be reachable!\n";
-				assert(false && "Must not be reached!");
+				assert_fail() << "Must not be reached!";
 				return c_ast::IdentifierPtr();
 			}
 
@@ -1515,7 +1515,7 @@ namespace backend {
 					return namedType->name;
 				}
 				std::cerr << "Unable to determine class-name for member function: " << funType << "\n";
-				assert(false && "Unsupported case!");
+				assert_fail() << "Unsupported case!";
 				return c_ast::IdentifierPtr();
 			};
 

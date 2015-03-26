@@ -176,12 +176,12 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 /// Remove the given list of statements, the NodeManger keeping track of removals.
 NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 
-	assert(!stmts.empty() && "List of statements to be removed must not be empty!");
+	assert_false(stmts.empty()) << "List of statements to be removed must not be empty!";
 
 	NodePtr res = stmts[0].getRootNode();
 
 	// check whether the stmt list is not empty and all addresses have the same root.
-	assert(!stmts.empty() && "Statements must not be empty!");
+	assert_false(stmts.empty()) << "Statements must not be empty!";
 	assert(all(stmts, [&](const StatementAddress& cur) { return cur.getRootNode() == res; }));
 
 	// create a sorted list of statements
@@ -634,7 +634,7 @@ namespace {
 
 
 //	LambdaExprPtr tryFixRecursive(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value) {
-//		assert(lambda->isRecursive());
+//		assert_true(lambda->isRecursive());
 //
 //		/**
 //		 * The following procedure is applied:
@@ -649,7 +649,7 @@ namespace {
 //		FunctionTypePtr funType = lambda->getFunctionType();
 //		TypeList paramTypes = funType->getParameterTypeList();
 //		assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
-//		assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+//		assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
 //
 //		// replace parameter within body
 //		const VariablePtr& param = lambda->getParameterList()[index];
@@ -699,10 +699,10 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
-	assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+	assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
 
 	// make sure replacement value does not have any free variables except it is a variable itself (used for fixing recursive variables)
-	assert((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty()) && "Replacement value must not have free variables!");
+	assert_true((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty())) << "Replacement value must not have free variables!";
 
 	// conduct replacement
 
@@ -721,7 +721,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	if (lambda->isRecursive()) {
 
 		if(lambda->getDefinition().size() > 1u) {
-			assert(false && "Propagating parameters across mutual recursive functions not supported yet!");
+			assert_fail() << "Propagating parameters across mutual recursive functions not supported yet!";
 			return lambda; // not supported yet
 		}
 
@@ -932,7 +932,7 @@ bool isOutlineAble(const StatementPtr& stmt) {
 
 CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	// check whether it is allowed
-	assert(isOutlineAble(stmt) && "Cannot outline given code - it contains 'free' return, break or continue stmts.");
+	assert_true(isOutlineAble(stmt)) << "Cannot outline given code - it contains 'free' return, break or continue stmts.";
 
 	// Obtain list of free variables
 	VariableList free = analysis::getFreeVariables(manager.get(stmt));
@@ -988,7 +988,7 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool eva
 
 	// check type of lazy expression
 	core::FunctionTypePtr funType = dynamic_pointer_cast<const core::FunctionType>(lazy->getType());
-	assert(funType && "Illegal lazy type!");
+	assert_true(funType) << "Illegal lazy type!";
 
 	// form call expression
 	core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
@@ -1053,7 +1053,7 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 		return lambda;
 	}
 
-	assert(!lambda->isRecursive() && "I owe you the support for recursive functions!");
+	assert_false(lambda->isRecursive()) << "I owe you the support for recursive functions!";
 
 	// update type
 	const FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(substitution->applyTo(lambda->getType()));
@@ -1125,7 +1125,7 @@ namespace {
 		 * handed in parameter.
 		 */
 		LambdaExprPtr addNewParameter(const LambdaExprPtr& lambda, VariablePtr& param) {
-			assert(!lambda->isRecursive() && "Recursive functions not supported yet!");
+			assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!";
 
 			IRBuilder builder(lambda.getNodeManager());
 
@@ -1301,7 +1301,7 @@ vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAd
 NodePtr pushInto(NodeManager& manager, const map<ExpressionAddress, VariablePtr>& elements) {
 
 	// some pre-conditions
-	assert(!elements.empty() && "Elements must not be empty!");
+	assert_false(elements.empty()) << "Elements must not be empty!";
 	assert(all(elements, [&](const pair<ExpressionAddress, VariablePtr>& cur)->bool {
 		return cur.first.getRootNode() == elements.begin()->first.getRootNode();
 	}));
@@ -1362,7 +1362,7 @@ namespace {
 			// a function reducing the level expression by 1
 			auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
 				auto formula = arithmetic::toFormula(level);
-				assert(formula.isConstant() && "Accessing thread-group using non-constant level index not supported!");
+				assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
 				if (formula.isZero()) return ExpressionPtr();
 				return arithmetic::toIR(level->getNodeManager(), formula-1);
 			};

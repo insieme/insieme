@@ -166,7 +166,7 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 			return isSubTypeOf(subType, superType.as<RecTypePtr>()->unroll());
 		}
 
-		assert(false && "How could you get here?");
+		assert_fail() << "How could you get here?";
 	}
 
 	// check whether the sub-type is generic

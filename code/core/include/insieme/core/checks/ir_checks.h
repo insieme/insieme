@@ -411,7 +411,7 @@ namespace checks {
 			case Message::ERROR: errors.push_back(msg); return;
 			case Message::WARNING: warnings.push_back(msg); return;
 			}
-			assert(false && "Invalid message type encountered!");
+			assert_fail() << "Invalid message type encountered!";
 		}
 
 		/**

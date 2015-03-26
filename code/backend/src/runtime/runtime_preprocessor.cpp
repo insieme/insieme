@@ -89,7 +89,7 @@ namespace runtime {
 			// create new lambda expression wrapping the entry point
 			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
 			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
-			assert(entryType->isPlain() && "Only plain functions can be entry points!");
+			assert_true(entryType->isPlain()) << "Only plain functions can be entry points!";
 
 
 			// define parameter of resulting lambda
@@ -419,7 +419,7 @@ namespace runtime {
 				auto alternatives = job->getDefaultExpr().as<core::CallExprPtr>()->getArgument(0);
 				auto impls = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(alternatives);
 
-				assert(!impls.empty() && "There must be at least one implementation!");
+				assert_false(impls.empty()) << "There must be at least one implementation!";
 
 				for(const auto& cur : impls) {
                     core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
@@ -566,7 +566,7 @@ namespace runtime {
 
 			core::ExpressionPtr convertPfor(const core::CallExprPtr& call) {
 				// check that it is indeed a pfor call
-				assert(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
+				assert_true(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
 
 				// construct call to pfor ...
 				const core::ExpressionList& args = call->getArguments();
@@ -606,8 +606,8 @@ namespace runtime {
 				static const analysis::features::FeaturePtr numMemAccessFtr
 						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_IO_NUM_any_read/write_OPs_real");
 
-				assert(numOpsFtr && "Missing required feature support!");
-				assert(numMemAccessFtr && "Missing required feature support!");
+				assert_true(numOpsFtr) << "Missing required feature support!";
+				assert_true(numMemAccessFtr) << "Missing required feature support!";
 
 				// extract values
 				uint64_t numOps = (uint64_t)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
@@ -903,7 +903,7 @@ namespace runtime {
 				auto pickCall = call->getFunctionExpr();
 
 				// check whether this is indeed a call to pick variants
-				assert(core::analysis::isCallOf(pickCall, basic.getPick()) && "Invalid Variant call!");
+				assert_true(core::analysis::isCallOf(pickCall, basic.getPick())) << "Invalid Variant call!";
 
 				// check if picking between implementations
 				if(pickCall->getType()->getNodeType() != core::NT_FunctionType) return call;
@@ -913,7 +913,7 @@ namespace runtime {
 					switch(implHint) {
 					case PickImplementationHint::CALL: return convertVariantToCall(call);
 					case PickImplementationHint::SWITCH: return convertVariantToSwitch(call);
-					default: assert(false && "Invalid variant implementation hint"); break;
+					default: assert_fail() << "Invalid variant implementation hint"; break;
 					}
 				}
 				// default to switch
@@ -981,7 +981,7 @@ namespace runtime {
 		assert(node->getNodeType() == core::NT_Program);
 
 		core::ProgramAddress program = root.as<core::ProgramAddress>();
-		assert(program->size() == 1u);
+		assert_eq(program->size(), 1u);
 
 		// get body of lambda expression
 		core::LambdaExprAddress main = program[0].as<core::LambdaExprAddress>();

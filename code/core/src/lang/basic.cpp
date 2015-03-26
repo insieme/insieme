@@ -349,7 +349,7 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 	}
 
 	LOG(ERROR) << "Operation " << op << " of type " << type << " is not declared" << std::endl;
-	assert(false && "Required combination of operator and type not declared");
+	assert_fail() << "Required combination of operator and type not declared";
 	return 0;
 }
 
@@ -374,7 +374,7 @@ BasicGenerator::Operator BasicGenerator::getOperator(const ExpressionPtr& lit) c
 		);
 		if (fit != opMap.end()) { return fit->first; }
 	}
-	assert(false && "Literal not found within the OperationMap, therefore not a valid IR literal expression");
+	assert_fail() << "Literal not found within the OperationMap, therefore not a valid IR literal expression";
 	// should never happen, but eliminates compiler warning in release mode
 	return BasicGenerator::Operator::Not;
 }

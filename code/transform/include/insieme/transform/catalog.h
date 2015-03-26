@@ -115,7 +115,7 @@ namespace transform {
 		 */
 		TransformationPtr createTransformation(const string& name, const parameter::Value& value = parameter::emptyValue) const {
 			TransformationTypePtr type = getTransformationType(name);
-			assert(type && "Unknown transformation type requested!");
+			assert_true(type) << "Unknown transformation type requested!";
 			return type->createTransformation(value);
 		}
 

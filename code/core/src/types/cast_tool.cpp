@@ -110,7 +110,7 @@ namespace {
 				res.assign(what[1].first, what[1].second);
 			}
 			else {
-					assert(false && "something wrong modifying literals");
+					assert_fail() << "something wrong modifying literals";
 			}
 			if (gen.isUnsignedInt(targetTy)){
 				// append u
@@ -145,7 +145,7 @@ namespace {
 				}
 			}
 			else {
-					assert(false && "something wrong modifying literals");
+					assert_fail() << "something wrong modifying literals";
 			}
 
 			if (gen.isReal4(targetTy)){
@@ -279,7 +279,7 @@ namespace {
 			dumpDetail(expr);
 			std::cout << "****" << std::endl;
 			dumpDetail(expr->getType());
-			assert(false && "this type can not be converted now to bool. implement it! ");
+			assert_fail() << "this type can not be converted now to bool. implement it! ";
 		}
 
 		return castScalar (gen.getBool(), expr);
@@ -438,7 +438,7 @@ namespace {
 					 std::cerr << "expr type: " << exprTy << std::endl;
 					 std::cerr << "targ type: " << targetTy << std::endl;
 					 std::cerr << "code: " << (int) code << std::endl;
-					 assert(false && "cast not defined");
+					 assert_fail() << "cast not defined";
 		}
 
 
@@ -513,7 +513,7 @@ namespace {
 		///////////////////////////////////////////////////////////////////////////////////////
 		if ( gen.isChar(argTy) && gen.isInt(trgTy) &&  expr->getNodeType() == core::NT_Literal ) {
 
-			assert(false && "deprecated: who uses this?");
+			assert_fail() << "deprecated: who uses this?";
 			const core::LiteralPtr& lit = expr.as<core::LiteralPtr>();
 
 			char val = ' ';
@@ -532,10 +532,10 @@ namespace {
 					case '0' : val = '\0';   break;
 					case 'v' : val = '\v';   break;
 					default :
-						assert(false && "missing escape sequence.");
+						assert_fail() << "missing escape sequence.";
 				}
 			} else {
-				assert(false && "Wrong encoding for char literals!");
+				assert_fail() << "Wrong encoding for char literals!";
 			}	
 
 			return builder.literal( utils::numeric_cast<std::string>(static_cast<short>(val)), trgTy );
@@ -686,7 +686,7 @@ namespace {
 				}
 
 				// converting from a vector of a type to a vector of another type, this is not possible
-				assert(false && "Converting from vector<'a> to vector<'b>"); 
+				assert_fail() << "Converting from vector<'a> to vector<'b>"; 
 			}
 
 
@@ -853,7 +853,7 @@ namespace {
 		assert_fail() << "as your see, we should not be here" << std::endl;
 
 		return builder.castExpr(trgTy, expr);
-		//assert(false && "Cast conversion not supported!");
+		//assert_fail() << "Cast conversion not supported!";
 	}
 
 	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr) {

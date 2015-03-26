@@ -111,7 +111,7 @@ namespace dump {
 			}
 
 			std::ostream& operator()(const filter::Filter& filter) const {
-//				assert(false && "Not implemented yet!");
+//				assert_fail() << "Not implemented yet!";
 				return out << " FILTER_NOT_SUPPORTED ";
 			}
 
@@ -292,7 +292,7 @@ namespace dump {
 
 				parameter::Value operator()(const parameter::ListParameterPtr& type) {
 					// consume opening token
-					if (*(next++) != "(") assert(false && "No opening bracket!");
+					if (*(next++) != "(") assert_fail() << "No opening bracket!";
 					vector<parameter::Value> res;
 					while (*next != ")") {
 						res.push_back(loader.resolveValue(next, end, type->getElementType()));
@@ -303,12 +303,12 @@ namespace dump {
 
 				parameter::Value operator()(const parameter::TupleParameterPtr& type) {
 					// consume opening token
-					if (*(next++) != "(") assert(false && "No opening bracket!");
+					if (*(next++) != "(") assert_fail() << "No opening bracket!";
 					vector<parameter::Value> res;
 					for_each(type->getComponents(), [&](const parameter::ParameterPtr& cur) {
 						res.push_back(loader.resolveValue(next, end, cur));
 					});
-					if (*(next++) != ")") assert(false && "No closing bracket!");
+					if (*(next++) != ")") assert_fail() << "No closing bracket!";
 					return parameter::makeValue(res);
 				}
 
@@ -355,7 +355,7 @@ namespace dump {
 				TransformationTypePtr type = catalog.getTransformationType(name);
 
 				// TODO: use an exception to indicate parsing errors
-				assert(type && "Unknown transformation type encountered!");
+				assert_true(type) << "Unknown transformation type encountered!";
 
 				auto paramInfos = type->getParameterInfo();
 				if (paramInfos->isAtomic()) {

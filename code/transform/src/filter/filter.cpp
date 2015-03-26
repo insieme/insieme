@@ -70,7 +70,7 @@ namespace filter {
 					if (value.getDepth() == 1) {
 						return value.getList();
 					}
-					assert(false && "Higher dimensions are not supported!");
+					assert_fail() << "Higher dimensions are not supported!";
 					return vector<core::NodeAddress>();
 		});
 	}

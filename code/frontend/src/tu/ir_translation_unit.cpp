@@ -372,7 +372,7 @@ namespace tu {
 				}
 
 				// otherwise fail!
-				assert(false && "Unsupported symbol encountered!");
+				assert_fail() << "Unsupported symbol encountered!";
 				return symbol;
 			}
 
@@ -406,7 +406,7 @@ namespace tu {
 						resolutionCache[s] = getRecVar(s);
 					}
 
-					assert(isResolved(first));
+					assert_true(isResolved(first));
 
 					// resolve definitions (without caching temporal values)
 					cachingEnabled = false;
@@ -513,8 +513,8 @@ namespace tu {
 
 						if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 
-							assert(call[0]);
-							assert(call[1]);
+							assert_true(call[0]);
+							assert_true(call[1]);
 
 							auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
