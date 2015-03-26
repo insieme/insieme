@@ -35,7 +35,8 @@
  */
 
 #include <iomanip>
-#include <isl/schedule.h>
+#include <cstddef> // workaround for old GMP library (<5.1.3) - see https://gcc.gnu.org/gcc-4.9/porting_to.html
+#include <isl/schedule.h>                  // this is the culprit import for which the above comment holds true
 #include <memory>
 #include <set>
 
