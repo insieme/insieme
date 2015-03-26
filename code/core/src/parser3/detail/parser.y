@@ -8,6 +8,10 @@
 %define parse.assert
 %code requires
 {
+    /**
+     * this code goes in the header
+     */
+
     # include <string>
     #include "insieme/core/ir.h"
 
@@ -23,6 +27,15 @@
     } // insieme
 
     using namespace insieme::core;
+
+    namespace {
+        struct For_decl{
+            VariablePtr it;
+            ExpressionPtr low;
+            ExpressionPtr up;
+            ExpressionPtr step;
+        };
+    }
 }
 
 // The parsing context.
@@ -40,8 +53,14 @@
 %define parse.error verbose
 %code
 {
+    /**
+     * this code goes in the cpp file
+     */
+
     #include "insieme/core/parser3/detail/driver.h"
     #include "insieme/core/ir.h"
+
+    #include "insieme/core/annotations/naming.h"
 
 }
 
@@ -90,18 +109,28 @@
   RANGE   ".."
   DOT     "."
 
-  INFINITE "#inf"
-  LET   "let"    
-  AUTO   "auto"    
-  IF     "if"      
-  ELSE   "else"    
-  FOR    "for"     
-  WHILE  "while"   
-  RETURN "return"  
-  TRUE   "true"  
-  FALSE  "false"  
-  STRUCT "struct"
-  UNION  "union"
+  
+  PARENT        ".as("
+  CAST          ".cast("
+  INFINITE      "#inf"
+  LET           "let"    
+  AUTO          "auto"    
+  IF            "if"      
+  ELSE          "else"    
+  FOR           "for"     
+  WHILE         "while"   
+  DECL          "decl"
+  TRY           "try"   
+  CATCH         "catch"   
+  RETURN        "return"  
+  DEFAULT       "default"  
+  CASE          "case"  
+  SWITCH        "switch"  
+
+  TRUE          "true"  
+  FALSE         "false"  
+  STRUCT        "struct"
+  UNION         "union"
 
   TYPE_ONLY
   EXPRESSION_ONLY
@@ -129,40 +158,68 @@
 %type  <std::string> "Number" 
 %type  <std::string> "indentifier" 
 
-%type <ExpressionPtr> expression cast_or_expr 
+%type <ProgramPtr> program
+
+%type <StatementPtr> statement decl_stmt
+%type <StatementList> compound_stmt
+%type <For_decl> for_decl
+%type <VariablePtr> var_decl
+%type <VariableList> variable_list 
+%type <SwitchCasePtr> switch_case
+%type <std::vector<SwitchCasePtr> > switch_case_list
+%type <std::vector<CatchClausePtr> > catch_clause_list
+
+%type <ExpressionPtr> expression  
+%type <ExpressionList> expression_list
+
 %type <std::pair<TypeList, IntParamList> > type_param_list
 %type <TypePtr> type 
 %type <TypeList> type_list parent_list
 %type <bool> func_tok
-%type <std::pair<TypeList, std::pair<TypeList, IntParamList> > > generic_type
 
 %type <NamedTypePtr> member_field
-%type <NamedTypeList> member_list
-%type <std::pair<TypeList, NamedTypeList> > tag_type
+%type <NamedTypeList> member_list tag_type
 
 %printer { yyoutput << $$; } <std::string>
 
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 %%
 
 %start program;
 program : TYPE_ONLY declarations type { driver.result = $3; }
+        | STMT_ONLY declarations statement { driver.result = $3; }
         | EXPRESSION_ONLY declarations expression { driver.result = $3; }
+        | FULL_PROGRAM declarations program { driver.result = $3; }
         ;
 
 declarations : /* empty */ { } 
              | "let" "indentifier" "=" type ";" {  driver.scopes.add_symb($2, $4); }
              | "let" "identifier" "=" type ";" declarations { driver.scopes.add_symb($2, $4); }
 
+program : "identifier" "(" variable_list ")" "->" type "{" statement "}" {
+                            std::cout << "program" << std::endl;
+						    ExpressionPtr main = driver.builder.lambdaExpr($6, $8, $3);
+						    $$ = driver.builder.createProgram(toVector(main));
+                        }
+                     ;
+
+variable_list : var_decl { $$.push_back($1); }
+              | var_decl "," variable_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
+              ;
+
+
 /* ~~~~~~~~~~~~~~~~~~~  TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-type_param_list : "#inf" { $$.second.push_back(driver.builder.infiniteIntTypeParam()); }
-                | "paramvar" { $$.second.push_back(driver.builder.variableIntTypeParam($1[0])); }
-                | "int" { $$.second.push_back(driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($1))); }
+type_param_list : "#inf" { $$.second.insert($$.second.begin(), driver.builder.infiniteIntTypeParam()); }
+                | "paramvar" { $$.second.insert($$.second.begin(), driver.builder.variableIntTypeParam($1[0])); }
+                | "int" { $$.second.insert($$.second.begin(), driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($1))); }
                 | type  { $$.first.push_back($1); }
-                | "#inf" "," type_param_list {$3.second.push_back(driver.builder.infiniteIntTypeParam()); std::swap($$, $3); }
-                | "paramvar" "," type_param_list {$3.second.push_back(driver.builder.infiniteIntTypeParam()); std::swap($$, $3); }
-                | "int" "," type_param_list {$3.second.push_back(driver.builder.variableIntTypeParam($1[0])); std::swap($$, $3); }
-                | type "," type_param_list {$3.first.push_back($1); std::swap($$, $3); }
+                | "#inf" "," type_param_list {$3.second.insert($3.second.begin(), driver.builder.infiniteIntTypeParam()); std::swap($$, $3); }
+                | "paramvar" "," type_param_list {$3.second.insert($3.second.begin(), driver.builder.infiniteIntTypeParam()); std::swap($$, $3); }
+                | "int" "," type_param_list {$3.second.insert($3.second.begin(), driver.builder.variableIntTypeParam($1[0])); std::swap($$, $3); }
+                | type "," type_param_list {$3.first.insert($3.first.begin(), $1); std::swap($$, $3); }
                 ;
 
 type_list : type { $$.push_back($1); }
@@ -170,45 +227,150 @@ type_list : type { $$.push_back($1); }
 
 parent_list : type { $$.push_back($1); }
             | type ":" parent_list { $3.push_back($1); std::swap($$, $3); }
+            ;
 
 /* is a closure? */
 func_tok : "->" { $$ = false; }
          | "=>" { $$ = true; }
          ;
 
-generic_type : "<" type_param_list ">"  { std::swap($$.second, $2); } 
-                        /* gen type with parents */
-             | "::" parent_list "<" type_param_list ">" { std::swap($$.first, $2); std::swap($$.second, $4); }
-             ;
-
 member_field : type "identifier" { $$ = driver.builder.namedType($2, $1); }
              ;
 
 member_list :  /* empty */  { }
             | member_field { $$.push_back($1); }
-            | member_field ";" member_list { $3.push_back($1); std::swap($$, $3); }
+            | member_field ";" member_list { $3.insert($3.begin(),$1); std::swap($$, $3); }
             ;
 
-op_semi_colon : /* empty */ | ";"
+//op_semi_colon : /* empty */ | ";"  // this beauty costs one conflict in grammar
 
-tag_type : ":" parent_list "{" member_list op_semi_colon "}" { std::swap($$.first, $2); std::swap($$.second, $4); }
-         | "{" member_list op_semi_colon "}"  { std::swap($$.second, $2); }
+tag_type : "{" member_list "}"  { std::swap($$, $2); }
          ;
 
-type : "identifier" { $$ = driver.findType(@1, $1); }  // defined?
-        /* gen type */
-     | "identifier" generic_type { $$ = driver.genGenericType(@$, $1, $2.first, $2.second.first, $2.second.second);} 
+type : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType(@$, $1, $3.first, $3.second);  }
+     | "identifier" "<" ">" {  $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList());  }
+     | "identifier" { $$ = driver.findType(@1, $1);if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } }
         /* func / closure type */
      | "(" type_list ")" func_tok type 
                 { $$ = driver.genFuncTypeType(@$, $2, $5, $4); }
      | "struct" "identifier" tag_type 
-                { $$ = driver.builder.structType(driver.builder.stringValue($2), driver.builder.parents($3.first), $3.second); }
+                { $$ = driver.builder.structType(driver.builder.stringValue($2), $3); }
+     | "struct" "identifier" "::" parent_list tag_type 
+                { $$ = driver.builder.structType(driver.builder.stringValue($2), driver.builder.parents($4), $5); }
      | "struct" tag_type              
-                { $$ = driver.builder.structType(driver.builder.stringValue(""), driver.builder.parents($2.first), $2.second); }
-     | "union" tag_type   { $$ = driver.builder.unionType($2.second); }
+                { $$ = driver.builder.structType(driver.builder.stringValue(""), $2); }
+     | "union" tag_type   { $$ = driver.builder.unionType($2); }
      ;
 
+/* ~~~~~~~~~~~~~~~~~~~  STATEMENTS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+statement : ";" { $$ = driver.builder.getNoOp(); } 
+          | expression ";" { $$ = $1; }
+
+                /* compound statement */ 
+          | "{" "}" { $$ = driver.builder.compoundStmt(StatementList()); }
+          | "{" compound_stmt { driver.scopes.close_scope(); $$ = driver.builder.compoundStmt($2); }
+
+                /* variable declarations */
+          | "decl" decl_stmt ";" { $$ = $2; }
+
+                /* if */
+          | "if" "(" expression ")" statement {  $$ = driver.builder.ifStmt($3, $5); }
+          | "if" "(" expression ")" statement "else" statement { $$ = driver.builder.ifStmt($3, $5, $7); }
+
+                /* loops */
+          | "while" "(" expression ")" statement { $$ = driver.builder.whileStmt($3, $5); }
+          | "for" for_decl statement {
+                $$ = driver.builder.forStmt($2.it, $2.low, $2.up, $2.step, $3);
+                driver.scopes.close_scope();
+            }
+                /* switch */
+          | "switch" "(" expression ")" "{" switch_case_list "}" {
+			    $$ = driver.builder.switchStmt($3, $6, driver.builder.getNoOp());
+            }
+          | "switch" "(" expression ")" "{" switch_case_list "default" ":" statement "}" {
+			    $$ = driver.builder.switchStmt($3, $6, $9);
+            }
+                /* exceptions */
+          | "try" statement "catch" catch_clause_list {
+                if(!$2.isa<CompoundStmtPtr>()) { driver.error(@2, "try body must be a compound"); YYABORT; }
+			    $$ = driver.builder.tryCatchStmt($2.as<CompoundStmtPtr>(), $4);
+            }
+          ;
+
+catch_clause_list : 
+                   "catch" "(" ")" statement { 
+                            if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
+                            $$.push_back(driver.builder.catchClause(VariablePtr(), $4.as<CompoundStmtPtr>())); 
+                    } 
+                  | "(" var_decl ")" statement {  
+                            if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
+                            $$.push_back(driver.builder.catchClause($2, $4.as<CompoundStmtPtr>())); 
+                    }
+                  | "(" var_decl ")" statement "catch" catch_clause_list{ 
+                            if(!$4.isa<CompoundStmtPtr>()) { driver.error(@4, "catch body must be a compound"); YYABORT; }
+                            $6.insert($6.begin(), driver.builder.catchClause($2, $4.as<CompoundStmtPtr>()));
+                            std::swap($$, $6);
+                    }
+                  ;
+
+decl_stmt : var_decl "=" expression {
+                $$ = driver.builder.declarationStmt($1, $3);
+            }
+          | "auto" "identifier" "=" expression {
+		        auto var = driver.builder.variable($4.getType());
+				annotations::attachName(var, $2);
+                driver.scopes.add_symb($2, var);
+                $$ = driver.builder.declarationStmt(var, $4);
+            }
+          ;
+
+var_decl : type "identifier" { 
+		        $$ = driver.builder.variable($1);
+				annotations::attachName( $$, $2);
+                driver.scopes.add_symb($2, $$);
+            };
+
+
+for_decl : "(" type "identifier" expression ".." expression ")"  {
+                driver.scopes.open_scope();
+		        $$.it = driver.builder.variable($2);
+				annotations::attachName( $$.it, $3);
+                driver.scopes.add_symb("$3", $$.it);
+                $$.low = $4;
+                $$.up = $6;
+                $$.step = driver.builder.literal($2, "1");
+           }
+         | "(" type "identifier" expression ".." expression ":" expression ")" {
+                driver.scopes.open_scope();
+		        $$.it = driver.builder.variable($2);
+				annotations::attachName( $$.it, $3);
+                driver.scopes.add_symb($3, $$.it);
+                $$.low = $4;
+                $$.up = $6;
+                $$.step = $8;
+           }
+         ;
+
+switch_case_list : switch_case { $$.push_back($1); }
+                 | switch_case switch_case_list { $2.insert($2.begin(), $1); std::swap($$, $2); }
+                 ;
+
+
+switch_case :  "case" expression ":" statement { 
+                  if(!$2.isa<LiteralPtr>()) { driver.error(@2, "case value must be a literal"); YYABORT; }
+                  $$ = driver.builder.switchCase($2.as<LiteralPtr>(), $4); 
+               }
+            ;
+
+compound_stmt : statement "}" { driver.scopes.open_scope(); $$.push_back($1); }
+              | statement compound_stmt { $2.insert($2.begin(),$1); std::swap($$, $2); }
+
+
 /* ~~~~~~~~~~~~~~~~~~~  EXPRESSIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+expression_list : expression { $$.push_back($1); }
+                | expression "," expression_list  { $3.insert($3.begin(), $1); std::swap($$, $3); }
  
 expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
             /* unary */
@@ -225,8 +387,14 @@ expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | expression "-" expression { $$ = driver.genBinaryExpression(@$, "-", $1, $3);  }
            | expression "*" expression { $$ = driver.genBinaryExpression(@$, "*", $1, $3);  }
            | expression "/" expression { $$ = driver.genBinaryExpression(@$, "/", $1, $3);  }
-            /* cast */
-           | "(" cast_or_expr { $$ = $2; }
+            /* call expr */
+           | expression "(" ")" {}
+           | expression "(" expression_list ")" {}
+            /* parenthesis */
+           | "(" expression ")"  { $$ = $2; }
+            /* cast */ 
+           | expression ".cast(" type ")"   { $$ = driver.builder.castExpr($3, $1); }
+           | expression ".as(" type ")" { $$  = driver.builder.refParent($1, $3); }
             /* literals */
            | "bool"       { $$ = driver.builder.literal(driver.mgr.getLangBasic().getBool(), $1); }
            | "charlit"    { $$ = driver.builder.literal(driver.mgr.getLangBasic().getChar(), $1); }
@@ -239,14 +407,14 @@ expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | "stringlit"  { $$ = driver.builder.stringLit($1); }
            ;
 
-cast_or_expr : type ")" expression     { $$ = $3; }
-             | expression ")"          { $$ = $1; }
-             ;
-
-
 %nonassoc "=" ;
 %nonassoc "::" ;
+%nonassoc ")";
+%nonassoc "else";
+%right "catch";
 %left "(";
+%left ".cast(";
+%left ".as(";
 %left "+" "-";
 %left "*" "/";
 %left "&&" "||";

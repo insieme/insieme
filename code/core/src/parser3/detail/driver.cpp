@@ -20,7 +20,7 @@ namespace detail{
         delete scanner;
     }
 
-    NodePtr inspire_driver::parseProgram ()
+    ProgramPtr inspire_driver::parseProgram ()
     {
       scanner->scan_begin ();
       auto ssymb = inspire_parser::make_FULL_PROGRAM(glob_loc);
@@ -29,7 +29,7 @@ namespace detail{
       int res = parser.parse ();
       scanner->scan_end ();
       if (!res) return nullptr;
-      return result;
+      return result.as<ProgramPtr>();
     }
 
     TypePtr inspire_driver::parseType ()
@@ -133,7 +133,7 @@ namespace detail{
         return nullptr;
     }
 
-    TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const TypeList& parents,
+    TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, 
                                            const TypeList& params, const IntParamList& iparamlist){
         
         if (name == "struct"){

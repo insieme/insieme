@@ -82,7 +82,7 @@ public:
 
     location glob_loc;
 
-    NodePtr parseProgram ();
+    ProgramPtr parseProgram ();
     TypePtr parseType ();
     StatementPtr parseStmt ();
     ExpressionPtr parseExpression ();
@@ -93,7 +93,7 @@ public:
 
     ExpressionPtr getOperand(ExpressionPtr expr);
     ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
-    TypePtr genGenericType(const location& l, const std::string& name, const TypeList& papas, const TypeList& params, const IntParamList& iparamlist);
+    TypePtr genGenericType(const location& l, const std::string& name, const TypeList& params, const IntParamList& iparamlist);
     TypePtr genFuncTypeType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
 
     // Error handling.

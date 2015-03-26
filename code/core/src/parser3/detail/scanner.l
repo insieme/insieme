@@ -109,14 +109,24 @@ paramvar #[a-zA-Z]
 ".."     return inspire_parser::make_RANGE(loc);
 "."      return inspire_parser::make_DOT(loc);
 
+".cast("  return inspire_parser::make_CAST(loc);
+".as("    return inspire_parser::make_PARENT(loc);
 "#inf"    return inspire_parser::make_INFINITE(loc);
 "let"     return inspire_parser::make_LET(loc);
 "auto"    return inspire_parser::make_AUTO(loc);
+
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);
 "for"     return inspire_parser::make_FOR(loc);
 "while"   return inspire_parser::make_WHILE(loc);
+"decl"    return inspire_parser::make_DECL(loc);
+"try"     return inspire_parser::make_TRY(loc);
+"catch"   return inspire_parser::make_CATCH(loc);
 "return"  return inspire_parser::make_RETURN(loc);
+"switch"  return inspire_parser::make_SWITCH(loc);
+"case"  return inspire_parser::make_CASE(loc);
+"default"  return inspire_parser::make_DEFAULT(loc);
+
 "true"    return inspire_parser::make_BOOL(yytext, loc);
 "false"   return inspire_parser::make_BOOL(yytext, loc);
 "struct"  return inspire_parser::make_STRUCT(loc);
