@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,7 +38,7 @@
 
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/dump/annotations.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/encoder/tuples.h"
@@ -135,9 +135,9 @@ namespace core {
 
 		// if duplicates, retur, but check if we are incorporating a different implementation
 		if(hasMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst())) {
-			assert_eq(*analysis::normalize(getMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst())->getImplementation()), 
+			assert_eq(*analysis::normalize(getMemberFunction(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst())->getImplementation()),
 					  *analysis::normalize(function.getImplementation()))
-					<< "Member functions may not exhibit the same name, type and const-flag state. \n" 
+					<< "Member functions may not exhibit the same name, type and const-flag state. \n"
 					<< "\t name: " << function.getName() << "\n\t"
 					<< "\t impl: " << function.getImplementation() << "\n";
 			return;
@@ -227,7 +227,7 @@ namespace core {
 		assert(*oldClassType != *newClassType);
 
 		NodeManager& mgr = after.getNodeManager();
-		IRBuilder builder(mgr);
+		FrontendIRBuilder builder(mgr);
 		VariablePtr newParam = builder.variable(builder.refType(newClassType));
 
 		// create helper for updating functions
@@ -263,7 +263,7 @@ namespace core {
 
 		// move constructors
 		for(auto cur : constructors) {
-			
+
 			if (auto lit = cur.isa<LiteralPtr>()) {
 
 				// update function type

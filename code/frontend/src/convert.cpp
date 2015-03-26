@@ -1490,7 +1490,7 @@ namespace {
 
 	core::StatementPtr prepentInitializerList(const clang::CXXConstructorDecl* ctorDecl, const core::TypePtr& classType, const core::StatementPtr& body, Converter& converter) {
 		auto& mgr = body.getNodeManager();
-		core::IRBuilder builder(mgr);
+		core::FrontendIRBuilder builder(mgr);
 
 		// nameless/anonymous structs/unions result in non-generic classtype
 		// structs unions with name should be generic types

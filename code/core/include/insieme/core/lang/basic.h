@@ -81,7 +81,7 @@ public:
 	enum Operator {
 	#define OPERATOR(_id, _str) \
 	_id,
-	#include "insieme/core/lang/lang.def"
+	#include "insieme/core/lang/inspire_api/lang.def"
 	};
 
 	#define TYPE(_id, _spec) \
@@ -108,7 +108,7 @@ public:
 	bool is##_id(const NodePtr& p) const; \
 	const vector<NodePtr>& get##_id##Group() const;
 
-	#include "insieme/core/lang/lang.def"
+	#include "insieme/core/lang/inspire_api/lang.def"
 
 	bool isBuiltIn(const NodePtr& node) const;
 	ExpressionPtr getBuiltIn(const std::string& name) const;

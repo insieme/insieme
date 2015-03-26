@@ -1,0 +1,33 @@
+
+let int = int<4>;
+let ten = lit("10" : intTypeParam<10>);
+let two = lit("2" : intTypeParam<2>);
+let three= lit("3" : intTypeParam<3>);
+let eight= lit("8" : intTypeParam<8>);
+let initUndef = lit("vector.init.undefined":(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>);
+let initUniform = lit("vector.init.uniform":('elem, intTypeParam<#a>) -> vector<'elem,#a>);
+let toUint = lit("to.uint":(intTypeParam<#n>) -> uint<8>);
+let arrayView = lit("array.view":(ref<array<'elem,1>>, int<8>) -> ref<array<'elem, 1>>);
+let reinterpret = lit("ref.reinterpret":(ref<'a>, type<'b>) -> ref<'b>);
+let toint = lit("uint.to.int":(uint<#a>, intTypeParam<#b>) -> int<#b>);
+
+unit main() {
+
+	// an atomic increment
+	let vector_projection = (vector<'elem, #n> v, intTypeParam<#a> begin, intTypeParam<#b> end) -> vector<'elem, #b>{
+        ref<vector<'elem, #b>> res = var(initUndef(lit('elem), param(#b)));
+        for (uint<8> i = 0ul .. toUint(param(#b))-  toUint(param(#a))){
+            res[i] = v[i + toUint(param(#a))];
+        }
+        return *res;
+	};
+
+	let vector_projection_ref = (ref<vector<'elem, #n>> v, intTypeParam<#a> begin, intTypeParam<#b> end) -> ref<vector<'elem, #b>>{
+       return  reinterpret(arrayView(reinterpret(v, lit(array<'elem, 1>)), toint(toUint(param(#a)), eight)), lit(vector<'elem, #b>) );
+	};
+
+    ref<vector<int, 10>> v = var(initUniform(0, ten));
+
+    auto res = vector_projection(*v, two, three);
+    auto res = vector_projection_ref(v, two, three);
+}

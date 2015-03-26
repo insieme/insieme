@@ -64,9 +64,6 @@
 
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/static_vars.h"
-
 #include "insieme/core/parser2/ir_parser.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -935,34 +932,6 @@ CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& 
 	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
 }
 
-CallExprPtr IRBuilder::virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
-	// some checks
-	assert(virtualFun->getType().isa<FunctionTypePtr>());
-	assert(virtualFun->getType().as<FunctionTypePtr>()->isMemberFunction());
-
-	vector<ExpressionPtr> realArgs;
-	realArgs.push_back(obj);
-	realArgs.insert(realArgs.end(), args.begin(), args.end());
-	return callExpr(virtualFun, args);
-}
-CallExprPtr IRBuilder::virtualCall(const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
-	return virtualCall(literal(name, funType), obj, args);
-}
-CallExprPtr IRBuilder::virtualCall(const TypePtr& resultType, const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
-	// some checks
-	assert(virtualFun->getType().isa<FunctionTypePtr>());
-	assert(virtualFun->getType().as<FunctionTypePtr>()->isMemberFunction());
-
-	vector<ExpressionPtr> realArgs;
-	realArgs.push_back(obj);
-	realArgs.insert(realArgs.end(), args.begin(), args.end());
-	return callExpr(resultType, virtualFun.as<ExpressionPtr>(), args);
-}
-CallExprPtr IRBuilder::virtualCall(const TypePtr& resultType, const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
-	return virtualCall(resultType, literal(name, funType), obj, args);
-}
-
-
 LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
 	return lambda(type, params, wrapBody(body));
 }
@@ -1596,101 +1565,6 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 	const TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
 
 	return callExpr(retTy, basic.getVectorPermute(), dataVec, permutationVec);
-}
-
-
-
-ExpressionPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const{
-	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
-
-	assert(staticVariable.getType().isa<RefTypePtr>());
-	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
-
-	if (constant){
-		return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
-	}
-	else{
-		return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
-	}
-}
-
-StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
-	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
-
-	return callExpr(ext.getCreateStatic(), staticVariable);
-}
-
-
-ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
-	assert_true(type->isMemberFunction());
-	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
-	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
-}
-
-ExpressionPtr IRBuilder::toCppRef(const ExpressionPtr& ref) const {
-	assert(ref && ref->getType()->getNodeType() == NT_RefType);
-	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
-
-	// avoid multiple nesting of wrapping / unwrapping
-	if (core::analysis::isCallOf(ref, ext.getRefCppToIR())) {
-		return ref.as<CallExprPtr>()[0];	// strip of previous call
-	}
-
-	// use converter function all
-	return callExpr(core::analysis::getCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToCpp(), ref);
-}
-
-ExpressionPtr IRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
-	assert(ref && ref->getType()->getNodeType() == NT_RefType);
-	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
-
-	// avoid multiple nesting of wrapping / unwrapping
-	if (core::analysis::isCallOf(ref, ext.getRefConstCppToIR())) {
-		return ref.as<CallExprPtr>()[0];	// strip of previous call
-	}
-
-	return callExpr(core::analysis::getConstCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstCpp(), ref);
-}
-
-ExpressionPtr IRBuilder::toConstRValCppRef(const ExpressionPtr& ref) const {
-	assert(ref && ref->getType()->getNodeType() == NT_RefType);
-	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
-
-	// avoid multiple nesting of wrapping / unwrapping
-	if (core::analysis::isCallOf(ref, ext.getRefConstRValCppToIR())) {
-		return ref.as<CallExprPtr>()[0];	// strip of previous call
-	}
-
-	return callExpr(core::analysis::getConstRValCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstRValCpp(), ref);
-}
-
-ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
-	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
-	assert(ref && (analysis::isAnyCppRef(ref->getType())));
-
-	// see whether this is a value which has just been wrapped
-	if (analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
-		return ref.as<CallExprPtr>()[0];		// strip of nested wrapper
-	}
-
-	// check whether it is a non-const reference
-	if (analysis::isCppRef(ref->getType())) {
-		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefCppToIR(), ref);
-	}
-	// check whether it is a const reference
-	if (analysis::isConstCppRef(ref->getType())) {
-		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstCppToIR(), ref);
-	}
-	// check whether it is a rval reference
-	if (analysis::isRValCppRef(ref->getType())) {
-		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefRValCppToIR(), ref);
-	}
-	// check whether it is a rval reference
-	if (analysis::isConstRValCppRef(ref->getType())) {
-		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstRValCppToIR(), ref);
-	}
-	assert_fail() << "failed to convert C++ reference to IR reference";
-    return ref;
 }
 
 } // namespace core

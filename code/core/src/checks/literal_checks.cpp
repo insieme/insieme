@@ -138,7 +138,7 @@ namespace checks {
 				min = std::numeric_limits<int64_t>::min();
 				max = std::numeric_limits<int64_t>::max();
 			} else {
-				assert_fail() << "Unsupported signed integer type encountered!";
+				assert_fail() << "Unsupported signed integer type encountered: \n" << type;
 			}
 
 			if (!(basic.isInt8(type) || basic.isInt16(type)) && *value.rbegin() == 'l') {
@@ -178,7 +178,7 @@ namespace checks {
 			} else if (basic.isUInt16(type)) {
 				max = std::numeric_limits<uint64_t>::max();
 			} else {
-				assert_fail() << "Unsupported signed integer type encountered!";
+				assert_fail() << "Unsupported signed integer type encountered: \n" << type;
 			}
 
 			if (!(basic.isUInt8(type) || basic.isUInt16(type)) && *value.rbegin() == 'l') {

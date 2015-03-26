@@ -44,6 +44,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 
 #include "insieme/core/types/cast_tool.h"
 
@@ -107,7 +108,7 @@ namespace {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 										  const clang::CastExpr* castExpr){
-	const core::IRBuilder& builder = convFact.getIRBuilder();
+	const core::FrontendIRBuilder& builder = convFact.getIRBuilder();
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::NodeManager& mgr = convFact.getNodeManager();
 
