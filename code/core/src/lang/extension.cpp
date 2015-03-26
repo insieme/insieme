@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,21 +39,51 @@
 #include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/ir_expressions.h"
 
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/assert.h"
+
+#include <string>
+#include <map>
+
 namespace insieme {
 namespace core {
 namespace lang {
 
-	core::TypePtr getType(core::NodeManager& manager, const string& type) {
+	void Extension::checkIrNameNotAlreadyInUse(const string& irName) const {
+		//only check for the existence of this name only if we define a new one
+		if (irName.empty()) {
+			return;
+		}
+
+		const auto& namedExtensions = getNamedIrExtensions();
+		//first check the names defined in this extension here
+		if (namedExtensions.find(irName) != namedExtensions.end()) {
+			assert_fail() << "IR_NAME \"" << irName << "\" already in use in this extension";
+		}
+
+		//then try to parse the given name as an expression
+		try {
+			const insieme::core::IRBuilder& builder(getNodeManager());
+			builder.parseExpr(irName, namedExtensions);
+			//if the parsing succeeded, then there already exists some literal or derived with that name
+			assert_fail() << "IR_NAME \"" << irName << "\" already in use";
+
+		} catch (const insieme::core::parser::IRParserException& ex) {
+			//nothing to do in here
+		}
+	}
+
+	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {
 		// build type
-		TypePtr res = parser::parse_type(manager, type, false);
+		TypePtr res = parser::parse_type(manager, type, false, definitions);
 		assert(res && "Unable to parse given type!");
 		return res;
 	}
 
-	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value) {
-		return core::Literal::get(manager, getType(manager, type), value);
+	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value, const std::map<string, NodePtr>& definitions) {
+		return Literal::get(manager, getType(manager, type, definitions), value);
 	}
-
 
 } // end namespace lang
 } // end namespace core

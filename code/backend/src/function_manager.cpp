@@ -463,7 +463,7 @@ namespace backend {
 		// 5) test whether target is a plane function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
-			c_ast::CallPtr res = c_ast::call(c_ast::parenthese(getValue(call->getFunctionExpr(), context)));
+			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(call->getFunctionExpr(), context)));
 			appendAsArguments(context, res, call->getArguments(), false);
 			return res;
 		}
@@ -476,7 +476,7 @@ namespace backend {
 			c_ast::ExpressionPtr trgObj =  converter.getStmtConverter().convertExpression(context, call[0]);
 
 			// make a call to the member pointer executor binary operator
-			c_ast::ExpressionPtr funcExpr = c_ast::parenthese(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
+			c_ast::ExpressionPtr funcExpr = c_ast::parentheses(c_ast::pointerToMember(trgObj, getValue(call->getFunctionExpr(), context)));
 
 			// the call is a call to the binary operation al the n-1 tail arguments
 			c_ast::CallPtr res = c_ast::call(funcExpr);
