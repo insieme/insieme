@@ -29,9 +29,15 @@ close($file);
 # check which of the builtins are not included in our hack.h and print these
 my %missing=();
 foreach (keys %clangmap) {
-    `grep -s $_ $hackh`;
-    $missing{$_}=undef if $?;
+    `grep -s $_ $hackh`;   # function found in hack.h?!
+    if ($?) {
+        my @gccfiles=map { /^(.+):/; $1 } grep(!/return/,
+                     `grep -e $_'[^[:alnum:]_]' $gcc/gcc/config/i386/*.h`);
+        # drop unknown builtins - clang sources are not correct sometimes
+        $missing{$_}=$gccfiles[0] if $gccfiles[0];
+    }
 }
 
-print "builtins missing from ".filename($hackh).":\n"
-    .join("\n", keys %missing)."\n";
+warn   "builtins missing from ".filename($hackh).":\n";
+warn   "   (none)\n" unless keys %missing;
+printf "   %-30s%s\n", $_, $missing{$_} foreach (sort keys %missing);
