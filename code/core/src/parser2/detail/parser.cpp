@@ -1281,25 +1281,26 @@ namespace detail {
 		struct using_scope_handler : public detail::actions {
 
 			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
-				//first check the terms we matched
-				assert_true(begin != end) << "Context doesn't seem to provide any of the sub-terms we are expecting";
-				const TokenIter& extensionNameToken = begin + 1;
-				assert_true(extensionNameToken != end) << "Context doesn't seem to provide the extension name";
-
-				//extract the name of the extension we are supposed to use and load the extension with this name
-				const string& extensionName = extensionNameToken->getLexeme().substr(1, extensionNameToken->getLexeme().length() - 2);
-				const lang::Extension& extension = context.getNodeManager().getLangExtensionByName(extensionName);
-
-				//push a new scope in which the loaded extension will be valid
+				//push a new scope in which the loaded extension(s) will be valid
 				context.getSymbolManager().pushScope(true);
 
-				//finally add all named constructs defined by this extension to the current context
-				auto& symManager = context.getSymbolManager();
-				for(const std::pair<string, NodePtr>& cur : extension.getNamedIrExtensions()) {
-					if (symManager.lookup(cur.first)) {
-						assert_fail() << "The name \"" << cur.first << "\" introduced by extension \"" << extensionName << "\" is already existing";
+				const Token& inKeyword = Token::createKeyword("in");
+
+				//iterate over all the extensions we are suppose to use - skipping the ',' tokens, end when we are past the "in" keyword
+				for (TokenIter currentToken = begin + 1; *(currentToken - 1) != inKeyword; currentToken += 2) {
+					//extract the name of the extension we are supposed to use and load the extension with this name
+					const string& extensionName = currentToken->getLexeme().substr(1, currentToken->getLexeme().length() - 2);
+					const lang::Extension& extension = context.getNodeManager().getLangExtensionByName(extensionName);
+
+					//add all named constructs defined by this extension to the current context
+					auto& symManager = context.getSymbolManager();
+					for(const std::pair<string, NodePtr>& cur : extension.getNamedIrExtensions()) {
+						//check if the named construct we are about to insert isn't already known
+						if (symManager.lookup(cur.first)) {
+							assert_fail() << "The name \"" << cur.first << "\" introduced by extension \"" << extensionName << "\" is already existing";
+						}
+						symManager.add(cur.first, cur.second);
 					}
-					symManager.add(cur.first, cur.second);
 				}
 			}
 			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const {

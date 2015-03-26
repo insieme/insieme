@@ -57,43 +57,57 @@ namespace lang {
 		ASSERT_DEATH(parser::parse(manager, "using \"ext.unknown_extension\" in complex a;"), "Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of ExtensionRegistry");
 	}
 
-	TEST(NamedCoreExtensionParserTest, ParserSingle) {
+	TEST(NamedCoreExtensionParserTest, ParserSingleStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("AP(struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>))", toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in complex a;"))));
+		EXPECT_EQ("AP(struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>))",
+		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in complex a;"))));
 	}
 
-	TEST(NamedCoreExtensionParserTest, ParserMultiple) {
+	TEST(NamedCoreExtensionParserTest, ParserMultipleStatements) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		//the second instance of type complex shouldn't be expanded
-		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); complex v1 = undefined(type<complex>);})", toString(builder.normalize(parser::parse(manager, "{using \"ext.complex\" in complex a; complex b;}"))));
+		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); complex v1 = undefined(type<complex>);})",
+		          toString(builder.normalize(parser::parse(manager, "{using \"ext.complex\" in complex a; complex b;}"))));
 	}
 
-	TEST(NamedCoreExtensionParserTest, ParserCompound) {
+	TEST(NamedCoreExtensionParserTest, ParserCompoundStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		//both instances of type complex should be expanded
-		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);})", toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in { complex a; complex b;}"))));
+		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);})",
+		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in { complex a; complex b;}"))));
 	}
 
-	TEST(NamedCoreExtensionParserTest, ParserCompoundNested) {
+	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		//the nested instance of complex should also be expanded
-		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); {struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);};})", toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in { complex a; { complex b; }}"))));
+		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); {struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);};})",
+		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in { complex a; { complex b; }}"))));
 	}
 
-	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedOutside) {
+	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatementOutside) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		//the nested instance of complex should also be expanded
-		EXPECT_EQ("AP({{struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>);}; complex v1 = undefined(type<complex>);})", toString(builder.normalize(parser::parse(manager, "{ using \"ext.complex\" in { complex a; } complex b;}"))));
+		//only the nested instance of complex should be expanded
+		EXPECT_EQ("AP({{struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>);}; complex v1 = undefined(type<complex>);})",
+		          toString(builder.normalize(parser::parse(manager, "{ using \"ext.complex\" in { complex a; } complex b;}"))));
+	}
+
+	TEST(NamedCoreExtensionParserTest, ParserMultipleUsing) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		//both named extensions should be expanded
+		EXPECT_EQ("AP({bool v0 = rec v0.{v0=fun('a v1) {return int.ne(enum.to.int(v1), 0);}}; struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);})",
+		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\",\"ext.enum\" in { bool a = enum_element_as_bool; complex b; }"))));
 	}
 
 
