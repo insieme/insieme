@@ -277,7 +277,7 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 
 void irt_cap_tag_block(void* pos, uint16 id) {
 	irt_cap_region* region = irt_g_cap_region_stack->region;
-	IRT_ASSERT(irt_cat_get_or_create_usage_info(region, pos)->tag == 0, IRT_ERR_INTERNAL, "Tag must only be assigned once!");
+	IRT_ASSERT(irt_cat_get_or_create_usage_info(region, pos)->tag < 0, IRT_ERR_INTERNAL, "Tag must only be assigned once!");
 	irt_cat_get_or_create_usage_info(region, pos)->tag = id;
 }
 

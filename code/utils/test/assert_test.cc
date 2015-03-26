@@ -38,7 +38,7 @@
 
 #include "insieme/utils/assert.h"
 
-TEST(Assert, RelWithAsserts) {
+TEST(Assert, RelWithAssertsDeathTest) {
 
 #ifdef INS_REL_WITH_DBG
 	ASSERT_DEATH(assert_gt(5,6), "failed!");
