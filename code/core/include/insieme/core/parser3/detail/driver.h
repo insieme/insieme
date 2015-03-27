@@ -42,39 +42,37 @@ public:
 
     void open_scope(const std::string& msg = ""){
         for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
-        std::cout << "open scope: " << msg << std::endl;
+//        std::cout << "open scope: " << msg << std::endl;
         scope_stack.push_back(ctx_map_type());
     }
     void close_scope(const std::string& msg = ""){
         scope_stack.pop_back();
         for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
-        std::cout << "close scope: " << msg <<  std::endl;
+//        std::cout << "close scope: " << msg <<  std::endl;
     }
 
-    void add_symb(const std::string& name, NodePtr node){
+    bool add_symb(const std::string& name, NodePtr node){
+//        std::cout <<"                             " <<  "add: " << name <<  " : "<< node << std::endl;
         if (scope_stack.empty()) {
             if (global_scope.find(name) != global_scope.end()) { 
-                std::cout << "overwrite: " << name << std::endl;
-                std::cout << "global_scope: " << global_scope << std::endl;
-                abort();
+                return false;
             }
             global_scope.insert({name, node});
         }
         else  {
             if (scope_stack.back().find(name) != scope_stack.back().end()) { 
-                std::cout << "overwrite: " << name << std::endl;
-                std::cout << "scope: " << scope_stack.back() << std::endl;
-                abort();
+                return false;
             }
             scope_stack.back().insert({name, node});
         }
+        return true;
     }
 
     NodePtr find(const std::string& name) const{
 
-        std::cout <<"                             " <<  "find: " << name << std::endl;
-        std::cout <<"                             " <<  global_scope << std::endl;
-        std::cout <<"                             " <<  scope_stack << std::endl;
+//        std::cout <<"                             " <<  "find: " << name << std::endl;
+//        std::cout <<"                                 " <<  global_scope << std::endl;
+//        std::cout <<"                                 " <<  scope_stack << std::endl;
 
         ctx_map_type::const_iterator mit;
         for (auto it = scope_stack.rbegin(); it != scope_stack.rend(); ++it){
@@ -125,8 +123,15 @@ public:
 
     ExpressionPtr getOperand(ExpressionPtr expr);
     ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
+
     TypePtr genGenericType(const location& l, const std::string& name, const TypeList& params, const IntParamList& iparamlist);
     TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
+
+    ExpressionPtr genLambda(const location& l, const VariableList& params, StatementPtr body);
+    ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
+    ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
+
+    void add_symb(const location& l, const std::string& name, NodePtr ptr);
 
     // Error handling.
     void error (const location& l, const std::string& m)const;

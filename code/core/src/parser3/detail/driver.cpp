@@ -4,6 +4,8 @@
 #include "insieme/core/parser3/detail/driver.h"
 #include "insieme/core/ir.h"
 
+#include "insieme/core/transform/manipulation.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
 
@@ -29,11 +31,9 @@ namespace detail{
         auto ssymb = inspire_parser::make_FULL_PROGRAM(glob_loc);
         auto* ptr = &ssymb;
 
-        std::cout << "parse program "<< std::endl;
         inspire_parser parser (*this, &ptr);
         int fail = parser.parse ();
         scanner->scan_end ();
-        std::cout << "parse program done: "<< fail <<std::endl;
         if (fail) {
             print_errors();
             return nullptr;
@@ -146,9 +146,9 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right){
         // Interpret operator
-        std::cout << op << std::endl;
-        std::cout << " " << left << " : " << left->getType() << std::endl;
-        std::cout << " " << right << " : " << right->getType() << std::endl;
+       // std::cout << op << std::endl;
+       // std::cout << " " << left << " : " << left->getType() << std::endl;
+       // std::cout << " " << right << " : " << right->getType() << std::endl;
 
         // right side must be always a value
         auto b = getOperand(right);
@@ -188,7 +188,7 @@ namespace detail{
         
         if (name == "ref"){
             if (iparamlist.size() != 0 || params.size() != 1) error(l, "malform ref type");
-            return builder.refType(params[0]);
+            else return builder.refType(params[0]);
         }
         if (name == "struct"){
         }
@@ -196,14 +196,11 @@ namespace detail{
         }
         if (name == "vector"){
             if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform vector type");
-            return builder.vectorType(params[0], iparamlist[0]);
+            else return builder.vectorType(params[0], iparamlist[0]);
         }
         if (name == "array"){
             if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform array type");
-            return builder.arrayType(params[0], iparamlist[0]);
-        }
-        if (name == "ref"){
-            if (!iparamlist.empty() || params.size() != 1) error(l, "malform ref type");
+            else return builder.arrayType(params[0], iparamlist[0]);
         }
         if (name == "int"){
             if (iparamlist.size() != 1) error(l, "wrong int size");
@@ -220,8 +217,63 @@ namespace detail{
     }
 
     TypePtr inspire_driver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, bool closure){
-        
-        return builder.functionType(params, retType, closure?FK_PLAIN:FK_CLOSURE);
+        return builder.functionType(params, retType, closure?FK_CLOSURE:FK_PLAIN);
+    }
+
+    ExpressionPtr inspire_driver::genLambda(const location& l, const VariableList& params, StatementPtr body){
+        TypeList paramTys;
+        for (const auto& var : params) paramTys.push_back(var.getType());
+
+        TypePtr retType;
+        std::set<TypePtr> allRetTypes;
+        visitDepthFirstOnce (body, [&allRetTypes] (const ReturnStmtPtr& ret){
+            allRetTypes.insert(ret.getReturnExpr().getType());
+        });
+        if (allRetTypes.size() > 1){
+            error(l, "the lambda returns more than one type");
+            return ExpressionPtr();
+        }
+        if (!allRetTypes.empty()) retType = *allRetTypes.begin();
+        else                   retType = builder.getLangBasic().getUnit();
+
+        auto funcType = genFuncType(l, paramTys, retType); 
+        return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
+    }
+
+    ExpressionPtr inspire_driver::genClosure(const location& l, const VariableList& params, StatementPtr stmt){
+
+        CallExprPtr call;
+        if (stmt.isa<CallExprPtr>()){
+            call = stmt.as<CallExprPtr>();
+        } 
+        else if( stmt->getNodeCategory() == NC_Expression){
+            call = builder.id(stmt.as<ExpressionPtr>());
+        }
+        else if (transform::isOutlineAble(stmt)) {
+            call = transform::outline(builder.getNodeManager(), stmt);  
+        }
+
+        // check whether call-conversion was successful
+        if (!call) {
+            error(l, "Not an outline-able context!");
+            return ExpressionPtr();
+        }
+
+        // build bind expression
+        return builder.bindExpr(params, call);
+    }
+
+    ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& func, ExpressionList params){
+
+        // TODO: fix the mesh with functions with variadic paramenters....
+    
+        return builder.callExpr(func, params);
+    }
+
+    void inspire_driver::add_symb(const location& l, const std::string& name, NodePtr ptr){
+        if (!scopes.add_symb(name, ptr)) {
+            error(l, format("symbol %s redefined", name));
+        }
     }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

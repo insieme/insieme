@@ -5,7 +5,7 @@ let channel = channel<int,1>;
 unit main() {
 	
 	// check creation
-	auto c = channel.create(type(int),param(1));
+	decl auto c = channel.create(type(int),param(1));
 	
 	// check assignment
 	channel c2 = c;
@@ -14,7 +14,7 @@ unit main() {
 	channel.send(c, 12);
 	
 	// try receiving stuff
-	auto v = channel.recv(c);
+	decl auto v = channel.recv(c);
 	
 	// check probe
 	if (channel.probe(c)) {};

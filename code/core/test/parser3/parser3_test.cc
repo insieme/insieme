@@ -139,8 +139,8 @@ namespace parser3{
 
     TEST(IR_Parser3, Program) {
 
-        EXPECT_TRUE(test_program("main (int<4> a, int<4> b) -> int<4> { 1+1; }"));
-        EXPECT_TRUE(test_program("let int = int<4>; main (int a, int b) -> int { 1+1; }"));
+        EXPECT_TRUE(test_program("int<4> main (int<4> a, int<4> b)  { 1+1; }"));
+        EXPECT_TRUE(test_program("let int = int<4>; int main (int a, int b) { 1+1; }"));
     }
 
 } // parser3

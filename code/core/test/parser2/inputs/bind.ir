@@ -1,6 +1,8 @@
 
 let int = int<4>;
 
+let sum = (int h, int j)->int { return h + j; };
+
 unit main() {
 	
 	// let's define some function sum
@@ -9,7 +11,7 @@ unit main() {
 	// define a variable
 	decl ref<int> a  = var(0);
 	
-	decl auto acc = lambda (int v)=>{ a = a + v; };
+	decl auto acc = lambda (int v)=> {a = a + v; };
 	
 	let doSomething = ((int)=>unit fun)->unit {
 		fun(4);
