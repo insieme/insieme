@@ -5,13 +5,13 @@ unit main() {
 
 	// an atomic increment
 	let atomicInc = (ref<'a> v)->unit {
-		atomic(v, ('a _)=>true, ('a x)=>x+('a)1);
+		atomic(v, lambda ('a _)=>true, lambda ('a x)=>x+CAST('a)1);
 	};
 
 	// create an int and increment
-	ref<int> x = var(0);
+	decl ref<int> x = var(0);
 	atomicInc(x);
 	
-	ref<int<8>> y = var(0l);
+	decl ref<int<8>> y = var(0l);
 	atomicInc(y);
 }

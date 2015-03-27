@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <string>
+
 #include "insieme/core/parser3/detail/driver.h"
 #include "insieme/core/ir.h"
 
@@ -87,6 +90,18 @@ namespace detail{
 
     ExpressionPtr inspire_driver::findSymbol(const location& l, const std::string& name)  const{
         auto x = scopes.find(name);
+
+        if(!x) {
+            try{ 
+            x = builder.getLangBasic().getBuiltIn(name);
+            }catch(...)
+            {
+                std::cout << "fail geting builtin " << name << std::endl;
+                abort();
+            }
+        }
+
+
         if (!x) {
             error(l, format("the symbol %s was not declared in this context", name));
             return nullptr; 
@@ -105,6 +120,16 @@ namespace detail{
         // keyword types (is this the right place?) 
         if (!x) {
             if (name == "unit") return builder.getLangBasic().getUnit();
+        }
+
+        if (!x) {
+            try{ 
+            x = builder.getLangBasic().getBuiltIn(name);
+            }catch(...)
+            {
+                std::cout << "fail geting builtin " << name << std::endl;
+                throw;
+            }
         }
 
         if (!x) {
@@ -157,18 +182,24 @@ namespace detail{
     TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, 
                                            const TypeList& params, const IntParamList& iparamlist){
         
+        if (name == "ref"){
+            if (iparamlist.size() != 0 || params.size() != 1) error(l, "malform ref type");
+            return builder.refType(params[0]);
+        }
         if (name == "struct"){
         }
         if (name == "union"){
         }
         if (name == "vector"){
-            if (iparamlist.size() != 1 || params.size() != 1) error(l, "mal-form vector type");
+            if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform vector type");
+            return builder.vectorType(params[0], iparamlist[0]);
         }
         if (name == "array"){
-            if (iparamlist.size() != 1 || params.size() != 1) error(l, "mal-form array type");
+            if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform array type");
+            return builder.arrayType(params[0], iparamlist[0]);
         }
         if (name == "ref"){
-            if (!iparamlist.empty() || params.size() != 1) error(l, "mal-form ref type");
+            if (!iparamlist.empty() || params.size() != 1) error(l, "malform ref type");
         }
         if (name == "int"){
             if (iparamlist.size() != 1) error(l, "wrong int size");
@@ -184,7 +215,7 @@ namespace detail{
         return nullptr;
     }
 
-    TypePtr inspire_driver::genFuncTypeType(const location& l, const TypeList& params, const TypePtr& retType, bool closure){
+    TypePtr inspire_driver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, bool closure){
         
         return builder.functionType(params, retType, closure?FK_PLAIN:FK_CLOSURE);
     }
@@ -210,7 +241,9 @@ namespace {
         auto end = s.find(delim);
         while (end != std::string::npos)
         {
-            res.push_back( s.substr(start, end - start) );
+            auto tmp = s.substr(start, end - start);
+            std::replace( tmp.begin(), tmp.end(), '\t', ' ');
+            res.push_back(tmp);
             start = end + delim.length();
             end = s.find(delim, start);
         }
@@ -229,9 +262,8 @@ namespace {
 
             for (; line< lineb; ++line); // PRINT FULL FILE:  //  out << buffer[line] << std::endl;
 
-            out << "ERROR: " << err.l << " " << err.msg;
+            out << "ERROR: " << err.l << " " << err.msg << std::endl;
 
-            out << buffer[line] << std::endl;
             for (; line< linee; ++line); out << buffer[line-1] << std::endl;
 
             int colb = err.l.begin.column;

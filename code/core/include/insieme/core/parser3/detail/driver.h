@@ -53,6 +53,7 @@ public:
     }
 
     NodePtr find(const std::string& name) const{
+
         ctx_map_type::const_iterator mit;
         for (auto it = scope_stack.rbegin(); it != scope_stack.rend(); ++it){
             if ((mit = it->find(name)) != it->end()) return mit->second;
@@ -103,7 +104,7 @@ public:
     ExpressionPtr getOperand(ExpressionPtr expr);
     ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
     TypePtr genGenericType(const location& l, const std::string& name, const TypeList& params, const IntParamList& iparamlist);
-    TypePtr genFuncTypeType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
+    TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
 
     // Error handling.
     void error (const location& l, const std::string& m)const;

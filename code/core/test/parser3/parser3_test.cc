@@ -25,6 +25,7 @@ namespace parser3{
         EXPECT_TRUE(test_type("someweirdname<>"));
         EXPECT_TRUE(test_type("vector<int<4>>"));
         EXPECT_TRUE(test_type("vector<int<4>, 4>"));
+        EXPECT_TRUE(test_type("vector<'a, 4>"));
         EXPECT_TRUE(test_type("struct { int<4> a; int<5> b}"));
         EXPECT_TRUE(test_type("struct name { int<4> a; int<5> b}"));
         EXPECT_TRUE(test_type("struct name :: int<4> : vector<int<4>, 45> { int<4> a; int<5> b}"));

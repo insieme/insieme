@@ -25,7 +25,8 @@ static insieme::core::parser3::detail::location loc;
 %option noyywrap nounput batch debug noinput
 
 
-id      [a-zA-Z_][a-zA-Z0-9_]*
+id       [a-zA-Z_][a-zA-Z0-9_]*
+type_var [\'][a-zA-Z0-9_]*
 
 stringlit \"(\\.|[^"])*\"
 charlit   \'(\\.|[^"])\'
@@ -109,12 +110,14 @@ paramvar #[a-zA-Z]
 ","      return inspire_parser::make_COMA(loc);
 ".."     return inspire_parser::make_RANGE(loc);
 "."      return inspire_parser::make_DOT(loc);
+"$"     return inspire_parser::make_ADDRESS(loc);
 
-".cast("  return inspire_parser::make_CAST(loc);
+"CAST("  return inspire_parser::make_CAST(loc);
 ".as("    return inspire_parser::make_PARENT(loc);
 "#inf"    return inspire_parser::make_INFINITE(loc);
 "let"     return inspire_parser::make_LET(loc);
 "auto"    return inspire_parser::make_AUTO(loc);
+"lambda"  return inspire_parser::make_LAMBDA(loc);
 
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);
@@ -127,6 +130,12 @@ paramvar #[a-zA-Z]
 "switch"  return inspire_parser::make_SWITCH(loc);
 "case"  return inspire_parser::make_CASE(loc);
 "default"  return inspire_parser::make_DEFAULT(loc);
+
+"var"     return inspire_parser::make_VAR(loc);
+"new"     return inspire_parser::make_NEW(loc);
+"loc"     return inspire_parser::make_LOC(loc);
+"delete"     return inspire_parser::make_DELETE(loc);
+"undefined"     return inspire_parser::make_UNDEFINED(loc);
 
 "true"    return inspire_parser::make_BOOL(yytext, loc);
 "false"   return inspire_parser::make_BOOL(yytext, loc);
@@ -167,6 +176,7 @@ paramvar #[a-zA-Z]
 }
 
 {id}       return inspire_parser::make_IDENTIFIER(yytext, loc);
+{type_var}       return inspire_parser::make_TYPE_VAR(yytext+1, loc);
 .          driver.error (loc, "invalid character");
 <<EOF>>    return inspire_parser::make_END(loc);
 
