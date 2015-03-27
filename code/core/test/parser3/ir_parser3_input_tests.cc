@@ -69,6 +69,7 @@ namespace parser3 {
 	TEST_P(IRParserTest, ReadFileTest) {
 
 		string file = ROOT_DIR + string(GetParam());
+        std::cout << " path:  " << file << std::endl;
 
 		SCOPED_TRACE(file);
 

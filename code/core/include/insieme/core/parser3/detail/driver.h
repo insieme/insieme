@@ -40,19 +40,41 @@ class DeclarationContext{
     ctx_map_type global_scope;
 public:
 
-    void open_scope(){
+    void open_scope(const std::string& msg = ""){
+        for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+        std::cout << "open scope: " << msg << std::endl;
         scope_stack.push_back(ctx_map_type());
     }
-    void close_scope(){
+    void close_scope(const std::string& msg = ""){
         scope_stack.pop_back();
+        for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+        std::cout << "close scope: " << msg <<  std::endl;
     }
 
     void add_symb(const std::string& name, NodePtr node){
-        if (scope_stack.empty()) global_scope.insert({name, node});
-        else  scope_stack.back().insert({name, node});
+        if (scope_stack.empty()) {
+            if (global_scope.find(name) != global_scope.end()) { 
+                std::cout << "overwrite: " << name << std::endl;
+                std::cout << "global_scope: " << global_scope << std::endl;
+                abort();
+            }
+            global_scope.insert({name, node});
+        }
+        else  {
+            if (scope_stack.back().find(name) != scope_stack.back().end()) { 
+                std::cout << "overwrite: " << name << std::endl;
+                std::cout << "scope: " << scope_stack.back() << std::endl;
+                abort();
+            }
+            scope_stack.back().insert({name, node});
+        }
     }
 
     NodePtr find(const std::string& name) const{
+
+        std::cout <<"                             " <<  "find: " << name << std::endl;
+        std::cout <<"                             " <<  global_scope << std::endl;
+        std::cout <<"                             " <<  scope_stack << std::endl;
 
         ctx_map_type::const_iterator mit;
         for (auto it = scope_stack.rbegin(); it != scope_stack.rend(); ++it){

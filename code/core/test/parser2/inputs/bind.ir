@@ -7,9 +7,9 @@ unit main() {
 	let sum = (int a, int b)->int { return a + b; };
 	
 	// define a variable
-	ref<int> a  = var(0);
+	decl ref<int> a  = var(0);
 	
-	auto acc = (int v)=>{ a = a + v; };
+	decl auto acc = lambda (int v)=>{ a = a + v; };
 	
 	let doSomething = ((int)=>unit fun)->unit {
 		fun(4);

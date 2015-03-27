@@ -65,6 +65,10 @@ namespace parser3{
         EXPECT_TRUE(test_expression("((1.0) + 4.0)"));
 
         EXPECT_FALSE(test_expression("x"));
+
+        EXPECT_TRUE(test_expression("lambda ('a _) -> true"));
+        EXPECT_TRUE(test_expression("lambda ('a x) -> x+CAST('a) 3"));
+        EXPECT_TRUE(test_expression("lambda ('a x) => x+CAST('a) 3"));
     }
 
     bool test_statement(const std::string& x){

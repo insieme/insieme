@@ -93,14 +93,11 @@ namespace detail{
 
         if(!x) {
             try{ 
-            x = builder.getLangBasic().getBuiltIn(name);
+               x = builder.getLangBasic().getBuiltIn(name);
             }catch(...)
             {
-                std::cout << "fail geting builtin " << name << std::endl;
-                abort();
             }
         }
-
 
         if (!x) {
             error(l, format("the symbol %s was not declared in this context", name));
@@ -127,8 +124,6 @@ namespace detail{
             x = builder.getLangBasic().getBuiltIn(name);
             }catch(...)
             {
-                std::cout << "fail geting builtin " << name << std::endl;
-                throw;
             }
         }
 
@@ -151,11 +146,20 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right){
         // Interpret operator
+        std::cout << op << std::endl;
+        std::cout << " " << left << " : " << left->getType() << std::endl;
+        std::cout << " " << right << " : " << right->getType() << std::endl;
 
-        auto a = getOperand(left);
+        // right side must be always a value
         auto b = getOperand(right);
 
         // assign
+        if (op == "="){
+            return builder.assign(left, b);
+        }
+
+        // if not assign, then left operand must be a value as well
+        auto a = getOperand(left);
 
         // bitwise 
         if (op == "&") return builder.bitwiseAnd(a,b);
@@ -239,6 +243,9 @@ namespace {
 
         auto start = 0U;
         auto end = s.find(delim);
+        if (end == std::string::npos) {
+            res.push_back(s);
+        }
         while (end != std::string::npos)
         {
             auto tmp = s.substr(start, end - start);
@@ -247,6 +254,7 @@ namespace {
             start = end + delim.length();
             end = s.find(delim, start);
         }
+        assert(res.size() > 0);
         return res;
     }
 }
@@ -260,10 +268,8 @@ namespace {
             int lineb = err.l.begin.line;
             int linee = err.l.end.line;
 
-            for (; line< lineb; ++line); // PRINT FULL FILE:  //  out << buffer[line] << std::endl;
-
             out << "ERROR: " << err.l << " " << err.msg << std::endl;
-
+            for (; line< lineb; ++line); 
             for (; line< linee; ++line); out << buffer[line-1] << std::endl;
 
             int colb = err.l.begin.column;

@@ -189,7 +189,7 @@
 %type <std::vector<SwitchCasePtr> > switch_case_list
 %type <std::vector<CatchClausePtr> > catch_clause_list
 
-%type <ExpressionPtr> expression  lambda_expression markable_expression
+%type <ExpressionPtr> expression  lambda_expression markable_expression lambda_expression_aux
 %type <ExpressionList> expression_list
 
 %type <std::pair<TypeList, IntParamList> > type_param_list
@@ -238,7 +238,7 @@ params_names : params_names_collector {
                         std::swap($$.types, $1.types);
                     }
                     else{
-                        driver.scopes.open_scope();
+                        driver.scopes.open_scope("params_names");
                         assert($$.params.empty());
                         for (unsigned i=0; i < $1.types.size(); ++i){
                             auto var = driver.builder.variable($1.types[i]);
@@ -258,7 +258,7 @@ func_or_type : "(" ")" "->" type ";" {
                        $$ = driver.genFuncType(@$, TypeList(), $4); 
                 }
              | "(" ")" "->" type "{" compound_stmt {
-                    driver.scopes.close_scope();
+                    driver.scopes.close_scope("func_or _type");
                     FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $4); 
                     CompoundStmtPtr body = driver.builder.compoundStmt($6);
 	    			$$ = driver.builder.lambdaExpr(funcType, VariableList(), body);
@@ -267,7 +267,7 @@ func_or_type : "(" ")" "->" type ";" {
                     $$ = driver.genFuncType(@$, $2.types , $5); 
                 }
              | "(" params_names ")" "->" type "{" compound_stmt {
-                    driver.scopes.close_scope();
+                    driver.scopes.close_scope("func_or _type2");
                     FunctionTypePtr funcType = driver.builder.functionType($2.types, $5); 
                     CompoundStmtPtr body = driver.builder.compoundStmt($7);
 	    			$$ = driver.builder.lambdaExpr(funcType, $2.params, body);
@@ -284,7 +284,7 @@ declarations : /* empty */ { }
              ;
 
 program : type "identifier" "(" variable_list ")" "{" compound_stmt  {
-                            driver.scopes.close_scope();
+                            driver.scopes.close_scope("program");
                             TypeList paramTys;
                             for (const auto& var : $4) paramTys.push_back(var.getType());
                             FunctionTypePtr funcType = driver.builder.functionType(paramTys, $1); 
@@ -292,17 +292,16 @@ program : type "identifier" "(" variable_list ")" "{" compound_stmt  {
 						    $$ = driver.builder.createProgram(toVector(main));
                         }
         | type "identifier" "(" ")" "{" compound_stmt {
-                            driver.scopes.close_scope();
+                            driver.scopes.close_scope("program 2");
                             FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $1); 
 						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, VariableList(), driver.builder.compoundStmt($6));
 						    $$ = driver.builder.createProgram(toVector(main));
                         }
         ;
 
-variable_list : var_decl { $$.push_back($1); }
+variable_list : var_decl {  $$.push_back($1); }
               | var_decl "," variable_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
               ;
-
 
 /* ~~~~~~~~~~~~~~~~~~~  TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -356,7 +355,7 @@ type_no_func : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType
              | "struct" tag_type              
                         { $$ = driver.builder.structType(driver.builder.stringValue(""), $2); }
              | "union" tag_type   { $$ = driver.builder.unionType($2); }
-             | "type_var" { $$ = driver.builder.typeVariable($1);  driver.scopes.add_symb($1, $$); }
+             | "type_var" { $$ = driver.builder.typeVariable($1);  }
              ;
 
 type : type_no_func { $$ = $1; }
@@ -370,7 +369,7 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
 
                 /* compound statement */ 
           | "{" "}" { $$ = driver.builder.compoundStmt(StatementList()); }
-          | "{" compound_stmt { driver.scopes.close_scope(); $$ = driver.builder.compoundStmt($2); }
+          | "{" compound_stmt { driver.scopes.close_scope("compound end"); $$ = driver.builder.compoundStmt($2); }
 
                 /* variable declarations */
           | "decl" decl_stmt ";" { $$ = $2;  }
@@ -383,7 +382,7 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
           | "while" "(" expression ")" statement { $$ = driver.builder.whileStmt($3, $5); }
           | "for" for_decl statement {
                 $$ = driver.builder.forStmt($2.it, $2.low, $2.up, $2.step, $3);
-                driver.scopes.close_scope();
+                driver.scopes.close_scope("for end");
             }
                 /* switch */
           | "switch" "(" expression ")" "{" switch_case_list "}" {
@@ -397,6 +396,7 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
                 if(!$2.isa<CompoundStmtPtr>()) { driver.error(@2, "try body must be a compound"); YYABORT; }
 			    $$ = driver.builder.tryCatchStmt($2.as<CompoundStmtPtr>(), $4);
             }   
+          | "return" expression ";" { $$ = driver.builder.returnStmt($2); }
           ;
 
 catch_clause_list : 
@@ -434,7 +434,7 @@ var_decl : type "identifier" {
 
 
 for_decl : "(" type "identifier" expression ".." expression ")"  {
-                driver.scopes.open_scope();
+                driver.scopes.open_scope("forDecl");
 		        $$.it = driver.builder.variable($2);
 				annotations::attachName( $$.it, $3);
                 driver.scopes.add_symb("$3", $$.it);
@@ -443,7 +443,7 @@ for_decl : "(" type "identifier" expression ".." expression ")"  {
                 $$.step = driver.builder.literal($2, "1");
            }
          | "(" type "identifier" expression ".." expression ":" expression ")" {
-                driver.scopes.open_scope();
+                driver.scopes.open_scope("forDecl_step");
 		        $$.it = driver.builder.variable($2);
 				annotations::attachName( $$.it, $3);
                 driver.scopes.add_symb($3, $$.it);
@@ -466,7 +466,7 @@ switch_case :  "case" expression ":" statement {
 
 compound_stmt : declarations statement_list { $$ = $2; }
 
-statement_list : statement "}" { driver.scopes.open_scope(); $$.push_back($1); }
+statement_list : statement "}" { driver.scopes.open_scope("stmt list"); $$.push_back($1); }
                | statement statement_list { $2.insert($2.begin(),$1); std::swap($$, $2); }
 
 
@@ -522,38 +522,37 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | "stringlit"  { $$ = driver.builder.stringLit($1); }
            ;
 
-open_scope : { driver.scopes.open_scope(); }
 
-lambda_expression : open_scope "(" ")" func_tok expression {    
-                            driver.scopes.close_scope();
-                            auto funcType = driver.genFuncType(@$, TypeList(), $5.getType(), $4); 
-                            CompoundStmtPtr body = driver.builder.compoundStmt(driver.builder.returnStmt($5));
-                            $$ = driver.builder.lambdaExpr(funcType.as<FunctionTypePtr>(), VariableList(), body);
-                    }
-                  | open_scope "(" ")" func_tok "{" compound_stmt {
-                            driver.scopes.close_scope();
-                            INSPIRE_NOT_IMPLEMENTED(@$);
-                            // this needs a little of love: get the type from the returns in the compound
-                    }
-                  | open_scope "(" variable_list ")" func_tok expression {
-                            driver.scopes.close_scope();
-                            TypeList paramTys;
-                            for (const auto& var : $3) paramTys.push_back(var.getType());
-                            auto funcType = driver.genFuncType(@$, paramTys, $6.getType(), $5); 
-                            CompoundStmtPtr body = driver.builder.compoundStmt(driver.builder.returnStmt($6));
-                            $$ = driver.builder.lambdaExpr(funcType.as<FunctionTypePtr>(), $3, body);
-                    }
-                  | open_scope "(" variable_list ")" func_tok  "{" compound_stmt  {
-                            driver.scopes.close_scope();
-                            INSPIRE_NOT_IMPLEMENTED(@$);
-                            // this needs a little of love: get the type from the returns in the compound
-                    }
-                  ;
+lambda_expression_aux : "(" ")" func_tok expression {    
+                               driver.scopes.close_scope("labmda1");
+                                auto funcType = driver.genFuncType(@$, TypeList(), $4.getType(), $3); 
+                                CompoundStmtPtr body = driver.builder.compoundStmt(driver.builder.returnStmt($4));
+                                $$ = driver.builder.lambdaExpr(funcType.as<FunctionTypePtr>(), VariableList(), body);
+                        }
+                      | "(" ")" func_tok "{" compound_stmt {
+                                driver.scopes.close_scope("labmda2");
+                                INSPIRE_NOT_IMPLEMENTED(@$);
+                                // this needs a little of love: get the type from the returns in the compound
+                        }
+                      | "(" variable_list ")" func_tok expression {
+                                driver.scopes.close_scope("labmda3");
+                                TypeList paramTys;
+                                for (const auto& var : $2) paramTys.push_back(var.getType());
+                                auto funcType = driver.genFuncType(@$, paramTys, $5.getType(), $4); 
+                                CompoundStmtPtr body = driver.builder.compoundStmt(driver.builder.returnStmt($5));
+                                $$ = driver.builder.lambdaExpr(funcType.as<FunctionTypePtr>(), $2, body);
+                        }
+                      | "(" variable_list ")" func_tok  "{" compound_stmt  {
+                                driver.scopes.close_scope("labmda4");
+                                INSPIRE_NOT_IMPLEMENTED(@$);
+                                // this needs a little of love: get the type from the returns in the compound
+                        }
+                      ;
 
-                //    driver.scopes.close_scope();
-                //    FunctionTypePtr funcType = driver.builder.functionType($2.types, $5); 
-                //    CompoundStmtPtr body = driver.builder.compoundStmt($7);
-	    		//	$$ = driver.builder.lambdaExpr(funcType, VariableList(), body);
+open_scope : /* empty */  { driver.scopes.open_scope("for_lambda_expr");} 
+
+lambda_expression : open_scope lambda_expression_aux { $$ = $2; }
+
 %nonassoc "=" ;
 %nonassoc "::" ;
 %nonassoc ")";
