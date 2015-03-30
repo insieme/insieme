@@ -1,11 +1,33 @@
 cmake_minimum_required(VERSION 2.8)
 
-#Target directory for the 3rd-party libraries
-set(insieme_lib ~/libs)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../code/cmake/")
 
+#figure out how many cores we have to run jobs on
 include(ProcessorCount)
 ProcessorCount(SLOTS)
 
+#Target directory for the 3rd-party libraries
+set(insieme_lib "~/libs/")
+get_filename_component(insieme_lib ${insieme_lib} ABSOLUTE)
+
+# set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var 
+if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
+	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home" )
+elseif ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
+	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+endif()
+
+if(NOT THIRD_PARTY_LIBS_HOME) 
+	set(THIRD_PARTY_LIBS_HOME ${insieme_lib})
+	message(WARNING "\nSetting THIRD_PARTY_LIBS_HOME to ${THIRD_PARTY_LIBS_HOME} - target destination for the libraries to install\nSet env{THIRD_PARTY_LIBS_HOME} to overwrite default")
+endif()
+
+#include library versions before find_package
+include(default_library_configuration)
+#is used in subsequent ${lib}_external_project.cmake files
+include(insieme_find_package)
+
+# TODO figure out which version we need !!!
 #The version of the libraries to be installed
 set(gmp_version 6.0.0)
 set(gmp_subversion a)
@@ -134,3 +156,11 @@ ExternalProject_Add(gcc_project
 
 add_custom_target(gcc)
 add_dependencies(gcc gcc_project)
+
+#installs boost 
+#target: boost
+include(boost_external_project.cmake)
+
+# installs llvm+clang
+#target: llvm
+include(llvm_external_project.cmake)
