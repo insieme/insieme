@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -222,7 +222,7 @@ namespace c_ast {
 
 	// --- create a pair of parentheses -------------------------
 
-	inline ExpressionPtr parenthese(ExpressionPtr expr) {
+	inline ExpressionPtr parentheses(ExpressionPtr expr) {
 		assert_true(expr && expr->getManager()) << "There should be a manager!";
 		switch(expr->getType()) {
 		case NT_Parentheses:
@@ -236,18 +236,18 @@ namespace c_ast {
 		return expr->getManager()->create<Parentheses>(expr);
 	}
 
-	inline NodePtr parenthese(NodePtr node) {
+	inline NodePtr parentheses(NodePtr node) {
 		// only expressions need to be encapsulated using parentheses
 		if (ExpressionPtr expr = dynamic_pointer_cast<Expression>(node)) {
-			return parenthese(expr);
+			return parentheses(expr);
 		}
 		// no parentheses required for the rest
 		return node;
 	}
 
-	inline NodePtr removeParenthese(NodePtr node) {
+	inline NodePtr removeParentheses(NodePtr node) {
 		if (node->getType() == NT_Parentheses) {
-			return removeParenthese(static_pointer_cast<Parentheses>(node)->expression);
+			return removeParentheses(static_pointer_cast<Parentheses>(node)->expression);
 		}
 		return node;
 	}
@@ -264,7 +264,7 @@ namespace c_ast {
 	}
 
 	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>()) {
-		if (getPriority(obj) < 15) obj = parenthese(obj);
+		if (getPriority(obj) < 15) obj = parentheses(obj);
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
 	}
 
@@ -273,7 +273,7 @@ namespace c_ast {
 	}
 
 	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
-		if (getPriority(obj) < 15) obj = parenthese(obj);
+		if (getPriority(obj) < 15) obj = parentheses(obj);
 		return classType->getManager()->create<c_ast::DestructorCall>(classType, obj, isVirtual);
 	}
 
@@ -281,13 +281,13 @@ namespace c_ast {
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
 		assert_true(a && a->getManager()) << "There should be a manager!";
-		a = removeParenthese(a);
-		a = (getPriority(a) < getPriority(op)) ? parenthese(a) : a;
+		a = removeParentheses(a);
+		a = (getPriority(a) < getPriority(op)) ? parentheses(a) : a;
 		return a->getManager()->create<UnaryOperation>(op, a);
 	}
 
 	inline bool isUnaryOp(NodePtr candidate, UnaryOperation::UnaryOp op) {
-		NodePtr cur = removeParenthese(candidate);
+		NodePtr cur = removeParentheses(candidate);
 		if (cur->getType() == NT_UnaryOperation) {
 			return static_pointer_cast<UnaryOperation>(cur)->operation == op;
 		}
@@ -300,7 +300,7 @@ namespace c_ast {
 
 	inline ExpressionPtr deref(ExpressionPtr expr) {
 		MAKE_PRETTY(
-			NodePtr sub = removeParenthese(expr);
+			NodePtr sub = removeParentheses(expr);
 			if (isUnaryOp(sub, UnaryOperation::Reference)) {
 				return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
 			}
@@ -314,7 +314,7 @@ namespace c_ast {
 
 	inline ExpressionPtr ref(ExpressionPtr expr) {
 		MAKE_PRETTY(
-			NodePtr sub = removeParenthese(expr);
+			NodePtr sub = removeParentheses(expr);
 			if (isUnaryOp(sub, UnaryOperation::Indirection)) {
 				return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
 			}
@@ -384,15 +384,15 @@ namespace c_ast {
 		assert_true(a && b && a->getManager() && a->getManager() == b->getManager()) << "Manager should match!";
 		unsigned priority = getPriority(op);
 		// comparison can be less than, since all binary operators are left-associative
-		a = removeParenthese(a);
-		b = removeParenthese(b);
-		a = (getPriority(a) < priority) ? parenthese(a) : a;
-		b = (getPriority(b) <= priority && op != BinaryOperation::Subscript) ? parenthese(b) : b;
+		a = removeParentheses(a);
+		b = removeParentheses(b);
+		a = (getPriority(a) < priority) ? parentheses(a) : a;
+		b = (getPriority(b) <= priority && op != BinaryOperation::Subscript) ? parentheses(b) : b;
 		return a->getManager()->create<BinaryOperation>(op, a, b);
 	}
 
 	inline bool isBinaryOp(NodePtr candidate, BinaryOperation::BinaryOp op) {
-		NodePtr cur = removeParenthese(candidate);
+		NodePtr cur = removeParentheses(candidate);
 		if (cur->getType() == NT_BinaryOperation) {
 			return static_pointer_cast<BinaryOperation>(cur)->operation == op;
 		}
@@ -517,7 +517,7 @@ namespace c_ast {
 
 	inline ExpressionPtr subscript(ExpressionPtr expr, NodePtr subscript) {
 		MAKE_PRETTY(
-			subscript = removeParenthese(subscript);
+			subscript = removeParentheses(subscript);
 			if (isBinaryOp(subscript, BinaryOperation::Cast)) {
 				subscript = static_pointer_cast<BinaryOperation>(subscript)->operandB;
 			}
@@ -569,9 +569,9 @@ namespace c_ast {
 
 	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, ExpressionPtr a, ExpressionPtr b, ExpressionPtr c) {
 		assert_true(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager()) << "Manager should match!";
-		a = (getPriority(a) <= getPriority(op))? parenthese(a) : a;
-		b = (getPriority(b) <= getPriority(op))? parenthese(b) : b;
-		c = (getPriority(c) <= getPriority(op))? parenthese(c) : c;
+		a = (getPriority(a) <= getPriority(op))? parentheses(a) : a;
+		b = (getPriority(b) <= getPriority(op))? parentheses(b) : b;
+		c = (getPriority(c) <= getPriority(op))? parentheses(c) : c;
 		return a->getManager()->create<TernaryOperation>(op, a, b, c);
 	}
 
