@@ -54,20 +54,20 @@ public:
     }
 
     bool add_symb(const std::string& name, NodePtr node){
-        std::cout <<"                             " <<  "add: " << name <<  " : "<< node << std::endl;
+//        std::cout <<"                             " <<  "add: " << name <<  " : "<< node << std::endl;
         if (scope_stack.empty()) {
             if (global_scope.find(name) != global_scope.end()) { 
                 return false;
             }
             global_scope[name] =  node;
-            std::cout <<"                             " <<  name << " is "  <<  global_scope[name] << std::endl;
+//            std::cout <<"                             " <<  name << " is "  <<  global_scope[name] << std::endl;
         }
         else  {
             if (scope_stack.back().find(name) != scope_stack.back().end()) { 
                 return false;
             }
             scope_stack.back()[name] =  node;
-            std::cout <<"                             " <<  name << " is "  <<  scope_stack.back()[name] << std::endl;
+//            std::cout <<"                             " <<  name << " is "  <<  scope_stack.back()[name] << std::endl;
         }
         return true;
     }

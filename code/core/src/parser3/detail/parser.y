@@ -239,61 +239,13 @@ params_names_collector : type "identifier"      { $$.types.insert($$.types.begin
                                                 }
              ;
 
-params_names : params_names_collector {
+let_defs : "lambda" lambda_expression ";"  {}
+         | "lambda" lambda_expression "," let_decls {}
+         | type ";"  {}
+         | type "," let_defs  {}
+         ;
 
-                    if($1.names.size() != $1.types.size()) {
-                        // typeList
-                        if(!$1.names.empty()) { driver.error(@1, "is this a list of types or variables?"); YYABORT;  }
-                        std::swap($$.types, $1.types);
-                    }
-                    else{
-                        assert($$.params.empty());
-                        for (unsigned i=0; i < $1.types.size(); ++i){
-                            auto var = driver.builder.variable($1.types[i]);
-                            annotations::attachName(var, $1.names[i]);
-                            driver.add_symb(@1, $1.names[i], var);
-
-                            $$.params.push_back(var);
-                        }
-                        std::swap ($$.types, $1.types);
-                    }
-                        
-                } 
-             ;
-
-prototype : "(" ")" "->" type  {  $$.returnType = $4; } 
-          | "(" params_names ")" "->" type {  std::swap($$.params, $2.params); std::swap($$.types, $2.types); $$.returnType = $5;  }
-          ;
-    
-
-func_or_type : prototype ";" {
-                }
-             | prototype "{" "}" ";" {
-                    FunctionTypePtr funcType = driver.builder.functionType($1.types, $1.returnType); 
-                    CompoundStmtPtr body = driver.builder.compoundStmt();
-	    			
-                    driver.close_unfinish_symbol(@1, driver.builder.lambdaExpr(funcType, $1.params, body)); 
-                }
-             | prototype "{" compound_stmt "}" ";"{
-                    FunctionTypePtr funcType = driver.builder.functionType($1.types, $1.returnType); 
-                }  
-             | type_no_func ";" {  
-                    driver.close_unfinish_symbol(@1, $1); 
-                }
-             | prototype "," func_or_type { 
-                }
-             | prototype "{" "}" "," func_or_type{
-                }
-             | prototype "{" compound_stmt "}" {
-                } "," func_or_type
-             | type_no_func { 
-                    driver.close_unfinish_symbol(@1, $1); 
-                } "," func_or_type 
-             ;
-
-let_def : func_or_type;
-
-let_decl : "identifier" { driver.add_unfinish_symbol(@1, $1); } "=" let_def  { driver.all_symb_defined(@$);}
+let_decl : "identifier" { driver.add_unfinish_symbol(@1, $1); } "=" let_defs  { driver.all_symb_defined(@$);}
          | "identifier" { driver.add_unfinish_symbol(@1, $1); } "," let_decl ;
 
 let_chain : let_decl  { } 
@@ -366,7 +318,7 @@ member_list :  /* empty */  { }
 tag_type : "{" member_list "}"  { std::swap($$, $2); }
          ;
 
-type_no_func : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType(@$, $1, $3.first, $3.second);  }
+type : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType(@$, $1, $3.first, $3.second);  }
              | "identifier" "<" ">" {                 $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList());  }
              | "identifier" {                         
                                                       $$ = driver.findType(@1, $1);
@@ -381,11 +333,8 @@ type_no_func : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType
                         { $$ = driver.builder.structType(driver.builder.stringValue(""), $2); }
              | "union" tag_type   { $$ = driver.builder.unionType($2); }
              | "type_var" { $$ = driver.builder.typeVariable($1);  }
+             | "(" type_list ")" func_tok type { $$ = driver.genFuncType(@$, $2, $5, $4); };
              ;
-
-type : type_no_func { $$ = $1; }
-     | "(" type_list ")" func_tok type { $$ = driver.genFuncType(@$, $2, $5, $4); }
-     ;
 
 /* ~~~~~~~~~~~~~~~~~~~  STATEMENTS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
