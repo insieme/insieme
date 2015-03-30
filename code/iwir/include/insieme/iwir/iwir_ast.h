@@ -42,6 +42,7 @@
 #include <memory>
 #include <utility>
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace iwir {
