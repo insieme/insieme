@@ -115,7 +115,7 @@ namespace cba {
 	template<typename Context>
 	Channel<Context> getChannelFromConstructor(const core::ExpressionInstance& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
-		assert(isChannelConstructor(ctor));
+		assert_true(isChannelConstructor(ctor));
 
 		// for globals the call context and thread context is not relevant
 		if (auto lit = ctor.isa<core::LiteralPtr>()) {

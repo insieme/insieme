@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -178,7 +178,7 @@ namespace core {
 				  nodeCategory(nodeCategory), manager(0), equalityID(0) {
 
 				// ensure that there no non-value node is of the value type
-				assert(nodeCategory != NC_Value && "Must not be a value node!");
+				assert_ne(nodeCategory, NC_Value) << "Must not be a value node!";
 			}
 
 			/**
@@ -275,7 +275,7 @@ namespace core {
 			 * @return a pointer to the requested child
 			 */
 			const NodePtr& getChildInternal(std::size_t index) const {
-				assert((index < children.size()) && "Index out of bound!");
+				assert_lt(index, children.size()) << "Index out of bound!";
 				return children[index];
 			}
 
@@ -295,7 +295,7 @@ namespace core {
 			 * @return a reference to the manager maintaining this node
 			 */
 			inline NodeManager& getNodeManagerInternal() const {
-				assert(manager && "NodeManager must not be null - unmanaged node detected!");
+				assert_true(manager) << "NodeManager must not be null - unmanaged node detected!";
 				return *manager;
 			}
 
@@ -392,7 +392,7 @@ namespace core {
 						other.equalityID = equalityID;
 					} else {
 						// both are != 0
-						assert(equalityID != 0 && other.equalityID != 0 && "Equality IDs should be != 0");
+						assert_true(equalityID != 0 && other.equalityID != 0) << "Equality IDs should be != 0";
 
 						// pick smaller ID for both
 						if (equalityID < other.equalityID) {
@@ -441,7 +441,7 @@ namespace core {
 			 * @return a reference to the internally maintained value
 			 */
 			const NodeValue& getNodeValue() const {
-				assert(isValueInternal() && "Node does not represent a value!");
+				assert_true(isValueInternal()) << "Node does not represent a value!";
 				return value;
 			}
 
@@ -671,6 +671,8 @@ namespace core {
 			return getLangExtension<E>();
 		}
 
+		const lang::Extension& getLangExtensionByName(const string& name);
+
 		/**
 		 * Obtains a fresh ID to be used within a node.
 		 */
@@ -748,7 +750,7 @@ namespace core {
 		 */
 		FixedSizeNodeHelper(const NodeList& children) {
 			// verify the proper composition of the child node list
-			assert((checkChildList(children) || printChildListTypes(children)) && "Invalid composition of Child-Nodes discovered!");
+			assert_true(checkChildList(children) || printChildListTypes(children)) << "Invalid composition of Child-Nodes discovered!";
 		}
 
 		/**
@@ -859,7 +861,7 @@ namespace core {
 			) {
 
 			// verify the proper composition of the child node list
-			assert((checkChildList(children) || printChildListTypes(children)) && "Invalid composition of Child-Nodes discovered!");
+			assert_true(checkChildList(children) || printChildListTypes(children)) << "Invalid composition of Child-Nodes discovered!";
 		}
 
 		/**
@@ -1048,7 +1050,7 @@ namespace core {
 		 * Obtains a reference to the first element within this list.
 		 */
 		const Ptr<const ElementType>& front() const {
-			assert(size() > 0u);
+			assert_gt(size(), 0u);
 			return *begin();
 		}
 
@@ -1056,7 +1058,7 @@ namespace core {
 		 * Obtains a reference to the last element within this list.
 		 */
 		const Ptr<const ElementType>& back() const {
-			assert(size() > 0u);
+			assert_gt(size(), 0u);
 			return *(end() - 1);
 		}
 

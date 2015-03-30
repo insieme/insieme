@@ -134,7 +134,7 @@ namespace extensions {
 
 					//we expect globals to be literals -- get the "standard IR"which we need to change
 					core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
-					assert(globalLit);
+					assert_true(globalLit);
 					VLOG(2) << globalLit;
 
 					auto globals = convFact.getIRTranslationUnit().getGlobals();

@@ -554,11 +554,6 @@ int main(int argc, char** argv) {
         compiler.addFlag("-std=c++0x");
     }
     
-    std::cout << "Compiling binary ...\n";
-
-	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
-
-	// done
-	return (success)?0:1;
+	return !cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 }
 

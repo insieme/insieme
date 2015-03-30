@@ -233,10 +233,10 @@ namespace cmd {
 				res.job.setStandard(frontend::ConversionSetup::Cxx03);
 			} else if(res.settings.standard == "c++0x") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
-				assert(res.job.isCxx());
+				assert_true(res.job.isCxx());
 			} else if(res.settings.standard == "c++11") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
-				assert(res.job.isCxx());
+				assert_true(res.job.isCxx());
 			} else {
 				std::cerr << "Error: Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
 				res.valid = false;

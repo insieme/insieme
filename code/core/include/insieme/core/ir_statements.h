@@ -1022,7 +1022,7 @@ namespace core {
 		 * @return the requested statement instance managed by the given manager
 		 */
 		static TryCatchStmtPtr get(NodeManager& manager, const CompoundStmtPtr& body, const vector<CatchClausePtr>& catchClauses) {
-			assert(!catchClauses.empty());
+			assert_false(catchClauses.empty());
 			NodeList children;
 			children.push_back(body);
 			children.insert(children.end(), catchClauses.begin(), catchClauses.end());

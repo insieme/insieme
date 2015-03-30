@@ -105,7 +105,7 @@ public:
 		// If the mapping is already in the map, we make sure that we don't rename a mapping with a
 		// new one invalidating the one already in the map
 		if ( fit != tupleMap.end() ) {
-			assert( mapping.second == fit->first );
+			assert_true(mapping.second == fit->first);
 			return fit;
 		}
 		return tupleMap.insert( std::make_pair(mapping.second, mapping.first) ).first;
@@ -114,7 +114,7 @@ public:
 	template <class T>
 	inline const T& getAs(const std::string& name) const {
 		auto&& fit = tupleMap.find(name);
-		assert( fit != tupleMap.end() && "Name not found" );
+		assert_true(fit != tupleMap.end()) << "Name not found";
 		return boost::get<T>(fit->second);
 	}
 

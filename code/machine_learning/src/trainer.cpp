@@ -104,7 +104,7 @@ const std::string getName(const Optimizer* optimizer) {
 	if(dynamic_cast<const SVM_Optimizer*>(optimizer) != 0)
 		return "SVM Optimizer";
 
-	assert(false && "getName not implemented for this Optimizer");
+	assert_fail() << "getName not implemented for this Optimizer";
 
 	return "eieieieiei";
 }
@@ -116,7 +116,7 @@ const std::string getName(const ErrorFunction* errFct) {
 	if(dynamic_cast<const ClassificationError*>(errFct) )
 		return "ClassificationError";
 
-	assert(false && "getName not implemented for this Error Function");
+	assert_fail() << "getName not implemented for this Error Function";
 
 	return "eieieieiei";
 }
@@ -409,23 +409,23 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 
 void Trainer::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
-	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		staticFeatures.push_back(*I);
 }
 void Trainer::setStaticFeatureByIndex(const std::string featureIndex) {
-	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	staticFeatures.push_back(featureIndex);
 }
 
-void Trainer::setStaticFeaturesByName(const std::vector<std::string>& featureNames){
+void Trainer::setStaticFeaturesByName(const std::vector<std::string>& featureNames) {
 	for(std::vector<std::string>::const_iterator I = featureNames.begin(); I != featureNames.end(); ++I) {
 		setStaticFeatureByName(*I);
 	}
 }
 
-void Trainer::setStaticFeatureByName(const std::string featureName){
-	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
+void Trainer::setStaticFeatureByName(const std::string featureName) {
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	// build query for name
 	std::string tmp;
 	try {
@@ -449,12 +449,12 @@ void Trainer::setStaticFeatureByName(const std::string featureName){
 }
 
 void Trainer::setDynamicFeaturesByIndex(const std::vector<std::string>& featureIndices) {
-	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		dynamicFeatures.push_back(*I);
 }
 void Trainer::setDynamicFeatureByIndex(const std::string featureIndex) {
-	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	dynamicFeatures.push_back(featureIndex);
 }
 
@@ -465,7 +465,7 @@ void Trainer::setDynamicFeaturesByName(const std::vector<std::string>& featureNa
 }
 
 void Trainer::setDynamicFeatureByName(const std::string featureName){
-	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	// build query for name
 	std::string tmp;
 	try {
@@ -490,12 +490,12 @@ void Trainer::setDynamicFeatureByName(const std::string featureName){
 
 
 void Trainer::setPcaFeaturesByIndex(const std::vector<std::string>& featureIndices) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		pcaFeatures.push_back(*I);
 }
 void Trainer::setPcaFeatureByIndex(const std::string featureIndex) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(pcaFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	pcaFeatures.push_back(featureIndex);
 }
 
@@ -506,7 +506,7 @@ void Trainer::setPcaFeaturesByName(const std::vector<std::string>& featureNames)
 }
 
 void Trainer::setPcaFeatureByName(const std::string featureName){
-	assert((staticFeatures.size() + dynamicFeatures.size()) == 0 && "Cannot use PCA and 'normal' features at the same time");
+	assert_eq(staticFeatures.size() + dynamicFeatures.size(), 0) << "Cannot use PCA and 'normal' features at the same time";
 	// build query for name
 	std::string tmp;
 	try {
@@ -643,7 +643,6 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
 	if(genOut == GenNNoutput::ML_FUZZY_VECTOR) {
 		valsToFuzzyTrainVector(stmt, queryIdx, oneOfN);
 		target.append_rows(oneOfN);
-//		assert(false && "Not implemented yet");
 	} else {
 		size_t theOne = valToClass(stmt, queryIdx, max, min);
 		valToOneOfN(theOne, oneOfN);
@@ -852,7 +851,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 			} else if(esvm) {
 				optimizeDistorted(*svmOpt, esvm->getSVM(), errFct, in, target);
 			}
-			assert((esvm || csvm) && "Trying to call SVM_Optimizer with a non Epsilon- or MultiClassSVM model");
+			assert_true(esvm || csvm) << "Trying to call SVM_Optimizer with a non Epsilon- or MultiClassSVM model";
 
 
 			error = errFct.error(model.getModel(), in, target);

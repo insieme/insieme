@@ -326,7 +326,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 }
 
 void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
-	assert(inductionVar && "Loop induction variable not found, impossible to handle increment expression.");
+	assert_true(inductionVar) << "Loop induction variable not found, impossible to handle increment expression.";
 
 	// a normalized loop always steps +1
 	// special case for arrays, since we iterate with an scalar, we generate a ponter wide iteration var (UINT 8)

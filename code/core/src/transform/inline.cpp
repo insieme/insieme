@@ -159,7 +159,7 @@ CompoundStmtPtr inlineMultiReturnInternal(StatementList& retStmts, NodeManager& 
 	IRBuilder build(nodeMan);
 
 	// get called lambda and its parameters
-	assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
+	assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
 	LambdaExprPtr lambdaExpr = call->getFunctionExpr().as<LambdaExprPtr>();
 
 	// build parameter map
@@ -205,7 +205,7 @@ CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExpr
 
 	// split into left and right side of assignment
 	ExpressionPtr rhsExpr = assignment->getArgument(1);
-	assert(rhsExpr->getNodeType() == NT_CallExpr);
+	assert_eq(rhsExpr->getNodeType(), NT_CallExpr);
 	CallExprPtr rhsCall = rhsExpr.as<CallExprPtr>();
 	ExpressionPtr retLocation = assignment->getArgument(0);
 

@@ -68,6 +68,8 @@ typedef long long __v2di __attribute__ ((__vector_size__ (16)));
 typedef char __v16qi __attribute__ ((__vector_size__ (16)));
 typedef short __v8hi __attribute__ ((__vector_size__ (16)));
 typedef long long __v1di __attribute__ ((__vector_size__ (8)));
+typedef long long __m128i __attribute__ ((__vector_size__ (16)));
+typedef double __m128d __attribute__ ((__vector_size__ (16)));
 
 #ifdef __clang__
 
@@ -156,6 +158,20 @@ extern __v4si __builtin_ia32_pcmpeqd128(__v4si, __v4si);
 extern __v4si __builtin_ia32_pcmpgtd128(__v4si, __v4si); 
 extern void __builtin_ia32_movnti64(long long int *, long long int); 
 
+extern __m128i __builtin_ia32_pshufhw(__v8hi, int);
+extern __m128i __builtin_ia32_pshuflw(__v8hi, int);
+extern __m128i __builtin_ia32_pshufd (__v4si, int);
+extern (unsigned short) __builtin_ia32_vec_ext_v8hi (__v8hi, int);
+extern __m128i __builtin_ia32_vec_set_v8hi(__v8hi, int, int);
+
+
+// builtins called in GCC's smmintrin.h
+extern (int) (unsigned char) __builtin_ia32_vec_ext_v16qi (__v16qi, int);
+extern __m128i __builtin_ia32_vec_set_v16qi(__v16qi, int, int);
+extern __m128i __builtin_ia32_vec_set_v4si (__v4si, int, int);
+extern __m128i __builtin_ia32_vec_set_v2di (__v2di, long long, int);
+
+
 // builtins called in GCC's ia32intrin.h
 extern int __builtin_ia32_bsrsi(int);
 extern int __builtin_ia32_bsrdi(long long);
@@ -229,11 +245,15 @@ extern __v4sf __builtin_ia32_loadlps(__v4sf, const __v2sf *);
    extern void __builtin_ia32_storelps(__v2sf *, __v4sf);						// GCC
 // extern void __builtin_ia32_movntq(unsigned long long *, unsigned long long);	// GCC
    extern void __builtin_ia32_movntq(__v1di*,              __v1di);		// Clang
-//FIXMEEND 
+
+extern int   __builtin_ia32_vec_ext_v4hi(__v4hi, int);
+extern __m64 __builtin_ia32_vec_set_v4hi(__v4hi, int, int);
+
 
 extern __v4sf __builtin_ia32_loadups(const float *);
 extern void __builtin_ia32_storeups(float *, __v4sf);
 extern __v4sf  __builtin_ia32_shufps(__v4sf, __v4sf, int const);
 extern float __builtin_ia32_vec_ext_v4sf(__v4sf, const int); 
 extern void __builtin_ia32_movntq(__v1di *, __v1di);
+
 #endif

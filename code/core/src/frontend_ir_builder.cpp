@@ -47,7 +47,7 @@ namespace insieme {
 namespace core {
 
 ExpressionPtr FrontendIRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
-	assert(type->isMemberFunction());
+	assert_true(type->isMemberFunction());
 	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
 	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
 }
@@ -114,7 +114,7 @@ ExpressionPtr FrontendIRBuilder::toIRRef(const ExpressionPtr& ref) const {
 	if (analysis::isConstRValCppRef(ref->getType())) {
 		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstRValCppToIR(), ref);
 	}
-	assert(false && "failed to convert C++ reference to IR reference");
+	assert_fail() << "failed to convert C++ reference to IR reference";
     return ref;
 }
 

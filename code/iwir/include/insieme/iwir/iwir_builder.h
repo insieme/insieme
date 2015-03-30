@@ -108,7 +108,7 @@ class IWIRBuilder {
 		DISPATCH2HANDLER(parallelFor,parallelFor);
 		DISPATCH2HANDLER(parallelForEach,parallelForEach);
 
-		assert(result && "no task was created");
+		assert_true(result) << "no task was created";
 		VLOG(2) << result->name << " " << nodeName;
 
 		return result;
@@ -589,9 +589,9 @@ class IWIRBuilder {
 			isDataLink = true;
 		} else if(fromSubs.size() == 1 && toSubs.size() == 1) {
 			isDataLink = false;
-//			assert(false && "ControlFlowLink not implemented yet");
+//			assert_not_implemented();
 		} else {
-			assert(false && "link is not of form task/[port]/[loopCounter]");
+			assert_fail() << "link is not of form task/[port]/[loopCounter]";
 		}
 
 		VLOG(2) << "from: " << fromSubs;
@@ -618,8 +618,8 @@ class IWIRBuilder {
 			toTask = tT->second;
 		}
 
-		assert(fromTask);
-		assert(toTask);
+		assert_true(fromTask);
+		assert_true(toTask);
 
 		Link* link = nullptr;
 		if(isDataLink) {
@@ -631,14 +631,14 @@ class IWIRBuilder {
 			if(tP != portCache.end()) {
 				toPort = tP->second;
 			}
-			assert(toPort);
+			assert_true(toPort);
 
 			VLOG(2) << "look for " << fromPortStr << " in portCache | " << portCache;
 			auto fP = portCache.find({fromTaskStr, fromPortStr});
 			if(fP != portCache.end()) {
 				fromPort = fP->second;
 			}
-			assert(fromPort);
+			assert_true(fromPort);
 			link = mgr->create<Link>(fromTask, toTask, fromPort, toPort, ctx.getParentTask());
 		} else {
 			link = mgr->create<Link>(fromTask, toTask, ctx.getParentTask());
@@ -783,7 +783,7 @@ class IWIRBuilder {
 
 			ret = mgr->create<CollectionType>(nesting, elementType);
 		}
-		assert(ret);
+		assert_true(ret);
 
 		return ret;
 	}
@@ -901,10 +901,10 @@ class IWIRBuilder {
 			step = mgr->create<LoopCounter>(ctx.getParentTask(), stepVal);
 		}
 		
-		assert(counter);
-		assert(from);
-		assert(to);
-		assert(step);
+		assert_true(counter);
+		assert_true(from);
+		assert_true(to);
+		assert_true(step);
 
 		return std::make_tuple(counter, from, to, step); 
 	}

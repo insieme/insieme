@@ -79,7 +79,7 @@ namespace iwir {
 	}
 
 	PropertyMap getPropertyMapAttached(const insieme::core::NodePtr& node) {
-		assert(hasPropertyMapAttached(node) && "Does not have a IWIR::PropertyMap attached");
+		assert_true(hasPropertyMapAttached(node)) << "Does not have a IWIR::PropertyMap attached";
 		return node->getAttachedValue<PropertyMapTag>().propertyMap;
 	}
 

@@ -258,7 +258,7 @@ namespace encoder {
 
 				// check values again ...
 				assert(types::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager())) && "Cannot convert non-related type!");
-				assert(expr->getNodeType() == core::NT_Literal && "Simple conversion only works for literals!");
+				assert_eq(expr->getNodeType(), core::NT_Literal) << "Simple conversion only works for literals!";
 
 				// convert
 				return utils::numeric_cast<T>(static_pointer_cast<const core::Literal>(expr)->getStringValue());
@@ -354,7 +354,7 @@ namespace encoder {
 
 		struct create_expr_type {
 			core::TypePtr operator()(core::NodeManager& manager) const {
-				assert(false && "Not applicable in the general case!");
+				assert_fail() << "Not applicable in the general case!";
 				throw InvalidExpression("Cannot define generic type for all expressions!");
 			}
 			create_expr_type() {}

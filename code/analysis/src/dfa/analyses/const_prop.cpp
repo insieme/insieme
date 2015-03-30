@@ -235,7 +235,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 			// Replace values with the constant values 
 			f = f.replace(replacements);
 
-			assert(f.isConstant());
+			assert_true(f.isConstant());
 
 			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
@@ -250,7 +250,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 		} catch(const NotAnAccessException& e) { return dfa::top; }
 	}
 
-	assert( false  && "Something odd happened" );
+	assert_fail() << "Something odd happened";
 	return dfa::Value<LiteralPtr>();
 }
 
@@ -273,7 +273,7 @@ ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& bl
 							const dfa::Value<LiteralPtr>& res) 
 	{
 		auto defClasses = aMgr.findClass(defAccess);
-		assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
+		assert_false(defClasses.empty()) << "Invalid class for access. Something wrong in the extract() method";
 
 		for (const auto& defClass : defClasses) {
 			gen.insert( std::make_tuple(defClass, res) );

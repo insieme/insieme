@@ -42,7 +42,14 @@
  * ignored. In those cases, variables declared using the 'assert_decl' macro will not be declared.
  */
 
-#ifdef NDEBUG
+#include <iostream>
+
+#ifdef assert
+#undef assert
+#endif
+#define assert(_BLA) static_assert(false, "You should use insieme assertions only! (insieme::utils::assert_*)")
+
+#if defined(NDEBUG)
 
 	#define _assert_ignore if(false) std::cerr << ""
 
@@ -56,9 +63,6 @@
 	#define assert_ge(_a,_b) _assert_ignore
 
 #else
-
-
-	#include <assert.h>
 	#include <iostream>
 
 	#include "insieme/utils/unused.h"

@@ -149,7 +149,7 @@ void AosToTaos::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-//assert(false);
+//assert_fail();
 		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
 
 		doReplacements(replacements, aosToTaosAllocTypeUpdate);
@@ -339,7 +339,7 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 //	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
 //		varsToPropagate.insert(oldToNew.first);
 //		std::cout << "ölkjasfdökljsfda " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
-////assert(false);
+////assert_fail();
 //	}
 
 	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
@@ -448,7 +448,7 @@ std::cout << "\n----------------------------------------------------------------
 
 //	doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
-//	assert(false);
+//	assert_fail();
 #endif
 }
 

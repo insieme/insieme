@@ -78,14 +78,14 @@ core::ExpressionPtr buildGen(core::NodeManager& mgr, const IterT& begin, const I
 	core::IRBuilder builder(mgr);
 	
 	size_t argSize = std::distance(begin, end);
-	assert( argSize >= 2 && "Cannot create a binary expression with less than 2 arguments");
+	assert_ge(argSize, 2) << "Cannot create a binary expression with less than 2 arguments";
 
 	// call recursively this function to build a min/max with more than 2 args
 	if ( argSize > 2 ) {
 		return builder.callExpr( mgr.getLangBasic().getSelect(), *begin, buildGen(mgr, begin+1, end, op), op );
 	}
 
-	assert( argSize == 2 && "2 arguments are required");
+	assert_eq(argSize, 2) << "2 arguments are required";
 	return builder.callExpr( mgr.getLangBasic().getSelect(), *begin, *(begin+1), op );
 }
 
@@ -130,7 +130,7 @@ struct ClastVisitor {
 	virtual RetTy visitClastEquation(const clast_equation* equation) = 0;
 
 	virtual RetTy visit(const clast_expr* expr) {
-		assert(expr && "Expression is not valid!");
+		assert_true(expr) << "Expression is not valid!";
 		switch(expr->type) {
 		case clast_expr_name:
 			return visitClastName( reinterpret_cast<const clast_name*>(expr) );
@@ -141,13 +141,13 @@ struct ClastVisitor {
 		case clast_expr_red:
 			return visitClastReduction( reinterpret_cast<const clast_reduction*>(expr) );
 		default:
-			assert(false && "Clast Expression not valid!");
+			assert_fail() << "Clast Expression not valid!";
 		}
 		return RetTy();
 	}
 
 	virtual RetTy visit(const clast_stmt* clast_node) {
-		assert(clast_node && "Clast node is not valid");
+		assert_true(clast_node) << "Clast node is not valid";
 
 		if( CLAST_STMT_IS_A(clast_node, stmt_root) )
 			return visitClastRoot( reinterpret_cast<const clast_root*>(clast_node) );
@@ -167,7 +167,7 @@ struct ClastVisitor {
 		if( CLAST_STMT_IS_A(clast_node, stmt_guard) )
 			return visitClastGuard( reinterpret_cast<const clast_guard*>(clast_node) );
 
-		assert(false && "Clast node not supported");
+		assert_fail() << "Clast node not supported";
 		return RetTy();
 	}
 
@@ -356,7 +356,7 @@ public:
 
 	void visitClastGuard(const clast_guard* guardStmt) {
 		out << indent << "if (";
-		assert(guardStmt->n>0);
+		assert_gt(guardStmt->n, 0);
 		visitClastEquation(guardStmt->eq);
 		for(size_t i=1, e=guardStmt->n; i!=e; ++i) {
 			out << " && ";
@@ -394,7 +394,7 @@ public:
 			case clast_bin_div: out << '/'; break;
 			case clast_bin_mod:	out << '%'; break;
 			default: 
-				assert(false);
+				assert_fail();
 			}
 		}
 		PRINT_CLOOG_INT(out, binExpr->RHS);
@@ -410,11 +410,11 @@ public:
 		case clast_red_min: out << "min";	break;
 		case clast_red_max: out << "max";	break;
 		default:
-			assert(false && "Reduction operation not valid");
+			assert_fail() << "Reduction operation not valid";
 		}
 
 		out << "(";
-		assert(redExpr->n >= 1);
+		assert_gt(redExpr->n, 1);
 
 		visit( redExpr->elts[0] );
 		for(size_t i=1, e=redExpr->n; i!=e; ++i) {
@@ -486,7 +486,7 @@ private:
 
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
-		assert(stmtStack.size() == stackInitialSize);				 \
+		assert_eq(stmtStack.size(), stackInitialSize);				 \
 	};																 \
 	 FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
 
@@ -548,7 +548,7 @@ public:
 		core::IRBuilder builder(mgr);
 
 		auto&& fit = varMap.find(nameExpr->name);
-		assert(fit != varMap.end() && "Variable not defined!");
+		assert_true(fit != varMap.end()) << "Variable not defined!";
 		
 		core::ExpressionPtr ret = fit->second;
 		if(fit->second->getType()->getNodeType() == core::NT_RefType) {
@@ -566,7 +566,7 @@ public:
 		std::vector<core::ExpressionPtr> args;
 		for (size_t i=0, e=redExpr->n; i!=e; ++i) {
 			args.push_back( visit( redExpr->elts[i] ) );
-			assert( args.back() );
+			assert_true(args.back());
 		}
 
 		core::LiteralPtr op;
@@ -578,10 +578,10 @@ public:
 		case clast_red_max: return build<MAX>(mgr, args);
 
 		default:
-			assert(false && "Reduction operation not valid");
+			assert_fail() << "Reduction operation not valid";
 		}
 
-		assert(redExpr->n >= 1);
+		assert_gt(redExpr->n, 1);
 		return buildBinCallExpr(mgr, mgr.getLangBasic().getInt4(), op, args.begin(), args.end());
 	}
 
@@ -594,7 +594,7 @@ public:
 		// In those case we need to perform special handling as the semantic information 
 		// could have introduced new domain which the cloog library wrongly interpret as for loops 
 		
-		assert(varMap.find(forStmt->iterator) == varMap.end() && "Induction variable being utilizied!");
+		assert_true(varMap.find(forStmt->iterator) == varMap.end()) << "Induction variable being utilizied!";
 		core::VariablePtr&& inductionVar = builder.variable( mgr.getLangBasic().getInt4() );
 
 		auto&& indPtr = varMap.insert( std::make_pair(std::string(forStmt->iterator), inductionVar) );
@@ -602,13 +602,13 @@ public:
 		VLOG(2) << "Induction variable for loop: " << *inductionVar;
 
 		core::ExpressionPtr&& lowerBound = visit(forStmt->LB);
-		assert( lowerBound && "Failed conversion of lower bound expression for loop!");
+		assert_true(lowerBound) << "Failed conversion of lower bound expression for loop!";
 
 		core::ExpressionPtr&& upperBound = visit(forStmt->UB);
 		// because cloog assumes the upperbound to be <=, we have to add a 1 to make it consistent
 		// with the semantics of the IR 
 		upperBound = builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), upperBound, builder.intLit(1) );
-		assert( upperBound && "Failed conversion of upper bound expression for loop!");
+		assert_true(upperBound) << "Failed conversion of upper bound expression for loop!";
 
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, forStmt->stride);
@@ -617,7 +617,7 @@ public:
 		core::StatementPtr irStmt;
 		stmtStack.push( StatementList() );
 
-		// Visit he body of this forstmt
+		// Visit the body of this forstmt
 		try {
 			visit(forStmt->body);
 			core::CompoundStmtPtr body = builder.compoundStmt( stmtStack.top() );
@@ -628,13 +628,8 @@ public:
 							strideExpr,
 							body );
 
-		}catch(const RangedFunction& ex) {
-			__unused const RangedFunction::VarVect& ranges = ex.getRangedVariables();
-			irStmt = stmtStack.top().front();
-
-			assert((ranges.size() == 1 && *ranges.front() == *inductionVar));
-
-			assert(false && "you should not have come here!");
+		} catch(const RangedFunction& ex) {
+			assert_not_implemented();
 		}
 
 		stmtStack.pop();
@@ -644,7 +639,7 @@ public:
 		// renew the mapping of this induction variable 
 		varMap.erase(indPtr.first);
 
-		assert(irStmt);
+		assert_true(irStmt);
 
 		stmtStack.top().push_back( irStmt );
 
@@ -662,16 +657,16 @@ public:
 		} catch(const RangedFunction& ex) {
 			ranges = ex.getRangedVariables();
 		}
-		assert(stmtStack.top().size() == 1 && "Expected 1 statement!");
+		assert_eq(stmtStack.top().size(), 1) << "Expected 1 statement!";
 		utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
 		size_t pos=0;
 		for(const clast_stmt* ptr = userStmt->substitutions; ptr; ptr=ptr->next,pos++) {
 			STACK_SIZE_GUARD;
 
-			assert(CLAST_STMT_IS_A(ptr, stmt_ass) && "Expected assignment statement");
+			assert_true(CLAST_STMT_IS_A(ptr, stmt_ass)) << "Expected assignment statement";
 			const clast_assignment* assignment = reinterpret_cast<const clast_assignment*>( ptr );
-			assert(assignment->LHS == NULL);
+			assert_true(assignment->LHS == NULL);
 			const core::ExpressionPtr& targetVar = visit(assignment->RHS);
 			const core::VariablePtr& sourceVar = 
 				core::static_pointer_cast<const core::Variable>(
@@ -684,7 +679,7 @@ public:
 				continue;
 			}
 			// Check inside the scop to see whether the loop contains 
-			assert(sourceVar->getType()->getNodeType() != core::NT_RefType);
+			assert_ne(sourceVar->getType()->getNodeType(), core::NT_RefType);
 			replacements.insert( std::make_pair(sourceVar, targetVar) );
 		}
 		
@@ -707,7 +702,7 @@ public:
 		STACK_SIZE_GUARD;
 		
 		using namespace insieme::analysis::polyhedral;
-		assert(cloogStmt->name);
+		assert_true(cloogStmt->name);
 
 		// get the stmt object 
 		Stmt& stmt = *ctx.getAs<StmtPtr>( cloogStmt->name );
@@ -726,7 +721,7 @@ public:
 				for_each(stmt.accessmtx.begin(), stmt.accessmtx.end(), [&](AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
-						assert( !iters.empty() && iters.size() == 1 );
+						assert_true(!iters.empty() && iters.size() == 1);
 						ranges.push_back( iters.front() ); 
 					}
 				});
@@ -772,7 +767,7 @@ public:
 		case clast_bin_mod:
 			op = mgr.getLangBasic().getCloogMod();		break;
 		default: 
-			assert(false && "Binary operator not defined");
+			assert_fail() << "Binary operator not defined";
 		}
 
 		core::ExpressionPtr&& lhs = visit(binExpr->LHS);
@@ -801,7 +796,7 @@ public:
 	core::ExpressionPtr visitClastGuard(const clast_guard* guardStmt) {
 		STACK_SIZE_GUARD;
 
-		assert(guardStmt->n>0);
+		assert_gt(guardStmt->n, 0);
 		core::IRBuilder builder(mgr);
 
 		core::ExpressionPtr&& condExpr = visitClastEquation(guardStmt->eq);
@@ -829,7 +824,7 @@ public:
 	}
 
 	core::StatementPtr getIR() const {
-		assert( stmtStack.size() == 1 );
+		assert_eq(stmtStack.size(), 1);
 		core::IRBuilder builder(mgr);
 
 		if(stmtStack.top().size() == 1) 
@@ -907,7 +902,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	opts.set(*options);
 
 	root = cloog_clast_create_from_input(input, options);
-	assert( root && "Generation of Cloog AST failed" );
+	assert_true(root) << "Generation of Cloog AST failed";
 
 	if(Logger::get().level() <= DEBUG) {
 		clast_pprint(stderr, root, 0, options);
@@ -972,7 +967,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	converter.visit(root);
 	
 	core::StatementPtr&& retIR = converter.getIR();
-	assert(retIR && "Conversion of Cloog AST to Insieme IR failed");
+	assert_true(retIR) << "Conversion of Cloog AST to Insieme IR failed";
 
 	// Append the generated code to the list of extracted declarations 
 	decls.push_back(retIR);
@@ -983,7 +978,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	// 	return core::check( ret, core::checks::getFullCheck() );
 	//};
 	// Perform semantics check on the generated code 
-	// assert(checks(ret).getAll().empty() && "Generated code from polyhedral model is not semantically correct"); 
+	// assert_true(checks(ret).getAll().empty()) << "Generated code from polyhedral model is not semantically correct"; 
 		
 	cloog_clast_free(root);
 	cloog_options_free(options);

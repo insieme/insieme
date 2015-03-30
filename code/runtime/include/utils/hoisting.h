@@ -72,7 +72,7 @@
 		retval = snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename);
 		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
 		retval = system(command);
-		assert(retval == 0);
+		assert_eq(retval, 0);
 		return dlopen(uniquename, flag);
 	}
 

@@ -149,21 +149,21 @@ namespace tu {
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-			assert(symbol );
-			assert(definition);
+			assert_true(symbol);
+			assert_true(definition);
 			types.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
 		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-			assert(symbol );
-			assert(definition);
+			assert_true(symbol);
+			assert_true(definition);
 			assert(types.find(symbol) != types.end());
 			types[symbol] = definition;
 		}
 		void substituteType (const core::GenericTypePtr& oldSymbol, const core::GenericTypePtr& newSymbol, const core::TypePtr& definition) {
-			assert(oldSymbol );
-			assert(newSymbol );
-			assert(definition);
+			assert_true(oldSymbol);
+			assert_true(newSymbol);
+			assert_true(definition);
 			assert(types.find(oldSymbol) != types.end());
 			types.erase(oldSymbol);
 			types[newSymbol] = definition;

@@ -404,9 +404,9 @@ using insieme::core::pattern::any;
 			std::vector<FeaturePtr> features;
 
 			features.push_back(catalog.getFeature(format(component0, mode)));
-			assert(features.back() && "Feature 1 of 2 is invalid");
+			assert_true(features.back()) << "Feature 1 of 2 is invalid";
 			features.push_back(catalog.getFeature(format(component1, mode)));
-			assert(features.back() && "Feature 2 of 2 is invalid");
+			assert_true(features.back()) << "Feature 2 of 2 is invalid";
 
 			composedFeatures[format(name, mode)] = features;
 		}
@@ -416,11 +416,11 @@ using insieme::core::pattern::any;
 			std::vector<FeaturePtr> features;
 
 			features.push_back(catalog.getFeature(format(component0, mode)));
-			assert(features.back() && "Feature 1 of 3 is invalid");
+			assert_true(features.back()) && "Feature 1 of 3 is invalid";
 			features.push_back(catalog.getFeature(format(component1, mode)));
-			assert(features.back() && "Feature 2 of 3 is invalid");
+			assert_true(features.back()) && "Feature 2 of 3 is invalid";
 			features.push_back(catalog.getFeature(format(component2, mode)));
-			assert(features.back() && "Feature 3 of 3 is invalid");
+			assert_true(features.back()) && "Feature 3 of 3 is invalid";
 
 			composedFeatures[format(name, mode)] = features;
 		}
@@ -431,13 +431,13 @@ using insieme::core::pattern::any;
 			std::vector<FeaturePtr> features;
 
 			features.push_back(catalog.getFeature(format(component0, mode)));
-			assert(features.back() && "Feature 1 of 4 is invalid");
+			assert_true(features.back()) << "Feature 1 of 4 is invalid";
 			features.push_back(catalog.getFeature(format(component1, mode)));
-			assert(features.back() && "Feature 2 of 4 is invalid");
+			assert_true(features.back()) << "Feature 2 of 4 is invalid";
 			features.push_back(catalog.getFeature(format(component2, mode)));
-			assert(features.back() && "Feature 3 of 4 is invalid");
+			assert_true(features.back()) << "Feature 3 of 4 is invalid";
 			features.push_back(catalog.getFeature(format(component3, mode)));
-			assert(features.back() && "Feature 4 of 4 is invalid");
+			assert_true(features.back()) << "Feature 4 of 4 is invalid";
 
 			composedFeatures[format(name, mode)] = features;
 		}
@@ -579,8 +579,8 @@ using insieme::core::pattern::any;
 					});
 				} else {
 					LOG(ERROR) << "Invalid number of features: " <<  cur_features.second.size() << std::endl;
-					assert(cur_features.second.size() > 4 && "Too much components passed");
-					assert(cur_features.second.size() < 2 && "Too few components passed");
+					assert_le(cur_features.second.size(), 4) << "Too many components passed";
+					assert_ge(cur_features.second.size(), 2) << "Too few components passed";
 				}
 			});
 		}

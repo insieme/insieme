@@ -182,7 +182,7 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 						const core::NodePtr& before, 
 						const core::NodePtr& after) const 
 	{
-		assert(&*ptr == this && "Annotation Pointer should point to this!");
+		assert_eq(&*ptr, this) << "Annotation Pointer should point to this!";
 		// always migrate the sema annotation
 		after->addAnnotation( ptr );
 		return true;

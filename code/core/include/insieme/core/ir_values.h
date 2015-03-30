@@ -95,7 +95,7 @@ namespace core {
 				return manager.get(NAME ## Value(value)); \
 			} \
 			static NAME ## ValuePtr get(NodeManager& manager, const NodeList& children) { \
-				assert(false && "Value nodes must not be constructed via their child node list!"); \
+				assert_fail() << "Value nodes must not be constructed via their child node list!"; \
 				return NAME ## ValuePtr(); \
 			} \
 			operator const TYPE&() const { \
@@ -109,7 +109,7 @@ namespace core {
 			} \
 		protected: \
 			virtual Node* createInstanceUsing(const NodeList& children) const { \
-				assert(children.empty() && "Value nodes must no have children!"); \
+				assert_true(children.empty()) << "Value nodes must no have children!"; \
 				return new NAME ## Value(*this); \
 			} \
 			virtual std::ostream& printTo(std::ostream& out) const { \

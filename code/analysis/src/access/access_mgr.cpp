@@ -200,7 +200,7 @@ namespace access {
 
 		// check if the parent class already has a child to represent this type of access
 		if (!parentClasses.empty()) {
-			assert(subLevel && "Invalid sublevel");
+			assert_true(subLevel) << "Invalid sublevel";
 
 			typedef std::tuple<AccessClassPtr, AccessClassPtr, AccessDecoratorPtr> AccessInfo;
 			std::vector<AccessInfo> toAppend;
@@ -217,7 +217,7 @@ namespace access {
 					
 					const auto& subClass  = std::get<0>(dep).lock();
 					const auto& subAccess = std::get<1>(dep);
-					assert(subClass && subAccess);
+					assert_true(subClass && subAccess);
 
 					//LOG(INFO) << subClass;
 					//LOG(INFO) << subAccess;
@@ -226,7 +226,7 @@ namespace access {
 					// assume that the subclasses are disjoints 
 					if (subAccess->getType() == AccessType::AT_MEMBER) {
 
-						assert(skipDeref->getType() == AccessType::AT_MEMBER);
+						assert_true(skipDeref->getType() == AccessType::AT_MEMBER);
 
 						if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(subAccess)->getMember()) {
 
@@ -241,14 +241,14 @@ namespace access {
 					// Subscripts 
 					if (subAccess->getType() == AccessType::AT_SUBSCRIPT) {
 						
-						assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
+						assert_true(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
 
 						auto classRange = cast<Subscript>(subAccess);
 						auto accessRange = cast<Subscript>(cmpAccess);
 
 						if (accessRange->isContextDependent()) {
 							// classfy it with the parent 
-							assert(parentClass && "parent class must be valid");
+							assert_true(parentClass) << "parent class must be valid";
 							// LOG(INFO) << "NOCTX";
 							parentClass->storeAccess(access);
 							retClasses.insert( parentClass );

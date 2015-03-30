@@ -87,7 +87,7 @@ insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr	(const c
 	auto builder = convFact.getIRBuilder();
 	insieme::core::ExpressionPtr retIr;
 	insieme::core::TypePtr type = convFact.convertType(nullPtrExpr->getType());
-	assert(type->getNodeType() != insieme::core::NT_ArrayType && "C pointer type must of type array<'a,1>");
+	assert_ne(type->getNodeType(), insieme::core::NT_ArrayType) << "C pointer type must of type array<'a,1>";
 	return (retIr = builder.refReinterpret(convFact.getNodeManager().getLangBasic().getRefNull(), type));
 }
 
@@ -184,7 +184,7 @@ insieme::core::TypePtr Cpp11Extension::VisitAutoType(const clang::AutoType* auto
  */
 insieme::core::TypePtr Cpp11Extension::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
 	insieme::core::TypePtr retTy;
-	assert(declTy->getUnderlyingExpr());
+	assert_true(declTy->getUnderlyingExpr());
 	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
 	return retTy;
 }

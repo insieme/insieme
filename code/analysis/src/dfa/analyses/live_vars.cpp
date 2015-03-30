@@ -103,7 +103,7 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 							);
 
 			auto defClasses = aMgr.findClass(defAccess);
-			assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
+			assert_false(defClasses.empty()) << "Invalid class for access. Something wrong in the extract() method";
 
 			AccessClassSet depClasses = getConflicting(defClasses);
 			std::copy(defClasses.begin(), defClasses.end(), std::inserter(depClasses, depClasses.begin()));

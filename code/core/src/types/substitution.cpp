@@ -114,11 +114,11 @@ namespace {
 				}
 
 				default:
-					assert(false && "Only type and parameter variables should reach this point!");
+					assert_fail() << "Only type and parameter variables should reach this point!";
 			}
 
 			//should never be reached
-			assert(false && "This point shouldn't be reachable!");
+			assert_fail() << "This point shouldn't be reachable!";
 			return element;
 		}
 
@@ -159,7 +159,7 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	if (!res.second) {
 		mapping.erase(var);
 		res = mapping.insert(element);
-		assert( res.second && "Insert was not successful!" );
+		assert_true(res.second) << "Insert was not successful!";
 	}
 }
 
@@ -169,7 +169,7 @@ void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeP
 	if (!res.second) {
 		paramMapping.erase(var);
 		res = paramMapping.insert(element);
-		assert( res.second && "Insert was not successful!" );
+		assert_true(res.second) << "Insert was not successful!";
 	}
 }
 

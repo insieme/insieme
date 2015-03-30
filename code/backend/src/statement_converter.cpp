@@ -253,7 +253,7 @@ namespace backend {
 
 			// add code dependency to global struct
 			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
-			assert(fragment && "Global Fragment not yet initialized!");
+			assert_true(fragment) << "Global Fragment not yet initialized!";
 			context.getDependencies().insert(fragment);
 			return res;
 		}
@@ -371,7 +371,7 @@ namespace backend {
 
 		// remove last element if it is a variable sized struct
 		if (core::types::isVariableSized(ptr->getType())) {
-			assert(!init->values.empty());
+			assert_false(init->values.empty());
 			init->values.pop_back();
 		}
 
@@ -563,12 +563,12 @@ namespace backend {
 		}
 
 		c_ast::NodePtr resolveStackBasedCArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert(isStackBasedCArray(init) && "Invalid input parameter!");
+			assert_true(isStackBasedCArray(init)) << "Invalid input parameter!";
 			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(0).as<core::CallExprPtr>()->getArgument(1));
 		}
 
 		c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert(isStackBasedCppArray(init) && "Invalid input parameter!");
+			assert_true(isStackBasedCppArray(init)) << "Invalid input parameter!";
 			const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(
 					(core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2
@@ -578,7 +578,7 @@ namespace backend {
 		c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
 			if (isStackBasedCArray(init)) return resolveStackBasedCArray(context, var, init);
 			if (isStackBasedCppArray(init)) return resolveStackBasedCppArray(context, var, init);
-			assert(false && "Init value is not a stack based array!");
+			assert_fail() << "Init value is not a stack based array!";
 			return 0;
 		}
 

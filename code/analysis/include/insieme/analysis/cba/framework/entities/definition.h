@@ -113,7 +113,7 @@ namespace cba {
 	Definition<Context> getDefinition(const core::StatementInstance& def, const Context& ctxt) {
 
 		// make sure it is a valid definition target
-		assert(isDefinition(def));
+		assert_true(isDefinition(def));
 
 		// create the definition instance
 		return Definition<Context>(def.as<core::CallExprInstance>(), ctxt);

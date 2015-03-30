@@ -115,8 +115,9 @@ namespace cba {
 
 			// check that call is a dynamic call
 			auto funType = call->getFunctionExpr()->getNodeType();
-			assert(funType != NT_LambdaExpr && funType != NT_BindExpr);
-			if (funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
+			assert_ne(funType, NT_LambdaExpr);
+			assert_ne(funType, NT_BindExpr);
+			if(funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
 
 			// fill predecessor set
 			auto pred_res = cba.getVar(pred, cba.getLabel(call));

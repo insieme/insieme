@@ -245,7 +245,7 @@ public:
 			: it(begin), end(end), type(type), usage(usage) { inc(true); }
 
 		inline const std::shared_ptr<T> operator*() const { 
-			assert(it != end && "Iterator out of bounds"); 
+			assert_true(it != end) << "Iterator out of bounds"; 
 			return std::static_pointer_cast<T>(*it);
 		}
 
