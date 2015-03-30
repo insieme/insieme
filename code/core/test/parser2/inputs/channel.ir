@@ -5,21 +5,21 @@ let channel = channel<int,1>;
 unit main() {
 	
 	// check creation
-	decl auto c = channel.create(type(int),param(1));
+	decl auto c = channel_create(type(int),param(1));
 	
 	// check assignment
-	channel c2 = c;
+	decl channel c2 = c;
 	
 	// try sending stuff
-	channel.send(c, 12);
+	channel_send(c, 12);
 	
 	// try receiving stuff
-	decl auto v = channel.recv(c);
+	decl auto v = channel_recv(c);
 	
 	// check probe
-	if (channel.probe(c)) {};
+	if (channel_probe(c)) {};
 	
 	// and release
-	channel.release(c);
+	channel_release(c);
 		
 }

@@ -190,6 +190,10 @@ namespace detail{
             if (iparamlist.size() != 0 || params.size() != 1) error(l, "malform ref type");
             else return builder.refType(params[0]);
         }
+        if (name == "channel"){
+            if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform channel type");
+            else return builder.channelType(params[0], iparamlist[0]);
+        }
         if (name == "struct"){
         }
         if (name == "union"){
@@ -263,17 +267,56 @@ namespace detail{
         return builder.bindExpr(params, call);
     }
 
-    ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& func, ExpressionList params){
+    ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& func, ExpressionList args){
 
-        // TODO: fix the mesh with functions with variadic paramenters....
+
+        auto ftype = func->getType();
+        if (!ftype.isa<FunctionTypePtr>()) error(l, "attempt to call non function expression");    
+
+        auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
+        if (builder.getLangBasic().isVarList(*funcParamTypes.rbegin())){
+
+            ExpressionList newParams (args.begin(), args.begin() + funcParamTypes.size()-1);
+            ExpressionList packParams(args.begin() + funcParamTypes.size(), args.end());
+            newParams.push_back(builder.pack(packParams));
+            std::swap(args, newParams);
+        }
+
+        if (args.size() != funcParamTypes.size())  error(l, "invalid number of arguments in function call"); 
     
-        return builder.callExpr(func, params);
+        return builder.callExpr(func, args);
     }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     void inspire_driver::add_symb(const location& l, const std::string& name, NodePtr ptr){
         if (!scopes.add_symb(name, ptr)) {
             error(l, format("symbol %s redefined", name));
         }
+    }
+    void inspire_driver::add_symb(const std::string& name, NodePtr ptr){
+        scopes.add_symb(name, ptr);
+    }
+
+    void inspire_driver::add_unfinish_symbol(const location& l, const std::string& name){
+        scopes.add_unfinish_symbol(name);
+        // generate a temporary callable variable to be fixed once the bodies are visited
+        scopes.add_symb(name, builder.variable(builder.functionType(TypeList(), builder.getLangBasic().getUnit()))); 
+    }
+    void inspire_driver::close_unfinish_symbol(const location& l, const NodePtr& node){
+        auto name = scopes.get_unfinish_symbol();
+        scopes.add_symb(name, node);
+    }
+    void inspire_driver::all_symb_defined(const location& l){
+        if (!scopes.all_symb_defined()) error(l, "not all let names were defined");
+    }
+
+    void inspire_driver::open_scope(const location& l, const std::string& name){
+        scopes.open_scope(name);
+    }
+
+    void inspire_driver::close_scope(const location& l, const std::string& name){
+        scopes.close_scope(name);
     }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

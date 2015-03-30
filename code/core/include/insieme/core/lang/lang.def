@@ -682,12 +682,12 @@ DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b 
 
 // Channels -----------------------------------------------------------------------------------------------------------
 
-LITERAL(ChannelCreate, 		"channel.create", 		"(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
-LITERAL(ChannelRelease, 	"channel.release", 		"(channel<'a,#n>) -> unit")
+LITERAL(ChannelCreate, 		"channel_create", 		"(type<'a>, intTypeParam<#n>) -> channel<'a,#n>")
+LITERAL(ChannelRelease, 	"channel_release", 		"(channel<'a,#n>) -> unit")
 
-LITERAL(ChannelSend, 		"channel.send", 		"(channel<'a,#n>, 'a) -> unit")
-LITERAL(ChannelRecv, 		"channel.recv", 		"(channel<'a,#n>) -> 'a")
-LITERAL(ChannelProbe, 		"channel.probe", 		"(channel<'a,#n>) -> bool")
+LITERAL(ChannelSend, 		"channel_send", 		"(channel<'a,#n>, 'a) -> unit")
+LITERAL(ChannelRecv, 		"channel_recv", 		"(channel<'a,#n>) -> 'a")
+LITERAL(ChannelProbe, 		"channel_probe", 		"(channel<'a,#n>) -> bool")
 
 // Atomics ------------------------------------------------------------------------------------------------------------
 

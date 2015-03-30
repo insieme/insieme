@@ -69,6 +69,8 @@ namespace parser3{
         EXPECT_TRUE(test_expression("lambda ('a _) -> true"));
         EXPECT_TRUE(test_expression("lambda ('a x) -> x+CAST('a) 3"));
         EXPECT_TRUE(test_expression("lambda ('a x) => x+CAST('a) 3"));
+
+        EXPECT_TRUE(test_expression("type(int<4>)"));
     }
 
     bool test_statement(const std::string& x){
@@ -128,7 +130,7 @@ namespace parser3{
         EXPECT_TRUE(test_statement("try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
 
     }
-    
+
     bool test_program(const std::string& x){
         NodeManager nm;
         inspire_driver driver(x, nm);
@@ -137,6 +139,14 @@ namespace parser3{
         return driver.result; 
     }
 
+    TEST(IR_Parser3, Let) {
+        EXPECT_TRUE(test_program("let int = int<4>; int main () { return 1; }"));
+        EXPECT_TRUE(test_program("let int = int<4>; let long = int<8>; long main (int a) { return 1; }"));
+        EXPECT_TRUE(test_program("let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
+        EXPECT_TRUE(test_program("let f = () -> unit { }; int<4> main () { f(); return 1; }"));
+        EXPECT_TRUE(test_program("let int = int<4>; let f = (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
+    }
+    
     TEST(IR_Parser3, Program) {
 
         EXPECT_TRUE(test_program("int<4> main (int<4> a, int<4> b)  { 1+1; }"));

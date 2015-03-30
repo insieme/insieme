@@ -137,6 +137,10 @@ paramvar #[a-zA-Z]
 "delete"     return inspire_parser::make_DELETE(loc);
 "undefined"     return inspire_parser::make_UNDEFINED(loc);
 
+"type("    return inspire_parser::make_TYPE_LITERAL(loc);
+"lit("     return inspire_parser::make_LITERAL(loc);
+"param("   return inspire_parser::make_PARAM(loc);
+
 "true"    return inspire_parser::make_BOOL(yytext, loc);
 "false"   return inspire_parser::make_BOOL(yytext, loc);
 "struct"  return inspire_parser::make_STRUCT(loc);

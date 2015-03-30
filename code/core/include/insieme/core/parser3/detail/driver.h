@@ -38,6 +38,8 @@ class DeclarationContext{
 
     std::vector<ctx_map_type> scope_stack;
     ctx_map_type global_scope;
+
+    std::vector<std::string> unfinished_symbols;
 public:
 
     void open_scope(const std::string& msg = ""){
@@ -52,18 +54,20 @@ public:
     }
 
     bool add_symb(const std::string& name, NodePtr node){
-//        std::cout <<"                             " <<  "add: " << name <<  " : "<< node << std::endl;
+        std::cout <<"                             " <<  "add: " << name <<  " : "<< node << std::endl;
         if (scope_stack.empty()) {
             if (global_scope.find(name) != global_scope.end()) { 
                 return false;
             }
-            global_scope.insert({name, node});
+            global_scope[name] =  node;
+            std::cout <<"                             " <<  name << " is "  <<  global_scope[name] << std::endl;
         }
         else  {
             if (scope_stack.back().find(name) != scope_stack.back().end()) { 
                 return false;
             }
-            scope_stack.back().insert({name, node});
+            scope_stack.back()[name] =  node;
+            std::cout <<"                             " <<  name << " is "  <<  scope_stack.back()[name] << std::endl;
         }
         return true;
     }
@@ -82,6 +86,20 @@ public:
         return nullptr;
     }
 
+    void add_unfinish_symbol(const std::string& name){
+        unfinished_symbols.push_back(name);
+    }
+
+    std::string get_unfinish_symbol(){
+        auto x = unfinished_symbols.back();
+        unfinished_symbols.pop_back();
+        return x;
+    }
+
+    bool all_symb_defined(){
+        return unfinished_symbols.empty();
+    }
+
 };
 
 
@@ -98,6 +116,7 @@ class inspire_driver
     mutable std::vector<t_error> errors;
 
     scanner_wrapper* scanner;    
+    DeclarationContext scopes;
 public:
     inspire_driver (const std::string& f, NodeManager& nk);
     virtual ~inspire_driver ();
@@ -108,7 +127,6 @@ public:
     const std::string& str;       
     NodePtr result;
 
-    DeclarationContext scopes;
 
     location glob_loc;
 
@@ -132,6 +150,14 @@ public:
     ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
 
     void add_symb(const location& l, const std::string& name, NodePtr ptr);
+    void add_symb(const std::string& name, NodePtr ptr);
+
+    void add_unfinish_symbol(const location& l, const std::string& name);
+    void close_unfinish_symbol(const location& l, const NodePtr& node);
+    void all_symb_defined(const location& l);
+
+    void open_scope(const location& l, const std::string& );
+    void close_scope(const location& l, const std::string&);
 
     // Error handling.
     void error (const location& l, const std::string& m)const;

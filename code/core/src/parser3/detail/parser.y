@@ -40,6 +40,7 @@
             TypeList types;
             std::vector<std::string> names;
             VariableList params;
+            TypePtr returnType;
         };
     }
 }
@@ -147,6 +148,10 @@
   DELETE        "delete"
   UNDEFINED     "undefined"
 
+  TYPE_LITERAL  "type("
+  LITERAL       "lit("
+  PARAM         "param("
+
   TRUE          "true"  
   FALSE         "false"  
   STRUCT        "struct"
@@ -201,8 +206,7 @@
 %type <NamedTypePtr> member_field
 %type <NamedTypeList> member_list tag_type
 
-%type <NodePtr> func_or_type
-%type <t_params_names> params_names params_names_collector
+%type <t_params_names> params_names params_names_collector prototype
 
 %printer { yyoutput << $$; } <std::string>
 
@@ -211,12 +215,16 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 %%
 
+/* ~~~~~~~~~~~~ Super rule, the lexer is prepared to return a spetial token and jump to the right rule ~~~~~~~~~~~~ */
+
 %start program;
 program : TYPE_ONLY declarations type             { driver.result = $3; }
         | STMT_ONLY statement                     { driver.result = $2; }
         | EXPRESSION_ONLY declarations expression { driver.result = $3; }
-        | FULL_PROGRAM declarations { driver.scopes.open_scope("program"); } program { driver.result = $4; }
+        | FULL_PROGRAM declarations { driver.open_scope(@$, "program"); } program { driver.result = $4; }
         ;
+
+/* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* poison: we do not know if we deal with a function or type until we find the first variable name 
         accumulate everithing and decide later
@@ -253,52 +261,63 @@ params_names : params_names_collector {
                 } 
              ;
 
+prototype : "(" ")" "->" type  {  $$.returnType = $4; } 
+          | "(" params_names ")" "->" type {  std::swap($$.params, $2.params); std::swap($$.types, $2.types); $$.returnType = $5;  }
+          ;
+    
 
-func_or_type : "(" ")" "->" type ";" {
-                       $$ = driver.genFuncType(@$, TypeList(), $4); 
+func_or_type : prototype ";" {
                 }
-             | "(" ")" "->" type "{" compound_stmt {
-                    FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $4); 
-                    CompoundStmtPtr body = driver.builder.compoundStmt($6);
-	    			$$ = driver.builder.lambdaExpr(funcType, VariableList(), body);
+             | prototype "{" "}" ";" {
+                    FunctionTypePtr funcType = driver.builder.functionType($1.types, $1.returnType); 
+                    CompoundStmtPtr body = driver.builder.compoundStmt();
+	    			
+                    driver.close_unfinish_symbol(@1, driver.builder.lambdaExpr(funcType, $1.params, body)); 
                 }
-             | "(" params_names ")" "->" type ";" {
-                    $$ = driver.genFuncType(@$, $2.types , $5); 
+             | prototype "{" compound_stmt "}" ";"{
+                    FunctionTypePtr funcType = driver.builder.functionType($1.types, $1.returnType); 
+                }  
+             | type_no_func ";" {  
+                    driver.close_unfinish_symbol(@1, $1); 
                 }
-             | "(" params_names ")" "->" type "{"  compound_stmt {
-                    FunctionTypePtr funcType = driver.builder.functionType($2.types, $5); 
-                    CompoundStmtPtr body = driver.builder.compoundStmt($7);
-	    			$$ = driver.builder.lambdaExpr(funcType, $2.params, body);
+             | prototype "," func_or_type { 
                 }
-             | type_no_func { $$ = $1; }
+             | prototype "{" "}" "," func_or_type{
+                }
+             | prototype "{" compound_stmt "}" {
+                } "," func_or_type
+             | type_no_func { 
+                    driver.close_unfinish_symbol(@1, $1); 
+                } "," func_or_type 
              ;
 
-let_def : "identifier" "=" { driver.scopes.open_scope("let"); } func_or_type ";" {  
-                        driver.scopes.close_scope("let"); 
-                        driver.add_symb(@$, $1, $4); 
-                }
-        ;
+let_def : func_or_type;
 
-let_chain : let_def {}
-          | let_def "let" let_chain {}
+let_decl : "identifier" { driver.add_unfinish_symbol(@1, $1); } "=" let_def  { driver.all_symb_defined(@$);}
+         | "identifier" { driver.add_unfinish_symbol(@1, $1); } "," let_decl ;
+
+let_chain : let_decl  { } 
+          | let_decl "let" let_chain { }
           ;
 
 declarations : /* empty */ { } 
              | "let" let_chain {}
              ;
 
-program : type "identifier" "(" variable_list ")" "{" compound_stmt  {
+/* ~~~~~~~~~~~~~~~~~~~  PROGRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+program : type "identifier" "(" variable_list ")" "{" compound_stmt  "}" {
                             INSPIRE_GUARD(@1, $1); 
-                            driver.scopes.close_scope("program");
+                            driver.close_scope(@$, "program");
                             TypeList paramTys;
                             for (const auto& var : $4) paramTys.push_back(var.getType());
                             FunctionTypePtr funcType = driver.builder.functionType(paramTys, $1); 
 						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, driver.builder.compoundStmt($7));
 						    $$ = driver.builder.createProgram(toVector(main));
                         }
-        | type "identifier" "(" ")" "{" compound_stmt {
+        | type "identifier" "(" ")" "{" compound_stmt "}"{
                             INSPIRE_GUARD(@1, $1); 
-                            driver.scopes.close_scope("program 2");
+                            driver.close_scope(@$, "program 2");
                             FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $1); 
 						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, VariableList(), driver.builder.compoundStmt($6));
 						    $$ = driver.builder.createProgram(toVector(main));
@@ -372,11 +391,11 @@ type : type_no_func { $$ = $1; }
 
 statement : ";" { $$ = driver.builder.getNoOp(); } 
           | expression ";" { $$ = $1; }
-          | "let" let_def {  $$ =  driver.builder.getNoOp(); }
+          | "let" let_decl {  $$ =  driver.builder.getNoOp(); }
                 /* compound statement */ 
           | "{" "}" { $$ = driver.builder.compoundStmt(StatementList()); }
-          | "{"  { driver.scopes.open_scope("compound"); } compound_stmt { 
-                                    driver.scopes.close_scope("compound_end"); $$ = driver.builder.compoundStmt($3); 
+          | "{"  { driver.open_scope(@$, "compound"); } compound_stmt "}" { 
+                                    driver.close_scope(@$, "compound_end"); $$ = driver.builder.compoundStmt($3); 
                  }
 
                 /* variable declarations */
@@ -390,7 +409,7 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
           | "while" "(" expression ")" statement { $$ = driver.builder.whileStmt($3, $5); }
           | "for" for_decl statement {
                 $$ = driver.builder.forStmt($2.it, $2.low, $2.up, $2.step, $3);
-                driver.scopes.close_scope("for end");
+                driver.close_scope(@$, "for end");
             }
                 /* switch */
           | "switch" "(" expression ")" "{" switch_case_list "}" {
@@ -442,7 +461,7 @@ var_decl : type "identifier" {
 
 
 for_decl : "(" type "identifier" expression ".." expression ")"  {
-                driver.scopes.open_scope("forDecl");
+                driver.open_scope(@$, "forDecl");
 		        $$.it = driver.builder.variable($2);
 				annotations::attachName( $$.it, $3);
                 driver.add_symb(@$, "$3", $$.it);
@@ -451,7 +470,7 @@ for_decl : "(" type "identifier" expression ".." expression ")"  {
                 $$.step = driver.builder.literal($2, "1");
            }
          | "(" type "identifier" expression ".." expression ":" expression ")" {
-                driver.scopes.open_scope("forDecl_step");
+                driver.open_scope(@$, "forDecl_step");
 		        $$.it = driver.builder.variable($2);
 				annotations::attachName( $$.it, $3);
                 driver.add_symb(@$, $3, $$.it);
@@ -474,7 +493,7 @@ switch_case :  "case" expression ":" statement {
 
 compound_stmt : statement_list { $$ = $1; }
 
-statement_list : statement "}" { $$.push_back($1); }
+statement_list : statement { $$.push_back($1); }
                | statement statement_list { $2.insert($2.begin(),$1); std::swap($$, $2); }
 
 
@@ -528,6 +547,12 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | "float"      { $$ = driver.builder.literal(driver.mgr.getLangBasic().getReal4(), $1); }
            | "double"     { $$ = driver.builder.literal(driver.mgr.getLangBasic().getReal8(), $1); }
            | "stringlit"  { $$ = driver.builder.stringLit($1); }
+            /* constructed literals */
+           | "type(" type ")"         { $$ = driver.builder.getTypeLiteral($2); }
+           | "param(" "paramvar" ")"  { $$ = driver.builder.getIntTypeParamLiteral(driver.builder.variableIntTypeParam($2[0])); }
+           | "param(" "int" ")"       { $$ = driver.builder.getIntTypeParamLiteral(driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($2))); }
+           | "lit(" "stringlit" ")" { $$ = driver.builder.getIdentifierLiteral($2); }
+           | "lit(" "stringlit" ":" type ")" { $$ = driver.builder.literal($4, $2); }
            ;
 
 
@@ -535,7 +560,7 @@ lambda_expression_aux : "(" ")" func_tok expression {
                                 if (!$3) $$ = driver.genLambda(@$, VariableList(), driver.builder.returnStmt($4));
                                 else     $$ = driver.genClosure(@$, VariableList(), $4 );
                         }
-                      | "(" ")" func_tok "{" compound_stmt {
+                      | "(" ")" func_tok "{" compound_stmt "}" {
                                 if (!$3) $$ = driver.genLambda(@$, VariableList(), driver.builder.compoundStmt($5));
                                 else     $$ = driver.genClosure(@$, VariableList(), driver.builder.compoundStmt($5) );
                         }
@@ -543,7 +568,7 @@ lambda_expression_aux : "(" ")" func_tok expression {
                                 if (!$4) $$ = driver.genLambda(@$, $2, driver.builder.returnStmt($5));
                                 else     $$ = driver.genClosure(@$, $2, $5);
                         }
-                      | "(" variable_list ")" func_tok  "{" compound_stmt  {
+                      | "(" variable_list ")" func_tok  "{" compound_stmt  "}" {
                                 if (!$4) $$ = driver.genLambda(@$, $2, driver.builder.compoundStmt($6));
                                 else     $$ = driver.genClosure(@$, $2, driver.builder.compoundStmt($6) );
                        }
@@ -551,7 +576,7 @@ lambda_expression_aux : "(" ")" func_tok expression {
 
 
 
-lambda_expression : { driver.scopes.open_scope("lambda expr"); } lambda_expression_aux { driver.scopes.close_scope("lambda expr"); $$ = $2; }
+lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_aux { driver.close_scope(@$, "lambda expr"); $$ = $2; }
                   ;
 
 %nonassoc "::" ;

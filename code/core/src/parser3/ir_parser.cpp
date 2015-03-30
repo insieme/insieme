@@ -53,31 +53,31 @@ using namespace detail;
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
         return driver.parseProgram();
     }
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
         return driver.parseType();
     }
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
         return driver.parseExpression();
     }
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
         return driver.parseStmt();
     }
 
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.scopes.add_symb(def.first, def.second);
+        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
         return driver.parseProgram();
     }
 
