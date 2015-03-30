@@ -44,3 +44,20 @@ set(GTEST_VERSION 1.7.0)
 
 #BOOST - used everywhere except for runtime...
 set(BOOST_VERSION 1.50.0)
+
+#TODO: currently this happens everytime we include this cmake some where...
+#if the user provides a env{lib_version} for one of the libraries
+# we overwrite the default
+list(APPEND LIB_VERSIONS LLVM_VERSION XERCES_VERSION PAPI_VERSION ISL_VERSION CLOOG_VERSION
+	BARVINOK_VERSION MPFR_VERSION GMP_VERSION CUDD_VERSION LUAJIT_VERSION SHARK_VERSION
+	KOMPEX_VERSION GTEST_VERSION BOOST_VERSION)
+
+foreach(lib ${LIB_VERSIONS})
+
+	#get ${lib_NAME}_VERSION from library_default_version_file
+	if( DEFINED ENV{${lib}} )
+		# overwrite if user specifies otherwise 
+		set(${lib} $ENV{${lib}})
+		message(STATUS "Overwriting default lib version: ${lib} = ${${lib}}")
+	endif()
+endforeach()

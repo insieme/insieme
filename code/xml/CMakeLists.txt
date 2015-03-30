@@ -20,7 +20,7 @@ add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} 
 target_include_directories(insieme_xml PUBLIC ${insieme_xml_include_dir})
 
 # lookup Xerces library
-insieme_find_package(Xerces)
+insieme_find_package(NAME Xerces)
 target_include_directories(insieme_xml PUBLIC ${Xerces_INCLUDE_DIRS})
 target_link_libraries(insieme_xml ${Xerces_LIBRARIES})
 

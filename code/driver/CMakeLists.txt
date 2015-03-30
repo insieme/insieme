@@ -18,7 +18,7 @@ add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driv
 target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
 # lookup Boost library
-insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS program_options) 
 target_include_directories(insieme_driver SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_driver ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
@@ -69,7 +69,7 @@ add_dependencies(integration_tests insiemecc)
 set ( ut_prefix  ut_driver )
 file(GLOB_RECURSE test_cases test/*.cc)
 
-insieme_find_package(PAPI)
+insieme_find_package(NAME PAPI)
 if(NOT PAPI_FOUND)
 	#measure test run a runtime-thingy which sould use papi if available
 	# if papi is not available the measure test will fail therefore exclude measuretest if papi is not

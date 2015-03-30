@@ -60,7 +60,7 @@ else()
 	find_package(Threads REQUIRED)
 
 	#look for papi
-	insieme_find_package(PAPI)
+	insieme_find_package(NAME PAPI)
 endif()
 	
 # set compiler flags for gcc

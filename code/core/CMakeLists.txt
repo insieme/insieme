@@ -37,14 +37,14 @@ target_link_libraries(insieme_core insieme_utils)
 # lookup CUDD library
 #lookup_lib( CUDD cudd )
 #target_link_libraries(insieme_core ${cudd_LIB}) 
-insieme_find_package(CUDD)
+insieme_find_package(NAME CUDD)
 target_link_libraries(insieme_core ${CUDD_LIBRARIES}) 
 target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 
 #include_directories( test/include/ )
 
 # lookup Boost library
-insieme_find_package(Boost regex) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS regex) 
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 

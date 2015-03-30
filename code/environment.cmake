@@ -266,9 +266,3 @@ if (NOT MEMORY_CHECK_SETUP)
 	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif (NOT MEMORY_CHECK_SETUP)
 
-# query the number of cores to control parallelism
-execute_process(COMMAND getconf  _NPROCESSORS_ONLN
-                OUTPUT_VARIABLE NB_PROCESSORS
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-		)
-

@@ -27,27 +27,27 @@ target_link_libraries(insieme_analysis insieme_utils)
 target_link_libraries(insieme_analysis insieme_annotations)
 
 # lookup ISL library
-insieme_find_package(ISL)
+insieme_find_package(NAME ISL)
 target_include_directories(insieme_analysis PUBLIC ${ISL_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${ISL_LIBRARIES})
 
 # lookup cloog library 
-insieme_find_package(CLOOG)
+insieme_find_package(NAME CLOOG)
 target_include_directories(insieme_analysis PUBLIC ${CLOOG_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${CLOOG_LIBRARIES}) 
 
 # lookup Barvinok library 
-insieme_find_package(BARVINOK)
+insieme_find_package(NAME BARVINOK)
 target_include_directories(insieme_analysis PUBLIC ${BARVINOK_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${BARVINOK_LIBRARIES})
 
 # lookup GMP library
-insieme_find_package(GMP) 
+insieme_find_package(NAME GMP) 
 target_include_directories(insieme_analysis PUBLIC ${GMP_INCLUDE_DIRS})
 target_link_libraries(insieme_analysis ${GMP_LIBRARIES})
 
 # lookup Boost library
-insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost) 
 target_include_directories(insieme_analysis SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 set ( ut_prefix  ut_analysis )

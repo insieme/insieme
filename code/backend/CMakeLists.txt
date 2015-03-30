@@ -16,7 +16,7 @@ target_include_directories(insieme_backend PUBLIC ${insieme_backend_include_dir}
 target_include_directories(insieme_backend PUBLIC ${insieme_common_include_dir})
 
 # lookup Boost library
-insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost)
 target_include_directories(insieme_backend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(insieme_backend insieme_core)

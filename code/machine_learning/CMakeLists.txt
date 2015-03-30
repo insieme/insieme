@@ -21,17 +21,17 @@ target_link_libraries(insieme_machine_learning insieme_utils)
 target_link_libraries(insieme_machine_learning dl)
 
 # lookup shark library
-insieme_find_package(SHARK)
+insieme_find_package(NAME SHARK)
 target_include_directories(insieme_machine_learning PUBLIC ${SHARK_INCLUDE_DIRS})
 target_link_libraries(insieme_machine_learning ${SHARK_LIBRARIES})
 
 # lookup kompex library
-insieme_find_package(KOMPEX)
+insieme_find_package(NAME KOMPEX)
 target_include_directories(insieme_machine_learning PUBLIC ${KOMPEX_INCLUDE_DIRS})
 target_link_libraries(insieme_machine_learning ${KOMPEX_LIBRARIES})
 
 # lookup Boost library
-insieme_find_package(Boost program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS program_options) 
 target_include_directories(insieme_machine_learning SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 # Build machine learning executables

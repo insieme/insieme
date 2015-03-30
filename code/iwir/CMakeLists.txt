@@ -22,7 +22,7 @@ target_link_libraries(insieme_iwir insieme_annotations)
 target_link_libraries(insieme_iwir insieme_utils)
 
 # lookup Boost library
-insieme_find_package(Boost program_options filesystem system) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS program_options filesystem system)
 target_include_directories(insieme_iwir SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_iwir ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(insieme_iwir ${Boost_FILESYSTEM_LIBRARY})

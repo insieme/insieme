@@ -98,15 +98,15 @@ if(CONFIG_INTEGRATION_TESTS)
 	# create global integration test configuration file
 
 	#FIXME: cpp/boost integration tests rely on boost to be set?
-	insieme_find_package(Boost)
+	insieme_find_package(NAME Boost)
 
 	#FIXME: we have integration-tests relying on gmp/mpfr to be configured in the integration test
 	#configuration file... --> there we need to have GMP_HOME/MPFR_HOME to be set...
 	# lookup GMP library
-	insieme_find_package(GMP)
+	insieme_find_package(NAME GMP)
 
 	# lookup MPFR library
-	insieme_find_package(MPFR)
+	insieme_find_package(NAME MPFR)
 
 	configure_file(integration_test_config.in ${CMAKE_BINARY_DIR}/integration_test_config  @ONLY IMMEDIATE)
 endif()

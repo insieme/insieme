@@ -13,7 +13,7 @@ macro ( add_unit_test case_name ut_prefix )
 
 	# lookup Google Test libraries
 	#find_package(GTest REQUIRED)
-	insieme_find_package(GTest)
+	insieme_find_package(NAME GTest)
 
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${GTEST_LIBRARIES})
@@ -56,7 +56,9 @@ macro ( add_unit_test case_name ut_prefix )
 			)
 		endif(NOT MSVC)
 	else()
+		include(ProcessorCount)
 		# use half the NB_PROCESSORS count to parallelize tests
+		ProcessorCount(NB_PROCESSORS)
 		if(NOT NB_PROCESSORS)
 			# default = 8 if system query failed
 			set(NB_PROCESSORS 8)

@@ -21,14 +21,14 @@ target_include_directories(insieme_frontend PUBLIC ${LLVM_ROOT}/include)
 target_link_libraries(insieme_frontend insieme_backend)
 
 # lookup Boost library
-insieme_find_package(Boost serialization filesystem system) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS serialization filesystem system) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_frontend ${Boost_SERIALIZATION_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_FILESYSTEM_LIBRARY})
 target_link_libraries(insieme_frontend ${Boost_SYSTEM_LIBRARY})
 
 # lookup LLVM/CLANG library+header
-insieme_find_package(LLVM)
+insieme_find_package(NAME LLVM)
 target_link_libraries(insieme_frontend ${LLVM_LIBRARIES})
 target_include_directories(insieme_frontend PUBLIC ${LLVM_INCLUDE_DIRS})
 target_link_libraries(insieme_frontend ${CLANG_LIBRARIES})

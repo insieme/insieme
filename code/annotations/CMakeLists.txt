@@ -26,7 +26,7 @@ target_link_libraries(insieme_annotations insieme_utils)
 target_link_libraries(insieme_annotations insieme_common)
 
 # lookup Boost library
-insieme_find_package(Boost) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost)
 target_include_directories(insieme_annotations SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 set(ut_prefix  ut_annotations )

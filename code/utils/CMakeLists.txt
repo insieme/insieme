@@ -23,14 +23,14 @@ add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_
 target_include_directories(insieme_utils PUBLIC include)
 
 # lookup Boost library
-insieme_find_package(Boost filesystem system) #TODO NOT NEEDED? program_options system filesystem regex serialization 
+insieme_find_package(NAME Boost COMPONENTS filesystem system) 
 target_include_directories(insieme_utils SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 # add boost_filesystem library
 target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 target_link_libraries( insieme_utils ${Boost_SYSTEM_LIBRARY})
 
 # lookup LuaJIT library
-insieme_find_package(LUAJIT)
+insieme_find_package(NAME LUAJIT)
 target_include_directories(insieme_utils PUBLIC ${LUAJIT_INCLUDE_DIRS})
 target_link_libraries(insieme_utils ${LUAJIT_LIBRARIES})
 
