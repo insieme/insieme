@@ -290,7 +290,7 @@ std::vector<std::pair<ExprAddressSet, RefTypePtr>> DatalayoutTransformer::create
 	for(std::pair<ExpressionAddress, RefTypePtr> candidate : structs) {
 		ExprAddressSet toReplaceList;
 		toReplaceList.insert(candidate.first);
-
+//std::cout << "inserted " << candidate.first << " " << *candidate.first << std::endl;
 		// fixpoint iteration to capture all variables that new a new versions with new type
 		size_t curNumOfVars = 0;
 		while(curNumOfVars != toReplaceList.size()) {
@@ -344,15 +344,16 @@ void DatalayoutTransformer::addNewDecls(const ExprAddressMap& varReplacements, c
 		const VariableAddress& oldVar = decl->getVariable();
 
 		auto newVarIter = varReplacements.find(oldVar);
+
 		if(newVarIter != varReplacements.end()) {
-			const VariablePtr& newVar = newVarIter->second.as<VariablePtr>();
+			const StatementPtr& newVar = newVarIter->second;
 
 			// check if the declaration does an allocation and try to extract the number of elements in that case
 			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
 			ExpressionPtr nElem;
 			if(match) {
 				nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
-				nElems[newVar] = nElem;
+				nElems[newVar.as<VariablePtr>()] = nElem;
 			}
 
 			IRBuilder builder(mgr);
@@ -793,7 +794,7 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 			NodeMap tyReplace;
 			tyReplace[oldStructType] = newStructType;
 			ExpressionPtr newInit = updateInit(varReplacements, decl->getInitialization(), tyReplace, StringValuePtr());
-			replacements[decl] = builder.declarationStmt(newVar.as<VariablePtr>(), newInit);
+			addToReplacements(replacements, decl, builder.declarationStmt(newVar.as<VariablePtr>(), newInit));
 		}
 
 		visitDepthFirst(toTransform, [&](const ExpressionAddress& expr) {
@@ -864,16 +865,19 @@ void DatalayoutTransformer::doReplacements(const std::map<NodeAddress, NodePtr>&
 //			std::cout << "\nTo++++++++++++++++++++++++++++++++++++++++++++++\n";
 //			dumpPretty(replacement.second);
 //			std::cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+//			NodeAddress withNewRoot = replacement.first.switchRoot(toTransform);
+//			dumpPretty(core::transform::replaceNode(mgr, withNewRoot, replacement.second));
+
 			if(*replacement.first.getRootNode()  != *toTransform) {
 				dumpPretty(replacement.first);
 				assert(false && "Replacement target has a wrong root");
 			}
 		}
-
+std::cout << "done\n";
 		toTransform = core::transform::replaceAll(mgr, replacements);
 	}
 
-	toTransform = core::transform::fixInterfaces(mgr, toTransform);
+//	toTransform = core::transform::fixInterfaces(mgr, toTransform);
 //visitDepthFirst(toTransform, [](const NodePtr& node) {
 //	std::cout << "\nNODE: " << node << "---------------\n";
 //	dumpPretty(node);
@@ -965,23 +969,61 @@ VariableAdder::VariableAdder(core::NodeManager& mgr, ExprAddressMap& varReplacem
 //	}
 }
 
+NodePtr VariableAdder::generateNewCall(const CallExprAddress& oldCall, const StatementPtr& newVar, const int argIdx) {
+	const LambdaExprAddress lambdaExpr = oldCall->getFunctionExpr().as<LambdaExprAddress>();
+
+	ExpressionAddress oldArg = oldCall->getArgument(argIdx);
+
+	// update to new variable which will be added to argument list;
+	ExpressionPtr newArg = updateArgument(oldArg);
+
+	assert(newArg && "Parameter to be replaced doesn't have replaceable argument.");
+
+	std::vector<ExpressionPtr> args(oldCall.getAddressedNode()->getArguments());
+	// add new arguments and parameters to corresponding list
+	VariableList params = lambdaExpr.getAddressedNode()->getParameterList();
+	args.push_back(newArg);
+	params.push_back(newVar.as<VariablePtr>());
+
+	IRBuilder builder(mgr);
+
+	// update function type
+	FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
+	std::vector<TypePtr> funTyMembers = lambdaType->getParameterTypeList();
+	funTyMembers.push_back(newVar.as<VariablePtr>()->getType());
+	FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
+
+	LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, lambdaExpr.getAddressedNode()->getBody());
+
+	CallExprPtr newCall = builder.callExpr(oldCall->getType(), newLambdaExpr, args);
+
+	//migrate possible annotations
+	core::transform::utils::migrateAnnotations(lambdaExpr.getAddressedNode(), newLambdaExpr);
+	core::transform::utils::migrateAnnotations(oldCall.getAddressedNode(), newCall);
+
+	return newCall;
+}
+
 NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 	std::map<NodeAddress, NodePtr> replacements;
 //for(std::pair<ExpressionAddress, ExpressionPtr> vr : varsToReplace) {
 //	std::cout << "to replace: " << vr.first << " " << *vr.first << std::endl;
 //}
 	NodeAddress srcAddr = NodeAddress(src);
+	ExprAddressMap tmp;
 	for(std::pair<ExpressionAddress, StatementPtr> vr : varsToReplace) {
+		tmp[vr.first] = vr.second;
+	}
+
+	for(std::pair<ExpressionAddress, StatementPtr> vr : tmp) {
 		// update current address
-		ExpressionAddress oldVar = vr.first;
-		ExpressionPtr newVar = vr.second.as<ExpressionPtr>();
+		ExpressionAddress oldVar = vr.first.switchRoot(srcAddr);
+		StatementPtr newVar = vr.second;
 		if(oldVar.getDepth() > 5) {
 			// if the variable's parent is a lambda it means it is part of a call to a subfunction -> add the new variable to the call
 			if(LambdaAddress lambda = oldVar.getParentAddress(2).isa<LambdaAddress>()) {
 				CallExprAddress oldCall = lambda.getParentAddress(4).as<CallExprAddress>();
-				auto alreadyModified = replacements.find(oldCall);
-				CallExprPtr call = (alreadyModified != replacements.end()) ? alreadyModified->second.as<CallExprPtr>() : oldCall.getAddressedNode();
-				LambdaExprAddress lambdaExpr = oldCall->getFunctionExpr().as<LambdaExprAddress>();
+				const LambdaExprAddress lambdaExpr = oldCall->getFunctionExpr().as<LambdaExprAddress>();
 				std::vector<VariableAddress> paramAddrs = lambdaExpr->getParameterList();
 
 				// determine index of the argument/parameter
@@ -991,37 +1033,8 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 						break;
 					}
 				}
-				ExpressionAddress oldArg = oldCall->getArgument(i);
 
-				// update to new variable which will be added to argument list;
-				ExpressionPtr newArg = updateArgument(oldArg);
-
-//				if(!newArg)
-//					break;
-
-				std::vector<ExpressionPtr> args(call->getArguments());
-				// add new arguments and parameters to corresponding list
-				VariableList params = lambdaExpr.getAddressedNode()->getParameterList();
-				args.push_back(newArg);
-				params.push_back(newVar.as<VariablePtr>());
-
-				IRBuilder builder(mgr);
-
-				// update function type
-				FunctionTypePtr lambdaType = lambdaExpr->getType().as<FunctionTypePtr>();
-				std::vector<TypePtr> funTyMembers = lambdaType->getParameterTypeList();
-				funTyMembers.push_back(newVar->getType());
-				FunctionTypePtr newFunType = builder.functionType(funTyMembers, lambdaType->getReturnType(), lambdaType->getKind());
-
-				LambdaExprPtr newLambdaExpr = builder.lambdaExpr(newFunType, params, lambdaExpr.getAddressedNode()->getBody());
-
-				CallExprPtr newCall = builder.callExpr(call->getType(), newLambdaExpr, args);
-
-				//migrate possible annotations
-				core::transform::utils::migrateAnnotations(lambdaExpr.getAddressedNode(), newLambdaExpr);
-				core::transform::utils::migrateAnnotations(call, newCall);
-
-				replacements[oldCall] = newCall;
+				replacements[oldCall] = generateNewCall(oldCall, newVar, i);
 			}
 		}
 
@@ -1029,25 +1042,18 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 //	std::cout << "\ndo it\n";
 //	dumpPretty(replacement.second);
 //}
-	}
+		if(!replacements.empty()) {
+			src = core::transform::replaceAll(mgr, replacements);
+			replacements.clear();
+			srcAddr = NodeAddress(src);
 
-	if(!replacements.empty()) {
-		src = core::transform::replaceAll(mgr, replacements);
-//		replacements.clear();
-		srcAddr = NodeAddress(src);
-	}
+			// update replacement with new root
+			varsToReplace.clear();
+			for(std::pair<ExpressionAddress, StatementPtr> vr : tmp) {
+				varsToReplace[vr.first.switchRoot(srcAddr)] = vr.second;
+			}
+		}
 
-	ExprAddressMap tmp;
-	// update addresses in the replacement list
-	for(std::pair<ExpressionAddress, StatementPtr> vr : varsToReplace) {
-		tmp[vr.first.switchRoot(srcAddr)] = vr.second;
-	}
-
-//TODO check if needed
-	//varsToReplace = tmp;
-	varsToReplace.clear();
-	for(std::pair<ExpressionAddress, StatementPtr> vr : tmp) {
-		varsToReplace[vr.first] = vr.second;
 	}
 
 	return srcAddr;

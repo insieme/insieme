@@ -237,10 +237,14 @@ TEST(DataLayout, AosToSoa2) {
 		"	let store = lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	let load = lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
 		""
+		"	let access1 = (ref<array<twoElem,1>> x)->unit {"
+		"		x[7].float = 0.0f;"
+		"	};"
 		"	let access = (ref<array<twoElem,1>> x, int<4> i)->unit {"
 		"		for(int<4> i = 0 .. 42 : 1) {"
 		"			x[i].int = i;"
 		"		}"
+		"		access1(x);"
 		"	};"
 		"	ref<ref<array<twoElem,1>>> a;"
 		"	a = new(array.create.1D( lit(struct{int<4> int; real<4> float;}), 100u ));"
@@ -275,7 +279,7 @@ TEST(DataLayout, AosToSoa2) {
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -292,9 +296,9 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(73, numberOfCompoundStmts(code));
-	EXPECT_EQ(11, countMarshalledAccesses(code));
-	EXPECT_EQ(7, countMarshalledAssigns(code));
+	EXPECT_EQ(75, numberOfCompoundStmts(code));
+	EXPECT_EQ(12, countMarshalledAccesses(code));
+	EXPECT_EQ(8, countMarshalledAssigns(code));
 }
 /*
 let type000 = struct<
@@ -307,50 +311,55 @@ let type001 = struct<
 	float:ref<array<real<4>,1>>
 >;
 
-let fun000 = fun(ref<array<type000,1>> v1, int<4> v2, type001 v154) -> unit {
+let fun000 = fun(ref<array<type000,1>> v1, type001 v180) -> unit {
+    v180.float&[7] := 0.0f;
+};
+
+let fun001 = fun(ref<array<type000,1>> v1, int<4> v2, type001 v179) -> unit {
     for(decl int<4> v3 = 0 .. 42 : 1) {
-        v154.int&[v3] := v3;
+        v179.int&[v3] := v3;
     };
+    fun000(v1, v179);
 };
 
 {
     decl ref<ref<array<type000,1>>> v0 =  var(undefined(type<ref<array<type000,1>>>));
-    decl ref<type001> v152 =  var(undefined(type<type001>));
-    v152->int := undefined(type<ref<array<int<4>,1>>>);
-    v152->float := undefined(type<ref<array<real<4>,1>>>);
+    decl ref<type001> v177 =  var(undefined(type<type001>));
+    v177->int := undefined(type<ref<array<int<4>,1>>>);
+    v177->float := undefined(type<ref<array<real<4>,1>>>);
     v0 :=  new(array.create.1D(type<type000>, 100u));
-    v152->int :=  new(array.create.1D(type<int<4>>, 100u));
-    v152->float :=  new(array.create.1D(type<real<4>>, 100u));
+    v177->int :=  new(array.create.1D(type<int<4>>, 100u));
+    v177->float :=  new(array.create.1D(type<real<4>>, 100u));
     loadData(v0);
-    for(decl uint<4> v155 = 0 .. 100u : 1) {
-         *v152->int&[v155] :=  * *v0&[v155]->int;
-         *v152->float&[v155] :=  * *v0&[v155]->float;
+    for(decl uint<4> v181 = 0 .. 100u : 1) {
+         *v177->int&[v181] :=  * *v0&[v181]->int;
+         *v177->float&[v181] :=  * *v0&[v181]->float;
     };
     decl ref<ref<array<type000,1>>> v1 =  var( *v0);
-    decl ref<type001> v153 =  var(undefined(type<type001>));
-    v153->int :=  *v152->int;
-    v153->float :=  *v152->float;
-    for(decl uint<4> v159 = 0 .. 100u : 1) {
-         *v1&[v159]->int :=  * *v153->int&[v159];
-         *v1&[v159]->float :=  * *v153->float&[v159];
+    decl ref<type001> v178 =  var(undefined(type<type001>));
+    v178->int :=  *v177->int;
+    v178->float :=  *v177->float;
+    for(decl uint<4> v185 = 0 .. 100u : 1) {
+         *v1&[v185]->int :=  * *v178->int&[v185];
+         *v1&[v185]->float :=  * *v178->float&[v185];
     };
     storeData( *v1);
-    for(decl uint<4> v157 = 0 .. 100u : 1) {
-         *v153->int&[v157] :=  * *v1&[v157]->int;
-         *v153->float&[v157] :=  * *v1&[v157]->float;
+    for(decl uint<4> v183 = 0 .. 100u : 1) {
+         *v178->int&[v183] :=  * *v1&[v183]->int;
+         *v178->float&[v183] :=  * *v1&[v183]->float;
     };
-    fun000( *v0, 0,  *v152);
-    for(decl uint<4> v158 = 0 .. 100u : 1) {
-         *v0&[v158]->int :=  * *v152->int&[v158];
-         *v0&[v158]->float :=  * *v152->float&[v158];
+    fun001( *v0, 0,  *v177);
+    for(decl uint<4> v184 = 0 .. 100u : 1) {
+         *v0&[v184]->int :=  * *v177->int&[v184];
+         *v0&[v184]->float :=  * *v177->float&[v184];
     };
     storeData( *v0);
-    for(decl uint<4> v156 = 0 .. 100u : 1) {
-         *v152->int&[v156] :=  * *v0&[v156]->int;
-         *v152->float&[v156] :=  * *v0&[v156]->float;
+    for(decl uint<4> v182 = 0 .. 100u : 1) {
+         *v177->int&[v182] :=  * *v0&[v182]->int;
+         *v177->float&[v182] :=  * *v0&[v182]->float;
     };
-     del( *v152->int);
-     del( *v152->float);
+     del( *v177->int);
+     del( *v177->float);
      del( *v0);
 }
 */
@@ -490,9 +499,26 @@ TEST(DataLayout, Tuple) {
 		"		tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
 		"	};"
 		""
+		"	let actualWork = (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, "
+		"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+//		"		ref<array<twoElem,1>> d = a;"
+//		"		ref<array<twoElem,1>> e;"
+//		"		e = a;"
+		"	};"
+		""
+		"	let local = (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, "
+		"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+		"		parallel(job([vector.reduction(local_size, 1u, uint.mul)-vector.reduction(local_size, 1u, uint.mul)]"
+		"		,	actualWork(a, b, c, local_size, global_size)"
+		"		));"
+		"	};"
+		""
 		"	let global = (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, "
 		"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
-//		"		*a[0];"
+		"		vector<uint<8>,3> groups = vector.pointwise(uint.div)(global_size, local_size);"
+		"		parallel(job([vector.reduction(groups, 1u, uint.mul)-vector.reduction(groups, 1u, uint.mul)]"
+		"		,	local(b, a, c, local_size, global_size)"
+		"		));"
 		"	};"
 		""
 		"	let kernelFct = (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {"
@@ -524,10 +550,10 @@ TEST(DataLayout, Tuple) {
 		"}"
 	));
 
-	dumpPretty(code);
-
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
+
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();

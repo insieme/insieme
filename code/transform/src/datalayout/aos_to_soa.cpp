@@ -167,7 +167,7 @@ StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
@@ -176,7 +176,7 @@ StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, c
 
 //			if(memAlloc.match(decl->getInitialization())) { // if memory is allocated, allocate memory of new newVar
 		allDecls.push_back(decl);
-		allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), builder.undefinedVar(newVar->getType())));
+		allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), builder.undefinedVar(newVar.as<VariablePtr>()->getType())));
 
 		// split up initialization expressions
 		for(NamedTypePtr memberType : newStructType->getElements()) {
@@ -188,7 +188,7 @@ StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, c
 			NodeMap inInitReplacementsInCaseOfNovarInInit;
 			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(memberType->getType(), memberType->getName());
 
-			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
+			allDecls.push_back(builder.assign(builder.accessMember(newVar.as<VariablePtr>(), memberType->getName()),
 					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 //			allDecls.push_back(removeRefVar(decl->getInitialization()));
 		}
@@ -333,7 +333,7 @@ void AosToSoa::replaceStructsInJobs(ExprAddressMap& varReplacements, const Struc
 			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
 	ParSecSoa psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
-	psa.transform();
+//	psa.transform();
 }
 } // datalayout
 } // transform
