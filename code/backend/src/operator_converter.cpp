@@ -156,7 +156,7 @@ namespace {
 			}
 
 			// checks the remaining data path
-			assert(dataPath->getNodeType() == core::NT_CallExpr && "Data Path is neither root nor call!");
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
@@ -208,7 +208,7 @@ namespace {
 			}
 
 			// process remaining data-path components
-			assert(dataPath->getNodeType() == core::NT_CallExpr && "Data Path is neither root nor call!");
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
@@ -645,7 +645,7 @@ namespace {
 				// Create code similar to this:
 				// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
-				assert(ARG(0)->getNodeType() == core::NT_StructExpr && "Only supporting struct expressions as initializer value so far!");
+				assert_eq(ARG(0)->getNodeType(), core::NT_StructExpr) << "Only supporting struct expressions as initializer value so far!";
 				core::StructExprPtr initValue = ARG(0).as<core::StructExprPtr>();
 
 				// get types of struct and element
@@ -938,7 +938,7 @@ namespace {
 			core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(vector->getType());
 
 			core::IntTypeParamPtr vectorSize = vectorType->getSize();
-			assert(vectorSize->getNodeType() == core::NT_ConcreteIntTypeParam && "Only supported for fixed vector sizes!");
+			assert_eq(vectorSize->getNodeType(), core::NT_ConcreteIntTypeParam) << "Only supported for fixed vector sizes!";
 			std::size_t size = static_pointer_cast<const core::ConcreteIntTypeParam>(vectorSize)->getValue();
 
 			// compose unfolded reduction expression
@@ -980,7 +980,7 @@ namespace {
 			context.getDependencies().insert(info.definition);
 
 			// create member access
-			assert(ARG(1)->getNodeType() == core::NT_Literal);
+			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
@@ -994,7 +994,7 @@ namespace {
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
 			context.getDependencies().insert(info.definition);
 
-			assert(ARG(1)->getNodeType() == core::NT_Literal);
+			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			// special handling for accessing variable array within struct
@@ -1025,7 +1025,7 @@ namespace {
 			while(index->getNodeType() == core::NT_CastExpr) {
 				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
 			}
-			assert(index->getNodeType() == core::NT_Literal);
+			assert_eq(index->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
@@ -1043,7 +1043,7 @@ namespace {
 			while(index->getNodeType() == core::NT_CastExpr) {
 				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
 			}
-			assert(index->getNodeType() == core::NT_Literal);
+			assert_eq(index->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 
 			// access the type

@@ -67,10 +67,10 @@ namespace core {
 	// --------- Class Meta-Info --------------------
 
 	void ClassMetaInfo::setConstructors(const vector<ExpressionPtr>& constructors) {
-		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getNodeType() == NT_Literal || cur->getNodeType() == NT_LambdaExpr; }));
+		assert_true(all(constructors, [&](const ExpressionPtr& cur) { return cur->getNodeType() == NT_Literal || cur->getNodeType() == NT_LambdaExpr; }));
 		// check new constructors
-		assert(all(constructors, [&](const ExpressionPtr& cur) { return cur->getType().isa<FunctionTypePtr>() && cur->getType().as<FunctionTypePtr>()->isConstructor(); }));
-		assert(all(constructors, [&](const ExpressionPtr& cur) { return checkObjectType(cur); }));
+		assert_true(all(constructors, [&](const ExpressionPtr& cur) { return cur->getType().isa<FunctionTypePtr>() && cur->getType().as<FunctionTypePtr>()->isConstructor(); }));
+		assert_true(all(constructors, [&](const ExpressionPtr& cur) { return checkObjectType(cur); }));
 
 		// exchange the list of constructors
 		this->constructors = constructors;
@@ -85,10 +85,10 @@ namespace core {
 	}
 
 	void ClassMetaInfo::addConstructor(const ExpressionPtr& constructor) {
-		assert(constructor->getNodeType() == NT_Literal || constructor->getNodeType() == NT_LambdaExpr);
+		assert_true(constructor->getNodeType() == NT_Literal || constructor->getNodeType() == NT_LambdaExpr);
 
 		// check constructor type
-		assert(constructor->getType().isa<FunctionTypePtr>() && constructor->getType().as<FunctionTypePtr>()->isConstructor());
+		assert_true(constructor->getType().isa<FunctionTypePtr>() && constructor->getType().as<FunctionTypePtr>()->isConstructor());
 		assert_true(checkObjectType(constructor));
 
 		// add new constructor
@@ -103,7 +103,7 @@ namespace core {
 
 		// check destructor type
 		assert_true(!destructor || (destructor->getType().isa<FunctionTypePtr>() && destructor->getType().as<FunctionTypePtr>()->isDestructor()));
-		assert(!destructor || checkObjectType(destructor));
+		assert_true(!destructor || checkObjectType(destructor));
 
 		// update destructor
 		this->destructor = (destructor)?core::analysis::normalize(destructor):ExpressionPtr();
@@ -114,8 +114,8 @@ namespace core {
 
 	void ClassMetaInfo::setMemberFunctions(const vector<MemberFunction>& functions) {
 		// check new functions
-		assert(all(functions, [&](const MemberFunction& cur) { return cur.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction(); }));
-		assert(all(functions, [&](const MemberFunction& cur) { return checkObjectType(cur.getImplementation()); }));
+		assert_true(all(functions, [&](const MemberFunction& cur) { return cur.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction(); }));
+		assert_true(all(functions, [&](const MemberFunction& cur) { return checkObjectType(cur.getImplementation()); }));
 
 		// exchange the list of member functions
 		this->memberFunctions.clear();
@@ -129,8 +129,8 @@ namespace core {
 
 	void ClassMetaInfo::addMemberFunction(const MemberFunction& function) {
 		// check member function type
-		assert(function.getImplementation()->getType()->getNodeType() == NT_FunctionType);
-		assert(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
+		assert_eq(function.getImplementation()->getType()->getNodeType(), NT_FunctionType);
+		assert_true(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
 		assert_true(checkObjectType(function.getImplementation()));
 
 		// if duplicates, retur, but check if we are incorporating a different implementation
@@ -167,7 +167,7 @@ namespace core {
 
 	bool ClassMetaInfo::checkObjectType(const ExpressionPtr& lambda) const {
 
-		assert(lambda->getType()->getNodeType() == NT_FunctionType);
+		assert_eq(lambda->getType()->getNodeType(), NT_FunctionType);
 
 		FunctionTypePtr funType = lambda->getType().as<FunctionTypePtr>();
 		assert_true(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction());
@@ -212,9 +212,9 @@ namespace core {
 	}
 
 	bool ClassMetaInfo::migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
-		assert(before != after);
-		assert(before.isa<TypePtr>());
-		assert(&getMetaInfo(before.as<TypePtr>()) == this);
+		assert_true(before != after);
+		assert_true(before.isa<TypePtr>());
+		assert_true(&getMetaInfo(before.as<TypePtr>()) == this);
 
 		// check whether new version is still an object type
 		if (after->getNodeCategory() != NC_Type || !analysis::isObjectType(after.as<TypePtr>())) {
@@ -224,7 +224,7 @@ namespace core {
 		TypePtr oldClassType = before.as<TypePtr>();
 		TypePtr newClassType = after.as<TypePtr>();
 
-		assert(*oldClassType != *newClassType);
+		assert_true(*oldClassType != *newClassType);
 
 		NodeManager& mgr = after.getNodeManager();
 		FrontendIRBuilder builder(mgr);
@@ -275,7 +275,7 @@ namespace core {
 
 			} else {
 				// handle as all other implementations
-				assert(cur.isa<LambdaExprPtr>());
+				assert_true(cur.isa<LambdaExprPtr>());
 				newInfo.addConstructor(alter(cur.as<LambdaExprPtr>()));
 			}
 		}
@@ -291,7 +291,7 @@ namespace core {
 				).as<LiteralPtr>());
 			} else {
 				// handle as all other implementations
-				assert(destructor.isa<LambdaExprPtr>());
+				assert_true(destructor.isa<LambdaExprPtr>());
 				newInfo.setDestructor(alter(destructor.as<LambdaExprPtr>()));
 			}
 		}
@@ -330,7 +330,7 @@ namespace core {
 
 			} else {
 				// handle as all other implementations
-				assert(impl.isa<LambdaExprPtr>());
+				assert_true(impl.isa<LambdaExprPtr>());
 				newMember.setImplementation(alter(impl.as<LambdaExprPtr>()));
 			}
 
@@ -345,7 +345,7 @@ namespace core {
 
 	void ClassMetaInfo::cloneTo(const NodePtr& target) const {
 
-		assert(target.isa<TypePtr>());
+		assert_true(target.isa<TypePtr>());
 
 		// create a copy of this class referencing instances managed by the new target node manager
 		NodeManager& newMgr = target->getNodeManager();
@@ -391,7 +391,7 @@ namespace core {
 		typedef core::value_node_annotation<ClassMetaInfo>::type annotation_type;
 
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only Class-Info annotations are supported!");
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only Class-Info annotations are supported!";
 			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue());
 		}
 

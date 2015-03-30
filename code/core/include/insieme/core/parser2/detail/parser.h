@@ -316,7 +316,7 @@ namespace detail {
 		}
 
 		const NodePtr& getTerm(unsigned index) const {
-			assert(index < subTerms.size());
+			assert_lt(index, subTerms.size());
 			return subTerms[index];
 		}
 
@@ -325,7 +325,7 @@ namespace detail {
 		}
 
 		const TokenRange& getSubRange(unsigned index) const {
-			assert(index < subRanges.size());
+			assert_lt(index, subRanges.size());
 			return subRanges[index];
 		}
 

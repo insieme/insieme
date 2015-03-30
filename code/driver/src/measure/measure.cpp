@@ -135,7 +135,7 @@ namespace measure {
 			vector<Quantity> operator()(const vector<Quantity>& a, const vector<Quantity>& b) const {
 				vector<Quantity> res;
 				Op op;
-				assert(a.size() == b.size() && "Expecting same sequence of values for given metrics!");
+				assert_eq(a.size(), b.size()) << "Expecting same sequence of values for given metrics!";
 				for(std::size_t i=0; i<a.size(); i++) {
 					res.push_back(op(a[i], b[i]));
 				}
@@ -817,7 +817,7 @@ namespace measure {
 				}
 
 				// handle return statement - TODO: add support for exceptions
-				assert(point->getNodeType() == core::NT_ReturnStmt && "Only break, continue and return should constitute a exit point!");
+				assert_eq(point->getNodeType(), core::NT_ReturnStmt) << "Only break, continue and return should constitute a exit point!";
 
 				core::ReturnStmtPtr ret = point.as<core::ReturnStmtPtr>();
 				core::ExpressionPtr retVal = ret->getReturnExpr();
@@ -1252,7 +1252,7 @@ namespace measure {
 
 				// read metrics
 				for(std::size_t i=2; i<line.size(); i++) {
-					assert(i-2 < metrics.size() && "To long row within performance result file!");
+					assert_lt(i-2, metrics.size()) << "To long row within performance result file!";
 
 					// check metric (skip unknown metrics)
 					MetricPtr metric = metrics[i-2];

@@ -707,7 +707,7 @@ namespace {
 					assert(vecArgTy->getElementType()->getNodeType() != core::NT_RefType && 
 							"conversion of string literals to vector<ref<'a>> not yet supported");
 
-					assert(vecArgTy->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam);
+					assert_eq(vecArgTy->getSize()->getNodeType(), core::NT_ConcreteIntTypeParam);
 
 					// do conversion from a string to an array of char
 					std::string strVal = plainExpr.as<core::LiteralPtr>()->getStringValue();
@@ -857,7 +857,7 @@ namespace {
 	}
 
 	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr) {
-		assert(expr->getType()->getNodeType() == core::NT_RefType);
+		assert_eq(expr->getType()->getNodeType(), core::NT_RefType);
 		
 		core::IRBuilder builder( expr->getNodeManager() );
 

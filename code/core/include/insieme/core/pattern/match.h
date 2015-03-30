@@ -161,7 +161,7 @@ namespace pattern {
 		 * less or equal the current size of the path.
 		 */
 		void prune(std::size_t reducedSize) {
-			assert(reducedSize <= path.size());
+			assert_le(reducedSize, path.size());
 			path.resize(reducedSize);
 		}
 
@@ -242,7 +242,7 @@ namespace pattern {
 		}
 
 		const MatchValue<T>& getValue(unsigned index) const {
-			assert(index < children.size() && "Invalid index!");
+			assert_lt(index, children.size()) << "Invalid index!";
 			return getValues()[index];
 		}
 
@@ -390,7 +390,7 @@ namespace pattern {
 				return getValue();
 			}
 			auto index = *begin;
-			assert(index < children.size() && "Index out of range!");
+			assert_lt(index, children.size()) << "Index out of range!";
 			return children[index].getValue(begin+1, end);
 		}
 
@@ -403,7 +403,7 @@ namespace pattern {
 				return getList();
 			}
 			auto index = *begin;
-			assert(index < children.size() && "Index out of range!");
+			assert_lt(index, children.size()) << "Index out of range!";
 			return children[index].getListValue(begin+1, end);
 		}
 

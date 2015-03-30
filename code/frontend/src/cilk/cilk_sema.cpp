@@ -89,7 +89,7 @@ namespace cilk {
 							auto decl = cur.as<core::DeclarationStmtPtr>();
 
 							core::TypePtr type = decl->getVariable()->getType();
-							assert(type->getNodeType() == core::NT_RefType && "can only handle reference types!");
+							assert_eq(type->getNodeType(), core::NT_RefType) << "can only handle reference types!";
 
 							core::IRBuilder builder(manager);
 

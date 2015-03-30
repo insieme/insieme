@@ -377,7 +377,7 @@ namespace arithmetic {
 
 	void markAsValueConstructor(const core::ExpressionPtr& expr) {
 		// expression has to be of a function type
-		assert(expr->getType()->getNodeType() == NT_FunctionType && "Non-function expression cannot be a value constructor.");
+		assert_eq(expr->getType()->getNodeType(), NT_FunctionType) << "Non-function expression cannot be a value constructor.";
 
 		expr->attachValue(ValueConstructorTag());
 	}

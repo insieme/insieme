@@ -550,7 +550,7 @@ IterationDomain ScopVisitor::extractFromCondition(IterationVector& iv, const Exp
 		);
 	}
 
-	assert (cond->getNodeType() == NT_CallExpr);
+	assert_eq(cond->getNodeType(), NT_CallExpr);
 	const CallExprPtr& callExpr = cond.as<CallExprPtr>();
 
 	// skip scalar casts

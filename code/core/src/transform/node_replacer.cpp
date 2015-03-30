@@ -512,7 +512,7 @@ private:
 	}
 
     CallExprPtr handleCallToLamba(const CallExprPtr& call) {
-		assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
+		assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
 
 		const LambdaExprPtr& lambda = call->getFunctionExpr().as<LambdaExprPtr>();
 		const ExpressionList& args = call->getArguments();
@@ -640,11 +640,11 @@ private:
 			}
 
 			// check return type
-			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
+			assert_eq(call->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
 
 			// extract function type
 			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
-			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
+			assert_eq(funType->getParameterTypes().size(), call->getArguments().size()) << "Invalid number of arguments!";
 /*
 			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
 				std::cout << "ARRR " << call << std::endl;
@@ -875,7 +875,7 @@ private:
 		IRBuilder builder(manager);
 
 		// only supported for function types
-		assert(literal->getType()->getNodeType() == NT_FunctionType);
+		assert_eq(literal->getType()->getNodeType(), NT_FunctionType);
 
 		// assemble new argument types
 		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
@@ -1151,7 +1151,7 @@ namespace {
 		const ExpressionList args = call->getArguments();
 
 		// check whether the function type has been preserved
-		assert(fun->getType()->getNodeType() == NT_FunctionType && "Call is no longer targeting function after replacement!");
+		assert_eq(fun->getType()->getNodeType(), NT_FunctionType) << "Call is no longer targeting function after replacement!";
 
 		FunctionTypePtr funType = fun->getType().as<FunctionTypePtr>();
 

@@ -168,7 +168,7 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 	// use generic manipulation function
 	return manipulate(manager, target, [index](vector<StatementPtr>& list){
 		// remove element
-		assert( index < list.size() && "Index out of range!");
+		assert_lt(index, list.size()) << "Index out of range!";
 		list.erase(list.begin() + index);
 	});
 }
@@ -196,7 +196,7 @@ NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 			cur = static_address_cast<StatementAddress>(cur.getParentAddress());
 		}
 
-		assert(cur.getParentAddress()->getNodeType() == NT_CompoundStmt && "Every stmt should be inside a compound stmt!");
+		assert_eq(cur.getParentAddress()->getNodeType(), NT_CompoundStmt) << "Every stmt should be inside a compound stmt!";
 
 		// update root of current stmt
 		cur = cur.switchRoot(res);
@@ -212,7 +212,7 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 	// use generic manipulation function
 	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list){
 		// remove element
-		assert( index < list.size() && "Index out of range!");
+		assert_lt(index, list.size()) << "Index out of range!";
 		list[index] = replacement;
 	});
 }
@@ -221,7 +221,7 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 	// use generic manipulation function
 	return manipulate(manager, target, [index, &replacements](vector<StatementPtr>& list){
 		// remove element
-		assert( index < list.size() && "Index out of range!");
+		assert_lt(index, list.size()) << "Index out of range!";
 		list.erase(list.begin() + index);
 		list.insert(list.begin() + index, replacements.cbegin(), replacements.cend());
 	});
@@ -237,7 +237,7 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 	// use generic manipulation function
 	return manipulate(manager, target, [index, displacement](vector<StatementPtr>& list){
 		// check index
-		assert( index < list.size() && "Index out of range!");
+		assert_lt(index, list.size()) << "Index out of range!";
 
 		// limit displacement
 		int newPos = index + displacement;
@@ -311,7 +311,7 @@ namespace {
 	ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
 
 		// extract bind and call expression
-		assert(call->getFunctionExpr()->getNodeType() == NT_BindExpr && "Illegal argument!");
+		assert_eq(call->getFunctionExpr()->getNodeType(), NT_BindExpr) << "Illegal argument!";
 		BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
 
 		// process call recursively
@@ -472,7 +472,7 @@ StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr, 
 	const auto& params = fun->getParameterList().getElements();
 	const auto& args = call->getArguments();
 
-	assert(params.size() == args.size() && "Arguments do not fit parameters!!");
+	assert_eq(params.size(), args.size()) << "Arguments do not fit parameters!!";
 
 	for(std::size_t i =0; i<params.size(); i++) {
 
@@ -579,7 +579,7 @@ namespace {
 
 					// check whether it is a known literal
 					} else if (analysis::isCallOf(fun, manager.getLangBasic().getPick())) {
-						assert(fun->getType()->getNodeType() == NT_FunctionType);
+						assert_eq(fun->getType()->getNodeType(), NT_FunctionType);
 
 						// get list encapsulated options
 						CallExprPtr pickCall = fun.as<CallExprPtr>();
@@ -648,7 +648,7 @@ namespace {
 //		// check for compatible target type
 //		FunctionTypePtr funType = lambda->getFunctionType();
 //		TypeList paramTypes = funType->getParameterTypeList();
-//		assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
+//		assert_lt(index, paramTypes.size()) << "Index out of bound - no such parameter!";
 //		assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
 //
 //		// replace parameter within body
@@ -697,7 +697,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	// check parameters
 	const FunctionTypePtr& funType = lambda->getFunctionType();
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
-	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
+	assert_lt(index, paramTypes.size()) << "Index out of bound - no such parameter!";
 
 	assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
 
@@ -735,7 +735,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 		// check whether parameter is propagated
 		bool isPropagated = all(calls, [&](const CallExprPtr& call)->bool {
 			// check whether value is propagated along the recursion
-			assert(index < call->getArguments().size() && "Invalid recursive call!");
+			assert_lt(index, call->getArguments().size()) << "Invalid recursive call!";
 			return call->getArgument(index) == value;
 		});
 
@@ -791,11 +791,11 @@ CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, un
 	// ---------------- Pre-Conditions --------------------
 
 	// check whether indexed parameter is in-deed a bind
-	assert(index < call->getArguments().size() && "Invalid argument index!");
-	assert(call->getArgument(index)->getNodeType() == NT_BindExpr && "Specified argument is not a bind!");
+	assert_lt(index, call->getArguments().size()) << "Invalid argument index!";
+	assert_eq(call->getArgument(index)->getNodeType(), NT_BindExpr) << "Specified argument is not a bind!";
 
 	// check whether function is in-deed a lambda
-	assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr && "Function has to be a lambda!");
+	assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr) << "Function has to be a lambda!";
 
 	// so far it is only supported for non-recursive implementations
 	assert(!call->getFunctionExpr().as<LambdaExprPtr>()->isRecursive() && "Not implemented for recursive functions!");
@@ -1187,7 +1187,7 @@ namespace {
 
 			// if we are crossing a lambda, check whether new parameter needs to be accepted
 			if (res.getNodeType() == NT_LambdaExpr) {
-				assert(res.getParentNode()->getNodeType() == NT_CallExpr && "Parent of lambda needs to be a call!");
+				assert_eq(res.getParentNode()->getNodeType(), NT_CallExpr) << "Parent of lambda needs to be a call!";
 				assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
 
 				LambdaExprPtr lambda = res.as<LambdaExprPtr>();

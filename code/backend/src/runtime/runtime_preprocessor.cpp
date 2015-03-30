@@ -87,7 +87,7 @@ namespace runtime {
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
 
 			// create new lambda expression wrapping the entry point
-			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
+			assert_eq(entry->getType()->getNodeType(), core::NT_FunctionType) << "Only functions can be entry points!";
 			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
 			assert_true(entryType->isPlain()) << "Only plain functions can be entry points!";
 
@@ -281,7 +281,7 @@ namespace runtime {
 			 * through the child-node list.
 			 */
 			void visitNode(const core::NodePtr& node) {
-				assert(node->getNodeType() != core::NT_LambdaExpr);
+				assert_ne(node->getNodeType(), core::NT_LambdaExpr);
 				// visit all children recursively
 				for_each(node->getChildList(), [this](const core::NodePtr& cur){
 					this->visit(cur);
@@ -788,7 +788,7 @@ namespace runtime {
 				for_each(variantCodes, [&](const core::ExpressionPtr& cur) {
 
 					// variant needs to be a lambda expression!
-					assert(cur->getNodeType() == core::NT_LambdaExpr);
+					assert_eq(cur->getNodeType(), core::NT_LambdaExpr);
 
 					// create literal
 					core::LiteralPtr lit = builder.uintLit(i);
@@ -962,7 +962,7 @@ namespace runtime {
 			}
 
 			// take first argument
-			assert(call[0]->getNodeType() == core::NT_Literal && "Region ID is expected to be a literal!");
+			assert_eq(call[0]->getNodeType(), core::NT_Literal) << "Region ID is expected to be a literal!";
 			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
 			if (max < regionId) max = regionId;
 		});
@@ -978,7 +978,7 @@ namespace runtime {
 
 		// add information to application
 		core::NodeAddress root(node);
-		assert(node->getNodeType() == core::NT_Program);
+		assert_eq(node->getNodeType(), core::NT_Program);
 
 		core::ProgramAddress program = root.as<core::ProgramAddress>();
 		assert_eq(program->size(), 1u);

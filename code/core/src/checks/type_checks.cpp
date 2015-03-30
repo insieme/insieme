@@ -353,7 +353,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 
 	// obtain function type ...
 	TypePtr funType = address->getFunctionExpr()->getType();
-	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	assert_eq(address->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Illegal function expression!";
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
 	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();

@@ -1421,7 +1421,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					}
 				}
 			}
-			assert(decl->getInitialization()->getNodeType() == NT_CallExpr && "Unexpected initialization of cl_mem variable");
+			assert_eq(decl->getInitialization()->getNodeType(), NT_CallExpr) << "Unexpected initialization of cl_mem variable";
 		}
 
 		if(var->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
@@ -1432,7 +1432,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					}
 				}
 			}
-			assert(decl->getInitialization()->getNodeType() == NT_CallExpr && "Unexpected initialization of cl_mem variable");
+			assert_eq(decl->getInitialization()->getNodeType(), NT_CallExpr) << "Unexpected initialization of cl_mem variable";
 		}
 
 		lookForKernelFilePragma(var->getType(), decl->getInitialization());

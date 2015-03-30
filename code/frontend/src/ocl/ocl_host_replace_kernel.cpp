@@ -247,7 +247,7 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 		param = builder.variable(argTy);
 	} else { // the argument is an array
 		size = utils::removeDoubleRef(size);
-//		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
+//		assert_eq(size->getType()->getNodeType(), NT_RefType) << "Called clEnqueueNDRangeKernel with invalid group argument";
 		arg = size;
 		argTy = arg->getType();
 		param = builder.variable(argTy);

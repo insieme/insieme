@@ -318,7 +318,7 @@ public:
 			// Generate all cases using node definition file
 			#define CONCRETE(name) \
 				case NT_ ## name : \
-					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
+					assert_true(dynamic_cast<const name*>(&*element)) << "Type token NT_" #name " does not match type!"; \
 					return this->visit ## name (cast.TEMP_OP<const name>(element), context...);
 
 					// take all nodes ...

@@ -281,7 +281,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 					type = core::analysis::getReferencedType(type); 
 				}
 				
-				assert(type->getNodeType() == NT_ArrayType);
+				assert_eq(type->getNodeType(), NT_ArrayType);
 		
 				type = type.as<ArrayTypePtr>()->getElementType();
 

@@ -123,7 +123,7 @@ namespace core {
 		 * Updates the implementation of this member function.
 		 */
 		void setImplementation(const ExpressionPtr& newImpl) {
-			assert(newImpl->getType()->getNodeType() == NT_FunctionType);
+			assert_eq(newImpl->getType()->getNodeType(), NT_FunctionType);
 			assert(newImpl->getType().as<FunctionTypePtr>()->isMemberFunction());
 			assert_true(newImpl->getNodeType() == NT_Literal || newImpl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(newImpl));
 			impl = newImpl;

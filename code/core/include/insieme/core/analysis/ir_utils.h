@@ -79,7 +79,7 @@ bool isCallOf(const NodePtr& candidate, const NodePtr& function);
  * @return the extracted argument
  */
 static inline core::ExpressionPtr getArgument(const NodePtr& call, int index) {
-	assert(call->getNodeType() == core::NT_CallExpr && "Call has to be a call expression!");
+	assert_eq(call->getNodeType(), core::NT_CallExpr) << "Call has to be a call expression!";
 	return static_pointer_cast<const CallExpr>(call)->getArgument(index);
 }
 

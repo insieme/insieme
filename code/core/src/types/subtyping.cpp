@@ -162,7 +162,7 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		}
 
 		if (superType->getNodeType() == NT_RecType) {
-			assert(subType->getNodeType() != NT_RecType);
+			assert_ne(subType->getNodeType(), NT_RecType);
 			return isSubTypeOf(subType, superType.as<RecTypePtr>()->unroll());
 		}
 

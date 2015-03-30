@@ -547,7 +547,7 @@ namespace core {
 
 			const NodePtr& cur = element->ptr;
 			const NodeList& list = cur->getChildList();
-			assert(index < list.size() && "Child Index out of bound!");
+			assert_lt(index, list.size()) << "Child Index out of bound!";
 
 			return NodePath(new NodePathElement<V>(list[index], index, value, element));
 		}

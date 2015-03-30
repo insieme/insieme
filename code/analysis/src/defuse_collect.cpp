@@ -121,7 +121,7 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage) : 
 	Ref(Ref::MEMBER, memberAcc, usage) 
 { 
-	assert (memberAcc->getNodeType() == core::NT_CallExpr);
+	assert_eq(memberAcc->getNodeType(), core::NT_CallExpr);
 
 	__unused core::NodeManager& mgr = memberAcc->getNodeManager();
 	assert (core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 

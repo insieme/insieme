@@ -753,7 +753,7 @@ private:
 
     // function to calculate the product of all elements in a vector
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
-        assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
+        assert_eq(vec->getType()->getNodeType(), core::NodeType::NT_VectorType) << "function vecProduct is only allowed for vector variables\n";
 
         return builder.callExpr(BASIC.getUInt8(), BASIC.getVectorReduction(), vec, builder.uintLit(1u), BASIC.getUnsignedIntMul());
 

@@ -460,14 +460,14 @@ AffineFunction::operator core::arithmetic::Formula() const {
 //====== AffineFunction::iterator =================================================================
 
 AffineFunction::iterator& AffineFunction::iterator::operator++() { 
-	assert ( iterPos < iterVec.size() && "Iterator not valid!"); 
+	assert_lt(iterPos, iterVec.size()) << "Iterator not valid!"; 
 	
 	iterPos++;
 	return *this;
 }
 
 AffineFunction::Term AffineFunction::iterator::operator*() const {  
-	assert ( iterPos < iterVec.size() && "Iterator not valid!"); 
+	assert_lt(iterPos, iterVec.size()) << "Iterator not valid!"; 
 
 	return Term(iterVec[iterPos], af.getCoeff(iterPos));	
 }

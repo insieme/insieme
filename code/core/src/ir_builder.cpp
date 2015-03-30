@@ -636,7 +636,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
 	TypePtr type = subExpr->getType();
-	assert(type->getNodeType() == NT_RefType);
+	assert_eq(type->getNodeType(), NT_RefType);
 	return callExpr(type.as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefDeref(), subExpr);
 }
 
@@ -884,11 +884,11 @@ namespace {
 
 	TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 		// check function expression
-		assert(functionExpr->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
+		assert_eq(functionExpr->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
 
 		// extract function type
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(functionExpr->getType());
-		assert(funType->getParameterTypes().size() == arguments.size() && "Invalid number of arguments!");
+		assert_eq(funType->getParameterTypes().size(), arguments.size()) << "Invalid number of arguments!";
 
 		// deduce return type
 		core::TypeList argumentTypes;
@@ -1095,7 +1095,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 
     vector<pair<ExpressionPtr, ExpressionPtr> > replVariableMap;
 	for(const core::ExpressionPtr& curr : args){
-		assert(curr->getNodeType() == core::NT_Variable);
+		assert_eq(curr->getNodeType(), core::NT_Variable);
 
 		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
 		const core::TypePtr& varType = bodyVar->getType();
@@ -1169,7 +1169,7 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& 
 
 CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
-	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
+	assert_eq(type->getNodeType(), core::NT_RefType) << "Cannot deref non ref type";
 
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
 
@@ -1191,7 +1191,7 @@ CallExprPtr IRBuilder::refParent(const ExpressionPtr& structExpr, const TypePtr&
 
 	// check some pre-conditions
 	TypePtr type = structExpr->getType();
-	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non-ref type");
+	assert_eq(type->getNodeType(), core::NT_RefType) << "Cannot deref non-ref type";
 	type = type.as<RefTypePtr>()->getElementType();
 	assert_true(type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_GenericType || type->getNodeType() == core::NT_RecType);
 
@@ -1211,10 +1211,10 @@ CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr co
 
 CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
-	assert(type->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
+	assert_eq(type->getNodeType(), core::NT_TupleType) << "Cannot access non-tuple type!";
 
 	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(type);
-	assert(component < tupleType->getElementTypes().size() && "Component out of range!");
+	assert_lt(component, tupleType->getElementTypes().size()) << "Component out of range!";
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
 
 	// create access instruction
@@ -1230,13 +1230,13 @@ CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr compo
 }
 CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
-	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
+	assert_eq(type->getNodeType(), core::NT_RefType) << "Cannot deref non ref type";
 
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
-	assert(elementType->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
+	assert_eq(elementType->getNodeType(), core::NT_TupleType) << "Cannot access non-tuple type!";
 
 	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(elementType);
-	assert(component < tupleType->getElementTypes().size() && "Component out of range!");
+	assert_lt(component, tupleType->getElementTypes().size()) << "Component out of range!";
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
 
 	// create access instruction
@@ -1290,7 +1290,7 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 	}
 
 	assert_true(getLangBasic().isScalarType(subExpr->getType())) << "Requested to convert non-scalar to scalar!";
-	assert(type->getNodeType() == NT_VectorType && "Target type has to be a vector type!");
+	assert_eq(type->getNodeType(), NT_VectorType) << "Target type has to be a vector type!";
 
 
 	VectorTypePtr vt = type.as<VectorTypePtr>();
@@ -1339,7 +1339,7 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 namespace {
 	template<typename ... T>
 	TypePtr infereExprTypeInternal(const ExpressionPtr& op, const T& ... operators) {
-		assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
+		assert_eq(op->getType()->getNodeType(), NT_FunctionType) << "Operation is not a function!";
 		FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
 		return types::tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
 	}

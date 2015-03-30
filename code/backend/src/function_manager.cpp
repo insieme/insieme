@@ -317,7 +317,7 @@ namespace backend {
 
 			// check whether there is a argument which is a vector but the parameter is not
 			const core::TypePtr& type = call->getFunctionExpr()->getType();
-			assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
+			assert_eq(type->getNodeType(), core::NT_FunctionType) << "Function should be of a function type!";
 			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
 			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
@@ -678,7 +678,7 @@ namespace backend {
 
 		ElementInfo* FunctionInfoStore::resolveLiteral(const core::LiteralPtr& literal, bool isConst) {
 
-			assert(literal->getType()->getNodeType() == core::NT_FunctionType && "Only supporting literals with a function type!");
+			assert_eq(literal->getType()->getNodeType(), core::NT_FunctionType) << "Only supporting literals with a function type!";
 
 			// some preparation
 			auto manager = converter.getCNodeManager();
@@ -1384,12 +1384,12 @@ namespace backend {
 								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
 
 								if( initCall->getNodeType() != c_ast::NT_ConstructorCall) {
-									assert(initCall->getNodeType() == c_ast::NT_UnaryOperation);
+									assert_eq(initCall->getNodeType(), c_ast::NT_UnaryOperation);
 									initCall = initCall.as<c_ast::UnaryOperationPtr>()->operand.as<decltype(initCall)>();
 								}
 
 								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
-								assert(initCall->getNodeType() == c_ast::NT_ConstructorCall);
+								assert_eq(initCall->getNodeType(), c_ast::NT_ConstructorCall);
 								auto ctorCall = initCall.as<c_ast::ConstructorCallPtr>();
 								// add constructor call to initializer list
 								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));

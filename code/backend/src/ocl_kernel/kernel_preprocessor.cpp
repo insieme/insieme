@@ -466,7 +466,7 @@ namespace {
 
 						core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 						const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
-						assert(paramTypes.size() == newArgs.size());
+						assert_eq(paramTypes.size(), newArgs.size());
 
 						// add type wrappers where necessary for the parameters of the kernel
 						for(std::size_t i = 0; i < paramTypes.size(); i++) {

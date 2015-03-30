@@ -469,7 +469,7 @@ protected:
 			} else {
 				// new access, generate var and add to map
 				VariablePtr varP = build.variable(accessExpr->getType());
-				assert(varP->getType()->getNodeType() == NT_RefType && "Non-ref threadprivate!");
+				assert_eq(varP->getType()->getNodeType(), NT_RefType) << "Non-ref threadprivate!";
 				thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
 				return varP;
 			}
@@ -477,7 +477,7 @@ protected:
 		LiteralPtr literal = node.isa<LiteralPtr>();
 		if(literal) {
 			//std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
-			assert(literal->getType()->getNodeType() == NT_RefType);
+			assert_eq(literal->getType()->getNodeType(), NT_RefType);
 			// alter the type of the literal
 			TypePtr newType = build.refType(
 					build.vectorType(
@@ -1045,7 +1045,7 @@ protected:
 	}
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
-		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
+		assert_eq(stmtNode.getNodeType(), NT_ForStmt) << "OpenMP for attached to non-for statement";
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 		//outer = collapseForNest(outer);
 		StatementList resultStmts;

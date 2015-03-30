@@ -1037,12 +1037,12 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 
 		// if only one is, it needs to be unrolled
 		if (a->getNodeType() == NT_RecType) {
-			assert(b->getNodeType() != NT_RecType);
+			assert_ne(b->getNodeType(), NT_RecType);
 			return compareTypes(a.as<RecTypePtr>()->unroll(), b);
 		}
 
 		if (b->getNodeType() == NT_RecType) {
-			assert(a->getNodeType() != NT_RecType);
+			assert_ne(a->getNodeType(), NT_RecType);
 			return compareTypes(a, b.as<RecTypePtr>()->unroll());
 		}
 		assert_fail() << "How could you get here?";

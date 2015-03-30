@@ -98,7 +98,7 @@ namespace ocl_host {
 		unsigned id = codes.size();
 		kernelMap.insert(std::make_pair(kernel, id));
 
-		assert(kernel->getNodeType() == core::NT_CallExpr);
+		assert_eq(kernel->getNodeType(), core::NT_CallExpr);
 		core::ExpressionPtr kernelLambda = core::analysis::getArgument(kernel, 0);
 
 		// fix name of kernel

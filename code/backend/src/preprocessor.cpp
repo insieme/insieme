@@ -130,8 +130,8 @@ namespace backend {
 				if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getVectorPointwise())) {
 
 					// get argument and result types!
-					assert(call->getType()->getNodeType() == core::NT_VectorType && "Result should be a vector!");
-					assert(call->getArgument(0)->getType()->getNodeType() == core::NT_VectorType && "Argument should be a vector!");
+					assert_eq(call->getType()->getNodeType(), core::NT_VectorType) << "Result should be a vector!";
+					assert_eq(call->getArgument(0)->getType()->getNodeType(), core::NT_VectorType) << "Argument should be a vector!";
 
 					core::VectorTypePtr argType = static_pointer_cast<const core::VectorType>(call->getArgument(0)->getType());
 					core::VectorTypePtr resType = static_pointer_cast<const core::VectorType>(call->getType());
@@ -140,7 +140,7 @@ namespace backend {
 					core::TypePtr in = argType->getElementType();
 					core::TypePtr out = resType->getElementType();
 
-					assert(resType->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam && "Result should be of fixed size!");
+					assert_eq(resType->getSize()->getNodeType(), core::NT_ConcreteIntTypeParam) << "Result should be of fixed size!";
 					core::ConcreteIntTypeParamPtr size = static_pointer_cast<const core::ConcreteIntTypeParam>(resType->getSize());
 
 					// extract operator
@@ -372,7 +372,7 @@ namespace backend {
 
 			// check whether there is a argument which is a vector but the parameter is not
 			const core::TypePtr& type = call->getFunctionExpr()->getType();
-			assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
+			assert_eq(type->getNodeType(), core::NT_FunctionType) << "Function should be of a function type!";
 			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
 			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();

@@ -263,7 +263,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 		}
 	} else { // the argument is an array
 		size = removeDoubleRef(size, builder);
-		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
+		assert_eq(size->getType()->getNodeType(), NT_RefType) << "Called clEnqueueNDRangeKernel with invalid group argument";
 		argTy = size->getType();
 		param = builder.variable(argTy);
 		arg = size;
