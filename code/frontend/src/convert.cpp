@@ -496,7 +496,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				wrapRefMap.erase(currParam);
 			}
 			else{
-				// other case materialize a var, declare it at the begining of the body
+				// other case materialize a var, declare it at the beginning of the body
 				decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
 			}
 		}

@@ -211,7 +211,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //	std::cout << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
 	// the source range we inspect is defined by the new source locations,
-	// this fix the problem with bonduaries jumping to the begining of the file in
+	// this fix the problem with bonduaries jumping to the beginning of the file in
 	// the macro expanisons:
 	//
 	//	#define F(x) { }

@@ -306,7 +306,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 	// now that we know the induction expression and we created a new var, we have to identify the lower bound
 	const clang::Stmt* initStmt = forStmt->getInit();
 
-	if (!initStmt){  // there is no init statement, therefore the initial value is the value of the induction expression at the begining of the loop
+	if (!initStmt){  // there is no init statement, therefore the initial value is the value of the induction expression at the beginning of the loop
 		initValue = originalInductionExpr;
         restoreValue = true;
 	}
@@ -319,7 +319,7 @@ void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 		preStmts	 = collector.leftoverStmts;
 		restoreValue = !collector.isDecl;
 		if (!initValue) {
-			// if we could not find any suitable init, the initialization is the value of the original variable at the begining of the loop
+			// if we could not find any suitable init, the initialization is the value of the original variable at the beginning of the loop
 			initValue = originalInductionExpr;
 		}
 	}
