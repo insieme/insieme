@@ -138,7 +138,7 @@ clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::Sou
 core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end) {
 	// check file validity
 	FileID&& fileId = sm.getFileID(start);
-	assert(!fileId.isInvalid() && "File is not valid!");
+	assert_false(fileId.isInvalid()) << "File is not valid!";
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	//if we cannot get the file entry, lets try to get the source filename directly
 	std::string filename;
@@ -146,7 +146,7 @@ core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const cla
         StringRef s = sm.getFilename(start);
         filename = s.str();
 	} else {
-        assert(fileEntry);
+        assert_true(fileEntry);
         filename = fileEntry->getName();
 	}
 	// update macro locations, if required

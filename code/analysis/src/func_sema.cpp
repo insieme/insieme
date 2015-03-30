@@ -56,8 +56,8 @@ using insieme::core::arithmetic::Piecewise;
 // Given a concrete call expression, this method returns the argument to which this object is referring
 core::ExpressionPtr FunctionArgument::operator()(const core::CallExprPtr& callExpr) const {
 	core::LiteralPtr callFunc = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
-	assert(*funcLit == *callFunc && "CallExpression is not of the same type");
-	assert(pos < callExpr->getArguments().size());
+	assert_true(*funcLit == *callFunc) << "CallExpression is not of the same type";
+	assert_lt(pos, callExpr->getArguments().size());
 	return callExpr->getArgument(pos);
 }
 
@@ -119,10 +119,10 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	RefSet ref_set;
 
 	for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { ref_set.insert(cur); } );
-	assert(!ref_set.empty());
+	assert_false(ref_set.empty());
 
 	RefPtr ref = *ref_set.begin();
-	assert(ref && "No ref in expression");
+	assert_true(ref) << "No ref in expression";
 
 	// if ( std::distance(refs.arrays_begin(), refs.arrays_end()) >= 1) {
 	//RefPtr ref = *refs.arrays_begin();
@@ -134,7 +134,7 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	case Ref::ARRAY: 
 	{
 		ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
-		assert(arrRef && "Wrong pointer cast");
+		assert_true(arrRef) << "Wrong pointer cast";
 		const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
 		if (indexes.size() == 0) {
 			// no displacement has been provided 
@@ -145,13 +145,13 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 		}
 		// if we have multiple indexes then we also need to know the size of the array in order to compute the
 		// size of the displacement
-		assert(false && "Arrays with multiple displacements are not yet supported");
+		assert_fail() << "Arrays with multiple displacements are not yet supported";
 	}
 	case Ref::MEMBER:
 	 return Piecewise();
 
 	default:
-		assert(false);
+		assert_fail();
 		return Piecewise();
 	}
 	//}
@@ -169,20 +169,20 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 	RefSet ref_set;
 
 	for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { ref_set.insert(cur); } );
-	assert(!ref_set.empty());
+	assert_false(ref_set.empty());
 
 	RefPtr ref = *ref_set.begin();
-	assert(ref && "No ref in expression");
+	assert_true(ref) << "No ref in expression";
 
 	switch(ref->getType()) {
 		// We do have a scalar variable which means that the displacement is zero 
-		case Ref::SCALAR: assert(false && "Cannot set displacement to a scalar variable");
+		case Ref::SCALAR: assert_fail() << "Cannot set displacement to a scalar variable";
 		// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
 		// expression utilized 
 		case Ref::ARRAY: 
 		{
 			ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
-			assert(arrRef && "Wrong pointer cast");
+			assert_true(arrRef) << "Wrong pointer cast";
 			const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
 			if (indexes.size() <= 1) {
 				// the old displacement was 0, we have to create a new expression with the new displacement 
@@ -191,7 +191,7 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 				core::ExpressionPtr arrRefExpr = arrRef->getBaseExpression();
 				// Get the type of the array
 				core::TypePtr arrType = arrRefExpr->getType();
-				assert(arrType->getNodeType() == core::NT_RefType && "Expecting a ref type");
+				assert_eq(arrType->getNodeType(), core::NT_RefType) << "Expecting a ref type";
 				
 				// Get the type of the contained object 
 				core::TypePtr nonRefTy = arrType;
@@ -199,8 +199,8 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 					nonRefTy = nonRefTy.as<core::RefTypePtr>()->getElementType();
 				}
 
-				assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
-						"expecting array or vector type");
+				assert_true((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType))  
+					<< "expecting array or vector type";
 				
 				core::TypePtr elemTy = nonRefTy.as<core::SingleElementTypePtr>()->getElementType();
 
@@ -214,10 +214,10 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 			}
 			// if we have multiple indexes then we also need to know the size of the array in order to compute the
 			// size of the displacement
-			assert(false && "Arrays with multiple displacements are not yet supported");
+			assert_fail() << "Arrays with multiple displacements are not yet supported";
 		}
 		default:
-			assert(false);
+			assert_fail();
 			return core::ExpressionPtr();
 	}
 }
@@ -240,7 +240,7 @@ core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
 	AddrSet ref_addresses;
 
 	for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { ref_addresses.insert(cur->getBaseExpression()); } );
-	assert(!ref_addresses.empty());
+	assert_false(ref_addresses.empty());
 
 	return ref_addresses.begin()->getAddressedNode();
 }
@@ -395,10 +395,9 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	{\
 	core::LiteralPtr funcLit = builder.literal(core::IRBuilder(mgr).parseType(Type), #Name); \
 	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
-	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && \
-		   "Type in function db not a function type: " #Name); \
+	assert_eq(funcLit->getType()->getNodeType(), core::NT_FunctionType) << "Type in function db not a function type: " << #Name; \
 	FunctionSemaAnnotation::Args args = makeArgumentInfo({ args_info }); \
-	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
+	assert_eq(args.size(), core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
 	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects) ); \
 	}
 	#include "function_db.def"
@@ -466,7 +465,7 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 
 			const LazyRange& range = boost::get<const LazyRange&>(r);
 			core::ExpressionAddress addr = core::Address<const core::Expression>::find(getReference(callExpr->getArgument(arg)), callExpr);
-			assert(addr);
+			assert_true(addr);
 			usages.push_back( 
 				FunctionSema::ReferenceAccess( 
 					std::make_pair(

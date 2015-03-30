@@ -39,6 +39,9 @@
 #include "range/formula.h"
 #include "range/impl/formula.impl.h"
 
+#include "context/impl/capture.impl.h"
+#include "standalone.h"
+
 char _buffer_str[500];
 #define toString(printer, object) ((*printer)(_buffer_str,500,(object)), _buffer_str)
 #define toStrP1(point) toString(irt_range_point_1d_snprint, (point))

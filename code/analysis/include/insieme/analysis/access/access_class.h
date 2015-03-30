@@ -130,8 +130,8 @@ namespace access {
 			/** 
 			 * Makes sure the access is not already in this class
 			 */
-			assert(!contains(access) && "Access is already present in this class");
-				accesses.push_back(access); 
+			assert_false(contains(access)) << "Access is already present in this class";
+			accesses.push_back(access); 
 			return *this;
 		}
 

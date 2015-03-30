@@ -55,7 +55,7 @@ std::string attributeIdToString(const NodeProperty& prop) {
 	case NodeProperty::HEIGHT: return "height";
 	case NodeProperty::WIDTH: return "width";
 	case NodeProperty::COLOR: return "color";
-	default:	assert(false);
+	default:	assert_fail();
 	}
 	return "-unknown-";
 }

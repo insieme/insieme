@@ -42,10 +42,12 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "boost/operators.hpp"
-#include "boost/mpl/or.hpp"
+#include <boost/operators.hpp>
+#include <boost/mpl/or.hpp>
 #include <boost/type_traits.hpp>
-#include "boost/utility/enable_if.hpp"
+#include <boost/utility/enable_if.hpp>
+
+#include "insieme/utils/assert.h"
 #include "insieme/utils/printable.h"
 
 namespace insieme {
@@ -83,7 +85,7 @@ inline ConstraintType getLogicNegation(const ConstraintType& c) {
 	case ConstraintType::GT: return ConstraintType::LE;
 	case ConstraintType::GE: return ConstraintType::LT;
 
-	default: assert(false && "Constraint type not supported");
+	default: assert_fail() << "Constraint type not supported";
 	}
 	return ConstraintType::GT;	// some return is required!
 }
@@ -410,7 +412,7 @@ struct ConstraintVisitor {
 			return visitBinConstraint(*bc);
 		}
 		//std::cout << cur;
-		assert(false && "Constraint Combiner not supported");
+		assert_fail() << "Constraint Combiner not supported";
 		return RetTy();
 	}
 
@@ -624,7 +626,7 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 
 	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
 		CombinerPtr<FuncTy> sub = this->visit( ucc.getSubConstraint() );
-		assert(sub && "Normalization of sub constraint failed");
+		assert_true(sub) << "Normalization of sub constraint failed";
 
 		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
 			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
@@ -636,10 +638,10 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 
 	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
 		CombinerPtr<FuncTy> lhs = this->visit( bcc.getLHS() );
-		assert(lhs && "Failed to normalize lhs of binary constraint");
+		assert_true(lhs) << "Failed to normalize lhs of binary constraint";
 
 		CombinerPtr<FuncTy> rhs = this->visit( bcc.getRHS() );
-		assert(rhs && "Failed to normalized rhs of binary constraint");
+		assert_true(rhs) << "Failed to normalized rhs of binary constraint";
 
 		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
@@ -673,10 +675,10 @@ struct ConstraintConverter : public RecConstraintVisitor<SrcTy, CombinerPtr<TrgT
 
 	CombinerPtr<TrgTy> visitBinConstraint(const BinConstraint<SrcTy>& bcc) {
 		CombinerPtr<TrgTy> lhs = this->visit(bcc.getLHS());
-		assert(lhs && "Error while converting LHS of binary constraint");
+		assert_true(lhs) << "Error while converting LHS of binary constraint";
 
 		CombinerPtr<TrgTy> rhs = this->visit(bcc.getRHS());
-		assert(rhs && "Error while converting RHS of binary constraint");
+		assert_true(rhs) << "Error while converting RHS of binary constraint";
 
 		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
@@ -765,7 +767,7 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 
 	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
 		CombinerPtr<FuncTy>&& sub = this->visit( ucc.getSubConstraint() );
-		assert(sub && "Normalization of sub constraint failed");
+		assert_true(sub) << "Normalization of sub constraint failed";
 
 		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
 			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
@@ -840,7 +842,7 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 				   toDNF(blhs.getRHS() and makeCombiner(brhs));
 		}
 
-		assert (brhs.isDisjunction());
+		assert_true(brhs.isDisjunction());
 
 		return toDNF(brhs.getLHS() and makeCombiner(blhs)) or 
 			   toDNF(brhs.getRHS() and makeCombiner(blhs));
@@ -861,7 +863,7 @@ struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
 	}
 
 	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
-		assert(ucc.getSubConstraint()->getCombinerType() == CT_RAW && "Constraint not in DNF");
+		assert_eq(ucc.getSubConstraint()->getCombinerType(), CT_RAW) << "Constraint not in DNF";
 		const RawConstraint<FuncTy>& rc = static_cast<const RawConstraint<FuncTy>&>(*ucc.getSubConstraint());
 
 		conjunctions.back().push_back( 

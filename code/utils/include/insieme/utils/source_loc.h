@@ -39,7 +39,9 @@
 #include <string>
 #include <cassert>
 #include <boost/operators.hpp>
+
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace utils {
@@ -62,24 +64,24 @@ public:
 		:  fileName(fileName), lineNo(lineNo), columnNo(columnNo), valid(true) { }
 
 	const std::string& getFileName() const { 
-		assert(valid && "Source location is not valid!"); 
+		assert_true(valid) << "Source location is not valid!"; 
 		return fileName;
 	}
 
 	bool isValid() const { return valid; }
 
 	size_t getLine() const { 
-		assert(valid && "Source location is not valid!"); 
+		assert_true(valid) << "Source location is not valid!"; 
 		return lineNo;
 	}
 
 	size_t getColumn() const { 
-		assert(valid && "Source location is not valid!"); 
+		assert_true(valid) << "Source location is not valid!"; 
 		return columnNo; 
 	}
 
 	bool operator<(const SourceLocation& other) const {
-		assert(valid && "Source location is not valid!");
+		assert_true(valid) << "Source location is not valid!";
 		return fileName == other.fileName && 
 			   (lineNo < other.lineNo || (lineNo == other.lineNo && columnNo < other.columnNo));
 	}

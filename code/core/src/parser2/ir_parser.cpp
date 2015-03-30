@@ -65,7 +65,7 @@ namespace parser {
 		// --- utilities for building rules ---
 
 		NodePtr forward(Context& context) {
-			assert(context.getTerms().size() == 1u);
+			assert_eq(context.getTerms().size(), 1u);
 			return context.getTerm(0);
 		}
 
@@ -134,8 +134,8 @@ namespace parser {
 
 
 		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep, bool angleBackets = false) {
-			assert(!info.isLeftParenthesis(Token::createSymbol(sep)));
-			assert(!info.isRightParenthesis(Token::createSymbol(sep)));
+			assert_false(info.isLeftParenthesis(Token::createSymbol(sep)));
+			assert_false(info.isRightParenthesis(Token::createSymbol(sep)));
 
 			TokenIter start = range.begin();
 			TokenIter end = range.end();
@@ -238,7 +238,7 @@ namespace parser {
 
 				// parse type
 				TypePtr type = cur.grammar.match(cur, typeRange.begin(), typeRange.end(), "T").as<TypePtr>();
-				assert(type && "Unable to parse parameter type!");
+				assert_true(type) << "Unable to parse parameter type!";
 
 				// add to parameter type list
 				params.push_back(type);
@@ -253,7 +253,7 @@ namespace parser {
 				resEnd = findNext(info, resEnd+1, range.end(), '}') + 1;
 			}
 			TypePtr resType = cur.grammar.match(cur, begin, resEnd, "T").as<TypePtr>();
-			assert(resType && "Unable to parse result type!");
+			assert_true(resType) << "Unable to parse result type!";
 
 			// build resulting type
 			return cur.functionType(params, resType);
@@ -275,8 +275,8 @@ namespace parser {
 			struct let_handler : public detail::actions {
 				void enter(Context& cur, const TokenIter& begin, const TokenIter& end) const {
 					// for simplicity it is assumed that let is first part of rule
-					assert(cur.getTerms().empty());
-					assert(cur.getSubRanges().empty());
+					assert_true(cur.getTerms().empty());
+					assert_true(cur.getSubRanges().empty());
 					cur.push(TokenRange(begin, end));
 				}
 				void leave(Context& cur, const TokenIter& begin, const TokenIter& end) const {
@@ -344,7 +344,7 @@ namespace parser {
 						}
 
 					} else {
-						assert(false && "Undefined type encountered!");
+						assert_fail() << "Undefined type encountered!";
 					}
 
 					// substitute temporal mappings with real mappings
@@ -362,7 +362,7 @@ namespace parser {
 
 					// get total range and list of names
 					const auto& ranges = cur.getSubRanges();
-					assert(ranges.size() >= 2u && "Total range and first name have to be there!");
+					assert_ge(ranges.size(), 2u) << "Total range and first name have to be there!";
 					TokenRange total = ranges[0];
 					auto names = utils::make_range(ranges.begin()+1, ranges.end());
 
@@ -370,7 +370,7 @@ namespace parser {
 
 					// isolate definitions
 					TokenRange def(names.back().end()+1, total.end());
-					assert(!def.empty());
+					assert_false(def.empty());
 
 					// split definitions
 					vector<TokenRange> defs;
@@ -541,7 +541,7 @@ namespace parser {
 							} else if (it->getNodeCategory() == NC_IntTypeParam) {
 								break;
 							} else {
-								assert(false && "Expecting Types and Parameters only!");
+								assert_fail() << "Expecting Types and Parameters only!";
 							}
 							++it;
 						}
@@ -554,7 +554,7 @@ namespace parser {
 							} else if (it->getNodeCategory() == NC_Type) {
 								return fail(cur, "Type and int-parameters must be separated!");
 							} else {
-								assert(false && "Expecting Types and Parameters only!");
+								assert_fail() << "Expecting Types and Parameters only!";
 							}
 							++it;
 						}
@@ -576,7 +576,7 @@ namespace parser {
 					seq("(", list(T, ","), ")->", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert(!terms.empty());
+						assert_false(terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
@@ -588,7 +588,7 @@ namespace parser {
 					seq("(", list(T, ","), ")=>", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert(!terms.empty());
+						assert_false(terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
@@ -601,7 +601,7 @@ namespace parser {
 					seq(T, "::(", list(T, ","), ")"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert(!terms.empty());
+						assert_false(terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						types[0] = cur.refType(types[0]);
 						return cur.functionType(types, types[0], FK_CONSTRUCTOR);
@@ -613,7 +613,7 @@ namespace parser {
 					seq("~", T, "::()"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert(terms.size() == 1u);
+						assert_eq(terms.size(), 1u);
 						TypePtr classType = cur.refType(convertList<TypePtr>(terms)[0]);
 						return cur.functionType(toVector(classType), classType, FK_DESTRUCTOR);
 					}
@@ -624,7 +624,7 @@ namespace parser {
 					seq(T, "::(", list(T, ","), ")->", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert(terms.size() >= 2u);
+						assert_ge(terms.size(), 2u);
 						TypeList types = convertList<TypePtr>(terms);
 						types[0] = cur.refType(types[0]);
 						TypePtr resType = types.back();
@@ -1415,7 +1415,7 @@ namespace parser {
 					seq(E, lit(".") | lit("->"), E, "(", list(E, ","), ")"),
 					[](Context& cur)->NodePtr {
 						NodeList terms = cur.getTerms();
-						assert(terms.size() >= 2u);
+						assert_ge(terms.size(), 2u);
 
 						// get the object
 						ExpressionPtr obj = terms.front().as<ExpressionPtr>();
@@ -2105,14 +2105,14 @@ namespace parser {
 
 			// add rules marking addresses
 			g.addRule("E", rule(seq("$", E, "$"), [](Context& context)->NodePtr {
-				assert(context.getTerms().size() == 1u);
+				assert_eq(context.getTerms().size(), 1u);
 				NodePtr res = context.markerExpr(context.getTerm(0).as<ExpressionPtr>());
 				res->attachValue<AddressMark>();
 				return res;
 			}));
 
 			g.addRule("S", rule(seq("$", S, "$"), [](Context& context)->NodePtr {
-				assert(context.getTerms().size() == 1u);
+				assert_eq(context.getTerms().size(), 1u);
 				NodePtr res = context.markerStmt(context.getTerm(0).as<StatementPtr>());
 				res->attachValue<AddressMark>();
 				return res;
@@ -2194,7 +2194,7 @@ namespace parser {
 					if (res->getNodeType() == core::NT_MarkerStmt) {
 						return res.as<core::MarkerStmtPtr>()->getSubStatement();
 					}
-					assert(false && "Only marker expressions and statements should be marked.");
+					assert_fail() << "Only marker expressions and statements should be marked.";
 				}
 
 				// return result
@@ -2263,7 +2263,7 @@ namespace parser {
 					} else if (cur->getNodeType() == core::NT_MarkerStmt) {
 						res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
 					} else {
-						assert(false && "Only marker expressions and statements should be marked.");
+						assert_fail() << "Only marker expressions and statements should be marked.";
 					}
 				}
 			});

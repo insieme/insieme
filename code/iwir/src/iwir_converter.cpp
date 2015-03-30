@@ -205,12 +205,12 @@ CONVERTER(Link) {
 		}
 		VLOG(2) << linkStmt;
 		
-		assert(linkStmt);
+		assert_true(linkStmt);
 		context.linkStmtMap[node] = linkStmt;
 	} else {
 		//control flow link -- link[task1->task2] -- no ports
 		//only needed for block scope -- handled in blockscope converter
-		//assert(false && "control flow not implemented");
+		//assert_not_implemented();
 	}
 }
 
@@ -237,7 +237,7 @@ CONVERTER(Ports) {
 			VLOG(2) << "\tUnionPorts";
 			break;
 
-		default: assert(false && "Wrong PortsKind");
+		default: assert_fail() << "Wrong PortsKind";
 
 	}
 	for(Port* n : node->elements) {
@@ -265,7 +265,7 @@ CONVERTER(Port) {
 			VLOG(2) << "loopCounter";
 			break;
 		default: 
-			assert(false && "Wrong PortKind");
+			assert_fail() << "Wrong PortKind";
 	}
 
 	VLOG(2) << "isInput: " << (node->isInput ? "true" : "false" );
@@ -299,9 +299,9 @@ CONVERTER(Port) {
 			}
 			break;
 		default: 
-			assert(false && "Wrong PortKind");
+			assert_fail() << "Wrong PortKind";
 	}
-	assert(varType);
+	assert_true(varType);
 	core::VariablePtr var = irBuilder.variable(varType);
 
 	auto constraints = CONVERT_CONSTRAINTS(node->constraints, context)
@@ -322,7 +322,7 @@ CONVERTER(Port) {
 	if(varMap.find({node->parentTask, node}) == varMap.end()) {
 		pair<Task*,Port*> key = { node->parentTask, node };
 		string value = "port_" + node->parentTask->name + "\\" + node->name;
-		assert(varType);
+		assert_true(varType);
 		
 		//IRVariable for Task/Port
 		varMap.insert( {key, var} ) ;
@@ -352,7 +352,7 @@ CONVERTER(Port) {
 				//the loopcounter itself is the iterator variable in the IR::for --> declared in the forstmt
 				break;
 			default: 
-				assert(false && "Wrong PortKind");
+				assert_fail() << "Wrong PortKind";
 		}
 	}
 
@@ -401,9 +401,9 @@ TYPE_CONVERTER(Type) {
 			retTy = convertCollectionType( static_cast<CollectionType*>(node), context); 
 			break;
 		default:
-			assert(false && "how did you get here?");
+			assert_fail() << "how did you get here?";
 	}
-	assert(retTy);
+	assert_true(retTy);
 	VLOG(2) << retTy;
 	return retTy;
 }
@@ -429,7 +429,7 @@ TYPE_CONVERTER(SimpleType) {
 			retTy = irBuilder.getLangBasic().getBool();
 			break;
 		default:
-			assert(false && "how did you get here?");
+			assert_fail() << "how did you get here?";
 			retTy = core::TypePtr();
 	}
 	return retTy;

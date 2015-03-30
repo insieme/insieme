@@ -435,7 +435,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				}
 
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				assert(elementType && "cannot build ref reinterpret without a type");
+				assert_true(elementType) << "cannot build ref reinterpret without a type";
 				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
@@ -514,7 +514,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			// pointers:
 			if (core::analysis::isPointerType(exprTy)){
-				assert(core::analysis::isPointerType(targetTy) && "from pointer to non pointer is not possible" );
+				assert_true(core::analysis::isPointerType(targetTy)) << "from pointer to non pointer is not possible";
 				targetTy = targetTy.as<core::RefTypePtr>()->getElementType();
 				return  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy)));
 			}
@@ -567,7 +567,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			// pointers:
 			if (core::analysis::isPointerType(exprTy)){
-				assert(core::analysis::isPointerType(targetTy) && "from pointer to non pointer is not possible" );
+				assert_true(core::analysis::isPointerType(targetTy)) << "from pointer to non pointer is not possible";
 				targetTy = targetTy.as<core::RefTypePtr>()->getElementType();
 				return  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy)));
 			}
@@ -722,12 +722,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			std::cout << " \nCAST: " << castExpr->getCastKindName () << " not supported!!"<< std::endl;
 			std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart (), convFact.getSourceManager()) <<std::endl;
 			castExpr->dump();
-			assert(false);
+			assert_fail();
 		default:
-			assert(false && "not all options listed, is this clang 3.2? maybe should upgrade Clang support");
+			assert_fail() << "not all options listed, is this clang 3.2? maybe should upgrade Clang support";
 	}
 
-	assert(false && "control reached an invalid point!");
+	assert_fail() << "control reached an invalid point!";
 
 	return expr;
 

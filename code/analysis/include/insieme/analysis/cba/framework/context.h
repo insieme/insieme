@@ -83,12 +83,12 @@ namespace cba {
 		// -- inspectors -----------
 
 		const T& front() const {
-			assert(!empty);
+			assert_false(empty);
 			return sequence.front();
 		}
 
 		const T& back() const {
-			assert(!empty);
+			assert_false(empty);
 			return sequence.back();
 		}
 
@@ -306,7 +306,7 @@ namespace cba {
 			if (*this == other) return false;
 			if (callContext != other.callContext) return callContext < other.callContext;
 			if (threadContext != other.threadContext) return threadContext < other.threadContext;
-			assert(false && "How did you get here?");
+			assert_fail() << "How did you get here?";
 			return false;
 		}
 

@@ -268,7 +268,7 @@ core::ExpressionPtr tryRefReinterpret(core::ExpressionPtr expr, core::TypePtr ty
 		if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(type))
 			return builder.callExpr(refTy, BASIC.getRefReinterpret(), expr, builder.getTypeLiteral(refTy->getElementType()));
 		else
-			assert(refTy && "Cannot do a reinterpret on an non-ref kernel argument");
+			assert_true(refTy) << "Cannot do a reinterpret on an non-ref kernel argument";
 	}
 
 	return expr;

@@ -154,7 +154,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	/** Returns the iterator through the statements and sub statements on this SCoP. For each statements the information
 	of its iteration domain, scattering matrix and access functions are listed. */
 	inline Scop& getScop() {
-		assert(valid && "SCoP is not valid");
+		assert_true(valid) << "SCoP is not valid";
 		if (!isResolved()) { resolve(); }
 		return *scopInfo;		
 	}

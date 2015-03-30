@@ -485,7 +485,7 @@ public:
 	 */
 	void addAnnotation(const annotation_ptr_type& annotation) const {
 		// check pre-condition
-		assert ( annotation && "Cannot add NULL annotation!" );
+		assert_true(annotation) << "Cannot add NULL annotation!";
 
 		// ensure map to be initialized
 		initAnnotationMap();
@@ -495,8 +495,8 @@ public:
 		(*map)[key] = annotation;
 
 		// check post-condition
-		assert ( hasAnnotation(key) && "Insert not successful!");
-		assert_eq( map->find(key)->second.get(), annotation.get() ) << "Insert not successful!";
+		assert_true(hasAnnotation(key)) << "Insert not successful!";
+		assert_eq(map->find(key)->second.get(), annotation.get()) << "Insert not successful!";
 	}
 
 	/**
@@ -546,8 +546,8 @@ public:
 		if (!res) return std::shared_ptr<typename Key::annotation_type>();
 
 		// check type
-		assert (std::dynamic_pointer_cast<typename Key::annotation_type>(res)
-				&& "Annotation Type of Key does not match actual annotation!" );
+		assert_true(std::dynamic_pointer_cast<typename Key::annotation_type>(res))
+				<< "Annotation Type of Key does not match actual annotation!";
 
 		// return pointer to result
 		return std::static_pointer_cast<typename Key::annotation_type>(res);
@@ -700,7 +700,7 @@ public:
 	template<typename V>
 	const V& getAttachedValue() const {
 		auto ptr = getAnnotation(detail::ValueAnnotation<V,AnnotationType,KeyType>::KEY);
-		assert(ptr && "Requested value not present!");
+		assert_true(ptr) << "Requested value not present!";
 		return ptr->getValue();
 	}
 

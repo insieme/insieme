@@ -1,5 +1,5 @@
 # Insieme: Compiler and Runtime Infrastructure
-The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More deatails are available [here](http://insieme-compiler.org/mission.html).
+The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More details are available [here](http://insieme-compiler.org/mission.html).
 
 ## Directory Structure
 Insieme contains 4 main sub-directories:
@@ -11,7 +11,7 @@ Insieme contains 4 main sub-directories:
   * /test -- Insieme integration tests
 
 ## Installation 
-Insieme is written in C++11 and relies on several third-party libraries, an updated list is available [here](http://insieme-compiler.org/license.html). 
+Insieme is written in C++11 and relies on several third-party libraries: 
 
 ### List of Required Libraries and Software
 Name 		| Version | What's for |
@@ -30,6 +30,11 @@ Name 		| Version | What's for |
 [Kompex](http://sqlitewrapper.kompex-online.com/)             	  	| >= 1.7.9 | DBMS |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.8 | Scripting |
 
+### List of Optional Libraries and Software
+Name 		| Version | What's for |
+--------|---------|------------|
+[PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0  | Runtime system, for hardware information and event counters |
+
 ### Preparing the Environment
 You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
 ```
@@ -39,7 +44,7 @@ make PREFIX=/where/to/install
 All libraries will be installed in ``$PREFIX`` and a symbolic link is created with postfix '-latest' pointing to the newest installed version of a library (which simplifies the following CMake configuration steps). By default ``PREFIX=~/lib``; additionally the script performs a parallel build (``make -j$SLOTS``) using all availabe cores in the host architecture. You can change this behaviour by passing a different value for ``SLOTS`` to ``make``.
 
 ### Building Insieme
-Insieme's build system is based on CMake. We suppose to have the all dependencies installed in the same directory: ``$HOME/libs``
+Insieme's build system is based on CMake. We assume that all dependencies installed in the same directory: ``$HOME/libs``
 
 ```
 mkdir build
@@ -82,20 +87,20 @@ Unit tests can be executed with:
 make test ARGS=-j2 # Runs all unit tests using two parallel jobs
 ```
 
-or directly via ctest:
+or directly via CTest:
 ```
 ctest -j2 # Runs all unit tests using two parallel jobs
 ```
 
 
 If everything was successful... 
-**congratulation!**
-**You may start enjoying Insieme now!**
+**congratulations!**
+**You can start enjoying Insieme now!**
 
 
 Please, understand that the install command is not implemented since this is an on-going development framework. 
 Instead of polluting your local setup, we prefer to use Insieme from the build directory. 
-There is always time for install scripts in future releases.
+Install scripts will be provided in future releases.
 
 ### Running Integration Tests
 

@@ -124,7 +124,7 @@ namespace {
 					return res;
 				}
 				default:
-					assert(false && "Should be impossible to reach!");
+					assert_fail() << "Should be impossible to reach!";
 			}
 			return ptr;
 		}

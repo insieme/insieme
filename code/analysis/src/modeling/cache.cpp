@@ -95,7 +95,7 @@ MapPtr<> buildCacheModel(CtxPtr<>& ctx, size_t block_size, size_t cache_size, si
 
 	// num_blocks  = cache_size / block_size
 	size_t num_blocks = cache_size / block_size / associativity;
-	assert(num_blocks > 0 && "Parameters for cache architecture not valid");
+	assert_gt(num_blocks, 0) << "Parameters for cache architecture not valid";
 	
 	std::string num_blocks_str = utils::numeric_cast<std::string>(num_blocks);
 	// BLOCK[i] -> SET[j] : exists a = [i/num_blocks] j = i - a*num_blocks and j > 0 and j < num_blocks
@@ -131,7 +131,7 @@ SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::Expr
 		elemType = subType;
 	}
 
-	assert( elemType );
+	assert_true(elemType);
 	// Compute the size of elements of this reference 
 	unsigned type_size = analysis::features::getSizeInBytes(elemType);
 	//LOG(DEBUG) << "SIZE FOR TYPE: " << type_size;
@@ -145,7 +145,7 @@ SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::Expr
 			
 			if (accessInfo.empty() || (*cur->getExpr().getAddressedNode() != *reference))  return;
 
-			assert(accessInfo.size() == 1 && "Multidimensional accesses not yet supported");
+			assert_eq(accessInfo.size(), 1) << "Multidimensional accesses not yet supported";
 
 			// an access of type i+j should be converted into size * (i+j), therefore every coeff should be multiplied
 			// by size
@@ -442,7 +442,7 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 
 			//// Set the value of eventual parameters to 100
 			//IterationVector iv = REUSE_DIST->getIterationVector(root->getNodeManager());
-			//assert(iv.getIteratorNum() == 0);
+			//assert_eq(iv.getIteratorNum(), 0);
 			//if (iv.getParameterNum() > 0) {
 				//// we have some parameters, let's set a default value = 100
 				//for_each(iv.param_begin(), iv.param_end(), [&](const Parameter& cur) {

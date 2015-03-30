@@ -106,7 +106,7 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 	 */
 	size_t extractIndexFromArg(CallExprPtr call) const {
 		ExpressionList args = call->getArguments();
-		assert(args.size() > 0 && "Call to opencl get id function must have one argument");
+		assert_gt(args.size(), 0) << "Call to opencl get id function must have one argument";
 		size_t retval = 0;
 
 		// try to read literal
@@ -120,7 +120,7 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 		if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
 			retval = dim->getValueAs<size_t>();
 
-		assert(retval <= 2 && "Argument of opencl get id function must be a literal between 0 an 2");
+		assert_le(retval, 2) << "Argument of opencl get id function must be a literal between 0 an 2";
 		return retval;
 	}
 

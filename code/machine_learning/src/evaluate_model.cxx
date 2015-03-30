@@ -351,7 +351,7 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 
 	Evaluator eval = Evaluator::loadEvaluator(*model, options.modelPath);
 
-	assert((options.svm >= 0 || num == model->getInputDimension()) && "The number of specified features does not match the input size of the loaded model");
+	assert_true(options.svm >= 0 || num == model->getInputDimension()) << "The number of specified features does not match the input size of the loaded model";
 
 	Kompex::SQLiteStatement stmt(database);
 

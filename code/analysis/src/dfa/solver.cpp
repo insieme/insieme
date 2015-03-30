@@ -50,7 +50,7 @@ void WorklistQueue::enqueue(const cfg::BlockPtr& block) {
 
 cfg::BlockPtr WorklistQueue::dequeue() {
 
-	if (empty()) { assert(false && "Worklist Queue is empty"); }
+	if (empty()) { assert_fail() << "Worklist Queue is empty"; }
 
 	__unused size_t s = block_queue.size();
 
@@ -58,7 +58,7 @@ cfg::BlockPtr WorklistQueue::dequeue() {
 	block_set.erase(block);
 	block_queue.pop();
 
-	assert(block_queue.size() == s-1);
+	assert_eq(block_queue.size(), s-1);
 
 	return block;
 }

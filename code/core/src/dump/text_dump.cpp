@@ -375,7 +375,7 @@ namespace dump {
 					#undef CONCRETE
 
 					std::cout << "WARNING: Unsupported node type: " << name << "\n";
-					assert(false && "UNSUPPORTED node type!");
+					assert_fail() << "UNSUPPORTED node type!";
 
 					// some standard result to avoid warnings
 					return NT_CallExpr;

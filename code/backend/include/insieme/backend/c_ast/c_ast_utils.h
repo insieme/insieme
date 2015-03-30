@@ -73,7 +73,7 @@ namespace c_ast {
 		case UnaryOperation::Delete:		return  1;
 		case UnaryOperation::DeleteArray:	return  1;
 		}
-		assert(false && "Uncovered operator encountered!");
+		assert_fail() << "Uncovered operator encountered!";
 		return 0;
 	}
 
@@ -118,7 +118,7 @@ namespace c_ast {
 		case BinaryOperation::ScopeResolution:			return 17;
 		case BinaryOperation::PointerToMember:			return 14;
 		}
-		assert(false && "Uncovered operator encountered!");
+		assert_fail() << "Uncovered operator encountered!";
 		return 0;
 	}
 
@@ -126,12 +126,12 @@ namespace c_ast {
 		switch(op) {
 		case TernaryOperation::TernaryCondition: return 3;
 		}
-		assert(false && "Uncovered operator encountered!");
+		assert_fail() << "Uncovered operator encountered!";
 		return 0;
 	}
 
 	static inline unsigned getPriority(const NodePtr& node) {
-		assert(node && "Cannot obtain type of null-node!");
+		assert_true(node) << "Cannot obtain type of null-node!";
 
 		// select priority based on operator
 		NodeType type = node->getType();
@@ -203,19 +203,19 @@ namespace c_ast {
 	// --- create literals and variables ------------------------
 
 	inline VariablePtr var(const TypePtr& type, const IdentifierPtr& name) {
-		assert(type && type->getManager() && name->getManager() && type->getManager() == name->getManager() && "Expected consistent managers!");
+		assert_true(type && type->getManager() && name->getManager() && type->getManager() == name->getManager()) << "Expected consistent managers!";
 		CNodeManager* manager = type->getManager();
 		return manager->create<Variable>(type, name);
 	}
 
 	inline VariablePtr var(const TypePtr& type, const string& name) {
-		assert(type && type->getManager() && "Expected type to be present!");
+		assert_true(type && type->getManager()) << "Expected type to be present!";
 		CNodeManager* manager = type->getManager();
 		return var(type, manager->create(name));
 	}
 
 	inline LiteralPtr lit(const TypePtr& type, const string& value) {
-		assert(type && type->getManager() && "Expected type to be present!");
+		assert_true(type && type->getManager()) << "Expected type to be present!";
 		CNodeManager* manager = type->getManager();
 		return manager->create<Literal>(value);
 	}
@@ -223,7 +223,7 @@ namespace c_ast {
 	// --- create a pair of parentheses -------------------------
 
 	inline ExpressionPtr parentheses(ExpressionPtr expr) {
-		assert(expr && expr->getManager() && "There should be a manager!");
+		assert_true(expr && expr->getManager()) << "There should be a manager!";
 		switch(expr->getType()) {
 		case NT_Parentheses:
 		case NT_Variable:
@@ -280,7 +280,7 @@ namespace c_ast {
 	// -- Unary Operations --------------------------------------
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
-		assert(a && a->getManager() && "There should be a manager!");
+		assert_true(a && a->getManager()) << "There should be a manager!";
 		a = removeParentheses(a);
 		a = (getPriority(a) < getPriority(op)) ? parentheses(a) : a;
 		return a->getManager()->create<UnaryOperation>(op, a);
@@ -381,7 +381,7 @@ namespace c_ast {
 	// -- Binary Operations -------------------------------------
 
 	inline ExpressionPtr binaryOp(BinaryOperation::BinaryOp op, NodePtr a, NodePtr b) {
-		assert(a && b && a->getManager() && a->getManager() == b->getManager() && "Manager should match!");
+		assert_true(a && b && a->getManager() && a->getManager() == b->getManager()) << "Manager should match!";
 		unsigned priority = getPriority(op);
 		// comparison can be less than, since all binary operators are left-associative
 		a = removeParentheses(a);
@@ -568,7 +568,7 @@ namespace c_ast {
 	// -- Ternary Operations -------------------------------------
 
 	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, ExpressionPtr a, ExpressionPtr b, ExpressionPtr c) {
-		assert(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager() && "Manager should match!");
+		assert_true(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager()) << "Manager should match!";
 		a = (getPriority(a) <= getPriority(op))? parentheses(a) : a;
 		b = (getPriority(b) <= getPriority(op))? parentheses(b) : b;
 		c = (getPriority(c) <= getPriority(op))? parentheses(c) : c;

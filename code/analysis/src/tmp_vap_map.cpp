@@ -54,7 +54,7 @@ bool cmp_key::operator()(const core::ExpressionAddress& lhs, const core::Express
 	if (lhs.getRootNode() < rhs.getRootNode()) return true;
 	if (rhs.getRootNode() < lhs.getRootNode()) return false;
 	
-	assert(*lhs.getRootNode() == *rhs.getRootNode());
+	assert_true(*lhs.getRootNode() == *rhs.getRootNode());
 	return lhs.getPath() < rhs.getPath();
 }
 

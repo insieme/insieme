@@ -43,6 +43,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "insieme/utils/assert.h"
+
 /**
  * A common utility file providing a C++ interface to an underlying
  * Lua library.
@@ -312,7 +314,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F, void, P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert(checkNumArgs(state, sizeof...(P)));
+				assert_true(checkNumArgs(state, sizeof...(P)));
 				call<F,void,P...>()(state, fun);
 				return 0;
 			}
@@ -321,7 +323,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F,bool,P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert(checkNumArgs(state, sizeof...(P)));
+				assert_true(checkNumArgs(state, sizeof...(P)));
 				lua_pushboolean(state, call<F,bool,P...>()(state, fun));
 				return 1;
 			}
@@ -330,7 +332,7 @@ namespace lua {
 		template<typename F, typename R, typename ... P>
 		struct executor_numeric_res {
 			int operator()(lua_State* state, F& fun) {
-				assert(checkNumArgs(state, sizeof...(P)));
+				assert_true(checkNumArgs(state, sizeof...(P)));
 				lua_pushnumber(state, call<F,R,P...>()(state, fun));
 				return 1;
 			}
@@ -355,7 +357,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F,std::string,P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert(checkNumArgs(state, sizeof...(P)));
+				assert_true(checkNumArgs(state, sizeof...(P)));
 				lua_pushstring(state, call<F,std::string,P...>()(state, fun).c_str());
 				return 1;
 			}
@@ -364,7 +366,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F,const char*,P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert(checkNumArgs(state, sizeof...(P)));
+				assert_true(checkNumArgs(state, sizeof...(P)));
 				lua_pushstring(state, call<F,const char*,P...>()(state, fun));
 				return 1;
 			}

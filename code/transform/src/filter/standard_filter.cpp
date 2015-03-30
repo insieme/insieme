@@ -117,7 +117,7 @@ namespace filter {
 	}
 
 	TargetFilter innermostLoops(unsigned level) {
-		assert(level > 0 && "Level must be > 0");
+		assert_gt(level, 0) << "Level must be > 0";
 		// return allMatches(transform::pattern::irp::innerMostForLoopNest(level));
 		std::stringstream name;
 		name << "InnermostLevel(" << level << ")";

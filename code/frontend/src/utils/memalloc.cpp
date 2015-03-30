@@ -98,8 +98,8 @@ namespace utils {
 
                     const core::lang::BasicGenerator& gen = builder.getLangBasic();
                     // The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
-                    assert(type->getNodeType() == core::NT_RefType);
-                    assert(core::analysis::getReferencedType(type)->getNodeType() == core::NT_ArrayType);
+                    assert_eq(type->getNodeType(), core::NT_RefType);
+                    assert_eq(core::analysis::getReferencedType(type)->getNodeType(), core::NT_ArrayType);
 
                     const core::RefTypePtr& refType = core::static_pointer_cast<const core::RefType>(type);
                     const core::ArrayTypePtr& arrayType = refType->getElementType().as<core::ArrayTypePtr>();

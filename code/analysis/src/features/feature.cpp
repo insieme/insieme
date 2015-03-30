@@ -96,7 +96,7 @@ namespace features {
 				Value res = eval();
 
 				// check value type
-				assert(feature.getValueType()->isValid(res) && "Feature extraction produced incorrect type!");
+				assert_true(feature.getValueType()->isValid(res)) << "Feature extraction produced incorrect type!";
 
 				// save and return
 				values[feature.getName()] = res;
@@ -143,7 +143,7 @@ namespace features {
 		FeatureValues values = evalFeatures(node, specs);
 
 		// merge in extracted values
-		assert(indices.size() == specs.size() && indices.size() == values.size());
+		assert_true(indices.size() == specs.size() && indices.size() == values.size());
 		for (std::size_t i=0; i<indices.size(); i++) {
 			res[indices[i]] = values[i];
 		}

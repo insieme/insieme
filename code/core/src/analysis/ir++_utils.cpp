@@ -201,7 +201,7 @@ namespace analysis {
 	}
 
 	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
-		assert(isCppRef(cppRefType) || isConstCppRef(cppRefType) || isRValCppRef(cppRefType) || isConstRValCppRef(cppRefType) );
+		assert_true(isCppRef(cppRefType) || isConstCppRef(cppRefType) || isRValCppRef(cppRefType) || isConstRValCppRef(cppRefType));
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
@@ -231,7 +231,7 @@ namespace analysis {
 			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType()), RK_SOURCE), manager.getLangExtension<lang::IRppExtensions>().getRefConstRValCppToIR(), expr);
 		}
 		// error fallthrow
-		assert(false && "could not unwrapp Cpp ref, is it a cpp ref?");
+		assert_fail() << "could not unwrapp Cpp ref, is it a cpp ref?";
 		return ExpressionPtr();
 	}
 
@@ -312,7 +312,7 @@ namespace analysis {
 
 
 	LambdaExprPtr createDefaultConstructor(const TypePtr& type) {
-		assert(isObjectType(type) && "to create DefaultCtor a objectType is needed");
+		assert_true(isObjectType(type)) << "to create DefaultCtor a objectType is needed";
 		NodeManager& manager = type.getNodeManager();
 		IRBuilder builder(manager);
 

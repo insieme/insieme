@@ -71,7 +71,7 @@ namespace access {
 			case AccessType::AT_SUBSCRIPT:	return visitSubscript(cast<Subscript>(access));
 
 			default:
-				assert(false && "Type of decorator not recognized");
+				assert_fail() << "Type of decorator not recognized";
 			}
 			return RetTy();
 		}
@@ -90,7 +90,7 @@ namespace access {
 
 		RetTy visit(const AccessPtr& access) {
 		
-			assert(access && "Visiting invalid access pointer");
+			assert_true(access) << "Visiting invalid access pointer";
 
 			if (access->getType() == AccessType::AT_BASE) {
 				// handles base-access nodes 

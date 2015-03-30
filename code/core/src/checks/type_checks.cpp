@@ -169,7 +169,7 @@ namespace {
 		}
 
 		std::cerr << "Invalid DataPath step encountered: " << *step << "\n";
-		assert(false && "Unsupported DataPath step encountered!");
+		assert_fail() << "Unsupported DataPath step encountered!";
 
 		return fail;
 	}
@@ -353,7 +353,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 
 	// obtain function type ...
 	TypePtr funType = address->getFunctionExpr()->getType();
-	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	assert_eq(address->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Illegal function expression!";
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
 	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
@@ -561,7 +561,7 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	}
 
 	// check type of recursive variable
-	assert(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
+	assert_true(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
 	is = lambda->getVariable()->getType();
 	should = lambda->getDefinition()->getDefinitionOf(lambda->getVariable())->getType();
 	if (*is != *should) {

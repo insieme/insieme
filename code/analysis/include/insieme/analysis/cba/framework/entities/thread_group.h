@@ -112,7 +112,7 @@ namespace cba {
 	template<typename Context>
 	ThreadGroup<Context> getThreadGroupFromConstructor(const core::ExpressionInstance& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
-		assert(isThreadGroupConstructor(ctor));
+		assert_true(isThreadGroupConstructor(ctor));
 
 		// create the group instance
 		return ThreadGroup<Context>(ctor, ctxt);

@@ -99,7 +99,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		if(gen.isBool(rTy)) {cast += 40;}
 
 		switch(cast) {
-			case 0: assert(false); break;
+			case 0: assert_fail(); break;
 				//lhs = int -- rhs = string
 			case 12: {
 							//rhs = stringToInt(rhs);
@@ -178,7 +178,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		if(gen.isString(operTy)) { op = irBuilder.getNodeManager().getLangExtension<iwir::extension::IWIRExtension>().getStringToBool(); }
 		if(gen.isInt(operTy)) { op = gen.getSignedToBool(); }
 		if(gen.isDouble(operTy)) { op = gen.getRealToBool(); }
-		assert(op);
+		assert_true(op);
 		return irBuilder.callExpr(op, oper);
 	}
 
@@ -195,8 +195,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_and>& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		lhs = cast_to_bool(lhs);
 		rhs = cast_to_bool(rhs);
@@ -208,8 +208,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 		
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		lhs = cast_to_bool(lhs);
 		rhs = cast_to_bool(rhs);
@@ -220,8 +220,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_eq >& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		if(*lhs->getType() != *rhs->getType()) {
 			std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
@@ -238,8 +238,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_neq>& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		if(*lhs->getType() != *rhs->getType()) {
 			std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
@@ -256,8 +256,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_gt >& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		if(*lhs->getType() != *rhs->getType()) {
 			std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
@@ -273,8 +273,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_gte>& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		if(*lhs->getType() != *rhs->getType()) {
 			std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
@@ -290,8 +290,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_lt >& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		if(*lhs->getType() != *rhs->getType()) {
 			std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
@@ -307,8 +307,8 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::binop<condition_ast::op_lte>& b) const { 
 		core::ExpressionPtr lhs = boost::apply_visitor(*this, b.oper1);
 		core::ExpressionPtr rhs = boost::apply_visitor(*this, b.oper2);
-		assert(lhs);
-		assert(rhs);
+		assert_true(lhs);
+		assert_true(rhs);
 
 		if(*lhs->getType() != *rhs->getType()) {
 			std::tie(lhs, rhs) = implicit_cast(lhs,rhs);
@@ -325,7 +325,7 @@ struct condition_ast_to_inspire : boost::static_visitor<core::ExpressionPtr> {
 	core::ExpressionPtr operator()(condition_ast::unop<condition_ast::op_not>& u) const {
 		core::ExpressionPtr condExpr = nullptr;
 		core::ExpressionPtr oper = boost::apply_visitor(*this, u.oper1); 
-		assert(oper);
+		assert_true(oper);
 
 		oper = cast_to_bool(oper);
 		condExpr = irBuilder.logicNeg(oper);

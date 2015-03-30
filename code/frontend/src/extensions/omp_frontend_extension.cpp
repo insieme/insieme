@@ -310,7 +310,7 @@ namespace {
         else if(def == "none")
             k = omp::Default::NONE;
         else
-            assert(false && "Unsupported default kind");
+            assert_fail() << "Unsupported default kind";
 
         return std::make_shared<omp::Default>(k);
     }
@@ -337,7 +337,7 @@ namespace {
         else if (kindStr == "runtime")
             k = omp::Schedule::RUNTIME;
         else
-            assert(false && "Unsupported scheduling kind");
+            assert_fail() << "Unsupported scheduling kind";
 
         // check for chunk_size expression
         core::ExpressionPtr chunkSize = handleSingleExpression(m, "chunk_size");
@@ -358,7 +358,7 @@ namespace {
         // check the operator
         const std::string opIt = mmap.getString("reduction_op");
 
-        assert(!opIt.empty() && "Reduction clause doesn't contain an operator");
+        assert_false(opIt.empty()) << "Reduction clause doesn't contain an operator";
 
         omp::Reduction::Operator op = omp::Reduction::PLUS;
         if(opIt == "+")		    op = omp::Reduction::PLUS;
@@ -369,7 +369,7 @@ namespace {
         else if(opIt == "^")	op = omp::Reduction::XOR;
         else if(opIt == "&&")	op = omp::Reduction::LAND;
         else if(opIt == "||")	op = omp::Reduction::LOR;
-        else assert(false && "Reduction operator not supported.");
+        else assert_fail() << "Reduction operator not supported.";
 
         return std::make_shared<omp::Reduction>(op, handleIdentifierList(mmap, "reduction"));
     }
@@ -383,7 +383,7 @@ namespace {
         if(vars.empty()) {
             return omp::ParamPtr();
         }
-        assert(vars.size() == 1 && "Param clause must contain one variable");
+        assert_eq(vars.size(), 1) << "Param clause must contain one variable";
     	core::ExpressionPtr varExpr = vars.front();
 
     	// range
@@ -403,7 +403,7 @@ namespace {
     	// enum
         omp::VarListPtr enumList = handleIdentifierList(mmap, "enum_list");
         if(!enumList->empty()) {
-            assert(enumList->size() == 1 && "Param clause enum must contain one variable");
+            assert_eq(enumList->size(), 1) << "Param clause enum must contain one variable";
     	    core::ExpressionPtr enumExpr = enumList->front();
     	    core::ExpressionPtr enumSize = handleSingleExpression(mmap, "enum_size");
 
@@ -459,7 +459,7 @@ namespace {
     	if(typeStr == "accelerator")
     		t = omp::Target::ACCELERATOR;
     	else
-    		assert(false && "Unsupported target type");
+    		assert_fail() << "Unsupported target type";
 
     	// group-id
         std::shared_ptr<core::ExpressionList> groupIds;
@@ -492,7 +492,7 @@ namespace {
     		else if(paramStr == "E")	param = Objective::ENERGY;
     		else if(paramStr == "P")	param = Objective::POWER;
     		else if(paramStr == "Q")	param = Objective::QUALITY;
-    		else assert(false && "Objective clause constraint parameter not supported.");
+    		else assert_fail() << "Objective clause constraint parameter not supported.";
 
     		paramList->push_back(param);
     	}
@@ -529,7 +529,7 @@ namespace {
     		else if(opStr == "==")	op = Objective::EQUALEQUAL;
     		else if(opStr == ">=")	op = Objective::GREATEREQUAL;
     		else if(opStr == ">")	op = Objective::GREATER;
-    		else assert(false && "Objective clause constraint operator not supported.");
+    		else assert_fail() << "Objective clause constraint operator not supported.";
 
     		opList->push_back(op);
     	}
@@ -874,7 +874,7 @@ namespace {
                     insieme::frontend::extensions::PragmaHandler("omp", "section", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
                             //attach annotation
-                            assert(node.isSingleStmt());
+                            assert_true(node.isSingleStmt());
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Section>());
                             node[0] = getMarkedNode(node[0], anns);
@@ -951,7 +951,7 @@ namespace {
                     insieme::frontend::extensions::PragmaHandler("omp", "master", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
                             //attach annotation
-                            assert(node.isSingleStmt());
+                            assert_true(node.isSingleStmt());
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Master>());
                             node[0] = getMarkedNode(node[0], anns);
@@ -1008,7 +1008,7 @@ namespace {
                     insieme::frontend::extensions::PragmaHandler("omp", "atomic", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
                             //attach annotation
-                            assert(node.isSingleStmt());
+                            assert_true(node.isSingleStmt());
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Atomic>());
                             node[0] = getMarkedNode(node[0], anns);
@@ -1035,7 +1035,7 @@ namespace {
                     insieme::frontend::extensions::PragmaHandler("omp", "ordered", tok::eod,
                         [](MatchObject object, stmtutils::StmtWrapper node) {
                             //attach annotation
-                            assert(node.isSingleStmt());
+                            assert_true(node.isSingleStmt());
                             frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Ordered>());
                             node[0] = getMarkedNode(node[0], anns);

@@ -208,7 +208,7 @@ namespace graph {
 		 * the given vertex value.
 		 */
 		vertex_descriptor getVertexDescriptor(const Vertex& vertex) const {
-			assert(vertexMap.find(vertex) != vertexMap.end());
+			assert_true(vertexMap.find(vertex) != vertexMap.end());
 			return vertexMap.find(vertex)->second;
 		}
 
@@ -631,7 +631,7 @@ namespace graph {
 			// compute (reverse) topological order
 			boost::topological_sort(graph, std::back_inserter(order));
 		} catch(boost::not_a_dag e) {
-			assert(0 && "There should not be any cycles!");
+			assert_fail() << "There should not be any cycles!";
 		}
 
 		// reverse order and return result

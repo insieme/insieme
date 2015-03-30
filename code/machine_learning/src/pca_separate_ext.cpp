@@ -213,7 +213,7 @@ void PcaSeparateExt::genDefaultDynamicQuery() {
 
 
 size_t PcaSeparateExt::calcPca(double toBeCovered) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
+	assert_gt((staticFeatures.size() + dynamicFeatures.size()), 0) << "Cannot do PCA without any features set";
 
 	size_t nPCs = 0;
 
@@ -230,7 +230,7 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
  * calculates the principal components of static features based on the given query and stores them in the database
  */
 double PcaSeparateExt::calcPca(size_t nDynamicOutFeatures, size_t nStaticOutFeatures) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
+	assert_gt((staticFeatures.size() + dynamicFeatures.size()), 0) << "Cannot do PCA without any features set";
 
 	double covered = 0.0, divisor = 0.0;
 

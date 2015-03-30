@@ -41,7 +41,10 @@
 #define RESTORE
 
 #include "context/capture.h"
+
+#include "impl/error_handling.impl.h"
 #include "context/impl/capture.impl.h"
+#include "standalone.h"
 
 
 #define CREATE_BLOCK(SIZE) REG_BLOCK(malloc(SIZE), (SIZE));

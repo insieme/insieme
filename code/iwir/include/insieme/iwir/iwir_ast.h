@@ -42,6 +42,7 @@
 #include <memory>
 #include <utility>
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace iwir {
@@ -139,7 +140,7 @@ class Node : public insieme::utils::Printable {
 	NodeType getNodeType() const { return nodeType; }
 	void setManager(NodeManager* mgr) { manager = mgr; }
 	NodeManager* getManager() const { 
-		assert(manager); 
+		assert_true(manager); 
 		return manager; 
 	}
 	

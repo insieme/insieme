@@ -138,8 +138,8 @@ namespace core {
 		 * @return a pointer to the requested child
 		 */
 		const NodePtr& getChild(std::size_t index) const {
-			assert(!isValue() && "Node represents a value!");
-			assert((index < getNode().children.size()) && "Index out of bound!");
+			assert_false(isValue()) << "Node represents a value!";
+			assert_lt(index, getNode().children.size()) << "Index out of bound!";
 			return getNode().children[index];
 		}
 
@@ -150,7 +150,7 @@ namespace core {
 		 * @return a reference to the manager maintaining this node
 		 */
 		inline NodeManager& getNodeManager() const {
-			assert(getNode().manager && "NodeManager must not be null - unmanaged node detected!");
+			assert_true(getNode().manager) << "NodeManager must not be null - unmanaged node detected!";
 			return *getNode().manager;
 		}
 
@@ -190,7 +190,7 @@ namespace core {
 		 * @return a reference to the internally maintained value
 		 */
 		const NodeValue& getNodeValue() const {
-			assert(isValue() && "Node does not represent a value!");
+			assert_true(isValue()) << "Node does not represent a value!";
 			return getNode().value;
 		}
 

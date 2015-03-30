@@ -65,7 +65,7 @@ namespace {
 					} else if (element->getNodeCategory() == NC_Expression) {
 						tmp = builder.markerExpr(element.as<ExpressionPtr>());
 					} else {
-						assert(false && "Cannot annotate non statement/expression!");
+						assert_fail() << "Cannot annotate non statement/expression!";
 					}
 					tmp->attachValue<T>();
 					res.push_back(tmp);

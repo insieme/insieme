@@ -109,7 +109,7 @@ public:
 	const CFG& getCFG() const { return cfg; }
 
 	const LowerSemilattice<container_type>& getLattice() const { 
-		assert(lattice_ptr && "Dataflow Problem not correctly initialized");
+		assert_true(lattice_ptr) << "Dataflow Problem not correctly initialized";
 		return *lattice_ptr; 
 	}
 

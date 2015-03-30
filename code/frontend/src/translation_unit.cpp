@@ -113,7 +113,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSem
 					bo.AddInitializers = true;
 					bo.AddImplicitDtors = true;
 					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
-					assert(cfg);
+					assert_true(cfg);
 					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
 					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
 				}

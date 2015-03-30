@@ -272,7 +272,7 @@ namespace pattern {
 			public:
 				Variable(const string& name) : name(name) {}
 				MatchValue<T> eval(const Match<T>& match) const {
-					assert(match.isVarBound(name) && "Unknown variable encountered!");
+					assert_true(match.isVarBound(name)) << "Unknown variable encountered!";
 					return match.getVarBinding(name);
 				}
 				std::ostream& printTo(std::ostream& out) const { return out << "$" << name; }
@@ -289,7 +289,7 @@ namespace pattern {
 					: subExpr(expression), index(index) {}
 				MatchValue<T> eval(const Match<T>& match) const {
 					MatchValue<T>&& value = subExpr->eval(match);
-					assert(value.getDepth() > 0 && "Cannot access element of a tree.");
+					assert_gt(value.getDepth(), 0) << "Cannot access element of a tree.";
 					return value.getValue(index);
 				}
 				std::ostream& printTo(std::ostream& out) const { return out << *subExpr << "[" << index << "]"; }
@@ -551,7 +551,7 @@ namespace pattern {
 
 		template<typename T>
 		MatchValue<T> reverse(const MatchValue<T>& value) {
-			assert(value.getDepth() == 1 && "Data is not a list!");
+			assert_eq(value.getDepth(), 1) << "Data is not a list!";
 			auto list = value.getList();
 			std::reverse(list.begin(), list.end());
 			return MatchValue<T>(list);
@@ -559,7 +559,7 @@ namespace pattern {
 
 		template<typename T>
 		MatchValue<T> listChildren(const MatchValue<T>& value) {
-			assert(value.getDepth() == 0 && "Data is not a tree!");
+			assert_eq(value.getDepth(), 0) << "Data is not a tree!";
 			return MatchValue<T>(value.getValue().getChildList());
 		}
 
@@ -695,7 +695,7 @@ namespace pattern {
 					const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
 					const Match<ptr_target>& match
 				) {
-			assert(node_expr && "Missing node expression!");
+			assert_true(node_expr) << "Missing node expression!";
 			return node_expr->eval(match);
 		}
 
@@ -704,7 +704,7 @@ namespace pattern {
 					const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
 					const Match<tree_target>& match
 				) {
-			assert(tree_expr && "Missing tree expression!");
+			assert_true(tree_expr) << "Missing tree expression!";
 			return tree_expr->eval(match);
 		}
 
@@ -737,7 +737,7 @@ namespace pattern {
 
 			GENERATE(Expression) {
 				MatchValue<T>&& value = eval(generator.node_expr, generator.tree_expr, match);
-				assert(value.getDepth() == 0);
+				assert_eq(value.getDepth(), 0);
 				return value.getValue();
 			}
 
@@ -814,7 +814,7 @@ namespace pattern {
 
 			GENERATE(Expression) {
 				MatchValue<T>&& value = eval(generator.node_expr, generator.tree_expr, match);
-				assert(value.getDepth() == 1);
+				assert_eq(value.getDepth(), 1);
 				return value.getList();
 			}
 
@@ -829,7 +829,7 @@ namespace pattern {
 
 				// obtain list of values
 				MatchValue<T> all = eval(generator.node_list, generator.tree_list, match);
-				assert(all.getDepth() > 0 && "Cannot apply for-each on scalar!");
+				assert_gt(all.getDepth(), 0) << "Cannot apply for-each on scalar!";
 
 				// create one entry per element within the list
 				typename T::list_type res;
@@ -858,7 +858,7 @@ namespace pattern {
 					CASE(Let);
 				#undef CASE
 			}
-			assert(false && "Unsupported tree-generator construct encountered!");
+			assert_fail() << "Unsupported tree-generator construct encountered!";
 			return typename T::value_type();
 		}
 
@@ -873,7 +873,7 @@ namespace pattern {
 					CASE(ForEach);
 				#undef CASE
 			}
-			assert(false && "Unsupported list-generator construct encountered!");
+			assert_fail() << "Unsupported list-generator construct encountered!";
 			return typename T::list_type();
 		}
 

@@ -61,12 +61,12 @@ namespace frontend {
 namespace pragma {
 
 void Pragma::setStatement(clang::Stmt const* stmt) {
-	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
+	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
 	mTargetNode = stmt;
 }
 
 void Pragma::setDecl(clang::Decl const* decl) {
-	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
+	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
 	mTargetNode = decl;
 }
 

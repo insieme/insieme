@@ -93,7 +93,7 @@ namespace {
 			}
 
 			// ensure correct type
-			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
+			assert_true(core::analysis::hasRefType(ARG(0))) << "Cannot free a non-ref type!";
 
 			// handle destructor call
 			if (core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
@@ -136,7 +136,7 @@ namespace {
 			core::NodeManager& manager = lazy->getNodeManager();
 
 			core::ExpressionPtr exprPtr = dynamic_pointer_cast<const core::Expression>(lazy);
-			assert(exprPtr && "Lazy is not an expression!");
+			assert_true(exprPtr) << "Lazy is not an expression!";
 
 			// use core functionality
 			auto res = core::transform::evalLazy(manager, exprPtr);
@@ -156,7 +156,7 @@ namespace {
 			}
 
 			// checks the remaining data path
-			assert(dataPath->getNodeType() == core::NT_CallExpr && "Data Path is neither root nor call!");
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
@@ -179,7 +179,7 @@ namespace {
 
 			// this is not a valid data path
 			LOG(ERROR) << "Invalid data path encoding: " << *dataPath << "\n";
-			assert(false && "Unknown Data Path encoding!");
+			assert_fail() << "Unknown Data Path encoding!";
 			return res;
 		}
 
@@ -208,7 +208,7 @@ namespace {
 			}
 
 			// process remaining data-path components
-			assert(dataPath->getNodeType() == core::NT_CallExpr && "Data Path is neither root nor call!");
+			assert_eq(dataPath->getNodeType(), core::NT_CallExpr) << "Data Path is neither root nor call!";
 
 			// resolve data path recursively
 			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
@@ -271,7 +271,7 @@ namespace {
 
 				// get element type of selected component
 				core::arithmetic::Formula index = core::arithmetic::toFormula(call->getArgument(1));
-				assert(index.isInteger() && "Non-constant tuple element access encountered!");
+				assert_true(index.isInteger()) << "Non-constant tuple element access encountered!";
 
 				// extract component index
 				int componentIndex = index.getConstantValue().getNumerator();
@@ -295,7 +295,7 @@ namespace {
 				return c_ast::sub(res, offset);
 
 			} else {
-				assert(false && "Unknown data path setup!");
+				assert_fail() << "Unknown data path setup!";
 			}
 
 			return src;
@@ -645,7 +645,7 @@ namespace {
 				// Create code similar to this:
 				// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
-				assert(ARG(0)->getNodeType() == core::NT_StructExpr && "Only supporting struct expressions as initializer value so far!");
+				assert_eq(ARG(0)->getNodeType(), core::NT_StructExpr) << "Only supporting struct expressions as initializer value so far!";
 				core::StructExprPtr initValue = ARG(0).as<core::StructExprPtr>();
 
 				// get types of struct and element
@@ -654,7 +654,7 @@ namespace {
 
 				// get size of variable part
 				auto arrayInitValue = initValue->getMembers().back()->getValue();
-				assert(core::analysis::isCallOf(arrayInitValue, LANG_BASIC.getArrayCreate1D()) && "Array not properly initialized!");
+				assert_true(core::analysis::isCallOf(arrayInitValue, LANG_BASIC.getArrayCreate1D())) << "Array not properly initialized!";
 				auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
 
 				// add header dependencies
@@ -938,7 +938,7 @@ namespace {
 			core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(vector->getType());
 
 			core::IntTypeParamPtr vectorSize = vectorType->getSize();
-			assert(vectorSize->getNodeType() == core::NT_ConcreteIntTypeParam && "Only supported for fixed vector sizes!");
+			assert_eq(vectorSize->getNodeType(), core::NT_ConcreteIntTypeParam) << "Only supported for fixed vector sizes!";
 			std::size_t size = static_pointer_cast<const core::ConcreteIntTypeParam>(vectorSize)->getValue();
 
 			// compose unfolded reduction expression
@@ -980,7 +980,7 @@ namespace {
 			context.getDependencies().insert(info.definition);
 
 			// create member access
-			assert(ARG(1)->getNodeType() == core::NT_Literal);
+			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
@@ -994,7 +994,7 @@ namespace {
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
 			context.getDependencies().insert(info.definition);
 
-			assert(ARG(1)->getNodeType() == core::NT_Literal);
+			assert_eq(ARG(1)->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			// special handling for accessing variable array within struct
@@ -1025,7 +1025,7 @@ namespace {
 			while(index->getNodeType() == core::NT_CastExpr) {
 				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
 			}
-			assert(index->getNodeType() == core::NT_Literal);
+			assert_eq(index->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
@@ -1043,7 +1043,7 @@ namespace {
 			while(index->getNodeType() == core::NT_CastExpr) {
 				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
 			}
-			assert(index->getNodeType() == core::NT_Literal);
+			assert_eq(index->getNodeType(), core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 
 			// access the type
@@ -1077,7 +1077,7 @@ namespace {
 		res[basic.getSizeof()] = OP_CONVERTER({
 			// extract type sizeof is applied to
 			core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
-			assert(type && "Illegal argument to sizeof operator");
+			assert_true(type) << "Illegal argument to sizeof operator";
 			core::TypePtr target = type->getTypeParameter()[0];
 
 			// return size-of operator call
@@ -1289,7 +1289,7 @@ namespace {
 				} else if (basic.isRefNew(ARG(0))) {
 					res = c_ast::newCall(res);
 				} else {
-					assert(false && "Creating Arrays of objects neither on heap nor stack isn't supported!");
+					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
 				}
 				return res;
 			});
@@ -1315,7 +1315,7 @@ namespace {
 				} else if (basic.isRefNew(ARG(0))) {
 					res = c_ast::newCall(res);
 				} else {
-					assert(false && "Creating Arrays of objects neither on heap nor stack isn't supported!");
+					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
 				}
 				return res;
 			});
@@ -1342,7 +1342,7 @@ namespace {
 				} else if (basic.isRefNew(ARG(0))) {
 					res = c_ast::newCall(res);
 				} else {
-					assert(false && "Creating Arrays of objects neither on heap nor stack isn't supported!");
+					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";
 				}
 				return res;
 			});
@@ -1386,7 +1386,7 @@ namespace {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 
-				assert(core::analysis::isCppRef(targetTy) && "targetType not a reference type");
+				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
 				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 
@@ -1396,7 +1396,7 @@ namespace {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 
-				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER({
@@ -1405,7 +1405,7 @@ namespace {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 
-				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 
@@ -1437,7 +1437,7 @@ namespace {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 
-				assert(core::analysis::isCppRef(targetTy) && "targetType not a reference type");
+				assert_true(core::analysis::isCppRef(targetTy)) << "targetType not a reference type";
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
 
@@ -1447,7 +1447,7 @@ namespace {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 
-				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
 
@@ -1457,7 +1457,7 @@ namespace {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 
-				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				assert_true(core::analysis::isConstCppRef(targetTy)) << "targetType not a reference type";
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
 

@@ -94,12 +94,12 @@ namespace access {
 
 		// Accessors 
 		inline AccessClass& operator[](const size_t uid) { 
-			assert(uid < classes.size() && "OutOfBounds array access");
+			assert_lt(uid, classes.size()) << "OutOfBounds array access";
 			return *classes[uid]; 
 		}
 
 		inline const AccessClass& operator[](const size_t uid) const {
-			assert(uid < classes.size() && "OutOfBounds array access");
+			assert_lt(uid, classes.size()) << "OutOfBounds array access";
 			return *classes[uid]; 
 		}
 

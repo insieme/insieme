@@ -113,7 +113,7 @@ namespace pattern {
 		 * index must not be 0.
 		 */
 		void dec() {
-			assert(path.back() > 0);
+			assert_gt(path.back(), 0);
 			path.back()--;
 		}
 
@@ -128,7 +128,7 @@ namespace pattern {
 		 * Updates the current index this path is pointing to.
 		 */
 		void set(std::size_t index) {
-			assert(path.size() > 0);
+			assert_gt(path.size(), 0);
 			assert(path.back() < index);
 			path.back() = index;
 		}
@@ -161,7 +161,7 @@ namespace pattern {
 		 * less or equal the current size of the path.
 		 */
 		void prune(std::size_t reducedSize) {
-			assert(reducedSize <= path.size());
+			assert_le(reducedSize, path.size());
 			path.resize(reducedSize);
 		}
 
@@ -237,18 +237,18 @@ namespace pattern {
 		}
 
 		const vector<MatchValue<T>>& getValues() const {
-			assert(depth > 0 && "Cannot access child-values of leaf node!");
+			assert_gt(depth, 0) << "Cannot access child-values of leaf node!";
 			return children;
 		}
 
 		const MatchValue<T>& getValue(unsigned index) const {
-			assert(index < children.size() && "Invalid index!");
+			assert_lt(index, children.size()) << "Invalid index!";
 			return getValues()[index];
 		}
 
 		/// only supported for depth = 0
 		const value_type& getValue() const {
-			assert(depth == 0 && "getValue only works on level 0!");
+			assert_eq(depth, 0) << "getValue only works on level 0!";
 			return tree;
 		}
 
@@ -256,7 +256,7 @@ namespace pattern {
 		list_type getList() const {
 			// static const auto extractor = [](const MatchValue& value) { return value.getValue(); };
 
-			assert(depth == 1 && "getList only works on level 1!");
+			assert_eq(depth, 1) << "getList only works on level 1!";
 			list_type res;
 			std::for_each(children.begin(), children.end(), [&] (const MatchValue& value) { 
 					auto&& match = value.getValue();
@@ -326,7 +326,7 @@ namespace pattern {
 			const auto constructor = [&](const value_type& cur){ return MatchValue<T>(cur, version); };
 
 			if (depth == 1) {
-				assert(children.empty() && "Not allowed to override existing data!");
+				assert_true(children.empty()) << "Not allowed to override existing data!";
 				std::transform(begin, end, std::back_inserter(children), constructor);
 			} else {
 				addListValue(path.begin(), path.end(), begin, end, version);
@@ -390,7 +390,7 @@ namespace pattern {
 				return getValue();
 			}
 			auto index = *begin;
-			assert(index < children.size() && "Index out of range!");
+			assert_lt(index, children.size()) << "Index out of range!";
 			return children[index].getValue(begin+1, end);
 		}
 
@@ -403,7 +403,7 @@ namespace pattern {
 				return getList();
 			}
 			auto index = *begin;
-			assert(index < children.size() && "Index out of range!");
+			assert_lt(index, children.size()) << "Index out of range!";
 			return children[index].getListValue(begin+1, end);
 		}
 
@@ -417,8 +417,8 @@ namespace pattern {
 			}
 
 			if (begin+1 == end) {
-				assert(depth == 1 && "Path length not correct!");
-				assert(!children[index].tree && "Value must not be set!");
+				assert_eq(depth, 1) << "Path length not correct!";
+				assert_false(children[index].tree) << "Value must not be set!";
 				children[index].tree = value;
 			} else {
 				children[index].addValue(begin+1, end, value, version);
@@ -431,8 +431,8 @@ namespace pattern {
 
 			// check for terminal condition
 			if (begin == end) {
-				assert(depth == 1 && "Path length not correct!");
-				assert(children.empty() && "Not allowed to override existing data!");
+				assert_eq(depth, 1) << "Path length not correct!";
+				assert_true(children.empty()) << "Not allowed to override existing data!";
 				std::transform(left, right, std::back_inserter(children), constructor);
 				return;
 			}
@@ -514,12 +514,12 @@ namespace pattern {
 		}
 
 		const MatchValue<T>& getVarBinding(const std::string& var) const {
-			assert(isVarBound(var) && "Requesting unbound variable!");
+			assert_true(isVarBound(var)) << "Requesting unbound variable!";
 			return map.find(var)->second.value;
 		}
 
 		void bindVar(const std::string& var, const MatchValue<T>& value) {
-			assert(!isVarBound(var) && "Requested to bind bound variable!");
+			assert_false(isVarBound(var)) << "Requested to bind bound variable!";
 			// add new value
 			map.insert(std::make_pair(var, MatchMapValue<T>(value, increment)));
 		}
@@ -535,7 +535,7 @@ namespace pattern {
 		}
 
 		void bindTreeVar(const MatchPath& path, const std::string& var, const value_type& match) {
-			assert(!isTreeVarBound(path, var) && "Variable bound twice");
+			assert_false(isTreeVarBound(path, var)) << "Variable bound twice";
 			auto pos = map.find(var);
 			if (pos == map.end()) {
 				pos = map.insert(std::make_pair(var, MatchMapValue<T>(MatchValue<T>(path.getDepth()), increment))).first;
@@ -545,7 +545,7 @@ namespace pattern {
 		}
 
 		void bindListVar(const MatchPath& path, const std::string& var, const list_iterator& begin, const list_iterator& end) {
-			assert(!isListVarBound(path, var) && "Variable bound twice");
+			assert_false(isListVarBound(path, var)) << "Variable bound twice";
 			auto pos = map.find(var);
 			if (pos == map.end()) {
 				pos = map.insert(std::make_pair(var, MatchMapValue<T>(MatchValue<T>(path.getDepth()+1), increment))).first;
@@ -555,13 +555,13 @@ namespace pattern {
 		}
 
 		const value_type& getTreeVarBinding(const MatchPath& path, const std::string& var) const {
-			assert(isTreeVarBound(path, var) && "Requesting bound value for unbound tree variable");
+			assert_true(isTreeVarBound(path, var)) << "Requesting bound value for unbound tree variable";
 			// auto pos = map.find(var);
 			return map.find(var)->second.value.getValue(path);
 		}
 
 		list_type getListVarBinding(const MatchPath& path, const std::string& var) const {
-			assert(isListVarBound(path, var) && "Requesting bound value for unbound list variable");
+			assert_true(isListVarBound(path, var)) << "Requesting bound value for unbound list variable";
 			// auto pos = map.find(var);
 			return map.find(var)->second.value.getListValue(path);
 		}
