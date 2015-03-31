@@ -5,6 +5,8 @@
 #include "insieme/core/ir.h"
 
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/annotations/naming.h"
 
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
@@ -13,6 +15,65 @@ namespace insieme{
 namespace core{
 namespace parser3{
 namespace detail{
+
+  /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ scope manager ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
+    void DeclarationContext::open_scope(const std::string& msg){
+        //for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+        scope_stack.push_back(ctx_map_type());
+    }
+    void DeclarationContext::close_scope(const std::string& msg){
+        scope_stack.pop_back();
+        //for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+    }
+
+    bool DeclarationContext::add_symb(const std::string& name, NodePtr node){
+        if (scope_stack.empty()) {
+            if (global_scope.find(name) != global_scope.end()) { 
+                return false;
+            }
+            global_scope[name] =  node;
+        }
+        else  {
+            if (scope_stack.back().find(name) != scope_stack.back().end()) { 
+                return false;
+            }
+            scope_stack.back()[name] =  node;
+        }
+        return true;
+    }
+
+    NodePtr DeclarationContext::find(const std::string& name) const{
+        ctx_map_type::const_iterator mit;
+        for (auto it = scope_stack.rbegin(); it != scope_stack.rend(); ++it){
+            if ((mit = it->find(name)) != it->end()) return mit->second;
+        }
+        if ((mit = global_scope.find(name)) != global_scope.end()) return mit->second;
+        return nullptr;
+    }
+
+    void DeclarationContext::add_unfinish_symbol(const std::string& name){
+        unfinished_symbols.push_back(name);
+        let_symbols.push_back(name);
+    }
+
+    std::string DeclarationContext::get_unfinish_symbol(){
+        auto x = unfinished_symbols.front();
+        unfinished_symbols.erase(unfinished_symbols.begin());
+        return x;
+    }
+
+    bool DeclarationContext::all_symb_defined(){
+        let_symbols.clear();
+        return unfinished_symbols.empty();
+    }
+
+    bool DeclarationContext::is_unfinished(const std::string& name)const {
+        return (std::find (let_symbols.begin(), let_symbols.end(), name) != let_symbols.end());
+    }
+
+  /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ inspire_driver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 
     inspire_driver::inspire_driver (const std::string &f, NodeManager& nm)
@@ -88,7 +149,26 @@ namespace detail{
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    ExpressionPtr inspire_driver::findSymbol(const location& l, const std::string& name)  const{
+namespace {
+
+    LiteralPtr get_tag_function(const std::string& name, IRBuilder& builder){
+        return builder.literal(builder.stringValue(name), builder.functionType(TypeList(), builder.getLangBasic().getUnit()));   
+    }
+
+}
+
+
+
+    ExpressionPtr inspire_driver::findSymbol(const location& l, const std::string& name) {
+
+        if (scopes.is_unfinished(name)) {
+            // this is the use of a recursive lambda call before is defined, return an callable type and wait for ammend
+            auto flit =  get_tag_function(name, builder);
+            // touch the map, the real type will not be known until the prototype is parsed
+            rec_function_vars[name] = {flit, nullptr}; 
+            return flit;
+        }
+
         auto x = scopes.find(name);
 
         if(!x) {
@@ -111,20 +191,27 @@ namespace detail{
         return x.as<ExpressionPtr>();
     }
 
-    TypePtr inspire_driver::findType(const location& l, const std::string& name)  const{
+    TypePtr inspire_driver::findType(const location& l, const std::string& name){
+
+        if (scopes.is_unfinished(name)) {
+            // this is the use of a recursive lambda call before is defined, return an callable type and wait for ammend
+            return builder.typeVariable(name);
+        }
+
         auto x = scopes.find(name);
 
         // keyword types (is this the right place?) 
         if (!x) {
             if (name == "unit") return builder.getLangBasic().getUnit();
         }
+        if (!x) {
+            if (name == "bool") return builder.getLangBasic().getBool();
+        }
 
         if (!x) {
             try{ 
-            x = builder.getLangBasic().getBuiltIn(name);
-            }catch(...)
-            {
-            }
+                x = builder.getLangBasic().getBuiltIn(name);
+            }catch(...) { }
         }
 
         if (!x) {
@@ -171,8 +258,8 @@ namespace detail{
         if (op == "&&") return builder.logicAnd(a,b);
 
         // arithm
-        if (op == "-") return builder.add(a,b);
-        if (op == "+") return builder.sub(a,b);
+        if (op == "+") return builder.add(a,b);
+        if (op == "-") return builder.sub(a,b);
 
         // geom
         if (op == "*") return builder.mul(a,b);
@@ -240,6 +327,14 @@ namespace detail{
         if (!allRetTypes.empty()) retType = *allRetTypes.begin();
         else                   retType = builder.getLangBasic().getUnit();
 
+        return genLambda(l, params, retType, body);
+    }
+
+    ExpressionPtr inspire_driver::genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body){
+        // TODO: cast returns to apropiate type
+        TypeList paramTys;
+        for (const auto& var : params) paramTys.push_back(var.getType());
+
         auto funcType = genFuncType(l, paramTys, retType); 
         return builder.lambdaExpr(funcType.as<FunctionTypePtr>(), params, body);
     }
@@ -269,17 +364,19 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& func, ExpressionList args){
 
-
         auto ftype = func->getType();
         if (!ftype.isa<FunctionTypePtr>()) error(l, "attempt to call non function expression");    
 
         auto funcParamTypes = ftype.as<FunctionTypePtr>()->getParameterTypeList();
-        if (builder.getLangBasic().isVarList(*funcParamTypes.rbegin())){
+        if (!funcParamTypes.empty() ){
+            // fix variadic arguments
+            if (builder.getLangBasic().isVarList(*funcParamTypes.rbegin())){
 
-            ExpressionList newParams (args.begin(), args.begin() + funcParamTypes.size()-1);
-            ExpressionList packParams(args.begin() + funcParamTypes.size(), args.end());
-            newParams.push_back(builder.pack(packParams));
-            std::swap(args, newParams);
+                ExpressionList newParams (args.begin(), args.begin() + funcParamTypes.size()-1);
+                ExpressionList packParams(args.begin() + funcParamTypes.size(), args.end());
+                newParams.push_back(builder.pack(packParams));
+                std::swap(args, newParams);
+            }
         }
 
         if (args.size() != funcParamTypes.size())  error(l, "invalid number of arguments in function call"); 
@@ -294,21 +391,90 @@ namespace detail{
             error(l, format("symbol %s redefined", name));
         }
     }
+
     void inspire_driver::add_symb(const std::string& name, NodePtr ptr){
-        scopes.add_symb(name, ptr);
+        add_symb(glob_loc, name, ptr);
     }
 
     void inspire_driver::add_unfinish_symbol(const location& l, const std::string& name){
         scopes.add_unfinish_symbol(name);
-        // generate a temporary callable variable to be fixed once the bodies are visited
-        scopes.add_symb(name, builder.variable(builder.functionType(TypeList(), builder.getLangBasic().getUnit()))); 
     }
+
     void inspire_driver::close_unfinish_symbol(const location& l, const NodePtr& node){
+
         auto name = scopes.get_unfinish_symbol();
-        scopes.add_symb(name, node);
+
+        // this node may be modified by every unfinished node that it might have used
+        recursive_symbols[name] = node;
     }
-    void inspire_driver::all_symb_defined(const location& l){
-        if (!scopes.all_symb_defined()) error(l, "not all let names were defined");
+
+    bool inspire_driver::all_symb_defined(const location& l){
+
+        if (!scopes.all_symb_defined()) {
+            //TODO: nested  recursion not supported, add scoping mechanisms to this thing.
+            error(l, "not all let identifiers were defined");
+            return false;
+        }
+
+        // amend all nodes that might be recursive
+        std::map<std::string, TypePtr> rec_types;
+        std::map<std::string, LambdaExprPtr> rec_funcs;
+        for (const auto& rec : recursive_symbols){
+            if (rec.second.isa<TypePtr>())            rec_types[rec.first] = rec.second.as<TypePtr>();
+            else if (rec.second.isa<LambdaExprPtr>()) rec_funcs[rec.first] = rec.second.as<LambdaExprPtr>();
+            else {
+                error(l, format("the recursive symbol %s is neither a type or function", rec.first));
+                return false;
+            }
+        }
+
+        // FIRST TYPES
+        std::vector<RecTypeBindingPtr> type_defs;
+        for (const auto& rec : rec_types){
+            type_defs.push_back(builder.recTypeBinding(builder.typeVariable(rec.first), rec.second.as<TypePtr>()));
+        }
+        RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
+        for (const auto& rec : rec_types) add_symb(l, rec.first, builder.recType(builder.typeVariable(rec.first), fullType));
+
+        // THEN FUNCTIONS
+        NodeMap replacements;
+       
+        // collect al symbols that need to be replaced
+        for (const auto& rec : rec_funcs){
+            // build literal (to match the used one)
+            LiteralPtr flit = get_tag_function(rec.first, builder);
+
+            // build variable with the right typing
+            VariablePtr fvar = builder.variable(rec.second.getType());
+            replacements.insert({flit, fvar});
+         //   count++;
+        }
+
+        std::vector<LambdaBindingPtr> lambda_defs;
+        // replace symbols and create lambda bindings
+        for (const auto& rec : rec_funcs){
+            LiteralPtr flit = get_tag_function(rec.first, builder);
+            
+            StatementPtr body = transform::replaceAllGen(mgr, rec.second->getBody(), replacements, true);
+            auto params = rec.second->getParameterList();
+            auto type = rec.second->getType();
+
+            VariablePtr var = replacements[flit].as<VariablePtr>();
+            lambda_defs.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
+        }
+        LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambda_defs);
+
+        // generate a callable symbol for each name
+        for (const auto& rec : rec_funcs){
+            LiteralPtr flit = get_tag_function(rec.first, builder);
+            VariablePtr var = replacements[flit].as<VariablePtr>();
+
+            add_symb(l, rec.first, builder.lambdaExpr(var, lambdaDef));
+        }
+
+        // clear the scope
+        recursive_symbols.clear();
+        return true;
     }
 
     void inspire_driver::open_scope(const location& l, const std::string& name){
@@ -322,16 +488,20 @@ namespace detail{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     void inspire_driver::error (const location& l, const std::string& m)const {
-
       errors.push_back(t_error(l, m));
     }
-
 
     void inspire_driver::error (const std::string& m)const {
       std::cerr << m << std::endl;
     }
 
+    bool inspire_driver::where_errors()const{
+        return !errors.empty();
+    }
+
 namespace {
+
+    //TODO: move this to string utils
     std::vector<std::string> split_string(const std::string& s){
         std::vector<std::string> res;
         std::string delim = "\n";
@@ -352,8 +522,21 @@ namespace {
         assert(res.size() > 0);
         return res;
     }
-}
 
+    //TODO: move this to  utils
+    const std::string RED   ="\033[31m";
+    const std::string GREEN ="\033[32m";
+    const std::string BLUE  ="\033[34m";
+    const std::string BLACK ="\033[30m";
+    const std::string CYAN  ="\033[96m";
+    const std::string YELLOW="\033[33m";
+    const std::string GREY  ="\033[37m";
+
+    const std::string RESET ="\033[0m";
+    const std::string BOLD  ="\033[1m";
+
+} // annon
+    
     void inspire_driver::print_errors(std::ostream& out)const {
 
         auto buffer = split_string(str);
@@ -363,7 +546,7 @@ namespace {
             int lineb = err.l.begin.line;
             int linee = err.l.end.line;
 
-            out << "ERROR: " << err.l << " " << err.msg << std::endl;
+            out << RED << "ERROR: "  << RESET << err.l << " " << err.msg << std::endl;
             for (; line< lineb; ++line); 
             for (; line< linee; ++line); out << buffer[line-1] << std::endl;
 
@@ -371,9 +554,10 @@ namespace {
             int cole = err.l.end.column;
 
             for (int i =0; i < colb-1; ++i) std::cerr << " ";
-            out << "^";
+            out << GREEN << "^";
             for (int i =0; i < cole - colb -1; ++i) std::cerr << "~";
-            out << std::endl;
+            out << RESET << std::endl;
+
 
         }
     }

@@ -3,6 +3,8 @@
 #include "insieme/core/parser3/detail/driver.h"
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
+
 
 namespace insieme{
 namespace core{
@@ -14,8 +16,11 @@ namespace parser3{
         NodeManager nm;
         inspire_driver driver(x, nm);
         driver.parseType();
-
-        if (driver.result) dumpColor(driver.result);
+        if (driver.result) {  
+            dumpColor(driver.result);
+            auto msg = checks::check(driver.result);
+            EXPECT_TRUE(msg.empty()) << msg;
+        }
         return driver.result; 
     }
 
@@ -23,12 +28,13 @@ namespace parser3{
 
         EXPECT_TRUE(test_type("int<4>"));
         EXPECT_TRUE(test_type("someweirdname<>"));
-        EXPECT_TRUE(test_type("vector<int<4>>"));
+        EXPECT_FALSE(test_type("vector<int<4>>"));
         EXPECT_TRUE(test_type("vector<int<4>, 4>"));
         EXPECT_TRUE(test_type("vector<'a, 4>"));
         EXPECT_TRUE(test_type("struct { int<4> a; int<5> b}"));
         EXPECT_TRUE(test_type("struct name { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type("struct name :: int<4> : vector<int<4>, 45> { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type("struct name :: papa<1> : mama<2> { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type("struct name :: papa<4> { int<4> a; int<5> b}"));
         EXPECT_TRUE(test_type("struct { int<4> a; int<5> b;}"));
         EXPECT_TRUE(test_type("let int = int<4>; int"));
 
@@ -41,6 +47,11 @@ namespace parser3{
         NodeManager nm;
         inspire_driver driver(x, nm);
         driver.parseExpression();
+        if (driver.result) {  
+            dumpColor(driver.result);
+            auto msg = checks::check(driver.result);
+            EXPECT_TRUE(msg.empty()) << msg;
+        }
         return driver.result; 
     }
 
@@ -66,8 +77,10 @@ namespace parser3{
 
         EXPECT_FALSE(test_expression("x"));
 
-        EXPECT_TRUE(test_expression("lambda ('a _) -> true"));
-        EXPECT_TRUE(test_expression("lambda ('a x) -> x+CAST('a) 3"));
+        EXPECT_TRUE(test_expression("lambda ('a _) -> bool : true"));
+        EXPECT_TRUE(test_expression("lambda ('a x) -> 'a :  x+CAST('a) 3"));
+        EXPECT_TRUE(test_expression("lambda ('a x) -> 'a : (x+CAST('a) 3)"));
+        EXPECT_TRUE(test_expression("lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
         EXPECT_TRUE(test_expression("lambda ('a x) => x+CAST('a) 3"));
 
         EXPECT_TRUE(test_expression("type(int<4>)"));
@@ -77,7 +90,11 @@ namespace parser3{
         NodeManager nm;
         inspire_driver driver(x, nm);
         driver.parseStmt();
-        if (driver.result) dumpColor(driver.result);
+        if (driver.result) {  
+            dumpColor(driver.result);
+            auto msg = checks::check(driver.result);
+            EXPECT_TRUE(msg.empty()) << msg;
+        }
         return driver.result; 
     }
 
@@ -113,8 +130,8 @@ namespace parser3{
         EXPECT_TRUE(test_statement("if ( true ) if ( false ) { } else 1 ;"));
         EXPECT_TRUE(test_statement("if ( true ) if ( false ) { } else 1 ; else 2; "));
         EXPECT_TRUE(test_statement("while ( true ) 1+1;"));
-        EXPECT_TRUE(test_statement("while ( 1+2 ) 1+1;"));
-        EXPECT_TRUE(test_statement("while ( 1+2 ) { 1+1; }"));
+        EXPECT_TRUE(test_statement("while ( false ) 1+1;"));
+        EXPECT_TRUE(test_statement("while ( false || true ) { 1+1; }"));
         EXPECT_TRUE(test_statement("for ( int<4> it 1 .. 3) 1+1;"));
         EXPECT_TRUE(test_statement("for ( int<4> it 1 .. 3: 2) 1+1;"));
         EXPECT_TRUE(test_statement("for ( int<4> it 1 .. 3: 2) { 1+1; }"));
@@ -135,16 +152,29 @@ namespace parser3{
         NodeManager nm;
         inspire_driver driver(x, nm);
         driver.parseProgram();
-        if (driver.result) dumpColor(driver.result);
+        if (driver.result) {  
+            dumpColor(driver.result);
+            auto msg = checks::check(driver.result);
+            EXPECT_TRUE(msg.empty()) << msg;
+        }
         return driver.result; 
+
     }
 
     TEST(IR_Parser3, Let) {
         EXPECT_TRUE(test_program("let int = int<4>; int main () { return 1; }"));
         EXPECT_TRUE(test_program("let int = int<4>; let long = int<8>; long main (int a) { return 1; }"));
         EXPECT_TRUE(test_program("let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
-        EXPECT_TRUE(test_program("let f = () -> unit { }; int<4> main () { f(); return 1; }"));
-        EXPECT_TRUE(test_program("let int = int<4>; let f = (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
+        EXPECT_TRUE(test_program("let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
+        EXPECT_TRUE(test_program("let int = int<4>; let f = lambda (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
+
+            
+        EXPECT_FALSE(test_program("let int , long = int<4>; int<4> main () { return 1; }"));
+        EXPECT_FALSE(test_program("let a , b = a<4>; int<4> main () { return 1; }"));
+
+        EXPECT_TRUE(test_program("let a , b = a<b>, b<a>; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
+        EXPECT_TRUE(test_program("let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
+            
     }
     
     TEST(IR_Parser3, Program) {
