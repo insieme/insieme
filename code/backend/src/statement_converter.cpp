@@ -708,6 +708,8 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
 
+		converter.getNameManager().pushVarScope(true);
+
 		auto manager = converter.getCNodeManager();
 
 		VariableManager& varManager = context.getVariableManager();
@@ -755,11 +757,14 @@ namespace backend {
 
 		// create init and body
 		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
+		converter.getNameManager().pushVarScope(true);
 		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
+		converter.getNameManager().popVarScope();
 
 		// remove variable info since no longer in scope
 		varManager.remInfo(var_iter);
 
+		converter.getNameManager().popVarScope();
 		// combine all into a for
 		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
 	}
