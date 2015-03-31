@@ -473,10 +473,12 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context) {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
+		converter.getNameManager().pushVarScope(true);
 		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
 			c_ast::NodePtr stmt = this->visit(cur,context);
 			if (stmt) { res->statements.push_back(stmt); }
 		});
+		converter.getNameManager().popVarScope();
 		return res;
 	}
 
@@ -708,6 +710,8 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
 
+		converter.getNameManager().pushVarScope(true);
+
 		auto manager = converter.getCNodeManager();
 
 		VariableManager& varManager = context.getVariableManager();
@@ -755,11 +759,14 @@ namespace backend {
 
 		// create init and body
 		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
+		converter.getNameManager().pushVarScope(true);
 		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
+		converter.getNameManager().popVarScope();
 
 		// remove variable info since no longer in scope
 		varManager.remInfo(var_iter);
 
+		converter.getNameManager().popVarScope();
 		// combine all into a for
 		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
 	}
