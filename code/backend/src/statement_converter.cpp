@@ -473,12 +473,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context) {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
-		converter.getNameManager().pushVarScope(true);
 		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
 			c_ast::NodePtr stmt = this->visit(cur,context);
 			if (stmt) { res->statements.push_back(stmt); }
 		});
-		converter.getNameManager().popVarScope();
 		return res;
 	}
 
