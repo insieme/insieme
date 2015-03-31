@@ -1,19 +1,19 @@
 
 let int = int<4>;
 
-let sum = (int h, int j)->int { return h + j; };
+let sum = lambda (int h, int j)->int { return h + j; };
 
 unit main() {
 	
 	// let's define some function sum
-	let sum = (int a, int b)->int { return a + b; };
+	let sum = lambda (int a, int b)->int { return a + b; };
 	
 	// define a variable
 	decl ref<int> a  = var(0);
 	
 	decl auto acc = lambda (int v)=> {a = a + v; };
 	
-	let doSomething = ((int)=>unit fun)->unit {
+	let doSomething = lambda ((int)=>unit fun)->unit {
 		fun(4);
 	};
 

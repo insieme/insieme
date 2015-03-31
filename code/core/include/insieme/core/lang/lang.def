@@ -522,21 +522,21 @@ LITERAL(IntTypeParamToInt, 	"to.uint", 					"(intTypeParam<#n>)->uint<8>")
 
 GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND, ArrayRefProjection1D, ArrayRefProjectionND)
 
-LITERAL(ArrayCreate1D, 		"array.create.1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
-LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
+LITERAL(ArrayCreate1D, 		"array_create.1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
+LITERAL(ArrayCreateND, 		"array_create.ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
 
-LITERAL(ArraySubscript1D,      "array.subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
-LITERAL(ArraySubscriptND,      "array.subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
+LITERAL(ArraySubscript1D,      "array_subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
+LITERAL(ArraySubscriptND,      "array_subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-DERIVED(ArrayRefElem1D,     "array.ref.elem.1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref.narrow(a, dp.element(dp.root, i), lit('elem)); }")
-LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
+DERIVED(ArrayRefElem1D,     "array_ref_elem.1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref.narrow(a, dp.element(dp.root, i), lit('elem)); }")
+LITERAL(ArrayRefElemND, 	"array_ref_elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
-LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
+LITERAL(ArrayRefProjection1D, "array_ref_projection.1D",
 							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
-LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
+LITERAL(ArrayRefProjectionND, "array_ref_projection.ND",
 							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
-LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
+LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
 DERIVED(ScalarToArray, 			"scalar.to.array", 		"(ref<'a> a) -> ref<array<'a,1>> { return ref.expand(a, dp.element(dp.root,0u), lit(array<'a,1>)); }")
 
 // computation of an array-offset and some derivades

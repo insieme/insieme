@@ -63,7 +63,11 @@
     #include "insieme/core/annotations/naming.h"
     #include "insieme/core/analysis/ir_utils.h"
 
-    #define INSPIRE_GUARD(l,n) \
+    #define INSPIRE_MSG(l, n, msg) \
+            if(!n) { driver.error(l, msg); YYABORT; }
+    #define INSPIRE_TYPE(l, n, t, msg) \
+            if(!n->getType().isa<t>()) { driver.error(l, msg); YYABORT; }
+    #define INSPIRE_GUARD(l, n) \
             if(!n) { driver.error(l, "unrecoverable error"); YYABORT; }
     #define INSPIRE_NOT_IMPLEMENTED(l) \
             { driver.error(l, "not supported yet "); YYABORT; }
@@ -217,10 +221,11 @@ program : TYPE_ONLY declarations type             { if(!driver.where_errors())  
 
 /* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-let_defs : "lambda" lambda_expression ";"          { driver.close_unfinish_symbol(@1, $2); }
-         | "lambda" lambda_expression "," { driver.close_unfinish_symbol(@1, $2); } let_defs 
-         | type ";"                                { driver.close_unfinish_symbol(@1, $1); }
-         | type "," { driver.close_unfinish_symbol(@1, $1); } let_defs                       
+let_defs : "lambda" lambda_expression ";"          { if(!driver.close_unfinish_symbol(@1, $2)) YYABORT; }
+         | "lambda" lambda_expression ","          { if(!driver.close_unfinish_symbol(@1, $2)) YYABORT; }
+                let_defs 
+         | type ";"                                { if(!driver.close_unfinish_symbol(@1, $1)) YYABORT; }
+         | type "," { if(!driver.close_unfinish_symbol(@1, $1)) YYABORT; } let_defs                       
          ;
 
 let_decl : "identifier" { driver.add_unfinish_symbol(@1, $1); } "=" let_defs  
@@ -246,11 +251,27 @@ program : type "identifier" "(" variable_list ")" "{" compound_stmt "}" {
 						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, $7);
 						    $$ = driver.builder.createProgram(toVector(main));
                         }
+        | type "identifier" "(" variable_list ")" "{" "}" {
+                            INSPIRE_GUARD(@1, $1); 
+                            driver.close_scope(@$, "program");
+                            TypeList paramTys;
+                            for (const auto& var : $4) paramTys.push_back(var.getType());
+                            FunctionTypePtr funcType = driver.builder.functionType(paramTys, $1); 
+						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, driver.builder.compoundStmt());
+						    $$ = driver.builder.createProgram(toVector(main));
+                        }
         | type "identifier" "(" ")" "{" compound_stmt "}"{
                             INSPIRE_GUARD(@1, $1); 
                             driver.close_scope(@$, "program 2");
                             FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $1); 
 						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, VariableList(), $6);
+						    $$ = driver.builder.createProgram(toVector(main));
+                        }
+        | type "identifier" "(" ")" "{" "}"{
+                            INSPIRE_GUARD(@1, $1); 
+                            driver.close_scope(@$, "program 2");
+                            FunctionTypePtr funcType = driver.builder.functionType(TypeList(), $1); 
+						    ExpressionPtr main = driver.builder.lambdaExpr(funcType, VariableList(), driver.builder.compoundStmt());
 						    $$ = driver.builder.createProgram(toVector(main));
                         }
         ;
@@ -448,8 +469,12 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | expression "*" expression { $$ = driver.genBinaryExpression(@$, "*", $1, $3);  }
            | expression "/" expression { $$ = driver.genBinaryExpression(@$, "/", $1, $3);  }
             /* call expr */
-           | expression "(" ")"                 { $$ = driver.genCall(@$, $1, ExpressionList());  }
-           | expression "(" expression_list ")" { $$ = driver.genCall(@$, $1, $3); }
+           | expression "(" ")"                 { INSPIRE_TYPE(@1, $1,FunctionTypePtr, "non callable symbol"); 
+                                                  std::cout << "f" << $1 << " : " << $1->getType() << std::endl;
+                                                  $$ = driver.genCall(@$, $1, ExpressionList());  }
+           | expression "(" expression_list ")" { INSPIRE_TYPE(@1, $1,FunctionTypePtr, "non callable symbol"); 
+                                                  std::cout << "f" << $1 << " : " << $1->getType() << std::endl;
+                                                  $$ = driver.genCall(@$, $1, $3); }
             /* parenthesis */
            | "(" expression ")"  { $$ = $2; }
             /* lambda or closure expression: callable expression */

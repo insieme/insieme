@@ -149,13 +149,19 @@ namespace detail{
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-namespace {
 
-    LiteralPtr get_tag_function(const std::string& name, IRBuilder& builder){
-        return builder.literal(builder.stringValue(name), builder.functionType(TypeList(), builder.getLangBasic().getUnit()));   
+    LiteralPtr inspire_driver::get_tag_function(const std::string& name){
+
+        if (!rec_function_vars[name].first){
+            LiteralPtr lit = builder.literal(builder.stringValue(name), 
+                                             builder.functionType(TypeList(), builder.getLangBasic().getUnit()));   
+            return rec_function_vars[name].first = lit;
+        }
+        else{
+            return rec_function_vars[name].first;
+        }
     }
 
-}
 
 
 
@@ -163,7 +169,7 @@ namespace {
 
         if (scopes.is_unfinished(name)) {
             // this is the use of a recursive lambda call before is defined, return an callable type and wait for ammend
-            auto flit =  get_tag_function(name, builder);
+            auto flit =  get_tag_function(name);
             // touch the map, the real type will not be known until the prototype is parsed
             rec_function_vars[name] = {flit, nullptr}; 
             return flit;
@@ -362,7 +368,25 @@ namespace {
         return builder.bindExpr(params, call);
     }
 
-    ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& func, ExpressionList args){
+    ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args){
+
+        ExpressionPtr func = callable;
+        std::cout << "call @" << l << std::endl;
+
+        // if the call is to a not yet defined symbol, we might want to change the type (now can be completed)
+        if (func.isa<LiteralPtr>()){
+		    auto name = func.as<LiteralPtr>().getValue()->getValue();
+            if (rec_function_vars.find(name) != rec_function_vars.end()){
+                // we can redefine the symbol now
+                TypeList l;
+                for(const auto& e : args) l.push_back(e.getType());
+                
+                func = builder.literal(name, builder.functionType(l, builder.getLangBasic().getUnit()));
+                rec_function_vars[name].first = func.as<LiteralPtr>();
+            }
+
+        }
+
 
         auto ftype = func->getType();
         if (!ftype.isa<FunctionTypePtr>()) error(l, "attempt to call non function expression");    
@@ -400,13 +424,25 @@ namespace {
         scopes.add_unfinish_symbol(name);
     }
 
-    void inspire_driver::close_unfinish_symbol(const location& l, const NodePtr& node){
-
+    bool inspire_driver::close_unfinish_symbol(const location& l, const NodePtr& node){
+        if (!node) return false;
         auto name = scopes.get_unfinish_symbol();
 
         // this node may be modified by every unfinished node that it might have used
         recursive_symbols[name] = node;
+        return true;
     }
+
+namespace {
+    bool contains_type_variables (const TypePtr& t){
+        
+        bool contains = false;
+        visitDepthFirstOnce(t, [&](const TypePtr& t){
+            if (t.isa<TypeVariablePtr>()) contains = true;
+        });
+        return contains;
+    }
+}
 
     bool inspire_driver::all_symb_defined(const location& l){
 
@@ -428,48 +464,60 @@ namespace {
             }
         }
 
+
         // FIRST TYPES
-        std::vector<RecTypeBindingPtr> type_defs;
-        for (const auto& rec : rec_types){
-            type_defs.push_back(builder.recTypeBinding(builder.typeVariable(rec.first), rec.second.as<TypePtr>()));
+        {
+            std::vector<RecTypeBindingPtr> type_defs;
+            std::vector<std::string> names;
+            for (const auto& rec : rec_types){
+                if(!contains_type_variables(rec.second.as<TypePtr>())) {
+                    add_symb(l, rec.first, rec.second);
+                }
+                else {
+                    type_defs.push_back(builder.recTypeBinding(builder.typeVariable(rec.first), rec.second.as<TypePtr>()));
+                    names.push_back(rec.first);
+                }
+            }
+            RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
+            for (const auto& n : names) add_symb(l, n, builder.recType(builder.typeVariable(n), fullType));
         }
-        RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
-        for (const auto& rec : rec_types) add_symb(l, rec.first, builder.recType(builder.typeVariable(rec.first), fullType));
+
 
         // THEN FUNCTIONS
-        NodeMap replacements;
-       
-        // collect al symbols that need to be replaced
-        for (const auto& rec : rec_funcs){
-            // build literal (to match the used one)
-            LiteralPtr flit = get_tag_function(rec.first, builder);
+        {
+            NodeMap replacements;
+           
+            // collect al symbols that need to be replaced
+            for (const auto& rec : rec_funcs){
+                // build literal (to match the used one)
+                LiteralPtr flit = get_tag_function(rec.first);
 
-            // build variable with the right typing
-            VariablePtr fvar = builder.variable(rec.second.getType());
-            replacements.insert({flit, fvar});
-         //   count++;
-        }
+                // build variable with the right typing
+                VariablePtr fvar = builder.variable(rec.second.getType());
+                replacements.insert({flit, fvar});
+             //   count++;
+            }
 
-        std::vector<LambdaBindingPtr> lambda_defs;
-        // replace symbols and create lambda bindings
-        for (const auto& rec : rec_funcs){
-            LiteralPtr flit = get_tag_function(rec.first, builder);
-            
-            StatementPtr body = transform::replaceAllGen(mgr, rec.second->getBody(), replacements, true);
-            auto params = rec.second->getParameterList();
-            auto type = rec.second->getType();
+            std::vector<LambdaBindingPtr> lambda_defs;
+            // replace symbols and create lambda bindings
+            for (const auto& rec : rec_funcs){
+                LiteralPtr flit = get_tag_function(rec.first);
+                StatementPtr body = transform::replaceAllGen(mgr, rec.second->getBody(), replacements, true);
+                auto params = rec.second->getParameterList();
+                auto type = rec.second->getType();
 
-            VariablePtr var = replacements[flit].as<VariablePtr>();
-            lambda_defs.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
-        }
-        LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambda_defs);
+                VariablePtr var = replacements[flit].as<VariablePtr>();
+                lambda_defs.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
+            }
+            LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambda_defs);
 
-        // generate a callable symbol for each name
-        for (const auto& rec : rec_funcs){
-            LiteralPtr flit = get_tag_function(rec.first, builder);
-            VariablePtr var = replacements[flit].as<VariablePtr>();
+            // generate a callable symbol for each name
+            for (const auto& rec : rec_funcs){
+                LiteralPtr flit = get_tag_function(rec.first);
+                VariablePtr var = replacements[flit].as<VariablePtr>();
 
-            add_symb(l, rec.first, builder.lambdaExpr(var, lambdaDef));
+                add_symb(l, rec.first, builder.lambdaExpr(var, lambdaDef));
+            }
         }
 
         // clear the scope

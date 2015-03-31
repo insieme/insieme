@@ -79,6 +79,8 @@ class inspire_driver
 
     std::map<std::string, NodePtr> recursive_symbols;
     std::map<std::string, std::pair<LiteralPtr, VariablePtr>> rec_function_vars;
+
+    LiteralPtr get_tag_function(const std::string& name);
 public:
     inspire_driver (const std::string& f, NodeManager& nk);
     virtual ~inspire_driver ();
@@ -116,7 +118,7 @@ public:
     void add_symb(const std::string& name, NodePtr ptr);
 
     void add_unfinish_symbol(const location& l, const std::string& name);
-    void close_unfinish_symbol(const location& l, const NodePtr& node);
+    bool close_unfinish_symbol(const location& l, const NodePtr& node);
     bool all_symb_defined(const location& l);
 
     void open_scope(const location& l, const std::string& );
