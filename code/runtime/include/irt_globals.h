@@ -55,6 +55,7 @@ extern irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker;
 extern struct _irt_worker **irt_g_workers;
 
+extern bool irt_g_rt_is_initialized;
 extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 
 

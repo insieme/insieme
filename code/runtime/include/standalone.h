@@ -85,6 +85,7 @@ irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
+bool irt_g_rt_is_initialized;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
 mqd_t irt_g_message_queue;
@@ -339,7 +340,14 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		irt_log_comment("Running Insieme runtime with OpenCL!\n");
 		irt_ocl_init_devices();
 	#endif
+
+	irt_g_rt_is_initialized = true;
 }
+
+bool irt_runtime_is_inited() {
+	return irt_g_rt_is_initialized;
+}
+
 
 uint32 irt_get_default_worker_count() {
 	uint32 cores;
