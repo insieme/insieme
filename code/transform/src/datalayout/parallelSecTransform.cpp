@@ -161,7 +161,7 @@ StatementList ParSecTransform<Baseclass>::generateNewDecl(const ExprAddressMap& 
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(Baseclass::mgr);
 
-	// replace declaration with compound statement containing only the declaration of the new variable and it's initialization
+	// replace declaration with compound statement containing only the declaration of the new variable and its initialization
 	StatementList allDecls;
 
 	NodeMap inInitReplacementsInCaseOfNovarInInit;

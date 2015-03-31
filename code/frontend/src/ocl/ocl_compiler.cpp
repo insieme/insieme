@@ -401,7 +401,7 @@ private:
     // extract the argument of a call to refVar function
     core::ExpressionPtr removeRefVar(core::DeclarationStmtPtr decl) {
         core::ExpressionPtr oldInit = decl->getInitialization();
-        // write the variable with it's initialization to the place the declaration was
+        // write the variable with its initialization to the place the declaration was
         if(core::CallExprPtr initCall = core::dynamic_pointer_cast<const core::CallExpr>(oldInit)) {
             // check if initCall calles the var() operation
             core::ExpressionPtr argument = core::dynamic_pointer_cast<const core::Expression>(initCall->getArgument(0));
@@ -646,8 +646,8 @@ public:
 
                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                 return builder.getNoOp();
-                            // write the variable with it's initialization to the place the declaration was
-                            // if it was a call to refVar, remove it and replace it by it's argument
+                            // write the variable with its initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by its argument
                             return removeRefVar(decl);
                             break;
                         }
@@ -667,8 +667,8 @@ public:
 
                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                  return builder.getNoOp();
-                            // write the variable with it's initialization to the place the declaration was
-                            // if it was a call to refVar, remove it and replace it by it's argument
+                            // write the variable with its initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by its argument
                             return removeRefVar(decl);
                             break;
                         }
@@ -858,7 +858,7 @@ private:
         // in-body pointers to global variables, map to a new variable at local scope
         if(scope == OCL_LOCAL_JOB)
             createArgList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
-        else // map the existing variable to it's init expression
+        else // map the existing variable to its init expression
             initArgInList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
 
         kd.appendArguments(arguments, scope, argTypes);

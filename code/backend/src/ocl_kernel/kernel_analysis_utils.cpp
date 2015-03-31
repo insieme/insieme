@@ -102,7 +102,7 @@ ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const 
 
 /*
  * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
- * it's value is returned, otherwise an assertion is raised
+ * its value is returned, otherwise an assertion is raised
  */
 size_t InductionVarMapper::extractIndexFromArg(CallExprPtr call) const {
 	ExpressionList args = call->getArguments();
@@ -158,7 +158,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 				else
 					replacements[lhs] = rhs;
 				return builder.getNoOp();
-				// remove variable from cache since it's mapping has been changed now
+				// remove variable from cache since its mapping has been changed now
 			} else {
 				// if we have a replacement for the rhs, use the it instead of the lhs
 				// only do this if it is not related to any global buffer, they should not be replaced
