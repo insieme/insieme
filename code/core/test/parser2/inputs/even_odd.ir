@@ -2,8 +2,8 @@
 let int = int<4>;
 
 let even, odd =
-	(int n)->bool { if (n == 0) return true; return odd(n-1); },
-	(int n)->bool { if (n == 0) return false; return even(n-1); }
+	lambda (int n)->bool { if (n == 0) return true; return odd(n-1); },
+	lambda (int n)->bool { if (n == 0) return false; return even(n-1); }
 ;
 
 unit main() {

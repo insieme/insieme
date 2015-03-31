@@ -48,7 +48,7 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseExpression();
         if (driver.result) {  
-            dumpColor(driver.result);
+            std::cout << driver.result << std::endl;
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
@@ -71,9 +71,16 @@ namespace parser3{
         EXPECT_TRUE(test_expression("1 & 0"));
         EXPECT_TRUE(test_expression("1 ^ 0"));
 
+        // precedence
+        EXPECT_TRUE(test_expression("1 + 0 * 5"));
+        EXPECT_TRUE(test_expression("1 * 0 + 5"));
+
         EXPECT_TRUE(test_expression("(1.0)"));
         EXPECT_TRUE(test_expression("((1.0))"));
         EXPECT_TRUE(test_expression("((1.0) + 4.0)"));
+
+        EXPECT_TRUE(test_expression("struct { i= 4.0}"));
+        EXPECT_TRUE(test_expression("let x = struct{ int<4> a }; struct x { a= 4}"));
 
         EXPECT_FALSE(test_expression("x"));
 
@@ -132,9 +139,9 @@ namespace parser3{
         EXPECT_TRUE(test_statement("while ( true ) 1+1;"));
         EXPECT_TRUE(test_statement("while ( false ) 1+1;"));
         EXPECT_TRUE(test_statement("while ( false || true ) { 1+1; }"));
-        EXPECT_TRUE(test_statement("for ( int<4> it 1 .. 3) 1+1;"));
-        EXPECT_TRUE(test_statement("for ( int<4> it 1 .. 3: 2) 1+1;"));
-        EXPECT_TRUE(test_statement("for ( int<4> it 1 .. 3: 2) { 1+1; }"));
+        EXPECT_TRUE(test_statement("for ( int<4> it = 1 .. 3) 1+1;"));
+        EXPECT_TRUE(test_statement("for ( int<4> it = 1 .. 3: 2) 1+1;"));
+        EXPECT_TRUE(test_statement("for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
 
         EXPECT_TRUE(test_statement("switch (2) { case 1: 1; case 2: 2; }"));
         EXPECT_FALSE(test_statement("switch (2) { case 1: 1; case 2: 2; default 2;}"));

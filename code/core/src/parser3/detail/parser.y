@@ -154,6 +154,10 @@
   STRUCT        "struct"
   UNION         "union"
 
+  SPAWN         "spawn"
+  SYNC          "sync"
+  SYNCALL       "syncAll"
+
   TYPE_ONLY
   EXPRESSION_ONLY
   STMT_ONLY
@@ -202,6 +206,10 @@
 
 %type <NamedTypePtr> member_field
 %type <NamedTypeList> member_list tag_type
+
+%type <NamedValuePtr> assign_field 
+%type <NamedValueList> assign_rules 
+
 
 %printer { yyoutput << $$; } <std::string>
 
@@ -348,7 +356,7 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
                  }
 
                 /* variable declarations */
-          | "decl" decl_stmt ";" { $$ = $2;  }
+          | "decl" decl_stmt { $$ = $2;  }
 
                 /* if */
           | "if" "(" expression ")" statement {  $$ = driver.builder.ifStmt($3, $5); }
@@ -356,8 +364,8 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
 
                 /* loops */
           | "while" "(" expression ")" statement { $$ = driver.builder.whileStmt($3, $5); }
-          | "for" for_decl statement {
-                $$ = driver.builder.forStmt($2.it, $2.low, $2.up, $2.step, $3);
+          | "for" { driver.open_scope(@$, "forDecl"); } for_decl statement {
+                $$ = driver.builder.forStmt($3.it, $3.low, $3.up, $3.step, $4);
                 driver.close_scope(@$, "for end");
             }
                 /* switch */
@@ -391,7 +399,10 @@ catch_clause_list :
                     }
                   ;
 
-decl_stmt : var_decl "=" expression {
+decl_stmt : var_decl ";" {
+                $$ = driver.builder.declarationStmt($1);
+            }
+          | var_decl "=" expression {
                 $$ = driver.builder.declarationStmt($1, $3);
             }
           | "auto" "identifier" "=" expression {
@@ -409,23 +420,21 @@ var_decl : type "identifier" {
             };
 
 
-for_decl : "(" type "identifier" expression ".." expression ")"  {
-                driver.open_scope(@$, "forDecl");
-		        $$.it = driver.builder.variable($2);
-				annotations::attachName( $$.it, $3);
-                driver.add_symb(@$, "$3", $$.it);
-                $$.low = $4;
-                $$.up = $6;
-                $$.step = driver.builder.literal($2, "1");
-           }
-         | "(" type "identifier" expression ".." expression ":" expression ")" {
-                driver.open_scope(@$, "forDecl_step");
+for_decl : "(" type "identifier" "=" expression ".." expression ")"  {
 		        $$.it = driver.builder.variable($2);
 				annotations::attachName( $$.it, $3);
                 driver.add_symb(@$, $3, $$.it);
-                $$.low = $4;
-                $$.up = $6;
-                $$.step = $8;
+                $$.low = $5;
+                $$.up = $7;
+                $$.step = driver.builder.literal($2, "1");
+           }
+         | "(" type "identifier" "=" expression ".." expression ":" expression ")" {
+		        $$.it = driver.builder.variable($2);
+				annotations::attachName( $$.it, $3);
+                driver.add_symb(@$, $3, $$.it);
+                $$.low = $5;
+                $$.up = $7;
+                $$.step = $9;
            }
          ;
 
@@ -468,12 +477,17 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | expression "-" expression { $$ = driver.genBinaryExpression(@$, "-", $1, $3);  }
            | expression "*" expression { $$ = driver.genBinaryExpression(@$, "*", $1, $3);  }
            | expression "/" expression { $$ = driver.genBinaryExpression(@$, "/", $1, $3);  }
+           | expression "==" expression { $$ = driver.genBinaryExpression(@$, "==", $1, $3);  }
+           | expression "!=" expression { $$ = driver.genBinaryExpression(@$, "!=", $1, $3);  }
+           | expression "<" expression {  $$ = driver.genBinaryExpression(@$, "<", $1, $3);  }
+           | expression ">" expression {  $$ = driver.genBinaryExpression(@$, ">", $1, $3);  }
+           | expression "<=" expression { $$ = driver.genBinaryExpression(@$, "<=", $1, $3);  }
+           | expression ">=" expression { $$ = driver.genBinaryExpression(@$, ">=", $1, $3);  }
+           | expression "[" expression "]" { $$ = driver.genBinaryExpression(@$, "[", $1, $3); }
             /* call expr */
            | expression "(" ")"                 { INSPIRE_TYPE(@1, $1,FunctionTypePtr, "non callable symbol"); 
-                                                  std::cout << "f" << $1 << " : " << $1->getType() << std::endl;
                                                   $$ = driver.genCall(@$, $1, ExpressionList());  }
            | expression "(" expression_list ")" { INSPIRE_TYPE(@1, $1,FunctionTypePtr, "non callable symbol"); 
-                                                  std::cout << "f" << $1 << " : " << $1->getType() << std::endl;
                                                   $$ = driver.genCall(@$, $1, $3); }
             /* parenthesis */
            | "(" expression ")"  { $$ = $2; }
@@ -504,7 +518,22 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | "param(" "int" ")"       { $$ = driver.builder.getIntTypeParamLiteral(driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($2))); }
            | "lit(" "stringlit" ")" { $$ = driver.builder.getIdentifierLiteral($2); }
            | "lit(" "stringlit" ":" type ")" { $$ = driver.builder.literal($4, $2); }
+            /* struct / union expressions */
+           | "struct" type "{" assign_rules { $$ = driver.genTagExpression(@$, $2, $4); }
+           | "struct" "{" assign_rules      { $$ = driver.genTagExpression(@$, $3); }
+            /* async */
+           | "spawn" expression { $$ = driver.builder.parallel($2);  }
+           | "sync" expression  { $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), 
+                                                               driver.builder.getLangBasic().getMerge(), $2);
+                                }
+           | "syncAll" { $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getLangBasic().getMergeAll()); }
            ;
+
+assign_field : "identifier" "=" expression { $$ = driver.builder.namedValue($1, $3); }
+
+assign_rules : "}" { }
+             | assign_field "}" { $$.insert($$.begin(), $1); }
+             | assign_field "," assign_rules { $3.insert($3.begin(), $1); std::swap($$, $3); }
 
         /* TODO:  lambdas require a type, closures dont, this makes no sense, find a uniform way to do it */
 lambda_expression_aux : "(" ")" "=>" expression {    
@@ -552,8 +581,10 @@ lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_a
 %nonassoc ")";
 %nonassoc "else";
 %right "=>";
+%left "spawn" "sync" "syncAll";
 %right "->";
 %right ":";
+%right "[";
 %right "catch";
 %left "=";
 %left "(";
@@ -561,6 +592,7 @@ lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_a
 %left ".as(";
 %left "+" "-";
 %left "*" "/";
+%left "==" "!=" "<" "<=" ">" ">=";
 %left "&&" "||";
 %left "&" "|" "^";
 %nonassoc UMINUS;

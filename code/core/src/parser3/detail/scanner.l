@@ -146,12 +146,14 @@ paramvar #[a-zA-Z]
 "struct"  return inspire_parser::make_STRUCT(loc);
 "union"   return inspire_parser::make_UNION(loc);
 
+"spawn"   return inspire_parser::make_SPAWN(loc);
+"sync"    return inspire_parser::make_SYNC(loc);
+"syncAll" return inspire_parser::make_SYNCALL(loc);
 
 {paramvar} {
     // skip # char
   return inspire_parser::make_PARAMVAR(yytext+1, loc);
 }
-
 
 {stringlit}      {
   return inspire_parser::make_STRING(yytext, loc);
@@ -171,7 +173,6 @@ paramvar #[a-zA-Z]
 {ulong}      {
   return inspire_parser::make_ULONG(yytext, loc);
 }
-
 {float}      {
   return inspire_parser::make_FLOAT(yytext, loc);
 }

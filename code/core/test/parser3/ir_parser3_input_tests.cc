@@ -85,7 +85,7 @@ namespace parser3 {
 		NodeManager manager;
 		NodePtr res = parse(manager, ss.str(), true);
 
-        if(res) dumpColor(res);
+        //if(res) dumpColor(res);
 
 		// it should have produced a result
 		ASSERT_TRUE(res);

@@ -114,6 +114,9 @@ public:
     ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
     ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
 
+    ExpressionPtr genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields);
+    ExpressionPtr genTagExpression(const location& l, const NamedValueList& fields);
+
     void add_symb(const location& l, const std::string& name, NodePtr ptr);
     void add_symb(const std::string& name, NodePtr ptr);
 

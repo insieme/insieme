@@ -182,6 +182,7 @@ namespace detail{
                x = builder.getLangBasic().getBuiltIn(name);
             }catch(...)
             {
+                //std::cout <<" exception thrown " << std::endl;
             }
         }
 
@@ -239,9 +240,9 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right){
         // Interpret operator
-       // std::cout << op << std::endl;
-       // std::cout << " " << left << " : " << left->getType() << std::endl;
-       // std::cout << " " << right << " : " << right->getType() << std::endl;
+        std::cout << op << std::endl;
+        std::cout << " " << left << " : " << left->getType() << std::endl;
+        std::cout << " " << right << " : " << right->getType() << std::endl;
 
         // right side must be always a value
         auto b = getOperand(right);
@@ -250,9 +251,27 @@ namespace detail{
         if (op == "="){
             return builder.assign(left, b);
         }
+        if (op == "["){
+            if (builder.getLangBasic().isSignedInt(b->getType())) {
+                b = builder.castExpr(builder.getLangBasic().getUInt8(), b);
+            }
+			if (left->getType()->getNodeType() == NT_RefType) {
+			    return builder.arrayRefElem(left, b);
+			}
+			return builder.arraySubscript(left, b);		// works for arrays and vectors
+        }
+
 
         // if not assign, then left operand must be a value as well
         auto a = getOperand(left);
+
+        // comparators
+        if (op == "==") return builder.eq(a,b);
+        if (op == "!=") return builder.ne(a,b);
+        if (op == "<") return builder.lt(a,b);
+        if (op == ">") return builder.gt(a,b);
+        if (op == "<=") return builder.le(a,b);
+        if (op == ">=") return builder.ge(a,b);
 
         // bitwise 
         if (op == "&") return builder.bitwiseAnd(a,b);
@@ -286,10 +305,6 @@ namespace detail{
         if (name == "channel"){
             if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform channel type");
             else return builder.channelType(params[0], iparamlist[0]);
-        }
-        if (name == "struct"){
-        }
-        if (name == "union"){
         }
         if (name == "vector"){
             if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform vector type");
@@ -371,7 +386,7 @@ namespace detail{
     ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args){
 
         ExpressionPtr func = callable;
-        std::cout << "call @" << l << std::endl;
+        //std::cout << "call @" << l << std::endl;
 
         // if the call is to a not yet defined symbol, we might want to change the type (now can be completed)
         if (func.isa<LiteralPtr>()){
@@ -386,7 +401,6 @@ namespace detail{
             }
 
         }
-
 
         auto ftype = func->getType();
         if (!ftype.isa<FunctionTypePtr>()) error(l, "attempt to call non function expression");    
@@ -406,6 +420,23 @@ namespace detail{
         if (args.size() != funcParamTypes.size())  error(l, "invalid number of arguments in function call"); 
     
         return builder.callExpr(func, args);
+    }
+
+    ExpressionPtr inspire_driver::genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields){
+        if (!type.isa<StructTypePtr>()) {
+            error (l, "not struct type"); 
+            return nullptr;
+        }
+	    return builder.structExpr(type.as<StructTypePtr>(), fields);
+    }
+    ExpressionPtr inspire_driver::genTagExpression(const location& l, const NamedValueList& fields){
+        // build up a struct type and call the other func
+        NamedTypeList fieldTypes;
+        for (const auto& f : fields) fieldTypes.push_back(builder.namedType(f->getName(), f->getValue()->getType()));
+
+        TypePtr type =  builder.structType(builder.stringValue(""), fieldTypes);  
+        return genTagExpression(l, type, fields);
+       
     }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
