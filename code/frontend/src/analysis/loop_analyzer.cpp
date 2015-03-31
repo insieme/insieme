@@ -221,12 +221,13 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact):
             auto ifStmt = builder.ifStmt(builder.eq(remainder, zero), ifBranch, elseBranch);
 			postStmts.push_back(ifStmt);
 
-			// if the induction variable is not scope defined, and there is actualy some init value assigned, we should
+			// if the induction variable is not scope defined, and there is actually some init value assigned, we should
 			// update this variable so the inner loop side effects have access to it
-			if ( oldInitValue != originalInductionExpr) {
-				auto assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], newInductionExpr);
-				firstStmts.push_back(assign);
-			}
+// FIXME this is removed because nobody knows why it would be needed. Actually, it shouldn't be needed if everything else works as expected
+//			if ( oldInitValue != originalInductionExpr) {
+//				auto assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], newInductionExpr);
+//				firstStmts.push_back(assign);
+//			}
 		}
 	}
 }
