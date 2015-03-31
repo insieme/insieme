@@ -233,7 +233,6 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact) :
 void LoopAnalyzer::findInductionVariable(const clang::ForStmt* forStmt) {
 
 	// convert to IR everything in condition and increment
-//	core::ExpressionPtr condition = convFact.convertExpr(forStmt->getCond());
 	core::ExpressionPtr incrementExpr;
 
 	// we start looking in the increment expression, if there is no increment we can not generate a for loop

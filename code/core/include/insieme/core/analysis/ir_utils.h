@@ -99,7 +99,7 @@ bool isNoOp(const StatementPtr& candidate);
 bool isGeneric(const TypePtr& type);
 
 /**
- * A universial utility extracting a list of element types from any given
+ * A universal utility extracting a list of element types from any given
  * type (e.g. parameter types of an abstract type, element types of a
  * reference, channel, array or vector type, ...)
  *
@@ -386,7 +386,7 @@ std::vector<VariablePtr> getVariableNames(const VariablePtr& var, const NodePtr&
 /**
  * Retrieves the name of variable in the outer scope where it has been declared.
  *
- * @param varlist the list of adresses of renamed variables
+ * @param varlist the list of addresses of renamed variables
  * @return a map of the addresses in varlist to their declaration in the outermost scope
  */
 utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist);
@@ -395,7 +395,7 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
  * Retrieves the name of variable in the outer scope where it has been declared.
  *
  * @param varMap map of the addresses in varlist to their declaration in the outermost scope
- *        will be updated with aliases of the outher scope in place
+ *        will be updated with aliases of the outer scope in place
  */
 void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap);
 
@@ -425,7 +425,7 @@ TypePtr getVolatileType(const TypePtr& type);
 CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const ExpressionPtr& fun);
 
 /**
- * Tests whether the given code fragement contains the given element.
+ * Tests whether the given code fragment contains the given element.
  *
  * @param code the IR structure to be inspected recursively
  * @param element the element to be searched
@@ -434,9 +434,9 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
 bool contains(const NodePtr& code, const NodePtr& element);
 
 /**
- * Tests if the variable is ever asigned or used by reference, if so, is not considered a read only
+ * Tests if the variable is ever assigned or used by reference, if so, is not considered a read only
  * variable
- * is not desdendign into lambdas, only evaluates closest scope
+ * is not descending into lambdas, only evaluates closest scope
  * @param context the IR structure inspected
  * @param var the variable we are testing
  * @return true if the variable is never assigned or used by reference
@@ -454,7 +454,7 @@ bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
 
 /**
  * 	Test if the parameter is read or written in the scope, if passed by reference 
- * 	to any other scope it will be asumed to be non readonly, 
+ * 	to any other scope it will be assumed to be non read-only,
  * 	no matters what happens inside of that lambda
  *
  * @param lambda the lambda expression to be tested
