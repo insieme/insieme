@@ -931,7 +931,7 @@ using insieme::core::pattern::anyList;
 				}
 				if (fun->getNodeType() == core::NT_LambdaExpr) {
 					LOG(INFO) << "\t Context:\n" << printer::PrettyPrinter(fun, printer::PrettyPrinter::PRINT_DEREFS |
-																	   printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+																	   printer::PrettyPrinter::JUST_OUTERMOST_SCOPE |
 																	   printer::PrettyPrinter::PRINT_CASTS) << std::endl;
 				}
 			});

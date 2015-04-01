@@ -300,7 +300,7 @@ namespace {
 					string name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
 
 					// avoid printing more than one scope
-					if(!printer.hasOption(PrettyPrinter::JUST_OUTHERMOST_SCOPE)){
+					if(!printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)){
 						// print a let binding
 						out << "let " << name << " = ";
 						visit(cur);
@@ -313,7 +313,7 @@ namespace {
 
 			}, false);	// iterate through IR in post-order
 
-			if (printer.hasOption(PrettyPrinter::JUST_OUTHERMOST_SCOPE)){
+			if (printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)){
 				letBindings.erase(node);
 			}
 
