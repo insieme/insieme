@@ -42,6 +42,7 @@
 
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_visitor.h"
@@ -54,7 +55,6 @@ class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address>
 
 	std::stack<std::vector<insieme::core::VariableAddress> > varstack;
 	std::stack<SCoP> scopstack;
-	unsigned int fornests;
 
 public:
 
@@ -65,7 +65,7 @@ public:
 	// helper routines for general use in other methods (except for constructor; do not keep track of state)
 	SCoPVisitor(const insieme::core::ProgramAddress &node);
 	void printNode           (const insieme::core::NodeAddress            &node,
-							  std::string descr="", unsigned int start=0, int count=-1);
+	                          std::string descr="", unsigned int start=0, int count=-1);
 	void visitNode           (const insieme::core::NodeAddress            &node);
 	void visitChildren       (const insieme::core::NodeAddress            &node);
 	boost::optional<insieme::core::arithmetic::Formula> parseAffine(const insieme::core::ExpressionAddress &expr);
@@ -75,6 +75,9 @@ public:
 	void visitForStmt        (const insieme::core::ForStmtAddress         &stmt);
 	void visitParameters     (const insieme::core::ParametersAddress      &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
+
+	typedef boost::optional<insieme::core::arithmetic::Formula> MaybeAffine;
+	boost::optional<SCoP> scopFromFor(MaybeAffine lb, insieme::core::VariableAddress iterator, MaybeAffine ub, MaybeAffine step);
 };
 
 }}}}

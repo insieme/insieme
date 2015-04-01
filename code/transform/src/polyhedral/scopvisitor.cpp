@@ -37,6 +37,9 @@
 #include <cstdlib>
 #include <boost/optional.hpp>
 #include <iostream>
+#include <isl/aff.h>
+#include <isl/ctx.h>
+#include <isl/printer.h>
 #include <memory>
 #include <vector>
 
@@ -50,7 +53,7 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// The constructor initializes class variables and triggers the visit of all nodes in the program.
-SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()), fornests(0),
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()),
 	scoplist(node) {
 	visit(node);
 }
@@ -99,10 +102,22 @@ void SCoPVisitor::visitChildren(const NodeAddress &node) {
 /// If this conversion is not possible, return an empty element.
 boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAddress &addr) {
 	boost::optional<arithmetic::Formula> maybe;
+
+	// extract the variables and literals from our (presumed) affine expression and store them internally for
+	// later processing with ISL
+	switch (addr.getNodeType()) {
+	case NT_Literal:  printNode(addr); break;
+	case NT_CallExpr: printNode(addr); break;
+	default: /* do nothing */;
+	}
+
+	// use the Insieme-provided means to convert the expression node to a linear formula
 	try {
 		auto formula=arithmetic::toFormula(addr.getAddressedNode());
 		if (formula.isLinear()) maybe=boost::optional<arithmetic::Formula>(formula);
 	} catch (...) { }
+
+	// return the internal representation of the given affine expression
 	return maybe;
 }
 
@@ -121,23 +136,31 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
+	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()));
+
 	// when we encounter a for loop, first increase the loop nesting level, and then copy the currently available
 	// variables, since variable modifications in the for loop cannot be seen outside the for loop
-	fornests++;
 	varstack.push(varstack.top());
-	auto decl=stmt.getAddressOfChild(0);
-	visit(decl); // visit declaration to add variable to the list of known variables
-	auto    lb  =parseAffine(decl.getAddressOfChild(1).as<ExpressionAddress>()),
-			ub  =parseAffine(stmt.getAddressOfChild(1).as<ExpressionAddress>()),
-			incr=parseAffine(stmt.getAddressOfChild(2).as<ExpressionAddress>());
-	if (lb && ub && incr) std::cout << "lb: " << *lb << "; ub: " << *ub << "; incr: " << *incr << std::endl;
+
+	// then, create a SCoP based upon the values encountered in the loop, and store the SCoP in the scopstack
+	auto    decl=stmt.getAddressOfChild(0);
+	VariableAddress iter=decl.getAddressOfChild(0).as<VariableAddress>();
+	MaybeAffine
+	        lb  =parseAffine(decl.getAddressOfChild(1).as<ExpressionAddress>()),
+	        ub  =parseAffine(stmt.getAddressOfChild(1).as<ExpressionAddress>()),
+	        step=parseAffine(stmt.getAddressOfChild(2).as<ExpressionAddress>());
+	auto scop=scopFromFor(lb, iter, ub, step);
+	if (scop) scopstack.push(*scop);
+
+	// visit declaration to add variable to the list of known variables
+	if (scop) std::cout << "Found SCoP but cannot print it yet" << std::endl;
 	else std::cout << "Loop parameters are not affine" << std::endl;
+	visit(decl);
 
 	// process all the children, and — when done — remove the scope modifications and lessen the nesting level again
-	printNode(stmt, "for nesting lvl " + std::to_string(fornests-1));
 	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
+	if (scop) scopstack.pop();
 	varstack.pop();
-	fornests--;
 }
 
 /// Visit lambda parameters so that we can add them to the list of available variables/SCoP parameters.
@@ -156,4 +179,29 @@ void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
 	//std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
 	varstack.top().push_back(node.getAddressOfChild(0).as<VariableAddress>());
 	visitChildren(node);
+}
+
+/// Generate a SCoP from the given for specification in Insieme IR style: lb ≤ iterator < up : step
+boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress iterator, MaybeAffine ub, MaybeAffine step) {
+	boost::optional<SCoP> maybe;
+	if (lb && ub && step) {
+		std::cout << "lb: " << *lb << "; ub: " << *ub << "; incr: " << *step << std::endl;
+		maybe=SCoP();
+	}
+
+	isl_ctx *ctx=isl_ctx_alloc();
+	isl_printer *printer=isl_printer_to_str(ctx);
+
+	// TODO: generate isl_aff from scratch and print it out
+	isl_aff *aff=0;//isl_aff_read_from_str(ctx, "3*x - 4*y - 7");
+
+	printer=isl_printer_print_aff(printer, aff);
+	char *out=isl_printer_get_str(printer);
+	std::cout << "From ISL we got: " << /*out <<*/ std::endl;
+	if (out) free(out);
+	isl_printer_free(printer);
+	if (aff) isl_aff_free(aff);
+	isl_ctx_free(ctx);
+
+	return maybe;
 }
