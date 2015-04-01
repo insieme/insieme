@@ -194,75 +194,75 @@ OPERATOR(Ge,	">=")  // 25
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
-OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
-OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
-OPERATION(Bool, And,  "bool.band", "(bool,bool) -> bool")
-OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
-OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
-OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
+OPERATION(Bool, Eq,   "bool_eq",  "(bool,bool) -> bool")
+OPERATION(Bool, Ne,   "bool_ne",  "(bool,bool) -> bool")
+OPERATION(Bool, LNot, "bool_not", "(bool) -> bool")
+OPERATION(Bool, And,  "bool_band", "(bool,bool) -> bool")
+OPERATION(Bool, Or,   "bool_bor", "(bool,bool) -> bool")
+OPERATION(Bool, Xor,  "bool_bxor", "(bool,bool) -> bool")
+OPERATION(Bool, Not,  "bool_bnot", "(bool) -> bool")
 
-DERIVED_OP(Bool, LAnd, "bool.and", "(bool a, ()=>bool b)->bool { if (a) return b(); return false; }")
-DERIVED_OP(Bool, LOr,  "bool.or",  "(bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
+DERIVED_OP(Bool, LAnd, "bool_and", "lambda (bool a, ()=>bool b)->bool { if (a) return b(); return false; }")
+DERIVED_OP(Bool, LOr,  "bool_or",  "lambda (bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
 GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, IncrementOp)
 //      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
-OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, Sub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, Mul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, Div,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Add,  "int_add", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Sub,  "int_sub", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Mul,  "int_mul", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Div,  "int_div", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Mod,  "int_mod", "(int<#a>,int<#a>) -> int<#a>")
 
-// OPERATION(SignedInt, PreInc,  "int.preInc",  "(ref<int<#a>>) -> int<#a>")
-// OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
-OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
-OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
+// OPERATION(SignedInt, PreInc,  "int_preInc",  "(ref<int<#a>>) -> int<#a>")
+// OPERATION(SignedInt, PostInc, "int_postInc", "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PreDec,  "int_preDec",  "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PostDec, "int_postDec", "(ref<int<#a>>) -> int<#a>")
 
 GROUP(CharArithOp, CharAdd, CharSub, CharMul, CharDiv, CharMod, IncrementOp)
 
-OPERATION(Char, Add,  "char.add", "(char,char) -> char")
-OPERATION(Char, Sub,  "char.sub", "(char,char) -> char")
-OPERATION(Char, Mul,  "char.mul", "(char,char) -> char")
-OPERATION(Char, Div,  "char.div", "(char,char) -> char")
-OPERATION(Char, Mod,  "char.mod", "(char,char) -> char")
+OPERATION(Char, Add,  "char_add", "(char,char) -> char")
+OPERATION(Char, Sub,  "char_sub", "(char,char) -> char")
+OPERATION(Char, Mul,  "char_mul", "(char,char) -> char")
+OPERATION(Char, Div,  "char_div", "(char,char) -> char")
+OPERATION(Char, Mod,  "char_mod", "(char,char) -> char")
 
-// OPERATION(Char, PreInc,  "char.preInc",  "(ref<char>) -> char")
-// OPERATION(Char, PostInc, "char.postInc", "(ref<char>) -> char")
-OPERATION(Char, PreDec,  "char.preDec",  "(ref<char>) -> char")
-OPERATION(Char, PostDec, "char.postDec", "(ref<char>) -> char")
+// OPERATION(Char, PreInc,  "char_preInc",  "(ref<char>) -> char")
+// OPERATION(Char, PostInc, "char_postInc", "(ref<char>) -> char")
+OPERATION(Char, PreDec,  "char_preDec",  "(ref<char>) -> char")
+OPERATION(Char, PostDec, "char_postDec", "(ref<char>) -> char")
 
 GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
 IncrementOp)
 //        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
-OPERATION(UnsignedInt, Add,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, Sub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, Mul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, Div,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, Mod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Add,  "uint_add", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Sub,  "uint_sub", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Mul,  "uint_mul", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Div,  "uint_div", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Mod,  "uint_mod", "(uint<#a>,uint<#a>) -> uint<#a>")
 
-// OPERATION(UnsignedInt, PreInc,  "uint.preInc",  "(ref<uint<#a>>) -> uint<#a>")
-// OPERATION(UnsignedInt, PostInc, "uint.postInc", "(ref<uint<#a>>) -> uint<#a>")
-OPERATION(UnsignedInt, PreDec,  "uint.preDec",  "(ref<uint<#a>>) -> uint<#a>")
-OPERATION(UnsignedInt, PostDec, "uint.postDec", "(ref<uint<#a>>) -> uint<#a>")
+// OPERATION(UnsignedInt, PreInc,  "uint_preInc",  "(ref<uint<#a>>) -> uint<#a>")
+// OPERATION(UnsignedInt, PostInc, "uint_postInc", "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PreDec,  "uint_preDec",  "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PostDec, "uint_postDec", "(ref<uint<#a>>) -> uint<#a>")
 
 
 GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
 
-OPERATION(Real, Add,  "real.add", "(real<#a>,real<#a>) -> real<#a>")
-OPERATION(Real, Sub,  "real.sub", "(real<#a>,real<#a>) -> real<#a>")
-OPERATION(Real, Mul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
-OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Add,  "real_add", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Sub,  "real_sub", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Mul,  "real_mul", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Div,  "real_div", "(real<#a>,real<#a>) -> real<#a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
-DERIVED(GenPreInc, 		"gen.pre.inc",		"(ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
-DERIVED(GenPostInc, 	"gen.post.inc",		"(ref<'a> v)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
-DERIVED(GenPreDec, 		"gen.pre.dec",		"(ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
-DERIVED(GenPostDec, 	"gen.post.dec",		"(ref<'a> v)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+DERIVED(GenPreInc, 		"gen_pre_inc",		"lambda (ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
+DERIVED(GenPostInc, 	"gen_post_inc",		"lambda (ref<'a> v)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+DERIVED(GenPreDec, 		"gen_pre_dec",		"lambda (ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
+DERIVED(GenPostDec, 	"gen_post_dec",		"lambda (ref<'a> v)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 GROUP(IncrementOp, GenPreInc, GenPostInc, GenPreDec, GenPostDec)
 // SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
@@ -274,39 +274,39 @@ GROUP(LinearIntOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, Unsig
 
 GROUP(CharCompOp, CharEq, CharNe, CharLt, CharGt, CharLe, CharGe)
 
-OPERATION(Char, Eq, "char.eq", "(char,char) -> bool")
-OPERATION(Char, Ne, "char.ne", "(char,char) -> bool")
-OPERATION(Char, Lt, "char.lt", "(char,char) -> bool")
-OPERATION(Char, Gt, "char.gt", "(char,char) -> bool")
-OPERATION(Char, Le, "char.le", "(char,char) -> bool")
-OPERATION(Char, Ge, "char.ge", "(char,char) -> bool")
+OPERATION(Char, Eq, "char_eq", "(char,char) -> bool")
+OPERATION(Char, Ne, "char_ne", "(char,char) -> bool")
+OPERATION(Char, Lt, "char_lt", "(char,char) -> bool")
+OPERATION(Char, Gt, "char_gt", "(char,char) -> bool")
+OPERATION(Char, Le, "char_le", "(char,char) -> bool")
+OPERATION(Char, Ge, "char_ge", "(char,char) -> bool")
 
 GROUP(IntCompOp, SignedIntEq, SignedIntNe, SignedIntLt, SignedIntGt, SignedIntLe, SignedIntGe)
 
-OPERATION(SignedInt, Eq, "int.eq", "(int<#a>,int<#a>) -> bool")
-OPERATION(SignedInt, Ne, "int.ne", "(int<#a>,int<#a>) -> bool")
-OPERATION(SignedInt, Lt, "int.lt", "(int<#a>,int<#a>) -> bool")
-OPERATION(SignedInt, Gt, "int.gt", "(int<#a>,int<#a>) -> bool")
-OPERATION(SignedInt, Le, "int.le", "(int<#a>,int<#a>) -> bool")
-OPERATION(SignedInt, Ge, "int.ge", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Eq, "int_eq", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Ne, "int_ne", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Lt, "int_lt", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Gt, "int_gt", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Le, "int_le", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Ge, "int_ge", "(int<#a>,int<#a>) -> bool")
 
 GROUP(UIntCompOp, UnsignedIntEq, UnsignedIntNe, UnsignedIntLt, UnsignedIntGt, UnsignedIntLe, UnsignedIntGe)
 
-OPERATION(UnsignedInt, Eq, "uint.eq", "(uint<#a>,uint<#a>) -> bool")
-OPERATION(UnsignedInt, Ne, "uint.ne", "(uint<#a>,uint<#a>) -> bool")
-OPERATION(UnsignedInt, Lt, "uint.lt", "(uint<#a>,uint<#a>) -> bool")
-OPERATION(UnsignedInt, Gt, "uint.gt", "(uint<#a>,uint<#a>) -> bool")
-OPERATION(UnsignedInt, Le, "uint.le", "(uint<#a>,uint<#a>) -> bool")
-OPERATION(UnsignedInt, Ge, "uint.ge", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Eq, "uint_eq", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Ne, "uint_ne", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Lt, "uint_lt", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Gt, "uint_gt", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Le, "uint_le", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Ge, "uint_ge", "(uint<#a>,uint<#a>) -> bool")
 
 GROUP(RealCompOp, RealEq, RealNe, RealLt, RealGt, RealLe, RealGe)
 
-OPERATION(Real, Eq, "real.eq", "(real<#a>,real<#a>) -> bool")
-OPERATION(Real, Ne, "real.ne", "(real<#a>,real<#a>) -> bool")
-OPERATION(Real, Lt, "real.lt", "(real<#a>,real<#a>) -> bool")
-OPERATION(Real, Gt, "real.gt", "(real<#a>,real<#a>) -> bool")
-OPERATION(Real, Le, "real.le", "(real<#a>,real<#a>) -> bool")
-OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Eq, "real_eq", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Ne, "real_ne", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Lt, "real_lt", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Gt, "real_gt", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Le, "real_le", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Ge, "real_ge", "(real<#a>,real<#a>) -> bool")
 
 // Type conversion Operations -----------------------------------------------------------------------------------------
 
@@ -314,72 +314,72 @@ GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
 
       // TO INT
 GROUP( ToInt, UnsignedToInt, WCharToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
-LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
-LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
-LITERAL (WCharToInt,	"wchar.to.int",   "(wchar<#a>,intTypeParam<#b>) -> int<#b>")
-LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
-DERIVED (BoolToInt,		"bool.to.int",    "(bool b,intTypeParam<#b> t) -> int<#b> { return (b)?(int.precision(1,param(#b))):(int.precision(0,param(#b))); }")
-LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (UnsignedToInt,	"uint_to_int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (RealToInt,		"real_to_int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (WCharToInt,	"wchar_to_int",   "(wchar<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (CharToInt,		"char_to_int",    "(char,intTypeParam<#b>) -> int<#b>")
+LITERAL (IntPrecisionFix,"int_precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
+DERIVED (BoolToInt,		"bool_to_int",    "lambda (bool b,intTypeParam<#b> t) -> int<#b> { return (b)?(int_precision(1,param(#b))):(int_precision(0,param(#b))); }")
 
       // TO UINT
 GROUP( ToUint, SignedToUnsigned, WCharToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
-LITERAL (SignedToUnsigned,	"int.to.uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
-LITERAL (RealToUnsigned,	"real.to.uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
-LITERAL (WCharToUnsigned,	"wchar.to.uint","(wchar<#a>,intTypeParam<#b>) -> uint<#b>")
-LITERAL (CharToUnsigned,	"char.to.uint",	"(char,intTypeParam<#b>) -> uint<#b>")
-LITERAL (BoolToUnsigned,	"bool.to.uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
-LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (SignedToUnsigned,	"int_to_uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (RealToUnsigned,	"real_to_uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (WCharToUnsigned,	"wchar_to_uint","(wchar<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (CharToUnsigned,	"char_to_uint",	"(char,intTypeParam<#b>) -> uint<#b>")
+LITERAL (BoolToUnsigned,	"bool_to_uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
+LITERAL (UintPrecisionFix,"uint_precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
 
 	  // TO WCHAR
 GROUP( ToWChar, SignedToWChar, UnsignedToWChar, RealToWChar, CharToWChar, BoolToWChar, WCharPrecisionFix)
-LITERAL (SignedToWChar,	    "int.to.wchar" ,	"(int<#a>,intTypeParam<#b>) -> wchar<#b>")
-LITERAL (UnsignedToWChar,	"uint.to.wchar",    "(uint<#a>,intTypeParam<#b>) -> wchar<#b>")
-LITERAL (RealToWChar,		"real.to.wchar",    "(real<#a>,intTypeParam<#b>) -> wchar<#b>")
-LITERAL (CharToWChar,		"char.to.wchar",    "(char,intTypeParam<#b>) -> wchar<#b>")
-LITERAL (BoolToWChar,		"bool.to.wchar",    "(bool,intTypeParam<#b>) -> wchar<#b>")
-LITERAL (WCharPrecisionFix, "wchar.precision",  "(wchar<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (SignedToWChar,	    "int_to_wchar" ,	"(int<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (UnsignedToWChar,	"uint_to_wchar",    "(uint<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (RealToWChar,		"real_to_wchar",    "(real<#a>,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (CharToWChar,		"char_to_wchar",    "(char,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (BoolToWChar,		"bool_to_wchar",    "(bool,intTypeParam<#b>) -> wchar<#b>")
+LITERAL (WCharPrecisionFix, "wchar_precision",  "(wchar<#a>,intTypeParam<#b>) -> wchar<#b>")
 
       // TO REAL
 GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
-LITERAL (SignedToReal,		"int.to.real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
-LITERAL (UnsignedToReal,	"uint.to.real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
-LITERAL (CharToReal,		"char.to.real",	"(char,intTypeParam<#b>) -> real<#b>")
-LITERAL (BoolToReal,		"bool.to.real",	"(bool,intTypeParam<#b>) -> real<#b>")
-LITERAL (RealPrecisionFix,"real.precision",    "(real<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (SignedToReal,		"int_to_real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (UnsignedToReal,	"uint_to_real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (CharToReal,		"char_to_real",	"(char,intTypeParam<#b>) -> real<#b>")
+LITERAL (BoolToReal,		"bool_to_real",	"(bool,intTypeParam<#b>) -> real<#b>")
+LITERAL (RealPrecisionFix,"real_precision",    "(real<#a>,intTypeParam<#b>) -> real<#b>")
 
       // TO CHAR
 GROUP( ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
-LITERAL (SignedToChar,    	"int.to.char" ,	"(int<#a>) -> char")
-LITERAL (UnsignedToChar,	"uint.to.char",	"(uint<#a>) -> char")
-LITERAL (RealToChar,		"real.to.char",	"(real<#a>) -> char")
-LITERAL (BoolToChar,		"bool.to.char",	"(bool) -> char")
+LITERAL (SignedToChar,    	"int_to_char" ,	"(int<#a>) -> char")
+LITERAL (UnsignedToChar,	"uint_to_char",	"(uint<#a>) -> char")
+LITERAL (RealToChar,		"real_to_char",	"(real<#a>) -> char")
+LITERAL (BoolToChar,		"bool_to_char",	"(bool) -> char")
 
       // TO Bool
 GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
-DERIVED (SignedToBool,		"int.to.bool" ,	"(int<#a> a) -> bool { return a != int.precision(0,param(#a)); }")
-DERIVED (UnsignedToBool,	"uint.to.bool",	"(uint<#a> a) -> bool { return a != uint.precision(0u,param(#a)); }")
-DERIVED (RealToBool,		"real.to.bool",	"(real<#a> a) -> bool { return a != real.precision(0.0f, param(#a)); }")
-DERIVED (CharToBool,		"char.to.bool",	R"((char a) -> bool { return a != '\0'; })")
+DERIVED (SignedToBool,		"int_to_bool" ,	"lambda (int<#a> a) -> bool { return a != int_precision(0,param(#a)); }")
+DERIVED (UnsignedToBool,	"uint_to_bool",	"lambda (uint<#a> a) -> bool { return a != uint_precision(0u,param(#a)); }")
+DERIVED (RealToBool,		"real_to_bool",	"lambda (real<#a> a) -> bool { return a != real_precision(0.0f, param(#a)); }")
+DERIVED (CharToBool,		"char_to_bool",	R"(lambda(char a) -> bool { return a != '\0'; })")
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
 
-OPERATION(SignedInt, Not,    "int.not",    "(int<#a>) -> int<#a>")
-OPERATION(SignedInt, And,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, Or,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, Xor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, LShift, "int.lshift", "(int<#a>,int<4>) -> int<#a>")
-OPERATION(SignedInt, RShift, "int.rshift", "(int<#a>,int<4>) -> int<#a>")
+OPERATION(SignedInt, Not,    "int_not",    "(int<#a>) -> int<#a>")
+OPERATION(SignedInt, And,    "int_and",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Or,     "int_or",     "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Xor,    "int_xor",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, LShift, "int_lshift", "(int<#a>,int<4>) -> int<#a>")
+OPERATION(SignedInt, RShift, "int_rshift", "(int<#a>,int<4>) -> int<#a>")
 
 GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
 
-OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<4>) -> uint<#a>")
-OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<4>) -> uint<#a>")
+OPERATION(UnsignedInt, Not,    "uint_not",    "(uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, And,    "uint_and",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Or,     "uint_or",     "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Xor,    "uint_xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint_lshift", "(uint<#a>,int<4>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint_rshift", "(uint<#a>,int<4>) -> uint<#a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
@@ -390,58 +390,58 @@ GROUP(RefOp, RefAlloc, RefNull, RefDelete, RefAssign, RefDeref, RefVar, RefNew,
 GROUP(Delete, RefDelete)
 
 TYPE(MemLoc, "memloc")
-LITERAL(MemLocStack, "memloc.stack", "memloc")
-LITERAL(MemLocHeap, "memloc.heap", "memloc")
-LITERAL(MemLocLocal, "memloc.local", "memloc")
+LITERAL(MemLocStack, "memloc_stack", "memloc")
+LITERAL(MemLocHeap, "memloc_heap", "memloc")
+LITERAL(MemLocLocal, "memloc_local", "memloc")
 
-LITERAL(RefAlloc,    	"ref.alloc",    		"(type<'a>, memloc) -> ref<'a>")
-LITERAL(RefNull,        "ref.null",             "ref<any>")
-LITERAL(NullFunc,       "func.null",            "(type<'a>)->'a")
-LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-LITERAL(RefAssign, 		"ref.assign", 			"(sink<'a>,'a) -> unit")
-LITERAL(RefDeref,  		"ref.deref",  			"(src<'a>) -> 'a")
+LITERAL(RefAlloc,    	"ref_alloc",    		"(type<'a>, memloc) -> ref<'a>")
+LITERAL(RefNull,        "ref_null",             "ref<any>")
+LITERAL(NullFunc,       "func_null",            "(type<'a>)->'a")
+LITERAL(RefDelete, 		"ref_delete", 			"(ref<'a>) -> unit")
+LITERAL(RefAssign, 		"ref_assign", 			"(sink<'a>,'a) -> unit")
+LITERAL(RefDeref,  		"ref_deref",  			"(src<'a>) -> 'a")
 
-LITERAL(SrcToRef,		"src.to.ref",			"(src<'a>) -> ref<'a>")
-LITERAL(SinkToRef,		"sink.to.ref",			"(sink<'a>) -> ref<'a>")
+LITERAL(SrcToRef,		"src_to_ref",			"(src<'a>) -> ref<'a>")
+LITERAL(SinkToRef,		"sink_to_ref",			"(sink<'a>) -> ref<'a>")
 
-LITERAL(RefToInt,		"ref.to.int",			"(ref<'a>) -> uint<8>")
-LITERAL(IntToRef,		"int.to.ref",			"(uint<8>, type<'a>) -> ref<'a>")
+LITERAL(RefToInt,		"ref_to_int",			"(ref<'a>) -> uint<8>")
+LITERAL(IntToRef,		"int_to_ref",			"(uint<8>, type<'a>) -> ref<'a>")
 
-DERIVED(RefVar,  			"ref.var",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.stack); r = v; return r; }")
-DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap ); r = v; return r; }")
-DERIVED(RefLoc,  			"ref.loc",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.local); r = v; return r; }")
-DERIVED(RefIsNull,   		"ref.is.null",			"(ref<'a> r) -> bool { return ref.eq(r, ref.null); }")
-DERIVED(FuncIsNull,   		"func.is.null",			"('a f) -> bool { return f == func.null(lit('a)); }")
+DERIVED(RefVar,  			"ref_var",    			"lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_stack); r = v; return r; }")
+DERIVED(RefNew,  			"ref_new",    			"lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_heap ); r = v; return r; }")
+DERIVED(RefLoc,  			"ref_loc",    			"lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_local); r = v; return r; }")
+DERIVED(RefIsNull,   		"ref_is_null",			"lambda (ref<'a> r) -> bool { return ref_eq(r, ref_null); }")
+DERIVED(FuncIsNull,   		"func_is_null",			"lambda ('a f) -> bool { return f == func_null(lit('a)); }")
 
 GROUP(AllocOp, RefVar, RefNew, RefLoc)
 
-LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
-LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
-LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+LITERAL(RefReinterpret, "ref_reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
+LITERAL(RefNarrow, 		"ref_narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+LITERAL(RefExpand,		"ref_expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 
-LITERAL(SrcReinterpret, "src.reinterpret",      "(src<'a>, type<'b>) -> src<'b>")
-LITERAL(SrcNarrow, 		"src.narrow",			"(src<'a>, datapath, type<'b>) -> src<'b>")
-LITERAL(SrcExpand,		"src.expand",			"(src<'a>, datapath, type<'b>) -> src<'b>")
+LITERAL(SrcReinterpret, "src_reinterpret",      "(src<'a>, type<'b>) -> src<'b>")
+LITERAL(SrcNarrow, 		"src_narrow",			"(src<'a>, datapath, type<'b>) -> src<'b>")
+LITERAL(SrcExpand,		"src_expand",			"(src<'a>, datapath, type<'b>) -> src<'b>")
 
-LITERAL(RefToSrc, "ref.src.cast",      "(ref<'a>) -> src<'a>")
+LITERAL(RefToSrc, "ref_src_cast",      "(ref<'a>) -> src<'a>")
 
 // Operators for references
-OPERATION(Ref, Eq, "ref.eq", "(ref<'a>,ref<'b>) -> bool")
-OPERATION(Ref, Ne, "ref.ne", "(ref<'a>,ref<'b>) -> bool")
-OPERATION(Ref, Lt, "ref.lt", "(ref<'a>,ref<'b>) -> bool")
-OPERATION(Ref, Gt, "ref.gt", "(ref<'a>,ref<'b>) -> bool")
-OPERATION(Ref, Le, "ref.le", "(ref<'a>,ref<'b>) -> bool")
-OPERATION(Ref, Ge, "ref.ge", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Eq, "ref_eq", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Ne, "ref_ne", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Lt, "ref_lt", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Gt, "ref_gt", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Le, "ref_le", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Ge, "ref_ge", "(ref<'a>,ref<'b>) -> bool")
 
 GROUP(RefCompOp, RefEq, RefNe, RefLt, RefGt, RefLe, RefGe)
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
-DERIVED(TypeOf,			"type.of",				"('a x)->type<'a> { return lit('a); }")
-DERIVED(TypeCast,		"type.cast",			"('a x,type<'b> t)->'b { return ('b)x; }")
-LITERAL(TypeIsSubtype,	"type.is.subtype",		"(type<'a>, type<'b>)->bool")
+DERIVED(TypeOf,			"type_of",				"lambda ('a x)->type<'a> { return lit('a); }")
+DERIVED(TypeCast,		"type_cast",			"lambda ('a x,type<'b> t)->'b { return ('b)x; }")
+LITERAL(TypeIsSubtype,	"type_is_subtype",		"lambda (type<'a>, type<'b>)->bool")
 
-OPERATION(Type, Eq, 	"type.eq", "(type<'a>,type<'a>) -> bool")
+OPERATION(Type, Eq, 	"type_eq", "(type<'a>,type<'a>) -> bool")
 
 GROUP(TypeCompOp, TypeEq)
 
@@ -449,27 +449,27 @@ GROUP(TypeCompOp, TypeEq)
 // Generic Operations -------------------------------------------------------------------------------------------------
 
 // binary generic operators
-OPERATION(Gen, Add, 	 "gen.add", "('a,'a)->'a")
-OPERATION(Gen, Sub, 	 "gen.sub", "('a,'a)->'a")
-OPERATION(Gen, Mul, 	 "gen.mul", "('a,'a)->'a")
-OPERATION(Gen, Div, 	 "gen.div", "('a,'a)->'a")
-OPERATION(Gen, Mod, 	 "gen.mod", "('a,'a)->'a")
+OPERATION(Gen, Add, 	 "gen_add", "('a,'a)->'a")
+OPERATION(Gen, Sub, 	 "gen_sub", "('a,'a)->'a")
+OPERATION(Gen, Mul, 	 "gen_mul", "('a,'a)->'a")
+OPERATION(Gen, Div, 	 "gen_div", "('a,'a)->'a")
+OPERATION(Gen, Mod, 	 "gen_mod", "('a,'a)->'a")
 
-OPERATION(Gen, And, 	 "gen.and", "('a,'b)->'a")
-OPERATION(Gen, Or, 	 	 "gen.or",  "('a,'b)->'a")
-OPERATION(Gen, Xor, 	 "gen.xor", "('a,'b)->'a")
-OPERATION(Gen, LShift, 	 "gen.lshift", "('a,'b)->'a")
-OPERATION(Gen, RShift, 	 "gen.rshift", "('a,'b)->'a")
+OPERATION(Gen, And, 	 "gen_and", "('a,'b)->'a")
+OPERATION(Gen, Or, 	 	 "gen_or",  "('a,'b)->'a")
+OPERATION(Gen, Xor, 	 "gen_xor", "('a,'b)->'a")
+OPERATION(Gen, LShift, 	 "gen_lshift", "('a,'b)->'a")
+OPERATION(Gen, RShift, 	 "gen_rshift", "('a,'b)->'a")
 
-OPERATION(Gen, Eq, "gen.eq", "('a,'a) -> bool")
-OPERATION(Gen, Ne, "gen.ne", "('a,'a) -> bool")
-OPERATION(Gen, Lt, "gen.lt", "('a,'a) -> bool")
-OPERATION(Gen, Gt, "gen.gt", "('a,'a) -> bool")
-OPERATION(Gen, Le, "gen.le", "('a,'a) -> bool")
-OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
+OPERATION(Gen, Eq, "gen_eq", "('a,'a) -> bool")
+OPERATION(Gen, Ne, "gen_ne", "('a,'a) -> bool")
+OPERATION(Gen, Lt, "gen_lt", "('a,'a) -> bool")
+OPERATION(Gen, Gt, "gen_gt", "('a,'a) -> bool")
+OPERATION(Gen, Le, "gen_le", "('a,'a) -> bool")
+OPERATION(Gen, Ge, "gen_ge", "('a,'a) -> bool")
 
 // generic unary ops
-OPERATION(Gen, Not,      "gen.not",    "('a) -> 'a")
+OPERATION(Gen, Not,      "gen_not",    "('a) -> 'a")
 
 GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
 GROUP(GenBitwiseOp, GenNot, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
@@ -487,11 +487,11 @@ GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
 // Data Paths ---------------------------------------------------------------------------------------------------------
 
 TYPE(DataPath, "datapath")
-LITERAL(DataPathRoot,		"dp.root", 				"datapath")
-LITERAL(DataPathMember,		"dp.member", 			"(datapath, identifier) -> datapath")
-LITERAL(DataPathElement,	"dp.element", 			"(datapath, uint<8>) -> datapath")
-LITERAL(DataPathComponent,	"dp.component", 		"(datapath, uint<8>) -> datapath")
-LITERAL(DataPathParent,     "dp.parent",            "(datapath, type<'a>) -> datapath")
+LITERAL(DataPathRoot,		"dp_root", 				"datapath")
+LITERAL(DataPathMember,		"dp_member", 			"(datapath, identifier) -> datapath")
+LITERAL(DataPathElement,	"dp_element", 			"(datapath, uint<8>) -> datapath")
+LITERAL(DataPathComponent,	"dp_component", 		"(datapath, uint<8>) -> datapath")
+LITERAL(DataPathParent,     "dp_parent",            "(datapath, type<'a>) -> datapath")
 
 GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPathComponent, DataPathParent)
 
@@ -501,8 +501,8 @@ GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPath
 GROUP(VolatileOp, VolatileMake, VolatileRead)
 
 TYPE(VolatileGen,		"volatile<'a>")
-LITERAL(VolatileMake,	"volatile.make",		"('a) -> volatile<'a>")
-LITERAL(VolatileRead,	"volatile.read",		"(volatile<'a>) -> 'a")
+LITERAL(VolatileMake,	"volatile_make",		"('a) -> volatile<'a>")
+LITERAL(VolatileRead,	"volatile_read",		"(volatile<'a>) -> 'a")
 
 // TEMP FIX
 LITERAL(Flush, "flush", "(ref<'a>) -> unit")
@@ -516,7 +516,7 @@ DERIVED(Id, 				"id", "('a x)->'a { return x; }")
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(Zero, 				"zero", 					"(type<'a>) -> 'a")
 LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
-LITERAL(IntTypeParamToInt, 	"to.uint", 					"(intTypeParam<#n>)->uint<8>")
+LITERAL(IntTypeParamToInt, 	"to_uint", 					"(intTypeParam<#n>)->uint<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
@@ -525,30 +525,30 @@ GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND,
 LITERAL(ArrayCreate1D, 		"array_create_1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
 LITERAL(ArrayCreateND, 		"array_create_ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
 
-LITERAL(ArraySubscript1D,      "array_subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
-LITERAL(ArraySubscriptND,      "array_subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
+LITERAL(ArraySubscript1D,      "array_subscript_1D",   "(array<'elem,1>, uint<8>) -> 'elem")
+LITERAL(ArraySubscriptND,      "array_subscript_ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-DERIVED(ArrayRefElem1D,     "array_ref_elem.1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref.narrow(a, dp.element(dp.root, i), lit('elem)); }")
-LITERAL(ArrayRefElemND, 	"array_ref_elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
+DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a, dp_element(dp_root, i), lit('elem)); }")
+LITERAL(ArrayRefElemND, 	"array_ref_elem_ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
-LITERAL(ArrayRefProjection1D, "array_ref_projection.1D",
+LITERAL(ArrayRefProjection1D, "array_ref_projection_1D",
 							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
-LITERAL(ArrayRefProjectionND, "array_ref_projection.ND",
+LITERAL(ArrayRefProjectionND, "array_ref_projection_ND",
 							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
 LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
-DERIVED(ScalarToArray, 			"scalar_to_array", 		"(ref<'a> a) -> ref<array<'a,1>> { return ref.expand(a, dp.element(dp.root,0u), lit(array<'a,1>)); }")
+DERIVED(ScalarToArray, 			"scalar_to_array", 		"lambda (ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u), lit(array<'a,1>)); }")
 
 // computation of an array-offset and some derivades
-LITERAL(ArrayView, 				"array_view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
-DERIVED(ArrayViewPreInc, 		"array_view_pre.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,1); return *a; }")
-DERIVED(ArrayViewPostInc, 		"array_view_post.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array_view(*a,1); return res; }")
-DERIVED(ArrayViewPreDec, 		"array_view_pre.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,-1); return *a; }")
-DERIVED(ArrayViewPostDec, 		"array_view_post.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array_view(*a,-1); return res; }")
+LITERAL(ArrayView, 				"array_view",					"lambda (ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
+DERIVED(ArrayViewPreInc, 		"array_view_pre_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,1); return *a; }")
+DERIVED(ArrayViewPostInc, 		"array_view_post_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array_view(*a,1); return res; }")
+DERIVED(ArrayViewPreDec, 		"array_view_pre_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,-1); return *a; }")
+DERIVED(ArrayViewPostDec, 		"array_view_post_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array_view(*a,-1); return res; }")
 
 DERIVED(ArrayReduce, "array_reduce",
-		"(ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
-		"	ref<'b> res = var(init);"
+		"lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
+		"	decl ref<'b> res = var(init);"
 		"	for(uint<8> i = 0ul .. size) {"
 		"		res = op(*res, *(data[i]));"
 		"	}"
@@ -564,44 +564,44 @@ GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorR
 GROUP(Pointwise, VectorPointwise, VectorPointwiseUnary)
 
 // deprecated
-LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
-LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
+LITERAL(VectorSubscript,      	"vector_subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
+LITERAL(VectorInitUniform,    	"vector_init_uniform",    	"('elem, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined,  	"vector_init_undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitPartial, 		"vector_init_partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
 
-DERIVED(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref.narrow(v, dp.element(dp.root, i), lit('elem)); }")
+DERIVED(VectorRefElem, 			"vector_ref_elem", 			"lambda (ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref_narrow(v, dp_element(dp_root, i), lit('elem)); }")
 
-DERIVED(VectorPointwise,		"vector.pointwise",			
-		"(('elem1, 'elem2) -> 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {"
+DERIVED(VectorPointwise,		"vector_pointwise",			
+		"lambda (('elem1, 'elem2) -> 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {"
 		"	return (vector<'elem1,#l> v1, vector<'elem2,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
-		"		ref<vector<'res,#l>> res = var(vector<'res,#l>);"
-		"		for(uint<8> i = 0u .. to.uint(param(#l))-1u ) { res[i] = op(v1[i], v2[i]); }"
+		"		decl ref<vector<'res,#l>> res = var(vector<'res,#l>);"
+		"		for(uint<8> i = 0u .. to_uint(param(#l))-1u ) { res[i] = op(v1[i], v2[i]); }"
 		"		return *res;"
 		"	}(v1, v2, op);"
 		"}")
 								
-//LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
+//LITERAL(VectorPointwiseUnary, 	"vector_pointwise_unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 
-DERIVED(VectorPointwiseUnary,		"vector.pointwise.unary",
-		"(('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {"
+DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary",
+		"lambda (('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {"
 		"	return (vector<'elem,#l> v) => (vector<'elem,#l> v, ('elem) -> 'res op) -> vector<'res,#l> {"
-		"		ref<vector<'res,#l>> res = var(vector<'res,#l>);"
-		"		for(uint<8> i = 0u .. to.uint(param(#l))-1u ) { res[i] = op(v[i]); }"
+		"		decl ref<vector<'res,#l>> res = var(vector<'res,#l>);"
+		"		for(uint<8> i = 0u .. to_uint(param(#l))-1u ) { res[i] = op(v[i]); }"
 		"		return *res;"
 		"	}(v, op);"
 		"}")
 
-LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
-LITERAL(VectorPermute,        	"vector.permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
+LITERAL(VectorReduction,      	"vector_reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
+LITERAL(VectorPermute,        	"vector_permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
 
-LITERAL(VectorProjection, 		"vector.projection",
+LITERAL(VectorProjection, 		"vector_projection",
 						  		"(vector<'elem,#n>,intTypeParam<#s>,intTypeParam<#m>) -> vector<'elem,#m>")
 
-LITERAL(VectorRefProjection, 	"vector.ref.projection",
+LITERAL(VectorRefProjection, 	"vector_ref_projection",
 							 	"(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
 
-DERIVED(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>> a) -> ref<array<'elem,1>> { return ref.reinterpret(a, lit(array<'elem,1>)); }")
-DERIVED(RefVectorToSrcArray, 	"ref.vector.to.src.array",		"(ref<vector<'elem,#l>> a) -> src<array<'elem,1>> { return ref.reinterpret(a, lit(array<'elem,1>)); }")
+DERIVED(RefVectorToRefArray, 	"ref_vector_to_ref_array",		"lambda (ref<vector<'elem,#l>> a) -> ref<array<'elem,1>> { return ref_reinterpret(a, lit(array<'elem,1>)); }")
+DERIVED(RefVectorToSrcArray, 	"ref_vector_to_src_array",		"lambda (ref<vector<'elem,#l>> a) -> src<array<'elem,1>> { return ref_reinterpret(a, lit(array<'elem,1>)); }")
 
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
@@ -610,29 +610,29 @@ GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, Ar
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
-DERIVED(CompositeRefElem,      "composite.ref.elem",      "(ref<'a> s, identifier i, type<'b> t) -> ref<'b> { return ref.narrow(s, dp.member(dp.root, i), t); }")
-LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
+DERIVED(CompositeRefElem,      "composite_ref_elem",      "lambda (ref<'a> s, identifier i, type<'b> t) -> ref<'b> { return ref_narrow(s, dp_member(dp_root, i), t); }")
+LITERAL(CompositeMemberAccess, "composite_member_access", "('a, identifier, type<'b>) -> 'b")
 
 // Tuple --------------------------------------------------------------------------------------------------------------
 // first argument has to be a tuple or a union, 'b has to be the type of the requested member
-DERIVED(TupleRefElem,      "tuple.ref.elem",      "(ref<'a> s, uint<8> i, type<'b> t) -> ref<'b> { return ref.narrow(s, dp.component(dp.root, i), t); }")
-LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b")
+DERIVED(TupleRefElem,      "tuple_ref_elem",      "lambda (ref<'a> s, uint<8> i, type<'b> t) -> ref<'b> { return ref_narrow(s, dp_component(dp_root, i), t); }")
+LITERAL(TupleMemberAccess, "tuple_member_access", "('a, uint<8>, type<'b>) -> 'b")
 
 GROUP(MemberAccess, CompositeRefElem, CompositeMemberAccess, TupleRefElem, TupleMemberAccess)
 
 // Generic type initialization ----------------------------------------------------------------------------------------
 
-LITERAL(GenInit, "gen.init", "(type<'a>, 'b) -> 'a")
+LITERAL(GenInit, "gen_init", "(type<'a>, 'b) -> 'a")
 
 // Accuracy defining functions ----------------------------------------------------------------------------------------
 GROUP(Accuracy, AccuracyHighBinary, AccuracyBestEffortBinary, AccuracyFastBinary, AccuracyHighUnary, AccuracyBestEffortUnary, AccuracyFastUnary)
 
-LITERAL(AccuracyHighBinary,       "accuracy.high", "(('a, 'a)=>'b) -> ('a, 'a)=>'b")
-LITERAL(AccuracyBestEffortBinary, "accuracy.besteffort", "(('a, 'a)=>'b) -> ('a, 'a)=>'b")
-LITERAL(AccuracyFastBinary,       "accuracy.fast", "(('a, 'a)=>'b) -> ('a, 'a)=>'b")
-LITERAL(AccuracyHighUnary,       "accuracy.high.unary", "(('a)=>'b) -> ('a)=>'b")
-LITERAL(AccuracyBestEffortUnary, "accuracy.besteffort.unary", "(('a)=>'b) -> ('a)=>'b")
-LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)=>'b) -> ('a)=>'b")
+LITERAL(AccuracyHighBinary,       "accuracy_high", "(('a, 'a)=>'b) -> ('a, 'a)=>'b")
+LITERAL(AccuracyBestEffortBinary, "accuracy_besteffort", "(('a, 'a)=>'b) -> ('a, 'a)=>'b")
+LITERAL(AccuracyFastBinary,       "accuracy_fast", "(('a, 'a)=>'b) -> ('a, 'a)=>'b")
+LITERAL(AccuracyHighUnary,       "accuracy_high_unary", "(('a)=>'b) -> ('a)=>'b")
+LITERAL(AccuracyBestEffortUnary, "accuracy_besteffort_unary", "(('a)=>'b) -> ('a)=>'b")
+LITERAL(AccuracyFastUnary,       "accuracy_fast_unary", "(('a)=>'b) -> ('a)=>'b")
 
 // IO -----------------------------------------------------------------------------------------------------------------
 
@@ -640,8 +640,8 @@ LITERAL(Print, "print", "(ref<array<char,1>>,var_list)->unit")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
-LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
-DERIVED(IfThenElse, "ite", "(bool c, () => 'b a, () => 'b b) -> 'b { if (c) { return a(); } else { return b(); } }")
+LITERAL(VarlistPack, "varlist_pack", "('alpha) -> var_list")
+DERIVED(IfThenElse, "ite", "lambda (bool c, () => 'b a, () => 'b b) -> 'b { if (c) { return a(); } else { return b(); } }")
 
 
 // Tunable Options ----------------------------------------------------------------------------------------------------
@@ -670,14 +670,14 @@ LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
 
 // the work-sharing construct
-DERIVED(PFor, "pfor", "(threadgroup g, int<#a> a, int<#a> b, int<#a> c, (int<#a>, int<#a>, int<#a>)=>'a f)->unit { f(a,b,c); }")
+DERIVED(PFor, "pfor", "lambda (threadgroup g, int<#a> a, int<#a> b, int<#a> c, (int<#a>, int<#a>, int<#a>)=>'a f)->unit { f(a,b,c); }")
 
 // the data-sharing construct
 LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
 
 // some derivades
-DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
-DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array.reduce(data, size, op, init) ); }")
+DERIVED(Barrier, "barrier", "lambda (threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
+DERIVED(PReduce, "preduce", "lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array_reduce(data, size, op, init) ); }")
 
 
 // Channels -----------------------------------------------------------------------------------------------------------
@@ -692,8 +692,8 @@ LITERAL(ChannelProbe, 		"channel_probe", 		"(channel<'a,#n>) -> bool")
 // Atomics ------------------------------------------------------------------------------------------------------------
 
 DERIVED(Atomic, "atomic",
-		"(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
-		"	auto res = *v; "
+		"lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
+		"	decl auto res = *v; "
 		"	if (p(*v)) { "
 		"		v = f(*v); "
 		"	} "
@@ -702,79 +702,79 @@ DERIVED(Atomic, "atomic",
 
 // arithmetic
 
-DERIVED(AtomicFetchAndAdd, "atomic.fetch.and.add",
-		"(ref<'a> v, 'a exp) -> 'a { "
+DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
 		"	let test = ('a _)=>true; "
 		"	let apply = ('a x)=>x+exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
-DERIVED(AtomicAddAndFetch, "atomic.add.and.fetch",
-		"(ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic.fetch.and.add(v, exp) + exp; "
+DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic_fetch_and_add(v, exp) + exp; "
 		"}  ")
 
-DERIVED(AtomicFetchAndSub, "atomic.fetch.and.sub",
-		"(ref<'a> v, 'a exp) -> 'a { "
+DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
 		"	let test = ('a _)=>true; "
 		"	let apply = ('a x)=>x-exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
-DERIVED(AtomicSubAndFetch, "atomic.sub.and.fetch",
-		"(ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic.fetch.and.sub(v, exp) - exp; "
+DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic_fetch_and_sub(v, exp) - exp; "
 		"}  ")
 
 // bitwise
 
-DERIVED(AtomicFetchAndAnd, "atomic.fetch.and.and",
-		"(ref<'a> v, 'a exp) -> 'a { "
+DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
 		"	let test = ('a _) => true; "
 		"	let apply = ('a x) => x & exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
-DERIVED(AtomicAndAndFetch, "atomic.and.and.fetch",
-		"(ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic.fetch.and.and(v, exp) & exp; "
+DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic_fetch_and_and(v, exp) & exp; "
 		"}  ")
 
-DERIVED(AtomicFetchAndOr, "atomic.fetch.and.or",
-		"(ref<'a> v, 'a exp) -> 'a { "
+DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
 		"	let test = ('a _) => true; "
 		"	let apply = ('a x) => x | exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
-DERIVED(AtomicOrAndFetch, "atomic.or.and.fetch",
-		"(ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic.fetch.and.or(v, exp) | exp; "
+DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic_fetch_and_or(v, exp) | exp; "
 		"}  ")
 
-DERIVED(AtomicFetchAndXor, "atomic.fetch.and.xor",
-		"(ref<'a> v, 'a exp) -> 'a { "
+DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
 		"	let test = ('a _) => true; "
 		"	let apply = ('a x) => x ^ exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
-DERIVED(AtomicXorAndFetch, "atomic.xor.and.fetch",
-		"(ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic.fetch.and.xor(v, exp) ^ exp; "
+DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch",
+		"lambda (ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic_fetch_and_xor(v, exp) ^ exp; "
 		"}  ")
 
 // test and set
 
-DERIVED(AtomicValCompareAndSwap, "atomic.val.compare.and.swap",
-		"(ref<'a> v, 'a _old, 'a _new) -> 'a { "
+DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap",
+		"lambda (ref<'a> v, 'a _old, 'a _new) -> 'a { "
 		"	let test = ('a x) => x == _old; "
 		"	let apply = ('a _) => _new; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
-DERIVED(AtomicBoolCompareAndSwap, "atomic.bool.compare.and.swap",
-		"(ref<'a> v, 'a _old, 'a _new) -> bool { "
+DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap",
+		"lambda (ref<'a> v, 'a _old, 'a _new) -> bool { "
 		"	let test = ('a x) => x == _old; "
 		"	let apply = ('a _) => _new; "
 		"	return atomic(v, test, apply) == _new; "
@@ -795,9 +795,9 @@ LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<8>, uint<8>, uint<8>)->Jo
 
 TYPE(Lock, "lock")
 
-LITERAL(LockAcquire,  "lock.acquire", "(ref<lock>)->unit")
-LITERAL(LockRelease, "lock.release", "(ref<lock>)->unit")
-LITERAL(LockInit,  "lock.init", "(ref<lock>)->unit")
+LITERAL(LockAcquire,  "lock_acquire", "(ref<lock>)->unit")
+LITERAL(LockRelease, "lock_release", "(ref<lock>)->unit")
+LITERAL(LockInit,  "lock_init", "(ref<lock>)->unit")
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -807,9 +807,9 @@ LITERAL(LockInit,  "lock.init", "(ref<lock>)->unit")
 GROUP(CloogMath, CloogFloor, CloogCeil, CloogMod)
 
 LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
-LITERAL(CloogFloor, "cloog.floor", "( int<4>, int<4> ) -> int<4>" )
-LITERAL(CloogCeil,  "cloog.ceil",  "( int<4>, int<4> ) -> int<4>" )
-LITERAL(CloogMod, 	"cloog.mod",   "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogFloor, "cloog_floor", "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogCeil,  "cloog_ceil",  "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogMod, 	"cloog_mod",   "( int<4>, int<4> ) -> int<4>" )
 
 LITERAL(Exit, "exit", "(int<4>)->unit" )
 

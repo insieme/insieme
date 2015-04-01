@@ -67,7 +67,7 @@
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/static_vars.h"
 
-#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/parser3/ir_parser.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -145,27 +145,27 @@ ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 // ---------------------------- Parser Integration -----------------------------------
 
 NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse(manager, code, true, symbols);
+	return parser3::parse(manager, code, true, symbols);
 }
 
 TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_type(manager, code, true, symbols);
+	return parser3::parse_type(manager, code, true, symbols);
 }
 
 ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_expr(manager, code, true, symbols);
+	return parser3::parse_expr(manager, code, true, symbols);
 }
 
 StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_stmt(manager, code, true, symbols);
+	return parser3::parse_stmt(manager, code, true, symbols);
 }
 
 ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_program(manager, code, true, symbols);
+	return parser3::parse_program(manager, code, true, symbols);
 }
 
 vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_addresses(manager, code, true, symbols);
+	return parser3::parse_addresses(manager, code, true, symbols);
 }
 
 

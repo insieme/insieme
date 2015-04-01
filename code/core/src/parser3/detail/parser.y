@@ -21,6 +21,8 @@
     namespace detail{
 
         class inspire_driver;
+        class inspire_scanner;
+
     } // detail
     } // parser3
     } // core
@@ -41,6 +43,7 @@
 // The parsing context.
 %param { parser3::detail::inspire_driver& driver }
 %param { symbol_type** start_token }
+%param { parser3::detail::inspire_scanner& scanner }
 %locations
 %initial-action
 {
@@ -58,6 +61,7 @@
      */
 
     #include "insieme/core/parser3/detail/driver.h"
+    #include "insieme/core/parser3/detail/scanner.h"
     #include "insieme/core/ir.h"
 
     #include "insieme/core/annotations/naming.h"
@@ -330,6 +334,7 @@ type : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType(@$, $1,
              | "identifier" "<" ">" {                 $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList());  }
              | "identifier" {                         
                                                       $$ = driver.findType(@1, $1);
+                                                      if(!$$) $$ = $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList()); 
                                                       if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                             }
                 /* func / closure type */

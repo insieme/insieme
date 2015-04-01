@@ -9,18 +9,6 @@
 
 
 #include "inspire_parser.hpp"
-#include "insieme/core/parser3/detail/scanner.h"
-
-
-
-
-// FLex is still a primitive tool using macros:
-// Tell Flex the lexer's prototype ...
-# define YY_DECL \
-  insieme::core::parser3::detail::inspire_parser::symbol_type yylex (insieme::core::parser3::detail::inspire_driver& driver, \
-                                                                     insieme::core::parser3::detail::inspire_parser::symbol_type** start_token)
-// ... and declare it for the parser's sake.
-YY_DECL;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 namespace insieme{
@@ -74,7 +62,6 @@ class inspire_driver
     };
     mutable std::vector<t_error> errors;
 
-    scanner_wrapper* scanner;    
     DeclarationContext scopes;
 
     std::map<std::string, NodePtr> recursive_symbols;

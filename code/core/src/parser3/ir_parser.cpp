@@ -51,39 +51,67 @@ namespace parser3 {
 
 using namespace detail;
 
+namespace {
+
+    void checkErrors(inspire_driver& driver, bool onFailThrow){
+        if (driver.result) {
+            if (onFailThrow ){
+                std::stringstream ss;
+                driver.print_errors(ss);
+                throw IRParserException(ss.str());
+            }
+            else{
+                driver.print_errors();
+            }
+        }
+    }
+}
+
+
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
         for (const auto& def : definitions) driver.add_symb(def.first, def.second);
-        return driver.parseProgram();
+        auto x = driver.parseProgram();
+        if(!x) checkErrors(driver, onFailThrow);
+        return x;
     }
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
         for (const auto& def : definitions) driver.add_symb(def.first, def.second);
-        return driver.parseType();
+        auto x = driver.parseType();
+        if(!x) checkErrors(driver, onFailThrow);
+        return x;
     }
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
         for (const auto& def : definitions) driver.add_symb(def.first, def.second);
-        return driver.parseExpression();
+        auto x = driver.parseExpression();
+        if(!x) checkErrors(driver, onFailThrow);
+        return x;
     }
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
         for (const auto& def : definitions) driver.add_symb(def.first, def.second);
-        return driver.parseStmt();
+        auto x =  driver.parseStmt();
+        if(!x) checkErrors(driver, onFailThrow);
+        return x;
     }
 
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
         for (const auto& def : definitions) driver.add_symb(def.first, def.second);
-        return driver.parseProgram();
+        auto x =  driver.parseProgram();
+        if(!x) checkErrors(driver, onFailThrow);
+        return x;
     }
 
 	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         assert_not_implemented() << "some stuff to do";
-        return std::vector<NodeAddress>();
+        auto x =  std::vector<NodeAddress>();
+        return x;
     }
 
 } //  parser3

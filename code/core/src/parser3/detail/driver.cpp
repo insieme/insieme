@@ -8,6 +8,8 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/annotations/naming.h"
 
+#include "insieme/core/parser3/detail/scanner.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
 
@@ -77,24 +79,24 @@ namespace detail{
 
 
     inspire_driver::inspire_driver (const std::string &f, NodeManager& nm)
-      : scanner( new scanner_string(this, f)),  mgr(nm), builder(mgr), file("global scope"), str(f), result(nullptr), glob_loc(&file)
+      : mgr(nm), builder(mgr), file("global scope"), str(f), result(nullptr), glob_loc(&file)
     {
     }
 
     inspire_driver::~inspire_driver ()
     {
-        delete scanner;
     }
 
     ProgramPtr inspire_driver::parseProgram ()
     {
-        scanner->scan_begin ();
+        std::stringstream ss(str);
+        inspire_scanner scanner(&ss);
         auto ssymb = inspire_parser::make_FULL_PROGRAM(glob_loc);
         auto* ptr = &ssymb;
 
-        inspire_parser parser (*this, &ptr);
+        inspire_parser parser (*this, &ptr, scanner);
         int fail = parser.parse ();
-        scanner->scan_end ();
+
         if (fail) {
             print_errors();
             return nullptr;
@@ -104,12 +106,14 @@ namespace detail{
 
     TypePtr inspire_driver::parseType ()
     {
-        scanner->scan_begin ();
+        std::stringstream ss(str);
+        inspire_scanner scanner(&ss);
         auto ssymb = inspire_parser::make_TYPE_ONLY(glob_loc);
         auto* ptr = &ssymb;
-        inspire_parser parser (*this, &ptr);
+        inspire_parser parser (*this, &ptr, scanner);
         int fail = parser.parse ();
-        scanner->scan_end ();
+        //scanner->scan_end ();
+        //delete scanner;
         if (fail) {
             print_errors();
             return nullptr;
@@ -119,12 +123,12 @@ namespace detail{
 
     StatementPtr inspire_driver::parseStmt ()
     {
-        scanner->scan_begin ();
+        std::stringstream ss(str);
+        inspire_scanner scanner(&ss);
         auto ssymb = inspire_parser::make_STMT_ONLY(glob_loc);
         auto* ptr = &ssymb;
-        inspire_parser parser (*this, &ptr);
+        inspire_parser parser (*this, &ptr, scanner);
         int fail = parser.parse ();
-        scanner->scan_end ();
         if (fail) {
             print_errors();
             return nullptr;
@@ -134,12 +138,12 @@ namespace detail{
 
     ExpressionPtr inspire_driver::parseExpression ()
     {
-        scanner->scan_begin ();
+        std::stringstream ss(str);
+        inspire_scanner scanner(&ss);
         auto ssymb = inspire_parser::make_EXPRESSION_ONLY(glob_loc);
         auto* ptr = &ssymb;
-        inspire_parser parser (*this, &ptr);
+        inspire_parser parser (*this, &ptr, scanner);
         int fail = parser.parse ();
-        scanner->scan_end ();
         if (fail) {
             print_errors();
             return nullptr;
@@ -179,10 +183,12 @@ namespace detail{
 
         if(!x) {
             try{ 
+            std::cout << "                                                  leaving" << std::endl;
                x = builder.getLangBasic().getBuiltIn(name);
+            std::cout << "                                                  come back" << x << std::endl;
             }catch(...)
             {
-                //std::cout <<" exception thrown " << std::endl;
+                std::cout <<" exception thrown " << std::endl;
             }
         }
 
@@ -208,12 +214,16 @@ namespace detail{
         auto x = scopes.find(name);
 
         // keyword types (is this the right place?) 
-        if (!x) {
-            if (name == "unit") return builder.getLangBasic().getUnit();
-        }
-        if (!x) {
-            if (name == "bool") return builder.getLangBasic().getBool();
-        }
+
+        
+        return x.as<TypePtr>();
+
+ //       if (!x) {
+ //           if (name == "unit") return builder.getLangBasic().getUnit();
+ //       }
+ //       if (!x) {
+ //           if (name == "bool") return builder.getLangBasic().getBool();
+ //       }
 
         if (!x) {
             try{ 

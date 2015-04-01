@@ -1,67 +1,59 @@
 #pragma once
 
+#include <vector>
+#include <sstream>
+
+// flex lexer base class
+#undef yyFlexLexer
+#define yyFlexLexer Trick_Lexer
+# include <FlexLexer.h>
+
+// these file is generated and the path is provided
+# include "location.hh"
+# include "inspire_parser.hpp"
+
 namespace insieme{
 namespace core{
 namespace parser3{
 namespace detail{
 
-class inspire_driver;
+    class inspire_driver;
 
-/**
- *  the scanner wrapper is an interface to implement differen inputs for the scanner
- */
-class scanner_wrapper
-{
-public:
-    inspire_driver* driver;
-    scanner_wrapper(inspire_driver* driver)
-    : driver(driver)
-    {}
-    virtual void scan_begin() =0;
-    virtual void scan_end() =0;
+    /**
+     *  the scanner wrapper is an interface to implement differen inputs for the scanner
+     */
+    class inspire_scanner : public Trick_Lexer
+    {
+        location loc;
 
-    virtual ~scanner_wrapper(){}
-};
+    public:
 
-/**
- * scanner stdin reads from the standar imput
- */
-class scanner_stdin : public scanner_wrapper{
-public:
-    scanner_stdin(inspire_driver* driver)
-    :scanner_wrapper(driver)
-    { }
-    void scan_begin();
-    void scan_end();
-};
+        inspire_scanner(std::istream* stream)
+        : Trick_Lexer(stream)
+        {
+            loc.initialize();
+        }
 
-/**
- * scanner string reads from a c++ string
- */
-class scanner_string : public scanner_wrapper{
-    const std::string& str;
-public:
-    scanner_string(inspire_driver* driver, const std::string& str)
-    :scanner_wrapper(driver), str(str)
-    { }
-    void scan_begin();
-    void scan_end();
-};
+    #undef YY_DECL
+    # define YY_DECL \
+      inspire_parser::symbol_type inspire_scanner::yylex ( inspire_driver& driver, inspire_parser::symbol_type** start_token)
+        inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_parser::symbol_type** start_token);
 
-/**
- * scanner file reads from a file descriptor, the stream is managed by flex, like it or not
- */
-class scanner_file : public scanner_wrapper{
-    const std::string& file;
-public:
-    scanner_file(inspire_driver* driver, const std::string& file)
-    :scanner_wrapper(driver), file(file)
-    { }
-    void scan_begin();
-    void scan_end();
-};
+
+        int yywrap(){ return 1; }
+
+        virtual ~inspire_scanner(){ }
+    };
+
+    /**
+     * Bison-Flex interaction in c++ mode is not very neat:
+     * Bison will call a function yylex, and to keep an unique instance of the scanner, we pass it by argument 
+     * this function bridges the bison flex interaction.
+     */
+    inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_parser::symbol_type** start_token, inspire_scanner& scanner);
 
 } // namespace detail
 } // namespace parser3
 } // namespace core
 } // namespace insieme
+

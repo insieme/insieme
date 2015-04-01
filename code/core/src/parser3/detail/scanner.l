@@ -5,6 +5,7 @@
 # include <string>
 
 #include "insieme/core/parser3/detail/driver.h"
+#include "insieme/core/parser3/detail/scanner.h"
 #include "insieme/core/ir.h"
 
 // this file is generated and the path is provided
@@ -14,16 +15,19 @@
 // 2.5.31 through 2.5.33): it generates code that does
 // not conform to C89.  See Debian bug 333231
 // <http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=333231>.
-# undef yywrap
-# define yywrap() 1
+//# undef yywrap
+//# define yywrap() 1
 
 // The location of the current token.
-static insieme::core::parser3::detail::location loc;
 %}
 
 
-%option noyywrap nounput batch debug noinput
-
+%option noyywrap c++ batch nounput
+%option yyclass="inspire_scanner"
+%option noyywrap
+/*%option prefix="inspire_"*/
+/*nounput batch debug noinput */
+/*reentrant bison-bridge noyywrap */
 
 id       [a-zA-Z_][a-zA-Z0-9_]*
 type_var [\'][a-zA-Z0-9_]*
@@ -188,42 +192,32 @@ paramvar #[a-zA-Z]
 %%
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 namespace insieme{
 namespace core{
 namespace parser3{
 namespace detail{
 
-void scanner_stdin::scan_begin(){
-    yyin=stdin;
-}
-void scanner_stdin::scan_end(){
-}
 
-void scanner_string::scan_begin(){
-    yy_flex_debug = 0;
-    yy_scan_string(str.c_str());
-}
-void scanner_string::scan_end(){
-    yylex_destroy();
-    loc.initialize();
-}
-
-void scanner_file::scan_begin(){
-    yy_flex_debug = 0;
-    if (!(yyin = fopen (file.c_str (), "r")))
-    {
-      driver->error ("cannot open " + file + ": " + strerror(errno));
-      exit (EXIT_FAILURE);
+    inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_parser::symbol_type** start_token, inspire_scanner& scanner){
+        return scanner.yylex(driver, start_token);
     }
-    loc.initialize();
-}
-
-void scanner_file::scan_end(){
-    fclose (yyin);
-    loc.initialize();
-}
 
 } // detail namespace
 } // parser3 namespace
 } // core namespace
 } // insieme namespace
+
+
+/* ~~~~~~~~~~~~~~~~~ UNUSED BUT REQUIRED ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+int Trick_Lexer::yywrap(){
+        std::cout << "this should not be called" << std::endl;
+        abort();
+    return 1;
+}
+int Trick_Lexer::yylex(){
+        std::cout << "this is overloaded and should not be called" << std::endl;
+        abort();
+    return 0;
+}
+
