@@ -54,6 +54,8 @@
 #include <execinfo.h>
 #endif
 
+#include "insieme/utils/assert.h"
+
 namespace insieme {
 namespace utils {
 namespace log {
@@ -142,7 +144,7 @@ struct LevelSpec {
 		case ERROR:		return "ERROR";
 		case FATAL:		return "FATAL";
 		default:
-		assert(false); return "UNKNOWN";
+		assert_fail(); return "UNKNOWN";
 		}
 	}
 	

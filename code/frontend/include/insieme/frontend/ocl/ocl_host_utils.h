@@ -63,7 +63,7 @@ const core::TypePtr getBaseType(const core::TypePtr& singleElementType);
 
 /*
  * Function to get the type of an Expression
- * If it is a ref-type, it's element type is returned
+ * If it is a ref-type, its element type is returned
  */
 const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr);
 /*

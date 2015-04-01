@@ -169,7 +169,7 @@ namespace {
 		}
 
 		std::cerr << "Invalid DataPath step encountered: " << *step << "\n";
-		assert(false && "Unsupported DataPath step encountered!");
+		assert_fail() << "Unsupported DataPath step encountered!";
 
 		return fail;
 	}
@@ -353,7 +353,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 
 	// obtain function type ...
 	TypePtr funType = address->getFunctionExpr()->getType();
-	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	assert_eq(address->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Illegal function expression!";
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
 	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
@@ -561,7 +561,7 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	}
 
 	// check type of recursive variable
-	assert(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
+	assert_true(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
 	is = lambda->getVariable()->getType();
 	should = lambda->getDefinition()->getDefinitionOf(lambda->getVariable())->getType();
 	if (*is != *should) {
@@ -1376,7 +1376,7 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 ///      Expand check
 ///	Expand construction is a function call in which there are 3 parameters
 //		- variable of any type which belongs as member to a structure/array/tuple
-//		- datapath of this variable inside of the outhermost structure/array/tuple
+//		- datapath of this variable inside of the outermost structure/array/tuple
 //		- type of the expected object
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
@@ -1396,7 +1396,7 @@ OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
 	// Obtain argument type
 	ExpressionPtr srcArg = callExpr->getArgument(0);  // variable
 	ExpressionPtr dpArg  = callExpr->getArgument(1);  // datapath
-	ExpressionPtr trgArg = callExpr->getArgument(2);  // outher data structure type literal
+	ExpressionPtr trgArg = callExpr->getArgument(2);  // outer data structure type literal
 
 	// test whether source is a reference
 	auto srcType = analysis::getReferencedType(srcArg->getType());

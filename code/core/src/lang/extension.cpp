@@ -77,7 +77,7 @@ namespace lang {
 	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {
 		// build type
 		TypePtr res = parser::parse_type(manager, type, false, definitions);
-		assert(res && "Unable to parse given type!");
+		assert_true(res) << "Unable to parse given type!";
 		return res;
 	}
 

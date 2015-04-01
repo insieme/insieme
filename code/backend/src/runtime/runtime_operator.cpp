@@ -128,7 +128,7 @@ namespace runtime {
 
 		table[ext.wrapLWData] = OP_CONVERTER({
 			// check arguments
-			assert(ARG(0)->getNodeType() == core::NT_TupleExpr && "Only supported for tuple expressions!");
+			assert_eq(ARG(0)->getNodeType(), core::NT_TupleExpr) << "Only supported for tuple expressions!";
 
 			// add type dependency
 			const TypeInfo& info = GET_TYPE_INFO(call->getType());

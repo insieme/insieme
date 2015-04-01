@@ -69,7 +69,7 @@ namespace {
 // Register call expression handlers to be used during the clang to IR conversion
 //void Converter::registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler) {
 //	auto it = callExprHanlders.insert( std::make_pair(funcDecl, handler) );
-//	assert( !it.second && "Handler for function declaration already registered." );
+//	assert_false(it.second) << "Handler for function declaration already registered.";
 //}
 //  Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
 // 	-> OpenCL address spaces
@@ -197,7 +197,7 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 			unsigned odd = accessor == "odd" ? 1 : 0;
 
 			if(refTy) {
-				assert(false && "Vector functions 'even' and 'odd' are not supported as l-values");
+				assert_fail() << "Vector functions 'even' and 'odd' are not supported as l-values";
 			}
 
 			// non-ref type
@@ -258,7 +258,7 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 		}
 
 	} else {
-		assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
+		assert_le(accessor.size(), 16) << "ExtVectorElementExpr has unknown format";
 	}
 
 	// The type of the index is always uint<4>
@@ -382,7 +382,7 @@ stmtutils::StmtWrapper OclKernelExtension::PostVisit(const clang::Stmt* stmt, co
 		if (const clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
 			//get annotate string
 			llvm::StringRef&& sr = attr->getAnnotation();
-assert(false && "attribute");
+assert_fail() << "attribute";
 			//check if it is an OpenCL kernel function
 			if ( sr == "__kernel" ) {
 					VLOG(1) << "is OpenCL kernel function";
@@ -392,7 +392,7 @@ assert(false && "attribute");
 
     }
 
-	assert(false && "post visit ");
+	assert_fail() << "post visit ";
 	return irStmt;
 }
 */

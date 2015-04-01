@@ -250,7 +250,7 @@ namespace cba {
 		}
 
 		std::uint64_t getIndex() const {
-			assert(isConcrete());
+			assert_true(isConcrete());
 			return index;
 		}
 

@@ -130,7 +130,7 @@ ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockP
 
 		auto handle_def = [&](const core::VariableAddress& varAddr) { 
 
-			assert(varAddr && "Variable not found within the statement of the CFG Block");
+			assert_true(varAddr) << "Variable not found within the statement of the CFG Block";
 
 			cfg::Address cfgAddr(block, stmtIdx, varAddr);
 

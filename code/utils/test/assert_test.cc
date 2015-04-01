@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,45 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/lang/static_vars.h"
+#include <gtest/gtest.h>
 
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/utils/assert.h"
 
-namespace insieme {
-namespace core {
-namespace lang {
+TEST(Assert, RelWithAssertsDeathTest) {
 
-
-	bool StaticVariableExtension::isStaticType(const TypePtr& type) const {
-		if (!type || type->getNodeType() != NT_StructType) return false;
-		StructTypePtr structType = type.as<StructTypePtr>();
-		if (structType->getName()->getValue() != "__static_var") return false;
-		if (structType.size() != 2) return false;
-		if (structType[0]->getName()->getValue() != "initialized") return false;
-		if (structType[1]->getName()->getValue() != "value") return false;
-		if (!type.getNodeManager().getLangBasic().isBool(structType[0]->getType())) return false;
-		return true;
-	}
-
-	TypePtr StaticVariableExtension::wrapStaticType(const TypePtr& type) const {
-		IRBuilder builder(type.getNodeManager());
-		return builder.structType(
-				builder.stringValue("__static_var"),
-				builder.parents(),
-				toVector(
-						builder.namedType("initialized", builder.getLangBasic().getBool()),
-						builder.namedType("value", type)
-				)
-		);
-	}
-
-	TypePtr StaticVariableExtension::unwrapStaticType(const TypePtr& type) const {
-		assert_true(isStaticType(type)) << "Unable to unwrap non-static type.";
-		return type.as<StructTypePtr>()[1]->getType();
-	}
-
-
-} // end namespace lang
-} // end namespace core
-} // end namespace insieme
+#ifdef INS_REL_WITH_DBG
+	ASSERT_DEATH(assert_gt(5,6), "failed!");
+#endif
+}

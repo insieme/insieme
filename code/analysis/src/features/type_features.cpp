@@ -191,12 +191,12 @@ namespace features {
 
 			unsigned visitType(const core::TypePtr& type) {
 				LOG(FATAL) << "Unsupported type encountered: " << *type;
-				assert(false && "Unsupported type encountered!");
+				assert_fail() << "Unsupported type encountered!";
 				return 0;
 			}
 
 			unsigned visitNode(const core::NodePtr& node) {
-				assert(false && "This visitor only supports types!");
+				assert_fail() << "This visitor only supports types!";
 				return 0;
 			}
 
@@ -231,7 +231,7 @@ namespace features {
 			offset += getEstimatedSizeInBytes(cur->getType());
 		}
 
-		assert(false && "Cannot determine offset of non-included member!");
+		assert_fail() << "Cannot determine offset of non-included member!";
 		return offset;
 	}
 

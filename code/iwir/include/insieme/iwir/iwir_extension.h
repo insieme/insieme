@@ -72,7 +72,7 @@ public:
 	LANG_EXT_LITERAL(FilePath, "file.path", "(file<ref<array<char,1>>>) -> ref<array<char,1>>");
 
 	bool isFileType(const core::TypePtr type) const {
-		assert(type);
+		assert_true(type);
 		core::GenericTypePtr gt = type.isa<core::GenericTypePtr>();
 		if(!gt) return false;
 
@@ -160,13 +160,13 @@ public:
 
 
 	core::TypePtr getCollectionType(const core::TypePtr elemType) const {
-		assert(elemType);
+		assert_true(elemType);
 		core::IRBuilder builder(elemType.getNodeManager());
 		return builder.genericType("collection", { elemType }, core::IntParamList());
 	}
 
 	bool isCollectionType(const core::TypePtr type) const {
-		assert(type);
+		assert_true(type);
 		core::GenericTypePtr gt = type.isa<core::GenericTypePtr>();
 		if(!gt) return false;
 
@@ -177,7 +177,7 @@ public:
 	}
 
 	core::TypePtr getElementType(const core::TypePtr collectionType) const {
-		assert(isCollectionType(collectionType));
+		assert_true(isCollectionType(collectionType));
 		return collectionType.as<core::GenericTypePtr>()->getTypeParameter()[0];
 	}
 };

@@ -184,7 +184,7 @@ using std::vector;
 	}
 
 	FormulaPtr lAnd(unsigned freeVars, const Link& left, const Link& right) {
-		assert( left <= right );
+		assert_true(left <= right);
 		return std::make_shared<And>(freeVars, left, right);
 	}
 

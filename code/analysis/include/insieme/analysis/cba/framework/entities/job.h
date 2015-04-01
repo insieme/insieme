@@ -111,7 +111,7 @@ namespace cba {
 	template<typename Context>
 	Job<Context> getJobFromConstructor(const core::ExpressionInstance& ctor, const Context& ctxt) {
 		// make sure the target is a channel constructor
-		assert(isJobConstructor(ctor));
+		assert_true(isJobConstructor(ctor));
 
 		// create the job instance
 		return Job<Context>(ctor.as<core::JobExprInstance>(), ctxt);

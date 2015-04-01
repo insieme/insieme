@@ -49,7 +49,7 @@ int gemfeof(FILE *stream) {
             return 0;
     }
     else {
-        assert(0 && "feof is not supported.");
+        assert_fail() << "feof is not supported.";
         return 1;
     }
 }
@@ -61,7 +61,7 @@ int gemferror(FILE *stream) {
     else if(stream == stdin) 
         return 0;
     else {
-        assert(0 && "ferror is not supported.");
+        assert_fail() << "ferror is not supported.";
         return 1;
     }
 }
@@ -71,7 +71,7 @@ int gemfflush(FILE *stream) {
     if(stream == stdout || stream == stderr) 
         return fflush(stream);
     else {
-        assert(0 && "fflush is not supported.");
+        assert_fail() << "fflush is not supported.";
         return EOF;
     }
 }
@@ -79,12 +79,12 @@ int gemfflush(FILE *stream) {
 /* READING FUNCTIONS */
 
 int gemfscanf(FILE *stream, const char *format, ...) {
-        assert(0 && "fscanf is not supported.");
+        assert_fail() << "fscanf is not supported.";
         return 0;
 }
 
 int gemvfscanf(FILE *stream, const char *format, va_list ap) {
-        assert(0 && "vfscanf is not supported.");
+        assert_fail() << "vfscanf is not supported.";
         return 0;
 }
 
@@ -111,7 +111,7 @@ size_t gemfread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
             return bytes;
         }
         else {
-            assert(0 && "fread is not supported.");
+            assert_fail() << "fread is not supported.";
             return 0; 
         }
 }
@@ -124,7 +124,7 @@ int gemfgetc(FILE *stream) {
 }
 
 char *gemfgets(char *s, int size, FILE *stream) {
-    assert(0 && "fgets is not supported.");
+    assert_fail() << "fgets is not supported.";
     return NULL; 
 }
 
@@ -138,7 +138,7 @@ int getchar(void) {
 }
 
 char *gets(char *s) {
-    assert(0 && "gets is not supported.");
+    assert_fail() << "gets is not supported.";
     return NULL; 
 }
 
@@ -148,7 +148,7 @@ int ungetc(int c, FILE *stream) {
         return c;
     }
     else {
-        assert(0 && "ungetc is not supported.");
+        assert_fail() << "ungetc is not supported.";
         return EOF; 
     }
 }

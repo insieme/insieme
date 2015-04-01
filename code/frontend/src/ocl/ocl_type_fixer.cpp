@@ -130,7 +130,7 @@ void TypeFixer::removeClVars() {
 			// drop ocl functions
 //if(call->getFunctionExpr()->toString().find("cl") == 0u) {
 //std::cout << dumpPretty(call) << "dropping " << utils::whatIs(call->getFunctionExpr()) << std::endl;
-//assert(false);
+//assert_fail();
 //	}
 			if(gen.isRefAssign(call->getFunctionExpr())) {
 				TypePtr lhsTy = call->getArgument(0)->getType();

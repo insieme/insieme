@@ -276,10 +276,10 @@ Converter::Converter(core::NodeManager& mgr, const TranslationUnit& tu, const Co
 }
 
 tu::IRTranslationUnit Converter::convert() {
-	assert(!used && "This one must only be used once!");
+	assert_false(used) << "This one must only be used once!";
 	used = true;
 
-	assert(getCompiler().getASTContext().getTranslationUnitDecl());
+	assert_true(getCompiler().getASTContext().getTranslationUnitDecl());
 
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
@@ -467,7 +467,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						assert(anno);
+						assert_true(anno);
 						anno->replaceUsage (wrap, currParam);
 					}
 				};
@@ -496,7 +496,7 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				wrapRefMap.erase(currParam);
 			}
 			else{
-				// other case materialize a var, declare it at the begining of the body
+				// other case materialize a var, declare it at the beginning of the body
 				decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
 			}
 		}
@@ -553,7 +553,7 @@ void Converter::trackSourceLocation (const clang::Stmt* stmt){
 //////////////////////////////////////////////////////////////////
 ///
 void Converter::untrackSourceLocation (){
-	assert(!lastTrackableLocation.empty());
+	assert_false(lastTrackableLocation.empty());
 	lastTrackableLocation.pop();
 }
 
@@ -626,7 +626,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// Conversion of the variable type
 		QualType&& varTy = valDecl->getType();
 		core::TypePtr&& irType = convertType( varTy );
-		assert(irType && "type conversion for variable failed");
+		assert_true(irType) << "type conversion for variable failed";
 
 		VLOG(2)	<< "clang type: " << varTy.getAsString();
 		VLOG(2)	<< "ir type:    " << irType;
@@ -839,7 +839,7 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 
 
 	// LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
-	// assert(false && "Default initialization type not defined");
+	// assert_fail() << "Default initialization type not defined";
 }
 
 //////////////////////////////////////////////////////////////////
@@ -866,7 +866,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// static needs to be initialized during first execution of function.
 			// but the var remains in the global storage (is an assigment instead of decl)
 			//
-			assert(var);
+			assert_true(var);
 			assert(var.isa<core::VariablePtr>());
 			assert(var->getType().isa<core::RefTypePtr>() && " all static variables need to be ref<'a>");
 
@@ -914,7 +914,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			}
 			else{
 				// build some default initializationA
-				assert(builder.getZero(varType) && "type needs to have a zero initializaiton" );
+				assert_true(builder.getZero(varType)) << "type needs to have a zero initializaiton";
 				initIr = builder.getZero(varType);
 				//this one is always const initialization
 				initIr =  builder.initStaticVariable(lit, initIr, true);
@@ -939,12 +939,12 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 				isConstant = true;
 				initExprType = var->getType();
 			}
-			assert( initExprType );
+			assert_true(initExprType);
 
 
 			// initialization value
 			core::ExpressionPtr initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), initExprType, false);
-			assert(initExpr && "not correct initialization of the variable");
+			assert_true(initExpr) << "not correct initialization of the variable";
 
 			// some Cpp cases do not create new var
 			if (!core::analysis::isAnyCppRef(var->getType()) &&
@@ -962,7 +962,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 		}
 	} else {
 		// this variable is extern
-		assert(varDecl->isExternC() && "Variable declaration is not extern");
+		assert_true(varDecl->isExternC()) << "Variable declaration is not extern";
 	}
 
 	VLOG(2)	<< "End of converting VarDecl";
@@ -1218,7 +1218,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 		// any other case (unions may not find a list of expressions, there is an spetial encoding)
 		std::cerr << "targetType to init: " << targetType << std::endl;
 		std::cerr << "init expression: "    << init << " : " << init->getType() << std::endl;
-		assert(false && "fallthrow while initializing generic typed global");
+		assert_fail() << "fallthrow while initializing generic typed global";
 	}
 
 	// the initialization is not a list anymore, this a base case
@@ -1238,7 +1238,7 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 			for (unsigned i = 0; i < unionTy->getEntries().size(); ++i)
 				if (*unionTy->getEntries()[i]->getName() == *name)
 					entityType = unionTy->getEntries()[0]->getType();
-			assert(entityType && "the targetType of the entity could not be found");
+			assert_true(entityType) << "the targetType of the entity could not be found";
 			return  (retIr = builder.unionExpr(unionTy, name,getInitExpr(entityType, init.as<core::CallExprPtr>()[0])));
 		}
 		// it might be that is an empy initialization, retrieve the targetType to avoid nested variable creation
@@ -1370,20 +1370,20 @@ core::ExpressionPtr Converter::getInitExpr (const core::TypePtr& targetType, con
 	std::cerr << "\t          target type: " << targetType << std::endl;
 	std::cerr << "\t resolved target type: " << elementType << std::endl;
 
-	assert(false && " fallthrow");
+	assert_fail() << " fallthrow";
 	return init;
 }
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr Converter::convertExpr(const clang::Expr* expr) const {
-       assert(expr && "Calling convertExpr with a NULL pointer");
+       assert_true(expr) << "Calling convertExpr with a NULL pointer";
        return exprConvPtr->Visit(const_cast<Expr*>(expr));
 }
 
 //////////////////////////////////////////////////////////////////
 ///
 core::StatementPtr Converter::convertStmt(const clang::Stmt* stmt) const {
-       assert(stmt && "Calling convertStmt with a NULL pointer");
+       assert_true(stmt) << "Calling convertStmt with a NULL pointer";
        return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
 
 }
@@ -1412,7 +1412,7 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 		}
 	} else {
 		// it is not a member function => just take the plain function
-		assert(funcType->isPlain());
+		assert_true(funcType->isPlain());
 		return funcType;
 	}
 	untrackSourceLocation();
@@ -1430,7 +1430,7 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 			returnType = thisType;
 			break;
 		default:
-			assert(false && "invalid state!");
+			assert_fail() << "invalid state!";
 			break;
 	}
 
@@ -1562,7 +1562,7 @@ namespace {
 							expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
 						} else if(core::analysis::isConstCppRef(toInit.getType().as<core::RefTypePtr>()->getElementType())){
 							expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), expr);
-						} else { assert(false); }
+						} else { assert_fail(); }
 					}
 					else{
 						// magic tryDeref if not a pointer.... because!
@@ -1612,11 +1612,11 @@ namespace {
 					result = builder.assign( toInit, expr);
 				}
 			} else if ((*it)->isInClassMemberInitializer ()){
-				assert(false && "in class member not implemented");
+				assert_not_implemented();
 			} else if ((*it)->isDelegatingInitializer ()){
-				assert(false && "delegating init not implemented");
+				assert_not_implemented();
 			} else  if ((*it)->isPackExpansion () ){
-				assert(false && "pack expansion not implemented");
+				assert_not_implemented();
 			}
 
 			VLOG(2) << result;
@@ -1734,7 +1734,7 @@ void Converter::convertFunctionDeclImpl(const clang::FunctionDecl* funcDecl) {
 	// -- conduct the conversion of the lambda --
 	core::LambdaExprPtr lambda;
 	{
-		assert(funcDecl->hasBody() && "At this point function should have a body!");
+		assert_true(funcDecl->hasBody()) << "At this point function should have a body!";
 
 		// init parameter set
 		vector<core::VariablePtr> params;
@@ -1879,7 +1879,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 			result = lambdaExprCache[funcDecl];
 		}
     }
-    assert(result);
+    assert_true(result);
 
     core::ExpressionPtr expr = result.as<core::ExpressionPtr>();
 

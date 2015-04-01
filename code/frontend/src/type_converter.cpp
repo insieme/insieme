@@ -94,7 +94,7 @@ namespace {
 
 			if (llvm::isa<clang::TypedefDecl> (*i)) {
 				std::cerr << "this is a typedef aliased type" << std::endl;
-				assert(false);
+				assert_fail();
 			}
 
 			if (i->isCompleteDefinition()){

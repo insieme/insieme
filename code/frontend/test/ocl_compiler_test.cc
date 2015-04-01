@@ -80,7 +80,7 @@ public:
     	// check if return type is an ocl vector, and if yes, if it is returned by value
     	if(core::RefTypePtr retTy = dynamic_pointer_cast<const core::RefType>(funTy.getReturnType())) {
     		if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(retTy.getElementType()))
-    			assert(false && "returns vector");
+    			assert_fail() << "returns vector";
     	}
 
 
@@ -128,7 +128,7 @@ public:
                 }
             }
        } else {
-            assert(funcType && "Function has unexpected type");
+            assert_true(funcType) << "Function has unexpected type";
         }
     }
 

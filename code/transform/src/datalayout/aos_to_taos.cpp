@@ -149,7 +149,7 @@ void AosToTaos::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-//assert(false);
+//assert_fail();
 		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
 
 		doReplacements(replacements, aosToTaosAllocTypeUpdate);
@@ -179,11 +179,11 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
-	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
+	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and its initialization
 	StatementList allDecls;
 
 	allDecls.push_back(decl);
@@ -339,7 +339,7 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 //	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
 //		varsToPropagate.insert(oldToNew.first);
 //		std::cout << "ölkjasfdökljsfda " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
-////assert(false);
+////assert_fail();
 //	}
 
 	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
@@ -448,7 +448,7 @@ std::cout << "\n----------------------------------------------------------------
 
 //	doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
-//	assert(false);
+//	assert_fail();
 #endif
 }
 

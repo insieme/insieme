@@ -345,7 +345,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 			ownerObj =  builder.refVar (ownerObj);
 		}
 
-		// incorporate this to the begining of the args list
+		// incorporate this to the beginning of the args list
 		args.insert (args.begin(), ownerObj);
 	}
 	else if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {

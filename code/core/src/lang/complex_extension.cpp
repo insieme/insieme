@@ -67,7 +67,7 @@ namespace lang {
                 return getComplexMember(expr, getComplexReal());
             else
                 return getComplexMember(expr, getRefComplexReal());
-            assert(false && "this is no ref or struct type and so it cannot be a complex type.");
+            assert_fail() << "this is no ref or struct type and so it cannot be a complex type.";
 		}
 
         /**
@@ -80,7 +80,7 @@ namespace lang {
                 return getComplexMember(expr, getComplexImg());
             else
                 return getComplexMember(expr, getRefComplexImg());
-            assert(false && "this is no ref or struct type and so it cannot be a complex type.");
+            assert_fail() << "this is no ref or struct type and so it cannot be a complex type.";
 		}
 
         /**
@@ -89,7 +89,7 @@ namespace lang {
 		 * @return boolean expression pointer
 		 */
         ExpressionPtr ComplexExtension::castComplexToBool(const ExpressionPtr& expr) const {
-            assert(expr);
+            assert_true(expr);
             IRBuilder builder(expr->getNodeManager());
             ExpressionPtr tmp = expr;
             if(expr->getType().isa<RefTypePtr>()) {
@@ -106,8 +106,8 @@ namespace lang {
 		 * @return complex number
 		 */
         ExpressionPtr ComplexExtension::castComplexToComplex(const ExpressionPtr& expr, const TypePtr& targetTy) const {
-            assert(expr);
-            assert(targetTy);
+            assert_true(expr);
+            assert_true(targetTy);
             IRBuilder builder(expr->getNodeManager());
             TypePtr target = targetTy.as<insieme::core::StructTypePtr>()->getEntries()[0]->getType();
             return builder.callExpr(getComplexToComplex(), expr, builder.getTypeLiteral(target));
@@ -150,7 +150,7 @@ namespace lang {
         * @return the inner type of the complex number
         */
         insieme::core::TypePtr ComplexExtension::getComplexMemberType(const insieme::core::ExpressionPtr& expr) const {
-            assert(isComplexType(expr) && "This is not a complex type");
+            assert_true(isComplexType(expr)) << "This is not a complex type";
             if(expr->getType().isa<insieme::core::StructTypePtr>())
                 return expr->getType().as<insieme::core::StructTypePtr>()->getEntries()[0]->getType();
             return expr->getType().as<insieme::core::RefTypePtr>().getElementType().as<insieme::core::StructTypePtr>()->getEntries()[0]->getType();

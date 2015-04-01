@@ -379,9 +379,9 @@ namespace integration {
 	namespace {
 
 		bool isParentOf(const fs::path& parent, const fs::path& child) {
-			assert(parent.is_absolute());
+			assert_true(parent.is_absolute());
 			//assertion fails if child is empty
-			//assert(child.is_absolute());
+			//assert_true(child.is_absolute());
 
 			// if it is the same => done
 			if (parent == child) return true;

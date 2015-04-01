@@ -44,6 +44,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace driver {
@@ -101,7 +102,8 @@ namespace measure {
 		 * Creates a new prefix based on the given coefficient.
 		 */
 		Prefix(int64_t coefficient = 1) : coefficient(coefficient) {
-			assert(coefficient != 0 && coefficient != -1 && "Coefficient invariant violated!");
+			assert_ne(coefficient, 0) << "Coefficient invariant violated!";
+			assert_ne(coefficient, -1) << "Coefficient invariant violated!";
 		}
 
 		/**
