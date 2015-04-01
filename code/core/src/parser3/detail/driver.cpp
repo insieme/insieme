@@ -81,6 +81,7 @@ namespace detail{
     inspire_driver::inspire_driver (const std::string &f, NodeManager& nm)
       : mgr(nm), builder(mgr), file("global scope"), str(f), result(nullptr), glob_loc(&file)
     {
+        std::cout << "parse: " << str << std::endl;
     }
 
     inspire_driver::~inspire_driver ()
@@ -118,6 +119,7 @@ namespace detail{
             print_errors();
             return nullptr;
         }
+        print_errors();
         return result.as<TypePtr>();
     }
 
@@ -183,12 +185,10 @@ namespace detail{
 
         if(!x) {
             try{ 
-            std::cout << "                                                  leaving" << std::endl;
                x = builder.getLangBasic().getBuiltIn(name);
-            std::cout << "                                                  come back" << x << std::endl;
             }catch(...)
             {
-                std::cout <<" exception thrown " << std::endl;
+               // pass, nothing to do really
             }
         }
 
@@ -250,9 +250,9 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right){
         // Interpret operator
-        std::cout << op << std::endl;
-        std::cout << " " << left << " : " << left->getType() << std::endl;
-        std::cout << " " << right << " : " << right->getType() << std::endl;
+      //  std::cout << op << std::endl;
+      //  std::cout << " " << left << " : " << left->getType() << std::endl;
+      //  std::cout << " " << right << " : " << right->getType() << std::endl;
 
         // right side must be always a value
         auto b = getOperand(right);
@@ -331,6 +331,18 @@ namespace detail{
             
             if (iparamlist.size() != 1) error(l, "wrong real size");
         }
+        for (const auto& p : params){
+            if(!p){
+                std::cout <<  "wrong parameter in paramenter list" << std::endl;
+                abort();
+            }
+        }
+        for (const auto& p : iparamlist){
+            if(!p){
+                std::cout <<  "wrong parameter in paramenter list" << std::endl;
+                abort();
+            }
+        }
 
 		return builder.genericType(name, params, iparamlist);
 
@@ -389,6 +401,7 @@ namespace detail{
             return ExpressionPtr();
         }
 
+
         // build bind expression
         return builder.bindExpr(params, call);
     }
@@ -396,7 +409,6 @@ namespace detail{
     ExpressionPtr inspire_driver::genCall(const location& l, const ExpressionPtr& callable, ExpressionList args){
 
         ExpressionPtr func = callable;
-        //std::cout << "call @" << l << std::endl;
 
         // if the call is to a not yet defined symbol, we might want to change the type (now can be completed)
         if (func.isa<LiteralPtr>()){
@@ -452,6 +464,10 @@ namespace detail{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     void inspire_driver::add_symb(const location& l, const std::string& name, NodePtr ptr){
+
+        // ignore wildcard for unused variables
+        if (name == "_") return;
+
         if (!scopes.add_symb(name, ptr)) {
             error(l, format("symbol %s redefined", name));
         }
@@ -468,10 +484,33 @@ namespace detail{
     bool inspire_driver::close_unfinish_symbol(const location& l, const NodePtr& node){
         if (!node) return false;
         auto name = scopes.get_unfinish_symbol();
-
+        
         // this node may be modified by every unfinished node that it might have used
         recursive_symbols[name] = node;
+
         return true;
+    }
+
+    VariableIntTypeParamPtr inspire_driver::gen_type_param_var(const location& l, const std::string& name){
+        auto x = scopes.find(name);
+        if(!x) {
+            if(name.size() != 2) error(l, format("variable %s needs to have lenght 1", name));
+            x = builder.variableIntTypeParam(name[1]);
+            add_symb(l, name, x);
+        }
+        if(!x.isa<VariableIntTypeParamPtr>()) {
+            error(l, format("variable %s is not an int type param var", name));
+        }
+        return x.as<VariableIntTypeParamPtr>();
+    }
+
+    VariableIntTypeParamPtr inspire_driver::find_type_param_var(const location& l, const std::string& name){
+        auto x = scopes.find(name);
+        if (!x) error(l, format("variable %s is not defined in context", name));
+        if (!x.isa<VariableIntTypeParamPtr>()) {
+                error(l, format("variable %s is not a type param variable", name));
+        }
+        return x.as<VariableIntTypeParamPtr>();
     }
 
 namespace {
@@ -496,11 +535,13 @@ namespace {
         // amend all nodes that might be recursive
         std::map<std::string, TypePtr> rec_types;
         std::map<std::string, LambdaExprPtr> rec_funcs;
+        std::map<std::string, BindExprPtr> rec_closures;
         for (const auto& rec : recursive_symbols){
             if (rec.second.isa<TypePtr>())            rec_types[rec.first] = rec.second.as<TypePtr>();
             else if (rec.second.isa<LambdaExprPtr>()) rec_funcs[rec.first] = rec.second.as<LambdaExprPtr>();
+            else if (rec.second.isa<BindExprPtr>()) rec_closures[rec.first] = rec.second.as<BindExprPtr>();
             else {
-                error(l, format("the recursive symbol %s is neither a type or function", rec.first));
+                error(l, format("the recursive symbol [%s] is neither a type or function", rec.first));
                 return false;
             }
         }
@@ -558,6 +599,13 @@ namespace {
                 VariablePtr var = replacements[flit].as<VariablePtr>();
 
                 add_symb(l, rec.first, builder.lambdaExpr(var, lambdaDef));
+            }
+        }
+
+        // And closures
+        {
+            for (auto &c : rec_closures){
+                add_symb(l, c.first, c.second);
             }
         }
 

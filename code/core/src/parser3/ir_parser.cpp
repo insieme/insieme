@@ -54,7 +54,7 @@ using namespace detail;
 namespace {
 
     void checkErrors(inspire_driver& driver, bool onFailThrow){
-        if (driver.result) {
+        if (!driver.result) {
             if (onFailThrow ){
                 std::stringstream ss;
                 driver.print_errors(ss);

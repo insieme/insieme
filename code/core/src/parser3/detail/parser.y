@@ -204,11 +204,10 @@
 %type <ExpressionList> expression_list
 
 %type <std::pair<TypeList, IntParamList> > type_param_list
-%type <TypePtr> type
+%type <TypePtr> type tuple_or_function
 %type <TypeList> type_list parent_list
 %type <bool> func_tok
 
-%type <NamedTypePtr> member_field
 %type <NamedTypeList> member_list tag_type
 
 %type <NamedValuePtr> assign_field 
@@ -295,21 +294,37 @@ variable_list : var_decl {  $$.push_back($1); }
 /* ~~~~~~~~~~~~~~~~~~~  TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 type_param_list : "#inf"     { $$.second.insert($$.second.begin(), driver.builder.infiniteIntTypeParam()); }
-                | "paramvar" { $$.second.insert($$.second.begin(), driver.builder.variableIntTypeParam($1[0])); }
+                | "paramvar" { $$.second.insert($$.second.begin(), driver.gen_type_param_var(@1,$1)); }
                 | "int"      { $$.second.insert($$.second.begin(), driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($1))); }
-                | type       { $$.first.push_back($1); }
+                | type       { $$.first.insert($$.first.begin(), $1); }
 
-                | "#inf" "," type_param_list {$3.second.insert($3.second.begin(), driver.builder.infiniteIntTypeParam()); std::swap($$, $3); }
-                | "paramvar" "," type_param_list {$3.second.insert($3.second.begin(), driver.builder.infiniteIntTypeParam()); std::swap($$, $3); }
-                | "int" "," type_param_list {$3.second.insert($3.second.begin(), driver.builder.variableIntTypeParam($1[0])); std::swap($$, $3); }
-                | type "," type_param_list {$3.first.insert($3.first.begin(), $1); std::swap($$, $3); }
+                | "#inf" "," type_param_list {
+                        $3.second.insert($3.second.begin(), driver.builder.infiniteIntTypeParam()); 
+                        std::swap($$.first, $3.first);
+                        std::swap($$.second, $3.second);
+                    }
+                | "paramvar" "," type_param_list {
+                        $3.second.insert($3.second.begin(), driver.gen_type_param_var(@1,$1)); 
+                        std::swap($$.first, $3.first);
+                        std::swap($$.second, $3.second);
+                    }
+                | "int" "," type_param_list {
+                        $3.second.insert($3.second.begin(), driver.builder.variableIntTypeParam($1[1])); 
+                        std::swap($$.first, $3.first);
+                        std::swap($$.second, $3.second);
+                    }
+                | type "," type_param_list {
+                        $3.first.insert($3.first.begin(), $1); 
+                        std::swap($$.first, $3.first);
+                        std::swap($$.second, $3.second);
+                    }
                 ;
 
-type_list : type { $$.push_back($1); }
-          | type "," type_list { $3.push_back($1); std::swap($$, $3); }
+type_list : type               { $$.insert($$.begin(), $1); }
+          | type "," type_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
 
-parent_list : type { $$.push_back($1); }
-            | type ":" parent_list { $3.push_back($1); std::swap($$, $3); }
+parent_list : type                 { $$.insert($$.begin(), $1); }
+            | type ":" parent_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
             ;
 
 /* is a closure? */
@@ -317,25 +332,32 @@ func_tok : "->" { $$ = false; }
          | "=>" { $$ = true; }
          ;
 
-member_field : type "identifier" { $$ = driver.builder.namedType($2, $1); }
-             ;
-
-member_list :  /* empty */  { }
-            | member_field { $$.push_back($1); }
-            | member_field ";" member_list { $3.insert($3.begin(),$1); std::swap($$, $3); }
+member_list : "}" {}
+            | type "identifier" "}" { $$.insert($$.begin(), driver.builder.namedType($2, $1)); }
+            | type "identifier" ";" member_list { $4.insert($4.begin(), driver.builder.namedType($2, $1)); std::swap($$, $4); }
             ;
 
 //op_semi_colon : /* empty */ | ";"  // this beauty costs one conflict in grammar
 
-tag_type : "{" member_list "}"  { std::swap($$, $2); }
+tag_type : "{" member_list   { std::swap($$, $2); }
          ;
 
+
+tuple_or_function : "(" type_list ")"  { if($2.size() <2) error(@2, "tuple type must have 2 fields or more, sorry");
+                                         $$ = driver.builder.tupleType($2); }
+                  | "(" type_list ")" func_tok type {
+                                          $$ = driver.genFuncType(@$, $2, $5, $4); 
+                                          INSPIRE_GUARD(@$, $$);
+                             }
+                  | "("")" func_tok type { $$ = driver.genFuncType(@$, TypeList(), $4, $3); }
+
+
 type : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType(@$, $1, $3.first, $3.second);  }
-             | "identifier" "<" ">" {                 $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList());  }
+             | "identifier" "<" ">" {         $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList());  }
              | "identifier" {                         
-                                                      $$ = driver.findType(@1, $1);
-                                                      if(!$$) $$ = $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList()); 
-                                                      if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
+                                              $$ = driver.findType(@1, $1);
+                                              if(!$$) $$ = $$ = driver.genGenericType(@$, $1, TypeList(), IntParamList()); 
+                                              if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                             }
                 /* func / closure type */
              | "struct" "identifier" tag_type 
@@ -346,14 +368,14 @@ type : "identifier" "<" type_param_list ">" { $$ = driver.genGenericType(@$, $1,
                         { $$ = driver.builder.structType(driver.builder.stringValue(""), $2); }
              | "union" tag_type   { $$ = driver.builder.unionType($2); }
              | "type_var" { $$ = driver.builder.typeVariable($1);  }
-             | "(" type_list ")" func_tok type { $$ = driver.genFuncType(@$, $2, $5, $4); };
+             | tuple_or_function { $$ = $1; }
              ;
 
 /* ~~~~~~~~~~~~~~~~~~~  STATEMENTS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 statement : ";" { $$ = driver.builder.getNoOp(); } 
           | expression ";" { $$ = $1; }
-          | "let" let_decl {  $$ =  driver.builder.getNoOp(); }
+          | "let" let_decl { if(!driver.all_symb_defined(@$)) YYABORT; $$ =  driver.builder.getNoOp(); }
                 /* compound statement */ 
           | "{" "}" { $$ = driver.builder.compoundStmt(StatementList()); }
           | "{"  { driver.open_scope(@$, "compound"); } compound_stmt "}" { 
@@ -386,6 +408,7 @@ statement : ";" { $$ = driver.builder.getNoOp(); }
 			    $$ = driver.builder.tryCatchStmt($2.as<CompoundStmtPtr>(), $4);
             }   
           | "return" expression ";" { $$ = driver.builder.returnStmt($2); }
+          | "return" ";" { $$ = driver.builder.returnStmt(driver.builder.getLangBasic().getUnitConstant()); }
           ;
 
 catch_clause_list : 
@@ -470,7 +493,7 @@ expression_list : expression { $$.push_back($1); }
 markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
             /* unary */
            | "*" expression { $$ = driver.builder.deref($2); } %prec UDEREF
-           | "-" expression {} %prec UMINUS
+           | "-" expression { $$ = driver.builder.minus($2); } %prec UMINUS
            | expression "=" expression {  $$ = driver.genBinaryExpression(@$, "=", $1, $3); }
             /* bitwise / logic / arithmetic / geometric */
            | expression "&" expression { $$ = driver.genBinaryExpression(@$, "&", $1, $3);  }
@@ -489,13 +512,20 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | expression "<=" expression { $$ = driver.genBinaryExpression(@$, "<=", $1, $3);  }
            | expression ">=" expression { $$ = driver.genBinaryExpression(@$, ">=", $1, $3);  }
            | expression "[" expression "]" { $$ = driver.genBinaryExpression(@$, "[", $1, $3); }
+            /* ternary operator */
+           | expression "?" expression ":" expression { 
+						$$ =  driver.builder.ite($1, driver.builder.wrapLazy($3), driver.builder.wrapLazy($5));
+                    }
             /* call expr */
            | expression "(" ")"                 { INSPIRE_TYPE(@1, $1,FunctionTypePtr, "non callable symbol"); 
                                                   $$ = driver.genCall(@$, $1, ExpressionList());  }
            | expression "(" expression_list ")" { INSPIRE_TYPE(@1, $1,FunctionTypePtr, "non callable symbol"); 
                                                   $$ = driver.genCall(@$, $1, $3); }
-            /* parenthesis */
-           | "(" expression ")"  { $$ = $2; }
+            /* parenthesis : tuple or expression */
+           | "(" expression_list ")"  {  
+                                                  if ($2.size() == 1) $$ = $2[0];
+                                                  else $$ = driver.builder.tupleExpr($2);
+             }
             /* lambda or closure expression: callable expression */
            |  "lambda" lambda_expression  { $$ = $2; }
             /* cast */ 
@@ -519,10 +549,11 @@ markable_expression : "identifier" { $$ = driver.findSymbol(@$, $1); }
            | "stringlit"  { $$ = driver.builder.stringLit($1); }
             /* constructed literals */
            | "type(" type ")"         { $$ = driver.builder.getTypeLiteral($2); }
-           | "param(" "paramvar" ")"  { $$ = driver.builder.getIntTypeParamLiteral(driver.builder.variableIntTypeParam($2[0])); }
+           | "param(" "paramvar" ")"  { $$ = driver.builder.getIntTypeParamLiteral(driver.find_type_param_var(@2, $2)); }
            | "param(" "int" ")"       { $$ = driver.builder.getIntTypeParamLiteral(driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($2))); }
            | "lit(" "stringlit" ")" { $$ = driver.builder.getIdentifierLiteral($2); }
            | "lit(" "stringlit" ":" type ")" { $$ = driver.builder.literal($4, $2); }
+           | "lit(" type ")" { $$ = driver.builder.getTypeLiteral($2); }
             /* struct / union expressions */
            | "struct" type "{" assign_rules { $$ = driver.genTagExpression(@$, $2, $4); }
            | "struct" "{" assign_rules      { $$ = driver.genTagExpression(@$, $3); }
@@ -551,7 +582,7 @@ lambda_expression_aux : "(" ")" "=>" expression {
                             $$ = driver.genClosure(@1, VariableList(), $5);
                         } 
                       | "(" variable_list ")" "=>" expression {    
-                            $$ = driver.genClosure(@1, $2, driver.builder.compoundStmt());
+                            $$ = driver.genClosure(@1, $2, $5);
                         } 
                       | "(" variable_list ")" "=>" "{" "}" {    
                             $$ = driver.genClosure(@1, $2, driver.builder.compoundStmt());
@@ -588,18 +619,19 @@ lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_a
 %right "=>";
 %left "spawn" "sync" "syncAll";
 %right "->";
+%right "?";
 %right ":";
 %right "[";
 %right "catch";
 %left "=";
-%left "(";
 %left ".cast(";
 %left ".as(";
+%left "==" "!=" "<" "<=" ">" ">=";
 %left "+" "-";
 %left "*" "/";
-%left "==" "!=" "<" "<=" ">" ">=";
 %left "&&" "||";
 %left "&" "|" "^";
+%right "(";
 %nonassoc UMINUS;
 %nonassoc UDEREF;
 %nonassoc BOOL_OP;

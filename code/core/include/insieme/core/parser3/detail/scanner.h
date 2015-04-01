@@ -39,7 +39,6 @@ namespace detail{
       inspire_parser::symbol_type inspire_scanner::yylex ( inspire_driver& driver, inspire_parser::symbol_type** start_token)
         inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_parser::symbol_type** start_token);
 
-
         int yywrap(){ return 1; }
 
         virtual ~inspire_scanner(){ }

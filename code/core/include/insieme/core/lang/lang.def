@@ -260,9 +260,9 @@ OPERATION(Real, Div,  "real_div", "(real<#a>,real<#a>) -> real<#a>")
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
 DERIVED(GenPreInc, 		"gen_pre_inc",		"lambda (ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
-DERIVED(GenPostInc, 	"gen_post_inc",		"lambda (ref<'a> v)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+DERIVED(GenPostInc, 	"gen_post_inc",		"lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
 DERIVED(GenPreDec, 		"gen_pre_dec",		"lambda (ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
-DERIVED(GenPostDec, 	"gen_post_dec",		"lambda (ref<'a> v)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+DERIVED(GenPostDec, 	"gen_post_dec",		"lambda (ref<'a> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 GROUP(IncrementOp, GenPreInc, GenPostInc, GenPreDec, GenPostDec)
 // SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
@@ -407,11 +407,11 @@ LITERAL(SinkToRef,		"sink_to_ref",			"(sink<'a>) -> ref<'a>")
 LITERAL(RefToInt,		"ref_to_int",			"(ref<'a>) -> uint<8>")
 LITERAL(IntToRef,		"int_to_ref",			"(uint<8>, type<'a>) -> ref<'a>")
 
-DERIVED(RefVar,  			"ref_var",    			"lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_stack); r = v; return r; }")
-DERIVED(RefNew,  			"ref_new",    			"lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_heap ); r = v; return r; }")
-DERIVED(RefLoc,  			"ref_loc",    			"lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_local); r = v; return r; }")
-DERIVED(RefIsNull,   		"ref_is_null",			"lambda (ref<'a> r) -> bool { return ref_eq(r, ref_null); }")
-DERIVED(FuncIsNull,   		"func_is_null",			"lambda ('a f) -> bool { return f == func_null(lit('a)); }")
+DERIVED(RefVar,  			"ref_var",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_stack); r = v; return r; }")
+DERIVED(RefNew,  			"ref_new",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_heap ); r = v; return r; }")
+DERIVED(RefLoc,  			"ref_loc",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_local); r = v; return r; }")
+DERIVED(RefIsNull,   		"ref_is_null",	    "lambda (ref<'a> r) -> bool { return ref_eq(r, ref_null); }")
+DERIVED(FuncIsNull,   		"func_is_null",	    "lambda ('a f) -> bool { return f == func_null(lit('a)); }")
 
 GROUP(AllocOp, RefVar, RefNew, RefLoc)
 
@@ -438,8 +438,8 @@ GROUP(RefCompOp, RefEq, RefNe, RefLt, RefGt, RefLe, RefGe)
 // Type Operations ----------------------------------------------------------------------------------------------------
 
 DERIVED(TypeOf,			"type_of",				"lambda ('a x)->type<'a> { return lit('a); }")
-DERIVED(TypeCast,		"type_cast",			"lambda ('a x,type<'b> t)->'b { return ('b)x; }")
-LITERAL(TypeIsSubtype,	"type_is_subtype",		"lambda (type<'a>, type<'b>)->bool")
+DERIVED(TypeCast,		"type_cast",			"lambda ('a x,type<'b> t)->'b { return CAST('b)x; }")
+LITERAL(TypeIsSubtype,	"type_is_subtype",		"(type<'a>, type<'b>)->bool")
 
 OPERATION(Type, Eq, 	"type_eq", "(type<'a>,type<'a>) -> bool")
 
@@ -511,7 +511,7 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 GROUP(GeneralOp, Undefined, Sizeof, IntTypeParamToInt)
 
-DERIVED(Id, 				"id", "('a x)->'a { return x; }")
+DERIVED(Id, 				"id", "lambda ('a x)->'a { return x; }")
 
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(Zero, 				"zero", 					"(type<'a>) -> 'a")
@@ -528,7 +528,7 @@ LITERAL(ArrayCreateND, 		"array_create_ND", 		"(type<'elem>, vector<uint<8>,#n>)
 LITERAL(ArraySubscript1D,      "array_subscript_1D",   "(array<'elem,1>, uint<8>) -> 'elem")
 LITERAL(ArraySubscriptND,      "array_subscript_ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "(ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a, dp_element(dp_root, i), lit('elem)); }")
+DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "lambda (ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a, dp_element(dp_root, i), lit('elem)); }")
 LITERAL(ArrayRefElemND, 	"array_ref_elem_ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
 LITERAL(ArrayRefProjection1D, "array_ref_projection_1D",
@@ -540,11 +540,11 @@ LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<ar
 DERIVED(ScalarToArray, 			"scalar_to_array", 		"lambda (ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u), lit(array<'a,1>)); }")
 
 // computation of an array-offset and some derivades
-LITERAL(ArrayView, 				"array_view",					"lambda (ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
+LITERAL(ArrayView, 				"array_view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
 DERIVED(ArrayViewPreInc, 		"array_view_pre_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,1); return *a; }")
-DERIVED(ArrayViewPostInc, 		"array_view_post_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array_view(*a,1); return res; }")
+DERIVED(ArrayViewPostInc, 		"array_view_post_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { decl auto res = *a; a = array_view(*a,1); return res; }")
 DERIVED(ArrayViewPreDec, 		"array_view_pre_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,-1); return *a; }")
-DERIVED(ArrayViewPostDec, 		"array_view_post_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array_view(*a,-1); return res; }")
+DERIVED(ArrayViewPostDec, 		"array_view_post_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { decl auto res = *a; a = array_view(*a,-1); return res; }")
 
 DERIVED(ArrayReduce, "array_reduce",
 		"lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
@@ -571,25 +571,27 @@ LITERAL(VectorInitPartial, 		"vector_init_partial",		"(list<'elem>, intTypeParam
 
 DERIVED(VectorRefElem, 			"vector_ref_elem", 			"lambda (ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref_narrow(v, dp_element(dp_root, i), lit('elem)); }")
 
-DERIVED(VectorPointwise,		"vector_pointwise",			
-		"lambda (('elem1, 'elem2) -> 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {"
-		"	return (vector<'elem1,#l> v1, vector<'elem2,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
-		"		decl ref<vector<'res,#l>> res = var(vector<'res,#l>);"
-		"		for(uint<8> i = 0u .. to_uint(param(#l))-1u ) { res[i] = op(v1[i], v2[i]); }"
-		"		return *res;"
-		"	}(v1, v2, op);"
-		"}")
+DERIVED(VectorPointwise,		"vector_pointwise",	 R"V0G0N(
+    lambda (('elem1, 'elem2) -> 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {  
+        return lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2) => lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {
+            decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));
+            for(uint<8> i = 0u .. to_uint(param(#l))-1u ) { res[i] = op(v1[i], v2[i]); }
+            return *res;
+        }(v1, v2, op);
+    } 
+)V0G0N")
 								
 //LITERAL(VectorPointwiseUnary, 	"vector_pointwise_unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 
-DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary",
-		"lambda (('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {"
-		"	return (vector<'elem,#l> v) => (vector<'elem,#l> v, ('elem) -> 'res op) -> vector<'res,#l> {"
-		"		decl ref<vector<'res,#l>> res = var(vector<'res,#l>);"
-		"		for(uint<8> i = 0u .. to_uint(param(#l))-1u ) { res[i] = op(v[i]); }"
-		"		return *res;"
-		"	}(v, op);"
-		"}")
+DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary", R"V0G0N(
+		lambda (('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {
+			return lambda (vector<'elem,#l> v) => lambda (vector<'elem,#l> v, ('elem) -> 'res op) -> vector<'res,#l> {
+				decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));
+				for(uint<8> i = 0u .. to_uint(param(#l))-1u ) { res[i] = op(v[i]); }
+				return *res;
+			}(v, op);
+		}
+)V0G0N")
 
 LITERAL(VectorReduction,      	"vector_reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        	"vector_permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
@@ -676,8 +678,8 @@ DERIVED(PFor, "pfor", "lambda (threadgroup g, int<#a> a, int<#a> b, int<#a> c, (
 LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
 
 // some derivades
-DERIVED(Barrier, "barrier", "lambda (threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
-DERIVED(PReduce, "preduce", "lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array_reduce(data, size, op, init) ); }")
+DERIVED(Barrier, "barrier", "lambda (threadgroup g)->unit { redistribute(g, 0, lambda (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
+DERIVED(PReduce, "preduce", "lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, lambda (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array_reduce(data, size, op, init) ); }")
 
 
 // Channels -----------------------------------------------------------------------------------------------------------
@@ -691,92 +693,102 @@ LITERAL(ChannelProbe, 		"channel_probe", 		"(channel<'a,#n>) -> bool")
 
 // Atomics ------------------------------------------------------------------------------------------------------------
 
-DERIVED(Atomic, "atomic",
-		"lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
-		"	decl auto res = *v; "
-		"	if (p(*v)) { "
-		"		v = f(*v); "
-		"	} "
-		"	return res; "
-		"} ")
+DERIVED(Atomic, "atomic", R"V0G0N(
+		lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { 
+			decl auto res = *v; 
+			if (p(*v)) { 
+				v = f(*v); 
+			} 
+			return res; 
+		} 
+)V0G0N")
 
 // arithmetic
 
-DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = ('a _)=>true; "
-		"	let apply = ('a x)=>x+exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add",R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			let test = lambda ('a _)=>true; 
+			let apply = lambda ('a x)=>x+exp; 
+			return atomic(v, test, apply); 
+		}  
+)V0G0N")
 
-DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_add(v, exp) + exp; "
-		"}  ")
+DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch",R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			return atomic_fetch_and_add(v, exp) + exp; 
+		}  
+)V0G0N")
 
-DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = ('a _)=>true; "
-		"	let apply = ('a x)=>x-exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub",R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			let test = lambda ('a _)=>true; 
+			let apply = lambda ('a x)=>x-exp; 
+			return atomic(v, test, apply); 
+		}  
+)V0G0N")
 
-DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_sub(v, exp) - exp; "
-		"}  ")
+DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch",R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			return atomic_fetch_and_sub(v, exp) - exp; 
+		}  
+)V0G0N")
 
 // bitwise
+DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			let test = lambda ('a _) => true; 
+			let apply = lambda ('a x) => x & exp; 
+			return atomic(v, test, apply); 
+		}  
+)V0G0N")
 
-DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = ('a _) => true; "
-		"	let apply = ('a x) => x & exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			return atomic_fetch_and_and(v, exp) & exp; 
+		}  
+)V0G0N")
 
-DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_and(v, exp) & exp; "
-		"}  ")
+DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			let test = lambda ('a _) => true; 
+			let apply = lambda ('a x) => x | exp; 
+			return atomic(v, test, apply); 
+		}  
+)V0G0N")
 
-DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = ('a _) => true; "
-		"	let apply = ('a x) => x | exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
+DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			return atomic_fetch_and_or(v, exp) | exp; 
+		}  
+)V0G0N")
 
-DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_or(v, exp) | exp; "
-		"}  ")
+DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			let test = lambda ('a _) => true; 
+			let apply = lambda ('a x) => x ^ exp; 
+			return atomic(v, test, apply); 
+		}  
+)V0G0N")
 
-DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	let test = ('a _) => true; "
-		"	let apply = ('a x) => x ^ exp; "
-		"	return atomic(v, test, apply); "
-		"}  ")
-
-DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch",
-		"lambda (ref<'a> v, 'a exp) -> 'a { "
-		"	return atomic_fetch_and_xor(v, exp) ^ exp; "
-		"}  ")
+DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", R"V0G0N(
+		lambda (ref<'a> v, 'a exp) -> 'a { 
+			return atomic_fetch_and_xor(v, exp) ^ exp; 
+		}  
+)V0G0N")
 
 // test and set
 
 DERIVED(AtomicValCompareAndSwap, "atomic_val_compare_and_swap",
 		"lambda (ref<'a> v, 'a _old, 'a _new) -> 'a { "
-		"	let test = ('a x) => x == _old; "
-		"	let apply = ('a _) => _new; "
+		"	let test = lambda ('a x) => x == _old; "
+		"	let apply = lambda ('a _) => _new; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
 DERIVED(AtomicBoolCompareAndSwap, "atomic_bool_compare_and_swap",
 		"lambda (ref<'a> v, 'a _old, 'a _new) -> bool { "
-		"	let test = ('a x) => x == _old; "
-		"	let apply = ('a _) => _new; "
+		"	let test = lambda ('a x) => x == _old; "
+		"	let apply = lambda ('a _) => _new; "
 		"	return atomic(v, test, apply) == _new; "
 		"}  ")
 

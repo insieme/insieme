@@ -17,7 +17,6 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseType();
         if (driver.result) {  
-            
             dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
@@ -28,7 +27,6 @@ namespace parser3{
     }
 
     TEST(IR_Parser3, Types) {
-
         EXPECT_TRUE(test_type("int<4>"));
         EXPECT_TRUE(test_type("someweirdname<>"));
         EXPECT_FALSE(test_type("vector<int<4>>"));
@@ -43,7 +41,7 @@ namespace parser3{
 
         EXPECT_TRUE(test_type("( int<4> , ref<int<4>>) -> int<4>"));
         EXPECT_TRUE(test_type("( int<4> , ref<int<4>>) => int<4>"));
-
+        EXPECT_TRUE(test_type("(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem"));
     }
 
     bool test_expression(const std::string& x){
@@ -51,7 +49,8 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseExpression();
         if (driver.result) {  
-         //   std::cout << driver.result << std::endl;
+            std::cout << driver.result << std::endl;
+            dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
@@ -60,6 +59,9 @@ namespace parser3{
     }
 
     TEST(IR_Parser3, Expressions) {
+
+        EXPECT_TRUE(test_expression("true?1:0"));
+        EXPECT_TRUE(test_expression("param(1)"));
 
         EXPECT_TRUE(test_expression("1"));
         EXPECT_TRUE(test_expression("1u"));

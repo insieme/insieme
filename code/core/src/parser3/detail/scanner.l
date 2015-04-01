@@ -156,7 +156,7 @@ paramvar #[a-zA-Z]
 
 {paramvar} {
     // skip # char
-  return inspire_parser::make_PARAMVAR(yytext+1, loc);
+  return inspire_parser::make_PARAMVAR(yytext, loc);
 }
 
 {stringlit}      {

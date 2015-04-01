@@ -104,6 +104,9 @@ public:
     ExpressionPtr genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields);
     ExpressionPtr genTagExpression(const location& l, const NamedValueList& fields);
 
+    VariableIntTypeParamPtr gen_type_param_var(const location& l, const std::string& name);
+    VariableIntTypeParamPtr find_type_param_var(const location& l, const std::string& name);
+
     void add_symb(const location& l, const std::string& name, NodePtr ptr);
     void add_symb(const std::string& name, NodePtr ptr);
 
