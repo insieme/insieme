@@ -4,7 +4,11 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
-#user configurable options
+# find HWloc package
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
+find_package(Hwloc)
+
+# user configurable options
 if (WIN32)
 	option (USE_PTHREADS "Use the Pthread Win32 Library (requires PTHREAD_ROOT environment var)" OFF)
 endif()
