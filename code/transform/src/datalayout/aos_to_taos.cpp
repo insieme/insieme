@@ -179,11 +179,11 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
-	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
+	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and its initialization
 	StatementList allDecls;
 
 	allDecls.push_back(decl);

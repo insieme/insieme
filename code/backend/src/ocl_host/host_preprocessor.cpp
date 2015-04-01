@@ -347,7 +347,7 @@ using insieme::core::pattern::anyList;
 				if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(element)) {
 					if(mgr.getLangBasic().isSizeof(call->getFunctionExpr())) {
 						TypePtr ty = call->getArgument(0)->getType().as<GenericTypePtr>()->getTypeParameter(0);
-						// replace the sizeof call with an estimation of it's result
+						// replace the sizeof call with an estimation of its result
 						return builder.intLit(analysis::features::getSizeInBytes(ty));
 					}
 				}

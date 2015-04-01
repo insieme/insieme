@@ -583,7 +583,7 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 	size_t winner = 0, looser = 0;
 	double min = DBL_MAX, max = 0;
 
-	// read measured values form database, save winner index and it's value
+	// read measured values form database, save winner index and its value
 	for(size_t i = 0; i < nClasses; ++i) {
 		values(i) = stmt->GetColumnDouble(index + i);
 		if(values(i) < min) {

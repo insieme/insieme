@@ -1376,7 +1376,7 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 ///      Expand check
 ///	Expand construction is a function call in which there are 3 parameters
 //		- variable of any type which belongs as member to a structure/array/tuple
-//		- datapath of this variable inside of the outhermost structure/array/tuple
+//		- datapath of this variable inside of the outermost structure/array/tuple
 //		- type of the expected object
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
@@ -1396,7 +1396,7 @@ OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
 	// Obtain argument type
 	ExpressionPtr srcArg = callExpr->getArgument(0);  // variable
 	ExpressionPtr dpArg  = callExpr->getArgument(1);  // datapath
-	ExpressionPtr trgArg = callExpr->getArgument(2);  // outher data structure type literal
+	ExpressionPtr trgArg = callExpr->getArgument(2);  // outer data structure type literal
 
 	// test whether source is a reference
 	auto srcType = analysis::getReferencedType(srcArg->getType());

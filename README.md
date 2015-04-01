@@ -30,6 +30,11 @@ Name 		| Version | What's for |
 [Kompex](http://sqlitewrapper.kompex-online.com/)             	  	| >= 1.7.9 | DBMS |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.8 | Scripting |
 
+### List of Optional Libraries and Software
+Name 		| Version | What's for |
+--------|---------|------------|
+[PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0  | Runtime system, for hardware information and event counters |
+
 ### Preparing the Environment
 You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
 ```
@@ -82,7 +87,7 @@ Unit tests can be executed with:
 make test ARGS=-j2 # Runs all unit tests using two parallel jobs
 ```
 
-or directly via ctest:
+or directly via CTest:
 ```
 ctest -j2 # Runs all unit tests using two parallel jobs
 ```

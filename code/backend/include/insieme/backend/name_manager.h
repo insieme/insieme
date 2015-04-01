@@ -134,7 +134,7 @@ namespace backend {
 			std::set<string> usedNames;
 
 			/**
-			 * A flag indicating whether this scope is extending it's parent scope or forming a new root-scope.
+			 * A flag indicating whether this scope is extending its parent scope or forming a new root-scope.
 			 */
 			bool extendsParentScope;
 
