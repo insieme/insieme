@@ -317,7 +317,14 @@ namespace core {
 			 * @param mapper the mapper used to translate child node references
 			 * @return a pointer to the modified node.
 			 */
-			NodePtr substituteInternal(NodeManager& manager, NodeMapping& mapper) const;
+			template<class Context>
+			NodePtr substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, Context c) const;
+
+			
+			/**
+			 * Migrates annotations from this node to the target.
+			 */
+			void migrateAnnotationsInternal(const NodePtr& target) const;
 
 		public:
 
@@ -690,6 +697,39 @@ namespace core {
 
 	};
 
+	// **********************************************************************************
+	// Node::substituteInternal needs to be in this header since it's a template method
+	// but it cannot be done directly inline in Node since it requires NodeManager to be defined
+	// **********************************************************************************
+	
+	template<class Context>
+	NodePtr Node::substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, Context c) const {
+		// skip operation if it is a value node
+		if (isValueInternal()) {
+			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
+		}
+
+		// compute new child node list
+		NodeList children = mapper.mapAll(getChildListInternal(), c);
+		if (::equals(children, getChildListInternal(), equal_target<NodePtr>())) {
+			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
+		}
+
+		// create a version having everything substituted
+		Node* node = createInstanceUsing(children);
+
+		// obtain element within the manager
+		NodePtr res = manager.get(node);
+
+		// free temporary instance
+		delete node;
+
+		// migrate annotations
+		this->migrateAnnotationsInternal(res);
+
+		// return instance maintained within manager
+		return res;
+	}
 
 
 	// **********************************************************************************

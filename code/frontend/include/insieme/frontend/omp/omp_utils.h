@@ -64,7 +64,7 @@ struct GlobalRequiredAnnotation : public core::NodeAnnotation {
 core::StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog);
 
 // Utility for passing global to functions that require it, and replacing literals with global accesses
-class GlobalMapper : public core::NodeMapping {
+class GlobalMapper : public core::SimpleNodeMapping {
 	core::NodeManager& nodeMan;
 	core::IRBuilder build;
 	core::VariablePtr curVar;

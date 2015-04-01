@@ -65,7 +65,7 @@ using namespace insieme::core;
 /** Inlines a lambda body with return statements
  *  if the lambda does not return unit, a return location needs to be passed
  */
-class Redeemer : public NodeMapping {
+class Redeemer : public SimpleNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;

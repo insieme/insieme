@@ -197,7 +197,7 @@ namespace tu {
 		 * The class converting a IR-translation-unit into an actual IR program by
 		 * realizing recursive definitions.
 		 */
-		class Resolver : private core::NodeMapping {
+		class Resolver : private core::SimpleNodeMapping {
 
 			typedef utils::graph::PointerGraph<NodePtr> SymbolDependencyGraph;
 			typedef utils::graph::Graph<std::set<NodePtr>> RecComponentGraph;

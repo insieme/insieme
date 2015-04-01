@@ -160,7 +160,7 @@ void benchmarkCore(const core::NodePtr& program) {
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address ",
 		[&]() {
-			core::NodeMapping* h;
+			core::SimpleNodeMapping* h;
 			auto mapper = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
 				count++;
 				return cur->substitute(mgr, *h);
@@ -175,7 +175,7 @@ void benchmarkCore(const core::NodePtr& program) {
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.NodeSubstitution.Non-Types ",
 		[&]() {
-			core::NodeMapping* h2;
+			core::SimpleNodeMapping* h2;
 			auto mapper2 = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
 				if (cur->getNodeCategory() == core::NC_Type) {
 					return cur;

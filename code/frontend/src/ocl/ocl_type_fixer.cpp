@@ -76,7 +76,7 @@ void TypeFixer::cleanStructures(const StructTypePtr& st, NodeMap& ptrReplacement
 }
 
 void TypeFixer::removeClVars() {
-	NodeMapping* h;
+	SimpleNodeMapping* h;
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& gen = builder.getLangBasic();

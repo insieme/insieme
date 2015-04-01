@@ -340,7 +340,7 @@ using insieme::core::pattern::anyList;
 		 * replaces the sizeof(type) expressions inside dataToTransfer with integer literals
 		 */
 		void transformTypeToItsSize(ExpressionPtr& expr) {
-			NodeMapping* sizeofEvaluator;
+			SimpleNodeMapping* sizeofEvaluator;
 
 			NodeManager& mgr = builder.getNodeManager();
 			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{

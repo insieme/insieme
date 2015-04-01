@@ -56,7 +56,7 @@ namespace types {
 
 namespace {
 
-	class FreshVariableSubstitution : public NodeMapping {
+	class FreshVariableSubstitution : public SimpleNodeMapping {
 
 		NodeManager& manager;
 
@@ -75,7 +75,7 @@ namespace {
 	public:
 
 		FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, IntTypeParamSet& paramSet)
-			: NodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
+			: SimpleNodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
 
 		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 			// only handle type variables

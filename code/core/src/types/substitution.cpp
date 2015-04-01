@@ -47,7 +47,7 @@ namespace {
 	 * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
 	 * mechanism to perform
 	 */
-	class SubstitutionMapper : public NodeMapping {
+	class SubstitutionMapper : public SimpleNodeMapping {
 
 		/**
 		 * The node manager to be used for creating new type nodes.
@@ -73,7 +73,7 @@ namespace {
 		 * @param substitution the substitution to be wrapped by the resulting instance.
 		 */
 		SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-			: NodeMapping(), manager(manager), mapping(substitution.getMapping()),
+			: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()),
 			  paramMapping(substitution.getIntTypeParamMapping()) {};
 
 		/**

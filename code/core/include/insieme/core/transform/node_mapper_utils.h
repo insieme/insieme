@@ -50,7 +50,7 @@ namespace transform {
 /**
  * A common base class for implementing node mappings which benefit from caching results
  */
-class CachedNodeMapping : public NodeMapping {
+class CachedNodeMapping : public SimpleNodeMapping {
 
 	/**
 	 * Defines the type of the internal factory used within the cache.
@@ -124,7 +124,7 @@ protected:
  * A utility class mapping a child list of a node using some other node mapping. After
  * mapping all children, it verifies whether any modification has been applied.
  */
-class ChildListMapping : public NodeMapping {
+class ChildListMapping : public SimpleNodeMapping {
 
 	/**
 	 * The mapped list of children.
@@ -143,8 +143,8 @@ public:
 	 * Creates a new child list mapping based on the given child list and the given mapping.
 	 * The represented list of replaced child nodes will be computed using the given list and mapping.
 	 */
-	ChildListMapping(const NodeList& list, NodeMapping& mapping)
-		: NodeMapping(), children(mapping.mapAll(list)), different(!equals(children, list)) {}
+	ChildListMapping(const NodeList& list, SimpleNodeMapping& mapping)
+		: SimpleNodeMapping(), children(mapping.mapAll(list)), different(!equals(children, list)) {}
 
 	/**
 	 * Create a new child list mapping based on the given list of children. The optional boolean
@@ -155,7 +155,7 @@ public:
 	 * @param different a flag allowing to determine whether the given list of children differs from the original child list
 	 */
 	ChildListMapping(const NodeList& children, bool different = true)
-		: NodeMapping(), children(children), different(different) {}
+		: SimpleNodeMapping(), children(children), different(different) {}
 
 	/**
 	 * Determines whether this mapping would cause any modification when being applied

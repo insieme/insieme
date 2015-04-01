@@ -79,7 +79,8 @@ namespace core {
 	// Supporting Utilities
 	class IRBuilder;
 	class NodeManager;
-	class NodeMapping;
+	template<typename Context = int> class NodeMapping;
+	class SimpleNodeMapping;
 	class NodeAnnotation;
 
 	namespace lang {
