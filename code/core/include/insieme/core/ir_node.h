@@ -317,8 +317,8 @@ namespace core {
 			 * @param mapper the mapper used to translate child node references
 			 * @return a pointer to the modified node.
 			 */
-			template<class Context>
-			NodePtr substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, Context c) const;
+			template<class Context, class C2>
+			NodePtr substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, C2 c) const;
 
 			
 			/**
@@ -702,8 +702,8 @@ namespace core {
 	// but it cannot be done directly inline in Node since it requires NodeManager to be defined
 	// **********************************************************************************
 	
-	template<class Context>
-	NodePtr Node::substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, Context c) const {
+	template<class Context, class C2>
+	NodePtr Node::substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, C2 c) const {
 		// skip operation if it is a value node
 		if (isValueInternal()) {
 			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);

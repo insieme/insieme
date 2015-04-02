@@ -124,7 +124,7 @@ TEST(NodeAddressTest, NullTest) {
 TEST(NodeAddressTest, SizeTest) {
 
 	NodeAddress addr;
-	EXPECT_EQ(sizeof(addr), 3*sizeof(int*));
+	EXPECT_EQ(sizeof(addr), 4*sizeof(int*));
 
 }
 

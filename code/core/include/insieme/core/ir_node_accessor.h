@@ -173,8 +173,8 @@ namespace core {
 		 * @param context the mapping context information to be forwarded
 		 * @return a pointer to the modified node.
 		 */
-		template<class Context>
-		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, Context c) const {
+		template<class Context, class C2>
+		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, C2 c) const {
 			return getNode().substituteInternal(manager, mapper, c).template as<Ptr<const node_type>>();
 		}
 
