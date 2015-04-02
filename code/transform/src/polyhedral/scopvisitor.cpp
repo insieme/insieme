@@ -191,16 +191,17 @@ boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress i
 
 	isl_ctx *ctx=isl_ctx_alloc();
 	isl_printer *printer=isl_printer_to_str(ctx);
-
-	// TODO: generate isl_aff from scratch and print it out
-	isl_aff *aff=0;//isl_aff_read_from_str(ctx, "3*x - 4*y - 7");
+	isl_aff *aff=isl_aff_read_from_str(ctx, "{ [x, y] -> [(3*x - 4*y - 7)] }");
 
 	printer=isl_printer_print_aff(printer, aff);
 	char *out=isl_printer_get_str(printer);
-	std::cout << "From ISL we got: " << /*out <<*/ std::endl;
-	if (out) free(out);
+	if (out) {
+		std::cout << "From ISL we got: " << out << std::endl;
+		free(out);
+	}
+
 	isl_printer_free(printer);
-	if (aff) isl_aff_free(aff);
+	isl_aff_free(aff);
 	isl_ctx_free(ctx);
 
 	return maybe;
