@@ -155,7 +155,7 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	// visit declaration to add variable to the list of known variables
 	visit(decl);
 	std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
-	std::unordered_set<VariableAddress> used=readVars(stmt);
+	std::vector<VariableAddress> used=readVars(stmt);
 	std::cout << "vars read\t[ ";  for (auto v: used)           std::cout << *v << " "; std::cout << "]" << std::endl;
 
 	// process all the children, and — when done — remove the scope modifications and lessen the nesting level again
@@ -183,10 +183,13 @@ void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
 }
 
 /// Determine which variables are being read in a given block specified by node and return these.
-std::unordered_set<VariableAddress> SCoPVisitor::readVars(const NodeAddress &node) {
-	std::unordered_set<VariableAddress> vars;
+std::vector<VariableAddress> SCoPVisitor::readVars(const NodeAddress &node) {
+	std::vector<VariableAddress> vars;
 
-	// here we need some visitor code
+	// here, a visitor visits every variable node in our code stub and records its address
+	core::visitDepthFirst(node, [&](const core::VariableAddress &v) {
+		vars.push_back(v);
+	});
 	return vars;
 }
 
