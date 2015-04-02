@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,7 @@ namespace {
 	 * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
 	 * mechanism to perform
 	 */
-	class SubstitutionMapper : public NodeMapping {
+	class SubstitutionMapper : public SimpleNodeMapping {
 
 		/**
 		 * The node manager to be used for creating new type nodes.
@@ -73,7 +73,7 @@ namespace {
 		 * @param substitution the substitution to be wrapped by the resulting instance.
 		 */
 		SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-			: NodeMapping(), manager(manager), mapping(substitution.getMapping()),
+			: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()),
 			  paramMapping(substitution.getIntTypeParamMapping()) {};
 
 		/**

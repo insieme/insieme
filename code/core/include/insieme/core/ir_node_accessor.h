@@ -170,10 +170,24 @@ namespace core {
 		 *
 		 * @param manager the manager to be used to create the new node
 		 * @param mapper the mapper used to translate child node references
+		 * @param context the mapping context information to be forwarded
 		 * @return a pointer to the modified node.
 		 */
-		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping& mapper) const {
-			return getNode().substituteInternal(manager, mapper).template as<Ptr<const node_type>>();
+		template<class Context, class C2>
+		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, C2 c) const {
+			return getNode().substituteInternal(manager, mapper, c).template as<Ptr<const node_type>>();
+		}
+
+		/**
+		 * Creates a new version of this node where every reference to a child node
+		 * is replaced by a pointer to the node returned by the given mapper.
+		 *
+		 * @param manager the manager to be used to create the new node
+		 * @param mapper the mapper used to translate child node references
+		 * @return a pointer to the modified node.
+		 */
+		Ptr<const node_type> substitute(NodeManager& manager, SimpleNodeMapping& mapper) const {
+			return getNode().substituteInternal(manager, mapper, 0).template as<Ptr<const node_type>>();
 		}
 
 		/**

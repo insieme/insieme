@@ -118,7 +118,8 @@
 		cout << " --- Insieme Code Feature Extractor ---- \n";
 
 		// process handle command line arguments
-		cmd::Options options = cmd::Options::parse(argc, argv);
+        std::vector<std::string> arguments(argv, argv+argc);
+        cmd::Options options = cmd::Options::parse(arguments);
 		if (!options.valid) return (options.settings.help)?0:1;
 
 

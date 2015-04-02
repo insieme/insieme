@@ -72,7 +72,7 @@ namespace irg = insieme::core::pattern::generator::irg;
  * gets an expression after the replacements of insertIndutionVariable have been done and fixes some ref and cast related errors
  */
 ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
-	NodeMapping* cleaner;
+	SimpleNodeMapping* cleaner;
 	NodeManager& mgr = basic.getNodeManager();
 	auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 		// stop recursion at type level

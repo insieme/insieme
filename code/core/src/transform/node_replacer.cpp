@@ -1008,7 +1008,7 @@ private:
 };
 
 
-class NodeAddressReplacer : public NodeMapping {
+class NodeAddressReplacer : public SimpleNodeMapping {
 	const unsigned indexToReplace;
 	const NodePtr& replacement;
 
@@ -1042,7 +1042,7 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper) {
+NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, SimpleNodeMapping& mapper) {
 	if(!root) {
 		return NodePtr(NULL);
 	}

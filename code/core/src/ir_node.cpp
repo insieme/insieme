@@ -162,35 +162,10 @@ namespace core {
 		return res;
 	}
 
-	NodePtr Node::substituteInternal(NodeManager& manager, NodeMapping& mapper) const {
-
-		// skip operation if it is a value node
-		if (isValueInternal()) {
-			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
-		}
-
-		// compute new child node list
-		NodeList children = mapper.mapAll(getChildListInternal());
-		if (::equals(children, getChildListInternal(), equal_target<NodePtr>())) {
-			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
-		}
-
-		// create a version having everything substituted
-		Node* node = createInstanceUsing(children);
-
-		// obtain element within the manager
-		NodePtr res = manager.get(node);
-
-		// free temporary instance
-		delete node;
-
-		// migrate annotations
-		core::transform::utils::migrateAnnotations(NodePtr(this), res);
-
-		// return instance maintained within manager
-		return res;
+	void Node::migrateAnnotationsInternal(const NodePtr& target) const {
+		core::transform::utils::migrateAnnotations(NodePtr(this), target);
 	}
-
+	
 	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
 
 		// check identity (under-approximation)
@@ -280,7 +255,7 @@ IRDump dumpOneLine(const insieme::core::NodePtr& node, std::ostream& out){
 		insieme::core::printer::PrettyPrinter print(node);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_CASTS);
-		print.setOption(insieme::core::printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE);
+		print.setOption(insieme::core::printer::PrettyPrinter::JUST_OUTERMOST_SCOPE);
 		return out << print;
 	}, out);
 }

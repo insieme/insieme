@@ -980,10 +980,6 @@ public:
 class Section: public Annotation {
 public:
 	std::ostream& dump(std::ostream& out) const { return out << "section"; }
-
-	virtual void replaceUsage (const core::NodeMap& map){
-		Annotation::replaceUsage ( map);
-	}
 };
 
 /**

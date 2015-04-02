@@ -251,7 +251,7 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 
 namespace {
 
-	class InlineSubstituter : public NodeMapping {
+	class InlineSubstituter : public SimpleNodeMapping {
 
 		bool successful;
 

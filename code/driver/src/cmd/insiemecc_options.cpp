@@ -51,13 +51,13 @@ namespace cmd {
 	namespace bpo = boost::program_options;
 	namespace fe = insieme::frontend;
 
-	detail::OptionParser Options::parse(int argc, char** argv) {
-		return detail::OptionParser(argc, argv);
+	detail::OptionParser Options::parse(const std::vector<std::string>& argv) {
+		return detail::OptionParser(argv);
 	}
 
 	namespace detail {
 
-		OptionParser::OptionParser(int argc, char** argv) : argc(argc), argv(argv) {
+		OptionParser::OptionParser(const std::vector<std::string>& argv) : argv(argv) {
 
 			// define options
 			desc.add_options()
@@ -88,6 +88,8 @@ namespace cmd {
 		OptionParser::operator Options() {
 
 			// -- parsing -------------------------------------------
+            // remove the first entry: this should be some string like "insiemecc"
+            argv.erase(argv.begin());
 
 			// define positional options (all options not being named)
 			bpo::positional_options_description pos;
@@ -95,7 +97,7 @@ namespace cmd {
 
 			// parse parameters
 			bpo::variables_map map;
-			bpo::store(bpo::basic_command_line_parser<char>(argc, argv)
+			bpo::store(bpo::basic_command_line_parser<char>(argv)
 				.options(desc)
 				.style((bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise) ^ bpo::command_line_style::allow_guessing)
 				.positional(pos)

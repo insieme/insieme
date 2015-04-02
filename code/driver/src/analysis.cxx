@@ -75,7 +75,8 @@ int main(int argc, char** argv) {
 	bool extract_execution_net = false;
 	bool extract_state_graph = false;
 	bool dump_equations = false;
-	cmd::Options options = cmd::Options::parse(argc, argv)
+    std::vector<std::string> arguments(argv, argv+argc);
+	cmd::Options options = cmd::Options::parse(arguments)
 		// register the extra flags
 		("exec_net", 		'e', 	extract_execution_net, 		"extract the execution net from the program")
 		("state_graph", 	's', 	extract_state_graph, 		"extract the state graph from the program")

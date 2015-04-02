@@ -160,7 +160,7 @@ void benchmarkCore(const core::NodePtr& program) {
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address ",
 		[&]() {
-			core::NodeMapping* h;
+			core::SimpleNodeMapping* h;
 			auto mapper = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
 				count++;
 				return cur->substitute(mgr, *h);
@@ -175,7 +175,7 @@ void benchmarkCore(const core::NodePtr& program) {
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.NodeSubstitution.Non-Types ",
 		[&]() {
-			core::NodeMapping* h2;
+			core::SimpleNodeMapping* h2;
 			auto mapper2 = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
 				if (cur->getNodeCategory() == core::NC_Type) {
 					return cur;
@@ -252,7 +252,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 		}
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
 			LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
-															   PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+															   PrettyPrinter::JUST_OUTERMOST_SCOPE |
 															   PrettyPrinter::PRINT_CASTS) << std::endl;
 		}
 
@@ -376,8 +376,8 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 int main(int argc, char** argv) {
 
 	// Step 1: parse input parameters
-
- 	cmd::Options options = cmd::Options::parse(argc, argv);
+    std::vector<std::string> arguments(argv, argv + argc);
+ 	cmd::Options options = cmd::Options::parse(arguments);
 
  	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.settings.logLevel), options.settings.verbosity);
 
