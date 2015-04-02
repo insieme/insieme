@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -80,7 +80,7 @@ namespace c_ast {
 					#include "insieme/backend/c_ast/c_nodes.def"
 					#undef CONCRETE
 				}
-				assert(false && "Unknown C-Node type encountered!");
+				assert_fail() << "Unknown C-Node type encountered!";
 				return out;
 			}
 
@@ -110,7 +110,7 @@ namespace c_ast {
 
 			void decIndent() {
 				indent--;
-				assert(indent >= 0 && "Should never become < 0");
+				assert_ge(indent, 0) << "Should never become < 0";
 			}
 
 			#define PRINT(name) std::ostream& print ## name (name ## Ptr node, std::ostream& out)
@@ -153,7 +153,7 @@ namespace c_ast {
 				case PrimitiveType::LongLong : return out << "long long";
 				case PrimitiveType::ULongLong : return out << "unsigned long long";
 				}
-				assert(false && "Unsupported primitive type!");
+				assert_fail() << "Unsupported primitive type!";
 				return out << "/* unsupported primitive type */";
 			}
 
@@ -212,7 +212,7 @@ namespace c_ast {
             }
 
             PRINT(MemberFieldPointer) {
-				assert(false && "this should never be reached, we can not define a member pointer without name");
+				assert_fail() << "this should never be reached, we can not define a member pointer without name";
                 return out  << " /* this type should not be here*/ ";
             }
 
@@ -241,7 +241,7 @@ namespace c_ast {
 					} else {
 						out << " = " << print(expr);
 					}
-				    
+
                     if (node->isStatic) {
                         makeTypesImplicit = false;
                     }
@@ -261,7 +261,7 @@ namespace c_ast {
 						// just add list of parameters
 						return out << "("
 								<< join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
-									out << print(cur);
+									out << "(" << print(cur) << ")";
 						}) << ")";
 					}
 
@@ -273,7 +273,7 @@ namespace c_ast {
 				}
 
 				// multiple declarations
-				assert(node->varInit.size() > 1u);
+				assert_gt(node->varInit.size(), 1u);
 
 				// start with type
 				out << print(node->varInit[0].first->type);
@@ -488,7 +488,7 @@ namespace c_ast {
 					case UnaryOperation::ComplexImag:	return out << "__imag__ " << print(node->operand);
 				}
 
-				assert(false && "Invalid unary operation encountered!");
+				assert_fail() << "Invalid unary operation encountered!";
 				return out;
 			}
 
@@ -564,7 +564,7 @@ namespace c_ast {
 				}
 				}
 
-				assert(false && "Invalid ternary operation encountered!");
+				assert_fail() << "Invalid ternary operation encountered!";
 				return out;
 			}
 
@@ -594,11 +594,12 @@ namespace c_ast {
 				}
 
 				// the rest
-				return out
-						<< print(node->classType) << "("
-						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
-							out << print(cur);
-						}) << ")";
+                return out
+                        << print(node->classType) << "("
+                        << join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+                            out << print(cur);
+                        }) << ")";
+
 			}
 
 			PRINT(DestructorCall) {
@@ -658,7 +659,7 @@ namespace c_ast {
 				auto fun = node->fun->function;
 				return out
 						<< (node->isVirtual?"virtual ":"")
-						<< (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
+						<< (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ")
 						<< print(fun->name)
 						<< "(" << printMemberParam(fun->parameter)<< ")"
 						<< (node->fun->isConstant?" const":"")
@@ -703,7 +704,7 @@ namespace c_ast {
 
 				// handle type definitions
 				if ((bool)(node->name)) {
-					// since here is the only place where we have type + name, we have to take care of 
+					// since here is the only place where we have type + name, we have to take care of
 					// function type declarations
 
 					// function type declaration need to be parametrized
@@ -713,7 +714,7 @@ namespace c_ast {
 
 				// handle struct / union types
 				c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type);
-				assert(composite && "Must be a struct or union type!");
+				assert_true(composite) << "Must be a struct or union type!";
 
 				// special handling for struct types
 				c_ast::StructTypePtr structType = dynamic_pointer_cast<c_ast::StructType>(composite);
@@ -829,9 +830,9 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ") 
-					<< " " 
-					<< print(node->className) << "::" 
+				out << (boost::starts_with(fun->name->name, "operator ")?  "" : toC(fun->returnType)+" ")
+					<< " "
+					<< print(node->className) << "::"
 					<< print(fun->name)
 					<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
 
@@ -908,9 +909,9 @@ namespace c_ast {
 
 		TypePtr computeNesting(TypeNesting& data, const TypePtr& type) {
 			// check whether there is something to do
-			if (type->getType() != NT_PointerType && 
-				type->getType() != NT_VectorType && 
-				type->getType() != NT_FunctionType && 
+			if (type->getType() != NT_PointerType &&
+				type->getType() != NT_VectorType &&
+				type->getType() != NT_FunctionType &&
 				type->getType() != NT_MemberFieldPointer ){
 				return type;
 			}
@@ -1006,7 +1007,7 @@ namespace c_ast {
 			}
 
 			// check whether one or the other is empty
-			assert(!(!cur.parameters.empty() && !cur.subscripts.empty()) && "Only one component may be non-empty!");
+			assert_true(!(!cur.parameters.empty() && !cur.subscripts.empty())) << "Only one component may be non-empty!";
 
 			// print vector sizes
 			out << join("", cur.subscripts, [&](std::ostream& out, const ExpressionPtr& cur) {

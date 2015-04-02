@@ -67,9 +67,9 @@ void _irt_worker_print_debug_info(irt_worker* self) {
 #ifdef USING_MINLWT	
 	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
 #else
-	IRT_INFO("== Base ptr: %p\n", &(self->basestack)); // casting to void* would break 32 bit compatibility
+	IRT_INFO("== Base ptr: %p\n", (void*)&(self->basestack)); // casting to void* would break 32 bit compatibility
 #endif
-	IRT_INFO("== Current wi: %p\n", self->cur_wi);
+	IRT_INFO("== Current wi: %p\n", (void*) self->cur_wi);
 	IRT_INFO("==== Pool:\n");
 	irt_work_item* next_wi = self->sched_data.pool.start;
 	while(next_wi != NULL) {
@@ -204,11 +204,11 @@ uint32 _irt_worker_select_implementation_variant(const irt_worker* self, const i
 }
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
-	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
+	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", (void*) self);
 	// wait for previous operations on WI to complete
 	while(wi->state != IRT_WI_STATE_NEW && wi->state != IRT_WI_STATE_SUSPENDED);
 	IRT_ASSERT(wi->state == IRT_WI_STATE_NEW || wi->state == IRT_WI_STATE_SUSPENDED,
-		IRT_ERR_INTERNAL, "Worker %p switching to WI %p, WI not ready", self, wi);
+		IRT_ERR_INTERNAL, "Worker %p switching to WI %p, WI not ready", (void*) self, (void*) wi);
 	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
@@ -216,9 +216,9 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		lwt_prepare(self->id.thread, wi, &self->basestack);
 		self->cur_wi = wi;
 		#ifdef USING_MINLWT
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", (void*) self, (void*)wi->stack_ptr);
 		#else
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", (void*) self, (void*) &(wi->stack_ptr));
 		#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_start_measurements(wi);
@@ -229,23 +229,23 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		//and start that variant
 		irt_optimizer_apply_dvfs(impl_variant);
 		lwt_start(wi, &self->basestack, impl_variant->implementation);
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", (void*) self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
 		// resume WI
 		wi->state = IRT_WI_STATE_STARTED;
 		self->cur_wi = wi;
 		#ifdef USING_MINLWT
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", (void*) self, (void*)wi->stack_ptr);
 		#else
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, &(wi->stack_ptr));
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", (void*) self, (void*) &(wi->stack_ptr));
 		#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED_UNKNOWN, wi->id);
 		irt_wi_implementation *wimpl = wi->impl;
 		irt_optimizer_apply_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
 		lwt_continue(&wi->stack_ptr, &self->basestack);
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", (void*) self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	}
 }

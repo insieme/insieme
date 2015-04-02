@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -273,14 +273,18 @@ namespace irp {
 		return res;
 	}
 
-	inline TreePattern jobExpr(const TreePattern& threadNumRange, const ListPattern& localDecls, const ListPattern& guardedExprs,
-			const TreePattern& defaultExpr) {
-		return node(core::NT_JobExpr, single(any) << single(threadNumRange) << single(node(core::NT_DeclarationStmts, localDecls)) 
-			<< single(node(core::NT_GuardedExprs, guardedExprs)) << single(defaultExpr));
+	inline TreePattern jobExpr(const TreePattern& threadNumRange, const ListPattern& localDecls, const TreePattern& defaultExpr) {
+		return node(core::NT_JobExpr, single(any) << single(threadNumRange) << single(node(core::NT_DeclarationStmts, localDecls)) << single(defaultExpr));
 	}
 
 	inline TreePattern jobExpr(const TreePattern& threadNumRange, const TreePattern& defaultExpr) {
-		return jobExpr(threadNumRange, anyList, anyList, defaultExpr);
+		return jobExpr(threadNumRange, anyList, defaultExpr);
+	}
+
+	inline TreePattern pfor(const TreePattern& group = any, const TreePattern& start = any, const TreePattern& end = any, const TreePattern& step = any, const TreePattern& body = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getUnit(); }),
+				lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getPFor(); }),
+				single(group) << single(start) << single(end) << single(step) << single(body));
 	}
 
 	/**

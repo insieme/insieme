@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ using namespace insieme::utils::log;
 
 TEST(ocl_hostKernel, vecadd_bare) {
 	NodeManager manager;
-	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
+	LOG(INFO) << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
 	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add_bare.c");
 
 	// Frontend PATH
@@ -76,21 +76,17 @@ TEST(ocl_hostKernel, vecadd_bare) {
 
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
-	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
+	// finally, do the conversion
 	auto program = job.execute(manager);
-	std::cout << "Done.\n";
 
-	LOG(INFO) << "Starting OpenCL host code transformations";
-
-	insieme::core::printer::PrettyPrinter pp(program); // program->getElement(0)
-
-	std::cout << "Starting OpenCL Backend visit\n";
+	LOG(INFO) << "#01 Converted vec_add and kernel to IR, have a look:" << std::endl
+			  << insieme::core::printer::PrettyPrinter(program) << std::endl << "#01 END" << std::endl << std::endl;
 
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
-	std::cout << "Converted code:\n" << *converted;
+	LOG(INFO) << "#02 Converted IR back to OCL C, see here:" << std::endl << *converted << "#02 END" << std::endl;
 }
 
 TEST(ocl_hostKernel, vecadd) {
@@ -106,7 +102,7 @@ TEST(ocl_hostKernel, vecadd) {
 
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	auto program = job.execute(manager);
@@ -137,7 +133,7 @@ TEST(ocl_hostKernel, matmul) {
 	// Backend PATH
 	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
 	//job.setOption(insieme::frontend::ConversionJob::OpenCL);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	job.setOption(insieme::frontend::ConversionJob::Lib_icl);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	auto program = job.execute(manager);

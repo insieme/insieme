@@ -290,10 +290,10 @@ namespace c_ast {
 
 		} catch(not_a_dag e) {
 			// failed => not resolvable cyclic dependencies
-			assert(false && "Impossible to resolve cyclic dependencies.");
+			assert_fail() << "Impossible to resolve cyclic dependencies.";
 		}
 
-		assert(false && "Should not be reachable!");
+		assert_fail() << "Should not be reachable!";
 
 		// return seeds only
 		return fragments;

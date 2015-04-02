@@ -4,7 +4,11 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
-#user configurable options
+# find HWloc package
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
+find_package(Hwloc)
+
+# user configurable options
 if (WIN32)
 	option (USE_PTHREADS "Use the Pthread Win32 Library (requires PTHREAD_ROOT environment var)" OFF)
 endif()
@@ -15,11 +19,9 @@ if (NOT third_part_libs_home )
 	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
-
 include(../lookup_lib.cmake)
-include (../add_unit_test.cmake)
-
-#add_subdirectory( pmlib )
+include(../add_unit_test.cmake)
+include(../environment_common.cmake)
 
 # for win64 we need to add a assembly object file to each target, see below.
 # For all other platforms this var is empty. This safes a lot of if clauses througout this file
@@ -73,8 +75,12 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp") #as one gtest uses openmp
 	endif()
 	
-	if(C99_Support)
-	       	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
+	#Compile with C11 and all warnings enabled, pedantic and warnings treated as errors for GCC>=4.9
+	if (CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 4.9)
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=c11")
+		set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Werror -pedantic")
+	elseif(C99_Support)
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
 	else()
 		message( "WARNING: --std=gnu99 not supported by your compiler!" )
 	endif()
@@ -186,14 +192,6 @@ set ( ut_prefix  ut_rt_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 # get energy unit tests, to be removed if papi and msr module are not present
 file(GLOB_RECURSE energy_test_cases test/energy*.cc)
-
-# check for RAPL module
-if (NOT MSVC)
-	if (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
-		message(STATUS "Excluding runtime energy tests" )
-		list(REMOVE_ITEM test_cases ${energy_test_cases})
-	endif (NOT EXISTS ${papi_LIB} OR NOT EXISTS "/dev/cpu/0/msr")
-endif (NOT MSVC)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 

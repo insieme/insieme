@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -401,7 +401,7 @@ namespace cba {
 
 		template<std::size_t size>
 		bool isValid(const std::array<Label, size>& seq) {
-			assert(size >= 2);
+			assert_ge(size, 2);
 
 			// check sequence
 			for(std::size_t i=0; i<size-1; i++) {

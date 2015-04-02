@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,6 +48,7 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
+#include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -172,7 +173,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
 	job.addIncludeDirectory(PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/");
 
-	job.setOption(fe::ConversionJob::lib_icl);
+	job.setOption(fe::ConversionJob::Lib_icl);
 	job.setDefinition("INSIEME", "");
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";

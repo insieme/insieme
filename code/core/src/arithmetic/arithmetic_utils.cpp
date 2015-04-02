@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -376,7 +376,7 @@ namespace {
 
 			// process selects
 			if (lang.isSelect(fun)) {
-				assert(call->getArguments().size() ==3u);
+				assert_eq(call->getArguments().size(), 3u);
 
 				// arguments must be formulas
 				Piecewise a = visit(call->getArgument(0));
@@ -451,8 +451,8 @@ Piecewise toPiecewise(const ExpressionPtr& expr) {
 namespace {
 
 	const TypePtr getBiggerType(const TypePtr& a, const TypePtr& b) {
-		assert(a->getNodeManager().getLangBasic().isInt(a) && "Has to be a IntegerType!");
-		assert(b->getNodeManager().getLangBasic().isInt(b) && "Has to be a IntegerType!");
+		assert_true(a->getNodeManager().getLangBasic().isInt(a)) << "Has to be a IntegerType!";
+		assert_true(b->getNodeManager().getLangBasic().isInt(b)) << "Has to be a IntegerType!";
 
 		// quick exit
 		if (*a == *b) {
@@ -471,7 +471,7 @@ namespace {
 
 		// for the rest => use generic solution
 		TypePtr res = types::getSmallestCommonSuperType(a, b);
-		assert(!a->getNodeManager().getLangBasic().isUnit(res) && "Invalid arguments passed to function!");
+		assert_false(a->getNodeManager().getLangBasic().isUnit(res)) << "Invalid arguments passed to function!";
 		return res;
 	}
 
@@ -500,7 +500,7 @@ ExpressionPtr toIR(NodeManager& manager, const Rational& value) {
 }
 
 ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
-	assert(factor.second != 0 && "Factor's exponent must not be 0!");
+	assert_ne(factor.second, 0) << "Factor's exponent must not be 0!";
 
 	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.getLangBasic();
@@ -649,13 +649,13 @@ ExpressionPtr toIR(NodeManager& manager, const Constraint& constraint) {
 			product = (product) ? builder.logicAnd(product, builder.wrapLazy(cur)) : cur;
 		});
 
-		assert(product && "There should not be an empty conjunction!");
+		assert_true(product) << "There should not be an empty conjunction!";
 
 		// combine conjunctions
 		res = (res) ? builder.logicOr(res, builder.wrapLazy(product)) : product;
 	});
 
-	assert(res && "There should not be an empty DNF!");
+	assert_true(res) << "There should not be an empty DNF!";
 
 	// return result
 	return res;

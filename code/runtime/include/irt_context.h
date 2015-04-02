@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -48,7 +48,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(context);
+IRT_MAKE_ID_TYPE(context)
 
 typedef void (init_context_fun)(irt_context* context);
 typedef void (cleanup_context_fun)(irt_context* context);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -149,21 +149,21 @@ namespace tu {
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-			assert(symbol );
-			assert(definition);
+			assert_true(symbol);
+			assert_true(definition);
 			types.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
 		void replaceType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
-			assert(symbol );
-			assert(definition);
+			assert_true(symbol);
+			assert_true(definition);
 			assert(types.find(symbol) != types.end());
 			types[symbol] = definition;
 		}
 		void substituteType (const core::GenericTypePtr& oldSymbol, const core::GenericTypePtr& newSymbol, const core::TypePtr& definition) {
-			assert(oldSymbol );
-			assert(newSymbol );
-			assert(definition);
+			assert_true(oldSymbol);
+			assert_true(newSymbol);
+			assert_true(definition);
 			assert(types.find(oldSymbol) != types.end());
 			types.erase(oldSymbol);
 			types[newSymbol] = definition;

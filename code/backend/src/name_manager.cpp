@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -179,7 +179,7 @@ namespace backend {
 
 	void SimpleNameManager::setName(const core::NodePtr& ptr, const string& name) {
 		// disabled since name collisions might happen with overloaded functions!
-		//assert((!isUsed(name) || (lookup(ptr) && *lookup(ptr) == name)) && "Cannot bind to name already used!");
+		//assert_true((!isUsed(name) || (lookup(ptr) && *lookup(ptr) == name))) << "Cannot bind to name already used!";
 
 		// everything is in the global scope
 		auto names = &globalScope.names;
@@ -195,7 +195,7 @@ namespace backend {
 		__unused auto res = names->insert(make_pair(ptr, name));
 
 		// disabled since name collisions might happen with overloaded member functions!
-		//assert((res.second || res.first->second == name) && "Tried to alter name after already being bound!");
+		//assert_true((res.second || res.first->second == name)) << "Tried to alter name after already being bound!";
 		used->insert(name);
 	}
 
@@ -212,7 +212,7 @@ namespace backend {
 
 	void SimpleNameManager::popVarScope() {
 		// drop the top-level scope
-		assert(varScope.size() > 1 && "Scope stack must not be empty!");
+		assert_gt(varScope.size(), 1) << "Scope stack must not be empty!";
 		varScope.pop_back();
 	}
 

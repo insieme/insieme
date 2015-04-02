@@ -60,14 +60,15 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+
 
 #include "test_utils.inc"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
-namespace fe = insieme::frontend;
+using namespace insieme::frontend::extensions;
 using namespace clang;
 
 void checkSemanticErrors(const NodePtr& node) {
@@ -103,23 +104,23 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/stmt.c");
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/stmt.c");
 
-	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	NodeManager mgr;
-	fe::ConversionSetup setup;
-	setup.frontendPluginInit();
-	fe::conversion::Converter convFactory( mgr, tu, setup);
+	insieme::frontend::ConversionSetup setup;
+	setup.frontendExtensionInit();
+	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
+		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement()) {
-			StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking
@@ -133,7 +134,7 @@ TEST(StmtConversion, FileTest) {
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
 				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
-				assert(expr);
+				assert_true(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
 
 				// do semantics checking

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,12 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
+
+#include "insieme/utils/unused.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_pointer.h"
@@ -47,6 +49,7 @@ namespace core {
 	 * Instances of this class represent mappings between nodes. During the transformation process,
 	 * each referenced pointer is replaced by the element it is mapped to.
 	 */
+	template<typename Context>
 	class NodeMapping {
 
 	protected:
@@ -59,7 +62,7 @@ namespace core {
 		 * @param ptr the pointer to be resolved
 		 * @return the pointer the given pointer is mapped to by this mapper
 		 */
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) =0;
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, Context c) =0;
 
 	public:
 
@@ -72,20 +75,20 @@ namespace core {
 		 * A generic version of the map operation to be applied on a root node.
 		 */
 		template<typename T>
-		inline Pointer<T> map(const Pointer<T>& ptr) {
-			return map<T>(0, ptr);
+		inline Pointer<T> map(const Pointer<T>& ptr, Context c) {
+			return map<T>(0, ptr, c);
 		}
 
 		/**
 		 * A generic version of the map operation handling pointer types properly.
 		 */
 		template<typename T>
-		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr) {
+		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr, Context c) {
 			// short-cut for null
 			if (!ptr) return Pointer<T>();
 
 			// map and cast
-			return mapElement(index, ptr).template as<Pointer<T>>();
+			return mapElement(index, ptr, c).template as<Pointer<T>>();
 		}
 
 		/**
@@ -96,7 +99,7 @@ namespace core {
 		 * @return a new container including pointers referencing clones of the nodes referenced
 		 * 		   by the original container.
 		 */
-		NodeList mapAll(const NodeList& container) {
+		NodeList mapAll(const NodeList& container, Context c) {
 			NodeList res;
 
 			auto first = container.begin();
@@ -104,17 +107,36 @@ namespace core {
 			auto out = inserter(res, res.end());
 			unsigned counter = 0;
 			for (auto it = first; it != last; ++it) {
-				*out = map(counter++, *it);
+				*out = map(counter++, *it, c);
 				out++;
 			}
 
 			return res;
 		}
+	};
 
+	class SimpleNodeMapping : public NodeMapping<int> {
+	public:
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, __unused int c) final override {
+			return mapElement(index, ptr);
+		}
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) =0;
+		
+		template<typename T>
+		inline Pointer<T> map(const Pointer<T>& ptr) {
+			return NodeMapping<int>::map<T>(0, ptr, 0);
+		}
+		template<typename T>
+		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr) {
+			return NodeMapping<int>::map(index, ptr, 0);
+		}
+		NodeList mapAll(const NodeList& container) {
+			return NodeMapping<int>::mapAll(container, 0);
+		}
 	};
 
 	template<typename Lambda>
-	class LambdaNodeMapper: public NodeMapping {
+	class LambdaNodeMapper: public SimpleNodeMapping {
 		Lambda lambda;
 	public:
 		LambdaNodeMapper(Lambda lambda)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -87,9 +87,9 @@ namespace runtime {
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
 
 			// create new lambda expression wrapping the entry point
-			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
+			assert_eq(entry->getType()->getNodeType(), core::NT_FunctionType) << "Only functions can be entry points!";
 			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
-			assert(entryType->isPlain() && "Only plain functions can be entry points!");
+			assert_true(entryType->isPlain()) << "Only plain functions can be entry points!";
 
 
 			// define parameter of resulting lambda
@@ -281,7 +281,7 @@ namespace runtime {
 			 * through the child-node list.
 			 */
 			void visitNode(const core::NodePtr& node) {
-				assert(node->getNodeType() != core::NT_LambdaExpr);
+				assert_ne(node->getNodeType(), core::NT_LambdaExpr);
 				// visit all children recursively
 				for_each(node->getChildList(), [this](const core::NodePtr& cur){
 					this->visit(cur);
@@ -413,13 +413,13 @@ namespace runtime {
 
 			// support for multiple body implementations
 			auto params = toVector(workItem);
-			if (job->getGuardedExprs().empty() && core::analysis::isCallOf(job->getDefaultExpr(), basic.getPick())) {
+			if (core::analysis::isCallOf(job->getDefaultExpr(), basic.getPick())) {
 
 				// ---- default only but various variants ------
 				auto alternatives = job->getDefaultExpr().as<core::CallExprPtr>()->getArgument(0);
 				auto impls = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(alternatives);
 
-				assert(!impls.empty() && "There must be at least one implementation!");
+				assert_false(impls.empty()) << "There must be at least one implementation!";
 
 				for(const auto& cur : impls) {
                     core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(cur));
@@ -429,23 +429,11 @@ namespace runtime {
 				}
 
 			} else {
-
-				// general case with guards, yet many variants
+				// general case when body is no Pick
 
 				// create function processing the job (forming the entry point)
-				core::StatementList body;
-				core::StatementPtr returnStmt = builder.returnStmt(basic.getUnitConstant());
-				for(auto it = job->getGuardedExprs().begin(); it != job->getGuardedExprs().end(); ++it) {
-					const core::GuardedExprPtr& cur = *it;
-					core::ExpressionPtr condition = fixVariables(cur->getGuard());
-					core::ExpressionPtr branch = fixBranch(cur->getExpression());
-					body.push_back(builder.ifStmt(condition, builder.compoundStmt(branch, returnStmt)));
-				}
 
-				// add default branch
-				body.push_back(fixBranch(job->getDefaultExpr()));
-
-                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, builder.compoundStmt(body));
+                core::StatementPtr instrumentedBody = wrapWithInstrumentationRegion(manager, job, fixBranch(job->getDefaultExpr()));
 
 				// build implementation
 				auto impl = builder.lambdaExpr(unit, instrumentedBody, params);
@@ -578,7 +566,7 @@ namespace runtime {
 
 			core::ExpressionPtr convertPfor(const core::CallExprPtr& call) {
 				// check that it is indeed a pfor call
-				assert(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
+				assert_true(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
 
 				// construct call to pfor ...
 				const core::ExpressionList& args = call->getArguments();
@@ -618,8 +606,8 @@ namespace runtime {
 				static const analysis::features::FeaturePtr numMemAccessFtr
 						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_IO_NUM_any_read/write_OPs_real");
 
-				assert(numOpsFtr && "Missing required feature support!");
-				assert(numMemAccessFtr && "Missing required feature support!");
+				assert_true(numOpsFtr) << "Missing required feature support!";
+				assert_true(numMemAccessFtr) << "Missing required feature support!";
 
 				// extract values
 				uint64_t numOps = (uint64_t)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
@@ -800,7 +788,7 @@ namespace runtime {
 				for_each(variantCodes, [&](const core::ExpressionPtr& cur) {
 
 					// variant needs to be a lambda expression!
-					assert(cur->getNodeType() == core::NT_LambdaExpr);
+					assert_eq(cur->getNodeType(), core::NT_LambdaExpr);
 
 					// create literal
 					core::LiteralPtr lit = builder.uintLit(i);
@@ -915,7 +903,7 @@ namespace runtime {
 				auto pickCall = call->getFunctionExpr();
 
 				// check whether this is indeed a call to pick variants
-				assert(core::analysis::isCallOf(pickCall, basic.getPick()) && "Invalid Variant call!");
+				assert_true(core::analysis::isCallOf(pickCall, basic.getPick())) << "Invalid Variant call!";
 
 				// check if picking between implementations
 				if(pickCall->getType()->getNodeType() != core::NT_FunctionType) return call;
@@ -925,7 +913,7 @@ namespace runtime {
 					switch(implHint) {
 					case PickImplementationHint::CALL: return convertVariantToCall(call);
 					case PickImplementationHint::SWITCH: return convertVariantToSwitch(call);
-					default: assert(false && "Invalid variant implementation hint"); break;
+					default: assert_fail() << "Invalid variant implementation hint"; break;
 					}
 				}
 				// default to switch
@@ -974,7 +962,7 @@ namespace runtime {
 			}
 
 			// take first argument
-			assert(call[0]->getNodeType() == core::NT_Literal && "Region ID is expected to be a literal!");
+			assert_eq(call[0]->getNodeType(), core::NT_Literal) << "Region ID is expected to be a literal!";
 			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
 			if (max < regionId) max = regionId;
 		});
@@ -990,10 +978,10 @@ namespace runtime {
 
 		// add information to application
 		core::NodeAddress root(node);
-		assert(node->getNodeType() == core::NT_Program);
+		assert_eq(node->getNodeType(), core::NT_Program);
 
 		core::ProgramAddress program = root.as<core::ProgramAddress>();
-		assert(program->size() == 1u);
+		assert_eq(program->size(), 1u);
 
 		// get body of lambda expression
 		core::LambdaExprAddress main = program[0].as<core::LambdaExprAddress>();

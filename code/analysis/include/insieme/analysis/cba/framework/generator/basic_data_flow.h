@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -955,14 +955,14 @@ namespace cba {
 				case NT_Parameters: {
 
 					// this should not be the end
-					assert(!parent.isRoot());
+					assert_false(parent.isRoot());
 
 //					// obtain the set containing all the potential predecessor of the current call in the cba
 //					auto predecessor_ctxt = cba.getVar(pred, ctxt.callContext.back());
 
 					// get containing callee (lambda or bind)
 					Callee callee(parent.getParentInstance());
-					assert(callee.isLambda() || callee.isBind());
+					assert_true(callee.isLambda() || callee.isBind());
 
 					// get all callers
 					const vector<Caller>& callers = cba.getCallSiteManager().getCaller(callee);
@@ -1295,7 +1295,7 @@ namespace cba {
 
 		void visitNode(const NodeInstance& node, const Context& ctxt, Constraints& constraints) {
 			std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
-			assert(false);
+			assert_fail();
 		}
 
 	protected:
@@ -1344,7 +1344,7 @@ namespace cba {
 			if (!bind) return false;
 
 			// and the expression must be bound
-			assert(bind->getCall() == call);
+			assert_eq(bind->getCall(), call);
 			if (!bind->isBoundExpression(expr)) return false;
 
 			// test whether bind is free (not statically bound)

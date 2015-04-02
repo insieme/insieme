@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,8 +49,6 @@
 
 #include "insieme/utils/logging.h"
 
-//FIXME debug
-#include "insieme/frontend/pragma/insieme.h"
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -169,7 +167,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //	std::cout << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
 
-	// FIXME: check if this is actualy needed anymore
+	// FIXME: check if this is actually needed anymore
 	/// when pragmas are just after the beginning of a compound stmt, example:
 	/// {
 	/// 		#pragma xxx
@@ -213,7 +211,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //	std::cout << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
 	// the source range we inspect is defined by the new source locations,
-	// this fix the problem with bonduaries jumping to the begining of the file in
+	// this fix the problem with bonduaries jumping to the beginning of the file in
 	// the macro expanisons:
 	//
 	//	#define F(x) { }

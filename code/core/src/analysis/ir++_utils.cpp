@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -131,6 +131,9 @@ namespace analysis {
 
 		const string CppRefStringMember = "_cpp_ref";
 		const string CppConstRefStringMember = "_const_cpp_ref";
+		const string RValCppRefStringMember = "_rval_cpp_ref";
+		const string ConstRValCppRefStringMember = "_const_rval_cpp_ref";
+
 		bool isRef(const TypePtr& type, const string& memberName) {
 
 			// filter out null-pointer
@@ -145,8 +148,10 @@ namespace analysis {
 
 			// check the one member element
 			NamedTypePtr element = structType[0];
+			core::TypePtr elTy = element->getType();
 			return element->getType()->getNodeType() == NT_RefType
-					&& !isCppRef(element->getType()) && !isConstCppRef(element->getType())
+					&& !isCppRef(elTy) && !isConstCppRef(elTy)
+					&& !isRValCppRef(elTy) && !isConstRValCppRef(elTy)
 					&& element->getName().getValue() == memberName;
 		}
 	}
@@ -173,13 +178,35 @@ namespace analysis {
 		));
 	}
 
+	bool isRValCppRef(const TypePtr& type) {
+		return isRef(type, RValCppRefStringMember);
+	}
+
+	TypePtr getRValCppRef(const TypePtr& elementType) {
+		IRBuilder builder(elementType->getNodeManager());
+		return builder.structType(toVector(
+				builder.namedType(RValCppRefStringMember, builder.refType(elementType))
+		));
+	}
+
+	bool isConstRValCppRef(const TypePtr& type) {
+		return isRef(type, ConstRValCppRefStringMember);
+	}
+
+	TypePtr getConstRValCppRef(const TypePtr& elementType) {
+		IRBuilder builder(elementType->getNodeManager());
+		return builder.structType(toVector(
+				builder.namedType(ConstRValCppRefStringMember, builder.refType(elementType, RK_SOURCE))
+		));
+	}
+
 	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
-		assert(isCppRef(cppRefType) || isConstCppRef(cppRefType));
+		assert_true(isCppRef(cppRefType) || isConstCppRef(cppRefType) || isRValCppRef(cppRefType) || isConstRValCppRef(cppRefType));
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
 	bool isAnyCppRef(const TypePtr& type){
-		return isCppRef(type) || isConstCppRef(type);
+		return isCppRef(type) || isConstCppRef(type) || isRValCppRef(type) || isConstRValCppRef(type) ;
 	}
 
 	ExpressionPtr unwrapCppRef (const ExpressionPtr& originalExpr){
@@ -197,9 +224,14 @@ namespace analysis {
 		else if (isConstCppRef(expr->getType())){
 			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType()), RK_SOURCE), manager.getLangExtension<lang::IRppExtensions>().getRefConstCppToIR(), expr);
 		}
-
+		else if (isRValCppRef(expr->getType())){
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefRValCppToIR(), expr);
+		}
+		else if (isConstRValCppRef(expr->getType())){
+			return builder.callExpr(builder.refType(getCppRefElementType(expr->getType()), RK_SOURCE), manager.getLangExtension<lang::IRppExtensions>().getRefConstRValCppToIR(), expr);
+		}
 		// error fallthrow
-		assert(false && "could not unwrapp Cpp ref, is it a cpp ref?");
+		assert_fail() << "could not unwrapp Cpp ref, is it a cpp ref?";
 		return ExpressionPtr();
 	}
 
@@ -280,7 +312,7 @@ namespace analysis {
 
 
 	LambdaExprPtr createDefaultConstructor(const TypePtr& type) {
-		assert(isObjectType(type) && "to create DefaultCtor a objectType is needed");
+		assert_true(isObjectType(type)) << "to create DefaultCtor a objectType is needed";
 		NodeManager& manager = type.getNodeManager();
 		IRBuilder builder(manager);
 

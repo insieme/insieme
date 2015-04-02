@@ -1,5 +1,5 @@
 # Insieme: Compiler and Runtime Infrastructure
-The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More deatails are available [here](http://insieme-compiler.org/mission.html).
+The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More details are available [here](http://insieme-compiler.org/mission.html).
 
 ## Directory Structure
 Insieme contains 4 main sub-directories:
@@ -11,7 +11,7 @@ Insieme contains 4 main sub-directories:
   * /test -- Insieme integration tests
 
 ## Installation 
-Insieme is written in C++11 and relies on several third-party libraries, an updated list is available [here](http://insieme-compiler.org/license.html). 
+Insieme is written in C++11 and relies on several third-party libraries: 
 
 ### List of Required Libraries and Software
 Name 		| Version | What's for |
@@ -30,16 +30,21 @@ Name 		| Version | What's for |
 [Kompex](http://sqlitewrapper.kompex-online.com/)             	  	| >= 1.7.9 | DBMS |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.8 | Scripting |
 
+### List of Optional Libraries and Software
+Name 		| Version | What's for |
+--------|---------|------------|
+[PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0  | Runtime system, for hardware information and event counters |
+
 ### Preparing the Environment
-You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and apply patches. 
+You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
 ```
 cd scripts
 make PREFIX=/where/to/install 
 ```
-All libraries will be installed in ``$PREFIX`` and a symbolic link is created with postfix '-latest' pointing to the newest installed version of a library (which simplifies the following cmake configuration steps). By default ``PREFIX=~/lib``; additionally the script performs a parallel build (``make -j$SLOTS``) using all availabe cores in the host architecture. You can change this behaviour by passing to the make a different value for ``SLOTS``.
+All libraries will be installed in ``$PREFIX`` and a symbolic link is created with postfix '-latest' pointing to the newest installed version of a library (which simplifies the following CMake configuration steps). By default ``PREFIX=~/lib``; additionally the script performs a parallel build (``make -j$SLOTS``) using all availabe cores in the host architecture. You can change this behaviour by passing a different value for ``SLOTS`` to ``make``.
 
 ### Building Insieme
-Insieme's build system is based on CMake. We suppose to have the all dependencies installed in the same directory: ``$HOME/libs``
+Insieme's build system is based on CMake. We assume that all dependencies installed in the same directory: ``$HOME/libs``
 
 ```
 mkdir build
@@ -59,44 +64,55 @@ Several other options can be provided to enable/disable some of the compiler fea
 - ``-DDOCS=ON|OFF`` -- Enable/disable generation of documentation
 - ``-DCMAKE_BUILD_TYPE=Debug|Release`` -- Set the build to be in Debug or Release mode 
 - ``-DUSE_OPENCL=ON|OFF`` -- Enabe/disable OpenCL support (in both frontend/backend/runtime)
-(note: this variables must be passed as parameters of the cmake command, not set as environment variables)
+- ``-DUSE_ENERGY=ON|OFF`` -- Enable/disable energy measurement support
+- ``-DCONDUCT_MEMORY_CHECKS=ON|OFF`` -- Enable/disable valgrind memory checks for most unit tests
+(note: these variables must be passed as parameters to the ``cmake`` command, not set as environment variables)
 
-If successful, CMake produces the set of Makefiles to build the Insieme project. 
+If successful, CMake produces the set of Makefiles required to build the Insieme project. 
 
 ```
-make -j2 # Builds using two threads
+make -j2 # Builds using two parallel jobs
 ```
 
-Or you can alternatively mode into a subfolder and only buld that particular module of the compiler
+Or you can alternatively change into a subfolder and only build that particular module of the compiler
 ```
 cd core
 make
 ```
 
+### Running Unit Tests
+
 Unit tests can be executed with:
 ```
-make test
+make test ARGS=-j2 # Runs all unit tests using two parallel jobs
 ```
 
+or directly via CTest:
+```
+ctest -j2 # Runs all unit tests using two parallel jobs
+```
+
+
 If everything was successful... 
-**congratulation!**
-**You may start enjoying Insieme now!**
+**congratulations!**
+**You can start enjoying Insieme now!**
 
 
-Please, understand that the install command is not implemented since this is an on-going development. 
-Instead of polluting your local setup, we prefer to use insieme from the build directory. 
-There is always time for install scripts in future releases.
+Please, understand that the install command is not implemented since this is an on-going development framework. 
+Instead of polluting your local setup, we prefer to use Insieme from the build directory. 
+Install scripts will be provided in future releases.
+
+### Running Integration Tests
 
 Integration tests can be executed using the custom runner compiled in the build directory:
 ```
-./code/driver/integration_test
+./code/driver/integration_tests
 ```
-Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the insieme developer documentation. The mock run (``-m```) will give you an idea of the actual commands being invoked.
+Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the Insieme developer documentation. The mock run (``-m``) will give you an idea of the actual commands being invoked.
 
+### Compiling Application Codes
 
-
-
-
-
-
-
+The main executable provided by the Insieme framework is called ``insiemecc``. It can be used to replace e.g. occurrences of another compiler such as ``gcc`` in makefiles. It supports both source-to-source-only compilation, as well as full compilation by calling a backend compiler. For further information on its features and options, please refer to:
+```
+./code/driver/insiemecc --help
+```

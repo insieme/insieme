@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,7 @@ namespace types {
 
 namespace {
 
-	class FreshVariableSubstitution : public NodeMapping {
+	class FreshVariableSubstitution : public SimpleNodeMapping {
 
 		NodeManager& manager;
 
@@ -75,7 +75,7 @@ namespace {
 	public:
 
 		FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, IntTypeParamSet& paramSet)
-			: NodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
+			: SimpleNodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
 
 		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
 			// only handle type variables
@@ -124,7 +124,7 @@ namespace {
 					return res;
 				}
 				default:
-					assert(false && "Should be impossible to reach!");
+					assert_fail() << "Should be impossible to reach!";
 			}
 			return ptr;
 		}

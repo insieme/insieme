@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -153,7 +153,7 @@ namespace cba {
 		}
 
 		FunctionTypePtr getFunctionType() const {
-			assert(definition);
+			assert_true(definition);
 			if (LambdaPtr lambda = definition.isa<LambdaPtr>()) {
 				return lambda->getType();
 			}
@@ -183,7 +183,7 @@ namespace cba {
 		}
 
 		VariablePtr getRecursiveVariable() const {
-			assert(isLambda());
+			assert_true(isLambda());
 			return definition.getParentNode().as<LambdaBindingPtr>()->getVariable();
 		}
 

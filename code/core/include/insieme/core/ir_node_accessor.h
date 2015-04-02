@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -138,8 +138,8 @@ namespace core {
 		 * @return a pointer to the requested child
 		 */
 		const NodePtr& getChild(std::size_t index) const {
-			assert(!isValue() && "Node represents a value!");
-			assert((index < getNode().children.size()) && "Index out of bound!");
+			assert_false(isValue()) << "Node represents a value!";
+			assert_lt(index, getNode().children.size()) << "Index out of bound!";
 			return getNode().children[index];
 		}
 
@@ -150,7 +150,7 @@ namespace core {
 		 * @return a reference to the manager maintaining this node
 		 */
 		inline NodeManager& getNodeManager() const {
-			assert(getNode().manager && "NodeManager must not be null - unmanaged node detected!");
+			assert_true(getNode().manager) << "NodeManager must not be null - unmanaged node detected!";
 			return *getNode().manager;
 		}
 
@@ -170,10 +170,24 @@ namespace core {
 		 *
 		 * @param manager the manager to be used to create the new node
 		 * @param mapper the mapper used to translate child node references
+		 * @param context the mapping context information to be forwarded
 		 * @return a pointer to the modified node.
 		 */
-		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping& mapper) const {
-			return getNode().substituteInternal(manager, mapper).template as<Ptr<const node_type>>();
+		template<class Context, class C2>
+		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, C2 c) const {
+			return getNode().substituteInternal(manager, mapper, c).template as<Ptr<const node_type>>();
+		}
+
+		/**
+		 * Creates a new version of this node where every reference to a child node
+		 * is replaced by a pointer to the node returned by the given mapper.
+		 *
+		 * @param manager the manager to be used to create the new node
+		 * @param mapper the mapper used to translate child node references
+		 * @return a pointer to the modified node.
+		 */
+		Ptr<const node_type> substitute(NodeManager& manager, SimpleNodeMapping& mapper) const {
+			return getNode().substituteInternal(manager, mapper, 0).template as<Ptr<const node_type>>();
 		}
 
 		/**
@@ -190,7 +204,7 @@ namespace core {
 		 * @return a reference to the internally maintained value
 		 */
 		const NodeValue& getNodeValue() const {
-			assert(isValue() && "Node does not represent a value!");
+			assert_true(isValue()) << "Node does not represent a value!";
 			return getNode().value;
 		}
 

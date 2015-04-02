@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,14 +46,9 @@
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
-
-#include "insieme/frontend/cilk/cilk_pragma.h"
-#include "insieme/frontend/mpi/mpi_pragma.h"
-#include "insieme/frontend/mpi/mpi_sema.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"
@@ -84,7 +79,7 @@ namespace {
 
 // Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
 ///
-void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, InsiemeSema& sema, bool dumpCFG) {
+void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSema& sema) {
 
 	Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();
@@ -109,7 +104,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	ParserProxy::discard();  // FIXME
 
 	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
-	if(dumpCFG) {
+	if(false) {
 		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
 		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
 			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
@@ -118,7 +113,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 					bo.AddInitializers = true;
 					bo.AddImplicitDtors = true;
 					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
-					assert(cfg);
+					assert_true(cfg);
 					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
 					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
 				}
@@ -137,24 +132,12 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
 	{
 
-	//register 'cilk' pragmas
-	cilk::registerPragmaHandlers( mClang.getPreprocessor() );
-
-	// register 'test' pragma
-	TestPragma::registerPragmaHandler( mClang.getPreprocessor() );
-
-	// register 'insieme' pragma
-	InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
-
-	// register 'mpi' pragma
-	mpi::registerPragmaHandler( mClang.getPreprocessor() );
-
-	// check for frontend plugins pragma handlers
+	// check for frontend extensions pragma handlers
 	// and add user provided pragmas to be handled
 	// by insieme
 	std::map<std::string,clang::PragmaNamespace *> pragmaNamespaces;
-	for(auto plugin : setup.getPlugins()) {
-		for(auto ph : plugin->getPragmaHandlers()) {
+	for(auto extension : setup.getExtensions()) {
+		for(auto ph : extension->getPragmaHandlers()) {
 			std::string name = ph->getName();
 			// if the pragma namespace is not registered already
 			// create and register it and store it in the map of pragma namespaces
@@ -170,7 +153,7 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		}
 	}
 
-	parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
+	parseClangAST(mClang, &emptyCons, mSema);
 
     // all pragmas should now have either a decl or a stmt attached.
     // it can be the case that a pragma is at the end of a file

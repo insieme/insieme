@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -282,6 +282,15 @@ Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, cons
 	replacements[toReplace] = replacement;
 	return fixTypesGen(mgr, root, replacements, limitScope, typeHandler);
 }
+
+/**
+ * Updates the type of functions to match their argument list, which may has been changed arelier
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ */
+NodePtr fixInterfaces(NodeManager& mgr, NodePtr root);
+
 
 /**
  * Replaces all occurrences of the type variables and int type parameters within the top level scope of the

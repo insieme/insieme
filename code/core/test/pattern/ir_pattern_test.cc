@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -680,6 +680,18 @@ TEST(PatternTests, VarUsage) {
 //	std::cout << "x=" << res->getVarBinding("x") << "\n";
 //	std::cout << "y=" << res->getVarBinding("y") << "\n";
 //	std::cout << "z=" << res->getVarBinding("z") << "\n";
+}
+
+TEST(PatternTests, PFor) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}").as<ForStmtPtr>();
+	CallExprPtr pforStmt = builder.pfor(forStmt);
+
+	TreePattern pattern = irp::pfor();
+
+	EXPECT_PRED2(isMatch, pattern, pforStmt);
 }
 
 } // end namespace pattern

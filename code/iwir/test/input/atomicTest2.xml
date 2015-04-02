@@ -1,0 +1,30 @@
+<IWIR version="1.1" wfname="atomic2" xmlns="http://shiwa-workflow.eu/IWIR">
+  <task name="atomic" tasktype="atomicType">
+    <inputPorts>
+      <inputPort name="in1" type="integer">
+        <properties>
+          <property name="prop1" value="val1"/>
+        </properties>
+        <constraints>
+          <constraint name="con1" value="val1"/>
+        </constraints>
+      </inputPort>
+    </inputPorts>
+    <outputPorts>
+      <outputPort name="out1" type="integer">
+        <properties>
+          <property name="prop1" value="val1"/>
+        </properties>
+        <constraints>
+          <constraint name="con1" value="val1"/>
+        </constraints>
+      </outputPort>
+    </outputPorts>
+    <properties>
+      <property name="prop1" value="val1"/>
+    </properties>
+    <constraints>
+      <constraint name="con1" value="val1"/>
+    </constraints>
+  </task>
+</IWIR>

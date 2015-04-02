@@ -34,6 +34,32 @@
  * regarding third party software licenses.
  */
 
+/**
+While the other header files adxintrin.h, emmintrin.h, ia32intrin.h and xmmintrin.h have been taken literally
+from the GCC source code, this file defines all the __builtins that are available in GCC but not in Clang. Clang
+implements fewer builtins than GCC by purpose, as the Clang developers claim that the vector operations _mm_*
+should be used instead. These vector operations are also available within GCC. See
+   http://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions   for a general discussion and
+   http://clang.llvm.org/builtins.py   for a script to convert builtins to vector operations).
+
+To make a long story short, if your program uses some of these functions found below, you should seriously think of
+adapting your program to the new standards. Do NOT use any of the __builtin_* functions in your code! It is not
+portable across compilers and/or architectures.
+
+However, as we are using GCC in the backend, we want Clang to have GCC semantics. Hence, we load the GCC header
+files adxintrin.h, emmintrin.h, ia32intrin.h and xmmintrin.h when generating the Clang AST, and thus we also need
+declarations for GCC __builtins so that Clang will not complain; without these declarations, Clang cannot possibly
+know that the builtins are known during the code generation phase.
+
+Generation/updating this file: As these builtins rarely change (about once per 7 years), an automatic approach to add
+elements to this file does not warrant the development effort: For example, __builtin_ia32_storehps was introduced
+Jul-2007 and updated for const correctness May-2008, then no updates were done until today (2015).
+
+Hence, we opt for a semi-automatic approach using the scripts/check-hack script which checks the Clang definitions
+(found on the Clang web site, so authoritative and hopefully up-to-date) that we need to include, and prints every
+definition that is not yet in this file.
+*/
+
 typedef double __v2df __attribute__ ((__vector_size__ (16)));
 typedef int __v4si __attribute__ ((__vector_size__ (16)));
 typedef float __v4sf __attribute__ ((__vector_size__ (16)));
@@ -42,10 +68,12 @@ typedef long long __v2di __attribute__ ((__vector_size__ (16)));
 typedef char __v16qi __attribute__ ((__vector_size__ (16)));
 typedef short __v8hi __attribute__ ((__vector_size__ (16)));
 typedef long long __v1di __attribute__ ((__vector_size__ (8)));
+typedef long long __m128i __attribute__ ((__vector_size__ (16)));
+typedef double __m128d __attribute__ ((__vector_size__ (16)));
 
-//emmintrin.h
-//INSIEME HACK
 #ifdef __clang__
+
+// builtins called in GCC's emmintrin.h
 extern __v2df __builtin_ia32_movsd(__v2df, __v2df); 
 extern __v2df __builtin_ia32_loadupd(const double *); 
 extern __v2df __builtin_ia32_shufpd(__v2df, __v2df, const int); 
@@ -129,12 +157,22 @@ extern __v8hi __builtin_ia32_pcmpgtw128(__v8hi, __v8hi);
 extern __v4si __builtin_ia32_pcmpeqd128(__v4si, __v4si); 
 extern __v4si __builtin_ia32_pcmpgtd128(__v4si, __v4si); 
 extern void __builtin_ia32_movnti64(long long int *, long long int); 
-//INSIEME HACK
-#endif
 
-//ia32intrin.h
-//INSIEME HACK
-#ifdef __clang__
+extern __m128i __builtin_ia32_pshufhw(__v8hi, int);
+extern __m128i __builtin_ia32_pshuflw(__v8hi, int);
+extern __m128i __builtin_ia32_pshufd (__v4si, int);
+extern (unsigned short) __builtin_ia32_vec_ext_v8hi (__v8hi, int);
+extern __m128i __builtin_ia32_vec_set_v8hi(__v8hi, int, int);
+
+
+// builtins called in GCC's smmintrin.h
+extern (int) (unsigned char) __builtin_ia32_vec_ext_v16qi (__v16qi, int);
+extern __m128i __builtin_ia32_vec_set_v16qi(__v16qi, int, int);
+extern __m128i __builtin_ia32_vec_set_v4si (__v4si, int, int);
+extern __m128i __builtin_ia32_vec_set_v2di (__v2di, long long, int);
+
+
+// builtins called in GCC's ia32intrin.h
 extern int __builtin_ia32_bsrsi(int);
 extern int __builtin_ia32_bsrdi(long long);
 extern unsigned long long __builtin_ia32_rdpmc(int);
@@ -145,12 +183,8 @@ extern unsigned short __builtin_ia32_rolhi(unsigned short, int);
 extern unsigned char __builtin_ia32_rorqi(unsigned char, int);
 extern unsigned short __builtin_ia32_rorhi(unsigned short, int);
 extern void __builtin_ia32_pause(void);
-#endif
-//INSIEME HACK
 
-//xmmintrin.h
-//INSIEME HACK
-#ifdef __clang__
+// builtins called in GCC's xmmintrin.h
 typedef int __v4si __attribute__ ((__vector_size__ (16)));
 extern __v4sf __builtin_ia32_addss(__v4sf, __v4sf);
 extern __v4sf __builtin_ia32_subss(__v4sf, __v4sf);
@@ -204,19 +238,22 @@ extern __v4sf __builtin_ia32_unpcklps(__v4sf ,__v4sf);
 extern __v4sf __builtin_ia32_loadhps(__v4sf, const __v2sf *);
 extern __v4sf __builtin_ia32_loadlps(__v4sf, const __v2sf *);
 
-//FIXME different signature in clang than in gcc
-//CLANG extern void __builtin_ia32_storehps(__v2si *, __v4sf); //CLANG
-extern void __builtin_ia32_storehps(__v2sf *, __v4sf);	//GCC
-//CLANG extern void __builtin_ia32_storelps(__v2si *, __v4sf); //CLANG
-extern void __builtin_ia32_storelps(__v2sf *, __v4sf);	//GCC
-//GCC extern void __builtin_ia32_movntq(unsigned long long *, unsigned long long); //GCC
-extern void __builtin_ia32_movntq(__v1di*,__v1di); //CLANG
-//FIXMEEND 
+// different signature in Clang than in GCC — we only care about GCC, as outlined above
+// extern void __builtin_ia32_storehps(__v2si *, __v4sf);				// Clang
+   extern void __builtin_ia32_storehps(__v2sf *, __v4sf);						// GCC
+// extern void __builtin_ia32_storelps(__v2si *, __v4sf);				// Clang
+   extern void __builtin_ia32_storelps(__v2sf *, __v4sf);						// GCC
+// extern void __builtin_ia32_movntq(unsigned long long *, unsigned long long);	// GCC
+   extern void __builtin_ia32_movntq(__v1di*,              __v1di);		// Clang
+
+extern int   __builtin_ia32_vec_ext_v4hi(__v4hi, int);
+extern __m64 __builtin_ia32_vec_set_v4hi(__v4hi, int, int);
+
 
 extern __v4sf __builtin_ia32_loadups(const float *);
 extern void __builtin_ia32_storeups(float *, __v4sf);
 extern __v4sf  __builtin_ia32_shufps(__v4sf, __v4sf, int const);
 extern float __builtin_ia32_vec_ext_v4sf(__v4sf, const int); 
 extern void __builtin_ia32_movntq(__v1di *, __v1di);
+
 #endif
-//INSIEME HACK

@@ -1780,7 +1780,7 @@ namespace arithmetic {
 		 * Converts this piecewise formula into a formula if possible.
 		 */
 		inline const Formula& toFormula() const {
-			assert(isFormula() && "Cannot convert non-formula piecewise function formula!");
+			assert_true(isFormula()) << "Cannot convert non-formula piecewise function formula!";
 			return pieces[0].second;
 		}
 

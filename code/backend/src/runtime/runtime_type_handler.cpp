@@ -53,7 +53,7 @@ namespace runtime {
 
 		const TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
 			// make sure it is only invoked using LW data items
-			assert(DataItem::isLWDataItemType(type) && "Only works on LW Data Items!");
+			assert_true(DataItem::isLWDataItemType(type)) << "Only works on LW Data Items!";
 
 			// get underlying tuple type
 			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(

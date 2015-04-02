@@ -94,7 +94,7 @@ public:
 	 * call this method with a NULL parser causes an assertion.
 	 */
 	static void init(clang::Parser* parser=NULL) {
-		assert(parser && "ParserProxy cannot be initialized with a NULL parser");
+		assert_true(parser) << "ParserProxy cannot be initialized with a NULL parser";
 		currParser = new ParserProxy(parser);
 	}
 
@@ -110,7 +110,7 @@ public:
 	 * Returns the current parser, if not initialized an assertion is thrown.
 	 */
 	static ParserProxy& get() {
-		assert(currParser && "Parser proxy not initialized.");
+		assert_true(currParser) << "Parser proxy not initialized.";
 		return *currParser;
 	}
 

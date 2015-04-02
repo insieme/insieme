@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,11 +55,11 @@ void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_hw_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation_variant g_insieme_wi_hw_variants[] = {
-	{ &insieme_wi_hw_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_hw_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {

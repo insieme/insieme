@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -94,12 +94,12 @@ namespace access {
 
 		// Accessors 
 		inline AccessClass& operator[](const size_t uid) { 
-			assert(uid < classes.size() && "OutOfBounds array access");
+			assert_lt(uid, classes.size()) << "OutOfBounds array access";
 			return *classes[uid]; 
 		}
 
 		inline const AccessClass& operator[](const size_t uid) const {
-			assert(uid < classes.size() && "OutOfBounds array access");
+			assert_lt(uid, classes.size()) << "OutOfBounds array access";
 			return *classes[uid]; 
 		}
 

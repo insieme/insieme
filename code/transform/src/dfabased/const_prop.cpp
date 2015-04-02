@@ -184,5 +184,5 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 	return core::transform::replaceAll(mgr, replacements);
 }
 
-} // end transfrom namespace 
+} // end transform namespace
 } // end insieme namespace 

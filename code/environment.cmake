@@ -35,6 +35,7 @@ set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_annotations_include_dir       	${insieme_code_dir}/annotations/include )
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
+set ( insieme_iwir_include_dir            	${insieme_code_dir}/iwir/include )
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
@@ -108,7 +109,7 @@ if ( NOT DEFINED BOOST_ROOT )
 		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
 	endif()
 endif()
-find_package( Boost 1.48 COMPONENTS program_options system filesystem regex serialization )
+find_package( Boost 1.48 QUIET COMPONENTS program_options system filesystem regex serialization )
 include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -151,6 +152,12 @@ lookup_lib( PAPI papi )
 
 # lookup ruby
 #find_package( Ruby )
+
+# lookup xerces
+if (USE_XML) 
+	lookup_lib( XERCES xerces-c )
+	add_definitions(-DUSE_XML)
+endif (USE_XML) 
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
@@ -350,15 +357,6 @@ if(MSVC)
 	add_definitions( /W4 )
 endif()
 
-# disable energy stuff if not explicitely requested
-option(USE_ENERGY "Enable energy capabilities" OFF)
-if (NOT MSVC)
-	if(NOT USE_ENERGY)
-		message(STATUS "Disabling energy capabilities" )
-		add_definitions(-DDISABLE_ENERGY)
-	endif ( NOT USE_ENERGY)
-endif (NOT MSVC)
-
 
 # --------------------------------------------------------- Runtime
 # -D_XOPEN_SOURCE=700 is required to get recent pthread features with -std=c99
@@ -398,5 +396,4 @@ execute_process(COMMAND getconf  _NPROCESSORS_ONLN
                 OUTPUT_VARIABLE NB_PROCESSORS
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
-
 

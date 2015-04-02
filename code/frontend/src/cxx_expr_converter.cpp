@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,7 +65,6 @@
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
 
@@ -247,7 +246,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	LOG_EXPR_CONVERSION(callExpr, ret);
 	// TODO: static methods
 
-	const core::IRBuilder& builder = convFact.builder;
+	const core::FrontendIRBuilder& builder = convFact.builder;
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	if (!methodDecl){
@@ -346,7 +345,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 			ownerObj =  builder.refVar (ownerObj);
 		}
 
-		// incorporate this to the begining of the args list
+		// incorporate this to the beginning of the args list
 		args.insert (args.begin(), ownerObj);
 	}
 	else if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
@@ -374,7 +373,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(callExpr, retIr);
-	const core::IRBuilder& builder = convFact.builder;
+	const core::FrontendIRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
     const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
@@ -392,6 +391,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	}
 
 	if( !ctorDecl->isUserProvided() ) {
+
 		if(	ctorDecl->isDefaultConstructor() ) {
 			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
 			//classes
@@ -427,17 +427,22 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				//return (retIr = (builder.callExpr(refToResTy, ctor, builder.undefinedVar(refToResTy))));
 			}
 		}
-		else if( ctorDecl->isCopyConstructor() && ctorDecl->getParent()->isPOD() ) {
+		else if( (ctorDecl->isMoveConstructor() || ctorDecl->isCopyConstructor()) && ctorDecl->getParent()->isPOD() ) {
 			//if not userprovided we don't need to add a constructor just create the object to work
 			//with -- for the rest the BE-compiler takes care of
 			return (retIr = Visit(callExpr->getArg(0)));
 		}
 	}
 
+    // if the thing below is an xvalue... just use the inner element
+    if(ctorDecl->isMoveConstructor() || ctorDecl->isCopyConstructor())
+        if(callExpr->getArg(0)->isXValue())
+            return (retIr = Visit(callExpr->getArg(0)));
+
 	// to begin with we translate the constructor as a regular function but with initialization list
 	core::ExpressionPtr ctorFunc = convFact.getCallableExpression(ctorDecl);
 
-	// update parameter list with a class-typed parameter in the first possition
+	// update parameter list with a class-typed parameter in the first position
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 
 	// reconstruct Arguments list, fist one is a scope location for the object
@@ -770,7 +775,7 @@ namespace detail{
 				auto decl = (*it).as<core::DeclarationStmtPtr>();
 				res =core::transform::replaceAllGen(res->getNodeManager(), res, decl->getVariable(), decl->getInitialization());
 			}
-			
+
 			return res;
 		}
 } // detail namespace
@@ -833,7 +838,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	else{
 		if (core::encoder::isListType(innerIr->getType())) {
 			vector<core::ExpressionPtr> retList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(innerIr);
-			if (core::encoder::isListType(retList[0]->getType())) 
+			if (core::encoder::isListType(retList[0]->getType()))
 				retList = core::encoder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(retList[0]);
 			for (core::ExpressionPtr& expr : retList){
 				expr = builder.deref(expr);
@@ -844,7 +849,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
-	// inline the list, 
+	// inline the list,
 	return retIr =  detail::inlineExpressionWithCleanups(stmtList);
 }
 
@@ -1016,9 +1021,9 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 
 	//iterate clang handler list and check if a handler wants to convert the expr
 	core::ExpressionPtr retIr;
-	//call frontend plugin visitors
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-		retIr = plugin->Visit(expr, convFact);
+	//call frontend extension visitors
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+		retIr = extension->Visit(expr, convFact);
 		if(retIr)
 			break;
     }
@@ -1031,9 +1036,9 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 	// print diagnosis messages
 	convFact.printDiagnosis(expr->getLocStart());
 
-    // call frontend plugin post visitors
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        retIr = plugin->PostVisit(expr, retIr, convFact);
+    // call frontend extension post visitors
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        retIr = extension->PostVisit(expr, retIr, convFact);
 	}
 
 	// attach location annotation
