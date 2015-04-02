@@ -376,8 +376,8 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 int main(int argc, char** argv) {
 
 	// Step 1: parse input parameters
-
- 	cmd::Options options = cmd::Options::parse(argc, argv);
+    std::vector<std::string> arguments(argv, argv + argc);
+ 	cmd::Options options = cmd::Options::parse(arguments);
 
  	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.settings.logLevel), options.settings.verbosity);
 

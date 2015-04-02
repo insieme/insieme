@@ -37,6 +37,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <cstdlib>
 
 #include <boost/program_options.hpp>
@@ -138,7 +139,7 @@ namespace cmd {
 		/**
 		 * Parses the given command line options.
 		 */
-		static detail::OptionParser parse(int argc, char** argv);
+		static detail::OptionParser parse(const std::vector<std::string>& argv);
 
 	private:
 
@@ -165,14 +166,9 @@ namespace cmd {
 			typedef std::function<bool(const boost::program_options::variables_map&)> parser_step;
 
 			/**
-			 * The number of arguments passed to the program.
-			 */
-			int argc;
-
-			/**
 			 * The arguments passed to the program.
 			 */
-			char** argv;
+            std::vector<std::string> argv;
 
 			/**
 			 * The description of parameters to be parsed by this parser - aggregated
@@ -185,18 +181,13 @@ namespace cmd {
 			 */
 			vector<parser_step> parser_steps;
 
-			/**
-			 * A list of frontend extensions that offer command line parameters.
-			 */
-			vector<FrontendExtensionPtr> frontendExtensions;
-
 		public:
 
 			/**
 			 * Creates a new instance of this option parser parsing the given arguments.
 			 * This
 			 */
-			OptionParser(int argc, char** argv);
+			OptionParser(const std::vector<std::string>& argv);
 
 			/**
 			 * Allows to add a flag to the program options using a convenient syntax.
@@ -207,17 +198,6 @@ namespace cmd {
 			 * @param description the description of the parameter to be shown in the help message
 			 */
 			OptionParser& operator()(const string& name, char symbol, bool& flag, const char* description);
-
-			/**
-			 * Allows to add a flag to the program options using a convenient syntax.
-			 *
-			 * @param name the name of the flag to be added
-			 * @param symbol the one-letter shortcut of the flag
-			 * @param target the target to be used for storing whether the flag has been set or not
-			 * @param description the description of the parameter to be shown in the help message
-			 */
-			template<typename T, typename ... Args>
-			OptionParser& registerFrontendExtension(const Args& ... args);
 
 			/**
 			 * Allows to add additional program options using a convenient syntax.
