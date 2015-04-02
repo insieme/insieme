@@ -55,49 +55,24 @@ namespace detail{
         return nullptr;
     }
 
-    void DeclarationContext::add_unfinish_symbol(const std::string& name){
-        unfinished_symbols.push_back(name);
-        let_symbols.push_back(name);
-    }
-
-    std::string DeclarationContext::get_unfinish_symbol(){
-        auto x = unfinished_symbols.front();
-        unfinished_symbols.erase(unfinished_symbols.begin());
-        return x;
-    }
-
-    bool DeclarationContext::all_symb_defined(){
-        let_symbols.clear();
-        return unfinished_symbols.empty();
-    }
-
-    bool DeclarationContext::is_unfinished(const std::string& name)const {
-        return (std::find (let_symbols.begin(), let_symbols.end(), name) != let_symbols.end());
-    }
-
   /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ inspire_driver ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 
-    inspire_driver::inspire_driver (const std::string &f, NodeManager& nm)
-      : mgr(nm), builder(mgr), file("global scope"), str(f), result(nullptr), glob_loc(&file)
+    inspire_driver::inspire_driver (const std::string& str, NodeManager& mgr, const DeclarationContext& ctx)
+      : scopes(ctx), mgr(mgr), builder(mgr), file("global scope"), str(str), result(nullptr), glob_loc(&file), in_let(false),
+        ss(str), scanner(&ss),
+        parser(*this, scanner),
+        inhibit_building_flag(false)
     {
-        std::cout << "parse: " << str << std::endl;
+        //std::cout << "parse: " << str << std::endl;
     }
 
-    inspire_driver::~inspire_driver ()
-    {
+    inspire_driver::~inspire_driver () {
     }
 
-    ProgramPtr inspire_driver::parseProgram ()
-    {
-        std::stringstream ss(str);
-        inspire_scanner scanner(&ss);
-        auto ssymb = inspire_parser::make_FULL_PROGRAM(glob_loc);
-        auto* ptr = &ssymb;
-
-        inspire_parser parser (*this, &ptr, scanner);
+    ProgramPtr inspire_driver::parseProgram () {
+        scanner.set_start_program();
         int fail = parser.parse ();
-
         if (fail) {
             print_errors();
             return nullptr;
@@ -105,31 +80,20 @@ namespace detail{
         return result.as<ProgramPtr>();
     }
 
-    TypePtr inspire_driver::parseType ()
-    {
-        std::stringstream ss(str);
-        inspire_scanner scanner(&ss);
-        auto ssymb = inspire_parser::make_TYPE_ONLY(glob_loc);
-        auto* ptr = &ssymb;
-        inspire_parser parser (*this, &ptr, scanner);
+    TypePtr inspire_driver::parseType () {
+        scanner.set_start_type();
+        inspire_parser parser (*this, scanner);
         int fail = parser.parse ();
-        //scanner->scan_end ();
-        //delete scanner;
         if (fail) {
             print_errors();
             return nullptr;
         }
-        print_errors();
         return result.as<TypePtr>();
     }
 
-    StatementPtr inspire_driver::parseStmt ()
-    {
-        std::stringstream ss(str);
-        inspire_scanner scanner(&ss);
-        auto ssymb = inspire_parser::make_STMT_ONLY(glob_loc);
-        auto* ptr = &ssymb;
-        inspire_parser parser (*this, &ptr, scanner);
+    StatementPtr inspire_driver::parseStmt () {
+        scanner.set_start_statement();
+        inspire_parser parser (*this, scanner);
         int fail = parser.parse ();
         if (fail) {
             print_errors();
@@ -138,13 +102,9 @@ namespace detail{
         return result.as<StatementPtr>();
     }
 
-    ExpressionPtr inspire_driver::parseExpression ()
-    {
-        std::stringstream ss(str);
-        inspire_scanner scanner(&ss);
-        auto ssymb = inspire_parser::make_EXPRESSION_ONLY(glob_loc);
-        auto* ptr = &ssymb;
-        inspire_parser parser (*this, &ptr, scanner);
+    ExpressionPtr inspire_driver::parseExpression () {
+        scanner.set_start_expression();
+        inspire_parser parser (*this, scanner);
         int fail = parser.parse ();
         if (fail) {
             print_errors();
@@ -155,31 +115,7 @@ namespace detail{
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Some tools ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-    LiteralPtr inspire_driver::get_tag_function(const std::string& name){
-
-        if (!rec_function_vars[name].first){
-            LiteralPtr lit = builder.literal(builder.stringValue(name), 
-                                             builder.functionType(TypeList(), builder.getLangBasic().getUnit()));   
-            return rec_function_vars[name].first = lit;
-        }
-        else{
-            return rec_function_vars[name].first;
-        }
-    }
-
-
-
-
     ExpressionPtr inspire_driver::findSymbol(const location& l, const std::string& name) {
-
-        if (scopes.is_unfinished(name)) {
-            // this is the use of a recursive lambda call before is defined, return an callable type and wait for ammend
-            auto flit =  get_tag_function(name);
-            // touch the map, the real type will not be known until the prototype is parsed
-            rec_function_vars[name] = {flit, nullptr}; 
-            return flit;
-        }
 
         auto x = scopes.find(name);
 
@@ -206,40 +142,12 @@ namespace detail{
 
     TypePtr inspire_driver::findType(const location& l, const std::string& name){
 
-        if (scopes.is_unfinished(name)) {
-            // this is the use of a recursive lambda call before is defined, return an callable type and wait for ammend
+        if (std::find(let_names.begin(), let_names.end(), name) != let_names.end()){
+            // this is a type in a let binding usage, it might be recursive, so we "mark" it
             return builder.typeVariable(name);
         }
 
         auto x = scopes.find(name);
-
-        // keyword types (is this the right place?) 
-
-        
-        return x.as<TypePtr>();
-
- //       if (!x) {
- //           if (name == "unit") return builder.getLangBasic().getUnit();
- //       }
- //       if (!x) {
- //           if (name == "bool") return builder.getLangBasic().getBool();
- //       }
-
-        if (!x) {
-            try{ 
-                x = builder.getLangBasic().getBuiltIn(name);
-            }catch(...) { }
-        }
-
-        if (!x) {
-            error(l, format("the symbol %s was not declared in this context", name));
-            return nullptr; 
-        }
-        if (!x.isa<TypePtr>()){
-            error(l, format("the symbol %s is not a type", name));
-            return nullptr; 
-        }
-
         return x.as<TypePtr>();
     }
 
@@ -254,13 +162,19 @@ namespace detail{
       //  std::cout << " " << left << " : " << left->getType() << std::endl;
       //  std::cout << " " << right << " : " << right->getType() << std::endl;
 
-        // right side must be always a value
-        auto b = getOperand(right);
-
         // assign
+        // left side must be a ref, right side must be untouched
         if (op == "="){
-            return builder.assign(left, b);
+
+            if (!left.getType().isa<RefTypePtr>()) {
+                error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
+            }
+
+            return builder.assign(left, right);
         }
+
+        auto b = getOperand(right);
+        // left side is untouched because of reference subscript operators
         if (op == "["){
             if (builder.getLangBasic().isSignedInt(b->getType())) {
                 b = builder.castExpr(builder.getLangBasic().getUInt8(), b);
@@ -311,6 +225,14 @@ namespace detail{
         if (name == "ref"){
             if (iparamlist.size() != 0 || params.size() != 1) error(l, "malform ref type");
             else return builder.refType(params[0]);
+        }
+        if (name == "src"){
+            if (iparamlist.size() != 0 || params.size() != 1) error(l, "malform ref type");
+            else return builder.refType(params[0], RK_SOURCE);
+        }
+        if (name == "sink"){
+            if (iparamlist.size() != 0 || params.size() != 1) error(l, "malform ref type");
+            else return builder.refType(params[0], RK_SINK);
         }
         if (name == "channel"){
             if (iparamlist.size() != 1 || params.size() != 1) error(l, "malform channel type");
@@ -410,20 +332,6 @@ namespace detail{
 
         ExpressionPtr func = callable;
 
-        // if the call is to a not yet defined symbol, we might want to change the type (now can be completed)
-        if (func.isa<LiteralPtr>()){
-		    auto name = func.as<LiteralPtr>().getValue()->getValue();
-            if (rec_function_vars.find(name) != rec_function_vars.end()){
-                // we can redefine the symbol now
-                TypeList l;
-                for(const auto& e : args) l.push_back(e.getType());
-                
-                func = builder.literal(name, builder.functionType(l, builder.getLangBasic().getUnit()));
-                rec_function_vars[name].first = func.as<LiteralPtr>();
-            }
-
-        }
-
         auto ftype = func->getType();
         if (!ftype.isa<FunctionTypePtr>()) error(l, "attempt to call non function expression");    
 
@@ -440,8 +348,16 @@ namespace detail{
         }
 
         if (args.size() != funcParamTypes.size())  error(l, "invalid number of arguments in function call"); 
-    
-        return builder.callExpr(func, args);
+
+        ExpressionPtr res;
+        try{
+            res = builder.callExpr(func, args);
+        }catch(...){
+            error(l, "malformed call expression");
+            return nullptr;
+        }
+        if(!res) error(l, "malformed call expression");
+        return res;
     }
 
     ExpressionPtr inspire_driver::genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields){
@@ -477,20 +393,6 @@ namespace detail{
         add_symb(glob_loc, name, ptr);
     }
 
-    void inspire_driver::add_unfinish_symbol(const location& l, const std::string& name){
-        scopes.add_unfinish_symbol(name);
-    }
-
-    bool inspire_driver::close_unfinish_symbol(const location& l, const NodePtr& node){
-        if (!node) return false;
-        auto name = scopes.get_unfinish_symbol();
-        
-        // this node may be modified by every unfinished node that it might have used
-        recursive_symbols[name] = node;
-
-        return true;
-    }
-
     VariableIntTypeParamPtr inspire_driver::gen_type_param_var(const location& l, const std::string& name){
         auto x = scopes.find(name);
         if(!x) {
@@ -522,122 +424,7 @@ namespace {
         });
         return contains;
     }
-}
-
-    bool inspire_driver::all_symb_defined(const location& l){
-
-        if (!scopes.all_symb_defined()) {
-            //TODO: nested  recursion not supported, add scoping mechanisms to this thing.
-            error(l, "not all let identifiers were defined");
-            return false;
-        }
-
-        // amend all nodes that might be recursive
-        std::map<std::string, TypePtr> rec_types;
-        std::map<std::string, LambdaExprPtr> rec_funcs;
-        std::map<std::string, BindExprPtr> rec_closures;
-        for (const auto& rec : recursive_symbols){
-            if (rec.second.isa<TypePtr>())            rec_types[rec.first] = rec.second.as<TypePtr>();
-            else if (rec.second.isa<LambdaExprPtr>()) rec_funcs[rec.first] = rec.second.as<LambdaExprPtr>();
-            else if (rec.second.isa<BindExprPtr>()) rec_closures[rec.first] = rec.second.as<BindExprPtr>();
-            else {
-                error(l, format("the recursive symbol [%s] is neither a type or function", rec.first));
-                return false;
-            }
-        }
-
-
-        // FIRST TYPES
-        {
-            std::vector<RecTypeBindingPtr> type_defs;
-            std::vector<std::string> names;
-            for (const auto& rec : rec_types){
-                if(!contains_type_variables(rec.second.as<TypePtr>())) {
-                    add_symb(l, rec.first, rec.second);
-                }
-                else {
-                    type_defs.push_back(builder.recTypeBinding(builder.typeVariable(rec.first), rec.second.as<TypePtr>()));
-                    names.push_back(rec.first);
-                }
-            }
-            RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
-            for (const auto& n : names) add_symb(l, n, builder.recType(builder.typeVariable(n), fullType));
-        }
-
-
-        // THEN FUNCTIONS
-        {
-            NodeMap replacements;
-           
-            // collect al symbols that need to be replaced
-            for (const auto& rec : rec_funcs){
-                // build literal (to match the used one)
-                LiteralPtr flit = get_tag_function(rec.first);
-
-                // build variable with the right typing
-                VariablePtr fvar = builder.variable(rec.second.getType());
-                replacements.insert({flit, fvar});
-             //   count++;
-            }
-
-            std::vector<LambdaBindingPtr> lambda_defs;
-            // replace symbols and create lambda bindings
-            for (const auto& rec : rec_funcs){
-                LiteralPtr flit = get_tag_function(rec.first);
-                StatementPtr body = transform::replaceAllGen(mgr, rec.second->getBody(), replacements, true);
-                auto params = rec.second->getParameterList();
-                auto type = rec.second->getType();
-
-                VariablePtr var = replacements[flit].as<VariablePtr>();
-                lambda_defs.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
-            }
-            LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambda_defs);
-
-            // generate a callable symbol for each name
-            for (const auto& rec : rec_funcs){
-                LiteralPtr flit = get_tag_function(rec.first);
-                VariablePtr var = replacements[flit].as<VariablePtr>();
-
-                add_symb(l, rec.first, builder.lambdaExpr(var, lambdaDef));
-            }
-        }
-
-        // And closures
-        {
-            for (auto &c : rec_closures){
-                add_symb(l, c.first, c.second);
-            }
-        }
-
-        // clear the scope
-        recursive_symbols.clear();
-        return true;
-    }
-
-    void inspire_driver::open_scope(const location& l, const std::string& name){
-        scopes.open_scope(name);
-    }
-
-    void inspire_driver::close_scope(const location& l, const std::string& name){
-        scopes.close_scope(name);
-    }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    void inspire_driver::error (const location& l, const std::string& m)const {
-      errors.push_back(t_error(l, m));
-    }
-
-    void inspire_driver::error (const std::string& m)const {
-      std::cerr << m << std::endl;
-    }
-
-    bool inspire_driver::where_errors()const{
-        return !errors.empty();
-    }
-
-namespace {
-
+    
     //TODO: move this to string utils
     std::vector<std::string> split_string(const std::string& s){
         std::vector<std::string> res;
@@ -659,6 +446,175 @@ namespace {
         assert(res.size() > 0);
         return res;
     }
+
+    std::string get_body_string(const std::string& text, const location& b, const location& e){
+        auto tmp = text;
+
+        auto strings = split_string(text);
+
+        std::vector<std::string> subset (strings.begin()+b.begin.line-1, strings.begin()+e.end.line);
+        std::string res;
+
+        subset[subset.size()-1] = subset[subset.size()-1].substr(0, e.end.column-1);
+        for (auto it = subset.begin(); it < subset.end(); ++it){
+            res.append(*it);
+        }
+        res = res.substr(b.begin.column-1, res.size());
+        // the lambda keyword is lost during parsing, ammend
+        return std::string("lambda ").append(res);
+    }
+
+}
+
+    void inspire_driver::add_let_lambda(const location& l, const location& begin, const location& end, 
+                                        const TypePtr& retType, const VariableList& params){
+
+        // save a the variable list, the type, and the body text 
+        lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end)));
+    }
+
+    void inspire_driver::add_let_type(const location& l, const TypePtr& type){
+        type_lets.push_back(type);
+    }
+
+    void inspire_driver::add_let_closure(const location& l, const ExpressionPtr& closure){
+        closure_lets.push_back(closure);
+    }
+
+    void inspire_driver::add_let_name(const location& l, const std::string& name){
+        let_names.push_back(name);
+        in_let = true;
+    }
+
+    void inspire_driver::close_let_statement(const location& l){
+
+        // Lambda Lets:
+        if(let_names.size() == lambda_lets.size()){
+            std::map<std::string, VariablePtr> funcVars;
+            unsigned count = 0;
+            for (const auto& name :  let_names) {
+                const Lambda_let& tmp = lambda_lets[count];
+
+                TypeList types;
+                for(const auto& v : tmp.params) types.push_back(v->getType());
+                funcVars[name] = builder.variable(builder.functionType(types, tmp.retType));
+                count ++;
+            }
+
+            // generate a nested parser to parse the body with the right types
+            std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
+            count =0;
+            for(const auto& let : lambda_lets){
+
+                inspire_driver let_driver(let.expression, mgr, scopes);
+                for (const auto pair : funcVars) let_driver.add_symb(pair.first, pair.second);
+                ExpressionPtr lambda = let_driver.parseExpression();
+                if (!lambda) error(l, "lambda expression is wrong");
+                funcs.push_back({funcVars[let_names[count]],lambda.as<LambdaExprPtr>()});
+
+                count ++;
+            }
+
+            if (funcs.size() == 1){
+                add_symb(l, let_names[0], funcs[0].second);
+            }
+            else{
+                // generate funcs and bound them to the var types
+                std::vector<LambdaBindingPtr> lambdas;
+                for (const auto& lf : funcs){
+                    auto var = lf.first;
+                    auto params = lf.second->getParameterList();
+                    auto type = lf.second->getType();
+                    auto body = lf.second->getBody();
+                    lambdas.push_back(builder.lambdaBinding(var, builder.lambda(type.as<FunctionTypePtr>(), params, body)));
+                }
+                LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(lambdas);
+                for (const auto& fv : funcVars){
+                    add_symb(l, fv.first, builder.lambdaExpr(fv.second, lambdaDef));
+                }
+
+            }
+
+            lambda_lets.clear();
+        }
+        else if(let_names.size() == type_lets.size()){
+
+            std::vector<RecTypeBindingPtr> type_defs;
+            std::vector<std::string> names;
+            unsigned count = 0;
+            for (const auto& type : type_lets){
+            
+                const std::string& name = let_names[count];
+                if(!contains_type_variables(type)) {
+                    add_symb(l, name, type);
+                }
+                else {
+                    type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), type));
+                    names.push_back(name);
+                }
+                count ++;
+            }
+            RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
+            for (const auto& n : names) add_symb(l, n, builder.recType(builder.typeVariable(n), fullType));
+
+            type_lets.clear();
+        }
+        else if(let_names.size() == closure_lets.size()){
+            unsigned count = 0;
+            for (const auto& name :  let_names) {
+                add_symb(l, name, closure_lets[count]);
+                count++;
+            }
+
+            closure_lets.clear();
+        }
+        else{ 
+    
+            std::cout << "let_mames " << let_names << std::endl;
+            std::cout << "let_clos " << closure_lets << std::endl;
+            std::cout << "let_type " << type_lets << std::endl;
+            //std::cout << "let_lambd " << lambda_lets << std::endl;
+
+            error(l, "mixed type/function/closure let not allowed");
+        }
+       
+        let_names.clear();
+        in_let = false;
+        inhibit_building_flag = false;
+    }
+
+    void inspire_driver::open_scope(const location& l, const std::string& name){
+        scopes.open_scope(name);
+    }
+
+    void inspire_driver::close_scope(const location& l, const std::string& name){
+        scopes.close_scope(name);
+    }
+
+
+    void inspire_driver::set_inhibit(bool flag){
+        inhibit_building_flag = flag;
+    }
+    bool inspire_driver::inhibit_building()const{
+        return inhibit_building_flag;
+    }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Error management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    void inspire_driver::error (const location& l, const std::string& m)const {
+      errors.push_back(t_error(l, m));
+    }
+
+    void inspire_driver::error (const std::string& m)const {
+      std::cerr << m << std::endl;
+    }
+
+    bool inspire_driver::where_errors()const{
+        if( !errors.empty()) print_errors();
+        return !errors.empty();
+    }
+
+namespace {
 
     //TODO: move this to  utils
     const std::string RED   ="\033[31m";

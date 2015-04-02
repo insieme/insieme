@@ -59,9 +59,9 @@ paramvar #[a-zA-Z]
   //  http://www.gnu.org/software/bison/manual/html_node/Multiple-start_002dsymbols.html
   //  There is somehow something different, start_token is passed to the lexer from the parser and is never modified,
   //  I  use a double ptr to alter the original value
-  if (*start_token){
-      auto t = *start_token;
-      *start_token = nullptr;
+  if (start_token){
+      auto t = start_token;
+      start_token = nullptr;
       return *t;
   }
 
@@ -160,7 +160,10 @@ paramvar #[a-zA-Z]
 }
 
 {stringlit}      {
-  return inspire_parser::make_STRING(yytext, loc);
+    std::string tmp(yytext);
+    tmp.replace(0,1,"");
+    tmp.replace(tmp.size()-1,1,"");
+    return inspire_parser::make_STRING(tmp, loc);
 }
 {charlit}      {
   return inspire_parser::make_CHAR(yytext, loc);
@@ -199,8 +202,8 @@ namespace parser3{
 namespace detail{
 
 
-    inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_parser::symbol_type** start_token, inspire_scanner& scanner){
-        return scanner.yylex(driver, start_token);
+    inspire_parser::symbol_type yylex (inspire_driver& driver, inspire_scanner& scanner){
+        return scanner.yylex(driver);
     }
 
 } // detail namespace

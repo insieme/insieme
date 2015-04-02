@@ -546,15 +546,15 @@ DERIVED(ArrayViewPostInc, 		"array_view_post_inc",			"lambda (ref<ref<array<'ele
 DERIVED(ArrayViewPreDec, 		"array_view_pre_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,-1); return *a; }")
 DERIVED(ArrayViewPostDec, 		"array_view_post_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { decl auto res = *a; a = array_view(*a,-1); return res; }")
 
-DERIVED(ArrayReduce, "array_reduce",
-		"lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
-		"	decl ref<'b> res = var(init);"
-		"	for(uint<8> i = 0ul .. size) {"
-		"		res = op(*res, *(data[i]));"
-		"	}"
-		"	return *res;"
-		"}"
-)
+DERIVED(ArrayReduce, "array_reduce", R"1N5P1RE(
+		lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {
+			decl ref<'b> res = var(init);
+			for(uint<8> i = 0ul .. size) {
+				res = op(*res, *(data[i]));
+			}
+			return *res;
+		}
+)1N5P1RE")
 
 
 // Vectors ------------------------------------------------------------------------------------------------------------
@@ -571,7 +571,7 @@ LITERAL(VectorInitPartial, 		"vector_init_partial",		"(list<'elem>, intTypeParam
 
 DERIVED(VectorRefElem, 			"vector_ref_elem", 			"lambda (ref<vector<'elem,#l>> v, uint<8> i) -> ref<'elem> { return ref_narrow(v, dp_element(dp_root, i), lit('elem)); }")
 
-DERIVED(VectorPointwise,		"vector_pointwise",	 R"V0G0N(
+DERIVED(VectorPointwise,		"vector_pointwise",	 R"1N5P1RE(
     lambda (('elem1, 'elem2) -> 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {  
         return lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2) => lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {
             decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));
@@ -579,11 +579,11 @@ DERIVED(VectorPointwise,		"vector_pointwise",	 R"V0G0N(
             return *res;
         }(v1, v2, op);
     } 
-)V0G0N")
+)1N5P1RE")
 								
 //LITERAL(VectorPointwiseUnary, 	"vector_pointwise_unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 
-DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary", R"V0G0N(
+DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary", R"1N5P1RE(
 		lambda (('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {
 			return lambda (vector<'elem,#l> v) => lambda (vector<'elem,#l> v, ('elem) -> 'res op) -> vector<'res,#l> {
 				decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));
@@ -591,7 +591,7 @@ DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary", R"V0G0N(
 				return *res;
 			}(v, op);
 		}
-)V0G0N")
+)1N5P1RE")
 
 LITERAL(VectorReduction,      	"vector_reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
 LITERAL(VectorPermute,        	"vector_permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
@@ -693,7 +693,7 @@ LITERAL(ChannelProbe, 		"channel_probe", 		"(channel<'a,#n>) -> bool")
 
 // Atomics ------------------------------------------------------------------------------------------------------------
 
-DERIVED(Atomic, "atomic", R"V0G0N(
+DERIVED(Atomic, "atomic", R"1N5P1RE(
 		lambda (ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { 
 			decl auto res = *v; 
 			if (p(*v)) { 
@@ -701,80 +701,80 @@ DERIVED(Atomic, "atomic", R"V0G0N(
 			} 
 			return res; 
 		} 
-)V0G0N")
+)1N5P1RE")
 
 // arithmetic
 
-DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add",R"V0G0N(
+DERIVED(AtomicFetchAndAdd, "atomic_fetch_and_add",R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			let test = lambda ('a _)=>true; 
 			let apply = lambda ('a x)=>x+exp; 
 			return atomic(v, test, apply); 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch",R"V0G0N(
+DERIVED(AtomicAddAndFetch, "atomic_add_and_fetch",R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			return atomic_fetch_and_add(v, exp) + exp; 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub",R"V0G0N(
+DERIVED(AtomicFetchAndSub, "atomic_fetch_and_sub",R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			let test = lambda ('a _)=>true; 
 			let apply = lambda ('a x)=>x-exp; 
 			return atomic(v, test, apply); 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch",R"V0G0N(
+DERIVED(AtomicSubAndFetch, "atomic_sub_and_fetch",R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			return atomic_fetch_and_sub(v, exp) - exp; 
 		}  
-)V0G0N")
+)1N5P1RE")
 
 // bitwise
-DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", R"V0G0N(
+DERIVED(AtomicFetchAndAnd, "atomic_fetch_and_and", R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			let test = lambda ('a _) => true; 
 			let apply = lambda ('a x) => x & exp; 
 			return atomic(v, test, apply); 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", R"V0G0N(
+DERIVED(AtomicAndAndFetch, "atomic_and_and_fetch", R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			return atomic_fetch_and_and(v, exp) & exp; 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", R"V0G0N(
+DERIVED(AtomicFetchAndOr, "atomic_fetch_and_or", R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			let test = lambda ('a _) => true; 
 			let apply = lambda ('a x) => x | exp; 
 			return atomic(v, test, apply); 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", R"V0G0N(
+DERIVED(AtomicOrAndFetch, "atomic_or_and_fetch", R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			return atomic_fetch_and_or(v, exp) | exp; 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", R"V0G0N(
+DERIVED(AtomicFetchAndXor, "atomic_fetch_and_xor", R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			let test = lambda ('a _) => true; 
 			let apply = lambda ('a x) => x ^ exp; 
 			return atomic(v, test, apply); 
 		}  
-)V0G0N")
+)1N5P1RE")
 
-DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", R"V0G0N(
+DERIVED(AtomicXorAndFetch, "atomic_xor_and_fetch", R"1N5P1RE(
 		lambda (ref<'a> v, 'a exp) -> 'a { 
 			return atomic_fetch_and_xor(v, exp) ^ exp; 
 		}  
-)V0G0N")
+)1N5P1RE")
 
 // test and set
 

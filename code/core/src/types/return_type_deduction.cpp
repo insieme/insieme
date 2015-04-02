@@ -169,20 +169,11 @@ TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argu
 	// check whether derivation was successful
 	if (!varInstantiation) {
 		std::stringstream msg;
-    
-        std::cout  << "               " << funType << " : " << argumentTypes << std::endl;
-		std::cout << "Cannot match arguments ("
-				<< join(", ", argumentTypes, print<deref<TypePtr>>())
-				<< ") to parameters ("
-				<< join(", ", funType->getParameterTypes(), print<deref<TypePtr>>())
-				<< ")" << std::endl;
 		msg << "Cannot match arguments ("
 				<< join(", ", argumentTypes, print<deref<TypePtr>>())
 				<< ") to parameters ("
 				<< join(", ", funType->getParameterTypes(), print<deref<TypePtr>>())
 				<< ")";
-
-        abort();
 		throw ReturnTypeDeductionException(msg.str());
 	}
 

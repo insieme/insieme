@@ -1,12 +1,13 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <map>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_builder.h"
-
+#include "insieme/core/parser3/detail/scanner.h"
 
 #include "inspire_parser.hpp"
 
@@ -27,9 +28,17 @@ class DeclarationContext{
     std::vector<ctx_map_type> scope_stack;
     ctx_map_type global_scope;
 
-    std::vector<std::string>       unfinished_symbols;
-    std::vector<std::string>       let_symbols;
 public:
+
+    DeclarationContext()
+    {}
+    DeclarationContext(const DeclarationContext& o) 
+    :global_scope(o.global_scope.begin(), o.global_scope.end())
+    {
+        for(const auto& scope : o.scope_stack){
+            scope_stack.push_back(ctx_map_type(scope.begin(), scope.end()));
+        }
+    }
 
     // ~~~~~~~~~~~~~~~~~~~~~ scope ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
 
@@ -38,15 +47,6 @@ public:
 
     bool add_symb(const std::string& name, NodePtr node);
     NodePtr find(const std::string& name) const;
-
-    // ~~~~~~~~~~~~~~~~~~~~~ recursive types construction ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
-
-    void add_unfinish_symbol(const std::string& name);
-    std::string get_unfinish_symbol();
-    bool is_unfinished(const std::string& name)const;
-
-    bool all_symb_defined();
-
 };
 
 
@@ -64,12 +64,8 @@ class inspire_driver
 
     DeclarationContext scopes;
 
-    std::map<std::string, NodePtr> recursive_symbols;
-    std::map<std::string, std::pair<LiteralPtr, VariablePtr>> rec_function_vars;
-
-    LiteralPtr get_tag_function(const std::string& name);
 public:
-    inspire_driver (const std::string& f, NodeManager& nk);
+    inspire_driver (const std::string& f, NodeManager& nk, const DeclarationContext& ctx = DeclarationContext());
     virtual ~inspire_driver ();
 
     NodeManager& mgr;
@@ -78,9 +74,30 @@ public:
     const std::string& str;       
     NodePtr result;
 
-
     location glob_loc;
+    bool in_let;
 
+private:
+    std::stringstream ss;
+    inspire_scanner scanner;
+    inspire_parser parser;
+
+    bool inhibit_building_flag;
+
+    struct Lambda_let{
+        TypePtr retType;
+        VariableList params;
+        std::string  expression;
+        Lambda_let( const TypePtr& retType, const VariableList& params, const std::string& expression)
+        : retType(retType), params(params.begin(), params.end()), expression(expression) {}
+    };
+    std::vector<Lambda_let>    lambda_lets;
+    std::vector<ExpressionPtr> closure_lets;
+    std::vector<TypePtr>       type_lets;
+    std::vector<std::string>   let_names;
+
+
+public:
     ProgramPtr parseProgram ();
     TypePtr parseType ();
     StatementPtr parseStmt ();
@@ -101,6 +118,13 @@ public:
     ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
     ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
 
+    void add_let_lambda(const location& l, const location& bodyb, const location& bodye, const TypePtr& retType, const VariableList& params = VariableList());
+    void add_let_type(const location& l, const TypePtr& type);
+    void add_let_closure(const location& l, const ExpressionPtr& closure);
+
+    void add_let_name(const location& l, const std::string& name); 
+    void close_let_statement(const location& l); 
+
     ExpressionPtr genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields);
     ExpressionPtr genTagExpression(const location& l, const NamedValueList& fields);
 
@@ -110,12 +134,12 @@ public:
     void add_symb(const location& l, const std::string& name, NodePtr ptr);
     void add_symb(const std::string& name, NodePtr ptr);
 
-    void add_unfinish_symbol(const location& l, const std::string& name);
-    bool close_unfinish_symbol(const location& l, const NodePtr& node);
-    bool all_symb_defined(const location& l);
-
     void open_scope(const location& l, const std::string& );
     void close_scope(const location& l, const std::string&);
+
+    // syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
+    bool inhibit_building()const;
+    void set_inhibit(bool flag =true);
 
     // Error handling.
     void error (const location& l, const std::string& m)const;

@@ -59,7 +59,7 @@ namespace parser {
 
 		TypePtr test = builder.genericType("test");
 		TypePtr A = builder.genericType("A");
-{ i=
+
 		TypePtr testA = builder.genericType("test", toVector(A));
 		TypePtr test2A = builder.genericType("test", toVector(testA));
 

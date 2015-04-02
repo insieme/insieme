@@ -189,13 +189,31 @@ namespace parser3{
 
         EXPECT_TRUE(test_program("let a , b = a<b>, b<a>; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
         EXPECT_TRUE(test_program("let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
-            
     }
     
     TEST(IR_Parser3, Program) {
 
         EXPECT_TRUE(test_program("int<4> main (int<4> a, int<4> b)  { 1+1; }"));
         EXPECT_TRUE(test_program("let int = int<4>; int main (int a, int b) { 1+1; }"));
+        EXPECT_TRUE(test_program("let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { f(1); }"));
+        EXPECT_TRUE(test_program(R"1N5P1RE( 
+let int = int<4> ; 
+let h = lambda ((int)->int f)->int { return f(5); } ; 
+let f,g = 
+    lambda (int a)->int {
+        h(f);
+        f(4);
+        g(f(4));
+        h(g);
+    },
+    lambda (int a)->int {
+        h(f);
+        f(g(4));
+        g(4);
+        h(g);
+    };
+unit main() { f(1); }
+        )1N5P1RE"));
     }
 
 } // parser3
