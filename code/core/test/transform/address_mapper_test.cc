@@ -59,7 +59,7 @@ TEST(AddressMapper, Simplest) {
 
 	EXPECT_EQ(addresses.size(), 1);
 
-	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) {
+	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) -> NodePtr {
 		if(addresses[0] == prevAddress) {
 			return builder.intLit(31337).as<NodePtr>();
 		}
@@ -85,7 +85,7 @@ TEST(AddressMapper, Simple) {
 
 	EXPECT_EQ(addresses.size(), 2);
 
-	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) {
+	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) -> NodePtr {
 		if(addresses[0] == prevAddress) {
 			return builder.intLit(31337).as<NodePtr>();
 		} 
