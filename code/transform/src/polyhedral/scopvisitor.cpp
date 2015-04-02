@@ -71,14 +71,13 @@ void SCoPVisitor::printNode(const NodeAddress &node, std::string descr, unsigned
 	// if requested (start=0), print the node itself with some debug information
 	if (start==0) {
 		if (!descr.empty()) descr=" ("+descr+")";
-		std::cout << node.getNodeType() << descr << ": " << node << std::endl;
+		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
 		start++;
 	}
 
 	// iterate over the requested children to complete the output
 	for (unsigned int n=start-1; n<start-1+count; n++)
 		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
-	std::cout << std::endl;
 }
 
 /// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
@@ -106,8 +105,8 @@ boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAd
 	// extract the variables and literals from our (presumed) affine expression and store them internally for
 	// later processing with ISL
 	switch (addr.getNodeType()) {
-	case NT_Literal:  printNode(addr); break;
-	case NT_CallExpr: printNode(addr); break;
+	case NT_Literal:  /* printNode(addr); */ break;
+	case NT_CallExpr: /* printNode(addr); */ break;
 	default: /* do nothing */;
 	}
 
@@ -136,7 +135,7 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
-	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()));
+	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()), 0, 3);
 
 	// when we encounter a for loop, first increase the loop nesting level, and then copy the currently available
 	// variables, since variable modifications in the for loop cannot be seen outside the for loop
@@ -151,11 +150,13 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	        step=parseAffine(stmt.getAddressOfChild(2).as<ExpressionAddress>());
 	auto scop=scopFromFor(lb, iter, ub, step);
 	if (scop) scopstack.push(*scop);
+	else std::cout << "Loop parameters are not affine" << std::endl;
 
 	// visit declaration to add variable to the list of known variables
-	if (scop) std::cout << "Found SCoP but cannot print it yet" << std::endl;
-	else std::cout << "Loop parameters are not affine" << std::endl;
 	visit(decl);
+	std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
+	std::unordered_set<VariableAddress> used=readVars(stmt);
+	std::cout << "vars read\t[ ";  for (auto v: used)           std::cout << *v << " "; std::cout << "]" << std::endl;
 
 	// process all the children, and — when done — remove the scope modifications and lessen the nesting level again
 	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
@@ -181,6 +182,15 @@ void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
 	visitChildren(node);
 }
 
+/// Determine which variables are being read in a given block specified by node and return these.
+std::unordered_set<VariableAddress> SCoPVisitor::readVars(const NodeAddress &node) {
+	std::unordered_set<VariableAddress> vars;
+
+	// here we need some visitor code
+	return vars;
+}
+
+
 /// Generate a SCoP from the given for specification in Insieme IR style: lb ≤ iterator < up : step
 boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress iterator, MaybeAffine ub, MaybeAffine step) {
 	boost::optional<SCoP> maybe;
@@ -189,6 +199,10 @@ boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress i
 		maybe=SCoP();
 	}
 
+	// we could use:
+	// isl_basic_set_from_constraint_matrices
+	// isl_basic_set_(in)equalities_matrix
+
 	isl_ctx *ctx=isl_ctx_alloc();
 	isl_printer *printer=isl_printer_to_str(ctx);
 	isl_aff *aff=isl_aff_read_from_str(ctx, "{ [x, y] -> [(3*x - 4*y - 7)] }");
@@ -196,7 +210,7 @@ boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress i
 	printer=isl_printer_print_aff(printer, aff);
 	char *out=isl_printer_get_str(printer);
 	if (out) {
-		std::cout << "From ISL we got: " << out << std::endl;
+		//std::cout << "From ISL we got: " << out << std::endl;
 		free(out);
 	}
 
