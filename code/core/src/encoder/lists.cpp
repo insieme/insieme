@@ -99,7 +99,7 @@ namespace encoder {
 	}
 
 	const core::TypePtr getElementType(const core::TypePtr& listType) {
-		assert_true(isListType(listType)) << "Not applicable to non-list type!";
+		assert(isListType(listType) && "Not applicable to non-list type!");
 		return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()->getElement(0);
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -76,7 +76,7 @@ void TypeFixer::cleanStructures(const StructTypePtr& st, NodeMap& ptrReplacement
 }
 
 void TypeFixer::removeClVars() {
-	SimpleNodeMapping* h;
+	NodeMapping* h;
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& gen = builder.getLangBasic();
@@ -130,7 +130,7 @@ void TypeFixer::removeClVars() {
 			// drop ocl functions
 //if(call->getFunctionExpr()->toString().find("cl") == 0u) {
 //std::cout << dumpPretty(call) << "dropping " << utils::whatIs(call->getFunctionExpr()) << std::endl;
-//assert_fail();
+//assert(false);
 //	}
 			if(gen.isRefAssign(call->getFunctionExpr())) {
 				TypePtr lhsTy = call->getArgument(0)->getType();

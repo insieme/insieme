@@ -139,12 +139,12 @@ public:
 		addPragma( pragma::PragmaPtr(new T(startLoc, endLoc, name, mmap)) );
 	}
 
-    void ActOnFrontendExtensionPragma(pragma::PragmaPtr p) {
+    void ActOnFrontendPluginPragma(pragma::PragmaPtr p) {
         addPragma(p);
     }
 
 	/**
-	 * Write into the logger information about the pragmas and their association to AST nodes.
+	 * Write into the logger information about the pragmas and their associatioation to AST nodes.
 	 */
 	void dump();
 };

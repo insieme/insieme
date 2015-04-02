@@ -60,14 +60,14 @@ namespace analysis {
 
 
 	bool hasAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert_true(isAttribute(attribute)) << "Checking for non-attribute!";
+		assert(isAttribute(attribute) && "Checking for non-attribute!");
 
 		// simple "dirty" implementation
 		return getAttributes(expr).contains(attribute);
 	}
 
 	ExpressionPtr addAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert_true(isAttribute(attribute)) << "Cannot add non-attribute!";
+		assert(isAttribute(attribute) && "Cannot add non-attribute!");
 
 		// simple "dirty" implementation
 		auto attributes = getAttributes(expr);
@@ -76,7 +76,7 @@ namespace analysis {
 	}
 
 	ExpressionPtr remAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert_true(isAttribute(attribute)) << "Cannot remove non-attribute!";
+		assert(isAttribute(attribute) && "Cannot remove non-attribute!");
 
 		// simple "dirty" implementation
 		auto attributes = getAttributes(expr);

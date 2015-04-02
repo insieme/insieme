@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -138,7 +138,7 @@ clang::SourceLocation getExpansionLoc(const clang::SourceManager& sm, clang::Sou
 core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const clang::SourceManager& sm, clang::SourceLocation start, clang::SourceLocation end) {
 	// check file validity
 	FileID&& fileId = sm.getFileID(start);
-	assert_false(fileId.isInvalid()) << "File is not valid!";
+	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	//if we cannot get the file entry, lets try to get the source filename directly
 	std::string filename;
@@ -146,7 +146,7 @@ core::annotations::Location convertClangSrcLoc(core::NodeManager& man, const cla
         StringRef s = sm.getFilename(start);
         filename = s.str();
 	} else {
-        assert_true(fileEntry);
+        assert(fileEntry);
         filename = fileEntry->getName();
 	}
 	// update macro locations, if required

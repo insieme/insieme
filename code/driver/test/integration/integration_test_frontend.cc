@@ -99,7 +99,7 @@ namespace insieme {
 				} while(ss.str().length() < 50 && contextSize++ < 5);
 				LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 			});
-			// assert_fail();
+			// assert(false);
 		}
 
 	}

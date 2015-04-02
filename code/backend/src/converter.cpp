@@ -172,7 +172,7 @@ namespace backend {
 
 
 	const c_ast::SharedCNodeManager& Converter::getCNodeManager() const {
-		assert_true(fragmentManager);
+		assert(fragmentManager);
 		return fragmentManager->getNodeManager();
 	}
 

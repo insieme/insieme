@@ -46,13 +46,10 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
-
 using namespace insieme;
 
-core::ExpressionPtr VariadicArgumentsExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+
+core::ExpressionPtr VariadicArgumentsPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 	const clang::VAArgExpr*  vaargexpr = (llvm::isa<clang::VAArgExpr>(expr)) ? llvm::cast<clang::VAArgExpr>(expr) : nullptr;
 	if(vaargexpr)
 	{
@@ -72,7 +69,7 @@ core::ExpressionPtr VariadicArgumentsExtension::Visit(const clang::Expr* expr, i
 	return nullptr;
 }
 
-core::ExpressionPtr  VariadicArgumentsExtension::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+core::ExpressionPtr  VariadicArgumentsPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
 												   insieme::frontend::conversion::Converter& convFact) {
 	const clang::CallExpr* callexpr = (llvm::isa<clang::CallExpr>(expr)) ? llvm::cast<clang::CallExpr>(expr) : nullptr;
 
@@ -122,7 +119,7 @@ core::ExpressionPtr  VariadicArgumentsExtension::PostVisit(const clang::Expr* ex
 	return irExpr;
 }
 
-core::TypePtr  VariadicArgumentsExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+core::TypePtr  VariadicArgumentsPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 	if(const clang::RecordType * tt = llvm::dyn_cast<clang::RecordType>(type)) {
 		if(tt->getDecl()->getNameAsString().find("va_list") != std::string::npos) {
 			auto irType = convFact.getNodeManager().getLangExtension<core::lang::VarArgsExtension>().getValist();
@@ -134,7 +131,7 @@ core::TypePtr  VariadicArgumentsExtension::Visit(const clang::QualType& type, in
 	return nullptr;
 }
 
-core::TypePtr  VariadicArgumentsExtension::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
+core::TypePtr  VariadicArgumentsPlugin::PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
 											 insieme::frontend::conversion::Converter& convFact) {
 
 	 // build the right function type for variadic functions, we have to extend the parameter list with an extra TYPE
@@ -144,7 +141,7 @@ core::TypePtr  VariadicArgumentsExtension::PostVisit(const clang::QualType& type
 			core::IRBuilder builder = convFact.getIRBuilder();
 
 			auto irFunType = irType.as<core::FunctionTypePtr>();
-			assert_true(irFunType) << "Type is not a FuntionType";
+			assert(irFunType && "Type is not a FuntionType");
 
 			auto parameterTypes = irFunType->getParameterTypeList();
 
@@ -165,7 +162,7 @@ core::TypePtr  VariadicArgumentsExtension::PostVisit(const clang::QualType& type
 	return irType;
 }
 
-insieme::core::ExpressionPtr VariadicArgumentsExtension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
+insieme::core::ExpressionPtr VariadicArgumentsPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
 	if(!symbolic) {
 		if(decl->isVariadic())
 		{
@@ -193,7 +190,7 @@ insieme::core::ExpressionPtr VariadicArgumentsExtension::FuncDeclPostVisit(const
 			auto funcTy = fe->getType();
 			auto lambda = builder.lambdaExpr(funcTy.as<core::FunctionTypePtr>(), params, body.as<core::CompoundStmtPtr>());
 
-			assert_true(lambda);
+			assert(lambda);
 			assert(lambda->getType() == symb->getType());
 
 			convFact.getIRTranslationUnit().replaceFunction(symb.as<core::LiteralPtr>(), lambda);
@@ -202,7 +199,7 @@ insieme::core::ExpressionPtr VariadicArgumentsExtension::FuncDeclPostVisit(const
 	return nullptr;
 }
 
-insieme::core::ProgramPtr  VariadicArgumentsExtension::IRVisit(insieme::core::ProgramPtr& prog){
+insieme::core::ProgramPtr  VariadicArgumentsPlugin::IRVisit(insieme::core::ProgramPtr& prog){
 
 	core::IRBuilder builder (prog->getNodeManager());
 	core::NodeManager& mgr = prog->getNodeManager();
@@ -251,6 +248,3 @@ insieme::core::ProgramPtr  VariadicArgumentsExtension::IRVisit(insieme::core::Pr
 	return prog;
 }
 
-} // extensions
-} // frontend
-} // insieme

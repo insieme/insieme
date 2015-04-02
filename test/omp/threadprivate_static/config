@@ -1,2 +1,2 @@
-excludeSteps=${excludeSteps},"insiemecc_seq_c_check","insiemecc_seq_c_compile","insiemecc_seq_c_convert","insiemecc_seq_c_execute"
+excludeSteps=${excludeSteps},"main_seq_check","main_seq_compile","main_seq_convert","main_seq_execute"
 

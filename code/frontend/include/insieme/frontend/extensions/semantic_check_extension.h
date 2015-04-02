@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/core/checks/full_check.h"
 #include <map>
 #include <set>
@@ -50,7 +50,7 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class SemanticCheckExtension : public FrontendExtension {
+class SemanticCheckPlugin : public FrontendPlugin {
 
     //I know that this is done super nicely
     //std::map<int, const core::NodePtr> irnodelist;
@@ -64,7 +64,7 @@ class SemanticCheckExtension : public FrontendExtension {
 
 
 public:
-    SemanticCheckExtension() : current(0), eE(0), tE(0) { }
+    SemanticCheckPlugin() : current(0), eE(0), tE(0) { }
 
     virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                        insieme::frontend::conversion::Converter& convFact) {
@@ -289,6 +289,6 @@ public:
 
 };
 
-} // extensions
-} // frontend
-} // insieme
+}
+}
+}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -55,7 +55,6 @@ extern irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker;
 extern struct _irt_worker **irt_g_workers;
 
-extern bool irt_g_rt_is_initialized;
 extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 
 

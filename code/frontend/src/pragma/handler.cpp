@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -61,12 +61,12 @@ namespace frontend {
 namespace pragma {
 
 void Pragma::setStatement(clang::Stmt const* stmt) {
-	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
+	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
 	mTargetNode = stmt;
 }
 
 void Pragma::setDecl(clang::Decl const* decl) {
-	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
+	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
 	mTargetNode = decl;
 }
 
@@ -116,9 +116,13 @@ stmtutils::StmtWrapper attachPragma(    const stmtutils::StmtWrapper& 			node,
     stmtutils::StmtWrapper ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::StmtMap::value_type& curr) {
-			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-			}
+			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
+				ret = pragma->attachTo(node, fact);
+				return;
+             } else if(auto pragma = dynamic_cast<pragma::FrontendPluginPragma*>(&*(curr.second))) {
+                 ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+                 return;
+             }
 	});
 
 	return ret;
@@ -138,9 +142,13 @@ stmtutils::StmtWrapper attachPragma(const stmtutils::StmtWrapper& 			node,
     stmtutils::StmtWrapper ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::DeclMap::value_type& curr) {
-			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-			}
+			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
+				ret = pragma->attachTo(node, fact);
+				return;
+             } else if(auto pragma = dynamic_cast<pragma::FrontendPluginPragma*>(&*(curr.second))) {
+                 ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+                 return;
+             }
 	});
 
 	return ret;

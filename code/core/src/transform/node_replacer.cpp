@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -512,7 +512,7 @@ private:
 	}
 
     CallExprPtr handleCallToLamba(const CallExprPtr& call) {
-		assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
+		assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
 
 		const LambdaExprPtr& lambda = call->getFunctionExpr().as<LambdaExprPtr>();
 		const ExpressionList& args = call->getArguments();
@@ -563,7 +563,7 @@ private:
 				manager.getLangBasic().getUnit() :
 				getSmallestCommonSuperType(returnTypes);
 
-		assert_true(returnType) << "Cannot find a common supertype of all return statements";
+		assert(returnType && "Cannot find a common supertype of all return statements");
 
 		// construct new function type
 		FunctionTypePtr funType = builder.functionType(extractTypes(newParams), returnType);
@@ -640,11 +640,11 @@ private:
 			}
 
 			// check return type
-			assert_eq(call->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
+			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
 
 			// extract function type
 			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
-			assert_eq(funType->getParameterTypes().size(), call->getArguments().size()) << "Invalid number of arguments!";
+			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
 /*
 			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
 				std::cout << "ARRR " << call << std::endl;
@@ -752,7 +752,7 @@ private:
 
 		LOG(ERROR) << fun;
 		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
-		assert_fail() << "Unsupported call-target encountered - sorry!";
+		assert(false && "Unsupported call-target encountered - sorry!");
 		return call;
 	}
 
@@ -761,7 +761,7 @@ private:
 		auto fun = call->getFunctionExpr();
 
 		// should only be called for built-in functions
-		assert_true(manager.getLangBasic().isBuiltIn(fun));
+		assert(manager.getLangBasic().isBuiltIn(fun));
 
 		// use type inference for the return type
 		if(manager.getLangBasic().isCompositeRefElem(fun)) {
@@ -856,7 +856,7 @@ private:
 				manager.getLangBasic().getUnit() :
 				getSmallestCommonSuperType(returnTypes);
 
-		assert_true(callTy) << "Cannot find a common supertype of all return statements";
+		assert(callTy && "Cannot find a common supertype of all return statements");
 
 		// assemble new lambda
 		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
@@ -875,7 +875,7 @@ private:
 		IRBuilder builder(manager);
 
 		// only supported for function types
-		assert_eq(literal->getType()->getNodeType(), NT_FunctionType);
+		assert(literal->getType()->getNodeType() == NT_FunctionType);
 
 		// assemble new argument types
 		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
@@ -888,42 +888,6 @@ private:
 
 };
 
-class InterfaceFixer : public CachedNodeMapping {
-
-	NodeManager& manager;
-
-public:
-	InterfaceFixer(NodeManager& manager) : manager(manager) {}
-
-private:
-	virtual const NodePtr resolveElement(const NodePtr& ptr) {
-		if(LambdaExprPtr lambdaExpr = ptr.isa<LambdaExprPtr>()) {
-			ParametersPtr params = lambdaExpr->getParameterList();
-			FunctionTypePtr funTy = lambdaExpr->getType().isa<FunctionTypePtr>();
-
-			if(funTy) {
-				TypeList newParamTys;
-				bool changed = false;
-				for_range(make_paired_range(params, funTy->getParameterTypeList()), [&](const std::pair<VariablePtr, TypePtr>& cur) {
-					if(cur.first->getType() != cur.second) {
-						changed = true;
-						newParamTys.push_back(cur.first->getType());
-					} else {
-						newParamTys.push_back(cur.second);
-					}
-				});
-
-				if(changed) {
-					IRBuilder builder(manager);
-					return builder.lambdaExpr(builder.functionType(newParamTys, funTy->getReturnType()), params,
-							lambdaExpr->getBody()->substitute(manager, *this));
-				}
-			}
-		}
-
-		return ptr->substitute(manager, *this);
-	}
-};
 
 class TypeVariableReplacer : public CachedNodeMapping {
 
@@ -934,7 +898,7 @@ public:
 
 	TypeVariableReplacer(NodeManager& manager, const SubstitutionOpt& substitution)
 		: manager(manager), substitution(substitution) {
-		assert_true(substitution && !substitution->empty()) << "Substitution must not be empty!";
+		assert(substitution && !substitution->empty() && "Substitution must not be empty!");
 	}
 
 private:
@@ -1008,7 +972,7 @@ private:
 };
 
 
-class NodeAddressReplacer : public SimpleNodeMapping {
+class NodeAddressReplacer : public NodeMapping {
 	const unsigned indexToReplace;
 	const NodePtr& replacement;
 
@@ -1042,7 +1006,7 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, SimpleNodeMapping& mapper) {
+NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
@@ -1151,7 +1115,7 @@ namespace {
 		const ExpressionList args = call->getArguments();
 
 		// check whether the function type has been preserved
-		assert_eq(fun->getType()->getNodeType(), NT_FunctionType) << "Call is no longer targeting function after replacement!";
+		assert(fun->getType()->getNodeType() == NT_FunctionType && "Call is no longer targeting function after replacement!");
 
 		FunctionTypePtr funType = fun->getType().as<FunctionTypePtr>();
 
@@ -1427,13 +1391,9 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace
 	return fixTypes(mgr, root, replacements, limitScope, typeHandler);
 }
 
-NodePtr fixInterfaces(NodeManager& mgr, NodePtr root) {
-	auto mapper = ::InterfaceFixer(mgr);
-	return applyReplacer(mgr, root, mapper);
-}
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
-	assert_true(root) << "Root must not be a null pointer!";
+	assert(root && "Root must not be a null pointer!");
 
 	// check whether there is something to do
 	if (!substitution || substitution->empty()) {
@@ -1450,7 +1410,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 	typedef std::pair<NodeAddress, NodePtr> Replacement;
 
 	// check preconditions
-	assert_false(replacements.empty()) << "Replacements must not be empty!";
+	assert(!replacements.empty() && "Replacements must not be empty!");
 
 	assert(all(replacements, [&](const Replacement& cur) {
 		return cur.first.isValid() && cur.second;
@@ -1476,7 +1436,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 }
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
-	assert_true(toReplace.isValid()) << "Invalid node address provided!";
+	assert( toReplace.isValid() && "Invalid node address provided!");
 
 	// short-cut for replacing the root
 	if (toReplace.isRoot()) return replacement;

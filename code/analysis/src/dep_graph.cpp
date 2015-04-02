@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -103,14 +103,14 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	std::copy(srcNest.begin(), srcNest.end(), std::back_inserter(distVecSkel));
 	std::copy(sinkNest.begin()+idx, sinkNest.end(), std::back_inserter(distVecSkel));
 	LOG(DEBUG) << toString(distVecSkel);
-	assert_eq(distVecSkel.size(), size);
+	assert(distVecSkel.size() == size);
 
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_in, NULL);
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_out, NULL);
 
  	isl_set* deltas = isl_map_deltas( isl_map_from_basic_map( isl_basic_map_copy( bmap ) ) );
 
-	assert_true(deltas && isl_set_n_basic_set(deltas) == 1);
+	assert(deltas && isl_set_n_basic_set(deltas) == 1);
 
 	IslSet set( ctx, isl_union_set_from_set(deltas) );
 	set.simplify();
@@ -161,7 +161,7 @@ std::string depTypeToStr(const dep::DependenceType& dep) {
 	case WAR: return "WAR";
 	case WAW: return "WAW";
 	case RAR: return "RAR";
-	default : assert_not_implemented();
+	default : assert( false && "Dependence type not supported");
 	}
 	return "-unknown-";
 }
@@ -219,8 +219,10 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr,
 	// Assign the ID and relative stmts to each node of the graph
 	typename boost::graph_traits<Graph>::vertex_iterator vi, vi_end;
 	for (tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
-		assert_eq(*vi, scop[*vi].id)
-			<< "Assigned ID in the dependence graph doesn't correspond to statement ID assigned inside this SCoP";
+		assert(*vi == scop[*vi].id &&
+				"Assigned ID in the dependence graph doesn't correspond to" 
+				" statement ID assigned inside this SCoP"
+			  );
 		graph[*vi] = std::make_shared<Stmt>( *this, *vi ); 
 		graph[*vi]->m_addr = scop[*vi].getAddr();
 	}
@@ -267,7 +269,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 										bool transitive_closure) 
 {
 	polyhedral::scop::mark(root);	// add scop annotation if necessary
-	assert_true(root->hasAnnotation(scop::ScopRegion::KEY)) << "IR statement must be a SCoP";
+	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 	
 	return extractDependenceGraph(root->getNodeManager(), scop, type, transitive_closure);
@@ -361,9 +363,10 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 					int coeff = af.getCoeff(cur);
 					if (!coeff) { return; }
 					
-					assert_eq(coeff, 1) << "The coefficient value is not unitary as expected";
-					assert_false(found) << "More than 1 iterator have unary coefficient";
+					assert(coeff == 1 && "The coefficient value is not unitary as expected");
+					assert(!found && "More than 1 iterator have unary coefficient");
 					found = true;
+		 			// assert(!distVec[iterVec.getIdx(cur)] && "Expected a NULL pointer");
 					// reset the value of the coefficient 
 					af.setCoeff(cur, 0);
 
@@ -379,12 +382,12 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 	AffineConstraintPtr visitNegConstraint(const NegAffineConstraint& ucc) {
 		// Because the constraint containing a distance vector is a basic_set, 
 		// there should not be any negations in this constraint 
-		assert_fail();
+		assert(false);
 		return AffineConstraintPtr();
 	}
 
 	AffineConstraintPtr visitBinConstraint(const BinAffineConstraint& bcc) {
-		assert_true(bcc.isConjunction()) << "This is not possible";
+		assert(bcc.isConjunction() && "This is not possible");
 
 		AffineConstraintPtr lhs = visit(bcc.getLHS());
 		AffineConstraintPtr rhs = visit(bcc.getRHS());
@@ -406,6 +409,7 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 	DistanceVectorExtractor dve(iterVec, mgr, skel);
 	AffineConstraintPtr&& res = dve.visit(cons);
 
+	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
 	utils::CombinerPtr<core::arithmetic::Formula> cf;
 	if (res) {
 		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(res);
@@ -498,7 +502,7 @@ void DependenceGraph::dumpDOT(std::ostream& out) const {
 			case dep::WAR: out << "color=orange";  break;
 			case dep::WAW: out << "color=brown";   break;
 			case dep::RAR: out << "color=green";   break;
-			default: assert_fail();
+			default: assert(false);
 		}
 		out << "]";
 	};

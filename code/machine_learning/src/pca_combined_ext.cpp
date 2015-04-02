@@ -129,7 +129,7 @@ void PcaCombinedExt::genDefaultQuery() {
  */
 size_t PcaCombinedExt::calcPca(double toBeCovered) {
 	size_t nFeatures = staticFeatures.size() + dynamicFeatures.size();
-	assert_gt(nFeatures, 0) << "Cannot do PCA without any features set";
+	assert(nFeatures > 0 && "Cannot do PCA without any features set");
 
 	Array<double> in;
 	Array<int64> ids;
@@ -189,7 +189,7 @@ size_t PcaCombinedExt::calcPca(double toBeCovered) {
  */
 double PcaCombinedExt::calcPca(size_t nOutFeatures, size_t unused) {
 	size_t nFeatures = staticFeatures.size() + dynamicFeatures.size();
-	assert_gt(nFeatures, 0) << "Cannot do PCA without any features set";
+	assert(nFeatures > 0 && "Cannot do PCA without any features set");
 
 	Array<double> in;
 	Array<int64> ids;

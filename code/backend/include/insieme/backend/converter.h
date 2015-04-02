@@ -187,7 +187,7 @@ namespace backend {
 		c_ast::CommentPtr convertToComment(const core::NodePtr& node) const;
 
 		const PreProcessorPtr& getPreProcessor() const {
-			assert_true(preProcessor);
+			assert(preProcessor);
 			return preProcessor;
 		}
 
@@ -196,7 +196,7 @@ namespace backend {
 		}
 
 		const PostProcessorPtr& getPostProcessor() const {
-			assert_true(postProcessor);
+			assert(postProcessor);
 			return postProcessor;
 		}
 
@@ -205,7 +205,7 @@ namespace backend {
 		}
 
 		NameManager& getNameManager() const {
-			assert_true(nameManager);
+			assert(nameManager);
 			return *nameManager;
 		}
 
@@ -214,7 +214,7 @@ namespace backend {
 		}
 
 		TypeManager& getTypeManager() const {
-			assert_true(typeManager);
+			assert(typeManager);
 			return *typeManager;
 		}
 
@@ -223,7 +223,7 @@ namespace backend {
 		}
 
 		StmtConverter& getStmtConverter() const {
-			assert_true(stmtConverter);
+			assert(stmtConverter);
 			return *stmtConverter;
 		}
 
@@ -232,7 +232,7 @@ namespace backend {
 		}
 
 		FunctionManager& getFunctionManager() const {
-			assert_true(functionManager);
+			assert(functionManager);
 			return *functionManager;
 		}
 
@@ -245,7 +245,7 @@ namespace backend {
 		}
 
 		const c_ast::SharedCodeFragmentManager& getFragmentManager() const {
-			assert_true(fragmentManager);
+			assert(fragmentManager);
 			return fragmentManager;
 		}
 

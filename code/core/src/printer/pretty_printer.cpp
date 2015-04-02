@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -300,7 +300,7 @@ namespace {
 					string name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
 
 					// avoid printing more than one scope
-					if(!printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)){
+					if(!printer.hasOption(PrettyPrinter::JUST_OUTHERMOST_SCOPE)){
 						// print a let binding
 						out << "let " << name << " = ";
 						visit(cur);
@@ -313,7 +313,7 @@ namespace {
 
 			}, false);	// iterate through IR in post-order
 
-			if (printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)){
+			if (printer.hasOption(PrettyPrinter::JUST_OUTHERMOST_SCOPE)){
 				letBindings.erase(node);
 			}
 
@@ -676,7 +676,7 @@ namespace {
 				}
 
 				// some sanity check frequently encountered
-				assert_true(node->getLambda()) << "Accessing non-present Lambda Definition!";
+				assert(node->getLambda() && "Accessing non-present Lambda Definition!");
 
 				// short-cut for non-recursive functions
 				if (!node->isRecursive()) {
@@ -858,6 +858,14 @@ namespace {
 					}) << "]";
 				}
 				out << "{"; increaseIndent(); this->newLine();
+				for_each(node->getGuardedExprs()->getElements(), [&](const GuardedExprPtr& cur) {
+					out << "if ";
+					this->visit(cur->getGuard());
+					out << " do: ";
+					this->visit(cur->getExpression());
+					this->newLine();
+				});
+				out << "default: ";
 				this->visit(node->getDefaultExpr());
 				decreaseIndent(); this->newLine(); out << "}";
 		});
@@ -1231,25 +1239,13 @@ namespace {
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
 
 			typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
-			typedef AttributConverter::is_encoding_of is_encoding_of_type;
 
 			ADD_FORMATTER(ext.empty, { OUT("[]"); });
 			ADD_FORMATTER(ext.cons, {
-					const is_encoding_of_type is_encoding_of{};
-					// check whether syntactic sugar is supported
-					if (is_encoding_of(call)) {
-						vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
-						printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
-							printer.visit(cur);
-						}) << "]";
-					} else {
-						// use fall-back solution
-						printer.out << "[";
-						printer.visit(call[0]);
-						printer.out << ",";
-						printer.visit(call[1]);
-						printer.out << "]";
-					}
+					vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
+					printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
+						printer.visit(cur);
+					}) << "]";
 			});
 		}
 

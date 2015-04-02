@@ -41,7 +41,7 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/logging.h"
 
@@ -56,14 +56,16 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
-using namespace insieme::frontend::extensions;
+
+namespace fe = insieme::frontend;
+
 
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
 	
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
@@ -71,7 +73,7 @@ TEST(TypeCast, FileTest) {
 
 		Converter convFactory( mgr, tu);
 
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement())
 			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );

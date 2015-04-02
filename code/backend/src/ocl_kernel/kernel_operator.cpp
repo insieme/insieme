@@ -72,7 +72,7 @@ namespace ocl_kernel{
 
 		table[ext.kernelWrapper] = OP_CONVERTER({
 			// verify that argument is indeed a lambda exression => nothing else supported!
-			assert_eq(ARG(0)->getNodeType(), core::NT_LambdaExpr) << "Argument has to be a lambda!";
+			assert(ARG(0)->getNodeType() == core::NT_LambdaExpr && "Argument has to be a lambda!");
 
 			// extract and convert lambda expression
 			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(ARG(0));

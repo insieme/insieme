@@ -89,7 +89,7 @@ namespace cilk {
 							auto decl = cur.as<core::DeclarationStmtPtr>();
 
 							core::TypePtr type = decl->getVariable()->getType();
-							assert_eq(type->getNodeType(), core::NT_RefType) << "can only handle reference types!";
+							assert(type->getNodeType() == core::NT_RefType && "can only handle reference types!");
 
 							core::IRBuilder builder(manager);
 
@@ -98,7 +98,7 @@ namespace cilk {
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();
-							assert_true(core::analysis::isCallOf(init, manager.getLangBasic().getRefVar()));
+							assert(core::analysis::isCallOf(init, manager.getLangBasic().getRefVar()));
 							init = init.as<core::CallExprPtr>()->getArgument(0);
 							newStmts.push_back(builder.parallel(builder.assign(decl.getVariable(), init),1));
 

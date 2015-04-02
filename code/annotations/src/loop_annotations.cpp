@@ -71,7 +71,7 @@ bool LoopAnnotation::hasAttachedValue(const core::NodePtr& node) {
 }
 
 size_t LoopAnnotation::getValue(const core::NodePtr& node) {
-	assert_true(hasAttachedValue(node)) << "Loop Annotation Counter has to be attached!";
+	assert(hasAttachedValue(node) && "Loop Annotation Counter has to be attached!");
 	return node->getAnnotation(LoopAnnotation::KEY)->getIterations();
 }
 

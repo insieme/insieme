@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -42,8 +42,6 @@
 #include <luajit-2.0/lua.hpp>
 
 #include <boost/noncopyable.hpp>
-
-#include "insieme/utils/assert.h"
 
 /**
  * A common utility file providing a C++ interface to an underlying
@@ -314,7 +312,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F, void, P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert_true(checkNumArgs(state, sizeof...(P)));
+				assert(checkNumArgs(state, sizeof...(P)));
 				call<F,void,P...>()(state, fun);
 				return 0;
 			}
@@ -323,7 +321,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F,bool,P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert_true(checkNumArgs(state, sizeof...(P)));
+				assert(checkNumArgs(state, sizeof...(P)));
 				lua_pushboolean(state, call<F,bool,P...>()(state, fun));
 				return 1;
 			}
@@ -332,7 +330,7 @@ namespace lua {
 		template<typename F, typename R, typename ... P>
 		struct executor_numeric_res {
 			int operator()(lua_State* state, F& fun) {
-				assert_true(checkNumArgs(state, sizeof...(P)));
+				assert(checkNumArgs(state, sizeof...(P)));
 				lua_pushnumber(state, call<F,R,P...>()(state, fun));
 				return 1;
 			}
@@ -357,7 +355,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F,std::string,P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert_true(checkNumArgs(state, sizeof...(P)));
+				assert(checkNumArgs(state, sizeof...(P)));
 				lua_pushstring(state, call<F,std::string,P...>()(state, fun).c_str());
 				return 1;
 			}
@@ -366,7 +364,7 @@ namespace lua {
 		template<typename F, typename ... P>
 		struct executor<F,const char*,P...> {
 			int operator()(lua_State* state, F& fun) {
-				assert_true(checkNumArgs(state, sizeof...(P)));
+				assert(checkNumArgs(state, sizeof...(P)));
 				lua_pushstring(state, call<F,const char*,P...>()(state, fun));
 				return 1;
 			}

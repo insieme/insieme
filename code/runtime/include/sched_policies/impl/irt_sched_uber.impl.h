@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -164,7 +164,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 // ------------------------------------------------------------ optional scheduling -----------------------------------
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	irt_cwb_push_front(&self->sched_data.queue, yielding_wi);
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }

@@ -57,7 +57,7 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
                 std::string cname = insieme::core::annotations::getAttachedName(lambdaEx->getLambda());
                 if(!cname.empty()) {
     //std::cout << "Cname: " << cname->getName() << std::endl;
-                    assert_eq(checkDuplicates[cname], 0) << "Multiple kernels with the same name not supported";
+                    assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
                     checkDuplicates[cname] = 1;
     //std::cout << "found " << kernelNames;
                     if(ExpressionPtr clKernel = kernelNames[cname]) {

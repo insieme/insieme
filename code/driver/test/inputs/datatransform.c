@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -43,7 +43,7 @@ struct Aos {
 };
 
 int main() {
-#pragma insieme data_transform "0"
+#pragma insieme transfrom "0"
 	struct Aos* aos = (struct Aos*)malloc(sizeof(struct Aos) * 100);
 
 	for(int i = 0; i < 100; ++i) {

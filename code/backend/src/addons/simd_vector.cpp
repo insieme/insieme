@@ -91,7 +91,7 @@ namespace addons {
 
 			// get the elementtype of the vector
 			const TypeInfo* elementTypeInfo = &typeManager.getTypeInfo(ptr->getElementType());
-			assert_true(elementTypeInfo);
+			assert(elementTypeInfo);
 
 			//__attribute__((vector_size(n)) where n specifies the size in bytes
 			string elementTypeName = toString(insieme::backend::c_ast::CPrint(elementTypeInfo->rValueType));

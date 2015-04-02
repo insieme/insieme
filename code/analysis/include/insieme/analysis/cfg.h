@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -106,8 +106,9 @@ struct Element : public utils::Printable {
 	  diffAddr(diffAddr),
 	  type(type) 
 	{
-		assert_true(!diffAddr || (diffAddr && diffAddr.getRootNode() == viewPtr))
-			<< "Diff must always be relative to analysis stmt"; 
+		assert( (!diffAddr || (diffAddr && diffAddr.getRootNode() == viewPtr)) && 
+				"Diff must always be relative to analysis stmt"
+			  ); 
 	}
 
 	inline const Type& getType() const { return type; }
@@ -233,10 +234,10 @@ struct Address : public utils::Printable {
 	Address& operator=(const Address&) = default;
 
 	/** 
-	 * Retrieve the CFG block to which this address refers to 
+	 * Retrieve the CFG block to which this address referes to 
 	 */
 	inline const cfg::Block& getBlock() const {
-		assert_true(block) << "Trying to access an invalid cfg address";
+		assert(block && "Trying to access an invalid cfg address");
 		return *block; 
 	}
 
@@ -249,7 +250,7 @@ struct Address : public utils::Printable {
 	inline bool isValid() const { return addr.isValid(); }
 
 	/**
-	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses)
+	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses 
 	 */
 	inline core::NodePtr getAddressedNode() const { return addr.getAddressedNode(); }
 
@@ -371,14 +372,14 @@ public:
 
 		// increment this iterator only if we are not at the end
 		inline BlockIterator<IterT> operator++() {
-			assert_true(iter != end) << "Incrementing an invalid iterator"; 
+			assert(iter != end && "Incrementing an invalid iterator"); 
 			++iter;
 			return *this;
 		}
 
 		// increment this iterator only if we are not at the end
 		inline BlockIterator<IterT> operator+=(unsigned id) {
-			assert_true(iter != end) << "Incrementing an invalid iterator"; 
+			assert(iter != end && "Incrementing an invalid iterator"); 
 			for(size_t i=0; i<id; i++) ++iter;
 			return *this;
 		}
@@ -390,13 +391,13 @@ public:
 
 		// Returns a reference to the block referenced by this iterator
 		inline const cfg::BlockPtr& operator*() const {
-			assert_true(iter != end) << "Iterator out of scope"; 
+			assert(iter != end && "Iterator out of scope");
 			return cfg->getBlockPtr(*iter);
 		}
 
 		// Returns a reference to the block referenced by this iterator
 		inline const cfg::Block* operator->() const {
-			assert_true(iter != end) << "Iterator out of scope";
+			assert(iter != end && "Iterator out of scope");
 			return &cfg->getBlock(*iter);
 		}
 	};
@@ -527,7 +528,7 @@ public:
 
 	inline GraphBounds getNodeBounds(const core::NodePtr& root) {
 		auto fit = subGraphs.find(root);
-		assert_true(fit != subGraphs.end());
+		assert( fit != subGraphs.end() );
 		return fit->second;
 	}
 
@@ -609,7 +610,7 @@ struct Block :
 
 	/// Setters and getters for the terminator element
 	inline const Terminator& terminator() const { 
-		assert_true(hasTerminator()) << "trying to access invalid terminator";
+		assert(hasTerminator() && "trying to access invalid terminator");
 		return *term; 
 	}
 	inline void setTerminator(const Terminator& t) {
@@ -646,12 +647,12 @@ struct Block :
 	}
 
 	inline Element& operator[](size_t idx) {
-		assert_lt(idx, size()) << "Out of bound array access";
+		assert(idx < size() && "Out of bound array access");
 		return stmtList[size()-1-idx];
 	}
 
 	inline const Element& operator[](size_t idx) const {
-		assert_lt(idx, size()) << "Out of bound array access";
+		assert(idx < size() && "Out of bound array access");
 		return stmtList[size()-1-idx];
 	}
 
@@ -727,7 +728,7 @@ struct CallBlock: public Block {
 	}
 
 	inline const RetBlock& getReturnBlock() const { 
-		assert_true(ret) << "Return block for this CALL block not set."; 
+		assert(ret && "Return block for this CALL block not set."); 
 		return *ret; 
 	}
 
@@ -748,7 +749,7 @@ struct RetBlock: public Block {
 	RetBlock(const CFG& cfg): Block(cfg, RET), call(NULL) { }
 
 	inline const CallBlock& getCallBlock() const { 
-		assert_true(call) << "Call block for this RET block not set.";
+		assert(call && "Call block for this RET block not set.");
 		return *call; 
 	}
 	inline void setCallBlock(CallBlock& call) { this->call = &call; }

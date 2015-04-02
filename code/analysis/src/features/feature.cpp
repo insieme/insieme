@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -96,7 +96,7 @@ namespace features {
 				Value res = eval();
 
 				// check value type
-				assert_true(feature.getValueType()->isValid(res)) << "Feature extraction produced incorrect type!";
+				assert(feature.getValueType()->isValid(res) && "Feature extraction produced incorrect type!");
 
 				// save and return
 				values[feature.getName()] = res;
@@ -143,7 +143,7 @@ namespace features {
 		FeatureValues values = evalFeatures(node, specs);
 
 		// merge in extracted values
-		assert_true(indices.size() == specs.size() && indices.size() == values.size());
+		assert(indices.size() == specs.size() && indices.size() == values.size());
 		for (std::size_t i=0; i<indices.size(); i++) {
 			res[indices[i]] = values[i];
 		}

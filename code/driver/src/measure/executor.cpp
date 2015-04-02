@@ -122,7 +122,7 @@ namespace measure {
 			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
 			break;
 		case PBS:
-			assert_fail() << "Not tested!";
+			assert(false && "Not tested!");
 			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" + binaryName + "\"");
 			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
 			break;

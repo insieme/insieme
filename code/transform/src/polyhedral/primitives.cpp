@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -67,7 +67,7 @@ std::vector<std::reference_wrapper<Stmt>> getStmts(Scop& scop, const Iterator& i
 	for_each(scop, [&] (StmtPtr& cur) { 
 			IntMatrix&& sched = extractFrom( cur->getSchedule() );
 			int idx = iterVec.getIdx(iter);
-			assert_ne(idx, -1);
+			assert(idx != -1);
 
 			size_t pos = 0, end = sched.rows();
 			for(; pos<end && sched[pos][idx]==0; ++pos) ;
@@ -174,7 +174,7 @@ makeInterchangeMatrix(const IterationVector& 	iterVec,
 {
 	int srcIdx = iterVec.getIdx( Iterator(src) );
 	int destIdx = iterVec.getIdx( Iterator(dest) );
-	assert_true(srcIdx != -1 && destIdx != -1 && srcIdx != destIdx) << "Interchange not valid";
+	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
 	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
 }
 
@@ -294,7 +294,7 @@ std::pair<DisjunctionList, DisjunctionList> getDomainBounds(IterationVector& ite
 				ubs.back().push_back( makeCombiner(AffineConstraint(f, c.getType()))); 
 				return;
 			}
-			assert_fail();
+			assert(false);
 		});
 		if (!lbs.back().empty()) { lbs.push_back( ConjunctionList() ); }
 		if (!ubs.back().empty()) { ubs.push_back( ConjunctionList() ); }
@@ -467,7 +467,7 @@ void doFuse(Scop& scop, const core::VariableList& iters) {
 	// the second loop).
 
 	size_t schedPos = 0;
-	assert_false(loopStmt1.empty()) << "Trying to fuse loop containing no statements";
+	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
 	AffineSystem& sys = loopStmt1.front().get().getSchedule();
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -46,7 +46,6 @@
 #include <cassert>
 
 #include "insieme/utils/unused.h"
-#include "insieme/utils/assert.h"
 
 #include "ReClaM/FFNet.h"
 #include "ReClaM/Svm.h"
@@ -327,7 +326,7 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert_true(file.is_open()) << "Cannot open input file in MyC_SVM::load";
+		assert(file.is_open() && "Cannot open input file in MyC_SVM::load");
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);
@@ -340,7 +339,7 @@ public:
 	}
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert_true(file.is_open()) << "Cannot open output file in MyC_SVM::save";
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
 		svm.SaveSVMModel(file);
 		file.close();
@@ -444,7 +443,7 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert_true(file.is_open()) << "Cannot open input file in MyEpsilon_SVM::load";
+		assert(file.is_open() && "Cannot open input file in MyEpsilon_SVM::load");
 
 		svm.LoadSVMModel(file);
 		shark = Epsilon_SVM(&svm, 0.0, 0.0);
@@ -457,7 +456,7 @@ public:
 	}
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		svm.SaveSVMModel(file);
 		file.close();
@@ -567,10 +566,10 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert_true(file.is_open()) << "Cannot open input file in MyEpsilon_SVM::load";
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::load");
 
 		__unused bool worked = svm.LoadSVMModel(file);
-		assert_true(worked) << "Cannot load multi class SVM";
+		assert(worked && "Cannot load multi class SVM");
 
 		shark = AllInOneMcSVM(&svm, 1.0);
 
@@ -584,10 +583,10 @@ public:
 
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		__unused bool worked = svm.SaveSVMModel(file);
-		assert_true(worked) << "Cannot save multi class SVM";
+		assert(worked && "Cannot save multi class SVM");
 
 		file.close();
 	}
@@ -697,7 +696,7 @@ public:
 	}
 	virtual void load(const char* path) {
 /*		std::fstream file(path);
-		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);*/
@@ -709,7 +708,7 @@ public:
 	}
 	void save(const char* path) {
 /*		std::fstream file(path, std::ios::out);
-		assert_true(file.is_open()) << "Cannot open output file in MyEpsilon_SVM::save";
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		shark.getSVM()->SaveSVMModel(file);
 		file.close();*/

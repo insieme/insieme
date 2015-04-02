@@ -1,2 +1,2 @@
-excludeSteps=$excludeSteps,"insiemecc_seq_c_convert","insiemecc_seq_c_compile","insiemecc_seq_c_execute","insiemecc_seq_c_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check"
+excludeSteps=$excludeSteps,"main_seq_convert","main_seq_compile","main_seq_execute","main_seq_check","main_seq_c++_convert","main_seq_c++_compile","main_seq_c++_execute","main_seq_c++_check","insiemecc_c++_compile","insiemecc_c++_execute","insiemecc_c++_check"
 

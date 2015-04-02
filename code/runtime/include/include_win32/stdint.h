@@ -34,9 +34,6 @@
  * regarding third party software licenses.
  */
 
-#ifndef _MSC_STDINT_H_ // [
-#define _MSC_STDINT_H_
-
 // 7.18.1.4 Integer types capable of holding object pointers
 #ifdef _WIN64 // [
    typedef signed __int64    intptr_t;

@@ -65,7 +65,7 @@ namespace measure {
 		// create a temporary local source file
 		char sourceFile[] = P_tmpdir "/srcXXXXXX";
 		int src = mkstemp(sourceFile);
-		assert_ne(src, -1);
+		assert(src != -1);
 		close(src);
 
 		// write source to file
@@ -97,7 +97,7 @@ namespace measure {
 			i++;
 		}
 		nfs::NetworkPath workDir = tmpDir / format("work_dir_%d", i);
-		assert_true(nfs::exists(workDir));
+		assert(nfs::exists(workDir));
 
 		bool res = true;
 

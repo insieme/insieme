@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -39,7 +39,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
@@ -136,7 +136,7 @@ TEST(IRBuilder, Assign) {
 TEST(IRBuilder, References) {
 
 	NodeManager manager;
-	FrontendIRBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// create an IR, C++ and const C++ reference
 	TypePtr T = builder.genericType("T");

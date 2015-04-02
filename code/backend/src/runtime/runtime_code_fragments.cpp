@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -196,7 +196,7 @@ namespace runtime {
                 return addType(static_pointer_cast<c_ast::ReferenceType>(type));
 			default:
 				LOG(FATAL) << "Unsupported type: " << c_ast::toC(type);
-				assert_fail() << "Unsupported type encountered!";
+				assert(false && "Unsupported type encountered!");
 			}
 			return unknown;
 		}

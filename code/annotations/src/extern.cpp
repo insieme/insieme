@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -61,12 +61,12 @@ namespace c {
 		typedef core::value_node_annotation<ExternTag>::type annotation_type;
 
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only include annotations supported!");
 			return encoder::toIR(manager, string("extern"));
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
 			return std::make_shared<annotation_type>(ExternTag());
 		}
 	};

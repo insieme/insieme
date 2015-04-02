@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -69,7 +69,7 @@ namespace {
 // Register call expression handlers to be used during the clang to IR conversion
 //void Converter::registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler) {
 //	auto it = callExprHanlders.insert( std::make_pair(funcDecl, handler) );
-//	assert_false(it.second) << "Handler for function declaration already registered.";
+//	assert( !it.second && "Handler for function declaration already registered." );
 //}
 //  Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
 // 	-> OpenCL address spaces
@@ -150,7 +150,7 @@ core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* varDecl, conver
 }
 }
 
-insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr OclKernelPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 	if(!llvm::isa<clang::ExtVectorElementExpr>(expr))
 		return nullptr;
 
@@ -197,7 +197,7 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 			unsigned odd = accessor == "odd" ? 1 : 0;
 
 			if(refTy) {
-				assert_fail() << "Vector functions 'even' and 'odd' are not supported as l-values";
+				assert(false && "Vector functions 'even' and 'odd' are not supported as l-values");
 			}
 
 			// non-ref type
@@ -258,7 +258,7 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 		}
 
 	} else {
-		assert_le(accessor.size(), 16) << "ExtVectorElementExpr has unknown format";
+		assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
 	}
 
 	// The type of the index is always uint<4>
@@ -270,7 +270,7 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 
 }
 
-insieme::core::TypePtr OclKernelExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr OclKernelPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 	if(!llvm::isa<clang::ExtVectorType>(type.getTypePtr()))
 		return nullptr;
 
@@ -294,13 +294,13 @@ insieme::core::TypePtr OclKernelExtension::Visit(const clang::QualType& type, in
 /** FuncDeclPostVisit will add the OpenCL kernel annotation.
     User provided post clang function decl visitor. Will be called after clang decl
     was visted by the insieme function decl visitor and returns a modified IR expression.
-    See FrontendExtension FuncDeclPostVisit
+    See FrontendPlugin FuncDeclPostVisit
 
     @param decl clang function decl
     @param type IR ExpressionPtr
     @param convFact insieme conversion factory
     @return modified version of IR ExpressionPtr */
-insieme::core::ExpressionPtr OclKernelExtension::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
+insieme::core::ExpressionPtr OclKernelPlugin::FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
 
 	if(!symbolic) {
 		// check Attributes of the function definition
@@ -339,13 +339,13 @@ insieme::core::ExpressionPtr OclKernelExtension::FuncDeclPostVisit(const clang::
 }
 
 
-insieme::core::TypePtr OclKernelExtension::TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::TypePtr OclKernelPlugin::TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, insieme::frontend::conversion::Converter& convFact) {
 	//decl->dump();
     return nullptr;
 }
 
 
-insieme::core::ExpressionPtr OclKernelExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
+insieme::core::ExpressionPtr OclKernelPlugin::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
     // check var Decls
 	if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
 		//varDecl->dump();
@@ -366,7 +366,7 @@ insieme::core::ExpressionPtr OclKernelExtension::ValueDeclPostVisit(const clang:
 
 
 /*
-stmtutils::StmtWrapper OclKernelExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact) {
+stmtutils::StmtWrapper OclKernelPlugin::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact) {
 	// Function declarations have only one single statement
 	if(!irStmt.isSingleStmt())
 		return irStmt;
@@ -382,7 +382,7 @@ stmtutils::StmtWrapper OclKernelExtension::PostVisit(const clang::Stmt* stmt, co
 		if (const clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
 			//get annotate string
 			llvm::StringRef&& sr = attr->getAnnotation();
-assert_fail() << "attribute";
+assert(false && "attribute");
 			//check if it is an OpenCL kernel function
 			if ( sr == "__kernel" ) {
 					VLOG(1) << "is OpenCL kernel function";
@@ -392,14 +392,14 @@ assert_fail() << "attribute";
 
     }
 
-	assert_fail() << "post visit ";
+	assert(false && "post visit ");
 	return irStmt;
 }
 */
 
 // OpenCL vector type
 /*
-insieme::core::TypePtr OclKernelExtension::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
+insieme::core::TypePtr OclKernelPlugin::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
                                          insieme::frontend::conversion::Converter& convFact) {
 	if(!llvm::isa<clang::FunctionProtoType>(type))
 		return irType;
@@ -426,13 +426,13 @@ insieme::core::TypePtr OclKernelExtension::PostVisit(const clang::Type* type, co
 //////////////////////////////////////////////////////////////////////////////////////
 //               opencl kernel file post processing
 
-insieme::core::ProgramPtr OclKernelExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+insieme::core::ProgramPtr OclKernelPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	insieme::core::NodeManager& mgr(prog->getNodeManager());
 	// call OpenCL kernel post processing
 	ocl::Compiler oclCompiler(prog, mgr);
 	return oclCompiler.lookForOclAnnotations();
 }
 
+} //namespace plugin
+} //namespace frontnt
 } //namespace extensions
-} //namespace frontend
-} //namespace insieme

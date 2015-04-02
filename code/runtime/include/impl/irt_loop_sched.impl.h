@@ -38,7 +38,6 @@
 #ifndef __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H
 #define __GUARD_IMPL_IRT_LOOP_SCHED_IMPL_H
 
-#include <string.h>
 #include "irt_loop_sched.h"
 #include "work_group.h"
 #include "utils/timing.h"

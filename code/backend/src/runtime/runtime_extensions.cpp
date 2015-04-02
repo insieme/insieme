@@ -77,7 +77,7 @@ namespace runtime {
 	}
 
 	core::TypePtr DataItem::extractItemType(const core::TypePtr& type) {
-		assert_true((isDataItemType(type) || isLWDataItemType(type))) << "Only works for data item types!";
+		assert((isDataItemType(type) || isLWDataItemType(type))&& "Only works for data item types!");
 		return static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
 	}
 

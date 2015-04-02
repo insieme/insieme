@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -208,7 +208,7 @@ namespace graph {
 		 * the given vertex value.
 		 */
 		vertex_descriptor getVertexDescriptor(const Vertex& vertex) const {
-			assert_true(vertexMap.find(vertex) != vertexMap.end());
+			assert(vertexMap.find(vertex) != vertexMap.end());
 			return vertexMap.find(vertex)->second;
 		}
 
@@ -631,7 +631,7 @@ namespace graph {
 			// compute (reverse) topological order
 			boost::topological_sort(graph, std::back_inserter(order));
 		} catch(boost::not_a_dag e) {
-			assert_fail() << "There should not be any cycles!";
+			assert(0 && "There should not be any cycles!");
 		}
 
 		// reverse order and return result

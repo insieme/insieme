@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -179,7 +179,7 @@ namespace types {
 				// compute (reverse) topological order
 				boost::topological_sort(graph, std::back_inserter(order));
 			} catch(boost::not_a_dag e) {
-				assert_fail() << "There should not be any cycles!";
+				assert(0 && "There should not be any cycles!");
 			}
 
 			// reverse order and return result
@@ -369,7 +369,7 @@ namespace types {
 			// get types of current node
 			vertex_descriptor vertex = order[i];
 			vector<TypePtr>& curList = graph[vertex];
-			assert_eq(curList.size(), 1) << "Graph-Vertices are not supposed to contain more than 1 type!";
+			assert(curList.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
 
 			TypePtr cur = curList[0];
 
@@ -384,7 +384,7 @@ namespace types {
 			boost::tie(begin, end) = boost::in_edges(vertex, graph);
 			for (auto it = begin; it!=end; ++it) {
 				vector<TypePtr>& sub = graph[source(*it, graph)];
-				assert_eq(sub.size(), 1) << "Graph-Vertices are not supposed to contain more than 1 type!";
+				assert(sub.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
 				subTypes.push_back(sub[0]);
 			}
 
@@ -436,7 +436,7 @@ namespace types {
 				boost::tie(begin, end) = boost::out_edges(vertex, graph);
 				for (auto it = begin; it!=end; ++it) {
 					vector<TypePtr>& super = graph[target(*it, graph)];
-					assert_eq(super.size(), 1) << "Graph-Vertices are not supposed to contain more than 1 type!";
+					assert(super.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
 					superTypes.push_back(super[0]);
 				}
 

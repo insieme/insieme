@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -145,7 +145,7 @@ protected:
 				}
 				else {
 					std::cout << "Annotated Node: " << *node << "\n";
-					assert_fail() << "OMP annotation on non-marker node.";
+					assert(0 && "OMP annotation on non-marker node.");
 				}
 			}
 			//LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
@@ -181,7 +181,7 @@ protected:
 					newNode = handleThreadprivate(newNode);
 				} else {
 					LOG(ERROR) << "Unhandled OMP annotation: " << *subAnn;
-					assert_fail();
+					assert(0);
 				}
 			});
 			//LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
@@ -254,14 +254,14 @@ protected:
 			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
 				// if parallel, pop a var list
 				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
-					assert_gt(sharedVarStack.size(), 0) << "leaving omp parallel: shared var stack corrupted";
+					assert(sharedVarStack.size() > 0 && "leaving omp parallel: shared var stack corrupted");
 					sharedVarStack.pop();
 				}
 			} );
 		}
 		// check stack integrity when leaving program
 		if(node.isa<ProgramPtr>()) {
-			assert_eq(sharedVarStack.size(), 0) << "ending omp translation: shared var stack corrupted";
+			assert(sharedVarStack.size() == 0 && "ending omp translation: shared var stack corrupted");
 		}
 	}
 
@@ -352,7 +352,7 @@ protected:
 				// Unhandled OMP functions
 				else if(funName.substr(0, 4) == "omp_") {
 					LOG(ERROR) << "Function name: " << funName;
-					assert_fail() << "Unknown OpenMP function";
+					assert(false && "Unknown OpenMP function");
 				}
 			}
 		}
@@ -469,7 +469,7 @@ protected:
 			} else {
 				// new access, generate var and add to map
 				VariablePtr varP = build.variable(accessExpr->getType());
-				assert_eq(varP->getType()->getNodeType(), NT_RefType) << "Non-ref threadprivate!";
+				assert(varP->getType()->getNodeType() == NT_RefType && "Non-ref threadprivate!");
 				thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
 				return varP;
 			}
@@ -477,7 +477,7 @@ protected:
 		LiteralPtr literal = node.isa<LiteralPtr>();
 		if(literal) {
 			//std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
-			assert_eq(literal->getType()->getNodeType(), NT_RefType);
+			assert(literal->getType()->getNodeType() == NT_RefType);
 			// alter the type of the literal
 			TypePtr newType = build.refType(
 					build.vectorType(
@@ -491,7 +491,7 @@ protected:
 			ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
 			return accessExpr;
 		}
-		assert_fail() << "OMP threadprivate annotation on non-member / non-call / non-literal";
+		assert(false && "OMP threadprivate annotation on non-member / non-call / non-literal");
 		return NodePtr();
 	}
 
@@ -545,7 +545,7 @@ protected:
 //				break;
 			default:
 				LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(clause->getReduction().getOperator());
-				assert_fail() << "Unsupported reduction operator";
+				assert(false && "Unsupported reduction operator");
 			}
 			replacements.push_back(operation);
 		});
@@ -556,7 +556,7 @@ protected:
 	ExpressionPtr getReductionInitializer(Reduction::Operator op, const TypePtr& type) {
 		ExpressionPtr ret;
 		RefTypePtr rType = dynamic_pointer_cast<const RefType>(type);
-		assert_true(rType) << "OMP reduction on non-reference type";
+		assert(rType && "OMP reduction on non-reference type");
 		switch(op) {
 		case Reduction::PLUS:
 		case Reduction::MINUS:
@@ -576,7 +576,7 @@ protected:
 			break;
 		default:
 			LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(op);
-			assert_fail() << "Unsupported reduction operator";
+			assert(false && "Unsupported reduction operator");
 		}
 		return ret;
 	}
@@ -889,7 +889,7 @@ protected:
 		auto paramNode = implementParamClause(newStmtNode, reg);
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1);
-		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 
         if(reg->hasObjective()) {
             implementObjectiveClause(jobExp, reg->getObjective());
@@ -920,7 +920,7 @@ protected:
 		parLambda = markUnordered(parLambda).as<BindExprPtr>();
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
-		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 
         if(par->hasObjective()) {
             implementObjectiveClause(jobExp, par->getObjective());
@@ -945,19 +945,7 @@ protected:
 		auto paramNode = implementParamClause(newStmtNode, par);
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
-
-		JobExprPtr jobExp;
-
-		// implement multiversioning for approximate clause
-		if(par->hasApproximate()) {
-			auto target = par->getApproximateTarget();
-			auto replacement = par->getApproximateReplacement();
-			auto approxLambda = core::transform::replaceAllGen(nodeMan, parLambda, target, replacement, false);
-			auto pick = build.pickVariant(ExpressionList{parLambda, approxLambda});
-			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), pick);
-		} else {
-			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
-		}
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 
         if(par->hasObjective()) {
             implementObjectiveClause(jobExp, par->getObjective());
@@ -1045,7 +1033,7 @@ protected:
 	}
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP, bool isParallel = false) {
-		assert_eq(stmtNode.getNodeType(), NT_ForStmt) << "OpenMP for attached to non-for statement";
+		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 		//outer = collapseForNest(outer);
 		StatementList resultStmts;
@@ -1118,7 +1106,7 @@ protected:
 	NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
 		CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
 		if(!call) cerr << printer::PrettyPrinter(stmtNode) << std::endl;
-		assert_true(call) << "Unhandled OMP atomic";
+		assert(call && "Unhandled OMP atomic");
 		auto at = build.atomicAssignment(call);
 		//std::cout << "ATOMIC: \n" << printer::PrettyPrinter(at, printer::PrettyPrinter::NO_LET_BINDINGS);
 		return at;
@@ -1184,7 +1172,7 @@ namespace {
 		visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) { 
 			const string& gname = lit->getStringValue();
 			if(gname.find("global_omp") != 0) return;
-			assert_true(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
+			assert(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
 
 			// add lock to global list
 			unit.addGlobal(lit);
@@ -1229,7 +1217,7 @@ tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeMan
 
 		// if it is an access to a thread-private value
 		if (CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
-			assert_true(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
+			assert(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
 			newGlobal = call[0];		// take first argument
 		}
 

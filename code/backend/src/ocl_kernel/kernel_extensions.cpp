@@ -145,7 +145,7 @@ namespace ocl_kernel{
 		case GLOBAL: return getGlobalType(type);
 		case CONSTANT: return getConstType(type);
 		}
-		assert_fail() << "Unsupported address space encountered!";
+		assert(false && "Unsupported address space encountered!");
 		return core::TypePtr();
 	}
 
@@ -165,23 +165,23 @@ namespace ocl_kernel{
 
 	const core::LiteralPtr& Extensions::getWrapper(AddressSpace space) const {
 		switch(space) {
-		case PRIVATE: assert_fail() << "Not supported!";
+		case PRIVATE: assert(false && "Not supported!");
 		case LOCAL: return wrapLocal;
 		case GLOBAL: return wrapGlobal;
 		case CONSTANT: return wrapConst;
 		}
-		assert_fail() << "Unsupported address space encountered!";
+		assert(false && "Unsupported address space encountered!");
 		return wrapGlobal;
 	}
 
 	const core::LiteralPtr& Extensions::getUnWrapper(AddressSpace space) const {
 		switch(space) {
-		case PRIVATE: assert_fail() << "Not supported!";
+		case PRIVATE: assert(false && "Not supported!");
 		case LOCAL: return unwrapLocal;
 		case GLOBAL: return unwrapGlobal;
 		case CONSTANT: return unwrapConst;
 		}
-		assert_fail() << "Unsupported address space encountered!";
+		assert(false && "Unsupported address space encountered!");
 		return unwrapGlobal;
 	}
 
@@ -235,7 +235,7 @@ namespace ocl_kernel{
 			return value;
 		}
 
-		assert_true(isWrapperType(addressSpace, value->getType()));
+		assert(isWrapperType(addressSpace, value->getType()));
 
 		core::IRBuilder builder(value->getNodeManager());
 

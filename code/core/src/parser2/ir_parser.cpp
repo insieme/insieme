@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -65,7 +65,7 @@ namespace parser {
 		// --- utilities for building rules ---
 
 		NodePtr forward(Context& context) {
-			assert_eq(context.getTerms().size(), 1u);
+			assert(context.getTerms().size() == 1u);
 			return context.getTerm(0);
 		}
 
@@ -97,31 +97,31 @@ namespace parser {
 
 		template<typename Target>
 		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token, bool angleBackets = false) {
-			vector<Token> parentheses;
+			vector<Token> parenthese;
 			for(TokenIter cur = begin; cur != end; ++cur) {
 
 				// early check to allow searching for open / close tokens
-				if (parentheses.empty() && *cur == token) {
+				if (parenthese.empty() && *cur == token) {
 					return cur;
 				}
 
-				if (info.isLeftParenthesis(*cur)) {
-					parentheses.push_back(info.getClosingParenthesis(*cur));
+				if (info.isLeftParenthese(*cur)) {
+					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
 
-				// special handling for enabling the parenthesis pair < >
+				// special handling for enabling the parenthese pair < >
 				if (angleBackets && *cur == '<') {
-					parentheses.push_back(Token::createSymbol('>'));
+					parenthese.push_back(Token::createSymbol('>'));
 				}
 
-				if (info.isRightParenthesis(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
+				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
 					// if this is not matching => return end (no next token)
-					if (parentheses.empty() || parentheses.back() != *cur) {
+					if (parenthese.empty() || parenthese.back() != *cur) {
 						return end;
 					}
-					parentheses.pop_back();
+					parenthese.pop_back();
 				}
-				if (!parentheses.empty()) {
+				if (!parenthese.empty()) {
 					continue;
 				}
 
@@ -134,8 +134,8 @@ namespace parser {
 
 
 		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep, bool angleBackets = false) {
-			assert_false(info.isLeftParenthesis(Token::createSymbol(sep)));
-			assert_false(info.isRightParenthesis(Token::createSymbol(sep)));
+			assert(!info.isLeftParenthese(Token::createSymbol(sep)));
+			assert(!info.isRightParenthese(Token::createSymbol(sep)));
 
 			TokenIter start = range.begin();
 			TokenIter end = range.end();
@@ -238,7 +238,7 @@ namespace parser {
 
 				// parse type
 				TypePtr type = cur.grammar.match(cur, typeRange.begin(), typeRange.end(), "T").as<TypePtr>();
-				assert_true(type) << "Unable to parse parameter type!";
+				assert(type && "Unable to parse parameter type!");
 
 				// add to parameter type list
 				params.push_back(type);
@@ -253,7 +253,7 @@ namespace parser {
 				resEnd = findNext(info, resEnd+1, range.end(), '}') + 1;
 			}
 			TypePtr resType = cur.grammar.match(cur, begin, resEnd, "T").as<TypePtr>();
-			assert_true(resType) << "Unable to parse result type!";
+			assert(resType && "Unable to parse result type!");
 
 			// build resulting type
 			return cur.functionType(params, resType);
@@ -275,8 +275,8 @@ namespace parser {
 			struct let_handler : public detail::actions {
 				void enter(Context& cur, const TokenIter& begin, const TokenIter& end) const {
 					// for simplicity it is assumed that let is first part of rule
-					assert_true(cur.getTerms().empty());
-					assert_true(cur.getSubRanges().empty());
+					assert(cur.getTerms().empty());
+					assert(cur.getSubRanges().empty());
 					cur.push(TokenRange(begin, end));
 				}
 				void leave(Context& cur, const TokenIter& begin, const TokenIter& end) const {
@@ -344,7 +344,7 @@ namespace parser {
 						}
 
 					} else {
-						assert_fail() << "Undefined type encountered!";
+						assert(false && "Undefined type encountered!");
 					}
 
 					// substitute temporal mappings with real mappings
@@ -362,7 +362,7 @@ namespace parser {
 
 					// get total range and list of names
 					const auto& ranges = cur.getSubRanges();
-					assert_ge(ranges.size(), 2u) << "Total range and first name have to be there!";
+					assert(ranges.size() >= 2u && "Total range and first name have to be there!");
 					TokenRange total = ranges[0];
 					auto names = utils::make_range(ranges.begin()+1, ranges.end());
 
@@ -370,7 +370,7 @@ namespace parser {
 
 					// isolate definitions
 					TokenRange def(names.back().end()+1, total.end());
-					assert_false(def.empty());
+					assert(!def.empty());
 
 					// split definitions
 					vector<TokenRange> defs;
@@ -541,7 +541,7 @@ namespace parser {
 							} else if (it->getNodeCategory() == NC_IntTypeParam) {
 								break;
 							} else {
-								assert_fail() << "Expecting Types and Parameters only!";
+								assert(false && "Expecting Types and Parameters only!");
 							}
 							++it;
 						}
@@ -554,7 +554,7 @@ namespace parser {
 							} else if (it->getNodeCategory() == NC_Type) {
 								return fail(cur, "Type and int-parameters must be separated!");
 							} else {
-								assert_fail() << "Expecting Types and Parameters only!";
+								assert(false && "Expecting Types and Parameters only!");
 							}
 							++it;
 						}
@@ -576,7 +576,7 @@ namespace parser {
 					seq("(", list(T, ","), ")->", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert_false(terms.empty());
+						assert(!terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
@@ -588,7 +588,7 @@ namespace parser {
 					seq("(", list(T, ","), ")=>", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert_false(terms.empty());
+						assert(!terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
@@ -601,7 +601,7 @@ namespace parser {
 					seq(T, "::(", list(T, ","), ")"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert_false(terms.empty());
+						assert(!terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						types[0] = cur.refType(types[0]);
 						return cur.functionType(types, types[0], FK_CONSTRUCTOR);
@@ -613,7 +613,7 @@ namespace parser {
 					seq("~", T, "::()"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert_eq(terms.size(), 1u);
+						assert(terms.size() == 1u);
 						TypePtr classType = cur.refType(convertList<TypePtr>(terms)[0]);
 						return cur.functionType(toVector(classType), classType, FK_DESTRUCTOR);
 					}
@@ -624,7 +624,7 @@ namespace parser {
 					seq(T, "::(", list(T, ","), ")->", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						assert_ge(terms.size(), 2u);
+						assert(terms.size() >= 2u);
 						TypeList types = convertList<TypePtr>(terms);
 						types[0] = cur.refType(types[0]);
 						TypePtr resType = types.back();
@@ -746,7 +746,7 @@ namespace parser {
 			));
 
 			// allow a let to be used with a type
-			g.addRule("T", rule(symScope(seq(let,"in",T)), forward));
+			g.addRule("T", rule(symScop(seq(let,"in",T)), forward));
 
 			// --------------- add literal rules ---------------
 
@@ -1415,7 +1415,7 @@ namespace parser {
 					seq(E, lit(".") | lit("->"), E, "(", list(E, ","), ")"),
 					[](Context& cur)->NodePtr {
 						NodeList terms = cur.getTerms();
-						assert_ge(terms.size(), 2u);
+						assert(terms.size() >= 2u);
 
 						// get the object
 						ExpressionPtr obj = terms.front().as<ExpressionPtr>();
@@ -1497,7 +1497,7 @@ namespace parser {
 
 
 			// -- let expression --
-			g.addRule("E", rule(symScope(seq(let,"in",E)), forward));
+			g.addRule("E", rule(symScop(seq(let,"in",E)), forward));
 
 
 			struct register_param : public detail::actions {
@@ -1516,7 +1516,7 @@ namespace parser {
 
 			// function expressions
 			g.addRule("E", rule(
-					newScope(seq("(", list(param,","), ")->", T, S)),
+					newScop(seq("(", list(param,","), ")->", T, S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1576,46 +1576,7 @@ namespace parser {
 
 						BindExprPtr bind 	= cur.bindExpr(VariableList(), call);
 						JobExprPtr job		= cur.jobExpr(cur.getThreadNumRange(rangeLowerBound, rangeUpperBound),
-								vector<core::DeclarationStmtPtr>(), bind);
-
-						return job;
-					}
-			));
-
-
-			// job
-			g.addRule("E", rule(
-					seq("job([", E, "-", E, "][", loop(seq(T, cap(id), " = ", E, opt(seq(",")))), "], ", E,")"),
-					[](Context& cur)->NodePtr {
-						NodeList terms = cur.getTerms();
-						ExpressionPtr rangeLowerBound = terms[0].as<ExpressionPtr>();
-						ExpressionPtr rangeUpperBound = terms[1].as<ExpressionPtr>();
-
-						// collect declarations
-						vector<core::DeclarationStmtPtr> decls;
-						for(unsigned int i = 2u; i < terms.size()-2u; i+=2u) {
-							TypePtr type = cur.getTerm(i).as<TypePtr>();
-							ExpressionPtr value = cur.getTerm(i+1u).as<ExpressionPtr>();
-							DeclarationStmtPtr decl = cur.declarationStmt(type, value);
-
-							// register name within variable manager
-							cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
-
-							// attach name
-							annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
-
-							decls.push_back(decl);
-						}
-
-						CallExprPtr call = terms[terms.size()-1].as<CallExprPtr>();
-
-						if (!call) {
-							return fail(cur, "Not a call expression!");
-						}
-
-						BindExprPtr bind 	= cur.bindExpr(VariableList(), call);
-						JobExprPtr job		= cur.jobExpr(cur.getThreadNumRange(rangeLowerBound, rangeUpperBound),
-								decls, bind);
+								vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), bind);
 
 						return job;
 					}
@@ -1655,7 +1616,7 @@ namespace parser {
 
 			// -- constructors --
 			g.addRule("E", rule(
-					newScope(seq(classType, "::(", list(param, ","), ") ", S)),
+					newScop(seq(classType, "::(", list(param, ","), ") ", S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1671,7 +1632,7 @@ namespace parser {
 
 			// -- constructors --
 			g.addRule("E", rule(
-					newScope(seq("~", classType, "::()", S)),
+					newScop(seq("~", classType, "::()", S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1687,7 +1648,7 @@ namespace parser {
 
 			// -- member function --
 			g.addRule("E", rule(
-					newScope(seq(classType, "::(", list(param, ","), ")->", T, S)),
+					newScop(seq(classType, "::(", list(param, ","), ")->", T, S)),
 					[](Context& cur)->NodePtr {
 						// construct the lambda
 						NodeList terms = cur.getTerms();
@@ -1831,7 +1792,7 @@ namespace parser {
 
 			// compound statement
 			g.addRule("S", rule(
-					varScope(seq("{", loop(S, Token::createSymbol(';')), "}")),
+					varScop(seq("{", loop(S, Token::createSymbol(';')), "}")),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						StatementList list;		// filter out no-ops
@@ -1915,7 +1876,7 @@ namespace parser {
 
 			// try-catch
 			g.addRule("S", rule(
-					seq("try", S, loop(varScope(seq("catch(", varDecl, ")", S)))),
+					seq("try", S, loop(varScop(seq("catch(", varDecl, ")", S)))),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 
@@ -1960,7 +1921,7 @@ namespace parser {
 
 			// for loop without step size
 			g.addRule("S", rule(
-					varScope(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
+					varScop(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 						TypePtr type = terms[0].as<TypePtr>();
@@ -2044,14 +2005,6 @@ namespace parser {
 					}
 			));
 
-			// using statement
-			g.addRule("S", rule(
-					usingScope(seq("using", seq(any(Token::String_Literal), loop(seq(",", any(Token::String_Literal)))), "in", S)),
-					[](Context& context)->NodePtr {
-						return context.getTerms().back().as<StatementPtr>();
-					}
-			));
-
 			// -- top level program code --
 
 			g.addRule("A", rule(
@@ -2105,14 +2058,14 @@ namespace parser {
 
 			// add rules marking addresses
 			g.addRule("E", rule(seq("$", E, "$"), [](Context& context)->NodePtr {
-				assert_eq(context.getTerms().size(), 1u);
+				assert(context.getTerms().size() == 1u);
 				NodePtr res = context.markerExpr(context.getTerm(0).as<ExpressionPtr>());
 				res->attachValue<AddressMark>();
 				return res;
 			}));
 
 			g.addRule("S", rule(seq("$", S, "$"), [](Context& context)->NodePtr {
-				assert_eq(context.getTerms().size(), 1u);
+				assert(context.getTerms().size() == 1u);
 				NodePtr res = context.markerStmt(context.getTerm(0).as<StatementPtr>());
 				res->attachValue<AddressMark>();
 				return res;
@@ -2194,7 +2147,7 @@ namespace parser {
 					if (res->getNodeType() == core::NT_MarkerStmt) {
 						return res.as<core::MarkerStmtPtr>()->getSubStatement();
 					}
-					assert_fail() << "Only marker expressions and statements should be marked.";
+					assert(false && "Only marker expressions and statements should be marked.");
 				}
 
 				// return result
@@ -2263,7 +2216,7 @@ namespace parser {
 					} else if (cur->getNodeType() == core::NT_MarkerStmt) {
 						res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
 					} else {
-						assert_fail() << "Only marker expressions and statements should be marked.";
+						assert(false && "Only marker expressions and statements should be marked.");
 					}
 				}
 			});

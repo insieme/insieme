@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -153,6 +153,11 @@ double init_func(int32_t x, int32_t y) {
 }
 /* ------- Function Definitions --------- */
 int32_t __insieme_fun_8(int32_t argc, char** argv) {
+    int64_t start_t = 0;
+    int64_t end_t = 0;
+    double setup_time = 0.0;
+    double elapsed_time = 0.0;
+    start_t = clock();
     int32_t N = 650;
     if (argc > 1) {
         N = atoi(argv[1]);
@@ -179,8 +184,13 @@ int32_t __insieme_fun_8(int32_t argc, char** argv) {
             f[var_20*N+var_22] = (float)init_func(var_20, var_22);
         };
     };
+    double comm_time = (double)0;
+    double comp_time = (double)0;
+    double timer = (double)0;
     double resv = 0.0;
     double factor = pow((double)1/(double)N, (double)2);
+    end_t = clock();
+    start_t = clock();
     for (int32_t var_32 = 0, var_92 = numIter, var_93 = 1; var_32 < var_92; var_32+=var_93) {
 
 		// WINFIX:
@@ -202,6 +212,7 @@ int32_t __insieme_fun_8(int32_t argc, char** argv) {
         };
         resv = sqrt(norm)/(double)(N-1);
     };
+    end_t = clock();
     free(u);
     free(tmp);
     free(f);
@@ -250,13 +261,13 @@ void insieme_wi_0_var_0_impl(irt_work_item* var_71) {
 
 // --- work item variants ---
 irt_wi_implementation_variant g_insieme_wi_0_variants[] = {
-    { &insieme_wi_0_var_0_impl, 0, NULL, 0, NULL, 0, {0} },
+    { &insieme_wi_0_var_0_impl, 0, NULL, 0, NULL, 0, NULL },
 };
 irt_wi_implementation_variant g_insieme_wi_1_variants[] = {
-    { &insieme_wi_1_var_0_impl, 0, NULL, 0, NULL, 0, {0} },
+    { &insieme_wi_1_var_0_impl, 0, NULL, 0, NULL, 0, NULL },
 };
 irt_wi_implementation_variant g_insieme_wi_2_variants[] = {
-    { &insieme_wi_2_var_0_impl, 0, NULL, 0, NULL, 0, {0} },
+    { &insieme_wi_2_var_0_impl, 0, NULL, 0, NULL, 0, NULL },
 };
 // --- the implementation table --- 
 irt_wi_implementation g_insieme_impl_table[] = {

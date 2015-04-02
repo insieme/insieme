@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -124,17 +124,17 @@ public:
 		friend void std::_Construct(T1*, Args&& ...);
 
 		inline T& operator[](const size_t& pos) { 
-			assert_true(mColIdx && mSize > pos) << "Index out of bounds";
+			assert( mColIdx && mSize > pos && "Index out of bounds");
 			return mBegin[ (*mColIdx)[pos] ];
 		}
 
 		inline const T& operator[](const size_t& pos) const { 
-			assert_true(mColIdx && mSize > pos) << "Index out of bounds";
+			assert( mColIdx && mSize > pos && "Index out of bounds");
 			return mBegin[ (*mColIdx)[pos] ];
 		}
 
 		inline Row& operator=( const std::vector<T>& coeffs ) {
-			assert_eq(coeffs.size(), mSize) << "Index out of bounds";
+			assert( coeffs.size() == mSize && "Index out of bounds");
 			std::copy(coeffs.begin(), coeffs.end(), begin());
 			return *this;
 		}
@@ -195,7 +195,7 @@ public:
 		updateVects();
 
 		for (size_t pos=0; pos<mRows; ++pos) {
-			assert_eq(coeffs[pos].size(), mCols);
+			assert(coeffs[pos].size() == mCols);
 			std::copy(coeffs[pos].begin(), coeffs[pos].end(), (*this)[pos].begin());
 		}
 	}
@@ -213,24 +213,24 @@ public:
 	}
 
 	Matrix<T>::Row& operator[](size_t pos) {
-		assert_lt(pos, mRows);
+		assert( pos < mRows );
 		return mRowVect[ mRowIdx[pos] ];
 	}
 
 	const Matrix<T>::Row& operator[](size_t pos) const {
-		assert_lt(pos, mRows);
+		assert( pos < mRows );
 		return mRowVect[ mRowIdx[pos] ];
 	}
 
 	void swapRows(size_t i, size_t j) { 
-		assert_true(i < mRows && j < mRows) << "Rows indeces out of bounds";
+		assert(i < mRows && j < mRows && "Rows indeces out of bounds");
 		size_t tmp = mRowIdx[i];
 		mRowIdx[i] = mRowIdx[j];
 		mRowIdx[j] = tmp;
 	}
 
 	void swapCols(size_t i, size_t j) { 
-		assert_true(i < mCols && j < mCols) << "Columns indeces out of bounds";
+		assert(i < mCols && j < mCols && "Columns indeces out of bounds");
 		size_t tmp = mColIdx[i];
 		mColIdx[i] = mColIdx[j];
 		mColIdx[j] = tmp;
@@ -288,7 +288,7 @@ private:
 		for(size_t i=0; i<mRows; i++, ptr+=mCols )          
 			mRowVect[i] = Row( &mColIdx, ptr, ptr+mCols );
 
-		assert_eq(mRawData + mRows*mCols, ptr);
+		assert(mRawData + mRows*mCols == ptr);
 	}
 
 	void initIndeces() {
@@ -338,7 +338,7 @@ Matrix<T> makeIdentity(size_t size) {
 template <class T>
 Matrix<T> operator*(const Matrix<T>& lhs, const Matrix<T>& rhs) {
 
-	assert_eq(lhs.cols(), rhs.rows()) << "Matrix not allowed, size mismatch";
+	assert(lhs.cols() == rhs.rows() && "Matrix not allowed, size missmatch");
 
 	Matrix<T> ret(lhs.rows(), rhs.cols());
 	
@@ -372,8 +372,8 @@ Matrix<T> matOp(const Matrix<T>& lhs, const Matrix<T>& rhs, const Op& op) {
 template <class T>
 Matrix<T> operator+(const Matrix<T>& lhs, const Matrix<T>& rhs) {
 	
-	assert_true(lhs.rows() == rhs.rows() && lhs.cols() == rhs.cols()) 
-			<< "Matrix sum not allowed, size mismatch";
+	assert(lhs.rows() == rhs.rows() && lhs.cols() == rhs.cols() && 
+			"Matrix sum not allowd, size missmatch");
 
 	return matOp(lhs, rhs, std::plus<T>());
 }
@@ -381,8 +381,8 @@ Matrix<T> operator+(const Matrix<T>& lhs, const Matrix<T>& rhs) {
 template <class T>
 Matrix<T> operator-(const Matrix<T>& lhs, const Matrix<T>& rhs) {
 	
-	assert_true(lhs.rows() == rhs.rows() && lhs.cols() == rhs.cols())  
-			<< "Matrix diff not allowed, size mismatch";
+	assert(lhs.rows() == rhs.rows() && lhs.cols() == rhs.cols() && 
+			"Matrix diff not allowd, size missmatch");
 	
 	return matOp(lhs, rhs, std::minus<T>());
 }

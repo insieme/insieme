@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -54,7 +54,6 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/hash_utils.h"
-#include "insieme/utils/assert.h"
 
 #include "insieme/utils/constraint/lattice.h"
 
@@ -489,7 +488,7 @@ namespace cba {
 			private:
 
 				const AtomicEntry<BaseLattice>& cast(const Entry<BaseLattice>& other) const {
-					assert_true(dynamic_cast<const AtomicEntry<BaseLattice>*>(&other));
+					assert(dynamic_cast<const AtomicEntry<BaseLattice>*>(&other));
 					return static_cast<const AtomicEntry<BaseLattice>&>(other);
 				}
 
@@ -627,7 +626,7 @@ namespace cba {
 			private:
 
 				const CompoundEntry<IndexType,BaseLattice>& cast(const Entry<BaseLattice>& other) const {
-					assert_true((dynamic_cast<const CompoundEntry<IndexType,BaseLattice>*>(&other)));
+					assert((dynamic_cast<const CompoundEntry<IndexType,BaseLattice>*>(&other)));
 					return static_cast<const CompoundEntry<IndexType,BaseLattice>&>(other);
 				}
 
@@ -952,13 +951,13 @@ namespace cba {
 
 				SetEntry(DataManager<BaseLattice>& mgr, const set_type& data)
 					: Entry<BaseLattice, SetEntry<BaseLattice>>(mgr, hash_set(data)), data(data) {
-					assert_false(data.empty());
+					assert(!data.empty());
 				}
 
 				SetEntry(DataManager<BaseLattice>& mgr, std::size_t hash, const set_type& data)
 					: Entry<BaseLattice, SetEntry<BaseLattice>>(mgr, hash), data(data) {
 					assert_eq(hash, hash_set(data)) << "Hashes not matching!";
-					assert_false(data.empty());
+					assert(!data.empty());
 				}
 
 				virtual ~SetEntry() {};
@@ -1102,7 +1101,7 @@ namespace cba {
 			private:
 
 				const AtomicEntry<BaseLattice>& cast(const TreeEntry<BaseLattice>& other) const {
-					assert_true(dynamic_cast<const AtomicEntry<BaseLattice>*>(&other));
+					assert(dynamic_cast<const AtomicEntry<BaseLattice>*>(&other));
 					return static_cast<const AtomicEntry<BaseLattice>&>(other);
 				}
 
@@ -1211,7 +1210,7 @@ namespace cba {
 			private:
 
 				const CompoundEntry<IndexType,BaseLattice>& cast(const TreeEntry<BaseLattice>& other) const {
-					assert_true((dynamic_cast<const CompoundEntry<IndexType,BaseLattice>*>(&other)));
+					assert((dynamic_cast<const CompoundEntry<IndexType,BaseLattice>*>(&other)));
 					return static_cast<const CompoundEntry<IndexType,BaseLattice>&>(other);
 				}
 

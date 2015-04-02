@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+
 #ifndef SCOPPAR_H
 #define SCOPPAR_H
 
@@ -43,12 +44,12 @@
 namespace insieme { namespace transform { namespace polyhedral {
 
 class SCoPPar {
-	const insieme::core::ProgramPtr& program;
+    insieme::core::ProgramPtr& program;
 
 public:
-	SCoPPar(const insieme::core::ProgramPtr &program);
+    SCoPPar(insieme::core::ProgramPtr& program);
 
-	const insieme::core::ProgramPtr& apply();
+    insieme::core::ProgramPtr& apply();
     unsigned int size(insieme::core::NodePtr n);
 };
 

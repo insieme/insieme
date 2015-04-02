@@ -52,7 +52,8 @@
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/type_converter.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/pragma/insieme.h"
+
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -63,7 +64,8 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
-using namespace insieme::frontend::extensions;
+
+namespace fe = insieme::frontend;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
 	{ Converter convFactory( manager, tu);\
@@ -79,7 +81,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -162,9 +164,9 @@ TEST(TypeConversion, PointerToType) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 
-	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
+	const fe::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
 
 	CHECK_POINTER_TYPE(Void, 	"ref<any>");
@@ -264,9 +266,9 @@ TEST(TypeConversion, References) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 
-	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
+	const fe::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
 
 	CHECK_REFERENCE_TYPE(Void, 		"struct<_cpp_ref:ref<unit>>");  // <== this is actually not a type...
@@ -352,10 +354,10 @@ TEST(TypeConversion, CombinedTypes) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 	Converter convFactory( manager, tu);
 
-	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
+	const fe::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
 
 	////////////////////////////////////
@@ -436,10 +438,10 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 	Converter convFactory( manager, tu);
 
-	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
+	const fe::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
 
 	// create rec struct
@@ -490,17 +492,17 @@ TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/types.c");
+	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/types.c");
 
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	// we use an internal manager to have private counter for variables so we can write independent tests
 	NodeManager mgr;
 
 
-	insieme::frontend::ConversionSetup setup;
-	setup.frontendExtensionInit();
-	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
+	fe::ConversionSetup setup;
+	setup.frontendPluginInit();
+	fe::conversion::Converter convFactory( mgr, tu, setup);
 	convFactory.convert();
 
 	auto resolve = [&](const core::NodePtr& cur) {
@@ -509,10 +511,10 @@ TEST(TypeConversion, FileTest) {
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
 
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement()) {
-			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+            StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
             std::string match = toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE));
    			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		} else {

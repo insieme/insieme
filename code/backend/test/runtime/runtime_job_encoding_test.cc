@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -67,8 +67,9 @@ TEST(JobSupport, LocalDeclarations) {
 	VariablePtr localVar = builder.variable(basic.getInt4(), 1);
 	VariablePtr captured = builder.variable(basic.getInt4(), 2);
 	DeclarationStmtsPtr localDecls = builder.declarationStmts(toVector(builder.declarationStmt(localVar, builder.intLit(12))));
+	GuardedExprsPtr guardedExpr = builder.guardedExprs(toVector<GuardedExprPtr>());
 	ExpressionPtr jobBody = builder.wrapLazy(builder.add(localVar, captured));
-	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, localDecls, jobBody);
+	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, localDecls, guardedExpr, jobBody);
 
 
 	// step 2: execute job

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -134,7 +134,7 @@ namespace backend {
 
 			// create a new context
 			ConversionContext entryContext(converter, core::LambdaPtr());
-
+			
 			c_ast::CodeFragmentPtr fragment;
 			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
 				// handle function-entry point specially
@@ -253,7 +253,7 @@ namespace backend {
 
 			// add code dependency to global struct
 			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
-			assert_true(fragment) << "Global Fragment not yet initialized!";
+			assert(fragment && "Global Fragment not yet initialized!");
 			context.getDependencies().insert(fragment);
 			return res;
 		}
@@ -371,7 +371,7 @@ namespace backend {
 
 		// remove last element if it is a variable sized struct
 		if (core::types::isVariableSized(ptr->getType())) {
-			assert_false(init->values.empty());
+			assert(!init->values.empty());
 			init->values.pop_back();
 		}
 
@@ -563,12 +563,12 @@ namespace backend {
 		}
 
 		c_ast::NodePtr resolveStackBasedCArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert_true(isStackBasedCArray(init)) << "Invalid input parameter!";
+			assert(isStackBasedCArray(init) && "Invalid input parameter!");
 			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(0).as<core::CallExprPtr>()->getArgument(1));
 		}
 
 		c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert_true(isStackBasedCppArray(init)) << "Invalid input parameter!";
+			assert(isStackBasedCppArray(init) && "Invalid input parameter!");
 			const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(
 					(core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2
@@ -578,7 +578,7 @@ namespace backend {
 		c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
 			if (isStackBasedCArray(init)) return resolveStackBasedCArray(context, var, init);
 			if (isStackBasedCppArray(init)) return resolveStackBasedCppArray(context, var, init);
-			assert_fail() << "Init value is not a stack based array!";
+			assert(false && "Init value is not a stack based array!");
 			return 0;
 		}
 
@@ -708,8 +708,6 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
 
-		converter.getNameManager().pushVarScope(true);
-
 		auto manager = converter.getCNodeManager();
 
 		VariableManager& varManager = context.getVariableManager();
@@ -757,14 +755,11 @@ namespace backend {
 
 		// create init and body
 		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
-		converter.getNameManager().pushVarScope(true);
 		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
-		converter.getNameManager().popVarScope();
 
 		// remove variable info since no longer in scope
 		varManager.remInfo(var_iter);
 
-		converter.getNameManager().popVarScope();
 		// combine all into a for
 		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
 	}
@@ -825,7 +820,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
-		if (converter.getNodeManager().getLangBasic().isUnitConstant(ptr->getReturnExpr())) {
+		if (context.getConverter().getNodeManager().getLangBasic().isUnit(ptr->getReturnExpr()->getType())) {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}

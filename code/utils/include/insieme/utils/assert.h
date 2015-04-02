@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,11 +29,10 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
 #pragma once
 
 /**
@@ -43,14 +42,7 @@
  * ignored. In those cases, variables declared using the 'assert_decl' macro will not be declared.
  */
 
-#include <iostream>
-
-#ifdef assert
-#undef assert
-#endif
-#define assert(_BLA) static_assert(false, "You should use insieme assertions only! (insieme::utils::assert_*)")
-
-#if defined(NDEBUG)
+#ifdef NDEBUG
 
 	#define _assert_ignore if(false) std::cerr << ""
 
@@ -64,6 +56,9 @@
 	#define assert_ge(_a,_b) _assert_ignore
 
 #else
+
+
+	#include <assert.h>
 	#include <iostream>
 
 	#include "insieme/utils/unused.h"

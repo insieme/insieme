@@ -131,7 +131,7 @@ namespace transform {
 			const TransformationPtr&  second,
 			const Params& ... rest ) 	
 	{
-		assert_true(first) << "Transformation must be valid!";
+		assert(first && "Transformation must be valid!");
 		return std::make_shared<Pipeline>(
 				parameter::combineValues(
 						parameter::makeValue(first),
@@ -582,7 +582,7 @@ namespace transform {
 			const TransformationPtr&  second,
 			const Params& ... rest ) 	
 	{
-		assert_true(first) << "Transformation must be valid!";
+		assert(first && "Transformation must be valid!");
 		return std::make_shared<TryOtherwise>(
 				parameter::combineValues(
 						parameter::makeValue(first),

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -67,7 +67,6 @@ using namespace llvm;
 		boost::replace_all(str, "<", "_"); \
 		boost::replace_all(str, ">", "_"); \
 		boost::replace_all(str, "::","_"); \
-		boost::replace_all(str, ":","_"); \
 		boost::replace_all(str, " ", "_"); \
 		boost::replace_all(str, "(", "_"); \
 		boost::replace_all(str, ")", "_"); \

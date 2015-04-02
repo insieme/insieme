@@ -59,7 +59,7 @@ double Timer::step() {
 }
 
 double Timer::getTime() const {
-	assert_true(isStopped) << "Cannnot read time of a running timer.";
+	assert(isStopped && "Cannnot read time of a running timer.");
 	return mElapsed;
 }
 

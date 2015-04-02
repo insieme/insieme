@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -258,7 +258,7 @@ namespace encoder {
 
 				// check values again ...
 				assert(types::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager())) && "Cannot convert non-related type!");
-				assert_eq(expr->getNodeType(), core::NT_Literal) << "Simple conversion only works for literals!";
+				assert(expr->getNodeType() == core::NT_Literal && "Simple conversion only works for literals!");
 
 				// convert
 				return utils::numeric_cast<T>(static_pointer_cast<const core::Literal>(expr)->getStringValue());
@@ -354,7 +354,7 @@ namespace encoder {
 
 		struct create_expr_type {
 			core::TypePtr operator()(core::NodeManager& manager) const {
-				assert_fail() << "Not applicable in the general case!";
+				assert(false && "Not applicable in the general case!");
 				throw InvalidExpression("Cannot define generic type for all expressions!");
 			}
 			create_expr_type() {}

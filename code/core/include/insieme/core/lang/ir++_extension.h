@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -213,62 +213,6 @@ namespace lang {
 				"(cppRef x)->constCppRef { return (constCppRef) { ref.src.cast(x._cpp_ref) }; }"
 		);
 
-		/**
-		 * An operator converting an IR reference into a C++ right side reference.
-		 */
-		LANG_EXT_DERIVED(RefIRToRValCpp,
-				"let rValCppRef = struct { ref<'a> _rval_cpp_ref } in "
-				"(ref<'a> x)->rValCppRef { return (rValCppRef) { x }; }"
-		);
-
-		/**
-		 * An operator converting a right side C++ reference into an IR reference.
-		 */
-		LANG_EXT_DERIVED(RefRValCppToIR,
-				"(struct { ref<'a> _rval_cpp_ref } x)->ref<'a> { return x._rval_cpp_ref; }"
-		);
-
-		/**
-		 * An operator converting a right side C++ reference into a C++ reference.
-		 */
-		LANG_EXT_DERIVED(RefRValCppToCpp,
-				"let rValCppRef = struct { ref<'a> _rval_cpp_ref } in "
-				"let cppRef = struct { ref<'a> _cpp_ref } in "
-				"(rValCppRef x)->cppRef { return (cppRef) { x._rval_cpp_ref }; }"
-		);
-
-		/**
-		 * An operator converting a right side C++ reference into a const C++ reference.
-		 */
-		LANG_EXT_DERIVED(RefRValCppToConstCpp,
-				"let rValCppRef = struct { ref<'a> _rval_cpp_ref } in "
-				"let constCppRef = struct { src<'a> _const_cpp_ref } in "
-				"(rValCppRef x)->constCppRef { return (constCppRef) { ref.src.cast(x._rval_cpp_ref) }; }"
-		);
-
-		/**
-		 * An operator converting a const right side C++ reference into an IR reference.
-		 */
-		LANG_EXT_DERIVED(RefConstRValCppToIR,
-                "(struct { src<'a> _const_rval_cpp_ref } x)->src<'a> { return x._const_rval_cpp_ref; }"
-        );
-
-		/**
-		 * An operator converting an IR reference into a const C++ right side reference.
-		 */
-		LANG_EXT_DERIVED(RefIRToConstRValCpp,
-				"let constRValCppRef = struct { src<'a> _const_rval_cpp_ref } in "
-				"(src<'a> x)->constRValCppRef { return (constRValCppRef) { x }; }"
-		);
-
-		/**
-		 * An operator converting a const C++ right side reference into a const C++ reference.
-		 */
-		LANG_EXT_DERIVED(RefConstRValCppToConstCpp,
-				"let constRValCppRef = struct { src<'a> _const_rval_cpp_ref } in "
-				"let constCppRef = struct { src<'a> _const_cpp_ref } in "
-				"(constRValCppRef x)->constCppRef { return (constCppRef) { (x._const_rval_cpp_ref) }; }"
-		);
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//	explicit C++ casts

@@ -3,4 +3,4 @@ includes="../../../gemsclaim/jasper-1.900.1/src/libjasper/include/","../../../ge
 executionFlags=-f ${PATH}/../../../gemsclaim/wow_320.pnm -T jp2
 definitions="EXCLUDE_PGX_SUPPORT","EXCLUDE_MIF_SUPPORT","EXCLUDE_RAS_SUPPORT","EXCLUDE_BMP_SUPPORT","EXCLUDE_JPG_SUPPORT"
 use_libmath=1
-excludeSteps=${excludeSteps},"insiemecc_seq_c_convert","insiemecc_seq_c_compile","insiemecc_seq_c_execute","insiemecc_seq_c_check"
+excludeSteps=${excludeSteps},"main_seq_convert","main_seq_compile","main_seq_execute","main_seq_check"

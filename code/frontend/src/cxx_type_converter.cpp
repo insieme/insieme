@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -159,7 +159,7 @@ vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRec
 // a ConstantArrayType or a VariableArrayType.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
-	assert_fail() << "DependentSizedArrayType not yet handled!";
+	assert(false && "DependentSizedArrayType not yet handled!");
 	return core::TypePtr();
 }
 
@@ -221,22 +221,22 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 			// templated parameters are values wich spetialize the template, because of their value nature,
 			// they should be encapsulated as types to fit in the typing of the parent type
 				VLOG(2) << "arg: integral";
-				assert_fail();
+				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Null: {
 				VLOG(2) << "arg: NULL";
-				assert_fail();
+				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Declaration: {
 				VLOG(2) << "arg: DECL";
-				assert_fail();
+				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::NullPtr: {
 				 VLOG(2) << "arg: nullptr";
-				assert_fail();
+				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Template: {
@@ -248,18 +248,18 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 			}
 			case clang::TemplateArgument::TemplateExpansion: {
 				VLOG(2) << "arg: template expansion";
-				assert_fail();
+				assert(false);
 				break;
 			}
 			case clang::TemplateArgument::Pack: {
 				VLOG(2) << "arg: pack";
-				assert_fail();
+				assert(false);
 				break;
 			}
 		}
     }
 
-	assert_true(templTy->isSugared()) << "no idea what to do with non sugar";
+	assert(templTy->isSugared()&& "no idea what to do with non sugar");
  	return	retTy = convFact.convertType(templTy->desugar());
 }
 
@@ -270,7 +270,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationT
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR";
+	assert(false && "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR");
 	return retTy;
 }
 
@@ -281,7 +281,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitInjectedClassNameType(const Inje
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert_fail() << "InjectedClassNameType not yet handled!";
+	assert(false && "InjectedClassNameType not yet handled!");
 	return retTy;
 }
 
@@ -304,7 +304,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const 
 	//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
 
 	//START_LOG_TYPE_CONVERSION(substTy);
-	//assert_fail() << "SubstTemplateTypeParmType not yet handled!";
+	//assert(false && "SubstTemplateTypeParmType not yet handled!");
 	retTy = convFact.convertType( substTy->getReplacementType() );
 	return retTy;
 }
@@ -316,7 +316,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	assert_fail() << "TemplateTypeParmType should not show off, can you explain to me how are you planing to handle this in IR?";
+	assert(false && "TemplateTypeParmType should not show off, can you explain to me how are you planing to handle this in IR?");
 	return retTy;
 }
 

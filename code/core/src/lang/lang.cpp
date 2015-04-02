@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ namespace lang {
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
 			return std::make_shared<annotation_type>(DerivedTag(encoder::toValue<string>(node)));
 		}
 	};
@@ -77,7 +77,7 @@ namespace lang {
 	}
 
 	const string& getConstructName(const NodePtr& node) {
-		assert_true(isDerived(node)) << "Node not marked as being a derived construct!";
+		assert(isDerived(node) && "Node not marked as being a derived construct!");
 		return node->getAttachedValue<DerivedTag>().name;
 	}
 

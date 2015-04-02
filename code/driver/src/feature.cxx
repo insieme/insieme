@@ -48,7 +48,7 @@
 
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/cmd/options.h"
 
 	/**
 	 * This executable is accepting some program code and extracting a set of
@@ -118,9 +118,8 @@
 		cout << " --- Insieme Code Feature Extractor ---- \n";
 
 		// process handle command line arguments
-        std::vector<std::string> arguments(argv, argv+argc);
-        cmd::Options options = cmd::Options::parse(arguments);
-		if (!options.valid) return (options.settings.help)?0:1;
+		cmd::Options options = cmd::Options::parse(argc, argv);
+		if (!options.valid) return (options.help)?0:1;
 
 
 		// loading features

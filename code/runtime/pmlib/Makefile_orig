@@ -1,0 +1,20 @@
+CC=g++ -m64
+CFLAGS=-c -Wall -fpic
+LDFLAGS=-pthread -shared -Wl,-soname,
+INCLUDES=
+SOURCES=AbstractParser.cpp  AbstractAnalyzer.cpp AbstractFileObserver.cpp CSVAnalyzer.cpp CSVParser.cpp EthernetLogDisposer.cpp EthernetParser.cpp EthernetParser2.cpp EthernetReceiver.cpp LinuxFileObserver.cpp LogFileCreator.cpp MeasurementAnalyzer.cpp MeasurementInfo.cpp PMClient.cpp PMFileParser.cpp PMMemoryParser.cpp ReaderWriter.cpp Runnable.cpp ServerParser.cpp SessionObject.cpp SimpleFileCreator.cpp SThread.cpp TCPClient.cpp TestClient.cpp TestRunnable.cpp unsupported_operation.cpp UtilityClass.cpp  WinCSVAnalyzer.cpp ListenerThread.cpp SessionListener.cpp PMInterface.cpp CInterface.cpp
+OBJECTS=$(SOURCES:.cpp=.o)
+HEADERS=$(SOURCES:.cpp=.h)
+LIB=libPM
+LIBNAME=libPM.so
+
+all: $(SOURCES) $(LIB)
+	
+$(LIB): $(OBJECTS) 
+	$(CC) $(INCLUDES) $(LDFLAGS) $(LIBNAME) -o $(LIBNAME) $(OBJECTS)
+
+.cpp.o:
+	$(CC) $(CFLAGS) $< -o $@
+	
+clean:
+	\rm *.o	

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -83,12 +83,12 @@ namespace cba {
 		// -- inspectors -----------
 
 		const T& front() const {
-			assert_false(empty);
+			assert(!empty);
 			return sequence.front();
 		}
 
 		const T& back() const {
-			assert_false(empty);
+			assert(!empty);
 			return sequence.back();
 		}
 
@@ -306,7 +306,7 @@ namespace cba {
 			if (*this == other) return false;
 			if (callContext != other.callContext) return callContext < other.callContext;
 			if (threadContext != other.threadContext) return threadContext < other.threadContext;
-			assert_fail() << "How did you get here?";
+			assert(false && "How did you get here?");
 			return false;
 		}
 

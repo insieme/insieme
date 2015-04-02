@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -44,7 +44,6 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
 
 #include "insieme/core/types/cast_tool.h"
 
@@ -108,7 +107,7 @@ namespace {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 										  const clang::CastExpr* castExpr){
-	const core::FrontendIRBuilder& builder = convFact.getIRBuilder();
+	const core::IRBuilder& builder = convFact.getIRBuilder();
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::NodeManager& mgr = convFact.getNodeManager();
 
@@ -122,7 +121,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		VLOG(2) << (expr);
 		VLOG(2) << "####### Expr Type: #######" ;
 		VLOG(2) << (exprTy);
-		VLOG(2) << "####### cast result Type: #######" ;
+		VLOG(2) << "####### cast Type: #######" ;
 		VLOG(2) << (targetTy);
 		VLOG(2)  << "####### clang: #######" << std::endl;
 		castExpr->dump();
@@ -205,9 +204,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		{
 			if (core::analysis::isCppRef(exprTy)){
 				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
-			}
-			if (core::analysis::isRValCppRef(exprTy)){
-				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefRValCppToConstCpp(), expr);
 			}
 
 			// types equality has been already checked, if is is a NoOp is because clang identifies
@@ -435,7 +431,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				}
 
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				assert_true(elementType) << "cannot build ref reinterpret without a type";
+				assert(elementType && "cannot build ref reinterpret without a type");
 				return builder.callExpr(targetTy, gen.getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
@@ -514,7 +510,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			// pointers:
 			if (core::analysis::isPointerType(exprTy)){
-				assert_true(core::analysis::isPointerType(targetTy)) << "from pointer to non pointer is not possible";
+				assert(core::analysis::isPointerType(targetTy) && "from pointer to non pointer is not possible" );
 				targetTy = targetTy.as<core::RefTypePtr>()->getElementType();
 				return  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy)));
 			}
@@ -567,7 +563,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 			// pointers:
 			if (core::analysis::isPointerType(exprTy)){
-				assert_true(core::analysis::isPointerType(targetTy)) << "from pointer to non pointer is not possible";
+				assert(core::analysis::isPointerType(targetTy) && "from pointer to non pointer is not possible" );
 				targetTy = targetTy.as<core::RefTypePtr>()->getElementType();
 				return  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy)));
 			}
@@ -722,12 +718,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			std::cout << " \nCAST: " << castExpr->getCastKindName () << " not supported!!"<< std::endl;
 			std::cout << " at location: " << frontend::utils::location(castExpr->getLocStart (), convFact.getSourceManager()) <<std::endl;
 			castExpr->dump();
-			assert_fail();
+			assert(false);
 		default:
-			assert_fail() << "not all options listed, is this clang 3.2? maybe should upgrade Clang support";
+			assert(false && "not all options listed, is this clang 3.2? maybe should upgrade Clang support");
 	}
 
-	assert_fail() << "control reached an invalid point!";
+	assert(false && "control reached an invalid point!");
 
 	return expr;
 

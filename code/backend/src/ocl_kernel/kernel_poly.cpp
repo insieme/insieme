@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -72,7 +72,7 @@ namespace irg = insieme::core::pattern::generator::irg;
  * gets an expression after the replacements of insertIndutionVariable have been done and fixes some ref and cast related errors
  */
 ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
-	SimpleNodeMapping* cleaner;
+	NodeMapping* cleaner;
 	NodeManager& mgr = basic.getNodeManager();
 	auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 		// stop recursion at type level
@@ -143,13 +143,13 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	// collect global and local size argument
 	// TODO maybe use the argument known to the outside code?
 /*	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel.getParentNode());
-	assert_true(kernelCall) << "Parent of kernel is not a call expression";
+	assert(kernelCall && "Parent of kernel is not a call expression");
 	size_t nArgs = kernelCall.getArguments().size();
 	ExpressionPtr globalSize = kernelCall.getArguments().at(nArgs-1);
 	ExpressionPtr localSize = kernelCall.getArguments().at(nArgs-2);*/
 
 	const LambdaExprPtr kernelCall = dynamic_pointer_cast<const LambdaExpr>(kernel.getAddressedNode());
-	assert_true(kernelCall) << "Parent of kernel is not a call expression";
+	assert(kernelCall && "Parent of kernel is not a call expression");
 	std::vector<VariablePtr> params = kernelCall->getParameterList()->getElements();
 	size_t nArgs = params.size();
 	ExpressionPtr globalSize = params.at(nArgs-1);
@@ -165,7 +165,7 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	// drop merge and return
 	toConvert.pop_back(), toConvert.pop_back();
 	StatementPtr transformedKernel = dynamic_pointer_cast<const StatementPtr>(ktlm.map(0, builder.compoundStmt(toConvert)));
-	assert_true(transformedKernel) << "KernelToLoopnestMapper corrupted the kernel function body";
+	assert(transformedKernel && "KernelToLoopnestMapper corrupted the kernel function body");
 
     // remove returns at the first level
 	NodeMapping* h;
@@ -186,7 +186,7 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	// try to use the induction variable were ever possible
 //	transformedKernel = dynamic_pointer_cast<const Statement>(
 //			core::transform::replaceAll(builder.getNodeManager(), transformedKernel, ktlm.getReplacements()));
-//	assert_true(transformedKernel) << "Variable replacing corrupted the loop nest";
+//	assert(transformedKernel && "Variable replacing corrupted the loop nest");
 
 	//replace kernel call with a loop nest
 	VariablePtr *gLoopVars, *lLoopVars;
@@ -218,7 +218,7 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 	InductionVarMapper ivm(program.getNodeManager());
 
 //	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel);
-//	assert_true(kernelCall) << "Parent of kernel is not a call expression";
+//	assert(kernelCall && "Parent of kernel is not a call expression");
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
 /*	for_each(ivm.getReplacements(), [](std::pair<NodePtr, NodePtr>r){
@@ -265,7 +265,7 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
  */
 bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
 //	std::cout << "Params "  << kernel->getLambda()->getParameterList() << std::endl;
-	assert_true(var) << "You passed a null pointer";
+	assert(var && "You passed a null pointer");
 
 	VariableList params = kernel->getLambda()->getParameterList();
 

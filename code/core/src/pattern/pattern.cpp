@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -817,37 +817,37 @@ namespace pattern {
 			}
 
 			void bindRecVar(const std::string& var, const impl::TreePatternPtr& pattern) {
-				assert_false(isRecVarBound(var)) << "Variable bound twice";
+				assert(!isRecVarBound(var) && "Variable bound twice");
 				boundRecursiveVariables.insert(std::make_pair(var, RecVarInfo(pattern, path.getDepth())));
 			}
 
 			void bindRecVar(const std::string& var, const RecVarInfo& info) {
-				assert_false(isRecVarBound(var)) << "Variable bound twice";
+				assert(!isRecVarBound(var) && "Variable bound twice");
 				boundRecursiveVariables.insert(std::make_pair(var, info));
 			}
 
 			impl::TreePatternPtr getRecVarBinding(const std::string& var) const {
-				assert_true(isRecVarBound(var)) << "Requesting bound value for unbound tree variable";
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 				return boundRecursiveVariables.find(var)->second.pattern;
 			}
 
 			const RecVarInfo& getRecVarInfo(const std::string& var) const {
-				assert_true(isRecVarBound(var)) << "Requesting bound value for unbound tree variable";
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 				return boundRecursiveVariables.find(var)->second;
 			}
 
 			unsigned getRecVarDepth(const std::string& var) const {
-				assert_true(isRecVarBound(var)) << "Requesting bound value for unbound tree variable";
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 				return boundRecursiveVariables.find(var)->second.level;
 			}
 
 			unsigned getRecVarCounter(const std::string& var) const {
-				assert_true(isRecVarBound(var)) << "Requesting bound value for unbound tree variable";
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 				return boundRecursiveVariables.find(var)->second.counter;
 			}
 
 			unsigned incRecVarCounter(const std::string& var) {
-				assert_true(isRecVarBound(var)) << "Requesting bound value for unbound tree variable";
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 				return ++(boundRecursiveVariables.find(var)->second.counter);
 			}
 
@@ -858,7 +858,7 @@ namespace pattern {
 			// -- Cached Match Results -----------------------------
 
 			CachedMatchResult cachedMatch(const impl::TreePattern& pattern, const atom_type& node) const {
-				assert_true(pattern.isVariableFree) << "Can only cache variable-free pattern fragments!";
+				assert(pattern.isVariableFree && "Can only cache variable-free pattern fragments!");
 
 				auto pos = treePatternCache.find(std::make_pair(&pattern, node));
 				if (pos == treePatternCache.end()) {
@@ -872,7 +872,7 @@ namespace pattern {
 			}
 
 			CachedMatchResult cachedMatch(const impl::ListPattern& pattern, const iterator& begin, const iterator& end) const {
-				assert_true(pattern.isVariableFree) << "Can only cache variable-free pattern fragments!";
+				assert(pattern.isVariableFree && "Can only cache variable-free pattern fragments!");
 
 				auto pos = listPatternCache.find(std::make_tuple(&pattern, begin, end));
 				if (pos == listPatternCache.end()) {
@@ -1002,7 +1002,7 @@ namespace pattern {
 			}
 
 			MATCH(Constant) {
-				assert_true(pattern.nodeAtom) << "Wrong type of constant value stored within atom node!";
+				assert(pattern.nodeAtom && "Wrong type of constant value stored within atom node!");
 				return *pattern.nodeAtom == *tree && delayedCheck(context);
 			}
 
@@ -1111,7 +1111,7 @@ namespace pattern {
 				// handle terminal
 				if(pattern.terminal) {
 					// get pattern bound to recursive variable
-					assert_true(context.isRecVarBound(pattern.name)) << "Recursive variable unbound!";
+					assert(context.isRecVarBound(pattern.name) && "Recursive variable unbound!");
 
 					// save current context path
 					MatchPath path = context.getCurrentPath();
@@ -1209,13 +1209,13 @@ namespace pattern {
 
 			// a specialization for tree pointers
 			inline bool matchConstant(const pattern::impl::tree::Constant& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
-				assert_true(pattern.treeAtom) << "Wrong type of constant value stored within atom node!";
+				assert(pattern.treeAtom && "Wrong type of constant value stored within atom node!");
 				return *pattern.treeAtom == *tree && delayedCheck(context);
 			}
 
 			// a specialization for tree pointers
 			inline bool matchLazyConstant(const pattern::impl::tree::LazyConstant& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
-				assert_fail() << "Not applicable to test-tree structure!";
+				assert(false && "Not applicable to test-tree structure!");
 				return false;
 			}
 
@@ -1420,7 +1420,7 @@ namespace pattern {
 						CASE(Recursion);
 					#undef CASE
 				}
-				assert_fail() << "Missed a pattern type!";
+				assert(false && "Missed a pattern type!");
 				return false;
 			}
 		}
@@ -1483,7 +1483,7 @@ namespace pattern {
 						CASE(Repetition);
 					#undef CASE
 				}
-				assert_fail() << "Missed a pattern type!";
+				assert(false && "Missed a pattern type!");
 				return false;
 			}
 		}

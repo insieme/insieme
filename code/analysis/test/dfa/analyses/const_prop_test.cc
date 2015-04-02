@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -70,7 +70,7 @@ typename AnalysisData::value_type find_constant_value(const AccessClassSet& clas
 		if (fit!=in.end()) { return *fit; }
 	}
 	
-	assert_fail() << "Big problem";
+	assert(false && "Big problem");
 	return AnalysisData::value_type();
 }
 
@@ -101,7 +101,7 @@ TEST(ConstantPropagation, PropagateConstantNoControl) {
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -137,7 +137,7 @@ TEST(ConstantPropagation, PropagateConstant) {
 
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor( accPtr );
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -174,7 +174,7 @@ TEST(ConstantPropagation, PropagateNotConstant) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -212,7 +212,7 @@ TEST(ConstantPropagation, PropagateArrayElementConstant) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -257,7 +257,7 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 	
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -297,7 +297,7 @@ TEST(ConstantPropagation, Formulas) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 	
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -334,7 +334,7 @@ TEST(ConstantPropagation, TransitivePropagation) {
 
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert_false(accClasses.empty());
+	assert( !accClasses.empty() );
 	
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);

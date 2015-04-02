@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -115,9 +115,8 @@ namespace cba {
 
 			// check that call is a dynamic call
 			auto funType = call->getFunctionExpr()->getNodeType();
-			assert_ne(funType, NT_LambdaExpr);
-			assert_ne(funType, NT_BindExpr);
-			if(funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
+			assert(funType != NT_LambdaExpr && funType != NT_BindExpr);
+			if (funType == NT_LambdaExpr || funType == NT_BindExpr) return;		// not interested
 
 			// fill predecessor set
 			auto pred_res = cba.getVar(pred, cba.getLabel(call));

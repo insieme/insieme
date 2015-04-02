@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -100,7 +100,7 @@ public:
 			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
 		} );
 
-		assert_true(constraint);
+		assert(constraint);
 	}
 
 	/**
@@ -118,7 +118,7 @@ public:
 			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
 		} );
 
-		assert_true(constraint);
+		assert(constraint);
 	}
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
@@ -135,14 +135,14 @@ public:
 
 	/// Intersect two iteration domains; the result will be returned and assigned to this iteration domain instance.
 	inline IterationDomain& operator&=(const IterationDomain& other) {
-		assert_true(iterVec == other.iterVec) << "Cannot intersect two iteration domains with non-compatible base";
+		assert(iterVec == other.iterVec && "Cannot intersect two iteration domains with non-compatible base");
 		constraint = constraint and other.constraint;
 		return *this;
 	}
 
 	/// Creates a union of two iteration domains; the result will be returned as well as assigned to this iteration domain instance.
 	inline IterationDomain& operator|=(const IterationDomain& other) {
-		assert_true(iterVec == other.iterVec) << "Cannot union two iteration domains with non-compatible base";
+		assert(iterVec == other.iterVec && "Cannot union two iteration domains with non-compatible base");
 		constraint = constraint or other.constraint;
 		return *this;
 	}

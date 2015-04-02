@@ -60,11 +60,11 @@ namespace extensions {
 using namespace insieme::core;
 using namespace insieme::frontend::ocl;
 
-OclHostExtension::OclHostExtension(const std::vector<boost::filesystem::path>& includeDirs)  : includeDirs(includeDirs) {
+OclHostPlugin::OclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs)  : includeDirs(includeDirs) {
 
 }
 
-core::ProgramPtr OclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+core::ProgramPtr OclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
@@ -91,10 +91,10 @@ core::ProgramPtr OclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	return prog;
 }
 
-IclHostExtension::IclHostExtension(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
+IclHostPlugin::IclHostPlugin(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
 }
 
-ExpressionPtr IclHostExtension::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+ExpressionPtr IclHostPlugin::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                insieme::frontend::conversion::Converter& convFact) {
 	NodeManager& mgr = irExpr->getNodeManager();
 	IRBuilder builder(mgr);
@@ -127,7 +127,7 @@ ExpressionPtr IclHostExtension::PostVisit(const clang::Expr* expr, const insieme
 	return irExpr;
 }
 
-core::ProgramPtr IclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+core::ProgramPtr IclHostPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
@@ -158,6 +158,6 @@ core::ProgramPtr IclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	return prog;
 }
 
-} //namespace extensions
+} //namespace plugin
 } //namespace frontend
-} //namespace insieme
+} //namespace extensions

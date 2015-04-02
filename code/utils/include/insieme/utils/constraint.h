@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -42,12 +42,10 @@
 #include <stdexcept>
 #include <iostream>
 
-#include <boost/operators.hpp>
-#include <boost/mpl/or.hpp>
+#include "boost/operators.hpp"
+#include "boost/mpl/or.hpp"
 #include <boost/type_traits.hpp>
-#include <boost/utility/enable_if.hpp>
-
-#include "insieme/utils/assert.h"
+#include "boost/utility/enable_if.hpp"
 #include "insieme/utils/printable.h"
 
 namespace insieme {
@@ -85,7 +83,7 @@ inline ConstraintType getLogicNegation(const ConstraintType& c) {
 	case ConstraintType::GT: return ConstraintType::LE;
 	case ConstraintType::GE: return ConstraintType::LT;
 
-	default: assert_fail() << "Constraint type not supported";
+	default: assert(false && "Constraint type not supported");
 	}
 	return ConstraintType::GT;	// some return is required!
 }
@@ -412,7 +410,7 @@ struct ConstraintVisitor {
 			return visitBinConstraint(*bc);
 		}
 		//std::cout << cur;
-		assert_fail() << "Constraint Combiner not supported";
+		assert(false && "Constraint Combiner not supported");
 		return RetTy();
 	}
 
@@ -626,7 +624,7 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 
 	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
 		CombinerPtr<FuncTy> sub = this->visit( ucc.getSubConstraint() );
-		assert_true(sub) << "Normalization of sub constraint failed";
+		assert(sub && "Normalization of sub constraint failed");
 
 		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
 			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
@@ -638,10 +636,10 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 
 	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
 		CombinerPtr<FuncTy> lhs = this->visit( bcc.getLHS() );
-		assert_true(lhs) << "Failed to normalize lhs of binary constraint";
+		assert(lhs && "Failed to normalize lhs of binary constraint");
 
 		CombinerPtr<FuncTy> rhs = this->visit( bcc.getRHS() );
-		assert_true(rhs) << "Failed to normalized rhs of binary constraint";
+		assert(rhs && "Failed to normalized rhs of binary constraint");
 
 		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
@@ -675,10 +673,10 @@ struct ConstraintConverter : public RecConstraintVisitor<SrcTy, CombinerPtr<TrgT
 
 	CombinerPtr<TrgTy> visitBinConstraint(const BinConstraint<SrcTy>& bcc) {
 		CombinerPtr<TrgTy> lhs = this->visit(bcc.getLHS());
-		assert_true(lhs) << "Error while converting LHS of binary constraint";
+		assert(lhs && "Error while converting LHS of binary constraint");
 
 		CombinerPtr<TrgTy> rhs = this->visit(bcc.getRHS());
-		assert_true(rhs) << "Error while converting RHS of binary constraint";
+		assert(rhs && "Error while converting RHS of binary constraint");
 
 		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
@@ -767,7 +765,7 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 
 	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
 		CombinerPtr<FuncTy>&& sub = this->visit( ucc.getSubConstraint() );
-		assert_true(sub) << "Normalization of sub constraint failed";
+		assert(sub && "Normalization of sub constraint failed");
 
 		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
 			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
@@ -842,7 +840,7 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 				   toDNF(blhs.getRHS() and makeCombiner(brhs));
 		}
 
-		assert_true(brhs.isDisjunction());
+		assert (brhs.isDisjunction());
 
 		return toDNF(brhs.getLHS() and makeCombiner(blhs)) or 
 			   toDNF(brhs.getRHS() and makeCombiner(blhs));
@@ -863,7 +861,7 @@ struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
 	}
 
 	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
-		assert_eq(ucc.getSubConstraint()->getCombinerType(), CT_RAW) << "Constraint not in DNF";
+		assert(ucc.getSubConstraint()->getCombinerType() == CT_RAW && "Constraint not in DNF");
 		const RawConstraint<FuncTy>& rc = static_cast<const RawConstraint<FuncTy>&>(*ucc.getSubConstraint());
 
 		conjunctions.back().push_back( 

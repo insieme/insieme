@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,10 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+
 
 // builtin types
 void basic_type_test() {
@@ -46,7 +47,7 @@ void basic_type_test() {
 	#pragma test "decl ref<real<4>> v0 =  var(1.0f)"
 	float f = 1;
 
-	// NOTE; this test is run without cleanups or extensions, therefore we only see a frontend representation
+	// NOTE; this test is ran without cleanps or plugins, therefore we only see a frontend representation
 	#pragma test "{decl ref<real<4>> v0 =  var(undefined(type<real<4>>));decl ref<int<4>> v1 =  var(-1);FE.RefAssign(v0, int.to.real(v1, 4));gen.pre.inc(v0);FE.RefAssign(v1, real.to.int(v0, 4));}"
 	{
 		float x;

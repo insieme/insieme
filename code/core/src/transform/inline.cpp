@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ using namespace insieme::core;
 /** Inlines a lambda body with return statements
  *  if the lambda does not return unit, a return location needs to be passed
  */
-class Redeemer : public SimpleNodeMapping {
+class Redeemer : public NodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
@@ -159,7 +159,7 @@ CompoundStmtPtr inlineMultiReturnInternal(StatementList& retStmts, NodeManager& 
 	IRBuilder build(nodeMan);
 
 	// get called lambda and its parameters
-	assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
+	assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
 	LambdaExprPtr lambdaExpr = call->getFunctionExpr().as<LambdaExprPtr>();
 
 	// build parameter map
@@ -205,7 +205,7 @@ CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExpr
 
 	// split into left and right side of assignment
 	ExpressionPtr rhsExpr = assignment->getArgument(1);
-	assert_eq(rhsExpr->getNodeType(), NT_CallExpr);
+	assert(rhsExpr->getNodeType() == NT_CallExpr);
 	CallExprPtr rhsCall = rhsExpr.as<CallExprPtr>();
 	ExpressionPtr retLocation = assignment->getArgument(0);
 

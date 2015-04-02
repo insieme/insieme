@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -124,14 +124,27 @@
 
 /*****************************************************************************************************
  *      ASSERT macros
- *      asserts specific for the frontend, use some features that can only be found in the frontend
+ *      asserts specific for the frontend, they make use of some featues that can only be found in
+ *      frontend
 *****************************************************************************************************/
 
 #include "insieme/utils/assert.h"
 
-/**
-  * this macro is meant to be used in the visitors ( stmt, expr and type) it requires the object convFact to be present
-  * in the scope to able to print the current translating location
-  */
-#define frontend_assert(_COND) assert_true(_COND) << " ==> last Trackable location: " << convFact.getLastTrackableLocation() << "\n"
+#ifdef NDEBUG
 
+	#define frontend_assert(_COND) _assert_ignore
+
+#else
+
+	/**
+	 * this macro is ment to be used in the visitors ( stmt, expr and type) it requires the object convFact to be pressent
+	 * in the scope to able to print the current translating location
+	 */
+	#define frontend_assert(_COND) \
+		if (__unused auto x = insieme::utils::detail::LazyAssertion((bool)(_COND))) \
+			std::cerr \
+			<< "\nAssertion " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"\
+			<< " ==> last Trackable location: " << convFact.getLastTrackableLocation() << "\n"\
+			<< "Message: "
+
+#endif

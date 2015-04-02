@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,6 +41,9 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/macros.h"
+
+#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -93,7 +96,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 			return stmt;
 	}
 
-	// return by value ALWAYS, will fix this in a second pass (check cpp_ref extension)
+	// return by value ALWAYS, will fix this in a second pass (check cpp_ref plugin)
 	//   - var(undefined (Obj))
 	//   - ctor(undefined(Obj))
 	//   - vx (where type is ref<Obj<..>>)
@@ -187,8 +190,8 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 
     //iterate clang handler list and check if a handler wants to convert the stmt
     stmtutils::StmtWrapper retStmt;
-	for(auto extension : convFact.getConversionSetup().getExtensions()) {
-        retStmt = extension->Visit(stmt, convFact);
+	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->Visit(stmt, convFact);
 		if(retStmt.size())
 			break;
 	}
@@ -201,12 +204,12 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
 
-	// Deal with transformation pragmas
+	// Deal with transfromation pragmas
 	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
 
-    // call frontend extension post visitors
-    for(auto extension : convFact.getConversionSetup().getExtensions()) {
-        retStmt = extension->PostVisit(stmt, retStmt, convFact);
+    // call frontend plugin post visitors
+    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
+        retStmt = plugin->PostVisit(stmt, retStmt, convFact);
     }
 
 	return  retStmt;

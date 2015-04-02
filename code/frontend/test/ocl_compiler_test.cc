@@ -80,7 +80,7 @@ public:
     	// check if return type is an ocl vector, and if yes, if it is returned by value
     	if(core::RefTypePtr retTy = dynamic_pointer_cast<const core::RefType>(funTy.getReturnType())) {
     		if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(retTy.getElementType()))
-    			assert_fail() << "returns vector";
+    			assert(false && "returns vector");
     	}
 
 
@@ -128,7 +128,7 @@ public:
                 }
             }
        } else {
-            assert_true(funcType) << "Function has unexpected type";
+            assert(funcType && "Function has unexpected type");
         }
     }
 
@@ -156,7 +156,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
     job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-    job.registerFrontendExtension<fe::extensions::OclKernelExtension>();
+    job.registerFrontendPlugin<fe::extensions::OclKernelPlugin>();
 
     LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
     core::ProgramPtr program = job.execute(manager, false);

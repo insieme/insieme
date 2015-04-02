@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -33,6 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+
 
 #include <gtest/gtest.h>
 #include <string>
@@ -254,6 +255,7 @@ TEST(region_instrumentation, parallel) {
 		EXPECT_EQ(reg0->aggregated_wall_time, 0);
 
 		auto workload = [&]() {
+			int32 sum = 0;
 			ir_inst_region_start(0);
 			irt_nanosleep(1e7);
 			ir_inst_region_end(0);
@@ -420,7 +422,7 @@ TEST(region_instrumentation, papi) {
 		EXPECT_EQ(reg0->last_wall_time, 0);
 		EXPECT_EQ(reg0->num_executions, 1);
 
-		printf("res: %f, total instruction count: %" PRIu64 "\n", a, reg0->aggregated_PAPI_TOT_INS);
+		printf("res: %f, total instruction count: %llu\n", a, reg0->aggregated_PAPI_TOT_INS);
 	});
 	irt::shutdown();
 }
@@ -460,16 +462,16 @@ TEST(region_instrumentation, pfor_nested) {
 				ir_inst_region_start(1);
 				ir_inst_region_start(2);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(uint j=0; j<iterations; j++) { sum++; }
+					for(int j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_end(2);
 				ir_inst_region_end(1);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(uint j=0; j<iterations; j++) { sum++; }
+					for(int j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_start(3);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(uint j=0; j<iterations; j++) { sum++; }
+					for(int j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_end(3);
 				ir_inst_region_start(4);
@@ -478,7 +480,7 @@ TEST(region_instrumentation, pfor_nested) {
 				ir_inst_region_end(5);
 				ir_inst_region_start(6);
 				irt::pfor_impl(0, 1000, 1, [&](uint64 i) {
-					for(uint j=0; j<iterations; j++) { sum++; }
+					for(int j=0; j<iterations; j++) { sum++; }
 				});
 				ir_inst_region_end(6);
 				ir_inst_region_start(7);
@@ -502,7 +504,7 @@ TEST(region_instrumentation, pfor_nested) {
 			EXPECT_GT(region[i]->aggregated_cpu_time, 0) << " for region id " << i;
 			EXPECT_LT(region[i]->aggregated_cpu_time/(elapsed*MAX_PARA), 1.10) << " for region id " << i;
 			EXPECT_GT(region[i]->aggregated_wall_time, 0) << " for region id " << i;
-//			EXPECT_LT(region[i]->aggregated_wall_time/(elapsed*IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE), 1.10) << " for region id " << i;
+			EXPECT_LT(region[i]->aggregated_wall_time/(elapsed*IRT_INST_REGION_INSTRUMENTATION_RING_BUFFER_SIZE), 1.10) << " for region id " << i;
 			EXPECT_EQ(region[i]->last_cpu_time, 0) << " for region id " << i;
 			EXPECT_EQ(region[i]->last_wall_time, 0) << " for region id " << i;
 		}

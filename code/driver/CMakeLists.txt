@@ -4,7 +4,6 @@
 project(insieme_driver CXX)
 
 include(../environment.cmake)
-include(../environment_common.cmake)
 
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
@@ -90,5 +89,5 @@ endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
 if(DO_INSTALL)
-	INSTALL(TARGETS insiemecc DESTINATION bin)
+	INSTALL(TARGETS main DESTINATION bin)
 endif(DO_INSTALL)

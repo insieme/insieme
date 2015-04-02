@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -328,13 +328,13 @@ namespace types {
 									 << " Parameter Type: " << typeA << std::endl
 									 << "  Argument Type: " << typeB << std::endl
 									 << " => the argument will be considered equal!!!";
-//						assert_not_implemented();
+//						assert(false && "Sorry - not implemented!");
 						constraints.makeUnsatisfiable();
 					}
 					break;
 				}
 				default:
-					assert_fail() << "Missed a kind of type!";
+					assert(false && "Missed a kind of type!");
 			}
 		}
 
@@ -394,7 +394,7 @@ namespace types {
 						}
 						break;
 					default:
-						assert_fail() << "Unknown int-type parameter encountered!";
+						assert(false && "Unknown int-type parameter encountered!");
 				}
 
 				// also make sure element types are equivalent

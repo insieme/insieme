@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -103,9 +103,6 @@ DEFINE_TYPE(Target);
 DEFINE_TYPE(Objective);
 DEFINE_TYPE(Region);
 DEFINE_TYPE(SharedOMPP);
-
-// OMPA extension
-DEFINE_TYPE(Approximate);
 
 /**
  * It implements the annotation node which is attached to the insieme IR for OpenMP directives
@@ -188,7 +185,7 @@ public:
 
 	Reduction(const Operator& op, const VarListPtr& vars): op(op), vars(vars) { }
 	const Operator& getOperator() const { return op; }
-	const VarList& getVars() const { assert_true(vars); return *vars; }
+	const VarList& getVars() const { assert(vars); return *vars; }
 
 	std::ostream& dump(std::ostream& out) const {
 		return out << "reduction(" << opToStr(op) << ": " << join(",", *vars) << ")";
@@ -205,7 +202,7 @@ public:
 		case LAND:	return "&&";
 		case LOR:	return "||";
 		}
-		assert_fail() << "Operator doesn't exist";
+		assert(false && "Operator doesn't exist");
 		return "?";
 	}
 
@@ -230,7 +227,7 @@ public:
 
 	const Kind& getKind() const { return kind; }
 	bool hasChunkSizeExpr() const { return static_cast<bool>(chunkExpr); }
-	const core::Expression& getChunkSizeExpr() const { assert_true(hasChunkSizeExpr()); return *chunkExpr; }
+	const core::Expression& getChunkSizeExpr() const { assert(hasChunkSizeExpr()); return *chunkExpr; }
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "schedule(" << kindToStr(kind);
@@ -247,7 +244,7 @@ public:
 		case AUTO: 		return "auto";
 		case RUNTIME: 	return "runtime";
 		}
-		assert_fail() << "Scheduling kind doesn't exist";
+		assert(false && "Scheduling kind doesn't exist");
 		return "?";
 	}
 
@@ -280,35 +277,12 @@ public:
 		case SHARED: 	return "shared";
 		case NONE: 		return "none";
 		}
-		assert_fail() << "Mode doesn't exist";
+		assert(false && "Mode doesn't exist");
 		return "?";
 	}
 
 private:
 	Kind mode;
-};
-
-
-class Approximate {
-public:
-	Approximate(const core::ExpressionPtr& target, const core::ExpressionPtr& replacement) :
-		available(true), approxTarget(target), approxReplacement(replacement) { }
-
-	Approximate(const ApproximatePtr& ptr) {
-		if(ptr) {
-			*this = *ptr;
-		} else {
-			available = false;
-		}
-	}
-
-	bool hasApproximate() { return available; }
-	core::ExpressionPtr getApproximateTarget() { return approxTarget; }
-	core::ExpressionPtr getApproximateReplacement() { return approxReplacement; }
-
-private:
-	bool available;
-	core::ExpressionPtr approxTarget, approxReplacement;
 };
 
 /**
@@ -323,21 +297,21 @@ public:
 			const core::ExpressionPtr& enumList,
 			const core::ExpressionPtr& enumSize): var(var), range(range), quality_range(quality_range), enumList(enumList), enumSize(enumSize) {}
 
-	const core::ExpressionPtr& getVar() const { assert_true(var); return var; }
+	const core::ExpressionPtr& getVar() const { assert(var); return var; }
 
 	bool hasRange() const { return static_cast<bool>(range && range->size() == 3); }
-	const core::ExpressionPtr& getRangeLBound() const { assert_true(hasRange()); return (range->at(0)); }
-	const core::ExpressionPtr& getRangeUBound() const { assert_true(hasRange()); return (range->at(1)); }
-	const core::ExpressionPtr& getRangeStep() const { assert_true(hasRange()); return (range->at(2)); }
+	const core::ExpressionPtr& getRangeLBound() const { assert(hasRange()); return (range->at(0)); }
+	const core::ExpressionPtr& getRangeUBound() const { assert(hasRange()); return (range->at(1)); }
+	const core::ExpressionPtr& getRangeStep() const { assert(hasRange()); return (range->at(2)); }
 
 	bool hasQualityRange() const { return static_cast<bool>(quality_range && quality_range->size() == 3); }
-	const core::ExpressionPtr& getQualityRangeLBound() const { assert_true(hasQualityRange()); return (quality_range->at(0)); }
-	const core::ExpressionPtr& getQualityRangeUBound() const { assert_true(hasQualityRange()); return (quality_range->at(1)); }
-	const core::ExpressionPtr& getQualityRangeStep() const { assert_true(hasQualityRange()); return (quality_range->at(2)); }
+	const core::ExpressionPtr& getQualityRangeLBound() const { assert(hasQualityRange()); return (quality_range->at(0)); }
+	const core::ExpressionPtr& getQualityRangeUBound() const { assert(hasQualityRange()); return (quality_range->at(1)); }
+	const core::ExpressionPtr& getQualityRangeStep() const { assert(hasQualityRange()); return (quality_range->at(2)); }
 
 	bool hasEnum() const { return static_cast<bool>(enumList); }
-	const core::ExpressionPtr& getEnumList() const { assert_true(hasEnum()); return enumList; }
-	const core::ExpressionPtr& getEnumSize() const { assert_true(hasEnum()); return enumSize; }
+	const core::ExpressionPtr& getEnumList() const { assert(hasEnum()); return enumList; }
+	const core::ExpressionPtr& getEnumSize() const { assert(hasEnum()); return enumSize; }
 
 	std::ostream& dump(std::ostream& out) const {
 		out << "param(" << *var;
@@ -384,23 +358,23 @@ public:
 					coreIds(coreIds), coreIdsRangeUpper(coreIdsRangeUpper) {}
 
 	bool hasGroupIds() const { return static_cast<bool>(groupIds); }
-	const core::ExpressionList& getGroupIds() const { assert_true(hasGroupIds()); return *(groupIds); }
+	const core::ExpressionList& getGroupIds() const { assert(hasGroupIds()); return *(groupIds); }
 
 	bool hasGroupIdsRange() const { return static_cast<bool>(groupIdsRangeUpper); }
-	const core::Expression& getGroupIdsRangeUpper() const { assert_true(hasGroupIdsRange()); return *(groupIdsRangeUpper); }
+	const core::Expression& getGroupIdsRangeUpper() const { assert(hasGroupIdsRange()); return *(groupIdsRangeUpper); }
 
 	bool hasCoreIds() const { return static_cast<bool>(coreIds); }
-	const core::ExpressionList& getCoreIds() const { assert_true(hasCoreIds()); return *(coreIds); }
+	const core::ExpressionList& getCoreIds() const { assert(hasCoreIds()); return *(coreIds); }
 
 	bool hasCoreIdsRange() const { return static_cast<bool>(coreIdsRangeUpper); }
-	const core::Expression& getCoreIdsRangeUpper() const { assert_true(hasCoreIdsRange()); return *(coreIdsRangeUpper); }
+	const core::Expression& getCoreIdsRangeUpper() const { assert(hasCoreIdsRange()); return *(coreIdsRangeUpper); }
 
 	static std::string typeToStr(Type t) {
 		switch(t) {
 		case GENERAL: 		return "general";
 		case ACCELERATOR: 	return "accelerator";
 		}
-		assert_fail() << "Type doesn't exist";
+		assert(false && "Type doesn't exist");
 		return "?";
 	}
 
@@ -456,25 +430,25 @@ public:
 						powerWeight(powerWeight), qualityWeight(qualityWeight), constraintsParams(constraintsParams), constraintsOps(constraintsOps), constraintsExprs(constraintsExprs) {}
 
 	bool hasTimeWeight() const { return true; }
-	const double getTimeWeight() const { assert_true(hasTimeWeight()); return timeWeight; }
+	const double getTimeWeight() const { assert(hasTimeWeight()); return timeWeight; }
 
 	bool hasEnergyWeight() const { return true; }
-	const double getEnergyWeight() const { assert_true(hasEnergyWeight()); return energyWeight; }
+	const double getEnergyWeight() const { assert(hasEnergyWeight()); return energyWeight; }
 
 	bool hasPowerWeight() const { return true; }
-	const double getPowerWeight() const { assert_true(hasPowerWeight()); return powerWeight; }
+	const double getPowerWeight() const { assert(hasPowerWeight()); return powerWeight; }
 
 	bool hasQualityWeight() const { return true; }
-	const double getQualityWeight() const { assert_true(hasQualityWeight()); return qualityWeight; }
+	const double getQualityWeight() const { assert(hasQualityWeight()); return qualityWeight; }
 
 	bool hasConstraintsParams() const { return static_cast<bool>(constraintsParams); }
-	const std::vector<Parameter>& getConstraintsParams() const { assert_true(hasConstraintsParams()); return *constraintsParams; }
+	const std::vector<Parameter>& getConstraintsParams() const { assert(hasConstraintsParams()); return *constraintsParams; }
 
 	bool hasConstraintsOps() const { return static_cast<bool>(constraintsOps); }
-	const std::vector<Operator>& getConstraintsOps() const { assert_true(hasConstraintsOps()); return *constraintsOps; }
+	const std::vector<Operator>& getConstraintsOps() const { assert(hasConstraintsOps()); return *constraintsOps; }
 
 	bool hasConstraintsExprs() const { return static_cast<bool>(constraintsExprs); }
-	const core::ExpressionList& getConstraintsExprs() const { assert_true(hasConstraintsExprs()); return *constraintsExprs; }
+	const core::ExpressionList& getConstraintsExprs() const { assert(hasConstraintsExprs()); return *constraintsExprs; }
 
 	static std::string opToStr(Operator op) {
 		switch(op) {
@@ -484,7 +458,7 @@ public:
 		case GREATEREQUAL: 	return ">=";
 		case GREATER:	 	return ">";
 		}
-		assert_fail() << "Operator doesn't exist";
+		assert(false && "Operator doesn't exist");
 		return "?";
 	}
 
@@ -495,7 +469,7 @@ public:
 		case POWER: 	return "P";
 		case QUALITY: 	return "Q";
 		}
-		assert_fail() << "Parameter doesn't exist";
+		assert(false && "Parameter doesn't exist");
 		return "?";
 	}
 
@@ -564,13 +538,13 @@ public:
 	SharedOMPP(const TargetPtr& targetClause, const ObjectivePtr& objectiveClause, const ParamPtr& paramClause): targetClause(targetClause), objectiveClause(objectiveClause), paramClause(paramClause) { }
 
 	bool hasTarget() const { return static_cast<bool>(targetClause); }
-	const Target& getTarget() const { assert_true(hasTarget()); return *targetClause; }
+	const Target& getTarget() const { assert(hasTarget()); return *targetClause; }
 
 	bool hasObjective() const { return static_cast<bool>(objectiveClause); }
-	const Objective& getObjective() const { assert_true(hasObjective()); return *objectiveClause; }
+	const Objective& getObjective() const { assert(hasObjective()); return *objectiveClause; }
 
 	bool hasParam() const { return static_cast<bool>(paramClause); }
-	const Param& getParam() const { assert_true(hasParam()); return *paramClause; }
+	const Param& getParam() const { assert(hasParam()); return *paramClause; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -599,16 +573,16 @@ public:
 		lastLocalClause(lastLocalClause), scheduleClause(scheduleClause), collapseExpr(collapseExpr), noWait(noWait), ordered(ordered) {}
 
 	bool hasLastPrivate() const { return static_cast<bool>(lastPrivateClause); }
-	const VarList& getLastPrivate() const { assert_true(hasLastPrivate()); return *lastPrivateClause; }
+	const VarList& getLastPrivate() const { assert(hasLastPrivate()); return *lastPrivateClause; }
 
 	bool hasLastLocal() const { return static_cast<bool>(lastLocalClause); }
-	const VarList& getLastLocal() const { assert_true(hasLastLocal()); return *lastLocalClause; }
+	const VarList& getLastLocal() const { assert(hasLastLocal()); return *lastLocalClause; }
 
 	bool hasSchedule() const { return static_cast<bool>(scheduleClause); }
-	const Schedule& getSchedule() const { assert_true(hasSchedule()); return *scheduleClause; }
+	const Schedule& getSchedule() const { assert(hasSchedule()); return *scheduleClause; }
 
 	bool hasCollapse() const { return static_cast<bool>(collapseExpr); }
-	const core::Expression& getCollapse() const { assert_true(hasCollapse()); return *collapseExpr; }
+	const core::Expression& getCollapse() const { assert(hasCollapse()); return *collapseExpr; }
 
 	bool hasNoWait() const { return noWait; }
 	bool hasOrdered() const { return ordered; }
@@ -636,13 +610,13 @@ public:
 		ifClause(ifClause), defaultClause(defaultClause), sharedClause(sharedClause) { }
 
 	bool hasIf() const { return static_cast<bool>(ifClause); }
-	const core::ExpressionPtr& getIf() const { assert_true(hasIf()); return ifClause; }
+	const core::ExpressionPtr& getIf() const { assert(hasIf()); return ifClause; }
 
 	bool hasDefault() const { return static_cast<bool>(defaultClause); }
-	const Default& getDefault() const { assert_true(hasDefault()); return *defaultClause; }
+	const Default& getDefault() const { assert(hasDefault()); return *defaultClause; }
 
 	bool hasShared() const { return static_cast<bool>(sharedClause); }
-	const VarList& getShared() const { assert_true(hasShared()); return *sharedClause; }
+	const VarList& getShared() const { assert(hasShared()); return *sharedClause; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -671,10 +645,10 @@ public:
 			numThreadClause(numThreadClause), copyinClause(copyinClause) { }
 
 	bool hasNumThreads() const { return static_cast<bool>(numThreadClause); }
-	const core::ExpressionPtr& getNumThreads() const { assert_true(hasNumThreads()); return numThreadClause; }
+	const core::ExpressionPtr& getNumThreads() const { assert(hasNumThreads()); return numThreadClause; }
 
 	bool hasCopyin() const { return static_cast<bool>(copyinClause); }
-	const VarList& getCopyin() const { assert_true(hasCopyin()); return *copyinClause; }
+	const VarList& getCopyin() const { assert(hasCopyin()); return *copyinClause; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -698,16 +672,16 @@ public:
 			localClause(localClause), firstLocalClause(firstLocalClause) { }
 
 	bool hasPrivate() const { return static_cast<bool>(privateClause); }
-	const VarList& getPrivate() const { assert_true(hasPrivate()); return *privateClause; }
+	const VarList& getPrivate() const { assert(hasPrivate()); return *privateClause; }
 
 	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause) && firstPrivateClause->size() > 0; }
-	const VarList& getFirstPrivate() const { assert_true(hasFirstPrivate()); return *firstPrivateClause; }
+	const VarList& getFirstPrivate() const { assert(hasFirstPrivate()); return *firstPrivateClause; }
 
 	bool hasLocal() const { return static_cast<bool>(localClause); }
-	const VarList& getLocal() const { assert_true(hasLocal()); return *localClause; }
+	const VarList& getLocal() const { assert(hasLocal()); return *localClause; }
 
 	bool hasFirstLocal() const { return static_cast<bool>(firstLocalClause); }
-	const VarList& getFirstLocal() const { assert_true(hasFirstLocal()); return *firstLocalClause; }
+	const VarList& getFirstLocal() const { assert(hasFirstLocal()); return *firstLocalClause; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -754,7 +728,7 @@ public:
 				dummy(Reduction::PLUS, VarListPtr()) {}
 
 	virtual bool hasReduction() const { return false; }
-	virtual const Reduction& getReduction() const { assert_fail(); return dummy; }
+	virtual const Reduction& getReduction() const { assert(false); return dummy; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -790,7 +764,7 @@ public:
 			reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
-	const Reduction& getReduction() const { assert_true(hasReduction()); return *reductionClause; }
+	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	std::ostream& dump(std::ostream& out) const;
 	
@@ -825,7 +799,7 @@ public:
 			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
-	const Reduction& getReduction() const { assert_true(hasReduction()); return *reductionClause; }
+	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -867,7 +841,7 @@ public:
 			ForClause(lastPrivateClause, lastLocalClause, scheduleClause, collapseExpr, targetClause, objectiveClause, paramClause, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
-	const Reduction& getReduction() const { assert_true(hasReduction()); return *reductionClause; }
+	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	ParallelPtr toParallel() const {
 		return std::make_shared<Parallel>(ifClause, numThreadClause, defaultClause, privateClause, 
@@ -901,10 +875,10 @@ public:
 		bool noWait) : lastPrivateClause(lastPrivateClause), reductionClause(reductionClause), noWait(noWait) { }
 
 	bool hasLastPrivate() const { return static_cast<bool>(lastPrivateClause); }
-	const VarList& getLastPrivate() const { assert_true(hasLastPrivate()); return *lastPrivateClause; }
+	const VarList& getLastPrivate() const { assert(hasLastPrivate()); return *lastPrivateClause; }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
-	const Reduction& getReduction() const { assert_true(hasReduction()); return *reductionClause; }
+	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	bool hasNoWait() const { return noWait; }
 
@@ -980,6 +954,10 @@ public:
 class Section: public Annotation {
 public:
 	std::ostream& dump(std::ostream& out) const { return out << "section"; }
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 /**
@@ -997,7 +975,7 @@ public:
 			copyPrivateClause(copyPrivateClause), noWait(noWait) { }
 
 	bool hasCopyPrivate() const { return static_cast<bool>(copyPrivateClause); }
-	const VarList& getCopyPrivate() const { assert_true(hasCopyPrivate()); return *copyPrivateClause; }
+	const VarList& getCopyPrivate() const { assert(hasCopyPrivate()); return *copyPrivateClause; }
 
 	bool hasNoWait() const { return noWait; }
 
@@ -1013,7 +991,7 @@ public:
 /**
  * OpenMP 'task' clause
  */
-class Task: public DatasharingClause, public Annotation, public SharedParallelAndTaskClause, public Approximate {
+class Task: public DatasharingClause, public Annotation, public SharedParallelAndTaskClause {
 	bool 	untied;
 	Reduction dummy;
 public:
@@ -1027,18 +1005,16 @@ public:
 		const VarListPtr& firstLocalClause,
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause,
-        const ParamPtr& paramClause,
-		const ApproximatePtr& approximateClause) :
+        const ParamPtr& paramClause) :
             SharedOMPP(targetClause, objectiveClause, paramClause),
 			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause),
 			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, targetClause, objectiveClause, paramClause),
-			Approximate(approximateClause),
 			untied(untied), dummy(Reduction::PLUS, VarListPtr()) { }
 
 	bool hasUntied() const { return untied; }
 	
 	bool hasReduction() const { return false; }
-	const Reduction& getReduction() const { assert_fail(); return dummy; }
+	const Reduction& getReduction() const { assert(false); return dummy; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -1084,7 +1060,7 @@ public:
 	Critical(const std::string& name): name(name) { }
 
 	bool hasName() const { return !name.empty(); }
-	const std::string& getName() const { assert_true(hasName()); return name; }
+	const std::string& getName() const { assert(hasName()); return name; }
 
 	std::ostream& dump(std::ostream& out) const;
 
@@ -1114,7 +1090,7 @@ public:
 	Flush(const VarListPtr& varList): varList(varList) { }
 
 	bool hasVarList() const { return static_cast<bool>(varList); }
-	const VarList& getVarList() const { assert_true(hasVarList()); return *varList; }
+	const VarList& getVarList() const { assert(hasVarList()); return *varList; }
 
 	std::ostream& dump(std::ostream& out) const;
 	

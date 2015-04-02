@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -57,16 +57,15 @@ namespace irp = insieme::core::pattern::irp;
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
 
 /// Pretty Printer: allows to print the given node to the output stream
-printer::PrettyPrinter WhileToForExtension::pp(const core::NodePtr& n) {
+printer::PrettyPrinter WhileToForPlugin::pp(const core::NodePtr& n) {
 	return printer::PrettyPrinter(n, printer::PrettyPrinter::NO_LET_BINDINGS);
 }
 
 /// Determines the maximum node path depth given node n as the root node. This procedure is most likely be
 /// used before or during a PrintNodes invocation.
-unsigned int WhileToForExtension::maxDepth(const insieme::core::Address<const insieme::core::Node> n) {
+unsigned int WhileToForPlugin::maxDepth(const insieme::core::Address<const insieme::core::Node> n) {
 	unsigned max = 0;
 	for (auto c: n.getChildAddresses()) {
 		unsigned now=maxDepth(c);
@@ -78,7 +77,7 @@ unsigned int WhileToForExtension::maxDepth(const insieme::core::Address<const in
 /// Print the nodes to std::cout starting from root n, one by one, displaying the node path
 /// and the visual representation. The output can be prefixed by a string, and for visually unifying several
 /// PrintNodes invocations the maximum (see MaxDepth) and current depth may also be given.
-void WhileToForExtension::printNodes(const insieme::core::Address<const insieme::core::Node> n,
+void WhileToForPlugin::printNodes(const insieme::core::Address<const insieme::core::Node> n,
 								  std::string prefix="        @\t", int max=-1, unsigned int depth=0) {
 	if (max<0) max=maxDepth(n);
 	int depth0=n.getDepth()-depth;
@@ -89,7 +88,7 @@ void WhileToForExtension::printNodes(const insieme::core::Address<const insieme:
 }
 
 /// From the given set of condition variables, return a set of VariablePtr for further consumption.
-insieme::utils::set::PointerSet<core::VariablePtr> WhileToForExtension::extractCondVars(std::vector<core::NodeAddress> cvars) {
+insieme::utils::set::PointerSet<core::VariablePtr> WhileToForPlugin::extractCondVars(std::vector<core::NodeAddress> cvars) {
 	insieme::utils::set::PointerSet<core::VariablePtr> cvarSet;
 
 	// iterate over all condition variables
@@ -103,7 +102,7 @@ insieme::utils::set::PointerSet<core::VariablePtr> WhileToForExtension::extractC
 }
 
 /// For a given variable, find all assignments in the loop body.
-std::vector<core::NodeAddress> WhileToForExtension::getAssignmentsForVar(core::NodeAddress body, core::VariablePtr var) {
+std::vector<core::NodeAddress> WhileToForPlugin::getAssignmentsForVar(core::NodeAddress body, core::VariablePtr var) {
 	std::vector<core::Address<const core::Node> > assignments;
 
 	// match all assignments where "var" occurs on the LHS
@@ -124,7 +123,7 @@ std::vector<core::NodeAddress> WhileToForExtension::getAssignmentsForVar(core::N
 /// Given a node "a", verify that it is a self-assignment to the variable with an added constant value,
 /// and then extract the integer value (the step size in a for loop), returning it. As an example,
 /// given the assignment "x = x - 5", this function would return the integer "-5".
-NodeBookmark WhileToForExtension::extractStepFromAssignment(core::Address<const core::Node> a) {
+NodeBookmark WhileToForPlugin::extractStepFromAssignment(core::Address<const core::Node> a) {
 	NodeBookmark step;
 
 	// set up the patterns and do the matching
@@ -186,7 +185,7 @@ NodeBookmark WhileToForExtension::extractStepFromAssignment(core::Address<const 
 
 /// For a given variable, try to extract the step size from a loop body, and return the relevant
 /// information as a NodeBookmark, if successful.
-NodeBookmark WhileToForExtension::extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
+NodeBookmark WhileToForPlugin::extractStepForVar(core::NodeAddress body, core::VariablePtr var) {
 	std::vector<core::Address<const core::Node> > assignments=getAssignmentsForVar(body, var);
 	NodeBookmark steps;
 	for (auto a: assignments) {
@@ -197,7 +196,7 @@ NodeBookmark WhileToForExtension::extractStepForVar(core::NodeAddress body, core
 }
 
 /// For a given variable, try to find its initialization value outside of the loop body.
-NodeBookmark WhileToForExtension::extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var) {
+NodeBookmark WhileToForPlugin::extractInitialValForVar(core::NodeAddress loop, core::VariablePtr var) {
 	NodeBookmark initial;
 
 	// visitor who will collect all instances (node addresses) from a given variable into a vector
@@ -235,7 +234,7 @@ NodeBookmark WhileToForExtension::extractInitialValForVar(core::NodeAddress loop
 }
 
 /// For a given variable, try to find its target value which should be given in the loop condition.
-NodeBookmark WhileToForExtension::extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var) {
+NodeBookmark WhileToForPlugin::extractTargetValForVar(core::NodeAddress cond, core::VariablePtr var) {
 	NodeBookmark target;
 
 	// visitor who will collect all accesses (node addresses) to a given variable and will try to find the target value
@@ -285,7 +284,7 @@ NodeBookmark WhileToForExtension::extractTargetValForVar(core::NodeAddress cond,
 }
 
 /// Rewriting of the given while loop based on the information in the NodeBookmarks.
-core::ProgramPtr WhileToForExtension::replaceWhileByFor(core::NodeAddress whileaddr,
+core::ProgramPtr WhileToForPlugin::replaceWhileByFor(core::NodeAddress whileaddr,
 										 NodeBookmark initial, NodeBookmark target, NodeBookmark step) {
 	core::NodeManager& mgr=step.nodes[0]->getNodeManager();
 	core::IRBuilder builder(mgr);
@@ -329,7 +328,7 @@ core::ProgramPtr WhileToForExtension::replaceWhileByFor(core::NodeAddress whilea
 
 /// while statements can be for statements iff only one variable used in the condition is
 /// altered within the statement, and this alteration satisfies certain conditions
-insieme::core::ProgramPtr WhileToForExtension::IRVisit(insieme::core::ProgramPtr& prog) {
+insieme::core::ProgramPtr WhileToForPlugin::IRVisit(insieme::core::ProgramPtr& prog) {
 		auto whilepat = irp::whileStmt(
 					pattern::var("condition", pattern::all(pattern::var("cvar", irp::variable()))),
 					pattern::var("body"));
@@ -374,6 +373,5 @@ insieme::core::ProgramPtr WhileToForExtension::IRVisit(insieme::core::ProgramPtr
 		return prog;
 }
 
-} // extensions
 } // frontend
 } // insieme

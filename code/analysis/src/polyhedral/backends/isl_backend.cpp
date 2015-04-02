@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -61,7 +61,7 @@ using namespace insieme::analysis::polyhedral;
 template <class IterT>
 void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, IterT const& begin, IterT const& end) {
 	for(IterT it = begin; it != end; ++it) {
-		assert_true(dynamic_cast<const Expr*>(&*it) != NULL) << "Element of not Variable type";
+		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
 
 		// Retrieve the expression associated to this dimension
 		const Expr& var = static_cast<const Expr&>(*it);
@@ -123,8 +123,8 @@ inline isl_aff* toIslAff (
 
 	size_t pos=0, sep=func.getIterationVector().getIteratorNum(), size=func.getIterationVector().size();
 	for(auto it=func.begin(), end=func.end(); it!=end; ++it, ++pos) {
-		assert_true(islAff) << "Wrong ";
-		assert_lt(pos, size);
+		assert(islAff && "Wrong ");
+		assert(pos < size);
 		
 		AffineFunction::Term&& term = *it;
 		if(term.second == 0) { continue; }
@@ -142,7 +142,7 @@ inline isl_aff* toIslAff (
 		
 	}
 
-	assert_true(islAff) << "Creation of isl_aff object failed";
+	assert(islAff && "Creation of isl_aff object failed");
 	return islAff;
 }
 
@@ -160,8 +160,8 @@ isl_constraint* toIslConstraint(
 	const AffineFunction& func = c.getFunction();
 	size_t pos=0, sep=func.getIterationVector().getIteratorNum(), size=func.getIterationVector().size();
 	for(auto it=func.begin(), end=func.end(); it!=end; ++it, ++pos) {
-		assert_true(islCons) << "Wrong ";
-		assert_lt(pos, size);
+		assert(islCons && "Wrong ");
+		assert(pos < size);
 		
 		AffineFunction::Term&& term = *it;
 		if(term.second == 0) { continue; }
@@ -179,7 +179,7 @@ isl_constraint* toIslConstraint(
 		
 	}
 	
-	assert_true(islCons) << "Creation of isl_aff object failed";
+	assert(islCons && "Creation of isl_aff object failed");
 	return islCons;
 }
 
@@ -190,7 +190,7 @@ bool isNormalized(const AffineConstraint& c) {
 isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_space* dim, const AffineConstraint& c) {
 
 	// check whether the constraint is properly normalize 
-	assert_true(isNormalized(c)) << "Constraint not normalized";
+	assert(isNormalized(c) && "Constraint not normlized");
 
 	// Create an ISL basic_set 
 	isl_basic_set* bset = isl_basic_set_universe( isl_space_copy(dim) );
@@ -250,16 +250,16 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 		// Determine whether this dimension has an isl_id associated 
 		if (isl_space_has_dim_id( space, type, num )) {
 			isl_id* id = isl_space_get_dim_id( space, type, num);
-			assert_true(id) << "ISL Set has no user data associated";
+			assert (id && "ISL Set has no user data associated");
 			const core::Expression* expr = reinterpret_cast<const core::Expression*>( isl_id_get_user(id) );
 			// Free the ID object
 			isl_id_free( id );
 
 			core::ExpressionPtr ir_expr = mgr.lookup(expr);
-			assert_true(ir_expr) << "Retrieving of user information within ISL set failed";
+			assert (ir_expr && "Retrieve of user information within ISL set failed");
 			return ir_expr;
 		} 
-		assert_fail();
+		assert(false);
 		// We need to create a new Variable to represent this specific iterator/parameter
 		return core::IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
 	};
@@ -268,17 +268,17 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 
 		__unused size_t pos = iterVec.add(Iterator(extract_ir_expr(i, isl_dim_set).as<core::VariablePtr>()));
 		// LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
-		assert_eq(pos, i);
+		assert(pos == i);
 
 	}
 	
 	for (unsigned i = 0; i < param_num; ++i) {
 		__unused size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
-		assert_eq(pos-iter_num, i);
+		assert(pos-iter_num == i);
 	}
 }
 
-} // end anonymous namespace
+} // end anonynous namespace
 
 
 
@@ -299,7 +299,7 @@ IslSet::~IslSet() {
 IslSet::IslSet(IslCtx& ctx, const std::string& set_str) : 
 	IslObj(ctx, NULL), set(isl_union_set_read_from_str(ctx.getRawContext(), set_str.c_str())) 
 {
-	assert_true(set) << "Error parsing input string as a set";
+	assert( set && "Error parsing input string as a set" );
 	space = isl_union_set_get_space( set );
 }
 
@@ -321,7 +321,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 		isl_set_universe( isl_space_copy(space) ) :
 		ISLConstraintConverterVisitor(ctx.getRawContext(), space).visit(domain.getConstraint());
 	
-	assert_true(cset) << "ISL set  is invalid";
+	assert(cset && "ISL set  is invalid");
 
 	// Eliminats existential quantitified variables 
 	size_t pos = 0;
@@ -335,7 +335,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 			pos++;
 		}
 	);
-	assert_true(cset) << "After projection set is invalid";
+	assert(cset && "After projection set is invalid");
 
 	isl_space_free(space);
 
@@ -420,7 +420,7 @@ struct UserData {
 };
 
 int visit_constraint(isl_constraint* cons, void* user) {
-	assert_true(user) << "Invalid User data";
+	assert(user && "Invalid User data");
 
 	UserData& data = *reinterpret_cast<UserData*>( user );
 	IterationVector& iv = data.iterVec;
@@ -474,9 +474,9 @@ int visit_constraint(isl_constraint* cons, void* user) {
 
 int visit_basic_set(isl_basic_set* bset, void* user) {
 	isl_space* space = isl_basic_set_get_space( bset);
-	assert_true(space) << isl_space_is_set(space);
+	assert(space && isl_space_is_set(space) );
 	
-	assert_true(user);
+	assert(user);
 	UserData& data = *reinterpret_cast<UserData*>( user );
 	IterationVector& iterVec = data.iterVec;
 	core::NodeManager& mgr = data.mgr;
@@ -544,7 +544,7 @@ PiecewisePtr<ISL> IslSet::getCard() const {
 
 IslMap::IslMap(IslCtx& ctx, const std::string& map_str) : IslObj(ctx, NULL) {
 	map = isl_union_map_read_from_str(ctx.getRawContext(), map_str.c_str());
-	assert_true(map) << "Error while reading map from input string";
+	assert(map && "Error while reading map from input string");
 	space = isl_union_map_get_space(map);
 }
 
@@ -906,7 +906,7 @@ int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user
 	isl_space* space = isl_qpolynomial_get_domain_space(qp);
 	visit_space(space, mgr, iterVec);
 
-	assert_false(isl_qpolynomial_is_infty(qp)) << "Infinity cardinality is not supported";
+	assert(!isl_qpolynomial_is_infty(qp) && "Infinity cardinality is not supported");
 
 	TermData td(mgr, iterVec, arith::Formula());
 	isl_qpolynomial_foreach_term(qp, visit_isl_term, &td);
@@ -1064,7 +1064,7 @@ double IslPiecewise::upperBound() const {
 
 	if (data.empty()) { return 0; }
 
-	assert_true(ret==0 && data.size() == 1) << "Fold contains more than 1 polynomial. NOT SUPPORTED!";
+	assert(ret==0 && data.size() == 1 && "Fold contains more than 1 polynomial. NOT SUPPORTED!");
 	return data.front();
 }
 

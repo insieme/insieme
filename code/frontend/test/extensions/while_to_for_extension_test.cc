@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -69,8 +69,8 @@ TEST(WhileToFor, Simple) {
 
 	ASSERT_TRUE(program);
 
-	frontend::extensions::WhileToForExtension extension;
-	auto str=toString(extension.IRVisit(program));
+	frontend::WhileToForPlugin plugin;
+	auto str=toString(plugin.IRVisit(program));
 	EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
 
@@ -96,8 +96,8 @@ TEST(WhileToFor, MultipleAss) {
 
 	ASSERT_TRUE(program);
 
-	frontend::extensions::WhileToForExtension extension;
-	auto str=toString(extension.IRVisit(program));
+	frontend::WhileToForPlugin plugin;
+	auto str=toString(plugin.IRVisit(program));
 	EXPECT_PRED2(containsSubString, str, "{ref<int<4>> v1 = 0; ref<int<4>> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.lt(ref.deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>> v2) {return int.ne(ref.deref(v2), 0);}}(v2)})) {ref<int<4>> v5 = v1; ref.assign(v1, int.add(int.add(1, ref.deref(v1)), 1)); ref.assign(v2, int.sub(ref.deref(v2), 2)); ref.assign(v1, int.sub(ref.deref(v1), 1));}; return 0;}");
 }
 
@@ -123,8 +123,8 @@ TEST(WhileToFor, DISABLED_ConfusedMultipleAss) {
 
 	ASSERT_TRUE(program);
 
-	frontend::extensions::WhileToForExtension extension;
-	extension.IRVisit(program);
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
 }
 
 TEST(WhileToFor, Nested) {
@@ -153,8 +153,8 @@ TEST(WhileToFor, Nested) {
 
 	ASSERT_TRUE(program);
 
-	frontend::extensions::WhileToForExtension extension;
-	auto str=toString(extension.IRVisit(program));
+	frontend::WhileToForPlugin plugin;
+	auto str=toString(plugin.IRVisit(program));
 	EXPECT_PRED2(containsSubString, str, "{{}; for(int<4> v6 = 0 .. 10 : 2) {{}; for(int<4> v5 = 8 .. 5 : -1) {{};}; {};}; {}; for(int<4> v4 = 2 .. 4 : -2) {{};}; return 0;}");
 }
 
@@ -182,8 +182,8 @@ TEST(WhileToFor, DISABLED_NestedDeps) {
 		
 	ASSERT_TRUE(program);
 
-	frontend::extensions::WhileToForExtension extension;
-	extension.IRVisit(program);
+	frontend::WhileToForPlugin plugin;
+	plugin.IRVisit(program);
 }
 	
 	TEST(WhileToFor, DISABLED_NonConvertible) {
@@ -217,8 +217,8 @@ TEST(WhileToFor, DISABLED_NestedDeps) {
 		
 		ASSERT_TRUE(program);
 
-		frontend::extensions::WhileToForExtension extension;
-		extension.IRVisit(program);
+		frontend::WhileToForPlugin plugin;
+		plugin.IRVisit(program);
 	}
 } // namespace pattern
 } // namespace core

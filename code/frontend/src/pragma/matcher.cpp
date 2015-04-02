@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,17 +29,15 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/convert.h"
-
-#include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/frontend/convert.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -55,6 +53,8 @@
 
 #include <llvm/Support/raw_ostream.h>
 
+//#include <glog/logging.h>
+#include "insieme/utils/logging.h"
 #include <boost/algorithm/string/join.hpp>
 
 
@@ -87,7 +87,7 @@ namespace pragma {
 // ------------------------------------ ValueUnion ---------------------------
 ValueUnion::~ValueUnion() {
 	if ( ptrOwner && is<clang::Stmt*>() ) {
-		assert_true(clangCtx) << "Invalid ASTContext associated with this element.";
+		assert(clangCtx && "Invalid ASTContext associated with this element.");
 		clangCtx->Deallocate(get<Stmt*>());
 	}
 	if(ptrOwner && is<std::string*>())
@@ -141,18 +141,18 @@ core::ExpressionPtr MatchObject::getExpr(const ValueUnionPtr& p, conversion::Con
     clang::Stmt* stmt = p->get<clang::Stmt*>();
     if(auto expr = llvm::dyn_cast<clang::Expr>(stmt)) {
         core::ExpressionPtr&& varExpr = fact.convertExpr( expr );
-        assert_true(varExpr) << "Conversion a to Insieme node failed!";
+        assert(varExpr && "Conversion a to Insieme node failed!");
         return varExpr;
     }
-    assert_fail() << "expression used in pragma seems to be no expression";
+    assert(false && "expression used in pragma seems to be no expression");
 	return core::ExpressionPtr();
 }
 
 core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Converter& fact) {
     clang::Stmt* varIdent = p->get<clang::Stmt*>();
-    assert_true(varIdent) << "Clause not containing var exps";
+    assert(varIdent && "Clause not containing var exps");
     clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);
-    assert_true(refVarIdent) << "Clause not containing a DeclRefExpr";
+    assert(refVarIdent && "Clause not containing a DeclRefExpr");
     core::ExpressionPtr&& varExpr = fact.convertExpr( refVarIdent );
     //this is a special case, where we cannot decide
     //if the clang stmt gets an variable or an expr.
@@ -193,25 +193,24 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
     }                                                                                                                                                                                
 }
 
-std::ostream& operator<<(std::ostream& out, const MatchObject& mo) {
-	out << "############MATCH OBJECT PRINT############\n";
-	out << "Var list: " << "\n";
-	for(auto cur: mo.varList) {
-		out << "KEY: " << cur.first << " -> ";
-		out << "[" << (cur.second) << "]" << std::endl;
-	}
-	out << "Expr list: " << "\n";
-	for(auto cur: mo.exprList) {
-		out << "KEY: " << cur.first << " -> ";
-		out << "[" << (cur.second) << "]" << std::endl;
-	}
-	out << "String list: " << "\n";
-	for(auto cur: mo.stringList) {
-		out << "KEY: " << cur.first << " -> ";
-		out << "[" << (cur.second) << "]" << std::endl;
-	}
-	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-	return out;
+void MatchObject::print() const {
+    std::cout << "############MATCH OBJECT PRINT############\n";
+    std::cout << "Var list: " << "\n";
+    for(auto cur: varList) {
+        std::cout << "KEY: " << cur.first << " -> ";
+        std::cout << "[" << (cur.second) << "]" << std::endl;
+    }
+    std::cout << "Expr list: " << "\n";
+    for(auto cur: exprList) {
+        std::cout << "KEY: " << cur.first << " -> ";
+        std::cout << "[" << (cur.second) << "]" << std::endl;
+    }
+    std::cout << "String list: " << "\n";
+    for(auto cur: stringList) {
+        std::cout << "KEY: " << cur.first << " -> ";
+        std::cout << "[" << (cur.second) << "]" << std::endl;
+    }
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 }
 
 // ------------------------------------ ParserStack ---------------------------
@@ -228,7 +227,7 @@ void ParserStack::discardRecord(size_t recordId) { mRecords[recordId] = LocError
 size_t ParserStack::getFirstValidRecord() {
 	for ( size_t i=0; i<mRecords.size(); ++i )
 		if ( !mRecords[i].empty() ) return i;
-	assert_fail();
+	assert(false);
 	return 0;
 }
 
@@ -244,7 +243,7 @@ const ParserStack::LocErrorList& ParserStack::getRecord(size_t recordId) const {
 
 /**
  * This function is used to report an error occurred during the pragma matching. Clang utilities are used
- * to report the caret location of the error.
+ * to report the carret location of the error.
  */
 void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, ParserStack& errStack) {
 	using namespace insieme::frontend::utils;
@@ -306,14 +305,6 @@ std::ostream& Tok<T>::printTo(std::ostream& out) const {
 
 std::ostream& kwd::printTo(std::ostream& out) const {
 	return out << "kwd(" << kw << ")";
-}
-
-std::ostream& expr_p::printTo(std::ostream& out) const {
-	return out << "expr_p[" << getMapName() << "]";
-}
-
-std::ostream& var_p::printTo(std::ostream& out) const {
-	return out << "var_p[" << getMapName() << "]";
 }
 
 bool concat::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
@@ -458,7 +449,7 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 		LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
 		if (!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
 			// TODO: Identifier could not be resolved => report error!
-			assert_fail() << "Unable to obtain declaration of identifier!";
+			assert(false && "Unable to obtain declaration of identifier!");
 		}
 		auto varDecl = res.getAsSingle<clang::VarDecl>();
 

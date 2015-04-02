@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -169,7 +169,7 @@ irt_cap_profile* irt_cap_load_profile() {
 				length = fread(start, sizeof(char), length, f);
 			}
 
-			DEBUG(printf("Restored block %d size %d @ %p\n", item->id, size, (void*) item->data));
+			DEBUG(printf("Restored block %d size %d @ %p\n", item->id, size, item->data));
 		}
 
 		// correct pointers
@@ -209,7 +209,7 @@ irt_cap_profile* irt_cap_load_profile() {
 						DEBUG(printf("Restored NULL pointer\n"));
 					} else if (block) {
 						ptr = block->data + replacement->offset;
-						DEBUG(printf("Restored pointer to block %d offest %d - %p - %p\n", replacement->block, replacement->offset, (void*) block->data, (void*) ptr));
+						DEBUG(printf("Restored pointer to block %d offest %d - %p - %p\n", replacement->block, replacement->offset, block->data, ptr));
 					}
 
 					// restore pointer to block
@@ -258,7 +258,7 @@ void irt_cap_profile_get_value(void* target, uint16 region_id, uint16 tag, uint3
 	}
 
 	// fail!
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Requested data block not found!");
+	assert(false && "Requested data block not found!");
 }
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,7 +42,7 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+	insieme::core::ExpressionPtr InterceptorPlugin::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 
 		if (const clang::CXXConstructExpr* ctorExpr =  llvm::dyn_cast<clang::CXXConstructExpr>(expr)){
 			auto ctorDecl = ctorExpr->getConstructor ();
@@ -58,7 +58,7 @@ namespace extensions {
 		}
 
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
-
+			
 			const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl());
 			std::string name;
 
@@ -70,9 +70,9 @@ namespace extensions {
 			}
 
 			if(funcDecl) {
-				if(name.empty()) name = funcDecl->getQualifiedNameAsString();
+				if(name.empty()) name = funcDecl->getQualifiedNameAsString();				
 				if(getInterceptor().isIntercepted(name)) {
-					VLOG(2) << "interceptorextension\n";
+					VLOG(2) << "interceptorplugin\n";
 					//returns a callable expression
 					return getInterceptor().intercept(funcDecl, convFact, declRefExpr->hasExplicitTemplateArgs(), name);
 				}
@@ -105,19 +105,19 @@ namespace extensions {
 		return nullptr;
 	}
 
-    core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
+    core::ExpressionPtr InterceptorPlugin::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         // check whether function should be intercected
         if( getInterceptor().isIntercepted(funcDecl) ) {
             auto irExpr = getInterceptor().intercept(funcDecl, convFact);
-            VLOG(2) << "interceptorextension" << irExpr;
+            VLOG(2) << "interceptorplugin" << irExpr;
             return irExpr;
         }
     	return nullptr;
 	}
 
-    core::TypePtr InterceptorExtension::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
+    core::TypePtr InterceptorPlugin::Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
 		if(getInterceptor().isIntercepted(type)) {
-			VLOG(2) << "interceptorextension\n";
+			VLOG(2) << "interceptorplugin\n";
 			auto res = getInterceptor().intercept(type, convFact);
 			//convFact.addToTypeCache(type, res);
 			return res;
@@ -125,7 +125,7 @@ namespace extensions {
 		return nullptr;
 	}
 
-    core::ExpressionPtr InterceptorExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
+    core::ExpressionPtr InterceptorPlugin::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
 		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl) ) {
 
 			if (getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
@@ -134,7 +134,7 @@ namespace extensions {
 
 					//we expect globals to be literals -- get the "standard IR"which we need to change
 					core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
-					assert_true(globalLit);
+					assert(globalLit);
 					VLOG(2) << globalLit;
 
 					auto globals = convFact.getIRTranslationUnit().getGlobals();
@@ -177,7 +177,7 @@ namespace extensions {
 		}
         return nullptr;
 	}
-    core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
+    core::TypePtr InterceptorPlugin::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
 
 		if (llvm::isa<clang::TypedefDecl>(decl)){
 			if (getInterceptor().isIntercepted(decl->getQualifiedNameAsString())) {
@@ -206,73 +206,6 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-
-
-    /**
-     * This post visitor is needed to check if we have a ctor that contains a default argument
-     * that accesses or uses private structs or elements. We have to remove this default arguments
-     * otherwise our backend code will contain a call to a private element -> compiler error
-     * Example:
-     *  class A { private: struct X{}; public: A(X x=X()) {} };
-     *  int main() { A a; }
-     */
-    core::ExpressionPtr InterceptorExtension::PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact){
-
-        if(const clang::CXXConstructExpr* call = llvm::dyn_cast<clang::CXXConstructExpr>(expr)) {
-            //only do this for intercepted types and only if we have an IR ctor call
-            if(!interceptor.isIntercepted(call->getConstructor()))
-                return irExpr;
-            if(!core::analysis::isConstructorCall(irExpr))
-                return irExpr;
-            //check for default arguments
-            unsigned defaultArgs=0;
-            for(unsigned i=0; i<call->getNumArgs(); ++i) {
-                //count the number of default args. they have to be at the end...
-                if(llvm::dyn_cast<clang::CXXDefaultArgExpr>(call->getArg(i)->IgnoreImplicit())) {
-                    defaultArgs++;
-                }
-            }
-            //if no default args -> early exit
-            if(!defaultArgs)
-                return irExpr;
-            //else create a new call
-            //first check if the ir call is a call expression
-            assert(irExpr.isa<core::CallExprPtr>() && "the constructor call has to be a call expression.");
-            core::CallExprPtr callExpr = irExpr.as<core::CallExprPtr>();
-            //no literal means not intercepted. return.
-            if(!callExpr->getFunctionExpr().isa<core::LiteralPtr>())
-                return irExpr;
-            //create new argument list
-            core::ExpressionList newArgs;
-            core::TypeList argTypes;
-            for(unsigned i=0; i<callExpr->getArguments().size()-defaultArgs; ++i) {
-                //migrate the annotations and store the node in the list
-                core::ExpressionPtr newA = callExpr->getArgument(i);
-                core::TypePtr newT = callExpr->getArgument(i)->getType();
-                core::transform::utils::migrateAnnotations(callExpr->getArgument(i), newA);
-                core::transform::utils::migrateAnnotations(callExpr->getArgument(i)->getType(), newT);
-                newArgs.push_back(newA);
-                argTypes.push_back(newT);
-            }
-            //extract old function type and return type
-            core::FunctionTypePtr funType = callExpr->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
-            core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr()->getType(), funType);
-            core::TypePtr retType = funType->getReturnType();
-            core::transform::utils::migrateAnnotations(funType->getReturnType(), retType);
-            //create new function expression
-            core::LiteralPtr literal = callExpr->getFunctionExpr().as<core::LiteralPtr>();
-            core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr(), literal);
-            core::ExpressionPtr newFunExpr = convFact.getIRBuilder().literal(literal->getStringValue(),
-                            convFact.getIRBuilder().functionType(argTypes, retType, core::FK_CONSTRUCTOR));
-            core::transform::utils::migrateAnnotations(callExpr->getFunctionExpr(), newFunExpr);
-
-            auto ir = convFact.getIRBuilder().callExpr(retType, newFunExpr, newArgs);
-            core::transform::utils::migrateAnnotations(irExpr, ir);
-            return ir;
-        }
-        return irExpr;
-    }
-
 } // extensions
 } // frontend
 } // insieme

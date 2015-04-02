@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -181,7 +181,7 @@ namespace core {
 		 * Decrement the reference counter for this path element.
 		 */
 		std::size_t decRefCount() const {
-			assert_gt(refCount, 0);
+			assert(refCount > 0);
 			int res = --refCount;
 			if (refCount == 0) {
 				// commit suicide
@@ -543,11 +543,11 @@ namespace core {
 		 * @return the extended path, ending at the given child node
 		 */
 		NodePath extendForChild(unsigned index, const V& value = V()) const {
-			assert_true(element) << "Invalid Path cannot be extended.";
+			assert(element && "Invalid Path cannot be extended.");
 
 			const NodePtr& cur = element->ptr;
 			const NodeList& list = cur->getChildList();
-			assert_lt(index, list.size()) << "Child Index out of bound!";
+			assert(index < list.size() && "Child Index out of bound!");
 
 			return NodePath(new NodePathElement<V>(list[index], index, value, element));
 		}
@@ -580,7 +580,7 @@ namespace core {
 		 */
 		bool isValid() const {
 			// actual test - but should never be violated
-			assert_true((!element || element->isValid())) << "All paths should be valid!";
+			assert((!element || element->isValid()) && "All paths should be valid!");
 
 			// return relevant part of test (that the element exists)
 			return element;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -44,7 +44,6 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
-#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace driver {
@@ -102,8 +101,7 @@ namespace measure {
 		 * Creates a new prefix based on the given coefficient.
 		 */
 		Prefix(int64_t coefficient = 1) : coefficient(coefficient) {
-			assert_ne(coefficient, 0) << "Coefficient invariant violated!";
-			assert_ne(coefficient, -1) << "Coefficient invariant violated!";
+			assert(coefficient != 0 && coefficient != -1 && "Coefficient invariant violated!");
 		}
 
 		/**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -488,7 +488,7 @@ namespace backend {
 					type = c_ast::PrimitiveType::Int128;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;
-					//assert_fail() << "Unsupported Integer type encountered!";
+					//assert(false && "Unsupported Integer type encountered!");
 					return type_info_utils::createUnsupportedInfo(manager);
 				}
 
@@ -933,7 +933,7 @@ namespace backend {
 			// ----- create array type representation ------
 
 			const TypeInfo* elementTypeInfo = resolveType(ptr->getElementType());
-			assert_true(elementTypeInfo);
+			assert(elementTypeInfo);
 
 			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
 			auto pos = typeInfos.find(ptr);
@@ -984,7 +984,7 @@ namespace backend {
 			// ----- create the struct representing the array type ------
 
 			const TypeInfo* elementTypeInfo = resolveType(ptr->getElementType());
-			assert_true(elementTypeInfo);
+			assert(elementTypeInfo);
 
 			// check whether the type has been resolved while resolving the sub-type
 			auto pos = typeInfos.find(ptr);
@@ -1226,7 +1226,7 @@ namespace backend {
 		}
 
 		const FunctionTypeInfo* TypeInfoStore::resolvePlainFunctionType(const core::FunctionTypePtr& ptr) {
-			assert_true(ptr->isPlain()) << "Only supported for plain function types!";
+			assert(ptr->isPlain() && "Only supported for plain function types!");
 
 			auto manager = converter.getCNodeManager();
 
@@ -1283,7 +1283,7 @@ namespace backend {
 		}
 
 		const FunctionTypeInfo* TypeInfoStore::resolveMemberFunctionType(const core::FunctionTypePtr& ptr) {
-			assert_true(ptr->isMemberFunction()) << "Only supported for Member function types!";
+			assert(ptr->isMemberFunction() && "Only supported for Member function types!");
 
 			auto manager = converter.getCNodeManager();
 
@@ -1346,7 +1346,7 @@ namespace backend {
 		}
 
 		const FunctionTypeInfo* TypeInfoStore::resolveThickFunctionType(const core::FunctionTypePtr& ptr) {
-			assert_false(ptr->isPlain()) << "Only supported for non-plain function types!";
+			assert(!ptr->isPlain() && "Only supported for non-plain function types!");
 
 			auto manager = converter.getCNodeManager();
 
@@ -1523,7 +1523,7 @@ namespace backend {
 				case core::NT_UnionType:
 					cType = manager->create<c_ast::UnionType>(name); break;
 				default:
-					assert_fail() << "Cannot support recursive type which isn't a struct or union!";
+					assert(false && "Cannot support recursive type which isn't a struct or union!");
 				}
 
 				// add declaration
@@ -1557,7 +1557,7 @@ namespace backend {
 				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType));
 				TypeInfo* newInfo = const_cast<TypeInfo*>(resolveType(unrolled));
 
-				assert_true(curInfo && newInfo) << "Both should be available now!";
+				assert(curInfo && newInfo && "Both should be available now!");
 				assert(curInfo != newInfo);
 
 				// remove dependency to old declaration (would produce duplicated declaration)

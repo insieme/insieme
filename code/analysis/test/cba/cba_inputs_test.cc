@@ -246,7 +246,7 @@ namespace cba {
 		vector<string> res;
 
 		fs::path root(ROOT_DIR);
-		assert_true(fs::is_directory(root));
+		assert(fs::is_directory(root));
 
 		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 			fs::path file = it->path();

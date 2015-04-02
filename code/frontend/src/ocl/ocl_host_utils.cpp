@@ -93,7 +93,7 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType) {
 
 /*
  * Function to get the type of an Expression
- * If it is a ref-type, its element type is returned
+ * If it is a ref-type, it's element type is returned
  */
 const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr) {
 	return getNonRefType(refExpr->getType());
@@ -268,7 +268,7 @@ core::ExpressionPtr tryRefReinterpret(core::ExpressionPtr expr, core::TypePtr ty
 		if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(type))
 			return builder.callExpr(refTy, BASIC.getRefReinterpret(), expr, builder.getTypeLiteral(refTy->getElementType()));
 		else
-			assert_true(refTy) << "Cannot do a reinterpret on an non-ref kernel argument";
+			assert(refTy && "Cannot do a reinterpret on an non-ref kernel argument");
 	}
 
 	return expr;

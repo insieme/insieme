@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -277,7 +277,7 @@ namespace properties {
 		typename boost::disable_if<boost::is_same<T,Value>,int>::type =0
 	>
 	inline T getValue(const Value& value) {
-		assert_true(isTypeOf<T>(value)) << "Tried reading value of incompatible Value instance!";
+		assert(isTypeOf<T>(value) && "Tried reading value of incompatible Value instance!");
 		return boost::get<T>(value);
 	}
 
@@ -310,7 +310,7 @@ namespace properties {
 	 */
 	template<typename T, typename Value, typename ... Rest>
 	inline T getValue(const Value& value, int first, Rest ... rest) {
-		assert_true(isTypeOf<vector<Value>>(value)) << "Not nested value encountered!";
+		assert(isTypeOf<vector<Value>>(value) && "Not nested value encountered!");
 		return getValue<T>(boost::get<vector<Value>>(value)[first], rest ...);
 	}
 
@@ -609,7 +609,7 @@ namespace properties {
 		 * @return a pointer to the type of element stored within lists of this property
 		 */
 		const typename Property<Value>::ptr& getElementType() const {
-			assert_eq(Property<Value>::getComponents().size(), 1u) << "Invalid size of component vector!";
+			assert(Property<Value>::getComponents().size() == 1u && "Invalid size of component vector!");
 			return Property<Value>::getComponents()[0];
 		}
 	};
@@ -802,7 +802,7 @@ namespace properties {
 			}
 
 			std::cout << "ERROR: unexpeted parameter type: " << *ptr << "\n";
-			assert_fail() << "Unexpected Parameter type encountered!";
+			assert(false && "Unexpected Parameter type encountered!");
 		}
 
 	};

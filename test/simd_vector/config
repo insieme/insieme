@@ -1,4 +1,4 @@
-excludeSteps="insiemecc_c++_sema","insiemecc_run_c++_convert","insiemecc_run_c++_compile","insiemecc_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","insiemecc_run_c++_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check"
+excludeSteps="main_c++_sema","main_run_c++_convert","main_run_c++_compile","main_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","main_run_c++_check","main_seq_c++_convert","main_seq_c++_compile","main_seq_c++_execute","main_seq_c++_check","insiemecc_c++_compile","insiemecc_c++_execute","insiemecc_c++_check"
 
 
 use_o3=1

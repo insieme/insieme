@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -49,7 +49,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(work_item)
+IRT_MAKE_ID_TYPE(work_item);
 
 typedef enum _irt_work_item_state {
 	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_SUSPENDED, IRT_WI_STATE_DONE, 
@@ -76,7 +76,6 @@ struct _irt_work_item {
 	irt_context_id context_id;
 	irt_wi_implementation* impl;
 	uint32 selected_impl_variant;
-	uint32 default_parallel_wi_count;
 	irt_work_item_range range;
 	uint32 num_groups;
 	volatile uint32 _num_active_children;

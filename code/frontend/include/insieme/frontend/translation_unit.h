@@ -69,7 +69,7 @@ namespace pragma {
 // ------------------------------------ TranslationUnit ---------------------------
 /**
  * A translation unit contains informations about the compiler (needed to keep alive object
- * instantiated by clang), and the pragmas encountered during the processing of the translation unit.
+ * instantiated by clang), and the pragmas encountred during the processing of the translation unit.
  */
 class TranslationUnit: public boost::noncopyable {
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -42,7 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
-#include "insieme/transform/datalayout/parallelSecTransform.h"
+#include "insieme/transform/datalayout/parallelSecAtt.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/utils/annotation.h"
@@ -74,24 +74,20 @@ AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder
 void AosToTaos::transform() {
 	IRBuilder builder(mgr);
 
-	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists = createCandidateLists();
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
-		ExprAddressMap varReplacements;
+		ExpressionMap varReplacements;
 		ExpressionMap nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
-		for(ExpressionAddress oldVar : toReplaceList.first) {
-			// update root for in case it has been modified in a previous iteration
-			oldVar = oldVar.switchRoot(toTransform);
-
+		for(ExpressionPtr oldVar : toReplaceList.first) {
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
 					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
@@ -106,11 +102,13 @@ void AosToTaos::transform() {
 		}
 
 		VariableAdder varAdd(mgr, varReplacements);
-		NodeAddress tta = varAdd.addVariablesToLambdas(toTransform);
+		toTransform = varAdd.mapElement(0, toTransform);
+
+		NodeAddress tta(toTransform);
 
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
-		// assignments to the entire struct should be ported to the new struct members
+		// assignments to the entire struct should be ported to the new sturct members
 		replaceAssignments(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
 		//introducing marshalling
@@ -132,12 +130,13 @@ void AosToTaos::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements);
+		ExpressionMap structures;
+		updateTuples(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, structures);
 
-		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
 
 //for(std::pair<NodeAddress, NodePtr> r : replacements) {
 //	std::cout << "\nFRom:\n";
@@ -149,10 +148,11 @@ void AosToTaos::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-//assert_fail();
-		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
+//assert(false);
 
-		doReplacements(replacements, aosToTaosAllocTypeUpdate);
+		doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
+
+		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements, structures);
 
 		NodeMap tilesize;
 		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);
@@ -179,11 +179,11 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
+StatementList AosToTaos::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
-	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and its initialization
+	// replace declaration with compound statement containing the declaration itself, the declaration of the new variable and it's initialization
 	StatementList allDecls;
 
 	allDecls.push_back(decl);
@@ -199,7 +199,7 @@ StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, 
 	return allDecls;
 }
 
-StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
+StatementList AosToTaos::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
 		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
@@ -215,7 +215,7 @@ StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacement
 	return allAssigns;
 }
 
-StatementPtr AosToTaos::generateMarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToTaos::generateMarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -245,7 +245,7 @@ StatementPtr AosToTaos::generateMarshalling(const ExpressionAddress& oldVar, con
 			builder.castExpr(boundaryType, builder.div(end, tilesize)), builder.literal(boundaryType, "1"), innerLoop);
 }
 
-StatementPtr AosToTaos::generateUnmarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToTaos::generateUnmarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -275,18 +275,14 @@ StatementPtr AosToTaos::generateUnmarshalling(const ExpressionAddress& oldVar, c
 			builder.castExpr(boundaryType, builder.div(end, tilesize)), builder.literal(boundaryType, "1"), innerLoop);
 }
 
-StatementList AosToTaos::generateDel(const StatementAddress& stmt, const ExpressionAddress& oldVar, const ExpressionPtr& newVar,
+StatementList AosToTaos::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
-	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::var("oldVar", pattern::atom(oldVar))));
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
 	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
 
 	if(match) {
-		ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
-		if(!compareVariables(oldVar, matchedOldVar))
-			return deletes;
-
 		IRBuilder builder(mgr);
 		deletes.push_back(core::transform::fixTypes(mgr, match.get().getRoot(), oldVar, newVar, true).as<ExpressionPtr>());
 		deletes.push_back(stmt);
@@ -326,23 +322,24 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 		StringValuePtr memberName = memberType->getName();
 
 		ExpressionPtr vectorAccess = builder.deref(refAccess(newStructAccess, arrayIdx, memberName, vectorIdx));
+
 		values.push_back(std::make_pair(memberName, vectorAccess));
 	}
 
 	return builder.structExpr(values);
 }
 
-void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
-			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
+void AosToTaos::replaceStructsInJobs(ExpressionMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements, ExpressionMap& structures) {
 
-//	ExpressionSet varsToPropagate;
-//	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
-//		varsToPropagate.insert(oldToNew.first);
-//		std::cout << "ölkjasfdökljsfda " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
-////assert_fail();
-//	}
+	ExpressionSet varsToPropagate;
+	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
+		varsToPropagate.insert(oldToNew.second);
+		std::cout << "ölkjasfdökljsfda " << oldToNew.second << std::endl;
+//assert(false);
+	}
 
-	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
+	ParSecAtt psa(toTransform, varsToPropagate, newStructType, oldStructType);
 	psa.transform();
 #if 0
 	ExpressionMap jobReplacements;
@@ -398,7 +395,7 @@ std::cout << ": \nAdding: " << *pair.second << " - " << newParamType << std::end
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprPtr job = expr.isa<JobExprPtr>()) {
-			CallExprPtr parallelCall = job->getBody().isa<BindExprPtr>()->getCall();
+			CallExprPtr parallelCall = job->getDefaultExpr().isa<BindExprPtr>()->getCall();
 
 			if(!parallelCall)
 				return;
@@ -448,7 +445,7 @@ std::cout << "\n----------------------------------------------------------------
 
 //	doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
 
-//	assert_fail();
+//	assert(false);
 #endif
 }
 

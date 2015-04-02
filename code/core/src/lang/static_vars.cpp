@@ -68,7 +68,7 @@ namespace lang {
 	}
 
 	TypePtr StaticVariableExtension::unwrapStaticType(const TypePtr& type) const {
-		assert_true(isStaticType(type)) << "Unable to unwrap non-static type.";
+		assert(isStaticType(type) && "Unable to unwrap non-static type.");
 		return type.as<StructTypePtr>()[1]->getType();
 	}
 

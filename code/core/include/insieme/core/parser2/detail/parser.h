@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -85,18 +85,10 @@ namespace detail {
 			// the currently registered symbols on some level
 			vector<std::pair<TokenRange, NodePtr>> symbols;
 
-			//additional tokens loaded in this scope with the "using" construct
-			std::set<vector<Token>> symbolTokens;
-
 			Scope(bool nested = false) : nested(nested) {};
 
 			void add(const TokenRange& range, const NodePtr& node) {
 				symbols.push_back(std::make_pair(range, node));
-			}
-
-			void add(const string& name, const NodePtr& node) {
-				auto inserted = symbolTokens.insert(toVector(Token::createIdentifier(name)));
-				add(utils::range<vector<Token>::const_iterator>(inserted.first->begin(), inserted.first->end()), node);
 			}
 
 			NodePtr lookup(const TokenRange& range) const {
@@ -155,10 +147,6 @@ namespace detail {
 			scopeStack.back().add(range, node);
 		}
 
-		void add(const string& name, const NodePtr& node) {
-			scopeStack.back().add(name, node);
-		}
-
 		bool replace(const TokenRange& range, const NodePtr& node) {
 			// search for scope to replace value
 			for(auto it = scopeStack.rbegin(); it!=scopeStack.rend(); ++it) {
@@ -177,12 +165,6 @@ namespace detail {
 			return NodePtr(); // .. nothing found
 		}
 
-		NodePtr lookup(const string& name) const {
-			const auto& identifierVector = toVector(Token::createIdentifier(name));
-			const auto& range = utils::range<vector<Token>::const_iterator>(identifierVector.begin(), identifierVector.end());
-			return lookup(range);
-		}
-
 		Backup backup() const {
 			return Backup(*this);
 		}
@@ -196,7 +178,7 @@ namespace detail {
 		}
 
 		void popScope() {
-			assert_false(scopeStack.empty());
+			assert(!scopeStack.empty());
 			scopeStack.pop_back();
 		}
 	};
@@ -334,7 +316,7 @@ namespace detail {
 		}
 
 		const NodePtr& getTerm(unsigned index) const {
-			assert_lt(index, subTerms.size());
+			assert(index < subTerms.size());
 			return subTerms[index];
 		}
 
@@ -343,7 +325,7 @@ namespace detail {
 		}
 
 		const TokenRange& getSubRange(unsigned index) const {
-			assert_lt(index, subRanges.size());
+			assert(index < subRanges.size());
 			return subRanges[index];
 		}
 
@@ -830,7 +812,7 @@ namespace detail {
 
 		Alternative(const vector<TermPtr>& alternatives)
 			: alternatives(alternatives) {
-			assert_gt(alternatives.size(), 1);
+			assert(alternatives.size() > 1);
 			updateLimit();
 		}
 
@@ -965,34 +947,34 @@ namespace detail {
 		private:
 
 			// identified pairs of terminals
-			std::set<Token> leftParenthesis;
-			std::set<Token> rightParenthesis;
-			std::map<Token,Token> parenthesisPairs;
+			std::set<Token> leftParenthese;
+			std::set<Token> rightParenthese;
+			std::map<Token,Token> parenthesePairs;
 
 		public:
 
-			void addParentheses(const Token& open, const Token& close) {
-				leftParenthesis.insert(open);
-				rightParenthesis.insert(close);
-				parenthesisPairs[open] = close;
+			void addParenthese(const Token& open, const Token& close) {
+				leftParenthese.insert(open);
+				rightParenthese.insert(close);
+				parenthesePairs[open] = close;
 			}
 
-			bool isLeftParenthesis(const Token& token) const {
-				return leftParenthesis.find(token) != leftParenthesis.end();
+			bool isLeftParenthese(const Token& token) const {
+				return leftParenthese.find(token) != leftParenthese.end();
 			}
 
-			bool isRightParenthesis(const Token& token) const {
-				return rightParenthesis.find(token) != rightParenthesis.end();
+			bool isRightParenthese(const Token& token) const {
+				return rightParenthese.find(token) != rightParenthese.end();
 			}
 
-			const Token& getClosingParenthesis(const Token& open) const {
-				auto pos = parenthesisPairs.find(open);
-				assert(pos != parenthesisPairs.end());
+			const Token& getClosingParenthese(const Token& open) const {
+				auto pos = parenthesePairs.find(open);
+				assert(pos != parenthesePairs.end());
 				return pos->second;
 			}
 
-			bool hasParenthesisPairs() const {
-				return !parenthesisPairs.empty();
+			bool hasParenthesePairs() const {
+				return !parenthesePairs.empty();
 			}
 
 			std::ostream& printTo(std::ostream& out) const;
@@ -1037,7 +1019,7 @@ namespace detail {
 
 		const TermInfo& getTermInfo() const {
 			if (!infoValid) updateTermInfo();
-			assert_true(infoValid);
+			assert(infoValid);
 			return info;
 		}
 
@@ -1107,7 +1089,7 @@ namespace detail {
 
 		void updateTermInfo() const;
 
-		bool checkParentheses(const TokenIter& begin, const TokenIter& end) const;
+		bool checkParenthese(const TokenIter& begin, const TokenIter& end) const;
 	};
 
 
@@ -1156,13 +1138,11 @@ namespace detail {
 
 	TermPtr cap(const TermPtr& term);
 
-	TermPtr varScope(const TermPtr& term);
+	TermPtr varScop(const TermPtr& term);
 
-	TermPtr newScope(const TermPtr& term);
+	TermPtr newScop(const TermPtr& term);
 
-	TermPtr symScope(const TermPtr& term);
-
-	TermPtr usingScope(const TermPtr& term);
+	TermPtr symScop(const TermPtr& term);
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
 		return std::make_shared<NonTerminal>(nonTerminal);

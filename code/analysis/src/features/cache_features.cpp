@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -150,8 +150,8 @@ namespace features {
 //				}
 //
 //				// ensure that this var is not a reference variable
-//				assert_true(var->getType()->getNodeType() != core::NT_RefType && "All reference variables have to be known!");
-//				assert_true(false && "Trying to read undefined variable!");
+//				assert(var->getType()->getNodeType() != core::NT_RefType && "All reference variables have to be known!");
+//				assert(false && "Trying to read undefined variable!");
 //				return 0;
 //			}
 //
@@ -168,7 +168,7 @@ namespace features {
 //
 //				// unable to process other literals
 //				std::cerr << "Unsupported literal: " << *lit << " of type " << *type << "\n";
-//				assert_true(false && "Unsupported literal encountered!");
+//				assert(false && "Unsupported literal encountered!");
 //				return 0;
 //			}
 //
@@ -198,13 +198,13 @@ namespace features {
 //					default: break;
 //					}
 //
-//					assert_true(false && "Unsupported arithmetic operator!");
+//					assert(false && "Unsupported arithmetic operator!");
 //				}
 //
 //				// deal with increment / decrement operators
 //				if (numOps == 1 && basic.isArithOp(fun)) {
 //
-//					assert_true(call->getArgument(0)->getNodeType() != core::NT_Variable
+//					assert(call->getArgument(0)->getNodeType() != core::NT_Variable
 //							&& "Can only increment variables!");
 //
 //					core::VariablePtr var = static_pointer_cast<core::VariablePtr>(call->getArgument(0));
@@ -217,7 +217,7 @@ namespace features {
 //					default: break;
 //					}
 //
-//					assert_true(false && "Unsupported arithmetic operator!");
+//					assert(false && "Unsupported arithmetic operator!");
 //				}
 //
 //				// deal with comparison operators
@@ -264,7 +264,7 @@ namespace features {
 //				}
 //
 //				std::cerr << "Unsupported operator encountered: " << *call << " of type " << *call->getType() << "\n";
-//				assert_true(false && "Unsupported operator encountered!");
+//				assert(false && "Unsupported operator encountered!");
 //				return 0;
 //			}
 //
@@ -317,7 +317,7 @@ namespace features {
 //
 //			void processAccess(const core::ExpressionPtr& target, SimulationContext& context) {
 //
-//				assert_true(target->getType()->getNodeType() == core::NT_RefType && "Cannot access non-reference type!");
+//				assert(target->getType()->getNodeType() == core::NT_RefType && "Cannot access non-reference type!");
 //
 //				// simulate memory access
 //				int64_t location = getAddress(target, context);
@@ -560,7 +560,7 @@ namespace features {
 							static_pointer_cast<core::VariablePtr>(target)->getId());
 				}
 
-				assert_eq(nodeType, core::NT_CallExpr) << "Need to be some derived value!";
+				assert(nodeType == core::NT_CallExpr && "Need to be some derived value!");
 
 				const auto& call = static_pointer_cast<core::CallExprPtr>(target);
 				const auto& fun = call->getFunctionExpr();
@@ -623,7 +623,7 @@ namespace features {
 				std::stringstream msg;
 				msg << "Unsupported memory location: " << *target << " of type " << target->getType();
 				std::cout << "Encountered problem: " << msg.str() << "\n";
-				assert_fail();
+				assert(false);
 				return 0;
 			}
 
@@ -752,7 +752,7 @@ namespace features {
 			}
 
 			core::SwitchStmtPtr visitSwitchStmt(const core::SwitchStmtPtr& stmt) {
-				assert_not_implemented();
+				assert(false && "Sorry, not implemented!");
 				return core::SwitchStmtPtr();
 			}
 
@@ -862,7 +862,7 @@ namespace features {
 
 			core::NodePtr visitNode(const core::NodePtr& node) {
 				std::cout << "Error - visiting " << node->getNodeType() << "\n";
-				assert_fail();
+				assert(false);
 				return node;
 			}
 

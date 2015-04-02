@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -91,7 +91,7 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 				VLOG(2) << "ArgKind::Declaration not supported";
 				const clang::ValueDecl* decl = arg->getAsDecl ();
 				if (llvm::isa<clang::TypeDecl>(decl))
-					assert_not_implemented();
+					assert(false && "not implemented");
 				if (const clang::FunctionDecl* f = llvm::dyn_cast<clang::FunctionDecl>(decl))
 					resList.insert(resList.end(), builder.genericType(buildNameForFunction(f)));
 				break;
@@ -119,13 +119,13 @@ insieme::core::TypeList evaluateTemplatedType (const clang::TemplateArgument* ar
 		case clang::TemplateArgument::ArgKind::TemplateExpansion: {
 				VLOG(2) << "ArgKind::TemplateExpansion ";
 				arg->getAsTemplateOrTemplatePattern();
-				assert_not_implemented();
+				assert(false && "not implemented");
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Expression: {
 				VLOG(2) << "ArgKind::Expression not supported";
-				assert_true(arg->getAsExpr());
-				assert_not_implemented();
+				assert ( arg->getAsExpr());
+				assert(false && "not implemented");
 				break;
 			}
 		case clang::TemplateArgument::ArgKind::Pack:
@@ -187,11 +187,11 @@ insieme::core::TypePtr Interceptor::intercept(const clang::QualType& type, insie
 
 	} else if( llvm::isa<clang::TypedefType>(type.getTypePtr()) ) {
 		// don't intercept typedefs -> only sugar, we can use underlying type
-		assert_fail() << "typedef is sugar -- use underlying type";
+		assert(false && "typedef is sugar -- use underlying type");
 	}
 
 	//we should only call intercept if type has a typeDecl
-	assert_true(irType) << "irType";
+	assert(irType && "irType");
 
 	VLOG(1) << "build interceptedType " << irType;
 	if(insieme::annotations::c::hasIncludeAttached(irType)) {
@@ -310,7 +310,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 							break;
 						}
 						default:
-							assert_fail();
+							assert(false);
 					}
 				}
 				};
@@ -329,7 +329,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 			VLOG(2) << "TK_DependentFunctionTemplateSpecialization";
 			break;
 		default:
-			assert_fail();
+			assert(false);
 	}
 
 

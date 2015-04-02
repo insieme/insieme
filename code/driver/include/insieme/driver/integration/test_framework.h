@@ -63,7 +63,7 @@ namespace testFramework{
 		bool valid;
 		bool mockrun;
 		int num_threads;
-		int num_repetitions;
+		int num_repeditions;
 		bool use_median;
 		bool statistics;
 		bool scheduling;
@@ -72,7 +72,7 @@ namespace testFramework{
 		bool panic_mode;
 		bool force;
 		bool list_only;
-		bool no_clean;
+		bool clean;
 		bool color;
 		bool overwrite;
 		vector<string> cases;
@@ -88,11 +88,11 @@ namespace testFramework{
 
 		Options(bool valid = true)
 			: valid(valid), mockrun(false),
-			  num_threads(1), num_repetitions(1), use_median(false),statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
-			  panic_mode(false),force(false), list_only(false), no_clean(false), color(true),overwrite(false),perf(false),load_miss(""),store_miss(""),flops("") {}
+			  num_threads(1), num_repeditions(1), use_median(false),statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
+			  panic_mode(false),force(false), list_only(false), clean(false), color(true),overwrite(false),perf(false),load_miss(""),store_miss(""),flops("") {}
 
 		bool operator==(Options a) const{
-		    return a.mockrun==mockrun && a.num_threads==num_threads && a.num_repetitions == num_repetitions && a.use_median==use_median
+		    return a.mockrun==mockrun && a.num_threads==num_threads && a.num_repeditions == num_repeditions && a.use_median==use_median
 			&& a.statistics==statistics && a.scheduling==scheduling && a.statThreads==statThreads && a.force==force && a.cases==cases && 
 			a.perf==perf && a.load_miss==load_miss && a.store_miss==store_miss && a.flops == flops && a.perf_metrics==perf_metrics && a.steps==steps;
 		}
@@ -104,7 +104,7 @@ namespace testFramework{
 		{
 		        ar & mockrun;
 		        ar & num_threads;
-		        ar & num_repetitions;
+		        ar & num_repeditions;
 			ar & use_median;
 			ar & statistics;
 			ar & scheduling;

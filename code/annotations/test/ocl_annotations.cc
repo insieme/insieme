@@ -67,7 +67,7 @@ TEST(ocl_properties, FunctionAnnotations) {
         for(ocl::BaseAnnotation::AnnotationList::const_iterator I = oclKernelAnnotation->getAnnotationListBegin();
                 I < oclKernelAnnotation->getAnnotationListEnd(); ++I) {
             ocl::AnnotationPtr ocl = std::dynamic_pointer_cast<ocl::Annotation>(*I);
-			assert_true(ocl) << "Wrong Annotation";
+			assert(ocl && "Wrong Annotation");
             if(ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<ocl::KernelFctAnnotation>(ocl))
                 EXPECT_TRUE(kf->isKernelFct());
             if(ocl::WorkGroupSizeAnnotationPtr wgs = std::dynamic_pointer_cast<ocl::WorkGroupSizeAnnotation>(ocl)) {

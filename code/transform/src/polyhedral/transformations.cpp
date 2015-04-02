@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -150,8 +150,8 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 	core::VariablePtr src = matchList[srcIdx].as<core::VariablePtr>();
 	core::VariablePtr dest = matchList[destIdx].as<core::VariablePtr>();
 
-	assert_ne(iterVec.getIdx(src), -1) << "Index for Source Loop is invalid";
-	assert_ne(iterVec.getIdx(dest), -1) << "Index for Destination Loop is invalid";
+	assert( iterVec.getIdx(src) != -1 && "Index for Source Loop is invalid");
+	assert( iterVec.getIdx(dest) != -1 && "Index for Destination Loop is invalid");
 	applyUnimodularTransformation<SCHED_ONLY>(transfScop, makeInterchangeMatrix(iterVec, src, dest));
 
 	// The original scop is in origScop, while the transformed one is in transScop
@@ -164,7 +164,7 @@ core::NodeAddress LoopInterchange::apply(const core::NodeAddress& targetAddress)
 	VLOG(1) << t;
 	VLOG(1) << "//@ polyhedral.loop.interchange Done";
 	
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
@@ -225,7 +225,7 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 			match->getVarBinding("loop").getList()[loopIdx]
 		); 
 
-	assert_true(forStmt) << "ForStmt not matched";
+	assert(forStmt && "ForStmt not matched");
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.stripmining'";
 	utils::Timer t("transform.polyhedral.loop.stripmining");
@@ -237,7 +237,7 @@ core::NodeAddress LoopStripMining::apply(const core::NodeAddress& targetAddress)
 	VLOG(1) << t;
 	VLOG(1) << "//@~ polyhedral.loop.stripmining Done";
 
-	assert_true(transformedIR) << "Generated code for loop strip mining not valid";
+	assert( transformedIR && "Generated code for loop strip mining not valid" );
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
@@ -296,7 +296,7 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 	//VLOG(1) << t;
 	//VLOG(1) << "//@~ polyhedral.loop.tiling Done";
 
-	//assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	//assert( transformedIR && "Generated code for loop fusion not valid" );
 	//// std::cout << *transformedIR << std::endl;
 	//return transformedIR;
 //}
@@ -423,7 +423,7 @@ core::NodeAddress LoopTiling::apply(const core::NodeAddress& targetAddress) cons
 	VLOG(1) << t;
 	VLOG(1) << "//@~ polyhedral.loop.tiling Done";
 
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// std::cout << *transformedIR << std::endl;
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
@@ -477,10 +477,10 @@ core::NodeAddress LoopFusion::apply(const core::NodeAddress& targetAddress) cons
 	core::VariableList iters;
 	for_each(loopIdxs, [&](const unsigned& idx) { 
 		iters.push_back( matchList[idx].as<core::VariablePtr>() );
-		assert_true(iters.back()) << "Induction variable for loop with index not valid";
+		assert( iters.back() && "Induction variable for loop with index not valid" );
 	});
 
-	assert_false(iters.empty());
+	assert( !iters.empty() );
 
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop scop(extractScopFrom(target));
@@ -497,7 +497,7 @@ core::NodeAddress LoopFusion::apply(const core::NodeAddress& targetAddress) cons
 	}
 
 	core::NodePtr&& transformedIR = scop.toIR( mgr );	
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
@@ -551,7 +551,7 @@ core::NodeAddress LoopFission::apply(const core::NodeAddress& targetAddress) con
 	}
 
 	core::NodePtr&& transformedIR = scop.toIR( mgr );	
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
@@ -576,7 +576,7 @@ core::NodeAddress LoopReschedule::apply(const core::NodeAddress& targetAddress) 
 	core::CompoundStmtPtr&& transformedIR = 
 		core::IRBuilder(mgr).compoundStmt( scop.optimizeSchedule( mgr ).as<core::StatementPtr>() );
 
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
@@ -617,7 +617,7 @@ core::NodeAddress LoopStamping::apply(const core::NodeAddress& targetAddress) co
 		forStmt = f.front().getAddressedNode().as<core::ForStmtPtr>();
 	}
 	
-	assert_true(forStmt) << "Loop stamping must be applied to a forstmt";
+	assert(forStmt && "Loop stamping must be applied to a forstmt");
 	core::VariablePtr iter = forStmt->getDeclaration()->getVariable();
 
 	std::vector<std::reference_wrapper<Stmt>>&& stampedStmts = getLoopSubStatements(scop, iter);
@@ -644,7 +644,7 @@ core::NodeAddress LoopStamping::apply(const core::NodeAddress& targetAddress) co
 	LOG(DEBUG) << scop;
 
 	core::NodePtr transformedIR = scop.toIR(mgr);
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }
 
@@ -726,13 +726,13 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
 
 			__unused unsigned ranges = curStmt->getSubRangeNum();
-			assert_eq(ranges, 1) << "Multiple ranges not supported";
+			assert(ranges == 1 && "Multiple ranges not supported");
 		
 			// Extract the variable which should be stripped 
 			core::VariablePtr var;
 			for_each(curStmt->accessmtx.begin(), curStmt->accessmtx.end(), [&](const AccessInfoPtr& cur) {
 				if ( cur->hasDomainInfo() ) {
-					assert_false(var) << "Variable already set";
+					assert(!var && "Variable already set");
 					var = getOrderedIteratorsFor(cur->getAccess()).front();
 					curStmt->getSchedule().append( AffineFunction(iv, core::arithmetic::Formula(var)) );
 
@@ -773,7 +773,7 @@ core::NodeAddress RegionStripMining::apply(const core::NodeAddress& targetAddres
 	doFuse(scop2, strip_iters);
 
 	transformedIR = core::IRBuilder(mgr).compoundStmt( scop2.toIR( mgr ).as<core::StatementPtr>() );	
-	assert_true(transformedIR) << "Generated code for loop fusion not valid";
+	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// LOG(DEBUG) << *transformedIR;
 	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, transformedIR);
 }

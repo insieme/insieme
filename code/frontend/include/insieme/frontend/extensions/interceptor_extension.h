@@ -29,13 +29,13 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/interceptor.h"
@@ -44,9 +44,9 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
+class InterceptorPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
-	// Extension Hooks
+	//Plugin Hooks
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
 
     virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic);
@@ -57,8 +57,6 @@ class InterceptorExtension : public insieme::frontend::extensions::FrontendExten
 
     virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
 
-    virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact);
-
 	private:
 
 	insieme::frontend::utils::Interceptor interceptor;
@@ -67,10 +65,10 @@ class InterceptorExtension : public insieme::frontend::extensions::FrontendExten
 
 	public:
 
-	InterceptorExtension(const std::set<std::string>& patterns) : interceptor(patterns) {}
+	InterceptorPlugin(const std::set<std::string>& patterns) : interceptor(patterns) {}
 
 };
 
-} // extensions
-} // frontend
-} // insieme
+}
+}
+}

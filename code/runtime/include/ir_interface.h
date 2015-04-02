@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -76,10 +76,6 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
  */
 irt_joinable irt_parallel(const irt_parallel_job* job);
 
-/** Sets the default parallel wi count for the current wi to num_wis.
- */
-void irt_set_default_parallel_wi_count(int num_wis);
-
 /** From a job description structure, generates a single work item to perform the job.
  *  No group is created.
  *  The return value is a pointer to a work item.
@@ -115,5 +111,6 @@ static inline void ir_inst_region_start(irt_inst_region_id id) {
 static inline void ir_inst_region_end(irt_inst_region_id id) {
 	irt_inst_region_end(id);
 }
+
 
 #endif // ifndef __GUARD_IR_INTERFACE_H

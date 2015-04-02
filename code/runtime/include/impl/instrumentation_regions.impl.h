@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -38,20 +38,17 @@
 #ifndef __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
 #define __GUARD_IMPL_INSTRUMENTATION_REGIONS_IMPL_H
 
-#include "instrumentation_regions.h"
-
-#include <string.h>
 #include <locale.h> // needed to use thousands separator
 #include <stdio.h>
 #ifndef _GEMS_SIM
 	#include <sys/stat.h>
 #endif
 #include <errno.h>
-
 #include "utils/timing.h"
 #include "abstraction/measurements.h"
 #include "abstraction/impl/measurements.impl.h"
 #include "utils/memory.h"
+#include "instrumentation_regions.h"
 #include "impl/error_handling.impl.h"
 #include "instrumentation_regions_includes.h"
 
@@ -107,7 +104,7 @@ void _irt_inst_region_start_early_entry_measurements(irt_work_item* wi) {
 		_region_early_start_code__; \
 	}
 #include "irt_metrics.def"
-//	printf("region %u %u start: last %llu at %p\n", irt_inst_region_get_current(wi)->id, index, rg->last_wall_time, (void*) &rg->last_wall_time);
+//	printf("region %u %u start: last %llu at %p\n", irt_inst_region_get_current(wi)->id, index, rg->last_wall_time, &rg->last_wall_time);
 }
 #pragma GCC diagnostic pop // needs to be done after ending the function scope
 
@@ -137,7 +134,7 @@ void _irt_inst_region_end_late_exit_measurements(irt_work_item* wi) {
 		rg->last_##_name__ = 0; \
 	}
 #include "irt_metrics.def"
-//	printf("region %u %u end end: aggregated %llu, using last %p\n", irt_inst_region_get_current(wi)->id, index, rg->aggregated_wall_time, (void*) &rg->last_wall_time);
+//	printf("region %u %u end end: aggregated %llu, using last %p\n", irt_inst_region_get_current(wi)->id, index, rg->aggregated_wall_time, &rg->last_wall_time);
 	irt_inst_region_context_data* current_region = irt_inst_region_get_current(wi);
 	irt_spin_lock(&(current_region->lock));
 #define METRIC(_name__, _id__, _unit__, _data_type__, _format_string__, _scope__, _aggregation__, _group__, _wi_start_code__, wi_end_code__, _region_early_start_code__, _region_late_end_code__, _output_conversion_code__) \

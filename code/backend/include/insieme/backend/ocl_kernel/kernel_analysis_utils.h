@@ -72,7 +72,7 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 
 	/*
 	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
-	 * its value is returned, otherwise an assertion is raised
+	 * it's value is returned, otherwise an assertion is raised
 	 * @param
 	 * call A CallExprPtr with an integer literal as first argument
 	 * @return

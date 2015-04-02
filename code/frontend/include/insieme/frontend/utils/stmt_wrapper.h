@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -39,14 +39,12 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/lang/basic.h"
 
-namespace insieme {
-namespace frontend {
 namespace stmtutils {
 
 using namespace insieme::core;
 
 namespace {
-typedef vector<StatementPtr> StatementList;
+typedef vector<insieme::core::StatementPtr> StatementList;
 }
 
 //-------------------------------------------- StmtWrapper ------------------------------------------------------------
@@ -61,12 +59,12 @@ struct StmtWrapper: public StatementList {
 	StmtWrapper() :
 			StatementList() {
 	}
-	StmtWrapper(const StatementPtr& stmt) :
+	StmtWrapper(const insieme::core::StatementPtr& stmt) :
 			StatementList( { stmt }) {
 	}
 
-	StatementPtr getSingleStmt() const {
-		assert_eq(size(), 1) << "More than 1 statement present";
+	insieme::core::StatementPtr getSingleStmt() const {
+		assert(size() == 1 && "More than 1 statement present");
 		return front();
 	}
 
@@ -87,6 +85,4 @@ StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& st
 ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, 
 							const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
 
-} // end namespace stmtutils
-} // end namespace frontend
-} // end namespace insieme
+} // namespace

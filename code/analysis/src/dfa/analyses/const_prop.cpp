@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -235,7 +235,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 			// Replace values with the constant values 
 			f = f.replace(replacements);
 
-			assert_true(f.isConstant());
+			assert(f.isConstant());
 
 			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
@@ -250,7 +250,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 		} catch(const NotAnAccessException& e) { return dfa::top; }
 	}
 
-	assert_fail() << "Something odd happened";
+	assert( false  && "Something odd happened" );
 	return dfa::Value<LiteralPtr>();
 }
 
@@ -273,7 +273,7 @@ ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& bl
 							const dfa::Value<LiteralPtr>& res) 
 	{
 		auto defClasses = aMgr.findClass(defAccess);
-		assert_false(defClasses.empty()) << "Invalid class for access. Something wrong in the extract() method";
+		assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
 
 		for (const auto& defClass : defClasses) {
 			gen.insert( std::make_tuple(defClass, res) );

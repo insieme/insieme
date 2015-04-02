@@ -50,7 +50,7 @@
 
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/frontend_ir_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/map_utils.h"
 
@@ -212,7 +212,7 @@ class Converter :  boost::noncopyable {
 	//////////////////////////////////////////////////
 	// IR building and managing tools
 	core::NodeManager& mgr;
-	const core::FrontendIRBuilder builder;
+	const core::IRBuilder builder;
 	const frontend::ir::FrontendIr feIR;
 
 	/**
@@ -240,7 +240,7 @@ public:
 	tu::IRTranslationUnit convert();
 
 	// Getters & Setters
-	const core::FrontendIRBuilder& getIRBuilder() const {
+	const core::IRBuilder& getIRBuilder() const {
 		return builder;
 	}
 	core::NodeManager& getNodeManager() const {
@@ -353,17 +353,6 @@ public:
 	 */
 	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
 
-
-    /**
-     * Returns a reference to the IR data structure used to represent a variable of the input C code.
-     *
-     * The function guarantees that the same variable in the input code is always represented in the
-     * IR with the same generated Variable and in the case of access to global variables, a reference
-     * to a member of the global data structure is returned.
-     */
-    core::ExpressionPtr lookUpVariableInWrapRefMap(const core::ExpressionPtr variable);
-
-
 	/**
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
 	 * @return The statement to pragma multimap
@@ -373,7 +362,7 @@ public:
 	}
 
 	/**
-	 * convert type declaration, it triggers the extensions and converts the represented type
+	 * convert type declaration, it triggers the plugins and converts the represented type
 	 * fills the translation unit with this type
 	 * @param typeDecl: the type declaration itself
 	 */
@@ -489,7 +478,7 @@ public:
 	core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 												const core::TypePtr& type, const bool zeroInit) ;
 
-	/**
+	/** 
 	 * extracts a list of statements and converts the scope into an function call
 	 * @param a statement to be extracted
 	 * @param the type the whole thing should return
@@ -497,7 +486,7 @@ public:
 	 * @return a call expression to the generated labda
 	 */
 core::ExpressionPtr createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy = false);
-	/**
+	/** 
 	 * extracts a list of statements and converts the scope into an function call
 	 * @param the list of statements to be converted
 	 * @param the type the whole thing should return
@@ -591,7 +580,7 @@ core::ExpressionPtr createCallExprFromBody(const core::StatementPtr& stmt, const
 	 * unstacks last tracked location
 	 */
 	void untrackSourceLocation ();
-
+	
 	/**
 	 *  returns readable location of the last registered source location
 	 */

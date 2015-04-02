@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -106,10 +106,6 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 	});
 }
 
-NodePtr append(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements) {
-	return insert(manager, target, statements, target->getChildList().size());
-}
-
 
 NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement) {
 
@@ -168,7 +164,7 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 	// use generic manipulation function
 	return manipulate(manager, target, [index](vector<StatementPtr>& list){
 		// remove element
-		assert_lt(index, list.size()) << "Index out of range!";
+		assert( index < list.size() && "Index out of range!");
 		list.erase(list.begin() + index);
 	});
 }
@@ -176,12 +172,12 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 /// Remove the given list of statements, the NodeManger keeping track of removals.
 NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 
-	assert_false(stmts.empty()) << "List of statements to be removed must not be empty!";
+	assert(!stmts.empty() && "List of statements to be removed must not be empty!");
 
 	NodePtr res = stmts[0].getRootNode();
 
 	// check whether the stmt list is not empty and all addresses have the same root.
-	assert_false(stmts.empty()) << "Statements must not be empty!";
+	assert(!stmts.empty() && "Statements must not be empty!");
 	assert(all(stmts, [&](const StatementAddress& cur) { return cur.getRootNode() == res; }));
 
 	// create a sorted list of statements
@@ -196,7 +192,7 @@ NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 			cur = static_address_cast<StatementAddress>(cur.getParentAddress());
 		}
 
-		assert_eq(cur.getParentAddress()->getNodeType(), NT_CompoundStmt) << "Every stmt should be inside a compound stmt!";
+		assert(cur.getParentAddress()->getNodeType() == NT_CompoundStmt && "Every stmt should be inside a compound stmt!");
 
 		// update root of current stmt
 		cur = cur.switchRoot(res);
@@ -212,7 +208,7 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 	// use generic manipulation function
 	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list){
 		// remove element
-		assert_lt(index, list.size()) << "Index out of range!";
+		assert( index < list.size() && "Index out of range!");
 		list[index] = replacement;
 	});
 }
@@ -221,7 +217,7 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 	// use generic manipulation function
 	return manipulate(manager, target, [index, &replacements](vector<StatementPtr>& list){
 		// remove element
-		assert_lt(index, list.size()) << "Index out of range!";
+		assert( index < list.size() && "Index out of range!");
 		list.erase(list.begin() + index);
 		list.insert(list.begin() + index, replacements.cbegin(), replacements.cend());
 	});
@@ -237,7 +233,7 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 	// use generic manipulation function
 	return manipulate(manager, target, [index, displacement](vector<StatementPtr>& list){
 		// check index
-		assert_lt(index, list.size()) << "Index out of range!";
+		assert( index < list.size() && "Index out of range!");
 
 		// limit displacement
 		int newPos = index + displacement;
@@ -251,7 +247,7 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 
 namespace {
 
-	class InlineSubstituter : public SimpleNodeMapping {
+	class InlineSubstituter : public NodeMapping {
 
 		bool successful;
 
@@ -311,7 +307,7 @@ namespace {
 	ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
 
 		// extract bind and call expression
-		assert_eq(call->getFunctionExpr()->getNodeType(), NT_BindExpr) << "Illegal argument!";
+		assert(call->getFunctionExpr()->getNodeType() == NT_BindExpr && "Illegal argument!");
 		BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
 
 		// process call recursively
@@ -472,7 +468,7 @@ StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr, 
 	const auto& params = fun->getParameterList().getElements();
 	const auto& args = call->getArguments();
 
-	assert_eq(params.size(), args.size()) << "Arguments do not fit parameters!!";
+	assert(params.size() == args.size() && "Arguments do not fit parameters!!");
 
 	for(std::size_t i =0; i<params.size(); i++) {
 
@@ -579,7 +575,7 @@ namespace {
 
 					// check whether it is a known literal
 					} else if (analysis::isCallOf(fun, manager.getLangBasic().getPick())) {
-						assert_eq(fun->getType()->getNodeType(), NT_FunctionType);
+						assert(fun->getType()->getNodeType() == NT_FunctionType);
 
 						// get list encapsulated options
 						CallExprPtr pickCall = fun.as<CallExprPtr>();
@@ -634,7 +630,7 @@ namespace {
 
 
 //	LambdaExprPtr tryFixRecursive(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value) {
-//		assert_true(lambda->isRecursive());
+//		assert(lambda->isRecursive());
 //
 //		/**
 //		 * The following procedure is applied:
@@ -648,8 +644,8 @@ namespace {
 //		// check for compatible target type
 //		FunctionTypePtr funType = lambda->getFunctionType();
 //		TypeList paramTypes = funType->getParameterTypeList();
-//		assert_lt(index, paramTypes.size()) << "Index out of bound - no such parameter!";
-//		assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
+//		assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
+//		assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 //
 //		// replace parameter within body
 //		const VariablePtr& param = lambda->getParameterList()[index];
@@ -697,12 +693,12 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	// check parameters
 	const FunctionTypePtr& funType = lambda->getFunctionType();
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
-	assert_lt(index, paramTypes.size()) << "Index out of bound - no such parameter!";
+	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
-	assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
+	assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 
 	// make sure replacement value does not have any free variables except it is a variable itself (used for fixing recursive variables)
-	assert_true((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty())) << "Replacement value must not have free variables!";
+	assert((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty()) && "Replacement value must not have free variables!");
 
 	// conduct replacement
 
@@ -721,7 +717,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	if (lambda->isRecursive()) {
 
 		if(lambda->getDefinition().size() > 1u) {
-			assert_fail() << "Propagating parameters across mutual recursive functions not supported yet!";
+			assert(false && "Propagating parameters across mutual recursive functions not supported yet!");
 			return lambda; // not supported yet
 		}
 
@@ -735,7 +731,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 		// check whether parameter is propagated
 		bool isPropagated = all(calls, [&](const CallExprPtr& call)->bool {
 			// check whether value is propagated along the recursion
-			assert_lt(index, call->getArguments().size()) << "Invalid recursive call!";
+			assert(index < call->getArguments().size() && "Invalid recursive call!");
 			return call->getArgument(index) == value;
 		});
 
@@ -791,11 +787,11 @@ CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, un
 	// ---------------- Pre-Conditions --------------------
 
 	// check whether indexed parameter is in-deed a bind
-	assert_lt(index, call->getArguments().size()) << "Invalid argument index!";
-	assert_eq(call->getArgument(index)->getNodeType(), NT_BindExpr) << "Specified argument is not a bind!";
+	assert(index < call->getArguments().size() && "Invalid argument index!");
+	assert(call->getArgument(index)->getNodeType() == NT_BindExpr && "Specified argument is not a bind!");
 
 	// check whether function is in-deed a lambda
-	assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr) << "Function has to be a lambda!";
+	assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr && "Function has to be a lambda!");
 
 	// so far it is only supported for non-recursive implementations
 	assert(!call->getFunctionExpr().as<LambdaExprPtr>()->isRecursive() && "Not implemented for recursive functions!");
@@ -932,7 +928,7 @@ bool isOutlineAble(const StatementPtr& stmt) {
 
 CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	// check whether it is allowed
-	assert_true(isOutlineAble(stmt)) << "Cannot outline given code - it contains 'free' return, break or continue stmts.";
+	assert(isOutlineAble(stmt) && "Cannot outline given code - it contains 'free' return, break or continue stmts.");
 
 	// Obtain list of free variables
 	VariableList free = analysis::getFreeVariables(manager.get(stmt));
@@ -988,7 +984,7 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool eva
 
 	// check type of lazy expression
 	core::FunctionTypePtr funType = dynamic_pointer_cast<const core::FunctionType>(lazy->getType());
-	assert_true(funType) << "Illegal lazy type!";
+	assert(funType && "Illegal lazy type!");
 
 	// form call expression
 	core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
@@ -1053,7 +1049,7 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 		return lambda;
 	}
 
-	assert_false(lambda->isRecursive()) << "I owe you the support for recursive functions!";
+	assert(!lambda->isRecursive() && "I owe you the support for recursive functions!");
 
 	// update type
 	const FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(substitution->applyTo(lambda->getType()));
@@ -1125,7 +1121,7 @@ namespace {
 		 * handed in parameter.
 		 */
 		LambdaExprPtr addNewParameter(const LambdaExprPtr& lambda, VariablePtr& param) {
-			assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!";
+			assert(!lambda->isRecursive() && "Recursive functions not supported yet!");
 
 			IRBuilder builder(lambda.getNodeManager());
 
@@ -1187,7 +1183,7 @@ namespace {
 
 			// if we are crossing a lambda, check whether new parameter needs to be accepted
 			if (res.getNodeType() == NT_LambdaExpr) {
-				assert_eq(res.getParentNode()->getNodeType(), NT_CallExpr) << "Parent of lambda needs to be a call!";
+				assert(res.getParentNode()->getNodeType() == NT_CallExpr && "Parent of lambda needs to be a call!");
 				assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
 
 				LambdaExprPtr lambda = res.as<LambdaExprPtr>();
@@ -1301,7 +1297,7 @@ vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAd
 NodePtr pushInto(NodeManager& manager, const map<ExpressionAddress, VariablePtr>& elements) {
 
 	// some pre-conditions
-	assert_false(elements.empty()) << "Elements must not be empty!";
+	assert(!elements.empty() && "Elements must not be empty!");
 	assert(all(elements, [&](const pair<ExpressionAddress, VariablePtr>& cur)->bool {
 		return cur.first.getRootNode() == elements.begin()->first.getRootNode();
 	}));
@@ -1362,7 +1358,7 @@ namespace {
 			// a function reducing the level expression by 1
 			auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
 				auto formula = arithmetic::toFormula(level);
-				assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
+				assert(formula.isConstant() && "Accessing thread-group using non-constant level index not supported!");
 				if (formula.isZero()) return ExpressionPtr();
 				return arithmetic::toIR(level->getNodeManager(), formula-1);
 			};
@@ -1448,6 +1444,9 @@ namespace {
 ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	static const ExpressionPtr fail;
 	NodeManager& mgr = job.getNodeManager();
+
+	// make sure there are no guarded statements
+	if (!job->getGuardedExprs().empty()) return fail;
 
 	// also, there must not be a re-distribute call => can not be supported
 	if (analysis::contains(job->getDefaultExpr(), mgr.getLangBasic().getRedistribute())) return fail;

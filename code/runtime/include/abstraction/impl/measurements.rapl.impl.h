@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -91,7 +91,7 @@ uint64 _irt_read_rapl_register(void* user_data) {
 	rapl_energy_data current_data = { 0, 0, 0 };
 
 	int32 file = 0;
-	int64 result = 0;
+	uint64 result = 0;
 	double energy_units = -1.0;
 
 	uint32 num_sockets = irt_hw_get_num_sockets();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -52,10 +52,10 @@
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
 	if (t == NULL) {
-		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", (void*) t);
+		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p",t);
 	}
 	else {
-		IRT_ASSERT(pthread_create(t, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", (void*) t);
+		IRT_ASSERT(pthread_create(t, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", t);
 	}
 }
 

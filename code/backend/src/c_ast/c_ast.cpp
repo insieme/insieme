@@ -104,7 +104,7 @@ namespace c_ast {
 				other.equalityID = equalityID;
 			} else {
 				// both are != 0
-				assert_true(equalityID != 0 && other.equalityID != 0) << "Equality IDs should be != 0";
+				assert(equalityID != 0 && other.equalityID != 0 && "Equality IDs should be != 0");
 
 				// pick smaller ID for both
 				if (equalityID < other.equalityID) {

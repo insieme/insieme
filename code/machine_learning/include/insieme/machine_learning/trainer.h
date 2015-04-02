@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,6 @@
 
 #include "insieme/machine_learning/myModel.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
-#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace ml {
@@ -402,7 +401,7 @@ public:
 	 * with GenNNoutput::ML_FUZZY_VECTOR
 	 */
 	void setDefaultSplittingAsTarget(){
-		assert_eq(genOut, GenNNoutput::ML_FUZZY_VECTOR) << "Fuzzy ouptut can only be used in conjunciton with GenNNoutput::ML_FUZZY_VECTOR";
+		assert(genOut == GenNNoutput::ML_FUZZY_VECTOR && "Fuzzy ouptut can only be used in conjunciton with GenNNoutput::ML_FUZZY_VECTOR");
 		trainForName = "s100_0_0, m.s90_10_0, m.s90_5_5, m.s80_20_0, m.s80_10_10, m.s70_30_0, m.s70_15_15, m.s60_40_0, \
 			m.s60_20_20, m.s50_50_0, m.s50_25_25, m.s40_60_0, m.s40_30_30, m.s30_70_0, m.s30_35_35, m.s20_80_0, m.s20_40_40, m.s10_90_0, m.s10_45_45, \
 			m.s0_100_0, m.s0_50_50";

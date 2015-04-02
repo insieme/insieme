@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -172,7 +172,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	// if there is still no match, try the paths of the input files
 /*	no job, no current file :/
 	if (check.fail()) {
-		assert_eq(job.getFiles().size(), 1u);
+		assert(job.getFiles().size() == 1u);
 		string ifp = job.getFiles()[0].string();
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
@@ -188,7 +188,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	ConversionJob kernelJob(path, includeDirs);
-	kernelJob.registerFrontendExtension<extensions::OclKernelExtension>();
+	kernelJob.registerFrontendPlugin<extensions::OclKernelPlugin>();
 	kernelJob.setDefinition("INSIEME", "");
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));
@@ -223,16 +223,16 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 
 	// check work dimension
 	const LiteralPtr dim = dynamic_pointer_cast<const Literal>(workDim);
-	assert_true(dim) << "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!";
+	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
 	wd = dim->getValueAs<unsigned int>();
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
-	assert_lt(wd, 3u) << "Invalid work_dim. Should be 1 - 3!";
+	assert(wd < 3u && "Invalid work_dim. Should be 1 - 3!");
 
 	// check if there is a x to array called
 	if(const CallExprPtr toArray = dynamic_pointer_cast<const CallExpr>(size)) {
 		if(toArray->getFunctionExpr() == gen.getScalarToArray()) {
 			// check consistency with workDim, should be 1
-			assert_eq(wd, 1) << "Scalar group size passed to a multi dimensional work_dim";
+			assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
 
 			arg = toArray->getArgument(0);
 		} else if(isPtrDecay(toArray->getFunctionExpr())) {
@@ -241,13 +241,13 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 			arg = toArray[0];
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
-			assert_fail() << "Unexpected function in OpenCL size argument";
+			assert(false && "Unexpected function in OpenCL size argument");
 		}
 		argTy = arg->getType();
 		param = builder.variable(argTy);
 	} else { // the argument is an array
 		size = utils::removeDoubleRef(size);
-//		assert_eq(size->getType()->getNodeType(), NT_RefType) << "Called clEnqueueNDRangeKernel with invalid group argument";
+//		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
 		arg = size;
 		argTy = arg->getType();
 		param = builder.variable(argTy);
@@ -271,7 +271,7 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 		vDecl = builder.declarationStmt(vecTy,
 				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(gen.getUInt8(), "1"), builder.literal(gen.getUInt8(), "1"))));
 	} else {
-		assert_true(isArray) << "Size argument of multidimensional group is no vector or array";
+		assert(isArray && "Size argument of multidimensional group is no vector or array");
 
 		vector<ExpressionPtr> subscripts;
 		subscripts.push_back(builder.arrayAccess(init, builder.literal(gen.getUInt8(), "0")));
@@ -517,7 +517,7 @@ void KernelReplacer::collectArguments() {
 			TypePtr type;
 			ExpressionPtr hostPtr;
 			utils::extractSizeFromSizeof(sizeArg, size, type);
-			assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
+			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 not needed since we store the entire sizeArg to avoid confusions with different types
 +*/
 			// only store size of local mem arrays, therefore it's always uint<8>
@@ -645,8 +645,8 @@ void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntrie
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 		if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
 			std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
-			assert_false(cname.empty()) << "cannot find the name of the kernel function";
-			assert_eq(checkDuplicates[cname], 0) << "Multiple kernels with the same name not supported";
+			assert(!cname.empty() && "cannot find the name of the kernel function");
+			assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
 			checkDuplicates[cname] = 1;
 			kernelFunctions[kernelNames[cname]] = lambdaEx;
 		}
@@ -770,7 +770,6 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 	std::vector<ExpressionPtr> kernelEntries;
 
 	if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(createProgramWithSource))) {
-		std::cout << "createProgramWithSource:\n" << dumpPretty(createProgramWithSource) << "\n";
 		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
 				(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
 			const string& path = kfa->getKernelPath();
@@ -904,7 +903,7 @@ void IclKernelReplacer::inlineKernelCode() {
 		replacements[matchAddress >> runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
 	});
 
-	assert_false(replacements.empty()) << "No kernels found";
+	assert(!replacements.empty() && "No kernels found");
 
 	prog = transform::replaceAll(mgr, replacements);
 

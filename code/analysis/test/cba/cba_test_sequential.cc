@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -2008,35 +2008,6 @@ namespace cba {
 
 //		createDotDump(analysis);
 	}
-
-//	TEST(CBA, IntegerParameter) {
-//
-//		// some code where the context of a memory allocation is relevant
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		std::map<string, NodePtr> symbols;
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//            //    "   let getInt = (intTypeParam<#a> param) -> int<4> { return to.uint(param(#a)); }"
-//                "   getInt(6); "
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//
-//        dumpColor(code);
-//
-//		CBA analysis(code);
-//
-//
-//		EXPECT_EQ("[]", 	toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
-//
-////		createDotDump(analysis);
-//	}
-
 
 } // end namespace cba
 } // end namespace analysis

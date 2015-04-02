@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -86,7 +86,7 @@ ProgramPtr HostCompiler::compile() {
 	HostMapper oclHostMapper(builder, mProgram, job);
 
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
-	assert_true(interProg) << "First pass of OclHostCompiler corrupted the program";
+	assert(interProg && "First pass of OclHostCompiler corrupted the program");
 
 	if(oclHostMapper.getnKernels() == 0) {
 		LOG(INFO) << "No OpenCL kernel functions found";
@@ -116,7 +116,7 @@ ProgramPtr HostCompiler::compile() {
 	 mProgram = newProg;
 	 return newProg;
 	 } else
-	 assert_true(newProg) << "Second pass of OclHostCompiler corrupted the program";
+	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
 	 */
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
@@ -134,7 +134,7 @@ ProgramPtr HostCompiler::compile() {
 			core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
 		// remove unnecessary derefs
 
-		SimpleNodeMapping* h;
+		NodeMapping* h;
 		auto mapper = makeLambdaMapper([this, &h](unsigned index, const NodePtr& element)->NodePtr{
 			// stop recursion at type level
 			if (element->getNodeCategory() == NodeCategory::NC_Type) {
@@ -223,9 +223,9 @@ ProgramPtr HostCompiler::compile() {
 		h = &cleaner;
 		mProgram = h->map(0, mProgram);
 	} else
-		assert_true(newProg) << "Third pass of OclHostCompiler corrupted the program";
+		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 
-	assert_true(mProgram) << "OclHostCompiler corrupted the program";
+	assert(mProgram && "OclHostCompiler corrupted the program");
 
 	return mProgram;
 }

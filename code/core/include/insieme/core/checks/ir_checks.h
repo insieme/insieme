@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -411,7 +411,7 @@ namespace checks {
 			case Message::ERROR: errors.push_back(msg); return;
 			case Message::WARNING: warnings.push_back(msg); return;
 			}
-			assert_fail() << "Invalid message type encountered!";
+			assert(false && "Invalid message type encountered!");
 		}
 
 		/**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,15 +29,13 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #include "range/formula.h"
 #include "range/impl/term.impl.h"
-
-#include "error_handling.h"
 
 static irt_range_formula_1d* _irt_range_formula_1d_alloc(uint32 num_terms) {
 	// allocate the required memory
@@ -315,9 +313,9 @@ static irt_int3_list* _irt_range_term_diff (
 		irt_range_int b_start, irt_range_int b_end, irt_range_int b_step
 ) {
 
-	IRT_ASSERT(a_step > 0, IRT_ERR_INVALIDARGUMENT, "Step size A must not be 0!");
-	IRT_ASSERT(b_step > 0, IRT_ERR_INVALIDARGUMENT, "Step size B must not be 0!");
-	IRT_ASSERT(res->num_entries >= 2 + b_step - 1, IRT_ERR_INTERNAL, "Undefined");
+	assert(a_step > 0 && "Step size A must not be 0!");
+	assert(b_step > 0 && "Step size B must not be 0!");
+	assert(res->num_entries >= 2 + b_step - 1);
 
 	// test whether sets are even intersecting
 	irt_int3 intersection = _irt_range_term_intersect(a_start, a_end, a_step, b_start, b_end, b_step);
@@ -367,7 +365,7 @@ static irt_int3_list* _irt_range_term_diff (
 	}
 
 	// check whether number of terms was right
-	IRT_ASSERT(counter == res->num_entries, IRT_ERR_INTERNAL, "Number of terms wrong");
+	assert(counter == res->num_entries);
 
 	// return result
 	return res;

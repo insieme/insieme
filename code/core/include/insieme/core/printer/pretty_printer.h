@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -99,7 +99,7 @@ struct PrettyPrinter {
 		PRINT_LITERAL_TYPES		= 1<<13,
 		USE_COLOR				= 1<<14,
 		PRINT_DERIVED_IMPL 		= 1<<15,
-		JUST_OUTERMOST_SCOPE	= 1<<16
+		JUST_OUTHERMOST_SCOPE	= 1<<16
 	};
 
 	/**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -111,7 +111,7 @@ namespace dump {
 			}
 
 			std::ostream& operator()(const filter::Filter& filter) const {
-//				assert_fail() << "Not implemented yet!";
+//				assert(false && "Not implemented yet!");
 				return out << " FILTER_NOT_SUPPORTED ";
 			}
 
@@ -292,7 +292,7 @@ namespace dump {
 
 				parameter::Value operator()(const parameter::ListParameterPtr& type) {
 					// consume opening token
-					if (*(next++) != "(") assert_fail() << "No opening bracket!";
+					if (*(next++) != "(") assert(false && "No opening bracket!");
 					vector<parameter::Value> res;
 					while (*next != ")") {
 						res.push_back(loader.resolveValue(next, end, type->getElementType()));
@@ -303,12 +303,12 @@ namespace dump {
 
 				parameter::Value operator()(const parameter::TupleParameterPtr& type) {
 					// consume opening token
-					if (*(next++) != "(") assert_fail() << "No opening bracket!";
+					if (*(next++) != "(") assert(false && "No opening bracket!");
 					vector<parameter::Value> res;
 					for_each(type->getComponents(), [&](const parameter::ParameterPtr& cur) {
 						res.push_back(loader.resolveValue(next, end, cur));
 					});
-					if (*(next++) != ")") assert_fail() << "No closing bracket!";
+					if (*(next++) != ")") assert(false && "No closing bracket!");
 					return parameter::makeValue(res);
 				}
 
@@ -355,18 +355,18 @@ namespace dump {
 				TransformationTypePtr type = catalog.getTransformationType(name);
 
 				// TODO: use an exception to indicate parsing errors
-				assert_true(type) << "Unknown transformation type encountered!";
+				assert(type && "Unknown transformation type encountered!");
 
 				auto paramInfos = type->getParameterInfo();
 				if (paramInfos->isAtomic()) {
 					// consume opening bracket
-					if (*(cur++) != "(") { /* TODO: throw exception */ assert_fail(); };
+					if (*(cur++) != "(") { /* TODO: throw exception */ assert(false); };
 
 					// load value
 					parameter::Value value = resolveValue(cur, end, paramInfos);
 
 					// consume closing bracket
-					if (*(cur++) != ")") { /* TODO: throw exception */ assert_fail(); };
+					if (*(cur++) != ")") { /* TODO: throw exception */ assert(false); };
 
 					// build transformation
 					return type->createTransformation(value);

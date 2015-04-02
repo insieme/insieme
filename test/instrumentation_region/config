@@ -1,4 +1,4 @@
 use_libmath=1
 executionFlags=100
-excludeSteps="insiemecc_c++_sema","insiemecc_run_c++_convert","insiemecc_run_c++_compile","insiemecc_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","insiemecc_run_c++_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check","insiemecc_seq_c_compile","insiemecc_seq_c_execute","insiemecc_seq_c_convert","insiemecc_seq_c_check"
-definitions[insiemecc_run_c_compile]=${definitions[insiemecc_run_c_compile]},"IRT_ENABLE_REGION_INSTRUMENTATION"
+excludeSteps="main_c++_sema","main_run_c++_convert","main_run_c++_compile","main_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","main_run_c++_check","main_seq_c++_convert","main_seq_c++_compile","main_seq_c++_execute","main_seq_c++_check","insiemecc_c++_compile","insiemecc_c++_execute","insiemecc_c++_check","main_seq_compile","main_seq_execute","main_seq_convert","main_seq_check"
+definitions[main_run_compile]=${definitions[main_run_compile]},"IRT_ENABLE_REGION_INSTRUMENTATION"

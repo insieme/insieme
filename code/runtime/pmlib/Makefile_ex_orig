@@ -1,0 +1,17 @@
+CC=g++
+CFLAGS=-c -Wall 
+LDFLAGS= -pthread
+SOURCES=AbstractParser.cpp  AbstractAnalyzer.cpp AbstractFileObserver.cpp CSVAnalyzer.cpp CSVParser.cpp EthernetLogDisposer.cpp EthernetParser.cpp EthernetParser2.cpp EthernetReceiver.cpp main.cpp JNIAnalyzer.cpp JNICallback.cpp LinuxFileObserver.cpp LogFileCreator.cpp MeasurementAnalyzer.cpp MeasurementInfo.cpp PMClient.cpp PMFileParser.cpp PMMemoryParser.cpp ReaderWriter.cpp Runnable.cpp ServerParser.cpp SessionObject.cpp SimpleFileCreator.cpp SThread.cpp TCPClient.cpp TestClient.cpp TestRunnable.cpp unsupported_operation.cpp UtilityClass.cpp  WinCSVAnalyzer.cpp ListenerThread.cpp SessionListener.cpp
+OBJECTS=$(SOURCES:.cpp=.o)
+EXECUTABLE=client
+
+all: $(SOURCES) $(EXECUTABLE)
+	
+$(EXECUTABLE): $(OBJECTS) 
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+
+.cpp.o:
+	$(CC) $(CFLAGS) $< -o $@
+	
+clean:
+	\rm *.o	

@@ -45,7 +45,7 @@ namespace std {
 			#undef CONCRETE
 		}
 
-		assert_fail() << "Unsupported node type encountered!";
+		assert(false && "Unsupported node type encountered!");
 		return out << "UnknownType";
 	}
 

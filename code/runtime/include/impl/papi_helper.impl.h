@@ -60,14 +60,11 @@
  *
  */
 
-#ifdef IRT_USE_PAPI
-
-#include "papi.h"
-
-#include <string.h>
-
 #include "worker.h"
 #include "irt_context.h"
+
+#ifdef IRT_USE_PAPI
+#include "papi.h"
 
 /*
  * initializes general papi support

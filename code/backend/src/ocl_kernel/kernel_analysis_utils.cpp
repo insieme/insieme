@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -102,11 +102,11 @@ ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const 
 
 /*
  * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
- * its value is returned, otherwise an assertion is raised
+ * it's value is returned, otherwise an assertion is raised
  */
 size_t InductionVarMapper::extractIndexFromArg(CallExprPtr call) const {
 	ExpressionList args = call->getArguments();
-	assert_gt(args.size(), 0) << "Call to opencl get id function must have one argument";
+	assert(args.size() > 0 && "Call to opencl get id function must have one argument");
 	size_t retval = 0;
 
 	// try to read literal
@@ -115,7 +115,7 @@ size_t InductionVarMapper::extractIndexFromArg(CallExprPtr call) const {
 	if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
 		retval = dim->getValueAs<size_t>();
 
-	assert_le(retval, 2) << "Argument of opencl get id function must be a literal between 0 an 2";
+	assert(retval <= 2 && "Argument of opencl get id function must be a literal between 0 an 2");
 	return retval;
 }
 
@@ -158,7 +158,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 				else
 					replacements[lhs] = rhs;
 				return builder.getNoOp();
-				// remove variable from cache since its mapping has been changed now
+				// remove variable from cache since it's mapping has been changed now
 			} else {
 				// if we have a replacement for the rhs, use the it instead of the lhs
 				// only do this if it is not related to any global buffer, they should not be replaced
@@ -310,16 +310,16 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 
 		if(match) {
 			globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
-			assert_true(globalVar) << "_ocl_unwrap_global should only be used to access ocl global variables";
+			assert(globalVar && "_ocl_unwrap_global should only be used to access ocl global variables");
 
 			idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
-			assert_true(idxExpr) << "Cannot extract index expression from access to ocl global variable";
+			assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
 		}
 
 		// check if access is to an alias of a global variable
 		if(globalAliases.find(idx->getArgument(0)) != globalAliases.end()) {
 			globalVar = globalAliases[idx->getArgument(0)];
-			assert_true(globalVar) << "Accessing alias to ocl global variable in a unexpected way";
+			assert(globalVar && "Accessing alias to ocl global variable in a unexpected way");
 
 			idxExpr = dynamic_pointer_cast<const Expression>(idx->getArgument(1));
 		}

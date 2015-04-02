@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -193,9 +193,9 @@ namespace rulebased {
 				core::IRBuilder builder(manager);
 
 				// resolve start/end variables
-				assert_true(match.isVarBound(var_start)) << "Start variable not bound to value!";
-				assert_true(match.isVarBound(var_end)) << "End variable not bound to value!";
-				assert_true(match.isVarBound(var_step)) << "Step variable not bound to value!";
+				assert(match.isVarBound(var_start) && "Start variable not bound to value!");
+				assert(match.isVarBound(var_end)   && "End variable not bound to value!");
+				assert(match.isVarBound(var_step)  && "Step variable not bound to value!");
 
 				const auto& start_value = match.getVarBinding(var_start).getValue();
 				const auto& end_value   = match.getVarBinding(var_end).getValue();

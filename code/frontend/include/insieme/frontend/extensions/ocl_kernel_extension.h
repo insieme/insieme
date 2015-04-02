@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
 namespace insieme {
 namespace frontend {
@@ -45,9 +45,9 @@ namespace extensions {
 
 // extension for OpenCl kernel files
 
-class OclKernelExtension : public FrontendExtension {
+class OclKernelPlugin : public FrontendPlugin {
 public:
-	OclKernelExtension() : FrontendExtension() {
+	OclKernelPlugin() : FrontendPlugin() {
 		injectedHeaders.push_back("./ocl_device.h");
 	}
 
@@ -66,6 +66,6 @@ private:
     virtual core::ProgramPtr 			 IRVisit(core::ProgramPtr& prog);
 };
 
-} //namespace extensions
+} //namespace plugin
 } //namespace frontend
-} //namespace insieme
+} //namespace extensions

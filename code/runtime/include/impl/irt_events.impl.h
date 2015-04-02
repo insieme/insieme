@@ -302,10 +302,10 @@ void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short
 
 
 // WI events //////////////////////////////////////
-IRT_DEFINE_EVENTS(work_item, wi, IRT_WI_EV_NUM)
+IRT_DEFINE_EVENTS(work_item, wi, IRT_WI_EV_NUM);
 
 // WG events //////////////////////////////////////
-IRT_DEFINE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
+IRT_DEFINE_EVENTS(work_group, wg, IRT_WG_EV_NUM);
 
 
 

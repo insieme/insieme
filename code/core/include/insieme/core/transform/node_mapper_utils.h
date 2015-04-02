@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -50,7 +50,7 @@ namespace transform {
 /**
  * A common base class for implementing node mappings which benefit from caching results
  */
-class CachedNodeMapping : public SimpleNodeMapping {
+class CachedNodeMapping : public NodeMapping {
 
 	/**
 	 * Defines the type of the internal factory used within the cache.
@@ -124,7 +124,7 @@ protected:
  * A utility class mapping a child list of a node using some other node mapping. After
  * mapping all children, it verifies whether any modification has been applied.
  */
-class ChildListMapping : public SimpleNodeMapping {
+class ChildListMapping : public NodeMapping {
 
 	/**
 	 * The mapped list of children.
@@ -143,8 +143,8 @@ public:
 	 * Creates a new child list mapping based on the given child list and the given mapping.
 	 * The represented list of replaced child nodes will be computed using the given list and mapping.
 	 */
-	ChildListMapping(const NodeList& list, SimpleNodeMapping& mapping)
-		: SimpleNodeMapping(), children(mapping.mapAll(list)), different(!equals(children, list)) {}
+	ChildListMapping(const NodeList& list, NodeMapping& mapping)
+		: NodeMapping(), children(mapping.mapAll(list)), different(!equals(children, list)) {}
 
 	/**
 	 * Create a new child list mapping based on the given list of children. The optional boolean
@@ -155,7 +155,7 @@ public:
 	 * @param different a flag allowing to determine whether the given list of children differs from the original child list
 	 */
 	ChildListMapping(const NodeList& children, bool different = true)
-		: SimpleNodeMapping(), children(children), different(different) {}
+		: NodeMapping(), children(children), different(different) {}
 
 	/**
 	 * Determines whether this mapping would cause any modification when being applied

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -70,7 +70,7 @@ namespace insieme { namespace analysis { namespace polyhedral {
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
-		assert_eq(regionStmts.size(), stackInitialSize);				 \
+		assert(regionStmts.size() == stackInitialSize);				 \
 	};																 \
 	FinalActions __check_stack_size( std::bind(checkPostCond, regionStmts.size()) );
 
@@ -89,7 +89,7 @@ ScopVisitor::ScopVisitor(std::vector<NodeAddress> &scopList): IRVisitor<Iteratio
 
 IterationVector ScopVisitor::markAccessExpression(const ExpressionPtr& expr) {
 	// If the expression is already annotated because shared, then we simply return the iteration
-	// vector previously computed (because by definition it has to be the same)
+	// vector precendly computed (because by definition it has to be the same)
 	if (expr->hasAnnotation(scop::AccessFunction::KEY)) {
 		return expr->getAnnotation(scop::AccessFunction::KEY)->getIterationVector();
 	}
@@ -258,7 +258,7 @@ AffineConstraintPtr ScopVisitor::extractFrom( IterationVector& iterVec, const Ex
 			// in order to handle the ceil case we have to set a number of constraint
 			// which solve a linear system determining the value of those operations
 			Formula&& den = toFormula(callExpr->getArgument(1));
-			assert_true(callExpr);
+			assert( callExpr );
 			if (!den.isConstant()) {
 				THROW_EXCEPTION(NotASCoP, "Denominator in modulo operation must be a constant", callExpr);
 			}
@@ -313,7 +313,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 	AffineConstraintPtr&& lbCons = extractFrom( ret, lb, iter, ConstraintType::GE );
 	AffineConstraintPtr&& ubCons = extractFrom( ret, ub, iter, ConstraintType::LT );
 
-	assert_true(lbCons && ubCons) << "Wrong conversion of lb and ub to set of constraints";
+	assert( lbCons && ubCons && "Wrong conversion of lb and ub to set of constraints" );
 
 	// set the constraint: iter >= lb && iter < ub
 	AffineConstraintPtr&& domain = lbCons and ubCons;
@@ -325,7 +325,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 	if ( stride.isOne() ) { return domain; }
 
 	// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
-	//assert_true(stride.isConstant()) << "Stride value of for loop is not constant.";
+	// assert(stride.isConstant() && "Stride value of for loop is not constant.");
 
 	int stride_size = stride.getTerms().front().second.getNumerator();
 
@@ -336,7 +336,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 
 	// Gets the list of lower bounds as a disjunction of eleemnts
 	DisjunctionList&& bounds = getConjunctions(toDNF(lbCons));
-	assert_true(!bounds.empty() && !bounds.front().empty());
+	assert(!bounds.empty() && !bounds.front().empty());
 
 	// If we are in a situation where we only have a single bound for the loop then we can set the
 	// stride starting from this bound
@@ -344,7 +344,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 
 		for_each(bounds.front(), [&](const AffineConstraintPtr& cur) {
 				// detect whether this constraint is an equality
-				assert_eq(cur->getCombinerType(), insieme::utils::CombinerType::CT_RAW);
+				assert(cur->getCombinerType() == insieme::utils::CombinerType::CT_RAW);
 
 				const RawAffineConstraint& rc = static_cast<const RawAffineConstraint&>(*cur);
 
@@ -379,7 +379,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 	for_each(bounds, [&](const ConjunctionList& cur) {
 
 			for_each(cur, [&](const AffineConstraintPtr& cur) {
-					assert_eq(cur->getCombinerType(), insieme::utils::CombinerType::CT_RAW);
+					assert(cur->getCombinerType() == insieme::utils::CombinerType::CT_RAW);
 					const RawAffineConstraint& rc = static_cast<const RawAffineConstraint&>(*cur);
 
 					// We are not interested in equality constraints
@@ -404,7 +404,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 				});
 		});
 
-	assert_true(newBound && boundEq);
+	assert(newBound && boundEq);
 
 	// we now impose the strided domain on the boundVar iterator previously introduced
 	AffineFunction f(ret);
@@ -419,7 +419,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 	STACK_SIZE_GUARD;
 
-	assert_true(subScops.empty());
+	assert(subScops.empty());
 
 	while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
 		addr = addr.getAddressOfChild((addr->getNodeType()==NT_MarkerStmt?1:2)); // sub-statement or expression
@@ -462,7 +462,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 					IterationVector iv;
 
 					if (displ.isFormula() && displ.toFormula() == 1) {
-						assert_true(std::get<1>(cur.second).isFormula()) << "The access index is not a Formula";
+						assert(std::get<1>(cur.second).isFormula() && "The access index is not a Formula");
 
 						ExpressionPtr&& index = arithmetic::toIR(mgr, std::get<1>(cur.second).toFormula());
 						index->addAnnotation(std::make_shared<scop::AccessFunction>(iv, AffineFunction(iv, index)));
@@ -551,7 +551,7 @@ IterationDomain ScopVisitor::extractFromCondition(IterationVector& iv, const Exp
 		);
 	}
 
-	assert_eq(cond->getNodeType(), NT_CallExpr);
+	assert (cond->getNodeType() == NT_CallExpr);
 	const CallExprPtr& callExpr = cond.as<CallExprPtr>();
 
 	// skip scalar casts
@@ -580,7 +580,7 @@ IterationDomain ScopVisitor::extractFromCondition(IterationVector& iv, const Exp
 		case BasicGenerator::LNot:
 			 return !extractFromCondition(iv, callExpr->getArgument(0));
 		default:
-			assert_fail() << "Unsupported boolean operator";
+			assert(false && "Unsupported boolean operator");
 			break;
 		}
 	}
@@ -588,13 +588,13 @@ IterationDomain ScopVisitor::extractFromCondition(IterationVector& iv, const Exp
 	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) ||
 		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) )
 	{
-		assert_eq(callExpr->getArguments().size(), 2) << "Malformed expression";
+		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
 		BasicGenerator::Operator&& op =
 			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() );
 
 		// A constraints is normalized having a 0 on the right side, therefore we build a
-		// temporary expression by subtracting the rhs from the lhs, Example:
+		// temporary expression by subtracting the rhs to the lhs, Example:
 		//
 		// if (a<b) { }    ->    if( a-b<0 ) { }
 		try {
@@ -610,7 +610,7 @@ IterationDomain ScopVisitor::extractFromCondition(IterationVector& iv, const Exp
 				case BasicGenerator::Gt: type = ConstraintType::GT; break;
 				case BasicGenerator::Ge: type = ConstraintType::GE; break;
 				default:
-					assert_fail() << "Operation not supported!";
+					assert(false && "Operation not supported!");
 			}
 
 			core::ExpressionPtr&& leftExpr = callExpr->getArgument(0);
@@ -718,14 +718,14 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 
 	std::vector<scop::Stmt> ifScopStmts;
 
-	assert_eq(regionStmts.top().size(), 1);
+	assert(regionStmts.top().size() == 1);
 	ifScopStmts.push_back(regionStmts.top().front());
 
 	// we saved the else body statements, therefore we can pop the record we allocated for it
 	regionStmts.pop();
 	faElse.setEnabled(false);
 
-	assert_eq(regionStmts.top().size(), 1);
+	assert(regionStmts.top().size() == 1);
 	ifScopStmts.push_back(regionStmts.top().front());
 
 	// we saved the then body statements, therefore we can pop the record we allocated for it
@@ -743,10 +743,11 @@ IterationVector ScopVisitor::visitIfStmt(const IfStmtAddress& ifStmt) {
 				);
 
 	// Checkpost conditions
-	assert_true(ifStmt->hasAnnotation(scop::ScopRegion::KEY) &&
+	assert (ifStmt->hasAnnotation(scop::ScopRegion::KEY) &&
 			ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY) &&
-			ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY) )
-			<< "IfStmt Post-Conditions check failed";
+			ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY) &&
+			"IfStmt Post-Conditions check failed"
+			);
 
 	subScops.push_back(ifStmt);
 	return ret;
@@ -801,7 +802,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// If the case statement is not a compound statement, the ScopRegion annotation will
 			// not be inserted by default. Therefore we add the annotation to simplify the
 			// resolution of the SCoP when the analysis is invoked
-			assert_true(stmtAddr->hasAnnotation(scop::ScopRegion::KEY));
+			assert (stmtAddr->hasAnnotation(scop::ScopRegion::KEY));
 
 			AffineFunction af(ret, arithmetic::toFormula(switchStmt->getSwitchExpr()) -
 							  arithmetic::toFormula(exprAddr.getAddressedNode()));
@@ -831,7 +832,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			// If the case statement is not a compound statement, the ScopRegion annotation will
 			// not be inserted by default. Therefore we add the annotation to simplify the
 			// resolution of the SCoP when the analysis is invoked
-			assert_true(defAddr->hasAnnotation(scop::ScopRegion::KEY));
+			assert (defAddr->hasAnnotation(scop::ScopRegion::KEY));
 
 			ret = merge(ret, iv);
 			scops.push_back(SubScop(defAddr, defaultCons));
@@ -852,7 +853,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 			}
 
 		}
-		assert_true(ex);
+		assert (ex);
 		RETHROW_EXCEPTION(NotASCoP, *ex, "", switchStmt.getAddressedNode());
 	}
 
@@ -875,7 +876,7 @@ IterationVector ScopVisitor::visitSwitchStmt(const SwitchStmtAddress& switchStmt
 IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 	STACK_SIZE_GUARD;
 
-	assert_true(subScops.empty());
+	assert(subScops.empty());
 
 	// if we already visited this forStmt, just return the precomputed iteration vector
 	if (forStmt->hasAnnotation(scop::ScopRegion::KEY)) {
@@ -923,7 +924,7 @@ IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 				mgr, ret, forStmt->getIterator(), forStmt->getStart(), forPtr->getEnd(), step);
 
 			IterationDomain cons(bounds);
-			assert_false(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+			assert(!forStmt->hasAnnotation(scop::ScopRegion::KEY));
 
 			forStmt->addAnnotation(std::make_shared<scop::ScopRegion>(
 				forStmt.getAddressedNode(), ret, cons, regionStmts.top(), toSubScopList(ret, subScops)));
@@ -974,7 +975,7 @@ IterationVector ScopVisitor::visitCompoundStmt(const CompoundStmtAddress& compSt
 	bool isSCOP = true;
 	std::vector<NodeAddress> scops;
 
-	assert_true(subScops.empty());
+	assert(subScops.empty());
 
 	if (compStmt->hasAnnotation(scop::ScopRegion::KEY)) {
 		scop::ScopRegion& ann = *compStmt->getAnnotation(scop::ScopRegion::KEY);
@@ -1032,7 +1033,7 @@ IterationVector ScopVisitor::visitCompoundStmt(const CompoundStmtAddress& compSt
 				postProcessSCoP(addr, scopList);
 			}
 		}
-		assert_true(cause);
+		assert(cause);
 		RETHROW_EXCEPTION(NotASCoP, *cause, "", compStmt.getAddressedNode());
 	}
 
@@ -1065,7 +1066,7 @@ IterationVector ScopVisitor::visitLambda(const LambdaAddress& lambda) {
 	STACK_SIZE_GUARD;
 
 	//LOG(INFO) << "visitLambda:\n" << printer::PrettyPrinter(lambda);
-	assert_true(subScops.empty());
+	assert(subScops.empty());
 
 	if (lambda->hasAnnotation(scop::ScopRegion::KEY)) {
 		// if the SCopRegion annotation is already attached, it means we already visited this
@@ -1084,8 +1085,8 @@ IterationVector ScopVisitor::visitLambda(const LambdaAddress& lambda) {
 		StatementAddress addr = AS_STMT_ADDR(lambda->getBody());  /*getBody()*/
 		bodyIV = visitStmt(addr);
 
-		assert_true(addr->hasAnnotation(scop::ScopRegion::KEY));
-		assert_eq(subScops.size(), 1) << "A Lambda cannot have more than one sub SCoP";
+		assert (addr->hasAnnotation(scop::ScopRegion::KEY));
+		assert(subScops.size() == 1 && "A Lambda cannot have more than one sub SCoP");
 
 		lambda->addAnnotation(
 					std::make_shared<scop::ScopRegion>(
@@ -1146,13 +1147,13 @@ IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 	iterVec = visitNode(func);
 
 	if (func->getNodeType() == NT_LambdaExpr) {
-		assert_eq(subScops.size(), 1);
+		assert(subScops.size() == 1);
 
 		lambdaScop = subScops.front();
 	}
 
 	if (func->getNodeType() == NT_LambdaExpr) {
-		assert_true(lambdaScop);
+		assert(lambdaScop);
 
 		// check if called function has multiple returns
 		LambdaExprPtr lex = static_pointer_cast<const LambdaExpr>(func.getAddressedNode());
@@ -1201,7 +1202,7 @@ IterationVector ScopVisitor::visitProgram(const ProgramAddress& prog) {
 		try {
 			NodeAddress&& addr = prog.getAddressOfChild(i);
 			visit(addr);
-			assert_eq(subScops.size(), 1);
+			assert(subScops.size() == 1);
 			postProcessSCoP(subScops.front(), scopList);
 		} catch(const NotASCoP& e) {
 			subScops.empty();

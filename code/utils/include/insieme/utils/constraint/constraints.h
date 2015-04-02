@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -474,7 +474,7 @@ namespace constraint {
 			TypedVariable<L> b;
 		public:
 			Subset(const TypedVariable<L>& a, const TypedVariable<L>& b)
-				: a(a), b(b) { assert_ne(a, b); }
+				: a(a), b(b) { assert(a != b); }
 			Variables getInputs() const {
 				return toVector<Variable>(a);
 			}

@@ -36,15 +36,11 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
-
-namespace insieme {
-namespace frontend {
-namespace extensions {
+#include "insieme/frontend/extensions/frontend_plugin.h"
 
 using namespace insieme;
 
-class VariadicArgumentsExtension : public insieme::frontend::extensions::FrontendExtension {
+class VariadicArgumentsPlugin : public insieme::frontend::extensions::FrontendPlugin {
 
     virtual core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) ;
 
@@ -60,7 +56,3 @@ class VariadicArgumentsExtension : public insieme::frontend::extensions::Fronten
 
 	virtual insieme::core::ProgramPtr  IRVisit(insieme::core::ProgramPtr& prog);
 };
-
-} // extensions
-} // frontend
-} // insieme

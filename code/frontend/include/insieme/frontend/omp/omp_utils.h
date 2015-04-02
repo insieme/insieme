@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -64,7 +64,7 @@ struct GlobalRequiredAnnotation : public core::NodeAnnotation {
 core::StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog);
 
 // Utility for passing global to functions that require it, and replacing literals with global accesses
-class GlobalMapper : public core::SimpleNodeMapping {
+class GlobalMapper : public core::NodeMapping {
 	core::NodeManager& nodeMan;
 	core::IRBuilder build;
 	core::VariablePtr curVar;

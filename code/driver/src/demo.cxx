@@ -48,7 +48,7 @@
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/backend/runtime/runtime_backend.h"
-#include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/cmd/options.h"
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
@@ -74,12 +74,11 @@ int main(int argc, char** argv) {
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
 	unsigned unrollingFactor = 1;
-    std::vector<std::string> arguments(argv, argv+argc);
-	cmd::Options options = cmd::Options::parse(arguments)
+	cmd::Options options = cmd::Options::parse(argc, argv)
 		// one extra parameter - unrolling factor, default should be 5
 		("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
 	;
-	if (!options.valid) return (options.settings.help)?0:1;
+	if (!options.valid) return (options.help)?0:1;
 
 
 	// Step 2: load input code
@@ -124,7 +123,7 @@ int main(int argc, char** argv) {
 	cp::Compiler compiler = cp::Compiler::getDefaultC99Compiler();
 	compiler = cp::Compiler::getOptimizedCompiler(compiler);
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
+	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done
 	return (success)?0:1;

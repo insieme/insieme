@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -224,7 +224,7 @@ namespace {
 		 */
 		bool visitNode(const NodePtr& node, TypeVariableSet& boundVars) {
 			LOG(FATAL) << "Reaching " << *node << " within IsGeneric visitor!";
-			assert_fail() << "Should not be reached!";
+			assert(false && "Should not be reached!");
 			return false;
 		}
 
@@ -341,7 +341,7 @@ bool isVolatileType(const TypePtr& type) {
 }
 
 TypePtr getVolatileType(const TypePtr& type) {
-	assert_true(isVolatileType(type));
+	assert( isVolatileType(type) );
 	return core::static_pointer_cast<const core::GenericType>( type )->getTypeParameter()[0];
 }
 
@@ -831,7 +831,7 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
 
 
 bool contains(const NodePtr& code, const NodePtr& element) {
-	assert_true(element) << "Element to be searched must not be empty!";
+	assert(element && "Element to be searched must not be empty!");
 	bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
 	return code && makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<bool>::type& rec)->bool { return *cur == *element || any(cur->getChildList(), rec); }, checkTypes)(code);
 }
@@ -884,7 +884,7 @@ namespace {
 			if (!VisitScopes) return true;
 
 			// check the parameter
-			assert_true(::contains(lambda->getParameterList(), param)) << "Asking for non-existing parameter.";
+			assert(::contains(lambda->getParameterList(), param) && "Asking for non-existing parameter.");
 
 			// simple case for non-recursive lambdas
 			if (!lambda->isRecursive()) {
@@ -1037,15 +1037,15 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 
 		// if only one is, it needs to be unrolled
 		if (a->getNodeType() == NT_RecType) {
-			assert_ne(b->getNodeType(), NT_RecType);
+			assert(b->getNodeType() != NT_RecType);
 			return compareTypes(a.as<RecTypePtr>()->unroll(), b);
 		}
 
 		if (b->getNodeType() == NT_RecType) {
-			assert_ne(a->getNodeType(), NT_RecType);
+			assert(a->getNodeType() != NT_RecType);
 			return compareTypes(a, b.as<RecTypePtr>()->unroll());
 		}
-		assert_fail() << "How could you get here?";
+		assert(false && "How could you get here?");
 	}	
 	
 	//RefType

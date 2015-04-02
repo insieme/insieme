@@ -834,7 +834,7 @@ namespace parser {
 		));
 
 		ASSERT_TRUE(job);
-		EXPECT_EQ("job [] (bind(){rec v0.{v0=fun() {int v1 = 2;}}()})", toString(*job));
+		EXPECT_EQ("job [] (default: bind(){rec v0.{v0=fun() {int v1 = 2;}}()})", toString(*job));
 	}
 
 	TEST(IR_Parser2, LargeCode) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -184,7 +184,105 @@ namespace integration {
 				}, deps,RUN);
 			}
 
-			TestStep createInsiemeccSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
+			TestStep createInsiemeccCompStep(const string& name, Language l) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
+					std::stringstream cmd;
+					TestSetup set=setup;
+
+					// start with executable
+					cmd<<props["compiler"];
+
+					// add include directories
+					for(const auto& cur : test.getIncludeDirs()) {
+						cmd << " -I" << cur.string();
+					}
+
+					// add external lib dirs
+					for(const auto& cur : test.getLibDirs()) {
+						cmd <<" -L"<<cur.string();
+					}
+
+					// add external libs
+					for(const auto& cur : test.getLibNames()) {
+						cmd <<" -l"<<cur;
+					}
+
+					// add input files
+					for(const auto& cur : test.getFiles()) {
+						cmd << " " << cur.string();
+					}
+
+					// disable multithreading
+					set.numThreads=0;
+
+					std::vector<string> flags=test.getCompilerArguments(name);
+					// get all flags defined by properties
+					for (string s: flags){
+						cmd <<" "<<s;
+					}
+
+					//get definitions
+					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
+						cmd<<" -D"<<def.first<<"="<<def.second;
+					});
+
+					//append intercept patterns
+					for(const auto& cur : test.getInterceptedNameSpaces()) {
+						cmd << " --intercept " << cur;
+					}
+					//append intercepted header file dirs
+					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
+						cmd << " --intercept-include " << cur.string();
+					}
+					cmd<<" ";
+
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
+					// set output file, stdOutFile and stdErrFile
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insiemecc";
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
+
+					// run it
+					return runner.runCommand(name, set, props, cmd.str());
+				},std::set<std::string>(),COMPILE);
+			}
+
+			TestStep createInsiemeccRunStep(const string& name, const Dependencies& deps = Dependencies(), int numThreads=0) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
+					std::stringstream cmd;
+					TestSetup set=setup;
+					auto props = test.getPropertiesFor(name);
+
+					// get execution directory
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+
+					// start with executable
+					cmd << executionDirectory << "/" << test.getBaseName() << ".insiemecc";
+
+					// add arguments
+					cmd << " " << props["executionFlags"];
+
+					// set number of threads
+					set.numThreads=numThreads;
+
+					// set output files
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
+
+					// run it
+					return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
+				}, deps,RUN);
+			}
+
+
+			TestStep createMainSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
 					auto props = test.getPropertiesFor(name);
 
@@ -200,10 +298,10 @@ namespace integration {
 					cmd << props["compiler"];
 
 					// enable semantic tests
-					cmd << " --check-sema-only";
+					cmd << " -S";
 
 					// also dump IR
-					std::string irFile = executionDirectory + "/" + test.getBaseName() + ".ir";
+					std::string irFile=executionDirectory + "/" + test.getBaseName() + ".ir";
 					cmd << " --dump-ir " << irFile;
 
 					// add include directories
@@ -245,11 +343,10 @@ namespace integration {
 
 					// run it
 					return runner.runCommand(name, set, props, cmd.str(),irFile);
-//					return runner.runCommand(name, set, props, cmd.str(),set.stdOutFile);
 				}, deps,COMPILE);
 			}
 
-			TestStep createInsiemeccConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
+			TestStep createMainConversionStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
 					auto props = test.getPropertiesFor(name);
 
@@ -259,18 +356,9 @@ namespace integration {
 					// start with executable
 					cmd << props["compiler"];
 
-					string executionDirectory=test.getDirectory().string();
-					if(!set.executionDir.empty())
-						executionDirectory=set.executionDir;
-
 					// determine backend
 					string be = getBackendKey(backend);
-
-					// source-to-source compilation only
-					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
-					cmd << " --dump-trg-only " << set.outputFile;
-
-					cmd << " --backend " << be;
+					cmd << " -b " << be;
 
 					// add include directories
 					for(const auto& cur : test.getIncludeDirs()) {
@@ -306,8 +394,12 @@ namespace integration {
 					}
 					cmd<<" ";
 
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
 	
-					// set stdOut file and stdErr file
+					// set output file, stdOut file and stdErr file
+					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be+"."+getExtension(l);
 					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
 
@@ -316,7 +408,7 @@ namespace integration {
 				}, deps,COMPILE);
 			}
 
-			TestStep createInsiemeccCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
+			TestStep createMainCompilationStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
 					auto props = test.getPropertiesFor(name);
 
@@ -388,7 +480,7 @@ namespace integration {
 				}, deps,COMPILE);
 			}
 
-			TestStep createInsiemeccExecuteStep(const string& name, Backend backend, const Dependencies& deps = Dependencies(), int numThreads=0, SchedulingPolicy sched=SCHED_UNDEFINED) {
+			TestStep createMainExecuteStep(const string& name, Backend backend, const Dependencies& deps = Dependencies(), int numThreads=0, SchedulingPolicy sched=SCHED_UNDEFINED) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
 					std::stringstream cmd;
 					TestSetup set=setup;
@@ -422,7 +514,7 @@ namespace integration {
 				}, deps,RUN);
 			}
 
-			TestStep createInsiemeccCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies(), int numThreads=0, SchedulingPolicy sched=SCHED_UNDEFINED) {
+			TestStep createMainCheckStep(const string& name, Backend backend, Language l, const Dependencies& deps = Dependencies(), int numThreads=0, SchedulingPolicy sched=SCHED_UNDEFINED) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
 					auto props = test.getPropertiesFor(name);
 
@@ -459,17 +551,65 @@ namespace integration {
 					// start with executable
 					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
 
+					//tweak lang string for c test cases
+					if(l==C)
+						langstr="_";
 					// pipe result to output file
 					if(numThreads)
-						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".main_"+be+langstr+"execute_"+schedString+std::to_string(numThreads)+".out";
 					else
-						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+be+langstr+"execute.out";
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".main_"+be+langstr+"execute.out";
 
 
 					// add awk pattern
 					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
 					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
 					cmd << " "<< outputAwk;
+
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
+
+					// run it
+					return runner.runCommand(name, set, props, cmd.str());
+				}, deps,CHECK);
+			}
+
+			TestStep createInsiemeccCheckStep(const string& name, Language l, const Dependencies& deps = Dependencies(), int numThreads=0) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
+					auto props = test.getPropertiesFor(name);
+
+					std::string langstr("c");
+					if(l==CPP)
+						langstr=string("c++");
+
+					std::stringstream cmd;
+					TestSetup set=setup;
+
+					// define comparison script
+					cmd << props["sortdiff"];
+
+					// get execution dir
+					string executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory=set.executionDir;
+	
+
+					// start with executable
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref_"+langstr+"_execute.out";
+
+					// pipe result to output file
+					if(numThreads)
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute_"+std::to_string(numThreads)+".out";
+					else
+						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+langstr+"_execute.out";
+
+					// add awk pattern
+					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
+					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
+					cmd << " "<< outputAwk;
+
+					// disable multithreading
+					set.numThreads=0;
 
 					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
@@ -551,33 +691,42 @@ namespace integration {
 				add(createRefRunStep(std::string("ref_c++_execute_")+std::to_string(i), { "ref_c++_compile" },i));
 			}
 
-			add(createInsiemeccSemaStep("insiemecc_c_sema", C));
-			add(createInsiemeccSemaStep("insiemecc_c++_sema", CPP));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c_convert", Sequential, C));
-			add(createInsiemeccConversionStep("insiemecc_run_c_convert", Runtime, C));
-
-			add(createInsiemeccConversionStep("insiemecc_seq_c++_convert", Sequential, CPP));
-			add(createInsiemeccConversionStep("insiemecc_run_c++_convert", Runtime, CPP));
-
-			add(createInsiemeccCompilationStep("insiemecc_seq_c_compile", Sequential, C, { "insiemecc_seq_c_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c_compile", Runtime, C, { "insiemecc_run_c_convert" }));
-
-			add(createInsiemeccCompilationStep("insiemecc_seq_c++_compile", Sequential, CPP, { "insiemecc_seq_c++_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c++_compile", Runtime, CPP, { "insiemecc_run_c++_convert" }));
-
-			// main seq execute
-			add(createInsiemeccExecuteStep("insiemecc_seq_c_execute", Sequential, { "insiemecc_seq_c_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_seq_c++_execute", Sequential, { "insiemecc_seq_c++_compile" }));
-
-			// main seq check
-			add(createInsiemeccCheckStep("insiemecc_seq_c_check", Sequential, C, { "insiemecc_seq_c_execute", "ref_c_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_seq_c++_check", Sequential, CPP, { "insiemecc_seq_c++_execute", "ref_c++_execute" }));
+			add(createInsiemeccCompStep("insiemecc_c_compile", C));
+			add(createInsiemeccCompStep("insiemecc_c++_compile", CPP));
 
 			for(int i:threadList){
-				// insiemecc_run execute
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_")+std::to_string(i), Runtime, { "insiemecc_run_c_compile" },i));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_")+std::to_string(i), Runtime, { "insiemecc_run_c++_compile" },i));
+				add(createInsiemeccRunStep(std::string("insiemecc_c_execute_")+std::to_string(i), { "insiemecc_c_compile" },i));
+				add(createInsiemeccRunStep(std::string("insiemecc_c++_execute_")+std::to_string(i), { "insiemecc_c++_compile" },i));
+			}
+
+			add(createMainSemaStep("main_c_sema", C));
+			add(createMainSemaStep("main_c++_sema", CPP));
+
+			add(createMainConversionStep("main_seq_convert", Sequential, C));
+			add(createMainConversionStep("main_run_convert", Runtime, C));
+
+			add(createMainConversionStep("main_seq_c++_convert", Sequential, CPP));
+			add(createMainConversionStep("main_run_c++_convert", Runtime, CPP));
+
+			add(createMainCompilationStep("main_seq_compile", Sequential, C, { "main_seq_convert" }));
+			add(createMainCompilationStep("main_run_compile", Runtime, C, { "main_run_convert" }));
+
+			add(createMainCompilationStep("main_seq_c++_compile", Sequential, CPP, { "main_seq_c++_convert" }));
+			add(createMainCompilationStep("main_run_c++_compile", Runtime, CPP, { "main_run_c++_convert" }));
+
+			// main seq execute
+			add(createMainExecuteStep("main_seq_execute", Sequential, { "main_seq_compile" }));
+			add(createMainExecuteStep("main_seq_c++_execute", Sequential, { "main_seq_c++_compile" }));
+
+			// main seq check
+			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
+			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
+
+			for(int i:threadList){
+				// main_run execute
+				add(createMainExecuteStep(std::string("main_run_execute_")+std::to_string(i), Runtime, { "main_run_compile" },i));
+				add(createMainExecuteStep(std::string("main_run_c++_execute_")+std::to_string(i), Runtime, { "main_run_c++_compile" },i));
 
 				// ref check
 				if(i!=1){
@@ -585,37 +734,40 @@ namespace integration {
 					add(createRefCheckStep(std::string("ref_c++_check_")+std::to_string(i),CPP,{"ref_c++_execute",std::string("ref_c++_execute_")+std::to_string(i)},i));
 				}
 
-				// insiemecc_run check
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_")+std::to_string(i), Runtime, C, { std::string("insiemecc_run_c_execute_")+std::to_string(i), "ref_c_execute" },i));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_")+std::to_string(i), Runtime, CPP, { std::string("insiemecc_run_c++_execute_")+std::to_string(i), "ref_c++_execute"},i));
+				// main_run check
+				add(createMainCheckStep(std::string("main_run_check_")+std::to_string(i), Runtime, C, { std::string("main_run_execute_")+std::to_string(i), "ref_c_execute" },i));
+				add(createMainCheckStep(std::string("main_run_c++_check_")+std::to_string(i), Runtime, CPP, { std::string("main_run_c++_execute_")+std::to_string(i), "ref_c++_execute"},i));
 
+				// insiemecc check
+				add(createInsiemeccCheckStep(std::string("insiemecc_c_check_")+std::to_string(i), C, { std::string("insiemecc_c_execute_")+std::to_string(i), "ref_c_execute" },i));
+				add(createInsiemeccCheckStep(std::string("insiemecc_c++_check_")+std::to_string(i), CPP, { std::string("insiemecc_c++_execute_")+std::to_string(i), "ref_c++_execute" },i));
 			}
 
 			// clone insieme runs using different scheduling policies
 			if(schedule){
 				// main run execute STATIC
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_stat_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c_compile" },statThreads,STATIC));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_stat_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c++_compile" },statThreads,STATIC));
+				add(createMainExecuteStep(std::string("main_run_execute_stat_")+std::to_string(statThreads), Runtime, { "main_run_compile" },statThreads,STATIC));
+				add(createMainExecuteStep(std::string("main_run_c++_execute_stat_")+std::to_string(statThreads), Runtime, { "main_run_c++_compile" },statThreads,STATIC));
 
-				// insiemecc_run check STATIC
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_stat_")+std::to_string(statThreads), Runtime, C, { std::string("insiemecc_run_c_execute_stat_")+std::to_string(statThreads),"ref_c_execute" },statThreads,STATIC));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_stat_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_stat_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,STATIC));
+				// main_run check STATIC
+				add(createMainCheckStep(std::string("main_run_check_stat_")+std::to_string(statThreads), Runtime, C, { std::string("main_run_execute_stat_")+std::to_string(statThreads),"ref_c_execute" },statThreads,STATIC));
+				add(createMainCheckStep(std::string("main_run_c++_check_stat_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_stat_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,STATIC));
 
 				// main run execute DYNAMIC
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_dyn_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c_compile" },statThreads,DYNAMIC));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_dyn_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c++_compile" },statThreads,DYNAMIC));
+				add(createMainExecuteStep(std::string("main_run_execute_dyn_")+std::to_string(statThreads), Runtime, { "main_run_compile" },statThreads,DYNAMIC));
+				add(createMainExecuteStep(std::string("main_run_c++_execute_dyn_")+std::to_string(statThreads), Runtime, { "main_run_c++_compile" },statThreads,DYNAMIC));
 
-				// insiemecc_run check DYNAMIC
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_dyn_")+std::to_string(statThreads), Runtime, C, { std::string("insiemecc_run_c_execute_dyn_")+std::to_string(statThreads), "ref_c_execute"},statThreads,DYNAMIC));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_dyn_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_dyn_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,DYNAMIC));
+				// main_run check DYNAMIC
+				add(createMainCheckStep(std::string("main_run_check_dyn_")+std::to_string(statThreads), Runtime, C, { std::string("main_run_execute_dyn_")+std::to_string(statThreads), "ref_c_execute"},statThreads,DYNAMIC));
+				add(createMainCheckStep(std::string("main_run_c++_check_dyn_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_dyn_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,DYNAMIC));
 
 				// main run execute GUIDED
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_guid_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c_compile" },statThreads,GUIDED));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_guid_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c++_compile" },statThreads,GUIDED));
+				add(createMainExecuteStep(std::string("main_run_execute_guid_")+std::to_string(statThreads), Runtime, { "main_run_compile" },statThreads,GUIDED));
+				add(createMainExecuteStep(std::string("main_run_c++_execute_guid_")+std::to_string(statThreads), Runtime, { "main_run_c++_compile" },statThreads,GUIDED));
 
-				// insiemecc_run check GUIDED
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_guid_")+std::to_string(statThreads), Runtime, C, { std::string("insiemecc_run_c_execute_guid_")+std::to_string(statThreads), "ref_c_execute"},statThreads,GUIDED));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_guid_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_guid_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,GUIDED));
+				// main_run check GUIDED
+				add(createMainCheckStep(std::string("main_run_check_guid_")+std::to_string(statThreads), Runtime, C, { std::string("main_run_execute_guid_")+std::to_string(statThreads), "ref_c_execute"},statThreads,GUIDED));
+				add(createMainCheckStep(std::string("main_run_c++_check_guid_")+std::to_string(statThreads), Runtime, CPP, { std::string("main_run_c++_execute_guid_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,GUIDED));
 			}
 
 			return list;
@@ -640,32 +792,41 @@ namespace integration {
 			add(createRefRunStep("ref_c_execute", { "ref_c_compile" }));
 			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
 
-			add(createInsiemeccSemaStep("insiemecc_c_sema", C));
-			add(createInsiemeccSemaStep("insiemecc_c++_sema", CPP));
+			add(createInsiemeccCompStep("insiemecc_c_compile", C));
+			add(createInsiemeccCompStep("insiemecc_c++_compile", CPP));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c_convert", Sequential, C));
-			add(createInsiemeccConversionStep("insiemecc_run_c_convert", Runtime, C));
+			add(createInsiemeccRunStep("insiemecc_c_execute", { "insiemecc_c_compile" }));
+			add(createInsiemeccRunStep("insiemecc_c++_execute", { "insiemecc_c++_compile" }));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c++_convert", Sequential, CPP));
-			add(createInsiemeccConversionStep("insiemecc_run_c++_convert", Runtime, CPP));
+			add(createMainSemaStep("main_c_sema", C));
+			add(createMainSemaStep("main_c++_sema", CPP));
 
-			add(createInsiemeccCompilationStep("insiemecc_seq_c_compile", Sequential, C, { "insiemecc_seq_c_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c_compile", Runtime, C, { "insiemecc_run_c_convert" }));
+			add(createMainConversionStep("main_seq_convert", Sequential, C));
+			add(createMainConversionStep("main_run_convert", Runtime, C));
 
-			add(createInsiemeccCompilationStep("insiemecc_seq_c++_compile", Sequential, CPP, { "insiemecc_seq_c++_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c++_compile", Runtime, CPP, { "insiemecc_run_c++_convert" }));
+			add(createMainConversionStep("main_seq_c++_convert", Sequential, CPP));
+			add(createMainConversionStep("main_run_c++_convert", Runtime, CPP));
 
-			add(createInsiemeccExecuteStep("insiemecc_seq_c_execute", Sequential, { "insiemecc_seq_c_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_run_c_execute", Runtime, { "insiemecc_run_c_compile" }));
+			add(createMainCompilationStep("main_seq_compile", Sequential, C, { "main_seq_convert" }));
+			add(createMainCompilationStep("main_run_compile", Runtime, C, { "main_run_convert" }));
 
-			add(createInsiemeccExecuteStep("insiemecc_seq_c++_execute", Sequential, { "insiemecc_seq_c++_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_run_c++_execute", Runtime, { "insiemecc_run_c++_compile" }));
+			add(createMainCompilationStep("main_seq_c++_compile", Sequential, CPP, { "main_seq_c++_convert" }));
+			add(createMainCompilationStep("main_run_c++_compile", Runtime, CPP, { "main_run_c++_convert" }));
 
-			add(createInsiemeccCheckStep("insiemecc_seq_c_check", Sequential, C, { "insiemecc_seq_c_execute", "ref_c_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_run_c_check", Runtime, C, { "insiemecc_run_c_execute", "ref_c_execute" }));
+			add(createMainExecuteStep("main_seq_execute", Sequential, { "main_seq_compile" }));
+			add(createMainExecuteStep("main_run_execute", Runtime, { "main_run_compile" }));
 
-			add(createInsiemeccCheckStep("insiemecc_seq_c++_check", Sequential, CPP, { "insiemecc_seq_c++_execute", "ref_c++_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_run_c++_check", Runtime, CPP, { "insiemecc_run_c++_execute", "ref_c++_execute" }));
+			add(createMainExecuteStep("main_seq_c++_execute", Sequential, { "main_seq_c++_compile" }));
+			add(createMainExecuteStep("main_run_c++_execute", Runtime, { "main_run_c++_compile" }));
+
+			add(createMainCheckStep("main_seq_check", Sequential, C, { "main_seq_execute", "ref_c_execute" }));
+			add(createMainCheckStep("main_run_check", Runtime, C, { "main_run_execute", "ref_c_execute" }));
+
+			add(createMainCheckStep("main_seq_c++_check", Sequential, CPP, { "main_seq_c++_execute", "ref_c++_execute" }));
+			add(createMainCheckStep("main_run_c++_check", Runtime, CPP, { "main_run_c++_execute", "ref_c++_execute" }));
+
+			add(createInsiemeccCheckStep("insiemecc_c_check", C, { "insiemecc_c_execute", "ref_c_execute" }));
+			add(createInsiemeccCheckStep("insiemecc_c++_check", CPP, { "insiemecc_c++_execute", "ref_c++_execute" }));
 
 			return list;
 		}
