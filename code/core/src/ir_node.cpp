@@ -255,7 +255,7 @@ IRDump dumpOneLine(const insieme::core::NodePtr& node, std::ostream& out){
 		insieme::core::printer::PrettyPrinter print(node);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_CASTS);
-		print.setOption(insieme::core::printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE);
+		print.setOption(insieme::core::printer::PrettyPrinter::JUST_OUTERMOST_SCOPE);
 		return out << print;
 	}, out);
 }

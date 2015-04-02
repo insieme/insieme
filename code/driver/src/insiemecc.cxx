@@ -252,7 +252,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 		}
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
 			LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
-															   PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+															   PrettyPrinter::JUST_OUTERMOST_SCOPE |
 															   PrettyPrinter::PRINT_CASTS) << std::endl;
 		}
 
