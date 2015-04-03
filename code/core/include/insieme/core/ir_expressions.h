@@ -240,7 +240,7 @@ namespace core {
 		 */
 		static VariablePtr get(NodeManager& manager, const TypePtr& type) {
 			unsigned id = manager.getFreshID();
-			Variable var(type,UIntValue::get(manager, id));
+			//Variable var(type,UIntValue::get(manager, id));
 			while(manager.contains(Variable(type, UIntValue::get(manager, id)))) { id = manager.getFreshID(); }
 			return manager.get(Variable(type, UIntValue::get(manager,id)));
 		}
