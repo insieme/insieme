@@ -57,7 +57,7 @@ namespace irp {
 	}
 
 	inline TreePattern atom(core::NodeManager& manager, const string& code) {
-		return atom(core::IRBuilder(manager).parse(code));
+		return atom(core::IRBuilder(manager).parseExpr(code));
 	}
 
 	inline TreePattern lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory) {

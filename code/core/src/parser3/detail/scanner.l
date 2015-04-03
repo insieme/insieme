@@ -34,8 +34,8 @@ type_var [\'][a-zA-Z0-9_]*
 
 stringlit \"(\\.|[^"])*\"
 charlit   \'(\\.|[^"])\'
-float   [0-9]*"."[0-9]+f
-double  [0-9]*"."[0-9]+
+float   [0-9]+"."[0-9]+f
+double  [0-9]+"."[0-9]+
 ulong   [0-9]+ul
 long    [0-9]+l
 uint    [0-9]+u
@@ -105,6 +105,7 @@ paramvar #[a-zA-Z]
 "="      return inspire_parser::make_ASSIGN(loc);
 "?"      return inspire_parser::make_QMARK(loc);
 "::"     return inspire_parser::make_NAMESPACE(loc);
+"~"      return inspire_parser::make_FUNNY_BOY(loc);
 ":"      return inspire_parser::make_COLON(loc);
 
 "->"     return inspire_parser::make_ARROW(loc);
@@ -122,6 +123,7 @@ paramvar #[a-zA-Z]
 "let"     return inspire_parser::make_LET(loc);
 "auto"    return inspire_parser::make_AUTO(loc);
 "lambda"  return inspire_parser::make_LAMBDA(loc);
+"ctor"  return inspire_parser::make_CTOR(loc);
 
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);

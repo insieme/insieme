@@ -58,7 +58,10 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto impl = builder.parse("C::(int<4> a)->int<4> { return a; }").as<LambdaExprPtr>();
+        map<string, NodePtr> symbols;
+        symbols["C"] = builder.parseType(" struct C { int<4> field; } ", symbols);
+
+		auto impl = builder.parseExpr("lambda C::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>();
 		MemberFunction fun("f", impl);
 
 		EXPECT_EQ("f = mfun C v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun));
@@ -76,12 +79,12 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto ctor = builder.parse("C::() { }").as<LambdaExprPtr>();
-		auto ctor2 = builder.parse("C::(int<4> a) { }").as<LambdaExprPtr>();
-		auto dtor = builder.parse("~C::() { }").as<LambdaExprPtr>();
+		auto ctor = builder.parseExpr("C::() { }").as<LambdaExprPtr>();
+		auto ctor2 = builder.parseExpr("C::(int<4> a) { }").as<LambdaExprPtr>();
+		auto dtor = builder.parseExpr("~C::() { }").as<LambdaExprPtr>();
 
-		auto fun1Impl = builder.parse("C::(int<4> a)->int<4> { return a; }").as<LambdaExprPtr>();
-		auto fun2Impl = builder.parse("C::(int<4> a, int<4> b)->int<4> { return a+b; }").as<LambdaExprPtr>();
+		auto fun1Impl = builder.parseExpr("C::(int<4> a)->int<4> { return a; }").as<LambdaExprPtr>();
+		auto fun2Impl = builder.parseExpr("C::(int<4> a, int<4> b)->int<4> { return a+b; }").as<LambdaExprPtr>();
 
 		EXPECT_TRUE(ctor);
 		EXPECT_TRUE(dtor);
@@ -107,7 +110,7 @@ namespace core {
 
 		ClassMetaInfo info;
 
-		auto fun = builder.parse("A::()->int<4> { return 3; }").as<LambdaExprPtr>();
+		auto fun = builder.parseExpr("A::()->int<4> { return 3; }").as<LambdaExprPtr>();
 		auto funType = fun->getFunctionType();
 
 		MemberFunctionPtr not_found = NULL;
@@ -138,7 +141,7 @@ namespace core {
 
 		IRBuilder builderA(mgrA);
 
-		StructTypePtr typeA = builderA.parse("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
+		StructTypePtr typeA = builderA.parseExpr("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
 		EXPECT_TRUE(typeA);
 
 		// create a class info
@@ -146,10 +149,10 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parse("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parse("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.setDestructor(builderA.parse("~T::() {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parse("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builderA.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 		// attach to type
 		setMetaInfo(typeA, info);
@@ -198,7 +201,7 @@ namespace core {
 
 		IRBuilder builderA(mgrA);
 
-		TypePtr typeA = builderA.parse("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
+		TypePtr typeA = builderA.parseExpr("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
 		EXPECT_TRUE(typeA);
 
 		// create a class info
@@ -206,17 +209,17 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parse("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parse("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.setDestructor(builderA.parse("~T::() {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parse("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builderA.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 		// attach to type
 		setMetaInfo(typeA, info);
 		EXPECT_TRUE(typeA->hasAttachedValue<ClassMetaInfo>());
 
 		// get one step higher
-		typeA = builderA.parseType("T::()", symbols).as<FunctionTypePtr>();
+		typeA = builderA.parseTypeExpr("T::()", symbols).as<FunctionTypePtr>();
 
 		EXPECT_EQ("(struct<a:int<4>,b:real<8>>::())", toString(*typeA));
 		EXPECT_TRUE(typeA.as<FunctionTypePtr>()->getObjectType()->hasAttachedValue<ClassMetaInfo>());
@@ -276,7 +279,7 @@ namespace core {
 		IRBuilder builder(mgr);
 
 		// create a type
-		TypePtr type = builder.parseType("struct { int<4> x; int<4> y; }");
+		TypePtr type = builder.parseTypeExpr("struct { int<4> x; int<4> y; }");
 
 		std::map<string, NodePtr> symbols;
 		symbols["T"] = type;

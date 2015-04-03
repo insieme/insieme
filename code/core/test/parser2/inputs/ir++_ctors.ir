@@ -9,8 +9,8 @@ let B = struct : A {
 	int y;
 };
 
-let ctorA1 = A::() { this->x = 0; };
-let ctorA2 = A::(int x) { this->x = x; };
+let ctorA1 = lambda ctor A::() { this->x = 0; };
+let ctorA2 = lambda ctor A::(int x) { this->x = x; };
 
 int main() {
 

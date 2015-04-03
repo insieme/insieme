@@ -12,8 +12,7 @@ namespace parser3{
 
     using namespace detail;
 
-    bool test_type(const std::string& x){
-        NodeManager nm;
+    bool test_type(NodeManager& nm, const std::string& x){
         inspire_driver driver(x, nm);
         driver.parseType();
         if (driver.result) {  
@@ -21,31 +20,46 @@ namespace parser3{
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ========================================== " << std::endl;
+        std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
 
     }
 
     TEST(IR_Parser3, Types) {
-        EXPECT_TRUE(test_type("int<4>"));
-        EXPECT_TRUE(test_type("someweirdname<>"));
-        EXPECT_FALSE(test_type("vector<int<4>>"));
-        EXPECT_TRUE(test_type("vector<int<4>, 4>"));
-        EXPECT_TRUE(test_type("vector<'a, 4>"));
-        EXPECT_TRUE(test_type("struct { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type("struct name { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type("struct name :: papa<1> : mama<2> { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type("struct name :: papa<4> { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type("struct { int<4> a; int<5> b;}"));
-        EXPECT_TRUE(test_type("let int = int<4>; int"));
+        NodeManager nm;
+        EXPECT_TRUE(test_type(nm, "int<4>"));
+        EXPECT_TRUE(test_type(nm, "someweirdname<>"));
+        EXPECT_TRUE(test_type(nm, "vector<int<4>, 4>"));
+        EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
+        EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type(nm, "struct name { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type(nm, "struct name : papa<1> , mama<2> { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type(nm, "struct name : papa<4> { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b;}"));
+        EXPECT_TRUE(test_type(nm, "let int = int<4>; int"));
 
-        EXPECT_TRUE(test_type("( int<4> , ref<int<4>>) -> int<4>"));
-        EXPECT_TRUE(test_type("( int<4> , ref<int<4>>) => int<4>"));
-        EXPECT_TRUE(test_type("(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem"));
+        EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) -> int<4>"));
+        EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) => int<4>"));
+        EXPECT_TRUE(test_type(nm, "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem"));
+
+        EXPECT_TRUE(test_type(nm, R"1N5P1RE(
+                    let class = struct name { int<4> a; int<5> b};
+                    name::()->int<4>
+                )1N5P1RE"));
+        EXPECT_TRUE(test_type(nm, R"1N5P1RE(
+                    let class = struct name { int<4> a; int<5> b};
+                    ~name::()
+                )1N5P1RE"));
+        EXPECT_TRUE(test_type(nm, R"1N5P1RE(
+                    let class = struct name { int<4> a; int<5> b};
+                    name::()->ctor
+                )1N5P1RE"));
+
+        // member types
+        EXPECT_FALSE(test_type(nm, "vector<int<4>>"));
     }
 
-    bool test_expression(const std::string& x){
-        NodeManager nm;
+    bool test_expression(NodeManager& nm, const std::string& x){
         inspire_driver driver(x, nm);
         driver.parseExpression();
         if (driver.result) {  
@@ -54,53 +68,84 @@ namespace parser3{
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ========================================== " << std::endl;
+        std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
     }
 
     TEST(IR_Parser3, Expressions) {
+        NodeManager nm;
+        EXPECT_TRUE(test_expression(nm, "true?1:0"));
+        EXPECT_TRUE(test_expression(nm, "param(1)"));
 
-        EXPECT_TRUE(test_expression("true?1:0"));
-        EXPECT_TRUE(test_expression("param(1)"));
+        EXPECT_TRUE(test_expression(nm, "1"));
+        EXPECT_TRUE(test_expression(nm, "1u"));
 
-        EXPECT_TRUE(test_expression("1"));
-        EXPECT_TRUE(test_expression("1u"));
+        EXPECT_TRUE(test_expression(nm, "1.0f"));
+        EXPECT_TRUE(test_expression(nm, "1.0"));
 
-        EXPECT_TRUE(test_expression("1.0f"));
-        EXPECT_TRUE(test_expression("1.0"));
-
-        EXPECT_TRUE(test_expression("1 + 3"));
-        EXPECT_TRUE(test_expression("1 - 0"));
-        EXPECT_TRUE(test_expression("1 * 0"));
-        EXPECT_TRUE(test_expression("1 / 0"));
-        EXPECT_TRUE(test_expression("1 | 0"));
-        EXPECT_TRUE(test_expression("1 & 0"));
-        EXPECT_TRUE(test_expression("1 ^ 0"));
+        EXPECT_TRUE(test_expression(nm, "1 + 3"));
+        EXPECT_TRUE(test_expression(nm, "1 - 0"));
+        EXPECT_TRUE(test_expression(nm, "1 * 0"));
+        EXPECT_TRUE(test_expression(nm, "1 / 0"));
+        EXPECT_TRUE(test_expression(nm, "1 | 0"));
+        EXPECT_TRUE(test_expression(nm, "1 & 0"));
+        EXPECT_TRUE(test_expression(nm, "1 ^ 0"));
 
         // precedence
-        EXPECT_TRUE(test_expression("1 + 0 * 5"));
-        EXPECT_TRUE(test_expression("1 * 0 + 5"));
+        EXPECT_TRUE(test_expression(nm, "1 + 0 * 5"));
+        EXPECT_TRUE(test_expression(nm, "1 * 0 + 5"));
 
-        EXPECT_TRUE(test_expression("(1.0)"));
-        EXPECT_TRUE(test_expression("((1.0))"));
-        EXPECT_TRUE(test_expression("((1.0) + 4.0)"));
+        EXPECT_TRUE(test_expression(nm, "(1.0)"));
+        EXPECT_TRUE(test_expression(nm, "((1.0))"));
+        EXPECT_TRUE(test_expression(nm, "((1.0) + 4.0)"));
 
-        EXPECT_TRUE(test_expression("struct { i= 4.0}"));
-        EXPECT_TRUE(test_expression("let x = struct{ int<4> a }; struct x { a= 4}"));
+        EXPECT_TRUE(test_expression(nm, "struct { i= 4.0}"));
+        EXPECT_TRUE(test_expression(nm, "let x = struct{ int<4> a }; struct x { a= 4}"));
 
-        EXPECT_FALSE(test_expression("x"));
+        EXPECT_FALSE(test_expression(nm, "x"));
 
-        EXPECT_TRUE(test_expression("lambda ('a _) -> bool : true"));
-        EXPECT_TRUE(test_expression("lambda ('a x) -> 'a :  x+CAST('a) 3"));
-        EXPECT_TRUE(test_expression("lambda ('a x) -> 'a : (x+CAST('a) 3)"));
-        EXPECT_TRUE(test_expression("lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
-        EXPECT_TRUE(test_expression("lambda ('a x) => x+CAST('a) 3"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool : true"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a :  x+CAST('a) 3"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a : (x+CAST('a) 3)"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a x) => x+CAST('a) 3"));
 
-        EXPECT_TRUE(test_expression("type(int<4>)"));
+        EXPECT_TRUE(test_expression(nm, "type(int<4>)"));
+
+        EXPECT_TRUE(test_expression(nm, "let f = lambda ()->unit {  5;  lambda ()->unit { f(); } (); }; f"));
+
+        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
+		lambda (int<4> v, int<4> exp) -> int<4> { 
+			let one = lambda(int<4> _)=>4; 
+			let two = lambda(int<4> x)=>x+exp; 
+            return one(two(exp));
+		}  
+            )1N5P1RE"));
+        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
+		lambda (int<4> v, int<4> exp) -> int<4> { 
+			let one = lambda(int<4> _)-> int<4> : 4; 
+			let two = lambda(int<4> x)-> int<4> :x+5; 
+            return one(two(exp));
+		}  
+            )1N5P1RE"));
+            
+        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
+            let class = struct name { int<4> a; int<5> b};
+            lambda name::()->ctor { }
+        )1N5P1RE"));
+
+        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
+            let class = struct name { int<4> a; int<5> b};
+            lambda name::()->int<4> { return 1; }
+        )1N5P1RE"));
+        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
+            let class = struct name { int<4> a; int<5> b};
+            lambda  ~name::() { }
+        )1N5P1RE"));
+
     }
 
-    bool test_statement(const std::string& x){
-        NodeManager nm;
+    bool test_statement(NodeManager& nm, const std::string& x){
         inspire_driver driver(x, nm);
         driver.parseStmt();
         if (driver.result) {  
@@ -108,62 +153,82 @@ namespace parser3{
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ========================================== " << std::endl;
+        std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
     }
 
     TEST(IR_Parser3, Statements) {
 
-        EXPECT_TRUE(test_statement(";"));
+        NodeManager nm;
+        EXPECT_TRUE(test_statement(nm, ";"));
 
-        EXPECT_TRUE(test_statement("1;"));
-        EXPECT_TRUE(test_statement("1u;"));
+        EXPECT_TRUE(test_statement(nm, "1;"));
+        EXPECT_TRUE(test_statement(nm, "1u;"));
 
-        EXPECT_TRUE(test_statement("1.0f;"));
-        EXPECT_TRUE(test_statement("1.0;"));
+        EXPECT_TRUE(test_statement(nm, "1.0f;"));
+        EXPECT_TRUE(test_statement(nm, "1.0;"));
 
-        EXPECT_TRUE(test_statement("1 + 3;"));
-        EXPECT_TRUE(test_statement("1 - 0;"));
-        EXPECT_TRUE(test_statement("1 * 0;"));
-        EXPECT_TRUE(test_statement("1 / 0;"));
-        EXPECT_TRUE(test_statement("1 | 0;"));
-        EXPECT_TRUE(test_statement("1 & 0;"));
-        EXPECT_TRUE(test_statement("1 ^ 0;"));
+        EXPECT_TRUE(test_statement(nm, "1 + 3;"));
+        EXPECT_TRUE(test_statement(nm, "1 - 0;"));
+        EXPECT_TRUE(test_statement(nm, "1 * 0;"));
+        EXPECT_TRUE(test_statement(nm, "1 / 0;"));
+        EXPECT_TRUE(test_statement(nm, "1 | 0;"));
+        EXPECT_TRUE(test_statement(nm, "1 & 0;"));
+        EXPECT_TRUE(test_statement(nm, "1 ^ 0;"));
 
-        EXPECT_TRUE(test_statement("(1.0);"));
-        EXPECT_TRUE(test_statement("((1.0));"));
+        EXPECT_TRUE(test_statement(nm, "(1.0);"));
+        EXPECT_TRUE(test_statement(nm, "((1.0));"));
 
-        EXPECT_FALSE(test_statement("x"));
-        EXPECT_FALSE(test_statement("x;"));
+        EXPECT_FALSE(test_statement(nm, "x"));
+        EXPECT_FALSE(test_statement(nm, "x;"));
 
-        EXPECT_TRUE(test_statement("{ decl int<4> x = 0; x+1; }"));
-        EXPECT_TRUE(test_statement("{ decl auto x = 0; x+1; }"));
+        EXPECT_TRUE(test_statement(nm, "{ decl int<4> x = 0; x+1; }"));
+        EXPECT_TRUE(test_statement(nm, "{ decl auto x = 0; x+1; }"));
 
-        EXPECT_TRUE(test_statement("if ( true ) {}"));
-        EXPECT_TRUE(test_statement("if ( true ) {} else {}"));
-        EXPECT_TRUE(test_statement("if ( true ) if ( false ) { } else 1 ;"));
-        EXPECT_TRUE(test_statement("if ( true ) if ( false ) { } else 1 ; else 2; "));
-        EXPECT_TRUE(test_statement("while ( true ) 1+1;"));
-        EXPECT_TRUE(test_statement("while ( false ) 1+1;"));
-        EXPECT_TRUE(test_statement("while ( false || true ) { 1+1; }"));
-        EXPECT_TRUE(test_statement("for ( int<4> it = 1 .. 3) 1+1;"));
-        EXPECT_TRUE(test_statement("for ( int<4> it = 1 .. 3: 2) 1+1;"));
-        EXPECT_TRUE(test_statement("for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
+        EXPECT_TRUE(test_statement(nm, "if ( true ) {}"));
+        EXPECT_TRUE(test_statement(nm, "if ( true ) {} else {}"));
+        EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ;"));
+        EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ; else 2; "));
+        EXPECT_TRUE(test_statement(nm, "while ( true ) 1+1;"));
+        EXPECT_TRUE(test_statement(nm, "while ( false ) 1+1;"));
+        EXPECT_TRUE(test_statement(nm, "while ( false || true ) { 1+1; }"));
+        EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3) 1+1;"));
+        EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) 1+1;"));
+        EXPECT_TRUE(test_statement(nm, "for ( int<4> it = 1 .. 3: 2) { 1+1; }"));
 
-        EXPECT_TRUE(test_statement("switch (2) { case 1: 1; case 2: 2; }"));
-        EXPECT_FALSE(test_statement("switch (2) { case 1: 1; case 2: 2; default 2;}"));
-        EXPECT_FALSE(test_statement("switch (2) { case 1+1: 1; case 2: 2; default: 2;}"));
+        EXPECT_TRUE(test_statement(nm, "switch (2) { case 1: 1; case 2: 2; }"));
+        EXPECT_FALSE(test_statement(nm,"switch (2) { case 1: 1; case 2: 2; default 2;}"));
+        EXPECT_FALSE(test_statement(nm,"switch (2) { case 1+1: 1; case 2: 2; default: 2;}"));
 
-        EXPECT_FALSE(test_statement("try  2; catch( int<4> e) { 1+1; }"));
-        EXPECT_FALSE(test_statement("try  {2;} catch( int<4> e)  1+1; "));
+        EXPECT_FALSE(test_statement(nm,"try  2; catch( int<4> e) { 1+1; }"));
+        EXPECT_FALSE(test_statement(nm,"try  {2;} catch( int<4> e)  1+1; "));
 
-        EXPECT_TRUE(test_statement("try  {2;} catch( int<4> e) { 1+1; }"));
-        EXPECT_TRUE(test_statement("try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
+        EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; }"));
+        EXPECT_TRUE(test_statement(nm, "try  {2;} catch( int<4> e) { 1+1; } catch (ref<int<4>> r) { 3+4; }"));
 
+        EXPECT_TRUE(test_statement(nm, "{ }"));
+
+
+        EXPECT_TRUE(test_statement(nm, R"1N5P1RE(
+        {
+            let type = struct a { int<4> a; int<8> b; };
+            decl type varable;
+            decl ref<type> var2;
+            decl auto var3 = undefined(type);
+        }
+        )1N5P1RE"));
+        EXPECT_TRUE(test_statement(nm, R"1N5P1RE(
+        {
+            let int = int<4>;    
+            let A = struct { int a; };  
+            let B = struct : A { int b; };  
+            decl ref<B> b;  
+            decl auto x = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );
+        }
+        )1N5P1RE"));
     }
 
-    bool test_program(const std::string& x){
-        NodeManager nm;
+    bool test_program(NodeManager& nm, const std::string& x){
         inspire_driver driver(x, nm);
         driver.parseProgram();
         if (driver.result) {  
@@ -171,48 +236,70 @@ namespace parser3{
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ========================================== " << std::endl;
+        std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
 
     }
 
     TEST(IR_Parser3, Let) {
-        EXPECT_TRUE(test_program("let int = int<4>; int main () { return 1; }"));
-        EXPECT_TRUE(test_program("let int = int<4>; let long = int<8>; long main (int a) { return 1; }"));
-        EXPECT_TRUE(test_program("let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
-        EXPECT_TRUE(test_program("let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
-        EXPECT_TRUE(test_program("let int = int<4>; let f = lambda (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
+        NodeManager mgr;
+        EXPECT_TRUE(test_program(mgr, "let int = int<4>; int main () { return 1; }"));
+        EXPECT_TRUE(test_program(mgr, "let int = int<4>; let long = int<8>; long main (int a) { return 1; }"));
+        EXPECT_TRUE(test_program(mgr, "let int , long = int<4> ,int<8>; int<4> main () { return 1; }"));
+        EXPECT_TRUE(test_program(mgr, "let f = lambda () -> unit { }; int<4> main () { f(); return 1; }"));
+        EXPECT_TRUE(test_program(mgr, "let int = int<4>; let f = lambda (int a) -> int { return a; }; int<4> main () { f(1); return 1; }"));
 
             
-        EXPECT_FALSE(test_program("let int , long = int<4>; int<4> main () { return 1; }"));
-        EXPECT_FALSE(test_program("let a , b = a<4>; int<4> main () { return 1; }"));
+        EXPECT_FALSE(test_program(mgr, "let int , long = int<4>; int<4> main () { return 1; }"));
+        EXPECT_FALSE(test_program(mgr, "let a , b = a<4>; int<4> main () { return 1; }"));
 
-        EXPECT_TRUE(test_program("let a , b = a<b>, b<a>; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
-        EXPECT_TRUE(test_program("let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
+        EXPECT_TRUE(test_program(mgr, "let a , b = a<b>, b<a>; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
+        EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
+
+        EXPECT_TRUE(test_program(mgr, R"1N5P1RE(
+
+            let class = struct name { int<4> a; int<5> b};
+            let f,g = lambda name :: ()->unit{
+                    g(this);
+                },
+                lambda name ::()->unit{
+                    f(this);
+                }; 
+            unit main() {  
+                decl ref<name> x;
+                f(x);
+                g(x);
+            }
+        )1N5P1RE" ));
     }
     
     TEST(IR_Parser3, Program) {
+        NodeManager nm;
+        EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { 1+1; }"));
+        EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (int a, int b) { 1+1; }"));
+        EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { f(1); }"));
+        EXPECT_TRUE(test_program(nm, R"1N5P1RE( 
 
-        EXPECT_TRUE(test_program("int<4> main (int<4> a, int<4> b)  { 1+1; }"));
-        EXPECT_TRUE(test_program("let int = int<4>; int main (int a, int b) { 1+1; }"));
-        EXPECT_TRUE(test_program("let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { f(1); }"));
-        EXPECT_TRUE(test_program(R"1N5P1RE( 
-let int = int<4> ; 
-let h = lambda ((int)->int f)->int { return f(5); } ; 
-let f,g = 
-    lambda (int a)->int {
-        h(f);
-        f(4);
-        g(f(4));
-        h(g);
-    },
-    lambda (int a)->int {
-        h(f);
-        f(g(4));
-        g(4);
-        h(g);
-    };
-unit main() { f(1); }
+                let int = int<4> ; 
+
+                let h = lambda ((int)->int f)->int { return f(5); } ; 
+
+                let f,g = 
+                    lambda (int a)->int {
+                        h(f);
+                        f(4);
+                        g(f(4));
+                        h(g);
+                    },
+                    lambda (int a)->int {
+                        h(f);
+                        f(g(4));
+                        g(4);
+                        h(g);
+                    };
+
+                unit main() { f(1); }
+
         )1N5P1RE"));
     }
 

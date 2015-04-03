@@ -5,29 +5,29 @@ let Counter = struct {
 	int value;
 };
 
-let reset = Counter::()->unit {
+let reset = lambda ctor Counter::(){
 	this->value = 0;
 };
 
-let inc = Counter::()->int {
+let inc = lambda Counter::()->int {
 	this->value = this->value + 1;
 	return *this->value;
 };
 
-let dec = Counter::()->int {
+let dec = lambda Counter::()->int {
 	this->value = this->value - 1;
 	return *this->value;
 };
 
-let get = Counter::()->int {
+let get = lambda Counter::()->int {
 	return *this->value;
 };
 
-let set = Counter::(int x)->unit { 
+let set = lambda Counter::(int x)->unit { 
 	this->value = x;
 };
 
-let p = Counter::()->unit {
+let p = lambda Counter::()->unit {
 	print("%d\n", this->get());
 };
 

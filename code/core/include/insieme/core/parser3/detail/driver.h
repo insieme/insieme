@@ -75,21 +75,27 @@ public:
     NodePtr result;
 
     location glob_loc;
-    bool in_let;
 
 private:
     std::stringstream ss;
     inspire_scanner scanner;
     inspire_parser parser;
 
-    bool inhibit_building_flag;
+public:
+    unsigned let_count;
+    unsigned inhibit_building_count;
 
+private:
     struct Lambda_let{
+
         TypePtr retType;
         VariableList params;
         std::string  expression;
-        Lambda_let( const TypePtr& retType, const VariableList& params, const std::string& expression)
-        : retType(retType), params(params.begin(), params.end()), expression(expression) {}
+        FunctionKind fk;
+
+        Lambda_let(const TypePtr& retType, const VariableList& params, const std::string& expression, const FunctionKind& fk)
+        : retType(retType), params(params.begin(), params.end()), expression(expression), fk(fk)
+        {}
     };
     std::vector<Lambda_let>    lambda_lets;
     std::vector<ExpressionPtr> closure_lets;
@@ -109,16 +115,18 @@ public:
 
     ExpressionPtr getOperand(ExpressionPtr expr);
     ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
+    ExpressionPtr genFieldAccess(const location& l, const ExpressionPtr&, const std::string& fieldname);
 
     TypePtr genGenericType(const location& l, const std::string& name, const TypeList& params, const IntParamList& iparamlist);
-    TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, bool closure = false);
+    TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);
 
-    ExpressionPtr genLambda(const location& l, const VariableList& params, StatementPtr body);
-    ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body);
+    ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind& = FK_PLAIN);
     ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
     ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
+    void add_this (const location& l, const TypePtr& classType);
 
-    void add_let_lambda(const location& l, const location& bodyb, const location& bodye, const TypePtr& retType, const VariableList& params = VariableList());
+    void add_let_lambda(const location& l, const location& bodyb, const location& bodye, const TypePtr& retType, const VariableList& params = VariableList(), const FunctionKind& fk = FK_PLAIN);
+
     void add_let_type(const location& l, const TypePtr& type);
     void add_let_closure(const location& l, const ExpressionPtr& closure);
 
@@ -140,6 +148,9 @@ public:
     // syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
     bool inhibit_building()const;
     void set_inhibit(bool flag =true);
+
+    // debug
+    void print_location(const location& l)const;
 
     // Error handling.
     void error (const location& l, const std::string& m)const;

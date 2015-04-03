@@ -16,7 +16,7 @@ int main (){
     a + 1;
     }
 
-    decl auto f = lambda (int a) -> a;
+    decl auto f = lambda (int a) -> int<4> : a;
 
     f(*a);
     f(a + 1);

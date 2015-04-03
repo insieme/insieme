@@ -6,19 +6,18 @@ let double = real<8>;
 
 let matrix = vector<vector<double,100>,100>;
 
-let initUniform = lit("vector.init.uniform":('elem, intTypeParam<#a>) -> vector<'elem,#a>);
+let initUniform = lambda ('elem elem, intTypeParam<#a> type) -> vector<'elem,#a>{
+                    return vector_init_uniform(elem, type);
+                    }
 
-let p100 = lit("100": intTypeParam<100>);
-
-let initMatrix = initUniform(initUniform(0.0,p100),p100);
 
 
 int main() {
 
 	// create matrices
-	ref<matrix> a = var(initMatrix);
-	ref<matrix> b = var(initMatrix);
-	ref<matrix> c = var(initMatrix);
+	decl ref<matrix> a = var(initUniform(initUniform(0.0,param(100)),param(100)));
+	decl ref<matrix> b = var(initUniform(initUniform(0.0,param(100)),param(100)));
+	decl ref<matrix> c = var(initUniform(initUniform(0.0,param(100)),param(100)));
 	
 	// initialize a and b
 	for(uint i= 0u .. 100u) {
@@ -44,7 +43,7 @@ int main() {
 	}
 	
 	// check results		
-	ref<bool> success = var(true);
+	decl ref<bool> success = var(true);
 	for(uint i = 0u .. 100u) {
 		for(uint j = 0u .. 100u) {
 			success = success && c[i][j] == 2.0;

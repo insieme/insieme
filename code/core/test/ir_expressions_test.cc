@@ -496,7 +496,7 @@ TEST(ExpressionsTest, LambdaPeeling) {
 
 	// check ordinary lambda
 	lambda = builder.parseExpr(
-		"let f = ()->unit { 5; } in f"
+		"let f = lambda ()->unit { 5; } ; f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -507,7 +507,7 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	// check recursive lambda
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
-		"let f = ()->unit { 5; f(); } in f"
+		"let f = lambda ()->unit { 5; f(); }; f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -520,9 +520,9 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
 		"let f,g = "
-		"	()->unit { 1; g(); }, "
-		"	()->unit { 2; f(); } "
-		"in f"
+		"	lambda ()->unit { 1; g(); }, "
+		"	lambda ()->unit { 2; f(); };"
+		" f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -534,10 +534,10 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	// check nested recursive lambda
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
-		"let f = ()->unit { "
+		"let f = lambda ()->unit { "
 		"	5; "
-		"	()->unit { f(); } (); "
-		"} in f"
+		"	lambda ()->unit { f(); } (); "
+		"}; f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -550,15 +550,15 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
 		"let f,g = "
-		"	()->unit { "
+		"	lambda ()->unit { "
 		"		1; "
-		"		()->unit { g(); } (); "
+		"		lambda ()->unit { g(); } (); "
 		"	}, "
-		"	()->unit { "
+		"	lambda ()->unit { "
 		"		2; "
-		"		()->unit { f(); } (); "
-		"	} "
-		"in f"
+		"		lambda ()->unit { f(); } (); "
+		"	}; "
+		"f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -578,11 +578,11 @@ TEST(ExpressionsTest, LambdaPeelingEvenOdd) {
 	 */
 
 	LambdaExprPtr even = builder.parseExpr(
-			"let int = int<4> in "
+			"let int = int<4> ; "
 			"let even,odd = "
-			"	(int x)->bool { return (x==0)?true:(odd(x-1)); },"
-			"	(int x)->bool { return (x==0)?false:(even(x-1)); }"
-			"in even"
+			"	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
+			"	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
+			"even"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(even);
@@ -637,11 +637,11 @@ TEST(ExpressionsTest, LambdaUnrollingEvenOdd) {
 	 */
 
 	LambdaExprPtr even = builder.parseExpr(
-			"let int = int<4> in "
+			"let int = int<4> ; "
 			"let even,odd = "
-			"	(int x)->bool { return (x==0)?true:(odd(x-1)); },"
-			"	(int x)->bool { return (x==0)?false:(even(x-1)); }"
-			"in even"
+			"	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
+			"	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
+			"even"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(even);
@@ -698,7 +698,7 @@ TEST(ExpressionsTest, LambdaUnrollingNonRecursive) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr simple = builder.parseExpr(
-			"(int<4> x)->bool { return (x==0); }"
+			"lambda (int<4> x)->bool { return (x==0); }"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(simple);
@@ -720,9 +720,9 @@ TEST(ExpressionsTest, LambdaUnrollingExponential) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr fun = builder.parseExpr(
-			"let int = int<4> in "
-			"let fun = (int x)->int { fun(x-2) + fun(x-1); }"
-			"in fun"
+			"let int = int<4> ; "
+			"let fun = lambda (int x)->int { fun(x-2) + fun(x-1); };"
+			"fun"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(fun);
@@ -748,9 +748,9 @@ TEST(ExpressionsTest, LambdaIsRecursiveTest) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr fun = builder.parseExpr(
-			"let f = (int<4> x)->int<4> {"
+			"let f = lambda (int<4> x)->int<4> {"
 			"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
-			"} in f"
+			"};  f"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(fun);
@@ -771,9 +771,9 @@ TEST(ExpressionTest, UnrollCompactFib) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr fun = builder.parseExpr(
-			"let f = (int<4> x)->int<4> {"
+			"let f = lambda (int<4> x)->int<4> {"
 			"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
-			"} in f"
+			"}; f"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(fun);
