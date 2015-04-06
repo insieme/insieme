@@ -46,19 +46,6 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-namespace {
-	// Virtual address "on top" of a given address
-	// used to resolve address mapping startup, which would otherwise induce statefulness in the mapper
-	class VirtualTopAddress : public NodeAddress {
-	public:
-		VirtualTopAddress(const NodeAddress& root) : NodeAddress(root) {
-		}
-
-		virtual NodeAddress getAddressOfChild(unsigned index) const override {
-			return NodeAddress(*this);
-		}
-	};
-}
 
 /**
  * A mapper which supplies pre-mapping addresses to the user for each node
@@ -78,8 +65,8 @@ public:
 	 * Internal, should not be changed afterwards.
 	 */
 	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, const NodeAddress& topAddr) final override {
-		if(topAddr->isValue()) return ptr->substitute(ptr->getNodeManager(), *this, topAddr);
-		auto curAddr = topAddr.getAddressOfChild(index);
+		if(topAddr && topAddr->isValue()) return ptr->substitute(ptr->getNodeManager(), *this, topAddr);
+		auto curAddr = (topAddr) ? topAddr.getAddressOfChild(index) : NodeAddress(ptr);
 		return mapAddress(ptr, curAddr);
 	}
 	
@@ -88,8 +75,7 @@ public:
 	 */
 	template<typename T>
 	Pointer<T> mapFromRoot(const Pointer<T>& rootPtr) {
-		auto root = VirtualTopAddress(NodeAddress(rootPtr));
-		return NodeMapping<const NodeAddress&>::map(rootPtr, root);
+		return NodeMapping<const NodeAddress&>::map(rootPtr, NodeAddress());
 	}
 };
 
