@@ -173,8 +173,8 @@ namespace core {
 		 * @param context the mapping context information to be forwarded
 		 * @return a pointer to the modified node.
 		 */
-		template<class Context, class C2>
-		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, C2 c) const {
+		template<typename Context>
+		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, Context& c) const {
 			return getNode().substituteInternal(manager, mapper, c).template as<Ptr<const node_type>>();
 		}
 
@@ -187,7 +187,8 @@ namespace core {
 		 * @return a pointer to the modified node.
 		 */
 		Ptr<const node_type> substitute(NodeManager& manager, SimpleNodeMapping& mapper) const {
-			return getNode().substituteInternal(manager, mapper, 0).template as<Ptr<const node_type>>();
+			int ctxt = 0; // yes, it is ugly, but a future revision of the mapper may get rid of it
+			return getNode().substituteInternal(manager, mapper, ctxt).template as<Ptr<const node_type>>();
 		}
 
 		/**

@@ -50,7 +50,7 @@ namespace transform {
 /**
  * A mapper which supplies pre-mapping addresses to the user for each node
  */
-class AddressMapping : public NodeMapping<const NodeAddress&> {
+class AddressMapping : public NodeMapping<NodeAddress> {
 public:
 	AddressMapping() {};
 	
@@ -58,13 +58,13 @@ public:
 	 * Map the node ptr "ptr", which had the previous address "prevAddr" before mappign started.
 	 * Needs to be defined in subclasses.
 	 */
-	virtual const NodePtr mapAddress(const NodePtr& ptr, const NodeAddress& prevAddr) = 0;
+	virtual const NodePtr mapAddress(const NodePtr& ptr, NodeAddress& prevAddr) = 0;
 
 	/*
 	 * Maps elements while keeping track of addresses. 
 	 * Internal, should not be changed afterwards.
 	 */
-	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, const NodeAddress& topAddr) final override {
+	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, NodeAddress& topAddr) final override {
 		if(topAddr && topAddr->isValue()) return ptr->substitute(ptr->getNodeManager(), *this, topAddr);
 		auto curAddr = (topAddr) ? topAddr.getAddressOfChild(index) : NodeAddress(ptr);
 		return mapAddress(ptr, curAddr);
@@ -75,7 +75,8 @@ public:
 	 */
 	template<typename T>
 	Pointer<T> mapFromRoot(const Pointer<T>& rootPtr) {
-		return NodeMapping<const NodeAddress&>::map(rootPtr, NodeAddress());
+		NodeAddress ctxt;
+		return NodeMapping<NodeAddress>::map(rootPtr, ctxt);
 	}
 };
 
@@ -89,7 +90,7 @@ public:
 	LambdaAddressMapping(const Lambda& lambda, const Filter& filter, bool mapTypes)
 		: lambda(lambda), filter(filter), mapTypes(mapTypes) { };
 
-	virtual const NodePtr mapAddress(const NodePtr& ptr, const NodeAddress& prevAddr) override {
+	virtual const NodePtr mapAddress(const NodePtr& ptr, NodeAddress& prevAddr) override {
 		return lambda(ptr->substitute(ptr->getNodeManager(), *this, prevAddr), prevAddr);
 	}
 };
