@@ -152,6 +152,10 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 	 */
     virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact, bool symbolic=false);
 
+public:
+
+    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+
 };
 
 } //namespace extensions

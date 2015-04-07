@@ -37,6 +37,7 @@
 #include "insieme/frontend/extensions/cpp_refs_extension.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/frontend.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
@@ -182,6 +183,18 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insiem
 	}
 	return tu;
 }
+
+FrontendExtension::flagHandler CppRefsCleanupExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        //check if the default activated plugins have been deactivated manually
+        if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions))
+            return false;
+        return job.isCxx();
+    };
+    return lambda;
+}
+
 
 } // extensions
 } // frontend

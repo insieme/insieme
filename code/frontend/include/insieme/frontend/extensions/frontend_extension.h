@@ -48,6 +48,15 @@
 
 
 namespace insieme {
+
+namespace driver {
+namespace cmd {
+namespace detail {
+    class OptionParser;
+}
+}
+}
+
 namespace frontend {
 
 namespace stmtutils {
@@ -66,6 +75,8 @@ namespace tu {
 namespace conversion {
     class Converter;
 }
+
+class ConversionJob;
 
 namespace extensions {
 
@@ -117,7 +128,18 @@ namespace extensions {
         headerVec kidnappedHeaders;
 
 	public:
+        typedef std::function<bool(const ConversionJob&)> flagHandler;
+
         virtual ~FrontendExtension(){}
+
+        /*****************DRIVER STAGE*****************/
+        /**
+         *  This method registers the flags in the OptionParser
+         *  that are needed to activate and configures the plugin.
+         *  @param optParser Reference to the OptionParser
+         *  @return lambda that is called after the insiemecc call was parsed
+         */
+         virtual flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
 
         /*****************PRE CLANG STAGE*****************/
         /**

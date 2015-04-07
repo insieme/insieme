@@ -53,6 +53,7 @@
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/utils/error_report.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 namespace fe = insieme::frontend;
 
@@ -432,6 +433,18 @@ insieme::core::ProgramPtr OclKernelExtension::IRVisit(insieme::core::ProgramPtr&
 	ocl::Compiler oclCompiler(prog, mgr);
 	return oclCompiler.lookForOclAnnotations();
 }
+
+
+FrontendExtension::flagHandler OclKernelExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //register omp flag
+    optParser("fopenclkernel", "", flagActivated, "OpenCL Kernel support");
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        return flagActivated;
+    };
+    return lambda;
+}
+
 
 } //namespace extensions
 } //namespace frontend

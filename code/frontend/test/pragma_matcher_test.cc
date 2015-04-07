@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 #include <vector>
+#include <string>
 #include <memory>
 
 #include "insieme/core/ir_builder.h"
@@ -50,11 +51,13 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/utils/config.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 
 using namespace insieme::frontend;
+using namespace insieme::driver;
 using namespace insieme::frontend::extensions;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
@@ -88,9 +91,10 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions) {
 	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
-	ConversionSetup setup;
-	setup.frontendExtensionInit();
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragmas.c", setup);
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/pragmas.c" };
+    cmd::Options options = cmd::Options::parse(args);
+	options.job.frontendExtensionInit(options.job);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragmas.c", options.job);
 
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
@@ -271,10 +275,11 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions2) {
 	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
-	ConversionSetup setup;
-	setup.frontendExtensionInit();
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/pragma2.c" };
+    cmd::Options options = cmd::Options::parse(args);
+	options.job.frontendExtensionInit(options.job);
 
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragma2.c", setup);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragma2.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 
@@ -347,11 +352,11 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions2) {
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/omp_parallel.c", "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(args);
+	options.job.frontendExtensionInit(options.job);
 
-    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/omp_parallel.c");
-    job.registerFrontendExtension<insieme::frontend::extensions::OmpFrontendExtension>();
-
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_parallel.c", job);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_parallel.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 	insieme::frontend::conversion::Converter convFactory(manager, tu);
@@ -482,11 +487,11 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/omp_for.c", "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(args);
+	options.job.frontendExtensionInit(options.job);
 
-    insieme::frontend::ConversionJob job(CLANG_SRC_DIR "/inputs/omp_for.c");
-    job.registerFrontendExtension<insieme::frontend::extensions::OmpFrontendExtension>();
-
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_for.c", job);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_for.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 	insieme::frontend::conversion::Converter convFactory(manager, tu);
@@ -624,10 +629,11 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 TEST(PragmaMatcherTest, DISABLED_RecursiveFunctions) {
 
 	NodeManager manager;
-	ConversionSetup setup;
-	setup.frontendExtensionInit();
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/rec.c"};
+    cmd::Options options = cmd::Options::parse(args);
+	options.job.frontendExtensionInit(options.job);
 
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/rec.c", setup);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/rec.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 

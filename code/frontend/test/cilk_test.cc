@@ -47,10 +47,16 @@
 
 #include "insieme/frontend/pragma/handler.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 
+#include <string>
+#include <vector>
+
 using namespace insieme::frontend;
+using namespace insieme::driver;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
 namespace fe = insieme::frontend;
@@ -60,10 +66,10 @@ TEST(Cilk, Pragmas) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionSetup setup;
-	setup.setOption(ConversionSetup::Cilk);
-	setup.frontendExtensionInit();
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", setup);
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
+    cmd::Options options = cmd::Options::parse(args);
+	options.job.frontendExtensionInit(options.job);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", options.job);
 
 	const auto& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
@@ -150,12 +156,11 @@ TEST(Cilk, Sema) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionJob job(CLANG_SRC_DIR "/inputs/hello.cilk");
-	job.setOption(ConversionJob::Cilk);
-
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
+    cmd::Options options = cmd::Options::parse(args);
 
 	// check proper encoding of cilk primitives
-	auto code = builder.normalize(job.execute(manager));
+	auto code = builder.normalize(options.job.execute(manager));
 
 	auto str = toString(printer::PrettyPrinter(code));
 

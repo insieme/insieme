@@ -55,11 +55,14 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 using namespace core;
+using namespace insieme::driver;
 
 LambdaExprPtr getEntryPoint(const core::ProgramPtr& prog, const std::string& entry)
 {
@@ -83,14 +86,14 @@ TEST(OMPx, SimpleRegion) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-
-	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.setOption(fe::ConversionJob::OpenMP);
+    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-	core::ProgramPtr prog = job.execute(manager, false);
+	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "simpleRegion");
@@ -145,14 +148,14 @@ TEST(OMPx, Objective) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-
-	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.setOption(fe::ConversionJob::OpenMP);
+    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-	core::ProgramPtr prog = job.execute(manager, false);
+	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "objective");
@@ -163,7 +166,7 @@ TEST(OMPx, Objective) {
         if(cur->hasAttachedValue<insieme::annotations::ompp_objective_info>()) {
             infos.push_back(cur->getAttachedValue<insieme::annotations::ompp_objective_info>());
         }
-        
+
     });
 
     ASSERT_TRUE(infos.size() == 3);
@@ -190,7 +193,7 @@ TEST(OMPx, Objective) {
     ASSERT_TRUE(infos[1].time_min == -1.f);
     ASSERT_TRUE(infos[1].time_max == -1.f);
     ASSERT_TRUE(infos[1].region_id == infos[0].region_id +1);
-	
+
     //#pragma parallel objective(0.1*E+0.2*P+0.7*T:T<3;P>22)
     ASSERT_TRUE(infos[2].energy_weight == 0.1f);
     ASSERT_TRUE(infos[2].energy_min == -1.f);
@@ -212,14 +215,14 @@ TEST(OMPx, Target) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-
-	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.setOption(fe::ConversionJob::OpenMP);
+    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-	core::ProgramPtr prog = job.execute(manager, false);
+	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "target");
@@ -235,14 +238,14 @@ TEST(OMPx, Param) {
     auto& basic = manager.getLangBasic();
 
 	// C source code compilation
-
-	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.setOption(fe::ConversionJob::OpenMP);
+    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-	core::ProgramPtr prog = job.execute(manager, false);
+	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "param");
@@ -307,14 +310,14 @@ TEST(OMPx, FirstLocal) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-
-	fe::ConversionJob job(CLANG_SRC_DIR "inputs/omp+_region.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.setOption(fe::ConversionJob::OpenMP);
+    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
-	core::ProgramPtr prog = job.execute(manager, false);
+	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "firstLocal");

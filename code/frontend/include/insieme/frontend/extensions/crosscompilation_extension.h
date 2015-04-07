@@ -48,10 +48,21 @@ namespace extensions {
 class CrossCompilationExtension : public insieme::frontend::extensions::FrontendExtension {
 
 public:
-        CrossCompilationExtension(const std::string& systemHeadersDir) {
-                kidnappedHeaders.push_back(systemHeadersDir);
-
+        CrossCompilationExtension() {
                 #include "insieme/frontend/extensions/crosscompilation_macros.inl"
+        }
+
+        FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+            //create lambda
+            auto lambda = [&](const ConversionJob& job) {
+                //if we have no cross compilation header directories return false
+                if(job.getCrossCompilationSystemHeadersDir().empty())
+                    return false;
+                //otherwise configure the extension and return true
+                kidnappedHeaders.push_back(job.getCrossCompilationSystemHeadersDir());
+                return true;
+            };
+            return lambda;
         }
 };
 

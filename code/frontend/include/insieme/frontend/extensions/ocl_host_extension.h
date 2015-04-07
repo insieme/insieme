@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,9 +48,11 @@ namespace extensions {
 // extension for OpenCl host files
 
 class OclHostExtension : public FrontendExtension {
-	const std::vector<boost::filesystem::path>& includeDirs;
+    bool flagActivated;
+	std::vector<boost::filesystem::path> includeDirs;
 public:
-	OclHostExtension(const std::vector<boost::filesystem::path>& includeDirs);
+	OclHostExtension() : flagActivated(false) {};
+    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
 private:
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
@@ -58,15 +60,15 @@ private:
 // extension for icl host files
 
 class IclHostExtension : public FrontendExtension {
-	const std::vector<boost::filesystem::path>& includeDirs;
+    bool flagActivated;
+	std::vector<boost::filesystem::path> includeDirs;
 	core::pattern::TreePattern iclRunKernel;
-
 public:
-	IclHostExtension(const std::vector<boost::filesystem::path>& includeDirs);
+	IclHostExtension() : flagActivated(false) {};
+    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
 private:
     virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                    insieme::frontend::conversion::Converter& convFact);
-
 
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
