@@ -29,14 +29,15 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
 #include <string>
+#include <vector>
 #include <cstdlib>
 
 #include <boost/program_options.hpp>
@@ -77,16 +78,7 @@ namespace cmd {
 
 	};
 
-	std::ostream& operator<<(std::ostream& out, const BackendHint& b) {
-		switch(b.backend) {
-			case BackendEnum::Runtime: out << "runtime"; break;
-			case BackendEnum::Sequential: out << "sequential"; break;
-			case BackendEnum::OpenCL: out << "opencl"; break;
-			case BackendEnum::Pthreads: out << "pthreads"; break;
-			default: out << "unknown";
-		}
-		return out;
-	}
+    std::ostream& operator<<(std::ostream& out, const BackendHint& b);
 
 	// holds all settings that are not part of a ConversionJob
 	struct Settings {
@@ -138,7 +130,7 @@ namespace cmd {
 		/**
 		 * Parses the given command line options.
 		 */
-		static detail::OptionParser parse(int argc, char** argv);
+		static detail::OptionParser parse(const std::vector<std::string>& argv);
 
 	private:
 
@@ -155,8 +147,6 @@ namespace cmd {
 
 	namespace detail {
 
-	typedef shared_ptr<insieme::frontend::extensions::FrontendExtension> FrontendExtensionPtr;
-
 		class OptionParser {
 
 			/**
@@ -165,14 +155,9 @@ namespace cmd {
 			typedef std::function<bool(const boost::program_options::variables_map&)> parser_step;
 
 			/**
-			 * The number of arguments passed to the program.
-			 */
-			int argc;
-
-			/**
 			 * The arguments passed to the program.
 			 */
-			char** argv;
+            std::vector<std::string> argv;
 
 			/**
 			 * The description of parameters to be parsed by this parser - aggregated
@@ -185,18 +170,17 @@ namespace cmd {
 			 */
 			vector<parser_step> parser_steps;
 
-			/**
-			 * A list of frontend extensions that offer command line parameters.
-			 */
-			vector<FrontendExtensionPtr> frontendExtensions;
-
 		public:
+			/**
+			 * The Option object that is going to be filled.
+			 */
+			Options res;
 
 			/**
 			 * Creates a new instance of this option parser parsing the given arguments.
 			 * This
 			 */
-			OptionParser(int argc, char** argv);
+			OptionParser(const std::vector<std::string>& argv);
 
 			/**
 			 * Allows to add a flag to the program options using a convenient syntax.
@@ -206,18 +190,7 @@ namespace cmd {
 			 * @param target the target to be used for storing whether the flag has been set or not
 			 * @param description the description of the parameter to be shown in the help message
 			 */
-			OptionParser& operator()(const string& name, char symbol, bool& flag, const char* description);
-
-			/**
-			 * Allows to add a flag to the program options using a convenient syntax.
-			 *
-			 * @param name the name of the flag to be added
-			 * @param symbol the one-letter shortcut of the flag
-			 * @param target the target to be used for storing whether the flag has been set or not
-			 * @param description the description of the parameter to be shown in the help message
-			 */
-			template<typename T, typename ... Args>
-			OptionParser& registerFrontendExtension(const Args& ... args);
+			OptionParser& operator()(const string& name, const string& symbol, bool& flag, const char* description);
 
 			/**
 			 * Allows to add additional program options using a convenient syntax.

@@ -74,7 +74,8 @@ int main(int argc, char** argv) {
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
 	unsigned unrollingFactor = 1;
-	cmd::Options options = cmd::Options::parse(argc, argv)
+    std::vector<std::string> arguments(argv, argv+argc);
+	cmd::Options options = cmd::Options::parse(arguments)
 		// one extra parameter - unrolling factor, default should be 5
 		("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
 	;

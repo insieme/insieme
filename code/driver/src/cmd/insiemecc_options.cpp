@@ -51,13 +51,24 @@ namespace cmd {
 	namespace bpo = boost::program_options;
 	namespace fe = insieme::frontend;
 
-	detail::OptionParser Options::parse(int argc, char** argv) {
-		return detail::OptionParser(argc, argv);
+    std::ostream& operator<<(std::ostream& out, const BackendHint& b) {
+        switch(b.backend) {
+            case BackendEnum::Runtime: out << "runtime"; break;
+            case BackendEnum::Sequential: out << "sequential"; break;
+            case BackendEnum::OpenCL: out << "opencl"; break;
+            case BackendEnum::Pthreads: out << "pthreads"; break;
+            default: out << "unknown";
+        }
+        return out;
+    }
+
+	detail::OptionParser Options::parse(const std::vector<std::string>& argv) {
+		return detail::OptionParser(argv);
 	}
 
 	namespace detail {
 
-		OptionParser::OptionParser(int argc, char** argv) : argc(argc), argv(argv) {
+		OptionParser::OptionParser(const std::vector<std::string>& argv) : argv(argv), res(frontend::ConversionJob("in.c"))  {
 
 			// define options
 			desc.add_options()
@@ -70,24 +81,34 @@ namespace cmd {
 #include "insieme/driver/cmd/insiemecc_options.def"
 			;
 
+			//get information how the plugins are activated
+            res.job.registerExtensionFlags(*this);
 		}
 
 
-		OptionParser& OptionParser::operator()(const string& name, char symbol, bool& flag, const char* description) {
+		OptionParser& OptionParser::operator()(const string& name, const string& symbol, bool& flag, const char* description) {
 
 			// add flag to description
-			desc.add_options()((name + "," + symbol).c_str(), description);
+			if(symbol.empty()) {
+                desc.add_options()(name.c_str(), description);
+            } else {
+                desc.add_options()((name + "," + symbol).c_str(), description);
+            }
 
 			// add parser step
-			parser_steps.push_back([&](const bpo::variables_map& map) {
-				flag = map.count(name); return true;
+			//be careful what you pass to the lambda. This is a little
+			//bit dangerous because we capture the flag as reference.
+			parser_steps.push_back([&flag, name](const bpo::variables_map& map) {
+				(map.count(name)) ? flag = 1 : flag = 0;
+				return true;
 			});
 			return *this;
 		}
 
 		OptionParser::operator Options() {
-
 			// -- parsing -------------------------------------------
+            // remove the first entry: this should be some string like "insiemecc"
+            argv.erase(argv.begin());
 
 			// define positional options (all options not being named)
 			bpo::positional_options_description pos;
@@ -95,7 +116,7 @@ namespace cmd {
 
 			// parse parameters
 			bpo::variables_map map;
-			bpo::store(bpo::basic_command_line_parser<char>(argc, argv)
+			bpo::store(bpo::basic_command_line_parser<char>(argv)
 				.options(desc)
 				.style((bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise) ^ bpo::command_line_style::allow_guessing)
 				.positional(pos)
@@ -108,7 +129,6 @@ namespace cmd {
 
 			// -- processing -----------------------------------------
 
-			Options res(frontend::ConversionJob("in.c"));
 			std::string tempName;
 #define FLAG(_name__, _id__, _description__) \
 			tempName = string(_name__); \
@@ -171,19 +191,10 @@ namespace cmd {
 
 
 			// --------------- Job Settings ---------------
-
-			res.job.setOption(fe::ConversionJob::OpenMP, res.settings.openMP);
-			res.job.setOption(fe::ConversionJob::Cilk, res.settings.cilk);
-			res.job.setOption(fe::ConversionJob::OpenCL, res.settings.openCL);
-			res.job.setOption(fe::ConversionJob::Lib_icl, res.settings.iCL);
 			res.job.setOption(fe::ConversionJob::ProgressBar, res.settings.progress);
 			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
 			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
-			res.job.setOption(fe::ConversionJob::GemCrossCompile, res.settings.gemCrossCompile);
-
-			// TODO: Remove this warning once the opencl frontend is fixed
-			if(res.job.hasOption(fe::ConversionJob::OpenCL))
-				std::cerr << "Warning: OpenCL frontend support still experimental, consider switching to ICL frontend.\n";
+			res.job.setOption(fe::ConversionJob::NoDefaultExtensions, res.settings.noDefaultExtensions);
 
 			// check for libraries and add LD_LIBRARY_PATH entries to lib search path
 			std::vector<frontend::path> ldpath;
@@ -245,7 +256,7 @@ namespace cmd {
 
             // interceptions
 			res.job.addInterceptedNameSpacePatterns(res.settings.intercept);
-            
+
             if(!res.settings.interceptIncludes.empty()) {
 				res.job.setInterceptedHeaderDirs(res.settings.interceptIncludes);
             }

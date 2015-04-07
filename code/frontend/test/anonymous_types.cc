@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,7 +44,11 @@
 
 #include "insieme/utils/test/test_utils.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "test_utils.inc"
+
+using namespace insieme::driver;
 
 namespace insieme {
 namespace frontend {
@@ -63,7 +67,7 @@ namespace frontend {
 		Source src(
 				R"(
 
-					typedef struct { 
+					typedef struct {
 					} A;
 
 					int main() {
@@ -75,8 +79,11 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		auto res = builder.normalize(ConversionJob(src).execute(mgr));
+		auto res = builder.normalize(options.job.execute(mgr));
 
 //		dumpPretty(res);
 		RUN_SEMA(res);
@@ -90,10 +97,10 @@ namespace frontend {
 		Source src(
 				R"(
 					typedef struct {
-						int a;    
-						int b;         
+						int a;
+						int b;
 					} A;
-																						    
+
 					typedef A X[1];
 
 					//  parameters tests
@@ -121,7 +128,7 @@ namespace frontend {
 
 					int main() {
 						X x;
-						
+
 						val(x);
 						ref(x);
 						constRef(x);
@@ -139,11 +146,11 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		ConversionJob cj(src);
-		cj.setStandard(ConversionSetup::Cxx03);
-
-		auto res = builder.normalize(cj.execute(mgr));
+		auto res = builder.normalize(options.job.execute(mgr));
 
 //		dumpPretty(res);
 		RUN_SEMA(res);
@@ -177,13 +184,13 @@ namespace frontend {
 					};
 
 					typedef struct {
-						int a;    
-						int b;         
+						int a;
+						int b;
 					} A;
 
 					void f(const A* ptr){
 					}
-																						    
+
 					typedef A X[1];
 
 					struct wrap{
@@ -205,11 +212,11 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		ConversionJob cj(src);
-		cj.setStandard(ConversionSetup::Cxx03);
-
-		auto res = builder.normalize(cj.execute(mgr));
+		auto res = builder.normalize(options.job.execute(mgr));
 
 	//	dumpPretty(res);
 		auto msg = insieme::core::checks::check(res);
@@ -218,7 +225,7 @@ namespace frontend {
 				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
 			}
 		}
-		EXPECT_TRUE(msg.empty());	
+		EXPECT_TRUE(msg.empty());
 	}
 
 	TEST(AnonymousTypes, Union) {
@@ -241,11 +248,11 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		ConversionJob cj(src);
-		cj.setStandard(ConversionSetup::Cxx03);
-
-		auto res = builder.normalize(cj.execute(mgr));
+		auto res = builder.normalize(options.job.execute(mgr));
 
 	//	dumpPretty(res);
 		auto msg = insieme::core::checks::check(res);
@@ -254,9 +261,9 @@ namespace frontend {
 				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
 			}
 		}
-		EXPECT_TRUE(msg.empty());	
+		EXPECT_TRUE(msg.empty());
 	}
-	
+
 	TEST(AnonymousTypes, Nested) {
 		Source src(
 				R"(
@@ -277,11 +284,11 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		ConversionJob cj(src);
-		cj.setStandard(ConversionSetup::Cxx03);
-
-		auto res = builder.normalize(cj.execute(mgr));
+		auto res = builder.normalize(options.job.execute(mgr));
 
 		dumpPretty(res);
 		auto msg = insieme::core::checks::check(res);
@@ -290,7 +297,7 @@ namespace frontend {
 				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
 			}
 		}
-		EXPECT_TRUE(msg.empty());	
+		EXPECT_TRUE(msg.empty());
 	}
 } // end namespace frontend
 } // end namespace insieme

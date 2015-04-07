@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,6 +51,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -61,6 +63,7 @@ namespace core = insieme::core;
 //using namespace insieme::c_info;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
+using namespace insieme::driver;
 
 namespace {
 class OclTestVisitor : public core::IRVisitor<void> {
@@ -154,12 +157,13 @@ TEST(OclCompilerTest, HelloCLTest) {
 
 	core::NodeManager manager;
 
-    fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-    job.registerFrontendExtension<fe::extensions::OclKernelExtension>();
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = CLANG_SRC_DIR "inputs/hello.cl";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenclkernel" };
+    cmd::Options options = cmd::Options::parse(argv);
 
     LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-    core::ProgramPtr program = job.execute(manager, false);
+    core::ProgramPtr program = options.job.execute(manager, false);
     LOG(INFO) << "Done.";
 
     core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);

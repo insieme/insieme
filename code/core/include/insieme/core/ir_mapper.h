@@ -62,7 +62,7 @@ namespace core {
 		 * @param ptr the pointer to be resolved
 		 * @return the pointer the given pointer is mapped to by this mapper
 		 */
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, Context c) =0;
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, Context& c) =0;
 
 	public:
 
@@ -75,7 +75,7 @@ namespace core {
 		 * A generic version of the map operation to be applied on a root node.
 		 */
 		template<typename T>
-		inline Pointer<T> map(const Pointer<T>& ptr, Context c) {
+		inline Pointer<T> map(const Pointer<T>& ptr, Context& c) {
 			return map<T>(0, ptr, c);
 		}
 
@@ -83,7 +83,7 @@ namespace core {
 		 * A generic version of the map operation handling pointer types properly.
 		 */
 		template<typename T>
-		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr, Context c) {
+		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr, Context& c) {
 			// short-cut for null
 			if (!ptr) return Pointer<T>();
 
@@ -99,7 +99,7 @@ namespace core {
 		 * @return a new container including pointers referencing clones of the nodes referenced
 		 * 		   by the original container.
 		 */
-		NodeList mapAll(const NodeList& container, Context c) {
+		NodeList mapAll(const NodeList& container, Context& c) {
 			NodeList res;
 
 			auto first = container.begin();
@@ -117,21 +117,24 @@ namespace core {
 
 	class SimpleNodeMapping : public NodeMapping<int> {
 	public:
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, __unused int c) final override {
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, int&) final override {
 			return mapElement(index, ptr);
 		}
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) =0;
 		
 		template<typename T>
 		inline Pointer<T> map(const Pointer<T>& ptr) {
-			return NodeMapping<int>::map<T>(0, ptr, 0);
+			int ctxt = 0;
+			return NodeMapping<int>::map<T>(0, ptr, ctxt);
 		}
 		template<typename T>
 		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr) {
-			return NodeMapping<int>::map(index, ptr, 0);
+			int ctxt = 0;
+			return NodeMapping<int>::map(index, ptr, ctxt);
 		}
 		NodeList mapAll(const NodeList& container) {
-			return NodeMapping<int>::mapAll(container, 0);
+			int ctxt = 0;
+			return NodeMapping<int>::mapAll(container, ctxt);
 		}
 	};
 

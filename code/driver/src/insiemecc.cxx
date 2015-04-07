@@ -61,6 +61,8 @@
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/extensions/ocl_host_extension.h"
+#include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/transform/polyhedral/scoppar.h"
 #include "insieme/transform/polyhedral/scopvisitor.h"
 
@@ -69,7 +71,6 @@
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
-
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/object_file_utils.h"
 
@@ -84,7 +85,6 @@
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/version.h"
-
 
 using namespace std;
 using namespace insieme;
@@ -317,8 +317,15 @@ const core::ProgramPtr SCoPTransformation(const core::ProgramPtr& program, const
 	int ocltransform = 0;
 
 	// check whether OpenCL processing has been requested by the user
-	if (options.backendHint == cmd::BackendEnum::OpenCL || options.settings.openCL) {
-		if ((options.backendHint == cmd::BackendEnum::OpenCL) ^ (options.settings.openCL))
+	auto oclChecker = [&]() -> bool {
+	    for(auto extPtr : options.job.getExtensions()) {
+            if(dynamic_cast<insieme::frontend::extensions::OclHostExtension*>(extPtr.get()))
+                return true;
+	    }
+	    return false;
+	};
+	if (options.backendHint == cmd::BackendEnum::OpenCL || oclChecker()) {
+		if ((options.backendHint == cmd::BackendEnum::OpenCL) ^ (oclChecker()))
 			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl <<
 						 "Not doing polyhedral OpenCL transformation." << std::endl;
 		else {
@@ -370,14 +377,21 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 	if(options.backendHint == cmd::BackendEnum::Sequential)
 		return be::sequential::SequentialBackend::getDefault();
 
-	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, options.job.hasOption(fe::ConversionJob::GemCrossCompile));
+    auto gemsclaimChecker = [&]() -> bool {
+	    for(auto extPtr : options.job.getExtensions()) {
+            if(dynamic_cast<insieme::frontend::extensions::GemsclaimExtension*>(extPtr.get()))
+                return true;
+	    }
+	    return false;
+	};
+	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, gemsclaimChecker());
 }
 
 int main(int argc, char** argv) {
 
 	// Step 1: parse input parameters
-
- 	cmd::Options options = cmd::Options::parse(argc, argv);
+    std::vector<std::string> arguments(argv, argv + argc);
+    cmd::Options options = cmd::Options::parse(arguments);
 
  	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.settings.logLevel), options.settings.verbosity);
 
@@ -535,13 +549,13 @@ int main(int argc, char** argv) {
     for(auto cur : options.job.getFFlags()) {
         compiler.addFlag(cur);
     }
-    
+
     //add definitions
     for(auto cur : options.job.getDefinitions()) {
         compiler.addFlag(std::string("-D" + cur.first));
     }
 
-    //if an optimization flag is set (e.g. -O3) 
+    //if an optimization flag is set (e.g. -O3)
     //set this flag in the backend compiler
     if(!options.settings.optimization.empty())
         compiler.addFlag("-O" + options.settings.optimization);
@@ -553,7 +567,7 @@ int main(int argc, char** argv) {
     if(options.job.isCxx()) {
         compiler.addFlag("-std=c++0x");
     }
-    
+
 	return !cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 }
 

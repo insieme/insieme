@@ -65,9 +65,13 @@ class InterceptorExtension : public insieme::frontend::extensions::FrontendExten
 
 	const insieme::frontend::utils::Interceptor& getInterceptor() const { return interceptor; }
 
+	void setInterceptor(const std::set<std::string>& patterns) { interceptor = insieme::frontend::utils::Interceptor(patterns); }
+
 	public:
 
-	InterceptorExtension(const std::set<std::string>& patterns) : interceptor(patterns) {}
+    FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+
+	InterceptorExtension() : interceptor(std::set<std::string>()) {}
 
 };
 

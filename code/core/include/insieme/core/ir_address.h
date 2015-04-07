@@ -452,7 +452,7 @@ namespace core {
 		 * @param index the index of the child-node to be addressed within the current nodes child list.
 		 * @return the address of the child node
 		 */
-		virtual NodeAddress getAddressOfChild(unsigned index) const {
+		NodeAddress getAddressOfChild(unsigned index) const {
 			// extend path by child element
 			return NodeAddress(path.extendForChild(index));
 		}

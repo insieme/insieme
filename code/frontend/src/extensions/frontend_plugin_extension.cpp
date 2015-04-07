@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,6 +39,8 @@
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/pragma/handler.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 namespace insieme {
 namespace frontend {
@@ -64,6 +66,16 @@ namespace extensions {
     insieme::frontend::pragma::node* PragmaHandler::getToken() {
         return tok;
     };
+
+    // ############ DRIVER STAGE ############ //
+    FrontendExtension::flagHandler FrontendExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        return [&](const ConversionJob& job) {
+                    //check if the default activated plugins have been deactivated manually
+                    if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions))
+                        return false;
+                    return true;
+        };
+    }
 
     // ############ PRE CLANG STAGE ############ //
     const FrontendExtension::macroMap& FrontendExtension::getMacroList() const {

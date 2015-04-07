@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -75,12 +75,14 @@ int main(int argc, char** argv) {
 	bool extract_execution_net = false;
 	bool extract_state_graph = false;
 	bool dump_equations = false;
-	cmd::Options options = cmd::Options::parse(argc, argv)
+    std::vector<std::string> arguments(argv, argv+argc);
+	cmd::detail::OptionParser optionParser = cmd::Options::parse(arguments);
 		// register the extra flags
-		("exec_net", 		'e', 	extract_execution_net, 		"extract the execution net from the program")
-		("state_graph", 	's', 	extract_state_graph, 		"extract the state graph from the program")
-		("dump_equations", 	'q', 	dump_equations, 			"dumps the equations utilized for computing the results")
-	;
+		optionParser("exec_net", 		"e", 	extract_execution_net, 		"extract the execution net from the program");
+		optionParser("state_graph", 	"s", 	extract_state_graph, 		"extract the state graph from the program");
+		optionParser("dump_equations", 	"q", 	dump_equations, 			"dumps the equations utilized for computing the results");
+
+	cmd::Options options = optionParser;
 	if (!options.valid) return (options.settings.help)?0:1;
 
 
