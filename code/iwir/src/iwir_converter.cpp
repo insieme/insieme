@@ -172,9 +172,14 @@ CONVERTER(Link) {
 			//TODO find better solution... output links from parallelFor/ForEach are like
 			//unionlinks...
 			//FUGLY HACK!!! -- move to AST?
-			bool isOutputOfParallelFor = (node->to->parentTask->getNodeType() == NT_ParallelForTask);
-			bool isOutputOfParallelForEach = (node->to->parentTask->getNodeType() == NT_ParallelForEachTask);
-			if(isOutputOfParallelFor || isOutputOfParallelForEach) {
+			VLOG(2) << *(node->to) << " " << node->to->isInput;
+			bool isOutputOfParallelFor = (!(node->to->isInput) && (node->to->parentTask->getNodeType() == NT_ParallelForTask));
+			bool isOutputOfParallelForEach = (!(node->to->isInput) && (node->to->parentTask->getNodeType() == NT_ParallelForEachTask));
+			bool isLoopCounter = (!(node->to->isInput) && (node->to->kind == PK_LoopCounter));
+			VLOG(2) << "isOutputOfParallelFor " << isOutputOfParallelFor; 
+			VLOG(2) << "isOutputOfParallelForEach " << isOutputOfParallelForEach; 
+			VLOG(2) << "isOutputLoopCounter " << isLoopCounter; 
+			if(!isLoopCounter && (isOutputOfParallelFor || isOutputOfParallelForEach) ) {
 				symbols["iterator"] = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
 				symbols["link"] = irMgr.getLangExtension<iwir::extension::CollectionTypeExtension>().getLinkParallelOutput();
 				linkStmt = irBuilder.parseStmt("link(from, to, iterator);", symbols);
