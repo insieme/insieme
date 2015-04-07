@@ -247,11 +247,6 @@ namespace core {
 		Address(Address<B>&& from) : path(std::move(from.getPath())) {}
 		
 		/**
-		 * Virtual destructor, required due to virtual method.
-		 */
-		virtual ~Address() {}
-
-		/**
 		 * Reinterprets this address to be referencing the requested element type.
 		 */
 		template<typename R>
