@@ -66,12 +66,14 @@ class NodeReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const PointerMap<NodePtr, NodePtr>& replacements;
 	const bool includesTypes;
+	const bool limitScope;
 
 public:
 
-	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements)
+	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope = false)
 		: manager(manager), replacements(replacements),
-		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })) { }
+		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })),
+		  limitScope(limitScope) { }
 
 private:
 
@@ -89,6 +91,12 @@ private:
 		// the recursion can be pruned (since types only have other types as
 		// sub-nodes)
 		if (!includesTypes && ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// handle scope limiting elements
+		if (limitScope && ptr->getNodeType() == NT_LambdaExpr) {
+			// enters a new scope => variable will no longer occur
 			return ptr;
 		}
 
@@ -1077,7 +1085,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replace
 	}
 
 	// handle entire map
-	auto mapper = ::NodeReplacer(mgr, replacements);
+	auto mapper = ::NodeReplacer(mgr, replacements, limitScope);
 	return applyReplacer(mgr, root, mapper);
 }
 

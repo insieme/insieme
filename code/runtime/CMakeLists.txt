@@ -100,6 +100,11 @@ if (Hwloc_FOUND)
 	add_definitions(-DIRT_USE_HWLOC)
 	# I tried to do this as it is supposed to be done, but CMake sucks
 	add_definitions("${Hwloc_CFLAGS}")
+	# this would be the correct way, but it requires the user to set LD_LIBRARY_FLAGS
+	# however, it would obviate the need for the link_hwloc function
+	#string (REPLACE ";" " " Hwloc_LDFLAGS_STR "${Hwloc_LDFLAGS}")
+	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${Hwloc_LDFLAGS_STR}")
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Hwloc_LDFLAGS_STR}")
 endif()
 
 function(link_hwloc target)
