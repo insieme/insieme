@@ -172,10 +172,10 @@ TypeHandler getVarInitUpdater(NodeManager& manager);
  * @param declInitReplacements a map from Variables present in replacements to expressions, which should be used as init expressions of the corresponding variable
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<ExpressionPtr, ExpressionPtr>& replacements, bool limitScope = true,
+		const insieme::utils::map::PointerMap<ExpressionPtr, ExpressionPtr>& replacements, bool limitScope = true,
 		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
 		const TypeHandler& typeHandler = id<StatementPtr>(),
-		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = utils::map::PointerMap<VariablePtr, ExpressionPtr>());
+		const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>());
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -195,7 +195,7 @@ Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T
 		const ExpressionMap& replacements, bool limitScope = true,
 		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
 		const TypeHandler& typeHandler = id<StatementPtr>(),
-		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
+		const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
 	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, recoveryHandler, typeHandler, declInitReplacements));
 }
 
@@ -204,7 +204,7 @@ Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T
 		const VariableMap& replacements, bool limitScope = true,
 		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
 		const TypeHandler& typeHandler = id<StatementPtr>(),
-		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
+		const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
 	ExpressionMap em;
 	for_each(replacements, [&](std::pair<VariablePtr, VariablePtr> rep) {
 		em[rep.first] = rep.second;
