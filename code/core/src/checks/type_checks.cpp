@@ -845,8 +845,16 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 	for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
 		core::TypePtr requiredType = structType->getTypeOfMember(cur->getName());
 		core::TypePtr isType = cur->getValue()->getType();
-
-		if (*requiredType != *isType) {
+        if (!requiredType) {
+           add(res, Message(address,
+                   EC_TYPE_INVALID_INITIALIZATION_EXPR,
+                   format(
+                           "No member %s in struct type %s",
+                           toString(cur->getName()).c_str(),
+                           toString(*structType).c_str()
+                   ), Message::ERROR)
+            );
+        } else if (*requiredType != *isType) {
 			add(res, Message(address,
 				EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s",
@@ -1247,7 +1255,7 @@ namespace {
 			return true;
 		}
 
-		// also allow function pointers to be casted to different type function pointers 
+		// also allow function pointers to be casted to different type function pointers
 		if (src->getNodeType() == NT_FunctionType && trg->getNodeType() == NT_FunctionType) return true;
 
 		// everything else is invalid
@@ -1314,7 +1322,7 @@ OptionalMessageList GenericZeroCheck::visitCallExpr(const CallExprAddress& addre
 //		- type of the expected inner object
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
-	
+
 	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
@@ -1354,7 +1362,7 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 		return res;
 	}
 
-	// generic types can not be checked, we must trust 
+	// generic types can not be checked, we must trust
 	if (narrowType.isa<GenericTypePtr>())
 		return res;
 
