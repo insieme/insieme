@@ -49,7 +49,25 @@ namespace transform {
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible VariableIntTypeParmas instantiated
  */
-NodePtr instatiateIntTypeParams(const NodePtr& root);
+NodePtr instantiateIntTypeParams(const NodePtr& root);
+
+/**
+ * A transformation which instantiates TypeVariables wherever possible
+ * from concrete types in each calls' argument list.
+ *
+ * @param root the node to start the instantiation from
+ * @return IR with the same root node, with all deducible TypeVariables instantiated
+ */
+NodePtr instantiateTypeVariables(const NodePtr& root);
+
+/**
+ * A transformation which instantiates all sources of genericity in types
+ * (VariableIntTypeParams and TypeVariables) from concrete types in each calls' argument list.
+ *
+ * @param root the node to start the instantiation from
+ * @return IR with the same root node, with all deducible types instantiated
+ */
+NodePtr instantiateTypes(const NodePtr& root);
 
 } // end namespace transform
 } // end namespace core

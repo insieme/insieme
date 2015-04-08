@@ -48,7 +48,8 @@ namespace transform {
 
 
 namespace {
-	class IntTypeParamInstantiator : public SimpleNodeMapping {
+	template<class VarTypePtr, class ConcreteTypePtr, class VarTypeAddress> 
+	class TypeInstantiator : public SimpleNodeMapping {
 	private:
 		template<class T>
 		static bool containsType(const TypePtr& t) {
@@ -58,11 +59,11 @@ namespace {
 		}
 
 		template<class T>
-		static vector<vector<VariableIntTypeParamAddress>> collectIntTypeParamList(const T& parameterTypes) {
-			vector<vector<VariableIntTypeParamAddress>> ret;
+		static vector<vector<VarTypeAddress>> collectTypeParamList(const T& parameterTypes) {
+			vector<vector<VarTypeAddress>> ret;
 			for(const auto& param : parameterTypes) {
-				auto cur = vector<VariableIntTypeParamAddress>();
-				visitDepthFirst(NodeAddress(param), [&](const VariableIntTypeParamAddress& i) {
+				auto cur = vector<VarTypeAddress>();
+				visitDepthFirst(NodeAddress(param), [&](const VarTypeAddress& i) {
 					cur.push_back(i);
 				}, true, true);
 				ret.push_back(cur);
@@ -74,22 +75,22 @@ namespace {
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) override {
 			auto& nodeMan = ptr->getNodeManager();
 			auto builder = IRBuilder(nodeMan);
-			// we are looking for CallExprs which have a ConcreteIntTypeParam in the arguments,
-			// but a VariableIntTypeParam in the lambda which is called
+			// we are looking for CallExprs which have a concrete type params in the arguments,
+			// but a variable type param in the lambda which is called
 			if(ptr.isa<CallExprPtr>()) {
 				auto call = ptr.as<CallExprPtr>();
 				auto args = call->getArguments();
 				if(std::any_of(args.cbegin(), args.cend(), [&](const ExpressionPtr& expr) {
-					return containsType<ConcreteIntTypeParamPtr>(expr->getType()); 
+					return containsType<ConcreteTypePtr>(expr->getType()); 
 				})) {
 					auto fun = call->getFunctionExpr();
 					if(fun.isa<LambdaExprPtr>()) {
 						auto funExp = fun.as<LambdaExprPtr>();
 						auto funType = funExp->getFunctionType();
-						if(containsType<VariableIntTypeParamPtr>(funType)) {
-							auto variableTypeAddrList = collectIntTypeParamList(funType->getParameterTypeList());
+						if(containsType<VarTypePtr>(funType)) {
+							auto variableTypeAddrList = collectTypeParamList(funType->getParameterTypeList());
 
-							// we have gathered the addresses of variable inttype pointers within each parameter
+							// we have gathered the addresses of variable type pointers within each parameter
 							// now we try to derive a mapping for each of them to a concrete instantiation from the call site
 							NodeMap nodeMap;
 							for(unsigned paramIndex = 0; paramIndex < variableTypeAddrList.size(); ++paramIndex) {
@@ -97,12 +98,12 @@ namespace {
 								auto argTypePtr = call->getArgument(paramIndex)->getType();
 								for(auto&& addr : paramAddr) {
 									auto mappedAddr = addr.switchRootAndType(argTypePtr);
-									nodeMap.insert(std::make_pair(addr.getAddressedNode(), mappedAddr.getAddressedNode().as<ConcreteIntTypeParamPtr>()));
+									nodeMap.insert(std::make_pair(addr.getAddressedNode(), mappedAddr.getAddressedNode()));
 								}
 							}
 							//std::cout << "THE MAP: " << nodeMap << std::endl;
 
-							// using the derived mapping, we generate a new lambda expression with instantiated intTypeParams
+							// using the derived mapping, we generate a new lambda expression with instantiated type params
 							// tricky: we apply the same mapping recursively on the *new* body
 							auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, true)->substitute(nodeMan, *this);
 							auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, true);
@@ -121,9 +122,18 @@ namespace {
 	};
 }
 
-NodePtr instatiateIntTypeParams(const NodePtr& root) {
-	IntTypeParamInstantiator inst;
+NodePtr instantiateIntTypeParams(const NodePtr& root) {
+	TypeInstantiator<VariableIntTypeParamPtr, ConcreteIntTypeParamPtr, VariableIntTypeParamAddress> inst; 
 	return inst.map(root);
+}
+
+NodePtr instantiateTypeVariables(const NodePtr& root) {
+	TypeInstantiator<TypeVariablePtr, TypePtr, TypeVariableAddress> inst; 
+	return inst.map(root);
+}
+
+NodePtr instantiateTypes(const NodePtr& root) {
+	return instantiateTypeVariables(instantiateIntTypeParams(root));
 }
 
 } // end namespace transform
