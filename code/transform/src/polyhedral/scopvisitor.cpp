@@ -122,6 +122,10 @@ boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAd
 
 /// When visiting visitLambdaExpr, we encountered a function call. Apart from declarations, this is another
 /// possibility to instantiate variables, so we need to gather all variables from the closure here.
+/// LambdaExpr  {  FunctionType  Variable  LambdaDefinition  {
+///                                        LambdaBinding  {
+///                                        Variable  Lambda  {
+///                                                  FunctionType  Parameters  CompoundStmt  }}}}
 void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 	// after entering a function, we need to allocate a new variable vector on our variable vector stack
 	varstack.push(std::vector<VariableAddress>());
@@ -134,6 +138,8 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
+/// ForStmt  {  DeclarationStmt  {
+///             Variable  Literal|CallExpr  }  Literal|CallExpr  Literal|CallExpr  CompoundStmt  }
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()), 0, 3);
 
@@ -153,7 +159,7 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	else std::cout << "Loop parameters are not affine" << std::endl;
 
 	// visit declaration to add variable to the list of known variables
-	visit(decl);
+	std::cout << "Visiting declaration... " << std::endl; visit(decl); std::cout << "... done!" << std::endl;
 	std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
 	std::vector<VariableAddress> used=readVars(stmt);
 	std::cout << "vars read\t[ ";  for (auto v: used)           std::cout << *v << " "; std::cout << "]" << std::endl;
@@ -165,10 +171,6 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 }
 
 /// Visit lambda parameters so that we can add them to the list of available variables/SCoP parameters.
-/// LambdaExpr { FunctionType, Variable, LambdaDefinition {
-///                                      LambdaBinding {
-///                                      Variable Lambda {
-///                                               FunctionType Parameters CompoundStmt }}}}
 void SCoPVisitor::visitParameters(const ParametersAddress &node) {
 	std::vector<VariableAddress> &vec=varstack.top();
 	for (auto c: node.getChildAddresses()) vec.push_back(c.as<VariableAddress>());
@@ -177,9 +179,18 @@ void SCoPVisitor::visitParameters(const ParametersAddress &node) {
 
 /// Visit all the declaration statements so that we can collect variable assignments.
 void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	//std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
+	std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
 	varstack.top().push_back(node.getAddressOfChild(0).as<VariableAddress>());
 	visitChildren(node);
+}
+
+/// Visit a compound statement; a compound statement is interesting due to the fact that it may declare local
+/// variables which will not be known outside of the scope of the compound stmt itself.
+void SCoPVisitor::visitCompoundStmt(const CompoundStmtAddress &stmt) {
+	NodeAddress parent=stmt.getParentAddress(1);
+	std::cout << "compound stmt called from " << parent.getNodeType() << std::endl;
+	if (parent.getNodeType() == NT_IfStmt) printNode(parent);
+	visitChildren(stmt);
 }
 
 /// Determine which variables are being read in a given block specified by node and return these.
