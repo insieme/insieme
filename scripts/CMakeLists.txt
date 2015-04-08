@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
+#be able to use the insieme build cmake modules in the superbuild
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../code/cmake/")
 
 #figure out how many cores we have to run jobs on
@@ -15,9 +16,7 @@ if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} )
 	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home" )
 elseif ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
 	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
-endif()
-
-if(NOT THIRD_PARTY_LIBS_HOME) 
+else() 
 	set(THIRD_PARTY_LIBS_HOME ${insieme_lib})
 	message(WARNING "\nSetting THIRD_PARTY_LIBS_HOME to ${THIRD_PARTY_LIBS_HOME} - target destination for the libraries to install\nSet env{THIRD_PARTY_LIBS_HOME} to overwrite default")
 endif()
