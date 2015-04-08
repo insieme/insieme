@@ -1,0 +1,155 @@
+/**
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
+#include <gtest/gtest.h>
+
+#include "insieme/core/transform/instantiate.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/test/test_utils.h"
+
+namespace insieme {
+namespace core {
+namespace transform {
+
+TEST(IntTypeParamInstantiation, Simple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{		
+		let test = (vector<'res,#l> a) -> unit {
+			$vector<'res, #l> res;$
+		};
+
+		vector<int<4>, 8> a;
+		test(a);
+	}
+	)raw");
+	
+	EXPECT_EQ(addresses.size(), 1);
+	
+	auto result = instatiateIntTypeParams(addresses[0].getRootNode());
+	
+	auto newAddr = addresses[0].switchRoot(result);
+	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<'res, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+}
+
+
+TEST(IntTypeParamInstantiation, Return) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{		
+		let test = $(vector<'res,#l> a) -> vector<'res,#l> {
+			return a;
+		}$;
+
+		vector<int<4>, 8> a;
+		test(a);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 1);
+
+	auto result = instatiateIntTypeParams(addresses[0].getRootNode());
+
+	auto newAddr = addresses[0].switchRoot(result);
+	auto retType = newAddr.as<LambdaExprPtr>()->getFunctionType()->getReturnType();
+	EXPECT_EQ(builder.normalize(builder.parseType("vector<'res, 8>")), builder.normalize(retType));
+}
+
+TEST(IntTypeParamInstantiation, Multiple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{		
+		let test = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
+			$vector<'res, #l> res;$
+			$matrix<'res, #x, #y> res2;$
+		};
+
+		vector<int<4>, 8> a;
+		matrix<int<4>, 16, 32> b;
+		test(a, b);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 2);
+
+	auto result = instatiateIntTypeParams(addresses[0].getRootNode());
+
+	auto newAddrVec = addresses[0].switchRoot(result);
+	auto newAddrMat = addresses[1].switchRoot(result);
+	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
+}
+
+TEST(IntTypeParamInstantiation, Nested) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{		
+		let test_array = (vector<'res,#l> a) -> unit {
+			$vector<'res, #l> res;$
+		};
+		let test_outer = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
+			test_array(a);
+			$matrix<'res, #x, #y> res2;$
+		};
+
+		vector<int<4>, 8> a;
+		matrix<int<4>, 16, 32> b;
+		test_outer(a, b);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 2);
+
+	auto result = instatiateIntTypeParams(addresses[0].getRootNode());
+
+	auto newAddrVec = addresses[0].switchRoot(result);
+	auto newAddrMat = addresses[1].switchRoot(result);
+	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
+}
+
+} // end namespace transform
+} // end namespace core
+} // end namespace insieme
