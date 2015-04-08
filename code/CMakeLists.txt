@@ -36,8 +36,8 @@ elseif(BUILD_IWIR)
 	#add_subdirectory(transform)	#CURRENTLY NOT USED FOR IWIR
 	#add_subdirectory(analysis)		#CURRENTLY NOT USED FOR IWIR
 	add_subdirectory(utils)
-	add_subdirectory(annotations)
 	add_subdirectory(common) # needed by annotations...
+	add_subdirectory(annotations)
 	add_subdirectory(core)
 	add_subdirectory(xml)
 	add_subdirectory(iwir)
@@ -79,12 +79,14 @@ else()
 	# C++ -> therefore Werror/Wall/pedantic shows them as error
 	add_subdirectory(runtime)
 
+
 	include(environment.cmake)
 	
 	# include _all_ modules (but runtime is handled in before -> because of certain Wall problems)
 	foreach( child ${children} )
 		if ( EXISTS ${curdir}/${child}/CMakeLists.txt 
-			AND NOT (${child} STREQUAL runtime))
+			AND NOT (${child} STREQUAL runtime)
+			)
 			add_subdirectory( ${child} )
 		endif()
 	endforeach()

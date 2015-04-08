@@ -10,10 +10,9 @@ cmake_minimum_required(VERSION 2.8)
 
 #ninja job pools setting
 # used to limit maximum of parallel CBA jobs as they need a lot of memory
-if( NOT DEFINED(CBA_JOBS) OR (CBA_JOBS) )
-	set(CBA_JOBS "1" CACHE STRING "number of parallel cba unit test jobs")
+if( DEFINED CBA_JOBS)
+	set_property(GLOBAL APPEND PROPERTY JOB_POOLS cba_jobs_compile=${CBA_JOBS} )
 endif()
-set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} )
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_analysis_srcs 	src/*.cpp )
@@ -59,8 +58,8 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 
 	#ninja job pools
-	if(${case_name} MATCHES "ut_analysis_cba_(.*)")
-		set_property(TARGET ${case_name} PROPERTY JOB_POOL_COMPILE cba_jobs)
+	if( DEFINED CBA_JOBS AND (${case_name} MATCHES "ut_analysis_cba_(.*)"))
+		set_property(TARGET ${case_name} PROPERTY JOB_POOL_COMPILE cba_jobs_compile)
 	endif()
 
 	target_link_libraries(${case_name} insieme_core)

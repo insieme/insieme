@@ -53,7 +53,6 @@ list(APPEND LIB_VERSIONS LLVM_VERSION XERCES_VERSION PAPI_VERSION ISL_VERSION CL
 	KOMPEX_VERSION GTEST_VERSION BOOST_VERSION)
 
 foreach(lib ${LIB_VERSIONS})
-
 	#get ${lib_NAME}_VERSION from library_default_version_file
 	if( DEFINED ENV{${lib}} )
 		# overwrite if user specifies otherwise 
