@@ -70,7 +70,7 @@ class NodeReplacer : public CachedNodeMapping {
 
 public:
 
-	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope = false)
+	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope)
 		: manager(manager), replacements(replacements),
 		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })),
 		  limitScope(limitScope) { }
