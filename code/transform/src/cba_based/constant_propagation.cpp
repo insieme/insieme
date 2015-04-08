@@ -81,6 +81,9 @@ namespace cba_based {
 			return false;
 		});
 
+		// return original if no replacements are necessary
+		if(constants.empty())
+			return target;
 		// replace all variable expressions by constants
 		return target.switchRoot(core::transform::replaceAll(mgr, constants));
 	}
