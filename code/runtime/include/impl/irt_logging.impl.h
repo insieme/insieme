@@ -114,6 +114,11 @@ void irt_log_init() {
 #else
 	irt_log_setting_s("IRT_USE_PAPI", "disabled");
 #endif
+#ifdef IRT_USE_HWLOC
+	irt_log_setting_s("IRT_USE_HWLOC", "enabled");
+#else
+	irt_log_setting_s("IRT_USE_HWLOC", "disabled");
+#endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_log_setting_s("IRT_ENABLE_INSTRUMENTATION", "enabled");
 #else

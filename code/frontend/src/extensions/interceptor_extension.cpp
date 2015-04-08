@@ -177,6 +177,7 @@ namespace extensions {
 		}
         return nullptr;
 	}
+
     core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
 
 		if (llvm::isa<clang::TypedefDecl>(decl)){
@@ -206,7 +207,6 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-
 
     /**
      * This post visitor is needed to check if we have a ctor that contains a default argument
@@ -273,6 +273,17 @@ namespace extensions {
         return irExpr;
     }
 
+    FrontendExtension::flagHandler InterceptorExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        //create lambda
+        auto lambda = [&](const ConversionJob& job) {
+            //check if the default activated plugins have been deactivated manually
+            if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions))
+                return false;
+            this->setInterceptor(job.getInterceptedNameSpacePatterns());
+            return true;
+        };
+        return lambda;
+    }
 } // extensions
 } // frontend
 } // insieme

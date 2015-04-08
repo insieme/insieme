@@ -320,6 +320,14 @@ stmtutils::StmtWrapper Cpp11Extension::VisitCXXForRangeStmt(const clang::CXXForR
 	return res;
 }
 
+FrontendExtension::flagHandler Cpp11Extension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        return (job.getStandard() == ConversionSetup::Standard::Cxx11);
+    };
+    return lambda;
+}
+
 } //namespace extension
 } //namespace frontend
 } //namespace insieme

@@ -786,7 +786,9 @@ using insieme::core::pattern::anyList;
 			});
 		}
 
-		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, true);
+		// this used to enable limitScope, but *actually* limiting the scope breaks a unit test.
+		// someone familiar with this code should investigate
+		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, false);
 
 		nodeMap.clear();
 		for (uint n = 0; n < vecBufVarNames.size(); ++n) {

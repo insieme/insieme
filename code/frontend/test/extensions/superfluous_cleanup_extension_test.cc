@@ -44,10 +44,13 @@
 #include "insieme/frontend/frontend.h"
 #include "../test_utils.inc"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace insieme {
 namespace frontend {
 
 using namespace core;
+using namespace driver;
 
 TEST(SuperfluousCleanup, Simple) {
 	NodeManager man;
@@ -163,7 +166,7 @@ int main() {
 				C[i][j] += A[i][k] * B[k][j];
 			}
 		}
-	} 
+	}
 }
 )"
 );
@@ -174,14 +177,17 @@ int main() {
 
 		// parse temporary file
 		core::NodeManager manager;
-		ConversionJob job(file);
-		auto code = job.execute(manager);
+        const boost::filesystem::path& fileName = file;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
+
+		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
 
 		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
 		auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
 		//dumpPretty(lambdaExp);
-		//dumpPretty(cleaned);	
+		//dumpPretty(cleaned);
 
 		// check if all superfluous "if"s got removed
 		int ifCount = 0;

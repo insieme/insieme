@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,7 +46,11 @@
 
 #include "insieme/utils/test/test_utils.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "test_utils.inc"
+
+using namespace insieme::driver;
 
 namespace insieme {
 namespace frontend {
@@ -65,15 +69,15 @@ namespace frontend {
 		Source src(
 				R"(
 
-					struct name{ 
+					struct name{
 						int a;
 					};
 
-					typedef struct oldname{ 
+					typedef struct oldname{
 						int a;
 					} renamed;
 
-					typedef struct { 
+					typedef struct {
 						int a;
 					} anon_renamed;
 
@@ -88,8 +92,12 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+		// parse temporary file
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		core::ProgramPtr res = builder.normalize(ConversionJob(src).execute(mgr));
+		core::ProgramPtr res = builder.normalize(options.job.execute(mgr));
 		RUN_SEMA(res);
 
 		dumpPretty(res);

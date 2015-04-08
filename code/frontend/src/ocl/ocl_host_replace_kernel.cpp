@@ -50,12 +50,13 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/cast_tool.h"
 
-
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/logging.h"
 
@@ -187,12 +188,17 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
-	ConversionJob kernelJob(path, includeDirs);
-	kernelJob.registerFrontendExtension<extensions::OclKernelExtension>();
-	kernelJob.setDefinition("INSIEME", "");
+	//create call to convert the kernel file
+	std::vector<std::string> argv {"kernelcompiler", "-fopenclkernel", path};
+    for(auto incl : includeDirs) {
+        std::string newIncl = "-I"+incl.string();
+        argv.push_back(newIncl);
+    }
+	driver::cmd::Options opt = driver::cmd::Options::parse(argv);
+	opt.job.setDefinition("INSIEME", "");
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));
-	return kernelJob.execute(builder.getNodeManager(), false);
+	return opt.job.execute(builder.getNodeManager(), false);
 }
 
 /* Assumptions:

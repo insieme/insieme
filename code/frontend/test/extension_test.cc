@@ -67,10 +67,16 @@
 #include "insieme/frontend/extensions/cpp11_extension.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
+#include <vector>
+#include <string>
+
 using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 using namespace insieme::frontend;
+using namespace insieme::driver;
 namespace fe = insieme::frontend;
 using namespace fe::pragma;
 
@@ -114,7 +120,7 @@ private:
 				case clang::BuiltinType::UChar:			EXPECT_EQ("uint<1>", toString(*irType)); break;
 				case clang::BuiltinType::Char16:		EXPECT_EQ("wchar<16>", toString(*irType)); break;
 				case clang::BuiltinType::Char32:		EXPECT_EQ("wchar<32>", toString(*irType)); break;
-				case clang::BuiltinType::Char_S:		EXPECT_EQ("char", toString(*irType)); break; 
+				case clang::BuiltinType::Char_S:		EXPECT_EQ("char", toString(*irType)); break;
 				case clang::BuiltinType::SChar:			EXPECT_EQ("char", toString(*irType)); break;
 				case clang::BuiltinType::WChar_S:		EXPECT_EQ("wchar<32>", toString(*irType)); break;
 				case clang::BuiltinType::WChar_U:		EXPECT_EQ("wchar<32>", toString(*irType)); break;
@@ -152,11 +158,11 @@ private:
 			//check if it is a IR complexType
 			EXPECT_TRUE(convFact.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::ComplexExtension>().isComplexType(irType));
 		}
-	
+
 		if(llvm::isa<clang::ArrayType>(type)) {
 			if(const clang::ConstantArrayType* constArrType = llvm::dyn_cast<clang::ConstantArrayType>(type)) {
 				//ConstantArray turns into vector<int<4>, CONST_SIZE>
-				
+
 				//check for vector type
 				EXPECT_TRUE(irType.isa<VectorTypePtr>());
 
@@ -169,7 +175,7 @@ private:
 				size_t arrSize = *constArrType->getSize().getRawData();
 				VectorTypePtr vecType = irType.as<VectorTypePtr>();
 				EXPECT_EQ( toString(*vecType.getSize()),toString(arrSize));
-			} 
+			}
 
 			/*TODO how to get this clang type node?
 			if(const clang::IncompleteArrayType* incArrType = llvm::dyn_cast<clang::IncompleteArrayType>(type)) {
@@ -180,10 +186,10 @@ private:
 			if(llvm::isa<clang::VariableArrayType>(type)) {
 			//if(const clang::VariableArrayType* varArrType = llvm::dyn_cast<clang::VariableArrayType>(type)) {
 				//VariableArray turns into array<int<4>,1>
-				
+
 				//checking array type
 				EXPECT_TRUE(irType.isa<ArrayTypePtr>());
-				
+
 				//checking elementType
 				//ArrayTypePtr arrType = irType.as<ArrayTypePtr>();
 				//TypePtr&& elemTy = convFact.convertType( varArrType->getElementType().getTypePtr() );
@@ -196,7 +202,7 @@ private:
 			//check isFunctionType
 			EXPECT_TRUE(irType.isa<FunctionTypePtr>());
 			auto funcTy = irType.as<FunctionTypePtr>();
-			
+
 			//check return type
 			auto retTy = funcTy.getReturnType();
 			if(retTy.isa<RefTypePtr>()) {
@@ -232,12 +238,12 @@ private:
 						//check ref for vector/array irTypes
 						auto refTy = retTy.as<RefTypePtr>();
 						EXPECT_TRUE(refTy.getElementType().isa<VectorTypePtr>() || refTy.getElementType().isa<ArrayTypePtr>());
-		
-						
+
+
 						//TODO check for OCL/GCC vector Types --> shouldn't have ref
 						// this checks only if SIMDvectors are used without ref, probably not enough
 						EXPECT_FALSE(insieme::core::lang::isSIMDVector(irType));
-					} 
+					}
 				}
 
 				//check single "void" arg is removed
@@ -245,7 +251,7 @@ private:
 					EXPECT_EQ(parameterTypes.size(), 0);
 				}
 
-				
+
 			}
 		}
 
@@ -256,8 +262,8 @@ private:
 		}
 
 		//if(llvm::isa<clang::TypedefType>(type)) { }
-		
-		if(const clang::PointerType* pointerType = llvm::dyn_cast<clang::PointerType>(type)) { 
+
+		if(const clang::PointerType* pointerType = llvm::dyn_cast<clang::PointerType>(type)) {
 			if(pointerType->isVoidPointerType()) {
 				//check void* to be anyRef
 				EXPECT_TRUE(convFact.getIRBuilder().getLangBasic().isAnyRef(irType));
@@ -267,7 +273,7 @@ private:
 			} else {
 				//ref<array<T>> for normal pointers
 				EXPECT_TRUE(irType.isa<RefTypePtr>());
-				auto refType = irType.as<RefTypePtr>(); 
+				auto refType = irType.as<RefTypePtr>();
 				EXPECT_TRUE(refType->getElementType().isa<ArrayTypePtr>());
 			}
 		}
@@ -275,7 +281,7 @@ private:
 		//TODO
 		//if(llvm::isa<clang::TagType>(type)) { }
 		//if(llvm::isa<clang::TagType>(type)) {
-		//if(const clang::RecordType* recType = llvm::dyn_cast<clang::RecordType>(type)) { 
+		//if(const clang::RecordType* recType = llvm::dyn_cast<clang::RecordType>(type)) {
 		if(llvm::isa<clang::RecordType>(type)) {
 			//we expect only a symbol with the name of the RecordType
 			EXPECT_TRUE(irType.isa<GenericTypePtr>()) << "ir type: " << irType << " clang type" << type;
@@ -283,20 +289,20 @@ private:
 			//TODO how to check details?
 			//EXPECT_TRUE(convFact.lookupTypeDetails(irType).isa<StructTypePtr>()) << "ir type: " << irType << " clang type" << type;
 		}
-		
+
 		if(llvm::isa<clang::EnumType>(type)) {
 			const auto& ext= convFact.getIRBuilder().getNodeManager().getLangExtension<insieme::core::lang::EnumExtension>();
 			EXPECT_TRUE(ext.isEnumType(irType)) << "ir type: " << irType << " clang type" << type;
 			//TODO how to check the details?
 		}
-		
+
 		return irType;
 	}
 
 	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
 		auto print = [&](const NodePtr& node) {
 			return toString(
-				printer::PrettyPrinter(analysis::normalize(node), 
+				printer::PrettyPrinter(analysis::normalize(node),
 					printer::PrettyPrinter::PRINT_SINGLE_LINE | printer::PrettyPrinter::NO_LET_BINDINGS
 				)
 			);
@@ -313,7 +319,7 @@ private:
 				EXPECT_TRUE(false) << "something went wrong";
 			}
 		}
-		
+
 		for(auto rt : resolvedTests) {
 			auto nodeToTest = rt.first;
 			auto expectedIRStr = rt.second;
@@ -339,7 +345,7 @@ TEST(TypeConversion, C99_BuiltinTypes) {
 		R"(
 			#include <stddef.h> //needed for wchar_t
 			_Bool b;
-			
+
 			unsigned char uc;
 			char c;
 
@@ -366,12 +372,15 @@ TEST(TypeConversion, C99_BuiltinTypes) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.setStandard(fe::ConversionSetup::C99);
-	job.registerFrontendExtension<UnitTestExtension>();
-	
+
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c99" };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
+
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -381,7 +390,7 @@ TEST(TypeConversion, CPP03_BuiltinTypes) {
 		R"(
 		int main() {
 			bool b;
-			
+
 			unsigned char uc;
 			char c;
 
@@ -393,7 +402,7 @@ TEST(TypeConversion, CPP03_BuiltinTypes) {
 			unsigned short us;
 			long l;
 			unsigned long ul;
-			
+
 			__int128_t i128;
 			__uint128_t ui128;
 
@@ -411,12 +420,14 @@ TEST(TypeConversion, CPP03_BuiltinTypes) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.setStandard(fe::ConversionSetup::Cxx03);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -426,7 +437,7 @@ TEST(TypeConversion, CPP11_BuiltinTypes) {
 		R"(
 		int main() {
 			bool b;
-			
+
 			unsigned char uc;
 			char c;
 
@@ -440,13 +451,13 @@ TEST(TypeConversion, CPP11_BuiltinTypes) {
 			unsigned short us;
 			long l;
 			unsigned long ul;
-			
+
 			__int128_t i128;
 			__uint128_t ui128;
 
 			long long ll;
 			unsigned long long ull;
-			
+
 			float f;
 			double d;
 			long double ld;
@@ -459,12 +470,14 @@ TEST(TypeConversion, CPP11_BuiltinTypes) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.setStandard(fe::ConversionSetup::Cxx11);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++11" };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -488,17 +501,20 @@ TEST(TypeConversion, ComplexType) {
 			}
 			return 0;
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
-	
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
+
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -537,7 +553,7 @@ TEST(TypeConversion, ArrayType) {
 				int intArr[x + fun()];
 				double doubleArr[x + fun()];
 			}
-			
+
 			{
 				//variable array
 				int x = 10;
@@ -550,20 +566,23 @@ TEST(TypeConversion, ArrayType) {
 				int intArr[x+fun()][x + fun()];
 				double doubleArr[x+fun()][x + fun()];
 
-			} 
+			}
 			return 0;
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
-	
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
+
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -582,20 +601,23 @@ TEST(TypeConversion, FunctionType) {
 		int fun_i_i_var(int a, ...) { return 10; }
 
 		int main() {
-			
+
 			return 0;
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -604,12 +626,12 @@ TEST(TypeConversion, SIMDVectorType) {
 	fe::Source src(
 		R"(
 
-		int __attribute__((vector_size(4*sizeof(int)))) fun() { 
+		int __attribute__((vector_size(4*sizeof(int)))) fun() {
 			int __attribute__((vector_size(4*sizeof(int)))) vectorInt4;
 			return vectorInt4;
 		}
 
-		int __attribute__((vector_size(4*sizeof(int)))) fun1(int __attribute__((vector_size(4*sizeof(int)))) arg) { 
+		int __attribute__((vector_size(4*sizeof(int)))) fun1(int __attribute__((vector_size(4*sizeof(int)))) arg) {
 			return arg;
 		}
 
@@ -619,17 +641,20 @@ TEST(TypeConversion, SIMDVectorType) {
 			fun1(vectorInt4);
 			return 0;
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -649,17 +674,20 @@ TEST(TypeConversion, PointerType) {
 
 			void (*fp)();
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 	//std::cout << tu << std::endl;
 }
@@ -677,17 +705,20 @@ TEST(TypeConversion, StructType) {
 			struct X x;
 			x.member = 10;
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 	//std::cout << tu << std::endl;
 
 	/*
@@ -742,23 +773,26 @@ TEST(TypeConversion, RecStructType) {
 				struct Y y = {0};
 			}
 		}
-			
+
 		)delim"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 	std::cout << tu << std::endl;
 
 
 	auto print = [&](const NodePtr& node) {
 			return toString(
-					printer::PrettyPrinter(analysis::normalize(node), 
+					printer::PrettyPrinter(analysis::normalize(node),
 					printer::PrettyPrinter::PRINT_SINGLE_LINE | printer::PrettyPrinter::NO_LET_BINDINGS
 			)
 		);
@@ -790,17 +824,20 @@ TEST(TypeConversion, EnumType) {
 			e = ENUM_CONST_0;
 			e = ENUM_CONST_1;
 		}
-			
+
 		)"
 	);
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-	job.registerFrontendExtension<UnitTestExtension>();
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string() };
+    cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+    cmd::Options options = optionParser;
 
 	//start conversion
-	auto tu = job.toIRTranslationUnit(mgr);
+	auto tu = options.job.toIRTranslationUnit(mgr);
 
 //	std::cout << tu << std::endl;
 }
