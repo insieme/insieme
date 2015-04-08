@@ -48,7 +48,7 @@ namespace utils {
 #define BASIC builder.getNodeManager().getLangBasic()
 
 /**
- * Visitor which checks if the type literal argument of compostite and tuple calls are aligned with the actual type of the struct/tuple.
+ * Visitor which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
  * If not the type literal is replaced with the appropriate one
  */
 const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
