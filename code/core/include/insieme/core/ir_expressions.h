@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -99,7 +99,12 @@ namespace core {
 		/**
 		 * Obtains the string version of this literal.
 		 */
-		const string& getStringValue() const { return getValue()->getValue(); }
+		const string getStringValue() const {
+			if(getValue()->getValue() == "type_literal") {
+				return toString(*this->getType());
+			}
+			return getValue()->getValue(); 
+		}
 
 		/**
 		 * A function extracting the value of this type by interpreting it
@@ -124,6 +129,9 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
+			if(getValue()->getValue() == "type_literal") {
+				return out << *getType();
+			}
 			return out << *getValue();
 		}
 

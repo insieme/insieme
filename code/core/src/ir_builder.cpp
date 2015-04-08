@@ -1276,7 +1276,7 @@ TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
 
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
 	auto literalType = getTypeLiteralType(type);
-	return literal(literalType, toString(*literalType));
+	return literal(literalType, "type_literal");
 }
 
 LiteralPtr IRBuilder::getIdentifierLiteral(const string& value) const {
