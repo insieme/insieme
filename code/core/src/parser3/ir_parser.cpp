@@ -43,6 +43,11 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
+
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/encoder/lists.h"
+
 #include "insieme/core/parser3/detail/driver.h"
 
 namespace insieme {
@@ -108,10 +113,110 @@ namespace {
         return x;
     }
 
-	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        assert_not_implemented() << "some stuff to do";
-        auto x =  std::vector<NodeAddress>();
-        return x;
+	namespace {
+
+		struct MarkEliminator : public core::transform::CachedNodeMapping {
+			virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+				// replace recursively
+				NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
+
+				// eliminate marked nodes
+				if (ptr->hasAttachedValue<AddressMark>()) {
+					// strip off marker expression (also drops annotation)
+					if(res->getNodeType() == core::NT_MarkerExpr) {
+						return res.as<core::MarkerExprPtr>()->getSubExpression();
+					}
+					if (res->getNodeType() == core::NT_MarkerStmt) {
+						return res.as<core::MarkerStmtPtr>()->getSubStatement();
+					}
+					assert(false && "Only marker expressions and statements should be marked.");
+				}
+
+				// return result
+				return res;
+			}
+		};
+
+		NodePtr removeMarks(const core::NodePtr& cur) {
+			return MarkEliminator().map(cur);
+		}
+
+		NodeAddress removeMarks(const core::NodePtr& newRoot, const core::NodeAddress& cur) {
+
+			// handle terminal case => address only references a root node
+			if (cur.isRoot()) {
+
+				// if root is marked => skip
+				if (cur->hasAttachedValue<AddressMark>()) {
+					return core::NodeAddress();
+				}
+
+				// return new root
+				return core::NodeAddress(newRoot);
+			}
+
+			// get cleaned path to parent node
+			NodeAddress parent = removeMarks(newRoot, cur.getParentAddress());
+
+			// skip marked nodes
+			if (cur->hasAttachedValue<AddressMark>()) {
+				return parent;
+			}
+
+			// see whether this is the first non-marked node along the path
+			if (!parent) {
+				return core::NodeAddress(newRoot);
+			}
+
+			// also fix child of marker node
+			if (cur.getDepth() >= 2 && cur.getParentNode()->hasAttachedValue<AddressMark>()) {
+				return parent.getAddressOfChild(cur.getParentAddress().getIndex());
+			}
+
+			// in all other cases just restore same address path
+			return parent.getAddressOfChild(cur.getIndex());
+		}
+
+	}
+
+	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, 
+                                             bool onFailThrow, const std::map<string, NodePtr>& definitions){
+        inspire_driver driver(code, manager);
+        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
+        auto root =  driver.parseStmt();
+        if(!root) {
+            checkErrors(driver, onFailThrow);
+            return std::vector<NodeAddress>();
+        }
+
+        // check the result
+
+        // search all marked locations within the parsed code fragment
+        std::vector<NodeAddress> res;
+        core::visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
+            if (cur->hasAttachedValue<AddressMark>()) {
+                // get address to marked sub-construct
+                if(cur->getNodeType() == core::NT_MarkerExpr) {
+                    res.push_back(cur.as<core::MarkerExprAddress>()->getSubExpression());
+                } else if (cur->getNodeType() == core::NT_MarkerStmt) {
+                    res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
+                } else {
+                    assert(false && "Only marker expressions and statements should be marked.");
+                }
+            }
+        });
+
+        // remove marks from code
+        root = removeMarks(root).as<StatementPtr>();
+
+        // remove marker nodes from addresses
+        for(NodeAddress& cur : res) {
+            cur = removeMarks(root, cur);
+        }
+
+        // return list of addresses
+        return res;
     }
 
 } //  parser3

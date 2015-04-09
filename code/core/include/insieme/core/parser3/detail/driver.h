@@ -97,10 +97,10 @@ private:
         : retType(retType), params(params.begin(), params.end()), expression(expression), fk(fk)
         {}
     };
-    std::vector<Lambda_let>    lambda_lets;
-    std::vector<ExpressionPtr> closure_lets;
-    std::vector<TypePtr>       type_lets;
     std::vector<std::string>   let_names;
+    std::vector<Lambda_let>    lambda_lets;
+    std::vector<TypePtr>       type_lets;
+    std::vector<ExpressionPtr> expr_lets;
 
 
 public:
@@ -117,7 +117,7 @@ public:
     ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
     ExpressionPtr genFieldAccess(const location& l, const ExpressionPtr&, const std::string& fieldname);
 
-    TypePtr genGenericType(const location& l, const std::string& name, const TypeList& params, const IntParamList& iparamlist);
+    TypePtr genGenericType(const location& l, const std::string& name, const TypeList& parents, const TypeList& params, const IntParamList& iparamlist);
     TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);
 
     ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind& = FK_PLAIN);
@@ -125,16 +125,17 @@ public:
     ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
     void add_this (const location& l, const TypePtr& classType);
 
-    void add_let_lambda(const location& l, const location& bodyb, const location& bodye, const TypePtr& retType, const VariableList& params = VariableList(), const FunctionKind& fk = FK_PLAIN);
-
-    void add_let_type(const location& l, const TypePtr& type);
-    void add_let_closure(const location& l, const ExpressionPtr& closure);
+    /* ~~~~~~~~~~~~~~~~~~~~~~~ let bindings management ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
     void add_let_name(const location& l, const std::string& name); 
+    void add_let_lambda(const location& l, const location& bodyb, const location& bodye, 
+                        const TypePtr& retType, const VariableList& params = VariableList(), const FunctionKind& fk = FK_PLAIN);
+    void add_let_type(const location& l, const TypePtr& type);
+    void add_let_expression(const location& l, const ExpressionPtr& expr); 
+
     void close_let_statement(const location& l); 
 
-    ExpressionPtr genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields);
-    ExpressionPtr genTagExpression(const location& l, const NamedValueList& fields);
+    ExpressionPtr genTagExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
 
     VariableIntTypeParamPtr gen_type_param_var(const location& l, const std::string& name);
     VariableIntTypeParamPtr find_type_param_var(const location& l, const std::string& name);
@@ -144,6 +145,9 @@ public:
 
     void open_scope(const location& l, const std::string& );
     void close_scope(const location& l, const std::string&);
+
+    ExpressionPtr mark_address(const location& l, const ExpressionPtr& expr);
+    StatementPtr  mark_address(const location& l, const StatementPtr& stmt);
 
     // syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
     bool inhibit_building()const;
@@ -158,6 +162,8 @@ public:
     bool where_errors()const ;
     void print_errors(std::ostream& out = std::cout)const;
 };
+
+class AddressMark {};
 
 } // namespace detail
 } // namespace parser3

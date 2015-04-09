@@ -52,7 +52,7 @@ namespace parser3{
                 )1N5P1RE"));
         EXPECT_TRUE(test_type(nm, R"1N5P1RE(
                     let class = struct name { int<4> a; int<5> b};
-                    name::()->ctor
+                    ctor name::()
                 )1N5P1RE"));
 
         // member types
@@ -99,8 +99,7 @@ namespace parser3{
         EXPECT_TRUE(test_expression(nm, "((1.0))"));
         EXPECT_TRUE(test_expression(nm, "((1.0) + 4.0)"));
 
-        EXPECT_TRUE(test_expression(nm, "struct { i= 4.0}"));
-        EXPECT_TRUE(test_expression(nm, "let x = struct{ int<4> a }; struct x { a= 4}"));
+        EXPECT_TRUE(test_expression(nm, "let x = struct{ int<4> a }; struct x { 4}"));
 
         EXPECT_FALSE(test_expression(nm, "x"));
 
@@ -131,7 +130,7 @@ namespace parser3{
             
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
             let class = struct name { int<4> a; int<5> b};
-            lambda name::()->ctor { }
+            lambda ctor name::() { }
         )1N5P1RE"));
 
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(

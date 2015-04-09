@@ -258,7 +258,7 @@ namespace detail{
             return builder.accessMember(expr, fieldname);
     }
 
-    TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, 
+    TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const TypeList& parents,
                                            const TypeList& params, const IntParamList& iparamlist){
         
         if (name == "ref"){
@@ -392,21 +392,45 @@ namespace detail{
         return res;
     }
 
-    ExpressionPtr inspire_driver::genTagExpression(const location& l, const TypePtr& type, const NamedValueList& fields){
-        if (!type.isa<StructTypePtr>()) {
-            error (l, "not struct type"); 
-            return nullptr;
-        }
-	    return builder.structExpr(type.as<StructTypePtr>(), fields);
-    }
-    ExpressionPtr inspire_driver::genTagExpression(const location& l, const NamedValueList& fields){
-        // build up a struct type and call the other func
-        NamedTypeList fieldTypes;
-        for (const auto& f : fields) fieldTypes.push_back(builder.namedType(f->getName(), f->getValue()->getType()));
+    ExpressionPtr inspire_driver::genTagExpression(const location& l, const TypePtr& type, const ExpressionList& list){
 
-        TypePtr type =  builder.structType(builder.stringValue(""), fieldTypes);  
-        return genTagExpression(l, type, fields);
-       
+		if (!type){  error(l, "Not a struct type!"); return nullptr; }
+
+        // retrieve struct type, (unroll rec types)
+        StructTypePtr structType = type.isa<StructTypePtr>();
+        if (type.isa<RecTypePtr>()){
+	        structType = type.as<RecTypePtr>()->unroll(type.getNodeManager()).isa<StructTypePtr>();
+        }
+
+		if (!structType){  error(l, format("Not a struct type: %s", toString(type))); return nullptr; }
+		if (structType->size() != list.size()) { error(l, "init list does not match number of fields"); return nullptr; }
+
+		// build up struct expression
+		auto begin = make_paired_iterator(structType->begin(), list.begin());
+		auto end = make_paired_iterator(structType->end(), list.end());
+
+		// extract name / value pairs
+		NamedValueList values;
+		for (auto it = begin; it != end; ++it) {
+			values.push_back(builder.namedValue(it->first->getName(), it->second.as<ExpressionPtr>()));
+		}
+
+		// build struct expression
+		return builder.structExpr(structType, values);
+    }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Address marking   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    ExpressionPtr inspire_driver::mark_address(const location& l, const ExpressionPtr& expr){
+        NodePtr res = builder.markerExpr(expr);
+        res->attachValue<AddressMark>();
+        return res.as<ExpressionPtr>();
+    }
+
+    StatementPtr  inspire_driver::mark_address(const location& l, const StatementPtr& stmt){
+        NodePtr res = builder.markerStmt(stmt);
+        res->attachValue<AddressMark>();
+        return res.as<StatementPtr>();
     }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Scope management  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -503,6 +527,9 @@ namespace {
     }
 
 }
+    void inspire_driver::add_let_name(const location& l, const std::string& name){
+        let_names.push_back(name);
+    }
 
     void inspire_driver::add_let_lambda(const location& l, const location& begin, const location& end, 
                                         const TypePtr& retType, const VariableList& params, const FunctionKind& fk){
@@ -525,12 +552,12 @@ namespace {
         type_lets.push_back(type);
     }
 
-    void inspire_driver::add_let_closure(const location& l, const ExpressionPtr& closure){
-        closure_lets.push_back(closure);
-    }
-
-    void inspire_driver::add_let_name(const location& l, const std::string& name){
-        let_names.push_back(name);
+    void inspire_driver::add_let_expression(const location& l, const ExpressionPtr& expr){
+        if (!expr) {
+            error(l, "no expression translated");
+            return;
+        }
+        expr_lets.insert(expr_lets.begin(), expr);
     }
 
     void inspire_driver::close_let_statement(const location& l){
@@ -540,7 +567,6 @@ namespace {
          // std::cout << "    let count" << let_count << std::endl;
          // std::cout << "    inhibitcount" << inhibit_building_count << std::endl;
          // std::cout << "    let_mames " << let_names << std::endl;
-         // std::cout << "    let_clos " << closure_lets << std::endl;
          // std::cout << "    let_type " << type_lets << std::endl;
          // std::cout << "    let_lambd " << lambda_lets.size() << std::endl;
 
@@ -628,21 +654,21 @@ namespace {
 
             type_lets.clear();
         }
-        // CLOSURE LETS
-        else if(let_names.size() == closure_lets.size()){
+        // Expression LETS (includes closures)
+        else if(let_names.size() == expr_lets.size()){
             unsigned count = 0;
             for (const auto& name :  let_names) {
-                add_symb(l, name, closure_lets[count]);
+                add_symb(l, name, expr_lets[count]);
                 count++;
             }
 
-            closure_lets.clear();
+            expr_lets.clear();
         }
         else{ 
     
             std::cout << "let_mames " << let_names << std::endl;
-            std::cout << "let_clos " << closure_lets << std::endl;
             std::cout << "let_type " << type_lets << std::endl;
+            std::cout << "let_expr " << expr_lets << std::endl;
             std::cout << "let_lambd " << lambda_lets.size() << std::endl;
             error(l, "mixed type/function/closure let not allowed");
         }

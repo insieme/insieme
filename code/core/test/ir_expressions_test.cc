@@ -247,8 +247,8 @@ TEST(ExpressionsTest, LambdaExpr) {
 	LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 	EXPECT_FALSE(simple->isRecursive());
 
-	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*even));
-	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*odd));
+	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return false;} else {return bool_not(v1(v3));};}}", toString(*even));
+	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return false;} else {return bool_not(v1(v3));};}}", toString(*odd));
 }
 
 TEST(ExpressionsTest, CallExpr) {
@@ -398,8 +398,8 @@ TEST(ExpressionsTest, MemberAccessExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, a, type<typeA>)", toString(*access));
-	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, b, type<typeB>)", toString(*access2));
+	EXPECT_EQ ("composite_member_access(struct{a=1, b=2}, a, type<typeA>)", toString(*access));
+	EXPECT_EQ ("composite_member_access(struct{a=1, b=2}, b, type<typeB>)", toString(*access2));
 }
 
 TEST(ExpressionsTest, TupleProjectionExpr) {
@@ -428,8 +428,8 @@ TEST(ExpressionsTest, TupleProjectionExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("tuple.member.access(tuple(1,2), 0, type<typeA>)", toString(*access));
-	EXPECT_EQ ("tuple.member.access(tuple(1,2), 1, type<typeB>)", toString(*access2));
+	EXPECT_EQ ("tuple_member_access(tuple(1,2), 0, type<typeA>)", toString(*access));
+	EXPECT_EQ ("tuple_member_access(tuple(1,2), 1, type<typeB>)", toString(*access2));
 }
 
 
@@ -656,8 +656,8 @@ TEST(ExpressionsTest, LambdaUnrollingEvenOdd) {
 //std::cout << "Unroll 2:\n" << core::printer::PrettyPrinter(even->unroll(2)) << "\n\n";
 //std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v3==0)?true:(v3-1==0)?false:v1(v3-1-1);");
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v7==0)?false:(v7-1==0)?true:v2(v7-1-1);");
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v5==0)?true:(v5-1==0)?false:v3(v5-1-1);");
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v9==0)?false:(v9-1==0)?true:v4(v9-1-1);");
 
 	res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;

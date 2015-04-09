@@ -112,7 +112,8 @@ namespace {
 	    utils::set::PointerSet<VariablePtr> usedVars;
 	};
 
-	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
+	std::vector<VariablePtr> getReachingVariables(const core::NodePtr& root) {
+        assert_true(root) << " no root node";
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
@@ -1118,7 +1119,7 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
-	std::vector<VariablePtr>&& args = getRechingVariables(body);
+	std::vector<VariablePtr>&& args = getReachingVariables(body);
 
     core::TypeList argsType;
     VariableList params;
