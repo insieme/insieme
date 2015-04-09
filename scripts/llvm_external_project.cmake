@@ -3,7 +3,7 @@ insieme_find_package(NAME LLVM SUPERBUILD TRUE)
 include(ProcessorCount)
 ProcessorCount(SLOTS)
 
-if(NOT LLVMFOUND)
+if(NOT LLVM_FOUND)
 
 	message(STATUS "we install LLVM (Version ${LLVM_VERSION})")
 	#download url expects version without dots...

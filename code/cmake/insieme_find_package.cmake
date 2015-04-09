@@ -14,7 +14,8 @@ include(CMakeParseArguments)
 #
 #####
 macro(insieme_find_package)
-	set(options SUPERBUILD) 
+	set(options SUPERBUILD)		#if we use this from the superbuild script, disables the fatal_error in
+								#case a library is not found -> needed to install it
 	set(singleValueArgs NAME) 
 	set(multipleValueArgs COMPONENTS) 
 
@@ -45,7 +46,7 @@ macro(insieme_find_package)
 	endif()
 
 	#we test if we find the requested library (at the suggested lib_ROOT) if we do not find it we install it our own
-	find_package(${lib_NAME} ${${lib_name_uc}_VERSION} COMPONENTS ${lib_COMPONENTS})
+	find_package(${lib_NAME} ${${lib_name_uc}_VERSION} EXACT COMPONENTS ${lib_COMPONENTS})
    
 	#we didn't find library at any of the given options:
 	#	${lib_NAME}_ROOT

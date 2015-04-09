@@ -1,3 +1,13 @@
+#
+#
+#
+#
+# READ build_readme before using the CMake or changing the CMake script
+#
+#
+#
+#
+#
 project(insieme_code C CXX)
 
 cmake_minimum_required(VERSION 2.8)

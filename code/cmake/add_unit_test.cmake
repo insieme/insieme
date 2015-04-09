@@ -19,15 +19,16 @@ macro ( add_unit_test case_name ut_prefix )
 		#generator
 		if(NOT TARGET googletest) 
 			include(ExternalProject)
+			set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
 			#ugly but necessary, in future versions one can use ${BINARY_DIR} in BUILD_BYPRODUCTS
 			set(gtest_lib
-				${THIRD_PARTY_LIBS_HOME}/gtest-${GTEST_VERSION}/src/googletest-build/libgtest.a)
+				${GTEST_PREFIX}/src/googletest-build/libgtest.a)
 			set(gtest_main_lib
-				${THIRD_PARTY_LIBS_HOME}/gtest-${GTEST_VERSION}/src/googletest-build/libgtest_main.a)
+				${GTEST_PREFIX}/src/googletest-build/libgtest_main.a)
 
 			ExternalProject_Add(googletest
 				URL http://googletest.googlecode.com/files/gtest-${GTEST_VERSION}.zip
-				PREFIX ${THIRD_PARTY_LIBS_HOME}/gtest-${GTEST_VERSION}
+				PREFIX ${GTEST_PREFIX} 
 				INSTALL_COMMAND "" #make gtest gtest_main
 				BUILD_BYPRODUCTS
 					${gtest_lib}
@@ -37,9 +38,6 @@ macro ( add_unit_test case_name ut_prefix )
 			ExternalProject_Get_Property(googletest source_dir binary_dir)
 			set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
 			set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
-
-			message("${GTEST_LIBRARY_PATH}")
-			message("${GTEST_MAIN_LIBRARY_PATH}")
 
 			set(GTEST_LIBRARY gtest)
 			set(GTEST_MAIN_LIBRARY gtest_main)

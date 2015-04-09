@@ -1,0 +1,80 @@
+Configuring the Insieme build
+-----------------------------
+
+Several options to build only parts of insieme:
+
++ BUILD_RUNTIME_ONLY - builds only runtime + dependencies
+
++ BUILD_IWIR - builds IWIR frontend + everything else (NO CLANG)
+
++ BUILD_CLANG - build Clang frontend + everything else (NO IWIR)
+
+If non of the above options is given EVERYTHING is build.
+
+Careful the order in the CMakeLists.txt (of the add_subdirectory calls) matters!
+
+FIXME/TODO Document:
+- BUILD_DOXYGEN
+- CONDUCT_MEMORY_CHECKS
+- DOCS
+- USE_OPENCL
+- USE_ENERGY
+
+Finding Third-Party-Libraries
+-----------------------------
+
+We expect an environment variable THIRD_PARTY_LIBS_HOME (preferred) or INSIEME_LIBS_HOME to point to the
+directory containing the installed third party libraries.
+
+The CMake script will give an error if a 3rdparty library is missing or not available in the
+expected version. The expected version of the currently known/used 3rd-party library can be found in
+${insieme_source}/code/cmake/default_library_configuration.cmake.
+
+We use a wrapper for the find_package (insieme_find_package) to give hints for the library lookup.
+Careful the find_package mechanisms is case-sensitive!
+
+1 set a cmake or environment variable ${lib_name_upper_case}_ROOT where the 3rdparty library
+	${lib_name} is expected  
+
+2 have them installed in THIRD_PARTY_LIBS_HOME
+
+3 if they are not found at neither cmake tries to find a system installed one
+
+4 if non is found we give a FATAL_ERROR -> with hints where to install the library or how to provide
+	the hints
+
+Overwriting 3rd-party library version is possible by providing an environment variable
+${lib_name}_VERSION. Careful case-sensitive! Check the name in the default library configuration
+file.
+
+
+Using Ninja instead of Make
+---------------------------
+
+CMake provides a generator for Ninja an alternative build system to Make. It offers better control
+over parallel job execution via job pool. This works with CMake 3.0 but bit shaky... better to use
+it with CMake 3.2. 
+
+We have some checks for CMake 3.2 in the cases where we want to setup job pools. 
+
+
+Using ExternalProjects
+----------------------
+ExternalProjects provide a mechanism to download/compile/install 3rd-party libraries during the
+build of the actual project (careful this is not done during the CMake run!).
+
+Again we have checks for CMake version as below (<) CMake 3.2 things are a bit shaky. 
+
+
+Superbuild
+----------
+
+This should replace the nice scripts/Makefile + the install scripts (WORK IN PROGRESS!!!)
+
+${insieme_src_dir}/scripts/CMakeLists.txt contains the script for a "superbuild", to install
+third-party libraries in a given target directory (set by env var THIRD_PARTY_LIBS_HOME (preferred)
+or INSIEME_LIBS_HOME) if non is given, ~/libs/ is used.
+
+Careful here we try first to find the libraries with insieme_find_package (as described above) and
+if not found we create a target to install it. In the next step the user has to run the generated
+Makefile with the targets (make all would install all which were not found)
