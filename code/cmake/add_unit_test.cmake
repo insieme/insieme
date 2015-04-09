@@ -131,7 +131,7 @@ macro ( add_unit_test case_name ut_prefix )
 		endif(${case_name} MATCHES ".*driver_integration.*")
 
 		# + valgrind as a custom target (only if not explicitly prohibited)
-		if ((NOT MSVC) AND USE_VALGRIND)
+		if ((NOT MSVC))
 			add_custom_target(valgrind_${case_name} 
 				COMMAND valgrind
 					--leak-check=full
@@ -146,6 +146,13 @@ macro ( add_unit_test case_name ut_prefix )
 			)
 			add_dependencies(valgrind valgrind_${case_name})
 			add_dependencies(valgrind_${case_name} ${case_name})
+
+			#check if target for test suite already exists
+			if(NOT TARGET valgrind_${ut_prefix})
+				add_custom_target(valgrind_${ut_prefix})
+			endif()
+
+			add_dependencies(valgrind_${ut_prefix} valgrind_${case_name})
 		endif()
 	endif()
 endmacro(add_unit_test)

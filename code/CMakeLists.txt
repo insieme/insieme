@@ -8,7 +8,7 @@
 #
 #
 #
-project(insieme_code C CXX)
+project(insieme_code CXX)
 
 cmake_minimum_required(VERSION 2.8)
 
