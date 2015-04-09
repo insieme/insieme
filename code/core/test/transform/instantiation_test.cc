@@ -39,6 +39,7 @@
 #include "insieme/core/transform/instantiate.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
@@ -224,6 +225,69 @@ TEST(TypeInstantiation, Simple) {
 	
 	auto newAddr = addresses[0].switchRoot(result);
 	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+}
+
+
+TEST(TypeInstantiation, NameAnnotations) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{		
+		let test = (vector<'res,#l> a) -> unit {
+			$vector<'res, #l> res;$
+			int<4> x = 0;
+			$x$;
+			$res$;
+		};
+
+		vector<int<4>, 8> a;
+		test(a);
+	}
+	)raw");
+	
+	EXPECT_EQ(addresses.size(), 3);
+	
+	auto result = instantiateTypes(addresses[0].getRootNode());
+
+	auto newAddr = addresses[0].switchRoot(result);
+	auto newAnnAddr = addresses[1].switchRoot(result);
+	auto newAnnAddr2 = addresses[2].switchRoot(result);
+	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+	EXPECT_TRUE(annotations::hasNameAttached(addresses[1].getAddressedNode()));
+	EXPECT_TRUE(annotations::hasNameAttached(newAnnAddr.getAddressedNode()));
+	EXPECT_TRUE(annotations::hasNameAttached(newAnnAddr2.getAddressedNode()));
+	EXPECT_EQ(annotations::getAttachedName(addresses[1].getAddressedNode()), annotations::getAttachedName(newAnnAddr.getAddressedNode()));
+	EXPECT_EQ(annotations::getAttachedName(addresses[2].getAddressedNode()), annotations::getAttachedName(newAnnAddr2.getAddressedNode()));
+}
+
+TEST(TypeInstantiation, TypeAnnotations) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{		
+		let test = (vector<'res,#l> a) -> unit {
+			$vector<'res, #l> res;$
+		};
+
+		vector<int<4>, 8> a;
+		test(a);
+	}
+	)raw");
+	
+	EXPECT_EQ(addresses.size(), 1);
+	
+	auto declStmtType = addresses[0].getAddressedNode().as<DeclarationStmtPtr>()->getVariable()->getType();
+	annotations::attachName(declStmtType, "NewtypeGundam");
+
+	auto result = instantiateIntTypeParams(addresses[0].getRootNode());
+	
+	auto newAddr = addresses[0].switchRoot(result);
+	auto newDeclStmtType = newAddr.getAddressedNode().as<DeclarationStmtPtr>()->getVariable()->getType();
+	EXPECT_TRUE(annotations::hasNameAttached(newDeclStmtType));
+	EXPECT_EQ(annotations::getAttachedName(declStmtType), annotations::getAttachedName(newDeclStmtType));
+	EXPECT_EQ("NewtypeGundam", annotations::getAttachedName(newDeclStmtType));
 }
 
 } // end namespace transform

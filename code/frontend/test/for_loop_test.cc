@@ -220,8 +220,8 @@ namespace frontend {
 					int main() {
 
 						float sum = 0;
-
-						for(int i=0; i<10; i++) {
+int i = 3;
+						for( i=0; i<10; i++) {
 							sum += x;
 						}
 
@@ -254,7 +254,7 @@ namespace frontend {
 						int array[10][10];
 						 int i, j, k;
 
-						for(i = 1; i < 11; i+=1) {
+						for(i = 1; i < 11; i+=3) {
 							for(j = 10; j < 20; ++j) {
 								array[i][j] = 0;
 							}
@@ -267,9 +267,11 @@ namespace frontend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
-		ConversionJob job(src);
+		const boost::filesystem::path& file = src;
+        std::vector<std::string> args = {"compiler", file.string()};
+        insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
 
-		auto res = builder.normalize(job.execute(mgr));
+		auto res = builder.normalize(options.job.execute(mgr));
 
 		dump(res);
 
@@ -277,7 +279,9 @@ namespace frontend {
 		auto code = toString(core::printer::PrettyPrinter(res));
 		EXPECT_PRED2(notContainsSubString, code, "if");
 		EXPECT_PRED2(notContainsSubString, code, "20+1-20-v52-20-v3/1*1");
+		EXPECT_PRED2(containsSubString, code, "v3 := 20");
 		EXPECT_PRED2(notContainsSubString, code, "11-v2-11-v2/3*3");
+		EXPECT_PRED2(containsSubString, code, "v2 := 13");
 	}
 
 } // end namespace frontend
