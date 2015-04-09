@@ -229,6 +229,12 @@ foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	set ( case_name ${ut_prefix}_${case_name} )
+	if(	(case_name MATCHES "ut_rt_energy_test" 
+		OR (case_name MATCHES "ut_rt_energy_test"))
+		#WE LINK IN THIS CASE libstdc++ statically as we want maybe 
+		set(CMAKE_CXX_FLAGS "-static-libstdc++")
+	endif()
+
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
