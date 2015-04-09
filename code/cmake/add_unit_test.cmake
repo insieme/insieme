@@ -19,7 +19,8 @@ macro ( add_unit_test case_name ut_prefix )
 		#generator
 		if(NOT TARGET googletest) 
 			include(ExternalProject)
-			set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
+			set(GTEST_PREFIX ep-gtest-${GTEST_VERSION})
+			#set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
 			#ugly but necessary, in future versions one can use ${BINARY_DIR} in BUILD_BYPRODUCTS
 			set(gtest_lib
 				${GTEST_PREFIX}/src/googletest-build/libgtest.a)
