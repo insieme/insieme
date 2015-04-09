@@ -232,7 +232,7 @@ foreach ( case_file ${test_cases})
 	if(	(case_name MATCHES "ut_rt_energy_test")
 		OR (case_name MATCHES "ut_rt_energy_test"))
 		#WE LINK IN THIS CASE libstdc++ statically as we want maybe 
-		set(CMAKE_CXX_FLAGS "-static-libstdc++")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++")
 	endif()
 
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
