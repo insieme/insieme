@@ -246,5 +246,39 @@ namespace frontend {
 		EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
 	}
 
+	TEST(StmtConversion, SimplePostCondition) {
+
+		Source src(
+				R"(
+					int main() {
+						int array[10][10];
+						 int i, j, k;
+
+						for(i = 1; i < 11; i+=1) {
+							for(j = 10; j < 20; ++j) {
+								array[i][j] = 0;
+							}
+						}
+						return 0;
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		ConversionJob job(src);
+
+		auto res = builder.normalize(job.execute(mgr));
+
+		dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(notContainsSubString, code, "if");
+		EXPECT_PRED2(notContainsSubString, code, "20+1-20-v52-20-v3/1*1");
+		EXPECT_PRED2(notContainsSubString, code, "11-v2-11-v2/3*3");
+	}
+
 } // end namespace frontend
 } // end namespace insieme

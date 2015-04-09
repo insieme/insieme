@@ -43,6 +43,7 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/simplify.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/cast_tool.h"
 
@@ -212,16 +213,11 @@ LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact) :
 				elseBranch = builder.assign(originalInductionExpr.as<core::CallExprPtr>()[0], builder.invertSign(tmpEndValue));
 			}
 
-			auto ifStmt = builder.ifStmt(builder.eq(remainder, zero), ifBranch, elseBranch);
-			postStmts.push_back(ifStmt);
+			core::StatementPtr ifStmt = builder.ifStmt(builder.eq(remainder, zero), ifBranch, elseBranch);
 
-			// if the induction variable is not scope defined, and there is actually some init value assigned, we should
-			// update this variable so the inner loop side effects have access to it
-// FIXME this is removed because nobody knows why it would be needed. Actually, it shouldn't be needed if everything else works as expected
-//			if ( oldInitValue != originalInductionExpr) {
-//				auto assign = builder.assign (originalInductionExpr.as<core::CallExprPtr>()[0], newInductionExpr);
-//				firstStmts.push_back(assign);
-//			}
+			// simplification can often get rid of the if/else branch and also make the arithmetic expression much shorter
+			postStmts.push_back(core::transform::simplify(mgr, ifStmt));
+
 		}
 	}
 }
