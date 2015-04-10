@@ -37,4 +37,4 @@ include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(CUDD DEFAULT_MSG CUDD_LIBRARIES CUDD_INCLUDE_DIRS)
 
-mark_as_advanced( CUDD_ROOTS CUDD_LIBRARIES CUDD_INCLUDE_DIRS)
+mark_as_advanced(CUDD_ROOT CUDD_LIBRARIES CUDD_INCLUDE_DIRS)

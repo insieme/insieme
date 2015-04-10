@@ -36,4 +36,4 @@ include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(CLOOG DEFAULT_MSG CLOOG_LIBRARIES CLOOG_INCLUDE_DIRS)
 
-mark_as_advanced( CLOOG_ROOTS CLOOG_LIBRARIES CLOOG_INCLUDE_DIRS)
+mark_as_advanced(CLOOG_ROOT CLOOG_LIBRARIES CLOOG_INCLUDE_DIRS)

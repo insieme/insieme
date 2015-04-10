@@ -1,24 +1,50 @@
+GCC Toolchain
+-------------
+
+Careful when using a custom GCC toolchain which is installed in a non-system-default path (i.e.
+installed in THIRD_PARTY_LIBS_HOME). One needs to take care of providing the correct search path for
+linktime (-L) and runtime (LD_LIBRARY_PATH or setting rpath).
+Relying on the LD_LIBRARY_PATH is fine as long as there is no setuid bit involved (or capabilities)
+then one should rely on RPATH to be set, example use case is ut_rt_energy_test or
+ut_rt_instrumentation_test.
+
+To set the RPATH and one can use: -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,${gcc-tool-chain-root}/lib64"
+To set the linktime -L flag on can use: -DCMAKE_CXX_LINK_FLAGS="-L${gcc-tool-chain-root}/lib64"
+
+To provide the correct compilers from the custom toolchain one can set the PATH, CC and CXX
+environment variables accordingly.
+For example:
+PATH=${gcc-tool-chain-root}:$PATH
+CC=gcc
+CXX=g++
+
+To use ccache provide it as CC/CXX (i.e. CC="ccach gcc").
+
+TODO:
+Currently Insieme offers no CMake/Make install mechanism, whenever this comes up, one needs to take
+care of this as well.
+
 Configuring the Insieme build
 -----------------------------
 
-Several options to build only parts of insieme:
+Several CMake options to build only parts of insieme:
 
-+ BUILD_RUNTIME_ONLY - builds only runtime + dependencies
++ BUILD_RUNTIME_ONLY=ON|OFF - builds only runtime + dependencies
 
-+ BUILD_IWIR - builds IWIR frontend + everything else (NO CLANG)
++ BUILD_IWIR=ON|OFF - builds IWIR frontend + everything else (NO CLANG)
 
-+ BUILD_CLANG - build Clang frontend + everything else (NO IWIR)
++ BUILD_CLANG=ON|OFF - build Clang frontend + everything else (NO IWIR)
 
-If non of the above options is given EVERYTHING is build.
+If non of the above options are provided or if they are set to OFF, EVERYTHING is build.
 
 Careful the order in the CMakeLists.txt (of the add_subdirectory calls) matters!
 
-FIXME/TODO Document:
-- BUILD_DOXYGEN
-- CONDUCT_MEMORY_CHECKS
-- DOCS
-- USE_OPENCL
-- USE_ENERGY
+FIXME/TODO Document CMake options:
+- BUILD_DOXYGEN=ON|OFF
+- CONDUCT_MEMORY_CHECKS=ON|OFF
+- DOCS=ON|OFF
+- USE_OPENCL=ON|OFF
+- USE_ENERGY=ON|OFF
 
 Finding Third-Party-Libraries
 -----------------------------
