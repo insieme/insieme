@@ -71,9 +71,9 @@ const NodePtr PForConstantPropagator::resolveElement(const NodePtr& ptr) {
 
 		if(basic.isPFor(call->getFunctionExpr().getAddressedNode())) {
 
-			const ExpressionPtr start = call->getArgument(1);
-			const ExpressionPtr end = call->getArgument(2);
-			const ExpressionPtr step = call->getArgument(3);
+			const ExpressionAddress start = call->getArgument(1);
+			const ExpressionAddress end = call->getArgument(2);
+			const ExpressionAddress step = call->getArgument(3);
 			NodeAddress body = call->getArgument(4);
 
 			if (body->getNodeType() == NT_BindExpr) {
@@ -91,16 +91,20 @@ const NodePtr PForConstantPropagator::resolveElement(const NodePtr& ptr) {
 
 				NodeMap replacements;
 
-				if(arithmetic::toFormula(start).isConstant())
-					replacements[startVar] = start;
-				if(arithmetic::toFormula(end).isConstant())
-					replacements[endVar] = end;
+				// TODO: fix apparent bug causing semantic errors for bt when replacing starting value (maybe it is wrongly working on pointers instead of addresses
+//				if(arithmetic::toFormula(start).isConstant())
+//					replacements[startVar] = start;
+//				if(arithmetic::toFormula(end).isConstant())
+//					replacements[endVar] = end;
 				if(arithmetic::toFormula(step).isConstant())
 					replacements[stepVar] = step;
 
-				const NodePtr newBody = core::transform::replaceAll(ptr->getNodeManager(), body, replacements);
+				if(!replacements.empty()) {
+					const NodePtr newBody = core::transform::replaceAll(ptr->getNodeManager(), body, replacements);
+					return core::transform::replaceAddress(ptr->getNodeManager(), body, newBody).getRootNode();
+				}
 
-				return core::transform::replaceAddress(ptr->getNodeManager(), body, newBody).getRootNode();
+				return res;
 			}
 		}
 	}
