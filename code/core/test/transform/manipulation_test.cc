@@ -561,13 +561,13 @@ TEST(Manipulation, TryFixParameter_recursive) {
 
 	// check whether something has changed
 	EXPECT_NE(lambda, fixed);
-	EXPECT_EQ("AP(rec v3.{v3=fun(int<4> v2) {if(int_eq(v2, 0)) {return unit;} else {}; ref_assign(global, int_add(ref_deref(global), v2)); v3(int_sub(v2, 1));}})" , toString(fixed));
+	EXPECT_EQ("AP(rec v3.{v3=fun(int<4> v5) {if(int_eq(v5, 0)) {return unit;} else {}; ref_assign(global, int_add(ref_deref(global), v5)); v3(int_sub(v5, 1));}})" , toString(fixed));
 	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 
 	// now, try fixing non-propagated parameter b
 	fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
 	EXPECT_NE(lambda, fixed);
-	EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>> v1) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(v1, int_add(ref_deref(v1), 5)); rec v3.{v3=fun(ref<int<4>> v1, int<4> v2) {if(int_eq(v2, 0)) {return unit;} else {}; ref_assign(v1, int_add(ref_deref(v1), v2)); v3(v1, int_sub(v2, 1));}}(v1, int_sub(5, 1));}})", toString(fixed));
+	EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>> v4) {if(int_eq(5, 0)) {return unit;} else {}; ref_assign(v4, int_add(ref_deref(v4), 5)); rec v3.{v3=fun(ref<int<4>> v4, int<4> v5) {if(int_eq(v5, 0)) {return unit;} else {}; ref_assign(v4, int_add(ref_deref(v4), v5)); v3(v4, int_sub(v5, 1));}}(v4, int_sub(5, 1));}})", toString(fixed));
 	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 
 }
@@ -873,7 +873,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
 
 	CallExprPtr call = analysis::normalize(builder.parseExpr(
-			"let int = int<4> ; lambda (((int)=>int a)->int { return a(2); } ((int x)=> (2+v) + x))",
+			"let int = int<4> ; lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+v) + x)",
 			symbols
 	)).as<CallExprPtr>();
 
@@ -896,7 +896,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	// ---- special case - no free variables in bounded expressions -----
 
 	call = analysis::normalize(builder.parseExpr(
-			"let int = int<4> ; lambda (((int)=>int a)->int { return a(2); } ((int x)=> (2+3) + x))"
+			"let int = int<4> ; lambda ((int)=>int a)->int { return a(2); } (lambda (int x)=> (2+3) + x)"
 	)).as<CallExprPtr>();
 
 	ASSERT_TRUE(call);
@@ -918,10 +918,12 @@ TEST(Manipulation, pushInto) {
 	IRBuilder builder(manager);
 
 	auto addresses = builder.parseAddresses(
+        "{"
 		"let int = int<4>; "
 		"let f = lambda (int a)->int { return a + $1$ + $2$; }; "
 		"let g = lambda (int a)->int { return a - f(a); }; "
-		"g(10)"
+		"g(10);"
+        "}"
 	);
 
 	ASSERT_EQ(2u, addresses.size());
@@ -931,18 +933,18 @@ TEST(Manipulation, pushInto) {
 
 	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(int_add(v1, 1), 2);}}(v1));}}(10)", toString(*code));
+	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1) {return int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(int_add(v1, 1), 2);}}(v1));}}(10);}", toString(*code));
 
 	// implant var
 	VariablePtr var = builder.variable(manager.getLangBasic().getInt4(), 1);
 	EXPECT_EQ("v1", toString(*var));
 
 	auto resA = analysis::normalize(transform::pushInto(manager, exprA, var));
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), 2);}}(v1, v2));}}(10, v1)", toString(*resA.getRootNode()));
+	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), 2);}}(v1, v2));}}(10, v1);}", toString(*resA.getRootNode()));
 	EXPECT_TRUE(core::checks::check(resA.getRootNode()).empty()) << core::checks::check(resA.getRootNode());
 
 	auto resB = analysis::normalize(transform::pushInto(manager, exprB.switchRoot(resA.getRootNode()), var));
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), v2);}}(v1, v2));}}(10, v1)", toString(*resB.getRootNode()));
+	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), v2);}}(v1, v2));}}(10, v1);}", toString(*resB.getRootNode()));
 	EXPECT_TRUE(core::checks::check(resB.getRootNode()).empty()) << core::checks::check(resB.getRootNode());
 }
 
@@ -950,11 +952,13 @@ TEST(Manipulation, pushIntoMultiple) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddresses( 
+        "{"
 		"let int = int<4>; "
 		"let f = lambda (int a)->int { return a + $1$; }; "
 		"let g = lambda (int a)->int { return a - f(a) + $2$; }; "
-		"g(10)"
+		"g(10);"
+        "}"
 	);
 
 	ASSERT_EQ(2u, addresses.size());
@@ -964,7 +968,7 @@ TEST(Manipulation, pushIntoMultiple) {
 
 	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(v1, 1);}}(v1)), 2);}}(10)", toString(*code));
+	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(v1, 1);}}(v1)), 2);}}(10);}", toString(*code));
 
 	// variables to be implanted
 	VariablePtr varA = builder.variable(manager.getLangBasic().getInt4(), 1);
@@ -977,7 +981,7 @@ TEST(Manipulation, pushIntoMultiple) {
 	elements[exprB] = varB;
 
 	auto res = analysis::normalize(transform::pushInto(manager, elements));
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(v1, v2);}}(v1, v3)), v2);}}(10, v2, v1)", toString(*res));
+	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(v1, v2);}}(v1, v3)), v2);}}(10, v2, v1);}", toString(*res));
 	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 }
 
@@ -1022,35 +1026,27 @@ TEST(Manipulation, ReplaseVaresRecursive) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	DeclarationStmtPtr declA = builder.parseStmt("ref<int<4>> A = var(0);").as<DeclarationStmtPtr>();
-	VariablePtr varA = declA->getVariable();
-	DeclarationStmtPtr declB = builder.declarationStmt(builder.variable(builder.refType(mgr.getLangBasic().getInt4())));
-	VariablePtr varB = declB->getVariable();
+	auto addr = builder.parseAddresses(
+			"{"
+			"	decl ref<int<4>> A = var(0);"
+			"	decl ref<int<4>> B = var(0);"
+			"	$ A $ = 4;"
+			"	$ B $ = 5;"
+			"	lambda (int<4> arg)->int<4> { return arg; }(*A);"
+			"}"
+	);
+
+    CompoundStmtPtr code = addr[0].getRootNode().as<CompoundStmtPtr>();
+
+    VariablePtr varA = addr[0].as<VariablePtr>();
+    VariablePtr varB = addr[1].as<VariablePtr>();
+
 	VariablePtr charA = builder.variable(builder.refType(mgr.getLangBasic().getChar()));
 	VariablePtr uintB = builder.variable(builder.refType(mgr.getLangBasic().getUInt4()));
 
-	std::map<string,NodePtr> symbols;
-	symbols["declA"] = declA;
-	symbols["declB"] = declB;
-	symbols["A"] = varA;
-	symbols["B"] = varB;
-
 	ExpressionMap replacements;
-
 	replacements[varA] = charA;
 	replacements[varB] = uintB;
-
-	CompoundStmtPtr code = builder.parseStmt(
-			"{"
-			"	declA;"
-			"	declB;"
-			"	A = 4;"
-			"	B = 5;"
-			"	lambda (int<4> arg)->int<4> { return arg; }(*A);"
-			"}"
-			, symbols
-	).as<CompoundStmtPtr>();
-
 
 	transform::TypeHandler th = [&](const StatementPtr& stmt)->StatementPtr {
 		if(DeclarationStmtPtr decl = stmt.isa<DeclarationStmtPtr>()) {

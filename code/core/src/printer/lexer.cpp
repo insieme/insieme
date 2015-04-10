@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/parser2/detail/lexer.h"
+#include "insieme/core/printer/lexer.h"
 
 #include <boost/regex.hpp>
 #include <boost/tokenizer.hpp>
@@ -43,7 +43,7 @@
 
 namespace insieme {
 namespace core {
-namespace parser {
+namespace printer {
 namespace detail {
 
 
@@ -299,6 +299,6 @@ namespace detail {
 	}
 
 } // end namespace detail
-} // end namespace parser
+} // end namespace printer
 } // end namespace core
 } // end namespace insieme

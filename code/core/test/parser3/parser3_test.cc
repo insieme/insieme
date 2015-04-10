@@ -16,11 +16,11 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseType();
         if (driver.result) {  
-      //      dumpColor(driver.result);
+            dumpColor(driver.result);
+            std::cout << " ============== TEST ============ " << std::endl;
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-     //   std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
 
     }
@@ -55,7 +55,9 @@ namespace parser3{
                     ctor class::()
                 )1N5P1RE"));
 
-        // member types
+        EXPECT_TRUE(test_type(nm, "struct C { int<4> field; }" ));
+
+        // failing types
         EXPECT_FALSE(test_type(nm, "vector<int<4>>"));
     }
 
@@ -188,6 +190,9 @@ namespace parser3{
         EXPECT_TRUE(test_statement(nm, "if ( true ) {} else {}"));
         EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ;"));
         EXPECT_TRUE(test_statement(nm, "if ( true ) if ( false ) { } else 1 ; else 2; "));
+	    EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; } else { return 1+2; }"));
+	    EXPECT_TRUE(test_statement(nm, "if( false ) { return 0; }"));
+	    EXPECT_TRUE(test_statement(nm, "if(1 != 0) { return 0; }"));
         EXPECT_TRUE(test_statement(nm, "while ( true ) 1+1;"));
         EXPECT_TRUE(test_statement(nm, "while ( false ) 1+1;"));
         EXPECT_TRUE(test_statement(nm, "while ( false || true ) { 1+1; }"));

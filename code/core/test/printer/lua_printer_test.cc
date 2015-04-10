@@ -58,11 +58,11 @@ namespace printer {
 		VariablePtr b = builder.variable(intType, 2);
 		ExpressionPtr t = builder.add(a, b);
 
-		EXPECT_EQ("int.add(v1, v2)", toString(*t));
+		EXPECT_EQ("int_add(v1, v2)", toString(*t));
 		EXPECT_EQ("v1 + v2", toLuaScript(t));
 
 		t = builder.mul(t,builder.sub(t,a));
-		EXPECT_EQ("int.mul(int.add(v1, v2), int.sub(int.add(v1, v2), v1))", toString(*t));
+		EXPECT_EQ("int_mul(int_add(v1, v2), int_sub(int_add(v1, v2), v1))", toString(*t));
 		EXPECT_EQ("(v1 + v2) * ((v1 + v2) - v1)", toLuaScript(t));
 
 		// test whether script is syntactically correct
@@ -82,7 +82,7 @@ namespace printer {
 		auto forStmt = analysis::normalize(builder.parseStmt(
 			"for(int<4> k = 0 .. 10) {"
 			"	for(int<4> i = 0 .. 20) {"
-			"		ref<int<4>> m = var(10);"
+			"		decl ref<int<4>> m = var(10);"
 			"		for(int<4> j = 0 .. 30) {"
 			"			v[i] = m;"
 			"           x = x + 1;"

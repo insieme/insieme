@@ -59,7 +59,7 @@ namespace lang {
 
 	public:
 		// An extension representing a busy waiting loop
-		LANG_EXT_DERIVED(BusyLoop, "(()=>bool condition) -> unit { while(condition()) { } }");
+		LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
 	};
 }
 }

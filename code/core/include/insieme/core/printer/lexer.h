@@ -43,15 +43,10 @@
 
 #include "insieme/utils/printable.h"
 
-/**
- * Within this header file the lexer-part of the INSPIRE parser is defined.
- * It essentially defines the type used to represent tokens and a function
- * converting a string into a list of tokens.
- */
 
 namespace insieme {
 namespace core {
-namespace parser {
+namespace printer {
 namespace detail {
 
 	using std::string;
@@ -265,6 +260,6 @@ namespace detail {
 
 
 } // end namespace detail
-} // end namespace parser
+} // end namespace printer
 } // end namespace core
 } // end namespace insieme

@@ -79,23 +79,24 @@ TEST(PatternUtils, basic) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-	core::NodePtr node = builder.parseStmt(
-		"for(uint<4> l = 8u .. 70u : 3u) {"
-		"	l; "
-		"	for(uint<4> i = 10u .. 50u) {"
-		"		for(uint<4> j = 3u .. 25u) {"
-		"			j; "
-		"			for(uint<4> k = 2u .. 100u) { "
-		"				v[i+j]; "
-		"			}; "
-		"           ref<uint<4>> a = var(3u); "
-		"			a = i; "
-		"		}"
-		"	}"
-		"	for(uint<4> k = 2u .. 100u) {"
-		"		v[l+k];"
-		"	}"
-		"}", symbols);
+	core::NodePtr node = builder.parseStmt(R"(
+		for(uint<4> l = 8u .. 70u : 3u) {
+			l; 
+			for(uint<4> i = 10u .. 50u) {
+				for(uint<4> j = 3u .. 25u) {
+					j; 
+					for(uint<4> k = 2u .. 100u) { 
+						v[i+j]; 
+					}; 
+		           decl ref<uint<4>> a = var(3u); 
+					a = i; 
+				}
+			}
+			for(uint<4> k = 2u .. 100u) {
+				v[l+k];
+			}
+        }
+		)", symbols);
 
 	EXPECT_TRUE(node);
 
@@ -153,8 +154,8 @@ TEST(PatternUtils, performance) {
 
 	core::StatementPtr node = builder.parseStmt(
 		"for(uint<4> k = 2u .. 100u) { "
-		"	ref<uint<4>> a = var(3u); "
-		"}; ");
+		"	decl ref<uint<4>> a = var(3u); "
+		"} ");
 
 	EXPECT_TRUE(node);
 

@@ -43,7 +43,7 @@
         };
 
         struct Gen_type{
-            TypeList parents;
+            ParentList parents;
             TypeList typeParams;
             IntParamList intParams;
         };
@@ -160,6 +160,8 @@
   DEFAULT       "default"  
   CASE          "case"  
   SWITCH        "switch"  
+  CONTINUE      "continue"  
+  BREAK         "break"  
   
   VAR           "var"
   NEW           "new"
@@ -222,10 +224,10 @@
 %type <ExpressionPtr> expression  lambda_expression markable_expression lambda_expression_aux
 %type <ExpressionList> expression_list
 
-// %type <std::pair<TypeList, IntParamList> > type_param_list gen_type
 %type <Gen_type> type_param_list gen_type
 %type <TypePtr> type tuple_or_function  struct_type named_type just_name 
-%type <TypeList> type_list parent_list type_list_aux
+%type <TypeList> type_list  type_list_aux
+%type <ParentList> parent_list
 %type <FunctionKind> func_tok
 
 %type <NamedTypeList> member_list tag_def union_type 
@@ -320,12 +322,16 @@ type_param_list : "#inf"     { RULE $$.intParams.insert($$.intParams.begin(), dr
 
 type_list_aux : type ")"           { RULE $$.insert($$.begin(), $1); }
               | type "," type_list_aux { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
+              ;
 
 type_list : ")" { }
           | type_list_aux { RULE std::swap($$, $1); }
+          ;
 
-parent_list : just_name                 { RULE $$.insert($$.begin(), $1); }
-            | just_name "," parent_list { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
+parent_list : just_name                 { RULE  $$.insert($$.begin(), driver.builder.parent(false, $1));  }
+            | just_name "," parent_list { RULE  $3.insert($3.begin(), driver.builder.parent(false, $1)); std::swap($$, $3); }
+            | "virtual" just_name                 { RULE  $$.insert($$.begin(), driver.builder.parent(true, $2)); }
+            | "virtual" just_name "," parent_list { RULE  $4.insert($4.begin(), driver.builder.parent(true, $2)); std::swap($$, $4); }
             ;
 
 func_tok : "->" { RULE $$ = FK_PLAIN; }
@@ -338,7 +344,7 @@ member_list : "}" {}
             ;
 
 tag_def : "{" member_list   { std::swap($$, $2); }
-         ;
+        ;
 
                      /* tuple */
 tuple_or_function : type_list  { RULE 
@@ -362,10 +368,10 @@ union_type : tag_def   { RULE std::swap($$, $1); }
 struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.builder.stringValue(""), $1); }
             | "identifier" tag_def { RULE $$ = driver.builder.structType(driver.builder.stringValue($1), $2); }
             | "identifier" ":" parent_list tag_def { RULE 
-                        $$ = driver.builder.structType(driver.builder.stringValue($1), driver.builder.parents($3), $4); 
+                        $$ = driver.builder.structType(driver.builder.stringValue($1), $3, $4); 
                     }
             | ":" parent_list tag_def { RULE 
-                        $$ = driver.builder.structType(driver.builder.parents($2), $3); 
+                        $$ = driver.builder.structType($2, $3); 
                     }
             ;
 
@@ -396,19 +402,18 @@ just_name : "identifier" { RULE  $$ = driver.findType(@1, $1);
                            INSPIRE_MSG(@$,$$, format("Type %s was not defined", $1));
                          }
           | "type_var"   { RULE  $$ = driver.builder.typeVariable($1); }
-          //| "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams, $3.intParams); }
           ;
                 
 named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams, $3.intParams); }
            | "identifier" { RULE         
                                   $$ = driver.findType(@1, $1);
-                                  if(!$$) $$ = $$ = driver.genGenericType(@$, $1, TypeList(), TypeList(), IntParamList()); 
+                                  if(!$$) $$ = driver.genGenericType(@$, $1, ParentList(), TypeList(), IntParamList()); 
                                   if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                           }
           | "identifier" ":" parent_list "<" gen_type { RULE
-                           INSPIRE_NOT_IMPLEMENTED(@$);
+                            $$ = driver.genGenericType(@$, $1, $3, $5.typeParams, $5.intParams);
                         }
-           | "type_var"   { RULE $$ = driver.builder.typeVariable($1);  }
+           | "type_var"   { RULE $$ = driver.builder.typeVariable($1); }
            ;
 
 /* ~~~~~~~~~~~~~~~~~~~  STATEMENTS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -450,8 +455,11 @@ statement_aux  : ";" { RULE $$ = driver.builder.getNoOp(); }
                      if(!$2.isa<CompoundStmtPtr>()) { driver.error(@2, "try body must be a compound"); YYABORT; }
 		             $$ = driver.builder.tryCatchStmt($2.as<CompoundStmtPtr>(), $4);
                  }   
+                    /* end of control flow */
                | "return" expression ";" { RULE $$ = driver.builder.returnStmt($2); }
                | "return" ";" {  RULE $$ = driver.builder.returnStmt(driver.builder.getLangBasic().getUnitConstant()); }
+               | "continue" ";" { RULE $$ = driver.builder.continueStmt(); }
+               | "break" ";" { RULE $$ = driver.builder.breakStmt(); }
                ;
 
 catch_clause_list : 
@@ -478,10 +486,10 @@ decl_stmt : var_decl ";" {RULE
                 }
                 $$ = driver.builder.declarationStmt($1, value);
             }
-          | var_decl "=" expression {RULE
+          | var_decl "=" expression ";" {RULE
                 $$ = driver.builder.declarationStmt($1, $3);
             }
-          | "auto" "identifier" "=" expression {RULE
+          | "auto" "identifier" "=" expression ";" {RULE
 		        auto var = driver.builder.variable($4.getType());
 				annotations::attachName(var, $2);
                 driver.add_symb(@$, $2, var);

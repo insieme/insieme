@@ -138,6 +138,8 @@ paramvar #[a-zA-Z]
 "switch"  return inspire_parser::make_SWITCH(loc);
 "case"  return inspire_parser::make_CASE(loc);
 "default"  return inspire_parser::make_DEFAULT(loc);
+"continue"  return inspire_parser::make_CONTINUE(loc);
+"break"  return inspire_parser::make_BREAK(loc);
 
 "var"     return inspire_parser::make_VAR(loc);
 "new"     return inspire_parser::make_NEW(loc);

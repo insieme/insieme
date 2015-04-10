@@ -145,9 +145,9 @@ ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 
 // ---------------------------- Parser Integration -----------------------------------
 
-//NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
-//	return parser3::parse(manager, code, true, symbols);
-//}
+NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser3::parse_any(manager, code, true, symbols);
+}
 
 TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
 	return parser3::parse_type(manager, code, true, symbols);

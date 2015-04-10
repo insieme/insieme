@@ -76,7 +76,7 @@ namespace lang {
 		 * Get real part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexReal,
-            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x->_real; }"
+            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x._real; }"
         );
 
         /**
@@ -90,14 +90,14 @@ namespace lang {
 		 * Get imaginary part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexImg,
-            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x->_img; }"
+            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x._img; }"
         );
 
         /**
 		 * Create a Complex out of a constant value.
 		 */
         LANG_EXT_DERIVED(ConstantToComplex,
-                            "let res_t = struct {'a _real; 'a _img} in"
+                            "let res_t = struct {'a _real; 'a _img};"
                             "('a c)->res_t {"
                                 "return (res_t) {c, ('a) 0};"
                             "}");

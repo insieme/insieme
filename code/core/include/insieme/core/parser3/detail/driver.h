@@ -118,7 +118,7 @@ public:
     ExpressionPtr genFieldAccess(const location& l, const ExpressionPtr&, const std::string& fieldname);
     ExpressionPtr genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member);
 
-    TypePtr genGenericType(const location& l, const std::string& name, const TypeList& parents, const TypeList& params, const IntParamList& iparamlist);
+    TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params, const IntParamList& iparamlist);
     TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);
 
     ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind& = FK_PLAIN);

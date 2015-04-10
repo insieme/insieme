@@ -69,10 +69,6 @@ namespace parser3 {
 	 * corresponding construct is used as a substitute. This, however, is not disabling the default back-tracking
 	 * mechanism which will still try to parse the full string even without considering those identifiers.
 	 *
-	 * For a full Grammar description see the corresponding section within the Insieme Developement Doc or
-	 * print an instance of the Grammer which can be obtained using the createGrammar() function within the
-	 * ir_parser_detail.h header to some output stream.
-	 *
 	 * @param manager the manager to be used for creating the resulting IR DAG
 	 * @param code the code fragment to be parsed
 	 * @param onFailThrow a flag determining whether a parsing error should result in a null-pointer (false) or a Parsing Exception (true)
@@ -80,10 +76,11 @@ namespace parser3 {
 	 * @return the parsed construct or null if the parsing was not successful and onFailThrow was set to false
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
+	NodePtr parse_any(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
 	/**
-	 * A specialized version of the general parse function focusing specifically on types. Using the specialized variant
+	 * A specialized version of the general parse function focusing specifically on types.
+     * Using the specialized variant
 	 * can help avoiding ambiguities at the top-level of the Grammar.
 	 *
 	 * @param manager the manager to be used for creating the resulting IR DAG

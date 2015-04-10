@@ -59,15 +59,15 @@ namespace core {
 		IRBuilder builder(manager);
 
         map<string, NodePtr> symbols;
-        symbols["C"] = builder.parseType(" struct C { int<4> field; } ", symbols);
+        symbols["C"] = builder.parseType("struct C { int<4> field; } ");
 
 		auto impl = builder.parseExpr("lambda C::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>();
 		MemberFunction fun("f", impl);
 
-		EXPECT_EQ("f = mfun C v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun));
+		EXPECT_EQ("f = mfun struct C <field:int<4>> v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun));
 
 		MemberFunction fun2("f", impl, true, true);
-		EXPECT_EQ("virtual const f = mfun C v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun2));
+		EXPECT_EQ("virtual const f = mfun struct C <field:int<4>> v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun2));
 
 		EXPECT_NE(fun, fun2);
 		EXPECT_EQ(fun, MemberFunction("f", impl));
@@ -79,12 +79,15 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto ctor = builder.parseExpr("C::() { }").as<LambdaExprPtr>();
-		auto ctor2 = builder.parseExpr("C::(int<4> a) { }").as<LambdaExprPtr>();
-		auto dtor = builder.parseExpr("~C::() { }").as<LambdaExprPtr>();
+        map<string, NodePtr> symbols;
+        symbols["C"] = builder.parseType("struct C { int<4> field; } ");
 
-		auto fun1Impl = builder.parseExpr("C::(int<4> a)->int<4> { return a; }").as<LambdaExprPtr>();
-		auto fun2Impl = builder.parseExpr("C::(int<4> a, int<4> b)->int<4> { return a+b; }").as<LambdaExprPtr>();
+		auto ctor = builder.parseExpr ("lambda ctor C::() { }", symbols).as<LambdaExprPtr>();
+		auto ctor2 = builder.parseExpr("lambda ctor C::(int<4> a) { }", symbols).as<LambdaExprPtr>();
+		auto dtor = builder.parseExpr ("lambda ~C::() { }", symbols).as<LambdaExprPtr>();
+
+		auto fun1Impl = builder.parseExpr("lambda C::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>();
+		auto fun2Impl = builder.parseExpr("lambda C::(int<4> a, int<4> b)->int<4> { return a+b; }", symbols).as<LambdaExprPtr>();
 
 		EXPECT_TRUE(ctor);
 		EXPECT_TRUE(dtor);
@@ -108,9 +111,12 @@ namespace core {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
+        map<string, NodePtr> symbols;
+        symbols["A"] = builder.parseType("A");
+
 		ClassMetaInfo info;
 
-		auto fun = builder.parseExpr("A::()->int<4> { return 3; }").as<LambdaExprPtr>();
+		auto fun = builder.parseExpr("lambda A::()->int<4> { return 3; }", symbols).as<LambdaExprPtr>();
 		auto funType = fun->getFunctionType();
 
 		MemberFunctionPtr not_found = NULL;
@@ -149,10 +155,10 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.setDestructor(builderA.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builderA.parseExpr("lambda ~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("lambda T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 		// attach to type
 		setMetaInfo(typeA, info);
@@ -209,17 +215,17 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.setDestructor(builderA.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor( builderA.parseExpr("lambda ~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("lambda T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 		// attach to type
 		setMetaInfo(typeA, info);
 		EXPECT_TRUE(typeA->hasAttachedValue<ClassMetaInfo>());
 
 		// get one step higher
-		typeA = builderA.parseType("T::()", symbols).as<FunctionTypePtr>();
+		typeA = builderA.parseType("ctor T::()", symbols).as<FunctionTypePtr>();
 
 		EXPECT_EQ("(struct<a:int<4>,b:real<8>>::())", toString(*typeA));
 		EXPECT_TRUE(typeA.as<FunctionTypePtr>()->getObjectType()->hasAttachedValue<ClassMetaInfo>());
@@ -286,18 +292,18 @@ namespace core {
 
 		// add information regarding a default constructor
 		ClassMetaInfo info;
-		info.addConstructor(builder.parseExpr("T::() { this->x = 0; this->y = 0; }", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builder.parseExpr("T::(int<4> x, int<4> y) { this->x = x; this->y = y; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builder.parseExpr("lambda ctor T::() { this.x = 0; this.y = 0; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builder.parseExpr("lambda ctor T::(int<4> x, int<4> y) { this.x = x; this.y = y; }", symbols).as<LambdaExprPtr>());
 
-		info.setDestructor(builder.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builder.parseExpr("lambda ~T::() {}", symbols).as<LambdaExprPtr>());
 		info.setDestructorVirtual(true);
 
 		info.addMemberFunction("abs", builder.parseExpr(
-				"let sqrt = lit(\"sqrt\" : (int<4>)->int<4>) in "
-				"T::()->int<4> { return sqrt(this->x*this->x + this->y * this->y); }"
+				"let sqrt = expr lit(\"sqrt\" : (int<4>)->int<4>); "
+				"lambda T::()->int<4> { return sqrt(this.x*this.x + this.y * this.y); }"
 				,symbols).as<LambdaExprPtr>());
 
-		info.addMemberFunction("magic", builder.getPureVirtual(builder.parseType("T::()->bool", symbols).as<FunctionTypePtr>()), true);
+		info.addMemberFunction("magic", builder.getPureVirtual(builder.parseType("method T::()->bool", symbols).as<FunctionTypePtr>()), true);
 
 		setMetaInfo(type, info);
 
@@ -339,10 +345,10 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.setDestructor(builderA.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builderA.parseExpr("lambda ~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("lambda T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 		// attach to type
 		setMetaInfo(typeA, info);
@@ -385,9 +391,9 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parseExpr("lambda ctor T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("lambda T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 		EXPECT_FALSE(info.hasDestructor());
 
@@ -432,10 +438,10 @@ namespace core {
 		symbols["T"] = typeA;
 
 		ClassMetaInfo info;
-		info.addConstructor(builderA.parseExpr("T::() {}", symbols).as<LambdaExprPtr>());
-		info.addConstructor(builderA.parseExpr("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-		info.setDestructor(builderA.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
-		info.addMemberFunction("f", builderA.parseExpr("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor        (builderA.parseExpr("lambda ctor T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor        (builderA.parseExpr("lambda ctor T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor         (builderA.parseExpr("lambda ~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parseExpr("lambda T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
 
 
 		// encode Meta-Info into IR
@@ -459,10 +465,12 @@ namespace core {
 		// this type should be error-free
 		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
 
+		std::map<string, NodePtr> symbols;
+		symbols["A"] = type;
 
 		// build a valid class-meta info
 		ClassMetaInfo info;
-		info.addConstructor(builder.parseExpr("A::() {}").as<LambdaExprPtr>());
+		info.addConstructor(builder.parseExpr("lambda ctor A::() {}", symbols).as<LambdaExprPtr>());
 		setMetaInfo(type, info);
 
 		// the check should still be fine
@@ -472,7 +480,7 @@ namespace core {
 		// now something with an error
 		info = ClassMetaInfo();
 
-		auto faulty = builder.parseExpr("A::() { lit(\"ads\":int<4>); }").as<LambdaExprPtr>();
+		auto faulty = builder.parseExpr("lambda ctor A::() { lit(\"ads\":int<4>); }", symbols).as<LambdaExprPtr>();
 		EXPECT_FALSE(checks::check(faulty).empty()) << checks::check(faulty);
 		info.addConstructor(faulty);
 		setMetaInfo(type, info);
@@ -483,7 +491,7 @@ namespace core {
 		// also check a member function
 		info = ClassMetaInfo();
 
-		faulty = builder.parseExpr("A::()->unit { lit(\"ads\":int<4>); }").as<LambdaExprPtr>();
+		faulty = builder.parseExpr("lambda A::()->unit { lit(\"ads\":int<4>); }", symbols).as<LambdaExprPtr>();
 		EXPECT_FALSE(checks::check(faulty).empty()) << checks::check(faulty);
 		info.addMemberFunction("fun", faulty, false, false);
 		setMetaInfo(type, info);

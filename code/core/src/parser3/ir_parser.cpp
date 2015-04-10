@@ -62,7 +62,6 @@ namespace {
         if (!driver.result) {
             if (onFailThrow ){
                 std::stringstream ss;
-                driver.print_errors(ss);
                 throw IRParserException(ss.str());
             }
             else{
@@ -70,20 +69,22 @@ namespace {
             }
         }
     }
-}
 
-
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
-        inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
-        auto x = driver.parseProgram();
-        if(!x) checkErrors(driver, onFailThrow);
-        return x;
+    void save_symbol_table(inspire_driver& driver, const std::map<string, NodePtr>& definitions){
+        for (const auto& def : definitions) {
+            if (!def.second) {
+                std::cerr << "WARNING!!!!!! you try to append symbol to the parser " << def.first << " with a nullptr value" << std::endl;
+            }
+            else{
+                driver.add_symb(def.first, def.second);
+            }
+        }
     }
+}
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
+        save_symbol_table(driver, definitions);
         auto x = driver.parseType();
         if(!x) checkErrors(driver, onFailThrow);
         return x;
@@ -99,7 +100,7 @@ namespace {
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
+        save_symbol_table(driver, definitions);
         auto x =  driver.parseStmt();
         if(!x) checkErrors(driver, onFailThrow);
         return x;
@@ -107,9 +108,39 @@ namespace {
 
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
+        save_symbol_table(driver, definitions);
         auto x =  driver.parseProgram();
         if(!x) checkErrors(driver, onFailThrow);
+        return x;
+    }
+
+	NodePtr parse_any(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
+
+        NodePtr x;
+        {
+            inspire_driver driver(code, manager);
+            save_symbol_table(driver, definitions);
+            x =  driver.parseType();
+        }
+        if (!x) {
+            inspire_driver driver(code, manager);
+            save_symbol_table(driver, definitions);
+            x = driver.parseExpression();
+        }
+        if (!x) {
+            inspire_driver driver(code, manager);
+            save_symbol_table(driver, definitions);
+            x = driver.parseStmt();
+        }
+        if (!x) {
+            inspire_driver driver(code, manager);
+            save_symbol_table(driver, definitions);
+            x = driver.parseProgram();
+        }
+
+        if(!x) {
+            std::cerr << "No way to parse the string, and because you use generic parse there is no way to provide errors, good luck there!" << std::endl;
+        }
         return x;
     }
 
@@ -183,7 +214,7 @@ namespace {
 	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, 
                                              bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
+        save_symbol_table(driver, definitions);
         auto root =  driver.parseStmt();
         if(!root) {
             checkErrors(driver, onFailThrow);

@@ -394,10 +394,17 @@ namespace types {
 		TypePtr D = builder.parseType("D");
 		symbols["D"] = D;
 
-		TypePtr E = builder.parseType("E : D", symbols);
+		TypePtr E = builder.parseType("E : D <>", symbols);
 		symbols["E"] = E;
 
-		TypePtr F = builder.parseType("F : B, E", symbols);
+		TypePtr F = builder.parseType("F : B, E <>", symbols);
+
+        std::cout << "A: " << A << std::endl;
+        std::cout << "B: " << B << std::endl;
+        std::cout << "C: " << C << std::endl;
+        std::cout << "D: " << D << std::endl;
+        std::cout << "E: " << E << std::endl;
+        std::cout << "F: " << F << std::endl;
 
 		// now check the relations
 
@@ -514,7 +521,10 @@ namespace types {
 		// create a recursive type
 		auto baseType = builder.parseType("struct { A a; }");
 
-		auto type = builder.parseType("let t = struct : struct { A a; } { B b; ref<t> next; }; t").as<RecTypePtr>();
+		auto type = builder.parseType("let t, s = struct : s { B b; ref<t> next; }, struct { A a; }; t").as<RecTypePtr>();
+
+        std::cout << type << std::endl;
+        dumpColor( type );
 
 		EXPECT_PRED2(isSubTypeOf, type, type);
 		EXPECT_PRED2(isSubTypeOf, type, type->unroll());

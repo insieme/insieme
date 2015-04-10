@@ -1158,7 +1158,7 @@ TEST(NarrowExpression, Basic) {
 	ASSERT_TRUE (res);
 	auto errors = check(res, typeCheck);
 	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
-	EXPECT_EQ("{{ };{ };decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 =  var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>));decl ref<int<4>> v1 = ref_narrow(v0, dp_root.b, type<int<4>>);{ };decl ref<int<4>> v2 = ref_narrow(v0, dp_root.a.a, type<int<4>>);{ };}",
+	EXPECT_EQ("{{ };{ };decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 =  var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>));decl ref<int<4>> v1 = ref_narrow(v0, dp_root.b, type<int<4>>);decl ref<int<4>> v2 = ref_narrow(v0, dp_root.a.a, type<int<4>>);}",
 			  toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 	res = builder.parseStmt(
@@ -1371,14 +1371,14 @@ TEST(ClassMetaInfo, InfoObjectType) {
 	IRBuilder builder(manager);
 
 	// create types to be tested
-	auto ok = builder.genericType("A");
+	auto ok = builder.genericType("t1");
 	auto err = ok;
 
 	ClassMetaInfo infoA;
-	infoA.addConstructor(builder.parseExpr("lambda ctor A::() {}").as<LambdaExprPtr>());
+	infoA.addConstructor(builder.parseExpr("let A = t1; lambda ctor A::() {}").as<LambdaExprPtr>());
 
 	ClassMetaInfo infoB;
-	infoB.addConstructor(builder.parseExpr("lambda ctor B::() {}").as<LambdaExprPtr>());
+	infoB.addConstructor(builder.parseExpr("let B = t2; lambda ctor B::() {}").as<LambdaExprPtr>());
 
 
 	// check the correct version (no information)
@@ -1386,7 +1386,7 @@ TEST(ClassMetaInfo, InfoObjectType) {
 
 	// use correct extra information
 	ok->attachValue(infoA);
-	EXPECT_TRUE(check(ok).empty());
+	EXPECT_TRUE(check(ok).empty()) << check(ok);
 
 	// use invalid extra information
 	err->attachValue(infoB);

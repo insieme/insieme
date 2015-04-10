@@ -54,7 +54,7 @@ namespace analysis {
 		// BUG: free variables within binds have not been recognized correctly
 		// reason: recursive call for bound parameters was wrong =>
 
-		auto funType = builder.parseType("A::()->unit").as<FunctionTypePtr>();
+		auto funType = builder.parseType("let A = t; method A::()->unit").as<FunctionTypePtr>();
 
 		ASSERT_TRUE(funType);
 		EXPECT_TRUE(funType->isMemberFunction());
@@ -96,7 +96,7 @@ namespace analysis {
 		IRBuilder builder(manager);
 
 		// create a struct type
-		StructTypePtr type = builder.parseType("struct { int x; int y; }").as<StructTypePtr>();
+		StructTypePtr type = builder.parseType("struct { int<4> x; int<4> y; }").as<StructTypePtr>();
 		ASSERT_TRUE(type);
 
 		// create a default constructor for this type

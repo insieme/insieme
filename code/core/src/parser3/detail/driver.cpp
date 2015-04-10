@@ -75,7 +75,7 @@ namespace detail{
         scanner.set_start_program();
         int fail = parser.parse ();
         if (fail) {
-            print_errors();
+            //print_errors();
             return nullptr;
         }
         return result.as<ProgramPtr>();
@@ -86,7 +86,7 @@ namespace detail{
         inspire_parser parser (*this, scanner);
         int fail = parser.parse ();
         if (fail) {
-            print_errors();
+            //print_errors();
             return nullptr;
         }
         return result.as<TypePtr>();
@@ -97,7 +97,7 @@ namespace detail{
         inspire_parser parser (*this, scanner);
         int fail = parser.parse ();
         if (fail) {
-            print_errors();
+            //print_errors();
             return nullptr;
         }
         return result.as<StatementPtr>();
@@ -108,7 +108,7 @@ namespace detail{
         inspire_parser parser (*this, scanner);
         int fail = parser.parse ();
         if (fail) {
-            print_errors();
+            //print_errors();
             return nullptr;
         }
         return result.as<ExpressionPtr>();
@@ -300,7 +300,7 @@ namespace detail{
 
     }
 
-    TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const TypeList& parents,
+    TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const ParentList& parents,
                                            const TypeList& params, const IntParamList& iparamlist){
         
         if (name == "ref"){
@@ -347,10 +347,7 @@ namespace detail{
             }
         }
 
-		return builder.genericType(name, params, iparamlist);
-
-        error(l, "this does not look like a type");
-        return nullptr;
+		return builder.genericType(name, parents, params, iparamlist);
     }
 
     TypePtr inspire_driver::genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk){
@@ -610,7 +607,6 @@ namespace {
          // std::cout << "    let_mames " << let_names << std::endl;
          // std::cout << "    let_type " << type_lets << std::endl;
          // std::cout << "    let_lambd " << lambda_lets.size() << std::endl;
-
   
         // LAMBDA LETS (functions):
         if(let_names.size() == lambda_lets.size()){
@@ -677,19 +673,36 @@ namespace {
 
             std::vector<RecTypeBindingPtr> type_defs;
             std::vector<std::string> names;
+            NodeMap non_recursive;
             unsigned count = 0;
+
+            // check for non recursive types
+            // if the type has no recursion inside, replace all uses of the type variable by a full type
             for (const auto& type : type_lets){
-            
                 const std::string& name = let_names[count];
                 if(!contains_type_variables(type)) {
+                    non_recursive[builder.typeVariable(name)] = type;
                     add_symb(l, name, type);
                 }
-                else {
-                    type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), type));
+                count ++;
+            }
+
+            count = 0;
+            // go over the types again and produce recursive type bindings for those who need it
+            for (const auto& type : type_lets){
+                const std::string& name = let_names[count];
+
+                if(contains_type_variables(type)){
+                    auto tmp =transform::replaceAllGen(mgr, type, non_recursive);
+                    std::cout << tmp << std::endl;
+
+                    type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), tmp));
                     names.push_back(name);
                 }
                 count ++;
             }
+
+            // generate a full recursive type and one entry point for each type variable
             RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
             for (const auto& n : names) add_symb(l, n, builder.recType(builder.typeVariable(n), fullType));
 
@@ -782,7 +795,7 @@ namespace {
     }
 
     void inspire_driver::error (const std::string& m)const {
-      std::cerr << m << std::endl;
+      errors.push_back(t_error(glob_loc, m));
     }
 
     bool inspire_driver::where_errors()const{

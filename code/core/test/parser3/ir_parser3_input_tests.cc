@@ -54,7 +54,7 @@ namespace core {
 namespace parser3 {
 
 	// the directory to load input files from
-	const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser2/inputs/";
+	const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser3/inputs/";
 
 
 	using std::string;
@@ -83,7 +83,7 @@ namespace parser3 {
 
 		// parse file
 		NodeManager manager;
-		NodePtr res = parse(manager, ss.str(), true);
+		NodePtr res = parse_program(manager, ss.str(), true);
 
         //if(res) dumpColor(res);
 
