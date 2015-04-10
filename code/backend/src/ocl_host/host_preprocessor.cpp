@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -210,7 +210,7 @@ using insieme::core::pattern::anyList;
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
-				assert(false && "Sizeof not present :(");
+				assert_fail() << "Sizeof not present :(";
 
             // case of a buffer that is not "size" long.
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
@@ -224,7 +224,7 @@ using insieme::core::pattern::anyList;
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
-				assert(false && "Sizeof not present :(");
+				assert_fail() << "Sizeof not present :(";
 
             // case of a buffer that is not "size" long.
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
@@ -340,14 +340,14 @@ using insieme::core::pattern::anyList;
 		 * replaces the sizeof(type) expressions inside dataToTransfer with integer literals
 		 */
 		void transformTypeToItsSize(ExpressionPtr& expr) {
-			NodeMapping* sizeofEvaluator;
+			SimpleNodeMapping* sizeofEvaluator;
 
 			NodeManager& mgr = builder.getNodeManager();
 			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 				if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(element)) {
 					if(mgr.getLangBasic().isSizeof(call->getFunctionExpr())) {
 						TypePtr ty = call->getArgument(0)->getType().as<GenericTypePtr>()->getTypeParameter(0);
-						// replace the sizeof call with an estimation of it's result
+						// replace the sizeof call with an estimation of its result
 						return builder.intLit(analysis::features::getSizeInBytes(ty));
 					}
 				}
@@ -369,7 +369,7 @@ using insieme::core::pattern::anyList;
 			transformTypeToItsSize(dataToTransfer.nonSplittableFromDevice);
 
 			std::ofstream os(filename);
-			assert(os.is_open() && "Could not open file to write data to transfer");
+			assert_true(os.is_open()) << "Could not open file to write data to transfer";
 			if(dataToTransfer.splittalbeToDevice )
 				os << printer::PrettyPrinter(dataToTransfer.splittalbeToDevice) << std::endl;
 			else
@@ -931,7 +931,7 @@ using insieme::core::pattern::anyList;
 				}
 				if (fun->getNodeType() == core::NT_LambdaExpr) {
 					LOG(INFO) << "\t Context:\n" << printer::PrettyPrinter(fun, printer::PrettyPrinter::PRINT_DEREFS |
-																	   printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+																	   printer::PrettyPrinter::JUST_OUTERMOST_SCOPE |
 																	   printer::PrettyPrinter::PRINT_CASTS) << std::endl;
 				}
 			});
@@ -940,7 +940,7 @@ using insieme::core::pattern::anyList;
 		}*/
 
 		// UNCOMMENT TO AVOID THE SPLITTING
-		//return code2;
+		return code2;
 
 
 
@@ -1198,8 +1198,7 @@ using insieme::core::pattern::anyList;
 				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
 											builder.deref(sizeVar), builder.sub(end, begin)).as<CompoundStmtPtr>();
 				// NEW CODE
-				newBody2 = core::transform::replaceAll(manager, newBody,
-											sizeVar, newSize).as<CompoundStmtPtr>();
+				//newBody2 = core::transform::replaceAll(manager, newBody2, sizeVar, newSize).as<CompoundStmtPtr>();
 
 				//LOG(DEBUG) << "=== NEWBODY ===\n" << core::printer::PrettyPrinter(newBody, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 				//LOG(INFO) << "\n==== ERROR NEWBODY START ====\n " << core::checks::check(newBody, core::checks::getFullCheck()) << "\n==== ERROR CHECK STOP ====\n ";
@@ -1332,7 +1331,7 @@ using insieme::core::pattern::anyList;
 				auto pfor = builder.pfor(body, builder.intLit(0), builder.deref(firstSizeVar));
 				auto parLambda = insieme::core::transform::extractLambda(manager, pfor);
 				auto range = builder.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
-				auto jobExp = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+				auto jobExp = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
 				auto parallelCall = builder.callExpr(basic.getParallel(), jobExp);
 				auto mergeCall = builder.callExpr(basic.getMerge(), parallelCall);
 
@@ -1363,7 +1362,7 @@ using insieme::core::pattern::anyList;
 			}
 		});
 
-		assert(!foundErrors && "Semantic errors when generating the splitting");
+		assert_false(foundErrors) << "Semantic errors when generating the splitting";
 
 		return code2;
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,10 +41,12 @@
 #include "impl/irt_scheduling.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+#include "impl/irt_loop_sched.impl.h"
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
+#include "utils/impl/frequency.impl.h"
 
 #ifdef USE_OPENCL
 #include <CL/cl.h>
@@ -112,20 +114,20 @@ void insieme_wi_add_implementation2(irt_work_item* wi);
 void insieme_wi_check_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
-	{ &insieme_wi_init_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_init_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ &insieme_wi_add_implementation1, 0, NULL, 0, NULL, 0, NULL },
-	{ &insieme_wi_add_implementation2, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_add_implementation1, 0, NULL, 0, NULL, 0, {0} },
+	{ &insieme_wi_add_implementation2, 0, NULL, 0, NULL, 0, {0} }
 };
 
 irt_wi_implementation_variant g_insieme_wi_check_variants[] = {
-	{ &insieme_wi_check_implementation, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_check_implementation, 0, NULL, 0, NULL, 0, {0} }
 };
 
 #define INSIEME_WI_INIT_INDEX 1

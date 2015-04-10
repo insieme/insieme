@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,7 +38,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <omp.h>
+#include <chrono>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/program_options.hpp>
@@ -292,17 +292,18 @@ std::string genQuery(CmdOptions options) {
 }
 
 bool evaluate(Evaluator& eval, Array<double>& in, size_t expected, std::ostream& out) throw(MachineLearningException) {
-	double start = omp_get_wtime();
+	std::chrono::system_clock c;
+
+	auto start = c.now();
 
 	size_t actual = eval.evaluate(in);
 
 	bool correct = expected == actual;
-	double end = omp_get_wtime();
-
+	auto end = c.now();
 
 	out << correct << " Expected: " << expected << "; Actual: " << actual << std::endl;
 
-	LOG(DEBUG) << "Evaluated in " << (end - start) * 1000 << " msec\n";
+	LOG(DEBUG) << "Evaluated in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " msec\n";
 	return correct;
 }
 
@@ -311,11 +312,12 @@ bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& 
 	Array<double> actualOut;
 	size_t i = 0;
 
-	double start = omp_get_wtime();
+	std::chrono::system_clock c;
+	auto start = c.now();
 
 	size_t actual = eval.evaluate(in, actualOut);
 
-	double end = omp_get_wtime();
+	auto end = c.now();
 
 	out << "Expected: " << expected << "; Actual: " << actual << " - ";
 	for_each(actualOut, [&](double ao) {
@@ -327,7 +329,7 @@ bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& 
 	});
 	out << std::endl;
 
-	LOG(DEBUG) << "Evaluated in " << (end - start) * 1000 << " msec\n";
+	LOG(DEBUG) << "Evaluated in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " msec\n";
 	return expected == actual;
 }
 
@@ -349,7 +351,7 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 
 	Evaluator eval = Evaluator::loadEvaluator(*model, options.modelPath);
 
-	assert((options.svm >= 0 || num == model->getInputDimension()) && "The number of specified features does not match the input size of the loaded model");
+	assert_true(options.svm >= 0 || num == model->getInputDimension()) << "The number of specified features does not match the input size of the loaded model";
 
 	Kompex::SQLiteStatement stmt(database);
 

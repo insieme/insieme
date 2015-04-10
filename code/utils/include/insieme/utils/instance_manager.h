@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -52,7 +52,7 @@
 #include "insieme/utils/pointer.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
-
+#include "insieme/utils/assert.h"
 #include "insieme/utils/unused.h"
 
 /**
@@ -112,17 +112,11 @@ class InstanceManager : private boost::noncopyable {
 	 */
 	template<class S>
 	typename boost::enable_if<boost::is_base_of<T,S>,const S*>::type clone(const S* instance) {
-		//  step 1 - cast to base type (since only this one allows us to clone it)
+		// step 1 - cast to base type (since only this one allows us to clone it)
 		const T* orig = instance;
-		//  step 2 - clone
+		// step 2 - clone
 		const T* clone = orig->cloneTo(*static_cast<typename S::Manager*>(this));
-
-		// make sure clone is valid
-//		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
-//		assert( orig != clone && "Not realy cloned!");
-//		assert( *orig == *clone && "Clone not equivalent to original!" );
-
-		// step 2 - cast back to original type
+		// step 3 - cast back to original type
 		return static_cast<const S*>(clone);
 	}
 
@@ -173,7 +167,7 @@ public:
 	typename boost::enable_if<boost::is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S* instance) {
 		static const PostAddAction postAddAction = PostAddAction();
 
-		assert ( instance && "Instance must not be NULL!");
+		assert_true(instance) << "Instance must not be NULL!";
 
 		// test whether there is already an identical element
 		auto res = lookupPlain(instance);
@@ -187,13 +181,13 @@ public:
 		__unused auto check = storage.insert(newElement);
 
 		// ensure this is a clone
-		assert ( instance != newElement );
+		assert_ne(instance, newElement);
 
 		// ensure the element has really been added (hash and equals is properly implemented)
-		assert ( *check.first == newElement || check.second );
+		assert_true(*check.first == newElement || check.second);
 
 		// ensure the element can be found again
-		assert ( check.first == storage.find(instance) && "Unable to add clone - value already present!" );
+		assert_true(check.first == storage.find(instance)) << "Unable to add clone - value already present!";
 
 		// apply post-insert action
 		postAddAction(instance, newElement);

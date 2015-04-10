@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -320,13 +320,6 @@ namespace core {
 			return callExpr(functionExpr, toVector<ExpressionPtr>(arg1, rest...));
 		}
 
-		// create a call to a virtual member function of an object type
-		CallExprPtr virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
-		CallExprPtr virtualCall(const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
-
-		CallExprPtr virtualCall(const TypePtr& resultType, const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
-		CallExprPtr virtualCall(const TypePtr& resultType, const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
-
 		// Lambda Nodes
 		LambdaPtr lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const;
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
@@ -346,7 +339,7 @@ namespace core {
 		}
 
 		// Create a job expression
-		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const;
+		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const ExpressionPtr& defaultExpr) const;
 		JobExprPtr jobExpr(const StatementPtr& stmt, int numThreads = -1) const;
 
 		// Create a marker expression
@@ -662,40 +655,6 @@ namespace core {
 
 		// helper for vector permute
 		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
-
-
-		// --------------------- static variables ----------------------
-
-
-		ExpressionPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant= false) const;
-
-		StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
-
-		// --------------------------- C++ -----------------------------
-
-		/**
-		 * Creates an expression representing a pure virtual function of the given type.
-		 *
-		 * @param memberFunctionType the type of the resulting pure virtual function
-		 * @return an expression representing a pure virtual function of the given type
-		 */
-		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
-
-
-		/**
-		 * Converts a given IR reference into a C++ reference.
-		 */
-		ExpressionPtr toCppRef(const ExpressionPtr& ref) const;
-
-		/**
-		 * Converts a given IR reference into a const C++ reference.
-		 */
-		ExpressionPtr toConstCppRef(const ExpressionPtr& ref) const;
-
-		/**
-		 * Converts a (const) C++ reference in an IR reference.
-		 */
-		ExpressionPtr toIRRef(const ExpressionPtr& ref) const;
 
 	private:
 

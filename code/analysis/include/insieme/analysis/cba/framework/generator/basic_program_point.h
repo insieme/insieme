@@ -788,7 +788,6 @@ namespace cba {
 				// obtain body of job
 				const Job<Context>& job = *jobs.begin();
 				const JobExprInstance& jobExpr = job.getCreationPoint();
-				assert_true(jobExpr->getGuardedExprs().empty()) << "Only non-guarded jobs are supported so far.";
 
 				// get set containing list of bodies
 				auto C_body = cba.getVar(C, jobExpr->getDefaultExpr(), job.getContext());
@@ -1186,7 +1185,7 @@ namespace cba {
 	namespace {
 
 		/**
-		 * ----------------------------- a Constraint Connecting the start of a thread with it's spawn point --------------------------------
+		 * ----------------------------- a Constraint Connecting the start of a thread with its spawn point --------------------------------
 		 */
 
 		/**

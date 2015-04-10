@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -94,7 +94,7 @@ namespace {
 
 			if (llvm::isa<clang::TypedefDecl> (*i)) {
 				std::cerr << "this is a typedef aliased type" << std::endl;
-				assert(false);
+				assert_fail();
 			}
 
 			if (i->isCompleteDefinition()){
@@ -612,7 +612,8 @@ core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decT
 core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 
 	std::string name;
-	if (tagDecl->getName() != ""){
+	//if we have a name in the tag declaration or we have a c++11 lambda 
+    if (tagDecl->getName() != "" || (llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl) && llvm::cast<clang::CXXRecordDecl>(tagDecl)->isLambda())) {
 		name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl),
 									   tagDecl->getTypeForDecl()->getCanonicalTypeInternal(),
 									   convFact.getSourceManager());
@@ -731,16 +732,16 @@ core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
     core::TypePtr irType;
 
     //iterate clang handler list and check if a handler wants to convert the type
-	for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-	    irType = plugin->Visit(type, convFact);
+	for(auto extension : convFact.getConversionSetup().getExtensions()) {
+	    irType = extension->Visit(type, convFact);
         if(irType) break;
 	}
 
     if(!irType)
         irType = convertImpl(type);
 
-    for(auto plugin : convFact.getConversionSetup().getPlugins()) {
-        irType = plugin->PostVisit(type, irType, convFact);
+    for(auto extension : convFact.getConversionSetup().getExtensions()) {
+        irType = extension->PostVisit(type, irType, convFact);
     }
 
 	return irType;

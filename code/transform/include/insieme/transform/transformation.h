@@ -129,7 +129,7 @@ namespace transform {
 		 */
 		TransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo)
 			: name(name), description(desc), connector(connector), parameterInfo(paramInfo) {
-			assert(paramInfo && "Parameter Information must be set!");
+			assert_true(paramInfo) << "Parameter Information must be set!";
 		};
 
 		/**
@@ -231,7 +231,7 @@ namespace transform {
 		 */
 		Transformation(const TransformationType& type, const vector<TransformationPtr>& subTransformations, const parameter::Value& params)
 			: type(type), subTransformations(subTransformations), parameters(params) {
-			assert(type.getParameterInfo()->isValid(params) && "Constructed using invalid parameters!");
+			assert_true(type.getParameterInfo()->isValid(params)) << "Constructed using invalid parameters!";
 		}
 
 		/**
@@ -408,7 +408,7 @@ namespace transform {
 		/**
 		 * A constructor just forwarding parameters to the parent class.
 		 */
-		AbstractTransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
+		AbstractTransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters())
 			: TransformationType(name, desc, connector, paramInfo) {};
 
 	};

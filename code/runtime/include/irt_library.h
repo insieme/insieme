@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -102,7 +102,7 @@ void _irt_lib_wi_startup_func(irt_work_item* wi) {
 int main(int argc, char **argv) {
 	irt_lib_critical_init();
 
-	irt_wi_implementation_variant impl_var = { &_irt_lib_wi_startup_func, 0, NULL, 0, NULL, NULL, NULL };
+	irt_wi_implementation_variant impl_var = { &_irt_lib_wi_startup_func, 0, NULL, 0, NULL, NULL, {0} };
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	_irt_lib_startup_lwdi params = { - (int32)sizeof(_irt_lib_startup_lwdi), argc, argv };
 
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
 void irt_lib_init_run(voidfp fun, void* data, size_t data_size) {
 	irt_lib_critical_init();
 
-	irt_wi_implementation_variant impl_var = { _irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, NULL };
+	irt_wi_implementation_variant impl_var = { _irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, {0} };
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	int32 lwdi_size = data_size + sizeof(_irt_lib_lwdi);
 	_irt_lib_lwdi *lwdi = (_irt_lib_lwdi*)alloca(lwdi_size);
@@ -140,7 +140,7 @@ void irt_lib_init_in_context(uint32 worker_count, contextfp context_init, contex
 
 // Run function as a work item within the (already inited) runtime, from a non-runtime thread
 void irt_lib_run(voidfp fun, void* data, size_t data_size) {
-	irt_wi_implementation_variant impl_var = { _irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, NULL };
+	irt_wi_implementation_variant impl_var = { _irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, {0} };
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	int32 lwdi_size = data_size + sizeof(_irt_lib_lwdi);
 	_irt_lib_lwdi *lwdi = (_irt_lib_lwdi*)alloca(lwdi_size);
@@ -183,7 +183,7 @@ uint32 irt_lib_get_default_worker_count() {
 irt_joinable irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, size_t data_size) {
 
 	// static wi implementation (immutable)
-	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, NULL };
+	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, {0} };
 	static irt_wi_implementation impl = { -1, 1, &impl_var };
 
 	// build lightweight data item
@@ -223,7 +223,7 @@ void _irt_lib_wi_pfor_func(irt_work_item* wi) {
 void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, size_t data_size) {
 
 	// static wi implementation (immutable)
-	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_func, 0, NULL, 0, NULL, NULL, NULL };
+	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_func, 0, NULL, 0, NULL, NULL, {0} };
 	static irt_wi_implementation impl = { -2, 1, &impl_var };
 
 	// build lightweight data item
@@ -258,7 +258,7 @@ void _irt_lib_wi_pfor_s_func(irt_work_item* wi) {
 void irt_lib_pfor_s(int64 begin, int64 end, int64 step, loopsfp body, void* data, size_t data_size) {
 
 	// static wi implementation (immutable)
-	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_s_func, 0, NULL, 0, NULL, NULL, NULL };
+	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_s_func, 0, NULL, 0, NULL, NULL, {0} };
 	static irt_wi_implementation impl = { -2, 1, &impl_var };
 
 	// build lightweight data item

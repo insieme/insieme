@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,8 +49,6 @@
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
-
-
 
 
 namespace insieme {
@@ -116,7 +114,7 @@ namespace access {
 		}
 
 		auto decAccess = cast<AccessDecorator>(access);
-		assert(decAccess);
+		assert_true(decAccess);
 		return decAccess->switchSubAccess( switchRoot(decAccess->getSubAccess(), newRoot) );
 	}
 
@@ -200,7 +198,7 @@ namespace access {
 
 			} catch (const arithmetic::NotAFormulaException& e) {
 				// What if this is a piecewise? we can handle it
-				assert (false && "Array access is not a formula");
+				assert_fail() << "Array access is not a formula";
 				return SubscriptPtr();
 			}
 		}
@@ -239,7 +237,7 @@ namespace access {
 			exprNode->getNodeType() == NT_VectorExpr) 
 			throw NotAnAccessException(toString(*exprNode));
 
-		assert(exprNode->getNodeType() == NT_CallExpr && "Expected a call expression");
+		assert_eq(exprNode->getNodeType(), NT_CallExpr) << "Expected a call expression";
 
 		CallExprPtr callExpr = exprNode.as<CallExprPtr>();
 		auto args = callExpr->getArguments();
@@ -278,14 +276,14 @@ namespace access {
 			if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
 				return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>(), final);
 			}
-			assert( false && "Type of member access not supported" );
+			assert_fail() << "Type of member access not supported";
 		}
 
 		// Handle Array/Vector subscript operator
 		if ( gen.isSubscriptOperator(funcExpr) ) {
 			return extractArrayAccess(mgr, expr, subAccess, tmpVarMap, final);
 		}
-		assert(false && "Access not supported");
+		assert_fail() << "Access not supported";
 		return AccessPtr();
 	}
 
@@ -407,7 +405,7 @@ namespace access {
 		if (!lhs || !rhs) { return false; }
 
 		// this must hold at this point
-		assert ( lhs && rhs );
+		assert_true(lhs && rhs);
 
 		// make sure to skip any deref nodes
 		if (lhs->getType() == AccessType::AT_DEREF)
@@ -461,7 +459,7 @@ namespace access {
 			}
 
 			default:
-				assert(false && "not supported");
+				assert_fail() << "not supported";
 				return false;
 		}
 	}

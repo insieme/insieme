@@ -134,7 +134,7 @@ namespace dump {
 				}
 
 				void operator()(const string& value) const {
-					assert(false && "Should not be handled this way!");
+					assert_fail() << "Should not be handled this way!";
 				}
 			};
 
@@ -332,7 +332,7 @@ namespace dump {
 
 								// convert annotation ...
 								NodePtr converted = cur_converter->toIR(mgr, cur_annotation.second);
-								assert(converted && "Converted Annotation must not be NULL!");
+								assert_true(converted) << "Converted Annotation must not be NULL!";
 
 								// .. and index converted result ..
 								visitDepthFirstOnce(converted, indexer);
@@ -538,7 +538,7 @@ namespace dump {
 						} else if (type == NT_IntValue) {
 							value = builder.intValue(int(read<int32_t>(in)));
 						} else {
-							assert(false && "Inconsistent code!");
+							assert_fail() << "Inconsistent code!";
 						}
 
 						// register value
@@ -627,7 +627,7 @@ namespace dump {
 		}
 
 		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses, const AnnotationConverterRegister& converterRegister) {
-			assert(!addresses.empty() && "Cannot dump empty list of addresses!");
+			assert_false(addresses.empty()) << "Cannot dump empty list of addresses!";
 
 			// just dump full IR tree ...
 			dumpIR(out, addresses[0].getRootNode(), converterRegister);
@@ -645,7 +645,7 @@ namespace dump {
 
 		NodeAddress loadAddress(std::istream& in, NodeManager& manager, const AnnotationConverterRegister& converterRegister) {
 			vector<NodeAddress> list = loadAddresses(in, manager, converterRegister);
-			assert(!list.empty() && "Resolved address list must not be empty!");
+			assert_false(list.empty()) << "Resolved address list must not be empty!";
 			return list[0];
 		}
 

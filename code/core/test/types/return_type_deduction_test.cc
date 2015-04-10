@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -166,7 +166,7 @@ namespace types {
 		// 				function type: ((vector<'elem,l>,'res,(('elem,'res)->'res))->'res)
 		//
 		// This error occurs when the function is invoked using a literal as
-		// its second argument and a generic integer operation is it's last.
+		// its second argument and a generic integer operation is its last.
 		// The expected return type should be consistent with the type of the
 		// second argument.
 

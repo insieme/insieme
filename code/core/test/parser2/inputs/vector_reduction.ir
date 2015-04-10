@@ -1,0 +1,27 @@
+
+let int = int<4>;
+let uint = uint<8>;
+let four = lit("4" : intTypeParam<4>);
+let initUniform = lit("vector.init.uniform":('elem, intTypeParam<#a>) -> vector<'elem,#a>);
+let toUint = lit("to.uint":(intTypeParam<#n>) -> uint<8>);
+
+unit main() {
+	let plus = (int a, int b) -> int {
+        return a + b;
+    };
+
+	let vectorReduce = (vector<'a,#n> v, 'b init, ('b, 'a) -> 'b f) -> 'b {
+        ref<'b> res = var(init);
+        for (uint i = 0u .. toUint(param(#n))){
+            res = f(*res, v[0]);
+        };
+        return *res;
+	};
+
+    ref<vector<int, 4>> v = var(initUniform(0, four));
+
+    int res = vectorReduce(*v, 0, plus);
+
+    print("res = %d \t o.a = %d\n", res);
+
+}

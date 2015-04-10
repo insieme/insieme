@@ -1,0 +1,67 @@
+<IWIR version="1.1" wfname="ifTask5" xmlns="http://shiwa-workflow.eu/IWIR">
+  <if name="ifTask5">
+    <inputPorts>
+      <inputPort name="in1" type="integer"/>
+      <inputPort name="in2" type="integer"/>
+    </inputPorts>
+    <condition>in1 = 2 and in1 = in2</condition>
+    <then>
+      <task name="atomicThen" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+    </then>
+    <else>
+      <task name="atomicElse1" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+	  <task name="atomicElse2" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+      <task name="atomicElse3" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+      <task name="atomicElse4" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+    </else>
+    <outputPorts>
+      <outputPort name="out1" type="integer"/>
+      <outputPort name="out2" type="integer"/>
+    </outputPorts>
+    <links>
+      <link from="ifTask5/in1" to="atomicThen/in1"/>
+      <link from="atomicThen/out1" to="ifTask5/out1"/>
+      <link from="ifTask5/in1" to="atomicElse1/in1"/>
+      <link from="atomicElse1/out1" to="atomicElse2/in1"/>
+      <link from="atomicElse2/out1" to="atomicElse3/in1"/>
+      <link from="atomicElse3/out1" to="ifTask5/out1"/>
+      <link from="atomicElse2/out1" to="atomicElse4/in1"/>
+      <link from="atomicElse4/out1" to="ifTask5/out2"/>
+    </links>
+  </if>
+</IWIR>

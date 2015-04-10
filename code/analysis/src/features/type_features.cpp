@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -191,12 +191,12 @@ namespace features {
 
 			unsigned visitType(const core::TypePtr& type) {
 				LOG(FATAL) << "Unsupported type encountered: " << *type;
-				assert(false && "Unsupported type encountered!");
+				assert_fail() << "Unsupported type encountered!";
 				return 0;
 			}
 
 			unsigned visitNode(const core::NodePtr& node) {
-				assert(false && "This visitor only supports types!");
+				assert_fail() << "This visitor only supports types!";
 				return 0;
 			}
 
@@ -231,7 +231,7 @@ namespace features {
 			offset += getEstimatedSizeInBytes(cur->getType());
 		}
 
-		assert(false && "Cannot determine offset of non-included member!");
+		assert_fail() << "Cannot determine offset of non-included member!";
 		return offset;
 	}
 

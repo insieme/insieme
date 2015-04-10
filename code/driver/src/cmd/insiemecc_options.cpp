@@ -1,0 +1,294 @@
+/**
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
+#include "insieme/driver/cmd/insiemecc_options.h"
+
+#include <boost/algorithm/string.hpp>
+
+#include <string>
+#include <iostream>
+#include "insieme/utils/version.h"
+
+namespace insieme {
+namespace driver {
+namespace cmd {
+
+	using namespace std;
+
+	namespace bpo = boost::program_options;
+	namespace fe = insieme::frontend;
+
+	detail::OptionParser Options::parse(const std::vector<std::string>& argv) {
+		return detail::OptionParser(argv);
+	}
+
+	namespace detail {
+
+		OptionParser::OptionParser(const std::vector<std::string>& argv) : argv(argv) {
+
+			// define options
+			desc.add_options()
+#define FLAG(_name__, _id__, _description__) \
+			( _name__, _description__)
+#define PARAMETER(_name__, _id__, _type__, _default_value__, _description__) \
+			( _name__, bpo::value< _type__ >()->default_value(_default_value__), _description__)
+#define OPTION(_name__, _id__, _type__, _default_value__, _description__) \
+			( _name__, bpo::value< _type__ >()->implicit_value(_default_value__), _description__)
+#include "insieme/driver/cmd/insiemecc_options.def"
+			;
+
+		}
+
+
+		OptionParser& OptionParser::operator()(const string& name, char symbol, bool& flag, const char* description) {
+
+			// add flag to description
+			desc.add_options()((name + "," + symbol).c_str(), description);
+
+			// add parser step
+			parser_steps.push_back([&](const bpo::variables_map& map) {
+				flag = map.count(name); return true;
+			});
+			return *this;
+		}
+
+		OptionParser::operator Options() {
+
+			// -- parsing -------------------------------------------
+            // remove the first entry: this should be some string like "insiemecc"
+            argv.erase(argv.begin());
+
+			// define positional options (all options not being named)
+			bpo::positional_options_description pos;
+			pos.add("input-file", -1);
+
+			// parse parameters
+			bpo::variables_map map;
+			bpo::store(bpo::basic_command_line_parser<char>(argv)
+				.options(desc)
+				.style((bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise) ^ bpo::command_line_style::allow_guessing)
+				.positional(pos)
+				.allow_unregistered()
+				.run(), map);
+
+
+			bpo::notify(map);
+
+
+			// -- processing -----------------------------------------
+
+			Options res(frontend::ConversionJob("in.c"));
+			std::string tempName;
+#define FLAG(_name__, _id__, _description__) \
+			tempName = string(_name__); \
+			tempName = tempName.substr(0, tempName.find(",")); \
+			res.settings._id__ = map.count(tempName.c_str());
+#define PARAMETER(_name__, _id__, _type__, _default_value__, _description__) \
+			tempName = string(_name__); \
+			tempName = tempName.substr(0, tempName.find(",")); \
+			if(map.count(tempName.c_str())) \
+				res.settings._id__ = map[tempName.c_str()].as<_type__>();
+#define OPTION(_name__, _id__, _type__, _default_value__, _description__) \
+			tempName = string(_name__); \
+			tempName = tempName.substr(0, tempName.find(",")); \
+			if(map.count(tempName.c_str())) \
+				res.settings._id__ = map[tempName.c_str()].as<_type__>();
+#include "insieme/driver/cmd/insiemecc_options.def"
+
+			// assume valid options until indicated otherwise
+			res.gracefulExit = false;
+			res.valid = true;
+
+			// check whether help was requested
+			if(res.settings.help) {
+				std::cout << "Usage: " << argv[0] << " [options | infile]" << "\n";
+				std::cout << desc << "\n";
+				// no non-zero exit code when requesting help!
+				res.gracefulExit = true;
+				return res;
+			}
+
+			// check whether version was requested
+			if(res.settings.version) {
+				std::cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << "\n" <<
+						"Realized by the Distributed and Parallel Systems (DPS) group, copyright 2008-2015, " <<
+						"University of Innsbruck\n" <<
+						"http://www.insieme-compiler.org\n";
+				// no non-zero exit code when requesting version!
+				res.gracefulExit = true;
+				return res;
+			}
+
+			// input files
+			if(!res.settings.inFiles.empty()) {
+				res.job.setFiles(res.settings.inFiles);
+			} else {
+				std::cerr << "Error: No input files provided!\n";
+				res.valid = false;
+				return res;
+			}
+
+			// user include paths
+			if(!res.settings.includePaths.empty()) {
+				res.job.setIncludeDirectories(res.settings.includePaths);
+			}
+
+			// system include paths
+			for(auto path : res.settings.systemIncludePaths) {
+				res.job.addSystemHeadersDirectory(path);
+			}
+
+
+			// --------------- Job Settings ---------------
+
+			res.job.setOption(fe::ConversionJob::OpenMP, res.settings.openMP);
+			res.job.setOption(fe::ConversionJob::Cilk, res.settings.cilk);
+			res.job.setOption(fe::ConversionJob::OpenCL, res.settings.openCL);
+			res.job.setOption(fe::ConversionJob::Lib_icl, res.settings.iCL);
+			res.job.setOption(fe::ConversionJob::ProgressBar, res.settings.progress);
+			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
+			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
+			res.job.setOption(fe::ConversionJob::GemCrossCompile, res.settings.gemCrossCompile);
+
+			// TODO: Remove this warning once the opencl frontend is fixed
+			if(res.job.hasOption(fe::ConversionJob::OpenCL))
+				std::cerr << "Warning: OpenCL frontend support still experimental, consider switching to ICL frontend.\n";
+
+			// check for libraries and add LD_LIBRARY_PATH entries to lib search path
+			std::vector<frontend::path> ldpath;
+			ldpath.push_back(boost::filesystem::current_path().string());
+			if(!res.settings.libraryPaths.empty()) {
+                ldpath = res.settings.libraryPaths;
+			}
+
+			if(auto ldPath = getenv("LD_LIBRARY_PATH")) {
+				std::string ldvar(ldPath);
+				boost::char_separator<char> sep(":");
+				boost::tokenizer<boost::char_separator<char>> tokens(ldvar, sep);
+				for(auto t : tokens) {
+				    ldpath.push_back(t);
+				}
+			}
+			//we have to check for lib<name>.<so|a> in every library directory provided by library-path
+			for(const frontend::path& s : res.settings.libraryFiles) {
+				for(const frontend::path& d : ldpath) {
+					frontend::path f1 = d / ("/lib" + s.string() + ".so");
+					frontend::path f2 = d / ("/lib" + s.string() + ".a");
+					if(boost::filesystem::is_regular_file(f1)) {
+						//shared object file
+						res.job.addFile(f1);
+						break;
+					}
+					if(boost::filesystem::is_regular_file(f2)) {
+						//static library
+						res.job.addFile(f2);
+						break;
+					}
+				}
+			}
+			// preprocessor directives
+			for(auto def : res.settings.definitions) {
+				res.job.setDefinition(def);
+			}
+
+			// insert
+			if(res.settings.standard == "auto") {
+				res.job.setStandard(frontend::ConversionSetup::Auto);
+			} else if(res.settings.standard == "c99") {
+				res.job.setStandard(frontend::ConversionSetup::C99);
+			} else if(res.settings.standard == "c++98") {
+				res.job.setStandard(frontend::ConversionSetup::Cxx98);
+			} else if(res.settings.standard == "c++03") {
+				res.job.setStandard(frontend::ConversionSetup::Cxx03);
+			} else if(res.settings.standard == "c++0x") {
+				res.job.setStandard(frontend::ConversionSetup::Cxx11);
+				assert_true(res.job.isCxx());
+			} else if(res.settings.standard == "c++11") {
+				res.job.setStandard(frontend::ConversionSetup::Cxx11);
+				assert_true(res.job.isCxx());
+			} else {
+				std::cerr << "Error: Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
+				res.valid = false;
+				return res;
+			}
+
+            // interceptions
+			res.job.addInterceptedNameSpacePatterns(res.settings.intercept);
+            
+            if(!res.settings.interceptIncludes.empty()) {
+				res.job.setInterceptedHeaderDirs(res.settings.interceptIncludes);
+            }
+
+            //f flags
+			for(auto optFlag : res.settings.optimizationFlags) {
+				std::string&& s = "-f" + optFlag;
+				res.job.addFFlag(s);
+			}
+
+			// extra flags
+			for(auto cur : parser_steps) {
+				res.valid = cur(map) && res.valid;
+			}
+
+			// prepare for setting up backend
+			if(res.settings.backend == "runtime" || res.settings.backend == "run") {
+				res.backendHint.backend = BackendEnum::Runtime;
+			} else if(res.settings.backend == "sequential" || res.settings.backend == "seq") {
+				res.backendHint.backend = BackendEnum::Sequential;
+			} else if(res.settings.backend == "opencl" || res.settings.backend == "ocl" ) {
+				res.backendHint.backend = BackendEnum::OpenCL;
+			} else if(res.settings.backend == "pthreads" || res.settings.backend == "pthread") {
+				res.backendHint.backend = BackendEnum::Pthreads;
+			} else {
+				std::cerr << "Error: Unsupported backend: " << res.settings.backend << " - supported: sequential | runtime | ocl | pthreads\n";
+				res.valid = false;
+				return res;
+			}
+
+			if(!res.settings.dumpOclKernel.empty() && res.backendHint.backend != BackendEnum::OpenCL) {
+				std::cerr << "Error: OpenCL kernel dump requires OpenCL backend (current backend selected: " << res.backendHint << ")\n";
+				res.valid = false;
+				return res;
+			}
+			// done
+			return res;
+
+		}
+	}
+
+} // end namespace cmd
+} // end namespace driver
+} // end namespace insieme

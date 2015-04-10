@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -201,8 +201,8 @@ void irt_cap_region_start(uint32 id) {
 void irt_cap_region_stop(uint32 id) {
 
 	// check some pre-requirements
-	assert(irt_g_cap_region_stack && "Stack must not be empty!");
-	assert(irt_g_cap_region_stack->region->id == id && "Non-matching start/stop encountered!");
+	IRT_ASSERT(irt_g_cap_region_stack, IRT_ERR_INTERNAL, "Stack must not be empty!");
+	IRT_ASSERT(irt_g_cap_region_stack->region->id == id, IRT_ERR_INTERNAL, "Non-matching start/stop encountered!");
 
 	// pop elment from stack
 	irt_cap_region_stack* top = irt_g_cap_region_stack;
@@ -244,7 +244,7 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 	// 	=> create new information
 
 	const irt_cap_data_block_info* info = irt_cap_dbi_lookup(pos);
-	assert(info && "Cannot create usage info for unregistered block!");
+	IRT_ASSERT(info, IRT_ERR_INTERNAL, "Cannot create usage info for unregistered block!");
 	irt_cap_block_usage_info* elem = (irt_cap_block_usage_info*)malloc(sizeof(irt_cap_block_usage_info));
 
 	elem->block = info;
@@ -277,7 +277,7 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 
 void irt_cap_tag_block(void* pos, uint16 id) {
 	irt_cap_region* region = irt_g_cap_region_stack->region;
-	assert(irt_cat_get_or_create_usage_info(region, pos)->tag < 0 && "Tag must only be assigned once!");
+	IRT_ASSERT(irt_cat_get_or_create_usage_info(region, pos)->tag < 0, IRT_ERR_INTERNAL, "Tag must only be assigned once!");
 	irt_cat_get_or_create_usage_info(region, pos)->tag = id;
 }
 
@@ -298,7 +298,7 @@ void irt_cap_print_report() {
 
 		it = cur->region.usage;
 		while (it != NULL) {
-			printf("  Block %d from %p size %u - is pointer: %d\n", it->tag, it->block->base, it->block->size, it->is_pointer[0]);
+			printf("  Block %d from %p size %u - is pointer: %d\n", it->tag, (void*) it->block->base, it->block->size, it->is_pointer[0]);
 			it = it->next;
 		}
 
@@ -420,7 +420,7 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 				info->life_in_values[absPos] = data[i];
 
 				// set pointer flag
-				assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
+				IRT_ASSERT(is_ptr || !info->is_pointer[absPos], IRT_ERR_INTERNAL, "Cannot support mixture of values and pointers!");
 				info->is_pointer[absPos] = is_ptr;
 
 				// release the lock
@@ -457,7 +457,7 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 					}
 
 					// make sure, position has not been used as a pointer!
-					assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
+					IRT_ASSERT(is_ptr || !info->is_pointer[absPos], IRT_ERR_INTERNAL, "Cannot support mixture of values and pointers!");
 
 					// update ti is_life_out flag
 					info->is_life_out[absPos] = true;
@@ -514,7 +514,7 @@ void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) 
 				info->life_out_values[absPos] = data[i];
 
 				// mark as pointer, if necessary
-				assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
+				IRT_ASSERT(is_ptr || !info->is_pointer[absPos], IRT_ERR_INTERNAL, "Cannot support mixture of values and pointers!");
 
 				info->is_pointer[absPos] = is_ptr;
 
@@ -551,7 +551,7 @@ void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) 
 					info->last_written[absPos] = false;
 
 					// make sure, position has not been used as a pointer!
-					assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
+					IRT_ASSERT(is_ptr || !info->is_pointer[absPos], IRT_ERR_INTERNAL, "Cannot support mixture of values and pointers!");
 
 					DEBUG(printf("Life-out terminated - pos %d - size %d\n", absPos, (int)size));
 
@@ -574,7 +574,7 @@ void irt_cap_written_value(void* pos, uint16 size) {
 }
 
 irt_cap_pointer_substitute irt_cap_get_substitute(void* pos) {
-	assert(sizeof(irt_cap_pointer_substitute) == sizeof(void*) && "Sizes don't match!");
+	IRT_ASSERT(sizeof(irt_cap_pointer_substitute) == sizeof(void*), IRT_ERR_INTERNAL, "Sizes don't match!");
 
 	irt_cap_pointer_substitute res;
 
@@ -588,9 +588,8 @@ irt_cap_pointer_substitute irt_cap_get_substitute(void* pos) {
 	// resolve all other pointers
 	const irt_cap_data_block_info* info = irt_cap_dbi_lookup(pos);
 
-	assert(info && "Reading unregistered memory location!");
-	assert((uint64)pos - (uint64)info->base <= ((uint32)(0)-1u)
-			&& "Width of offset segment not large enought!");
+	IRT_ASSERT(info, IRT_ERR_INTERNAL, "Reading unregistered memory location!");
+	IRT_ASSERT((uint64)pos - (uint64)info->base <= ((uint32)(0)-1u), IRT_ERR_INTERNAL, "Width of offset segment not large enought!");
 
 	res.block = info->id;
 	res.offset = (uint64)pos - (uint64)info->base;

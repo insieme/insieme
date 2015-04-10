@@ -59,7 +59,6 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -105,7 +104,7 @@ TEST(CppConversion, FileTest) {
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-//		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+//		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 

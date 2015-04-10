@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,6 +40,7 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
+#include "insieme/transform/datalayout/parallelSecSoa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 namespace insieme {
@@ -67,23 +68,28 @@ AosToSoa::AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder)
 void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
-	std::vector<std::pair<ExpressionSet, RefTypePtr>> toReplaceLists = createCandidateLists();
+	const NodeAddress toTransAddr(toTransform);
+	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
 
-	for(std::pair<ExpressionSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
 		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
-		ExpressionMap varReplacements;
+		ExprAddressMap varReplacements;
 		ExpressionMap nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
-		for(ExpressionPtr oldVar : toReplaceList.first) {
+		for(ExpressionAddress oldVar : toReplaceList.first) {
+			// update root for in case it has been modified in a previous iteration
+			oldVar = oldVar.switchRoot(toTransform);
+
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second, newStructType).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -95,12 +101,11 @@ void AosToSoa::transform() {
 		}
 
 		VariableAdder varAdd(mgr, varReplacements);
-		toTransform = varAdd.mapElement(0, toTransform);
 
 //for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements)
 //	std::cout << "from " << rep.first << "  to  " << rep.second << std::endl;
 
-		NodeAddress tta(toTransform);
+		NodeAddress tta = varAdd.addVariablesToLambdas(toTransform);
 
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
@@ -126,15 +131,16 @@ void AosToSoa::transform() {
 //	core::transform::replaceAll(mgr, re);
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
-		ExpressionMap structures;
-		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements, structures);
+		updateTuples(varReplacements, newStructType, toReplaceList.second, tta, replacements);
 
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, structures);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
-		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements, structures);
+		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
 
-		doReplacements(replacements, structures, aosToSoaAllocTypeUpdate);
+		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
+
+		doReplacements(replacements, aosToSoaAllocTypeUpdate);
 
 //		replacements.clear();
 //		tta = NodeAddress(toTransform);
@@ -161,7 +167,7 @@ StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
-StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 
@@ -170,7 +176,7 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 
 //			if(memAlloc.match(decl->getInitialization())) { // if memory is allocated, allocate memory of new newVar
 		allDecls.push_back(decl);
-		allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), builder.undefinedVar(newVar->getType())));
+		allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), builder.undefinedVar(newVar.as<VariablePtr>()->getType())));
 
 		// split up initialization expressions
 		for(NamedTypePtr memberType : newStructType->getElements()) {
@@ -182,7 +188,7 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 			NodeMap inInitReplacementsInCaseOfNovarInInit;
 			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(memberType->getType(), memberType->getName());
 
-			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
+			allDecls.push_back(builder.assign(builder.accessMember(newVar.as<VariablePtr>(), memberType->getName()),
 					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 //			allDecls.push_back(removeRefVar(decl->getInitialization()));
 		}
@@ -200,7 +206,7 @@ StatementList AosToSoa::generateNewDecl(const ExpressionMap& varReplacements, co
 }
 
 
-StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements, const CallExprAddress& call,
+StatementList AosToSoa::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
 		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
@@ -218,7 +224,7 @@ StatementList AosToSoa::generateNewAssigns(const ExpressionMap& varReplacements,
 	return allAssigns;
 }
 
-StatementPtr AosToSoa::generateMarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToSoa::generateMarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -235,7 +241,7 @@ StatementPtr AosToSoa::generateMarshalling(const ExpressionPtr& oldVar, const Ex
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.literal(start->getType(), "1"), builder.compoundStmt(loopBody));
 }
 
-StatementPtr AosToSoa::generateUnmarshalling(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
+StatementPtr AosToSoa::generateUnmarshalling(const ExpressionAddress& oldVar, const ExpressionPtr& newVar, const ExpressionPtr& start,
 		const ExpressionPtr& end, const StructTypePtr& structType) {
 	IRBuilder builder(mgr);
 
@@ -252,6 +258,24 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionPtr& oldVar, const 
 	return builder.forStmt(builder.declarationStmt(iterator, start), end, builder.literal(start->getType(), "1"), builder.compoundStmt(loopBody));
 
 }
+
+//TypePtr AosToSoa::generateNewTupleType(const TypePtr& oldTupleVarType,const StructTypePtr& newStructType, const TypePtr& oldStructType) {
+//	TypeList newTupleTypeElements;
+//
+//std::cout << "otvt: " << oldStructType << std::endl;
+//	TupleTypePtr oldTupleType = removeRef(oldTupleVarType).as<TupleTypePtr>();
+//	for(TypePtr elemTy : oldTupleType->getElements()) {
+//std::cout << "type: " << elemTy << " is the thing " << containsType(elemTy, oldStructType) << std::endl;
+//		if(containsType(elemTy, oldStructType)) {
+//			newTupleTypeElements.push_back(core::transform::replaceAllGen(mgr, elemTy, oldStructType, newStructType, true));
+//std::cout << "new: " << newTupleTypeElements.back();
+//		} else
+//			newTupleTypeElements.push_back(elemTy);
+//	}
+//
+//	IRBuilder builder(mgr);
+//	return core::transform::replaceAllGen(mgr, oldTupleVarType, oldTupleType, builder.tupleType(newTupleTypeElements));
+//}
 
 ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
 		const ExpressionPtr& structAccess) {
@@ -281,14 +305,18 @@ ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, con
 }
 
 
-StatementList AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionPtr& oldVar, const ExpressionPtr& newVar,
+StatementList AosToSoa::generateDel(const StatementAddress& stmt, const ExpressionAddress& oldVar, const ExpressionPtr& newVar,
 		const StructTypePtr& newStructType) {
 	StatementList deletes;
 
-	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::atom(oldVar)));
+	pattern::TreePattern delVarPattern = pirp::refDelete(aT(pattern::var("oldVar", pattern::atom(oldVar))));
 	pattern::AddressMatchOpt match = delVarPattern.matchAddress(stmt);
 
 	if(match) {
+		ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+		if(!compareVariables(oldVar, matchedOldVar))
+			return deletes;
+
 		IRBuilder builder(mgr);
 		for(NamedTypePtr memberType : newStructType->getElements()) {
 			deletes.push_back(builder.refDelete(refAccess(newVar, ExpressionPtr(), memberType->getName())));
@@ -298,9 +326,15 @@ StatementList AosToSoa::generateDel(const StatementAddress& stmt, const Expressi
 	}
 
 	return deletes;
+
 }
 
+void AosToSoa::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
+	ParSecSoa psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
+//	psa.transform();
+}
 } // datalayout
 } // transform
 } // insieme

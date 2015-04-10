@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -81,7 +81,7 @@ void irt_scheduling_loop(irt_worker* self) {
 			}
 			#ifdef IRT_ASTEROIDEA_STACKS
 			if(self->share_stack_wi != NULL) {
-				IRT_DEBUG(" � %p allowing stack stealing: %d children\n", self->share_stack_wi, *self->share_stack_wi->num_active_children);
+				IRT_DEBUG(" - %p allowing stack stealing: %d children\n", (void*) self->share_stack_wi, *self->share_stack_wi->num_active_children);
 				self->share_stack_wi->stack_available = true;
 				self->share_stack_wi = NULL;
 			}

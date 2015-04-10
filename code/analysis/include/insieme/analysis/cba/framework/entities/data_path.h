@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -142,7 +142,7 @@ namespace cba {
 				}
 
 				// now the length is equally long
-				assert(length == other.length);
+				assert_eq(length, other.length);
 
 				// implement lexicographical order
 				return *head < *other.head || (*head == *other.head && lessIndex(other));
@@ -404,7 +404,7 @@ namespace cba {
 			if (extension.isNarrow()) {
 				extension.visit([&](const detail::DataPathElement& cur){ moveDown(cur); });
 			} else {
-				assert(extension.isExpand());
+				assert_true(extension.isExpand());
 				extension.visit([&](const detail::DataPathElement& cur) { moveUp(cur); });
 			}
 
@@ -477,7 +477,7 @@ namespace cba {
 			if (extension.isNarrow()) {
 				extension.visit([&](const detail::DataPathElement& cur){ moveUp(cur); });
 			} else {
-				assert(extension.isExpand());
+				assert_true(extension.isExpand());
 				extension.visit([&](const detail::DataPathElement& cur) { moveDown(cur); });
 			}
 

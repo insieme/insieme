@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -333,7 +333,7 @@ namespace core {
 		 * @return a pointer to the root node.
 		 */
 		NodePtr getRootNode() const {
-			assert(path && "Invalid node address!");
+			assert_true(path) << "Invalid node address!";
 			// root = the pointer assigned to the first path element
 			return path.getRootNode();
 		}
@@ -429,7 +429,7 @@ namespace core {
 			visitPathBottomUpInterruptible(*this, visitor);
 			return ret;
 
-			assert(false && "Requested parent address of this type does not exist");
+			assert_fail() << "Requested parent address of this type does not exist";
 			return NodeAddress();
 		}
 
@@ -440,7 +440,7 @@ namespace core {
 		 * @param index the index of the child-node to be addressed within the current nodes child list.
 		 * @return the address of the child node
 		 */
-		NodeAddress getAddressOfChild(unsigned index) const {
+		virtual NodeAddress getAddressOfChild(unsigned index) const {
 			// extend path by child element
 			return NodeAddress(path.extendForChild(index));
 		}
@@ -769,7 +769,7 @@ namespace core {
 		assert(addr.getRootAddress() == newRoot.getRootAddress() && "Root of the two addresses must be the same");
 
 		// Make sure that the newRoot is a child of addr*/
-		assert( isChildOf(newRoot, addr) && "addr must be a child of newRoot");
+		assert_true(isChildOf(newRoot, addr)) << "addr must be a child of newRoot";
 
 		std::vector<unsigned> newPath;
 		auto visitor = [&](const NodeAddress& cur) -> bool {
@@ -779,7 +779,7 @@ namespace core {
 
 		auto lambdaVisitor = makeLambdaVisitor(visitor);
 		bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
-		if (!ret) assert(ret && "The new root was not find within the src address");
+		if (!ret) assert_true(ret) << "The new root was not find within the src address";
 
 		NodeAddress newAddr(newRoot.getAddressedNode());
 		for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) {

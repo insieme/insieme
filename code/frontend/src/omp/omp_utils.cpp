@@ -78,7 +78,7 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 				ExpressionPtr initializer;
 				if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
 					initializer = build.undefined(analysis::getReferencedType(lit->getType()));
-				} else assert(false && "Unsupported OMP global type");
+				} else assert_fail() << "Unsupported OMP global type";
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
 			}

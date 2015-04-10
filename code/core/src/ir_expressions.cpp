@@ -51,9 +51,7 @@ namespace core {
 	using std::map;
 
 	std::ostream& JobExpr::printTo(std::ostream& out) const {
-		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] ("
-			<< join(", ", getGuardedExprs()->getElements(), print<deref<NodePtr>>())
-			<< (getGuardedExprs()->empty()?"":", ") << "default: " << *getDefaultExpr() << ")";
+		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] (" << *getDefaultExpr() << ")";
 		return out;
 	}
 
@@ -219,7 +217,7 @@ namespace core {
 
 			// get lambda binding
 			auto binding = definition->getBindingOf(var);
-			assert(binding && "Requesting recursive status of invalid rec-lambda variable!");
+			assert_true(binding) << "Requesting recursive status of invalid rec-lambda variable!";
 
 			// return a reference to the call location set
 			const auto& locs = getRecursiveCallLocations(definition).bind2var;
@@ -282,7 +280,7 @@ namespace core {
 	}
 
 	LambdaExprPtr LambdaDefinition::peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes) const {
-		assert(getBindingOf(variable) && "Referencing undefined recursive lambda binding!");
+		assert_true(getBindingOf(variable)) << "Referencing undefined recursive lambda binding!";
 
 		// terminal case => no peeling at all
 		if (numTimes == 0 || !isRecursive(variable)) {

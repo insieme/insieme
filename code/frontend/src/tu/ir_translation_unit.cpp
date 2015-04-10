@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,6 +44,7 @@
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -128,7 +129,7 @@ namespace tu {
 			res.addEntryPoints(cur);
 		}
 
-		// copy meta infos 
+		// copy meta infos
 		for(auto cur : getMetaInfos()) {
 			res.addMetaInfo(cur.first, cur.second);
 		}
@@ -165,8 +166,8 @@ namespace tu {
 		for(auto cur : b.getEntryPoints()) {
 			res.addEntryPoints(cur);
 		}
-		
-		// copy meta infos 
+
+		// copy meta infos
 		for(auto cur : b.getMetaInfos()) {
 			res.addMetaInfo(cur.first, cur.second);
 		}
@@ -196,14 +197,14 @@ namespace tu {
 		 * The class converting a IR-translation-unit into an actual IR program by
 		 * realizing recursive definitions.
 		 */
-		class Resolver : private core::NodeMapping {
+		class Resolver : private core::SimpleNodeMapping {
 
 			typedef utils::graph::PointerGraph<NodePtr> SymbolDependencyGraph;
 			typedef utils::graph::Graph<std::set<NodePtr>> RecComponentGraph;
 
 			NodeManager& mgr;
 
-			IRBuilder builder;
+			FrontendIRBuilder builder;
 
 			NodeMap symbolMap;
 
@@ -372,7 +373,7 @@ namespace tu {
 				}
 
 				// otherwise fail!
-				assert(false && "Unsupported symbol encountered!");
+				assert_fail() << "Unsupported symbol encountered!";
 				return symbol;
 			}
 
@@ -406,7 +407,7 @@ namespace tu {
 						resolutionCache[s] = getRecVar(s);
 					}
 
-					assert(isResolved(first));
+					assert_true(isResolved(first));
 
 					// resolve definitions (without caching temporal values)
 					cachingEnabled = false;
@@ -513,8 +514,8 @@ namespace tu {
 
 						if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 
-							assert(call[0]);
-							assert(call[1]);
+							assert_true(call[0]);
+							assert_true(call[1]);
 
 							auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
@@ -609,7 +610,7 @@ namespace tu {
 				}
 			}
 
-			core::IRBuilder builder(internalMainFunc->getNodeManager());
+			core::FrontendIRBuilder builder(internalMainFunc->getNodeManager());
 			core::StatementList inits;
 
 			// check all used literals if they are used as global and the global type is vector
@@ -715,21 +716,21 @@ namespace tu {
 		auto mm = metaInfos.find(classType);
 		if(mm != metaInfos.end()) {
 			auto metaInfoList = mm->second;
-			
-			//merge metaInfos into one 
+
+			//merge metaInfos into one
 			for(auto m : metaInfoList) {
 				metaInfo = core::merge(metaInfo, m);
 			}
 		}
 
-		if(symbolic) 
+		if(symbolic)
 			return metaInfo;
-		
-		auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();	
+
+		auto resolvedClassType = this->resolve(classType).as<core::TypePtr>();
 
 		// encode meta info into pure IR
 		auto encoded = core::encoder::toIR(getNodeManager(), metaInfo);
-			
+
 		// resolve meta info
 		auto resolved = core::encoder::toValue<ClassMetaInfo>(this->resolve(encoded).as<core::ExpressionPtr>());
 		return resolved;
@@ -778,7 +779,7 @@ namespace tu {
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
-		
+
 		// search for entry point
 		Resolver resolver(mgr, a);
 		core::IRBuilder builder(mgr);

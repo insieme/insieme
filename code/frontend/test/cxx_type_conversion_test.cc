@@ -41,7 +41,6 @@
 #include "insieme/frontend/translation_unit.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/logging.h"
 
@@ -402,7 +401,7 @@ TEST(TypeConversion, FileTest) {
 // 		CXXConversionFactory convFactory( mgr, prog );
 // 		convFactory.setTranslationUnit(tu);
 // 
-// 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+// 		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
 // 
 // 		if(tp.isStatement())
 // 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );

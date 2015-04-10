@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,7 +49,6 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/extensions/superfluous_cleanup.h"
 
 namespace insieme {
 namespace driver {
@@ -65,10 +64,10 @@ namespace integration {
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
 			job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
-			std::string step="main_run_convert";
+			std::string step="insiemecc_run_c_convert";
 			if (testCase.isCXX11()){
 				job.setStandard(frontend::ConversionSetup::Cxx11);
-				step="main_run_c++_convert";
+				step="insiemecc_run_c++_convert";
 			}
 
 			// add pre-processor definitions
@@ -380,9 +379,9 @@ namespace integration {
 	namespace {
 
 		bool isParentOf(const fs::path& parent, const fs::path& child) {
-			assert(parent.is_absolute());
+			assert_true(parent.is_absolute());
 			//assertion fails if child is empty
-			//assert(child.is_absolute());
+			//assert_true(child.is_absolute());
 
 			// if it is the same => done
 			if (parent == child) return true;
@@ -426,7 +425,6 @@ namespace integration {
 		// load code using frontend - using given options
 		auto job = frontend::ConversionJob(curCase->getFiles(), curCase->getIncludeDirs());
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
-		job.registerFrontendPlugin<frontend::SuperfluousCleanup>();
 
 		// add pre-processor definitions
 		for(const auto& cur : definitions) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -39,9 +39,10 @@
 #define __GUARD_UTILS_LOOKUP_TABLES_H
 
 #include "abstraction/threads.h"
-#include "abstraction/impl/threads.impl.h"
 #include "abstraction/spin_locks.h"
 #include "abstraction/impl/spin_locks.impl.h"
+#include "abstraction/rdtsc.h"
+#include "utils/timing.h"
 
 #include "error_handling.h"
 
@@ -104,16 +105,16 @@ static inline void irt_##__type__##_table_insert_impl(irt_##__type__** table, ir
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
 	if(id.cached) { return id.cached; } \
-	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_DEBUG("Looking up %u/%u/%u, hash val %u, in table %p", id.node, id.thread, id.index, hash_val, table); \
+	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_DEBUG("Looking up %u/%u/%u, hash val %u, in table %p", id.node, id.thread, id.index, hash_val, (void*) table); \
 	irt_##__type__* element; \
 	/* No locking required assuming sequential consistency and correctness of requests */ \
 	/* The above is a lie. A vile lie. People have lost their heads for less. */ \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
 	element = table[hash_val]; \
-	IRT_DEBUG_ONLY(if(element)) { IRT_DEBUG("Starting at elem %p, id %u/%u/%u", element, element->id.node, element->id.thread, element->id.index); } \
-	while(element && element->id.full != id.full) { element = element->__next_name__; IRT_DEBUG("Looking at elem %p, id %u/%u/%u", element, element->id.node, element->id.thread, element->id.index); } \
+	IRT_DEBUG_ONLY(if(element)) { IRT_DEBUG("Starting at elem %p, id %u/%u/%u", (void*) element, element->id.node, element->id.thread, element->id.index); } \
+	while(element && element->id.full != id.full) { element = element->__next_name__; IRT_DEBUG("Looking at elem %p, id %u/%u/%u", (void*) element, element->id.node, element->id.thread, element->id.index); } \
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
-	id.cached = element; IRT_DEBUG("Found elem %p\n", element); \
+	id.cached = element; IRT_DEBUG("Found elem %p\n", (void*) element); \
 	return element; \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
@@ -155,6 +156,24 @@ static inline void irt_##__type__##_table_remove_impl(irt_##__type__** table, ir
 	} \
 	previous->__next_name__ = element->__next_name__;\
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
+} \
+ \
+static inline void irt_##__type__##_table_print_impl(FILE* log_file, irt_##__type__** table) { \
+	fprintf(log_file, "--------\n"); \
+	fprintf(log_file, "Dumping " #__type__ "_table (at time %" PRIu64 "):\n", irt_time_convert_ticks_to_ns(irt_time_ticks())); \
+	for (int i = 0; i < __num_buckets__; ++i) { \
+		irt_##__type__* element = table[i]; \
+		if (!element) { \
+			continue; \
+		} \
+		fprintf(log_file, "Bucket %d: ", i); \
+		while(element) { \
+			fprintf(log_file, "[%d %d %d] (%p) -> ", element->id.node, element->id.thread, element->id.index, (void*) element); \
+			element = element->__next_name__; \
+		} \
+		fprintf(log_file, "(nil)\n"); \
+	} \
+	fflush(log_file); \
 }
 
 #define IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
@@ -179,6 +198,9 @@ static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__ty
 } \
 static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
 	irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
+} \
+static inline void irt_dbg_print_##__type__##_table(FILE* log_file) { \
+	irt_##__type__##_table_print_impl(log_file, irt_g_##__type__##_table); \
 }
 
 #define IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \

@@ -122,10 +122,10 @@ namespace annotations {
 	 *
 	 * @param node the node to attach a location to
 	 * @param file the source file to be referenced
-	 * @param startLine start possition line number
-	 * @param startColumn start possition column number
-	 * @param endLine end possition line number
-	 * @param endColumn end possition column number
+	 * @param startLine start position line number
+	 * @param startColumn start position column number
+	 * @param endLine end position line number
+	 * @param endColumn end position column number
 	 * @return the node handed in
 	 */
 	const NodePtr& attachLocation(const NodePtr& node, const string& file, unsigned startLine, unsigned startColumn, unsigned endLine, unsigned endColumn);
@@ -292,7 +292,7 @@ namespace annotations {
 		 * Obtains the file this location is referencing.
 		 */
 		const string& getFile() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return file->getValue();
 		}
 
@@ -300,7 +300,7 @@ namespace annotations {
 		 * Obtains the string value reference stored for referencing the source file.
 		 */
 		const StringValuePtr& getFileValue() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return file;
 		}
 
@@ -308,7 +308,7 @@ namespace annotations {
 		 * Obtains the start position referenced by this location.
 		 */
 		const TextPosition& getStart() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return start;
 		}
 
@@ -316,7 +316,7 @@ namespace annotations {
 		 * Obtains the end position referenced by this location.
 		 */
 		const TextPosition& getEnd() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return end;
 		}
 

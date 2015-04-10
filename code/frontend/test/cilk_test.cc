@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,7 +46,6 @@
 #include "insieme/utils/config.h"
 
 #include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/insieme.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -63,6 +62,7 @@ TEST(Cilk, Pragmas) {
 
 	ConversionSetup setup;
 	setup.setOption(ConversionSetup::Cilk);
+	setup.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", setup);
 
 	const auto& pl = tu.getPragmaList();
@@ -165,9 +165,9 @@ TEST(Cilk, Sema) {
 
 	EXPECT_PRED2(containsSubString, str, "decl ref<int<4>> v2 =  var(undefined(type<int<4>>));");
 
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v1, v2)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v1, v6)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v1)}");
+	EXPECT_PRED2(containsSubString, str, "bind(){fun000(v1, v2)}");
+	EXPECT_PRED2(containsSubString, str, "bind(){fun001(v1, v6)}");
+	EXPECT_PRED2(containsSubString, str, "bind(){fun002(v1)}");
 
 	EXPECT_PRED2(containsSubString, str, "mergeAll()");
 	EXPECT_PRED2(containsSubString, str, "return v2+v6");

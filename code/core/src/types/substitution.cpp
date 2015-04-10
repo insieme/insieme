@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,7 @@ namespace {
 	 * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
 	 * mechanism to perform
 	 */
-	class SubstitutionMapper : public NodeMapping {
+	class SubstitutionMapper : public SimpleNodeMapping {
 
 		/**
 		 * The node manager to be used for creating new type nodes.
@@ -73,7 +73,7 @@ namespace {
 		 * @param substitution the substitution to be wrapped by the resulting instance.
 		 */
 		SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-			: NodeMapping(), manager(manager), mapping(substitution.getMapping()),
+			: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()),
 			  paramMapping(substitution.getIntTypeParamMapping()) {};
 
 		/**
@@ -114,11 +114,11 @@ namespace {
 				}
 
 				default:
-					assert(false && "Only type and parameter variables should reach this point!");
+					assert_fail() << "Only type and parameter variables should reach this point!";
 			}
 
 			//should never be reached
-			assert(false && "This point shouldn't be reachable!");
+			assert_fail() << "This point shouldn't be reachable!";
 			return element;
 		}
 
@@ -159,7 +159,7 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	if (!res.second) {
 		mapping.erase(var);
 		res = mapping.insert(element);
-		assert( res.second && "Insert was not successful!" );
+		assert_true(res.second) << "Insert was not successful!";
 	}
 }
 
@@ -169,7 +169,7 @@ void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeP
 	if (!res.second) {
 		paramMapping.erase(var);
 		res = paramMapping.insert(element);
-		assert( res.second && "Insert was not successful!" );
+		assert_true(res.second) << "Insert was not successful!";
 	}
 }
 

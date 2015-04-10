@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -176,7 +176,7 @@ namespace cba {
 		typedef boost::optional<CallerList> OptCallerList;
 
 		bool collectUsesOfVariable(const VariableInstance& var, vector<Caller>& res) {
-			assert(getDefinitionPoint(var) == var);
+			assert_true(getDefinitionPoint(var) == var);
 
 			NodeInstance root;
 			if (auto decl = var.getParentInstance().isa<DeclarationStmtInstance>()) {
@@ -194,7 +194,7 @@ namespace cba {
 			}
 
 			// there should be a root now
-			assert(root);
+			assert_true(root);
 
 			bool allFine = true;
 			visitDepthFirstPrunable(root, [&](const ExpressionInstance& cur) {
@@ -220,7 +220,7 @@ namespace cba {
 				} else {
 					// it is an argument
 					if (auto fun = call->getFunctionExpr().isa<LambdaExprInstance>()) {
-						assert(call[cur.getIndex()-2] == cur);
+						assert_true(call[cur.getIndex()-2] == cur);
 						// ok - it is a static call => we may follow the parameter
 						allFine = allFine && collectUsesOfVariable(fun->getParameterList()[cur.getIndex()-2], res);
 					} else {
@@ -270,7 +270,7 @@ namespace cba {
 					// function is an argument of the call => check whether target function is fixed
 					} else if (auto fun = call->getFunctionExpr().isa<LambdaExprInstance>()) {
 						// collect all uses of corresponding function parameter
-						assert(call[function.getIndex()-2] == function);
+						assert_true(call[function.getIndex()-2] == function);
 						res = getUsesOfVariable(fun->getParameterList()[function.getIndex()-2]);
 
 					} else {

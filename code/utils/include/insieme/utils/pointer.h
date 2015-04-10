@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,6 +43,8 @@
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/mpl/logical.hpp>
+
+#include "insieme/utils/assert.h"
 
 template<typename T> class Ptr;
 
@@ -84,7 +86,7 @@ dynamic_pointer_cast(const Ptr<T>& src) {
 template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Ptr<B>>::type
 static_pointer_cast(Ptr<T>& src) {
-	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
+	assert_true((!src || dynamic_cast<B*>(&(*src)))) << "Invalid static cast!";
 	return Ptr<B>(static_cast<B*>(src.ptr));
 }
 
@@ -92,7 +94,7 @@ static_pointer_cast(Ptr<T>& src) {
 template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Ptr<B>>::type
 static_pointer_cast(const Ptr<T>& src) {
-	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
+	assert_true((!src || dynamic_cast<B*>(&(*src)))) << "Invalid static cast!";
 	return Ptr<B>(static_cast<B*>(src.ptr));
 }
 
@@ -100,7 +102,7 @@ static_pointer_cast(const Ptr<T>& src) {
 template<typename B, typename T, typename E = typename B::element_type>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_pointer_cast(const Ptr<T>& src) {
-	assert((!src || dynamic_cast<E*>(&(*src))) && "Invalid static cast!");
+	assert_true((!src || dynamic_cast<E*>(&(*src)))) << "Invalid static cast!";
 	return B(static_cast<E*>(src.ptr));
 }
 
@@ -139,7 +141,7 @@ public:
 	}
 
 	T& operator*() const {
-		assert(ptr != NULL && "Illegal: dereferencing a NULL pointer!" );
+		assert_true(ptr != NULL) << "Illegal: dereferencing a NULL pointer!";
 		return *ptr;
 	}
 

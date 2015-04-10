@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,7 +40,6 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
-#include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
@@ -56,16 +55,19 @@
 #include "insieme/frontend/extensions/interceptor_extension.h"
 #include "insieme/frontend/extensions/variadic_arguments_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
-#include "insieme/frontend/extensions/cpp_refs.h"
-#include "insieme/frontend/extensions/frontend_cleanup.h"
+#include "insieme/frontend/extensions/cpp_refs_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/frontend/extensions/crosscompilation_extension.h"
-#include "insieme/frontend/extensions/omp_frontend_plugin.h"
-#include "insieme/frontend/extensions/instrumentation_region_plugin.h"
-#include "insieme/frontend/extensions/anonymous_rename.h"
+#include "insieme/frontend/extensions/omp_frontend_extension.h"
+#include "insieme/frontend/extensions/instrumentation_region_extension.h"
+#include "insieme/frontend/extensions/anonymous_rename_extension.h"
+#include "insieme/frontend/extensions/cilk_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -89,60 +91,66 @@ namespace frontend {
 		return standard == Cxx03 || standard == Cxx98 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
 
-    //register frontend plugins
-    //be CAREFUL with the order of the plugins
-    //if a plugin is stateful (e.g., OMP plugin)
+    //register frontend extensions
+    //be CAREFUL with the order of the extensions
+    //if a extension is stateful (e.g., OMP extension)
     //insieme might generates malformed code.
     //Example: anonymous record type replacements 
     //done before omp threadprivate handling.
-    void ConversionSetup::frontendPluginInit() {
-        registerFrontendPlugin<extensions::InterceptorPlugin>(getInterceptedNameSpacePatterns());
-        registerFrontendPlugin<VariadicArgumentsPlugin>();
-        registerFrontendPlugin<extensions::ASMExtension>();
-        registerFrontendPlugin<CppRefsCleanup>();   //FIXME: make it only if cpp
-		registerFrontendPlugin<extensions::BuiltinFunctionExtension>();
-		registerFrontendPlugin<extensions::InstrumentationRegionPlugin>();
+    void ConversionSetup::frontendExtensionInit() {
+        registerFrontendExtension<extensions::InterceptorExtension>(getInterceptedNameSpacePatterns());
+        registerFrontendExtension<extensions::VariadicArgumentsExtension>();
+        registerFrontendExtension<extensions::ASMExtension>();
+        registerFrontendExtension<extensions::CppRefsCleanupExtension>();   //FIXME: make it only if cpp
+		registerFrontendExtension<extensions::BuiltinFunctionExtension>();
+		registerFrontendExtension<extensions::InstrumentationRegionExtension>();
+		registerFrontendExtension<extensions::TestPragmaExtension>();
+		registerFrontendExtension<extensions::InsiemePragmaExtension>();
 
         if(hasOption(ConversionSetup::OpenMP)) {
-            registerFrontendPlugin<extensions::OmpFrontendPlugin>();
+            registerFrontendExtension<extensions::OmpFrontendExtension>();
+        }
+
+        if(hasOption(ConversionSetup::Cilk)) {
+            registerFrontendExtension<extensions::CilkFrontendExtension>();
         }
 
         if(hasOption(ConversionJob::GemCrossCompile)) {
-            registerFrontendPlugin<GemsclaimPlugin>();
+            registerFrontendExtension<extensions::GemsclaimExtension>();
         }
 
         if(!getCrossCompilationSystemHeadersDir().empty()) {
-            registerFrontendPlugin<CrossCompilationPlugin>(getCrossCompilationSystemHeadersDir());
+            registerFrontendExtension<extensions::CrossCompilationExtension>(getCrossCompilationSystemHeadersDir());
         }
 
         if (hasOption(ConversionSetup::StrictSemanticChecks)) {
-            registerFrontendPlugin<extensions::SemanticCheckPlugin>();
+            registerFrontendExtension<extensions::SemanticCheckExtension>();
         }
 
         if(flags & OpenCL) {
-        	registerFrontendPlugin<extensions::OclHostPlugin>(includeDirs);
+        	registerFrontendExtension<extensions::OclHostExtension>(includeDirs);
 		}
        
-        if(flags & lib_icl) {
-        	registerFrontendPlugin<extensions::IclHostPlugin>(includeDirs);
+        if(flags & Lib_icl) {
+        	registerFrontendExtension<extensions::IclHostExtension>(includeDirs);
 		}
 
-		registerFrontendPlugin<FrontendCleanup>();
-		registerFrontendPlugin<extensions::AnonymousRename>();
+		registerFrontendExtension<extensions::FrontendCleanupExtension>();
+		registerFrontendExtension<extensions::AnonymousRenameExtension>();
 	}
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
         if(standard == Cxx11)
-                registerFrontendPlugin<extensions::Cpp11Plugin>();
+                registerFrontendExtension<extensions::Cpp11Extension>();
     }
 
 
 	tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) const {
 	    ConversionSetup setup = *this;
 
-		// plugin initialization
-		setup.frontendPluginInit();
+		// extension initialization
+		setup.frontendExtensionInit();
 
 		// add definitions needed by the OpenCL frontend
 		if(hasOption(OpenCL)) {
@@ -151,7 +159,7 @@ namespace frontend {
 
 			setup.setDefinition("INSIEME");
 		}
-		if(hasOption(lib_icl)) {
+		if(hasOption(Lib_icl)) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
 			setup.addIncludeDirectory(CLANG_SRC_DIR);
 			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
@@ -163,16 +171,11 @@ namespace frontend {
 		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
 			auto res = convert(manager, file, setup);
 
-			// apply Cilk sema
-			if (setup.hasOption(ConversionSetup::Cilk)) {
-				res = cilk::applySema(res, manager);
-			}
-
 			//FIXME: who takes care of applying MPI sema/OCL
 
             // maybe a visitor wants to manipulate the IR program
-            for(auto plugin : setup.getPlugins())
-                res = plugin->IRVisit(res);
+            for(auto extension : setup.getExtensions())
+                res = extension->IRVisit(res);
 
 			// done
 			return res;
@@ -186,13 +189,47 @@ namespace frontend {
 		return singleTu;
 	}
 
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, core::ProgramPtr& program, ConversionSetup& setup) const {
+		// strip of OMP annotation since those may contain references to local nodes
+		core::visitDepthFirstOnce(program, [](const core::NodePtr& cur) {
+			cur->remAnnotation(omp::BaseAnnotation::KEY);
+		});
+
+        // maybe a visitor wants to manipulate the IR translation unit
+        for(auto extension : setup.getExtensions())
+            program = extension->IRVisit(program);
+
+		// return instance within global manager
+		return core::transform::utils::migrate(program, manager);
+	}
+
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
+	    ConversionSetup setup = *this;
+
+		// extension initialization
+		setup.frontendExtensionInit();
+
+		// create a temporary manager
+	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
+//		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
+
+		// load and merge all files into a single translation unit
+		auto unit = toIRTranslationUnit(tmpMgr);
+		core::ProgramPtr res;
+
+		if(unit.getEntryPoints().size() > 1)
+			res = tu::resolveEntryPoints(tmpMgr, unit);
+		else
+			res = tu::toProgram(tmpMgr, unit);
+
+		return execute(manager, res, setup);
+	}
+
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 	    ConversionSetup setup = *this;
 
-
-		// plugin initialization
-            setup.frontendPluginInit();
-
+		// extension initialization
+		setup.frontendExtensionInit();
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -210,17 +247,7 @@ namespace frontend {
 			res = oclHostCompiler.compile();
 		}
 */
-		// strip of OMP annotation since those may contain references to local nodes
-		core::visitDepthFirstOnce(res, [](const core::NodePtr& cur) {
-			cur->remAnnotation(omp::BaseAnnotation::KEY);
-		});
-
-        // maybe a visitor wants to manipulate the IR translation unit
-        for(auto plugin : setup.getPlugins())
-            res = plugin->IRVisit(res);
-
-		// return instance within global manager
-		return core::transform::utils::migrate(res, manager);
+		return execute(manager, res, setup);
 	}
 
 	bool ConversionJob::isCxx() const {

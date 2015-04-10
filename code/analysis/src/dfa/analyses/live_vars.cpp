@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -103,7 +103,7 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 							);
 
 			auto defClasses = aMgr.findClass(defAccess);
-			assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
+			assert_false(defClasses.empty()) << "Invalid class for access. Something wrong in the extract() method";
 
 			AccessClassSet depClasses = getConflicting(defClasses);
 			std::copy(defClasses.begin(), defClasses.end(), std::inserter(depClasses, depClasses.begin()));

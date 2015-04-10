@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -77,10 +77,10 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 		//	int num_stacks=1;
 		//	lwt_reused_stack* cur = ret;
 		//	while(cur = cur->next) num_stacks++;
-		//	printf("-- %d, Reusing stack %p, %d stack(s) available:\n", w_id, ret, num_stacks);
+		//	printf("-- %d, Reusing stack %p, %d stack(s) available:\n", w_id, (void*) ret, num_stacks);
 		//	cur = ret;
 		//	printf("---- ");
-		//	do { printf("%p, ", cur);  } while(cur = cur->next);
+		//	do { printf("%p, ", (void*) cur);  } while(cur = cur->next);
 		//	printf("\n");
 		//});
 		lwt_g_stack_reuse.stacks[w_id] = ret->next;
@@ -106,7 +106,7 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 #ifdef IRT_ASTEROIDEA_STACKS
 		// make parent stack available again
 		irt_work_item* parent = wi->parent_id.cached;
-		IRT_DEBUG(" + %p returning stack to %p\n", wi, parent);
+		IRT_DEBUG(" + %p returning stack to %p\n", (void*) wi, (void*) parent);
 		IRT_ASSERT(parent != NULL, IRT_ERR_INTERNAL, "Asteroidea: No parent and no stack storage.\n");
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack.\n");
 #endif //IRT_ASTEROIDEA_STACKS
@@ -132,11 +132,11 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 	//		lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
 	//		while(cur = cur->next) num_stacks++;
 	//	}
-	//	printf("-- %d, Recycling stack %p, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
+	//	printf("-- %d, Recycling stack %p, %d stack(s) available:\n", tid, (void*) wi->stack_storage, num_stacks);
 	//	if(lwt_g_stack_reuse.stacks[tid]) {
 	//		lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
 	//		printf("---- ");
-	//		do { printf("%p, ", cur);  } while(cur = cur->next);
+	//		do { printf("%p, ", (void*) cur);  } while(cur = cur->next);
 	//		printf("\n");
 	//	}
 	//});
@@ -162,8 +162,8 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 			// check required to see if stack is not in use by directly evaluated child wi
 			if(parent->num_active_children != wi->parent_num_active_children) irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t);
 			else {
-				IRT_DEBUG(" + %p taking stack from %p\n", wi, parent);
-				IRT_DEBUG("   %p child count: %d\n", parent, *parent->num_active_children);
+				IRT_DEBUG(" + %p taking stack from %p\n", (void*) wi, (void*) parent);
+				IRT_DEBUG("   %p child count: %d\n", (void*) parent, *parent->num_active_children);
 				wi->stack_storage = NULL;
 				wi->stack_ptr = parent->stack_ptr - 8;
 				wi->stack_ptr -= wi->stack_ptr % LWT_STACK_ALIGNMENT;
@@ -214,7 +214,16 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 
 
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
-	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", wi, (void*)*basestack, func);
+	IRT_DEBUG_ONLY(
+			//dirty hack to print the function pointer in debug output, as function pointers can't be legally casted to void pointers.
+			//This solution may still be undefined behaviour, but it will probably do what it is supposed to do for our debugging purposes
+			union {
+				wi_implementation_func* f;
+				void* pt;
+			} hack;
+			hack.f = func;
+			IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*) wi, (void*)*basestack, hack.pt);
+	)
 	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);
 }
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {

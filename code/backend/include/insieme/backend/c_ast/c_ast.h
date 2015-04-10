@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -92,7 +92,7 @@ namespace c_ast {
 
 		void setManager(CNodeManager* mgr) { manager = mgr; }
 		CNodeManager* getManager() const {
-			assert(manager && "Manager uninitialized!");
+			assert_true(manager) << "Manager uninitialized!";
 			return manager;
 		}
 

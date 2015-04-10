@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -228,16 +228,16 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 
 	// check work dimension
 	const LiteralPtr dim = dynamic_pointer_cast<const Literal>(workDim);
-	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
+	assert_true(dim) << "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!";
 	wd = dim->getValueAs<unsigned int>();
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
-	assert(wd < 3u && "Invalid work_dim. Should be 1 - 3!");
+	assert_lt(wd, 3u) << "Invalid work_dim. Should be 1 - 3!";
 
 	// check if there is a x to array called
 	if(const CallExprPtr toArray = dynamic_pointer_cast<const CallExpr>(size)) {
 		if(toArray->getFunctionExpr() == BASIC.getScalarToArray()) {
 			// check consitency with workDim, should be 1
-			assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
+			assert_eq(wd, 1) << "Scalar group size passed to a multi dimensional work_dim";
 
 			argTy = toArray->getArgument(0)->getType();
 			param = builder.variable(argTy);
@@ -259,11 +259,11 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 			}
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
-			assert(false && "Unexpected function in OpenCL size argument");
+			assert_fail() << "Unexpected function in OpenCL size argument";
 		}
 	} else { // the argument is an array
 		size = removeDoubleRef(size, builder);
-		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
+		assert_eq(size->getType()->getNodeType(), NT_RefType) << "Called clEnqueueNDRangeKernel with invalid group argument";
 		argTy = size->getType();
 		param = builder.variable(argTy);
 		arg = size;
@@ -286,7 +286,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 		vDecl = builder.declarationStmt(vecTy,
 				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt8(), "1"), builder.literal(BASIC.getUInt8(), "1"))));
 	} else {
-		assert(isArray && "Size argument of multidimensional group is no vector or array");
+		assert_true(isArray) << "Size argument of multidimensional group is no vector or array";
 
 		vector<ExpressionPtr> subscripts;
 		subscripts.push_back(builder.arrayAccess(init, builder.literal(BASIC.getUInt8(), "0")));
@@ -336,7 +336,7 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     const VariablePtr& args = kernelArgs[k];
     const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
     const VariableList& interface = lambda->getParameterList()->getElements();
- //   assert(argTypes && "The kernel arguments have to be stored in a tuple");
+ //   assert_true(argTypes) << "The kernel arguments have to be stored in a tuple";
 
 	// make a three element vector out of the global and local size
 	const ExpressionPtr global = anythingToVec3(newCall->getArgument(2-offset), newCall->getArgument(4-2*offset));
@@ -431,7 +431,7 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 
 	vector<StatementPtr> declsAndKernelCall;
 	for_each(localMemDecls[k], [&](DeclarationStmtPtr& decl) {
-		assert(!!decl && "Kernel has illegal local memory argument");
+		assert_false(!decl) << "Kernel has illegal local memory argument";
 		declsAndKernelCall.push_back(decl);
 	});
 
@@ -442,16 +442,16 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 	cnt = 0;
 	for_each(args, [&](ExpressionPtr arg) {
 		VariablePtr param = interface.at(cnt);
-		assert(!!arg && "Kernel has illegal global memory argument");
+		assert_false(!arg) << "Kernel has illegal global memory argument";
 		bool local = false;
 		//global and private memory arguments must be variables
 		arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 		// local args are declared in localMemDecls
 		for_each(localMemDecls[k], [&](DeclarationStmtPtr& decl) {
-			assert(!!decl && "Kernel has illegal local memory argument");
+			assert_false(!decl) << "Kernel has illegal local memory argument";
 			if(arg == decl->getVariable()) {
 				// will be declared inside wrapper function
-//				assert(false);
+//				assert_fail();
 				local = true;
 			}
 		});
@@ -627,7 +627,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(const CallExprPtr undefined = dynamic_pointer_cast<const CallExpr>(initFct->getArgument(0))) { // default init
 					if(undefined->getFunctionExpr() == BASIC.getUndefined()) {
 						typeLiteral = dynamic_pointer_cast<const Literal>(undefined->getArgument(0));
-						assert(typeLiteral && "Unexpected argument when initializing variable with undefined");
+						assert_true(typeLiteral) << "Unexpected argument when initializing variable with undefined";
 						oldType = static_pointer_cast<GenericTypePtr>(typeLiteral->getType())->getTypeParameter(0);
 					}
 				}
@@ -635,7 +635,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(initFct->getArguments().size() > 0)
 				if(const CastExprPtr castToClMem = dynamic_pointer_cast<const CastExpr>(initFct->getArgument(0))) {
 					oldType = (castToClMem->getType());
-					assert(oldType && "Unexpected argument when initializing variable by cast");
+					assert_true(oldType) << "Unexpected argument when initializing variable by cast";
 				}
 
 			}
@@ -714,7 +714,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(fun)) {
 			if(lit->toString().find("Buffer") != string::npos) {
 				LOG(ERROR) << "FOUND " << lit << std::endl;
-				assert(false && "Buffer has not been removed during compilation");
+				assert_fail() << "Buffer has not been removed during compilation";
 			}
 
 		}
@@ -782,16 +782,16 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				const VariablePtr oldStruct = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0));
 //				std::cout << "OldStruct: " << callExpr->getArgument(0) << "\nNewStruct: " << newCall->getArgument(0) << std::endl;
 				//TODO test quickfix if NULL, e.g. struct is inside an array
-				//assert(oldStruct && newStruct && "First argument of composite.ref.elem must be a struct variable");
+				//assert_true(oldStruct && newStruct) << "First argument of composite.ref.elem must be a struct variable";
 
 				if(!!newStruct && (newStruct != oldStruct)) { // struct variable has been replaced, may need to update type of composite.ref.elem
 					const StructTypePtr newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
 
-					assert(newType && "First argument of composite.ref.elem must be a struct variable");
+					assert_true(newType) << "First argument of composite.ref.elem must be a struct variable";
 
 					const LiteralPtr oldIdLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(1));
 					const LiteralPtr oldTypeLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(2));
-					assert(oldIdLit && oldTypeLit && "Second and third argument of composite.ref.elem must be a literals");
+					assert_true(oldIdLit && oldTypeLit) << "Second and third argument of composite.ref.elem must be a literals";
 					// check if the field has been replaced with another field of the same struct with a different identifier
 					const LiteralPtr newIdLit = replacements.find(oldIdLit) != replacements.end() ?
 							static_pointer_cast<const Literal>(replacements[oldIdLit]) : oldIdLit;
@@ -852,7 +852,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if(callExpr->getType()->toString().find("_cl_kernel") != string::npos)
 		std::cout << "\nElephants of the Apokalypse\n" << callExpr->getType() << " " << callExpr << std::endl;*/
 
-	assert(element);
+	assert_true(element);
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
 /*
 	if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(ret)) {

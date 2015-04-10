@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -103,7 +103,7 @@ protected:
 	Converter& convFact;
 
 	core::NodeManager& 					mgr;
-	const core::IRBuilder& 				builder;
+	const core::FrontendIRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
 	core::ExpressionPtr wrapVariable(const clang::Expr* expr);
@@ -242,7 +242,7 @@ public:
 	//convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
 	//return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
 	//}
-	//assert(false && "SizeOfAlignOfExpr not yet supported");
+	//assert_fail() << "SizeOfAlignOfExpr not yet supported";
 	//}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

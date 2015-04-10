@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -152,6 +152,45 @@ namespace analysis {
 	 * @return the const C++ reference type referencing an element of the given type
 	 */
 	TypePtr getConstCppRef(const TypePtr& elementType);
+
+	/**
+	 * Checks whether the given type is a C++ right side reference type. A type is a C++ right side reference
+	 * type in case it has the shape
+	 *
+	 * 			struct { ref<'a> _rval_cpp_ref; }
+	 *
+	 * @param type the type to be tested
+	 * @return true if it is a C++ right side reference type, false otherwise
+	 */
+	bool isRValCppRef(const TypePtr& type);
+
+	/**
+	 * Creates a C++ right side reference type referencing an instance of the given element type.
+	 *
+	 * @param elementType the type of the element to be referenced
+	 * @return the C++ right side reference type referencing an element of the given type
+	 */
+	TypePtr getRValCppRef(const TypePtr& elementType);
+
+
+	/**
+	 * Checks whether the given type is a const C++ right side reference type. A type is a const
+	 * C++ right side reference type in case it has the shape
+	 *
+	 * 			struct { src<'a> _const_rval_cpp_ref; }
+	 *
+	 * @param type the type to be tested
+	 * @return true if it is a const C++ right side reference type, false otherwise
+	 */
+	bool isConstRValCppRef(const TypePtr& type);
+
+	/**
+	 * Creates a const C++ right side reference type referencing an instance of the given element type.
+	 *
+	 * @param elementType the type of the element to be referenced
+	 * @return the const C++ right side reference type referencing an element of the given type
+	 */
+	TypePtr getConstRValCppRef(const TypePtr& elementType);
 
 	/**
 	 * Extracts the element type of a given (const) C++ reference type.
