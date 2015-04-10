@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -193,7 +193,7 @@ namespace {
 
 	};
 
-} // end anonumous namespace
+} // end anonymous namespace
 
 
 Formula toFormula(const ExpressionPtr& expr) {
@@ -326,7 +326,7 @@ namespace {
 
 	};
 
-} // end anonumous namespace
+} // end anonymous namespace
 
 Constraint toConstraint(const ExpressionPtr& expr) {
 	// the magic is done by the constraint converter
@@ -441,7 +441,7 @@ namespace {
 
 	};
 
-} // end anonumous namespace
+} // end anonymous namespace
 
 Piecewise toPiecewise(const ExpressionPtr& expr) {
 	// the magic is done by the piecewise converter
