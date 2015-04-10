@@ -46,6 +46,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/transform/simplify.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
@@ -623,9 +624,9 @@ public:
 			core::CompoundStmtPtr body = builder.compoundStmt( stmtStack.top() );
 	
 			irStmt = builder.forStmt( 
-							inductionVar, lowerBound,
-							upperBound, 
-							strideExpr,
+							inductionVar, core::transform::simplify(mgr, lowerBound),
+							core::transform::simplify(mgr, upperBound),
+							core::transform::simplify(mgr, strideExpr),
 							body );
 
 		} catch(const RangedFunction& ex) {
@@ -866,7 +867,6 @@ core::NodePtr toIR(core::NodeManager& mgr,
 					const CloogOpts& opts
 				  ) 
 {
-
 	CloogState *state;
 	CloogInput *input;
 	CloogOptions *options;

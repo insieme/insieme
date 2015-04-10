@@ -54,6 +54,15 @@
 #include "insieme/utils/printable.h"
 
 namespace insieme {
+
+namespace driver {
+namespace cmd {
+namespace detail {
+    class OptionParser;
+}
+}
+}
+
 namespace frontend {
 
 	using std::map;
@@ -78,20 +87,11 @@ namespace frontend {
 		 */
 		enum Option {
 			PrintDiag		= 1<<0,
-
-			OpenMP			= 1<<1,
-			OpenCL			= 1<<2,
-			Cilk			= 1<<3,
-
-			WinCrossCompile	= 1<<4,
-			GemCrossCompile	= 1<<5,
-			TAG_MPI			= 1<<6,
-
-			ProgressBar		= 1<<7,
-			NoWarnings		= 1<<8,
-			StrictSemanticChecks = 1<<9,
-
-			Lib_icl			= 1<<10
+			WinCrossCompile	= 1<<1,
+			TAG_MPI			= 1<<2,
+			ProgressBar		= 1<<3,
+			NoWarnings		= 1<<4,
+			NoDefaultExtensions = 1<<5
 		};
 
 		/**
@@ -157,12 +157,21 @@ namespace frontend {
 		unsigned flags;
 
         /**
-         *  A map that contains all user extensions
-         */
-         typedef std::shared_ptr<extensions::FrontendExtension> FrontendExtensionPtr;
-         std::list<FrontendExtensionPtr> extensions;
+		 * A vector of pairs. Each pair contains a frontend extension pointer and a
+		 * lambda that was retrieved from the extension. This lambda will decide
+		 * if the plugin gets registered and the plugin will be configured by the
+		 * lambda.
+		 */
+        typedef std::shared_ptr<extensions::FrontendExtension> FrontendExtensionPtr;
+        std::vector<std::pair<FrontendExtensionPtr, extensions::FrontendExtension::flagHandler>> extensions;
+
 
 	public:
+
+        /**
+         *  A list that contains all user extensions that have been registered
+         */
+         std::list<FrontendExtensionPtr> extensionList;
 
 		/**
 		 * Creates a new setup covering the given include directories.
@@ -349,24 +358,26 @@ namespace frontend {
         /**
          *  Frontend extension initialization method
          */
-        void frontendExtensionInit();
+        void frontendExtensionInit(const ConversionJob& job);
 
         /**
-         *  Register a new frontend extension
+         *  Insert a new frontend extension. This DOES NOT mean that the
+         *  extension gets registered. The registerFlag method will return a
+         *  lambda that is called in frontendExtensionInit. This lambda decides
+         *  if the extension is registered. If the extension does not override the
+         *  registerFlag method it will be registered by default.
          */
-        template <class T, class ... Args>
-        void registerFrontendExtension(const Args& ... args) {
-			extensions.push_back(std::make_shared<T>(args ...));
-			for(auto kidnappedHeader : extensions.back()->getKidnappedHeaderList()) {
-				addSystemHeadersDirectory(kidnappedHeader);
-			}
+        template <class T>
+        void registerFrontendExtension(driver::cmd::detail::OptionParser& optParser) {
+            auto extensionPtr = std::make_shared<T>();
+			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(optParser) } );
         };
 
         /**
-         *  Return the list of frontend extensions
+         *  Return the list of all registered frontend extensions
          */
         const std::list<FrontendExtensionPtr> getExtensions() const {
-            return extensions;
+            return extensionList;
         };
 	};
 
@@ -499,6 +510,8 @@ namespace frontend {
 		 * @throws an exception if the conversion fails.
 		 */
 		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
+
+        void registerExtensionFlags(driver::cmd::detail::OptionParser& optParser);
 
 		/**
 		 *  Prints the conversion setup

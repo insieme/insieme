@@ -37,12 +37,18 @@
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
 
 #include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/config.h"
+#include "insieme/frontend/pragma/matcher.h"
+
+using namespace insieme::frontend::pragma::tok;
+using namespace insieme::frontend::pragma;
+using namespace insieme::frontend;
 
 namespace insieme {
 namespace frontend {
@@ -423,7 +429,7 @@ namespace {
 
     	return std::make_shared<omp::Param>(varExpr, std::make_shared<std::vector<core::ExpressionPtr>>(range), std::make_shared<std::vector<core::ExpressionPtr>>(quality_range), core::ExpressionPtr(), core::ExpressionPtr());
     }
-	
+
     /**
      *  Checks given match object for approximate clauses
      */
@@ -637,8 +643,7 @@ namespace {
 
 }
 
-
-    OmpFrontendExtension::OmpFrontendExtension() {
+    OmpFrontendExtension::OmpFrontendExtension() : flagActivated(false) {
 
         //Add the required header and macro definitions
         kidnappedHeaders.push_back(CLANG_SRC_DIR "../include/insieme/frontend/omp/input/");
@@ -932,7 +937,7 @@ namespace {
                             omp::ParamPtr paramClause = handleParamClause(object);
                             // check for approximate clause
 							omp::ApproximatePtr approxClause = handleApproximateClause(object);
-							
+
 							frontend::omp::BaseAnnotation::AnnotationList anns;
                             anns.push_back(std::make_shared<omp::Task>(ifClause, untied, defaultClause, privateClause,
                                                                        firstPrivateClause, sharedClause,
@@ -1111,6 +1116,15 @@ namespace {
         return tu;
 	}
 
+    FrontendExtension::flagHandler OmpFrontendExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        //register omp flag
+        optParser("fopenmp", "", flagActivated, "OpenMP support");
+        //create lambda
+        auto lambda = [&](const ConversionJob& job) {
+            return flagActivated;
+        };
+        return lambda;
+    }
 
 
 }   //end namespace extensions

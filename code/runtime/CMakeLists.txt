@@ -4,16 +4,11 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
-# find HWloc package
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
-find_package(Hwloc)
-
 # user configurable options
 if (WIN32)
 	option (USE_PTHREADS "Use the Pthread Win32 Library (requires PTHREAD_ROOT environment var)" OFF)
 endif()
 option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
-
 
 if (NOT third_part_libs_home )
 	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
@@ -98,6 +93,26 @@ elseif (WIN32 AND USE_PTHREADS)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D IRT_USE_PTHREADS")
 endif()
 
+# find HWloc package
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
+find_package(Hwloc)
+if (Hwloc_FOUND)
+	add_definitions(-DIRT_USE_HWLOC)
+	# I tried to do this as it is supposed to be done, but CMake sucks
+	add_definitions("${Hwloc_CFLAGS}")
+	# this would be the correct way, but it requires the user to set LD_LIBRARY_FLAGS
+	# however, it would obviate the need for the link_hwloc function
+	#string (REPLACE ";" " " Hwloc_LDFLAGS_STR "${Hwloc_LDFLAGS}")
+	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${Hwloc_LDFLAGS_STR}")
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Hwloc_LDFLAGS_STR}")
+endif()
+
+function(link_hwloc target)
+	if (Hwloc_FOUND)
+		# I tried to do this as it is supposed to be done, but CMake sucks
+		target_link_libraries(${target} ${Hwloc_INCLUDE_DIRS}/../lib/lib${Hwloc_LIBRARIES}.so)
+	endif()
+endfunction(link_hwloc)
 
 #collect all source and header files
 file(GLOB_RECURSE insieme_runtime_srcs 	src/runtime.c )
@@ -137,6 +152,8 @@ endif( USE_OPENCL )
 
 # create the runtime target
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} ${WIN64ASM_OBJ})
+
+link_hwloc(insieme_runtime)
 
 if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
@@ -214,6 +231,7 @@ foreach ( case_file ${test_cases})
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${gtest_LIB})
 	target_link_libraries(${case_name} ${gtest_main_LIB})
+	link_hwloc(${case_name})
 		
 	if ( USE_OPENCL )
     		target_link_libraries(${case_name} ${OPENCL_LIBS})
@@ -247,6 +265,7 @@ foreach (case_file ${test_cases})
 	else()
 		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
 	endif()
+	link_hwloc(${case_name})
 endforeach(case_file)
 
 # handle standalone (executable) test cases
@@ -268,6 +287,7 @@ foreach (case_file ${test_cases})
 	else()
 		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
 	endif()
+	link_hwloc(${case_name})
 	
 	if ( USE_OPENCL )
     	target_link_libraries(${case_name} ${OPENCL_LIBS})

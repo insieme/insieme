@@ -75,7 +75,9 @@ public:
 	void visitForStmt        (const insieme::core::ForStmtAddress         &stmt);
 	void visitParameters     (const insieme::core::ParametersAddress      &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
+	void visitCompoundStmt   (const insieme::core::CompoundStmtAddress    &stmt);
 
+	std::vector<insieme::core::VariableAddress> readVars(const insieme::core::NodeAddress &node);
 	typedef boost::optional<insieme::core::arithmetic::Formula> MaybeAffine;
 	boost::optional<SCoP> scopFromFor(MaybeAffine lb, insieme::core::VariableAddress iterator, MaybeAffine ub, MaybeAffine step);
 };

@@ -50,6 +50,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -64,10 +66,13 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
 
-	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.registerFrontendExtension<frontend::extensions::OclKernelExtension>();
-	core::ProgramPtr program = job.execute(manager, false);
+    //create call to convert the kernel
+    std::string kernelFile = std::string(CLANG_SRC_DIR)+"inputs/hello.cl";
+    std::string include = "-I"+std::string(CLANG_SRC_DIR)+"inputs";
+    std::vector<std::string> argv = {"kernelcompiler", kernelFile, include, "-fopenclkernel"};
+    insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+
+	core::ProgramPtr program = options.job.execute(manager, false);
 	LOG(INFO) << "Done.";
 
 	backend::ocl_kernel::KernelPreprocessor kpp("kernel.dat");

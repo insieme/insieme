@@ -71,14 +71,13 @@ void SCoPVisitor::printNode(const NodeAddress &node, std::string descr, unsigned
 	// if requested (start=0), print the node itself with some debug information
 	if (start==0) {
 		if (!descr.empty()) descr=" ("+descr+")";
-		std::cout << node.getNodeType() << descr << ": " << node << std::endl;
+		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
 		start++;
 	}
 
 	// iterate over the requested children to complete the output
 	for (unsigned int n=start-1; n<start-1+count; n++)
 		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
-	std::cout << std::endl;
 }
 
 /// visitNode is the entry point for visiting all statements within a program to search for a SCoP. It will visit
@@ -106,8 +105,8 @@ boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAd
 	// extract the variables and literals from our (presumed) affine expression and store them internally for
 	// later processing with ISL
 	switch (addr.getNodeType()) {
-	case NT_Literal:  printNode(addr); break;
-	case NT_CallExpr: printNode(addr); break;
+	case NT_Literal:  /* printNode(addr); */ break;
+	case NT_CallExpr: /* printNode(addr); */ break;
 	default: /* do nothing */;
 	}
 
@@ -123,6 +122,10 @@ boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAd
 
 /// When visiting visitLambdaExpr, we encountered a function call. Apart from declarations, this is another
 /// possibility to instantiate variables, so we need to gather all variables from the closure here.
+/// LambdaExpr  {  FunctionType  Variable  LambdaDefinition  {
+///                                        LambdaBinding  {
+///                                        Variable  Lambda  {
+///                                                  FunctionType  Parameters  CompoundStmt  }}}}
 void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 	// after entering a function, we need to allocate a new variable vector on our variable vector stack
 	varstack.push(std::vector<VariableAddress>());
@@ -135,8 +138,10 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 
 /// visitForStmt describes what should happen when a for stmt is encountered within the program.
 /// Is it the outermost for, or is it already nested?
+/// ForStmt  {  DeclarationStmt  {
+///             Variable  Literal|CallExpr  }  Literal|CallExpr  Literal|CallExpr  CompoundStmt  }
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
-	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()));
+	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()), 0, 3);
 
 	// when we encounter a for loop, first increase the loop nesting level, and then copy the currently available
 	// variables, since variable modifications in the for loop cannot be seen outside the for loop
@@ -151,11 +156,13 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	        step=parseAffine(stmt.getAddressOfChild(2).as<ExpressionAddress>());
 	auto scop=scopFromFor(lb, iter, ub, step);
 	if (scop) scopstack.push(*scop);
+	else std::cout << "Loop parameters are not affine" << std::endl;
 
 	// visit declaration to add variable to the list of known variables
-	if (scop) std::cout << "Found SCoP but cannot print it yet" << std::endl;
-	else std::cout << "Loop parameters are not affine" << std::endl;
-	visit(decl);
+	std::cout << "Visiting declaration... " << std::endl; visit(decl); std::cout << "... done!" << std::endl;
+	std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
+	std::vector<VariableAddress> used=readVars(stmt);
+	std::cout << "vars read\t[ ";  for (auto v: used)           std::cout << *v << " "; std::cout << "]" << std::endl;
 
 	// process all the children, and — when done — remove the scope modifications and lessen the nesting level again
 	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
@@ -164,10 +171,6 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 }
 
 /// Visit lambda parameters so that we can add them to the list of available variables/SCoP parameters.
-/// LambdaExpr { FunctionType, Variable, LambdaDefinition {
-///                                      LambdaBinding {
-///                                      Variable Lambda {
-///                                               FunctionType Parameters CompoundStmt }}}}
 void SCoPVisitor::visitParameters(const ParametersAddress &node) {
 	std::vector<VariableAddress> &vec=varstack.top();
 	for (auto c: node.getChildAddresses()) vec.push_back(c.as<VariableAddress>());
@@ -176,10 +179,31 @@ void SCoPVisitor::visitParameters(const ParametersAddress &node) {
 
 /// Visit all the declaration statements so that we can collect variable assignments.
 void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	//std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
+	std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
 	varstack.top().push_back(node.getAddressOfChild(0).as<VariableAddress>());
 	visitChildren(node);
 }
+
+/// Visit a compound statement; a compound statement is interesting due to the fact that it may declare local
+/// variables which will not be known outside of the scope of the compound stmt itself.
+void SCoPVisitor::visitCompoundStmt(const CompoundStmtAddress &stmt) {
+	NodeAddress parent=stmt.getParentAddress(1);
+	std::cout << "compound stmt called from " << parent.getNodeType() << std::endl;
+	if (parent.getNodeType() == NT_IfStmt) printNode(parent);
+	visitChildren(stmt);
+}
+
+/// Determine which variables are being read in a given block specified by node and return these.
+std::vector<VariableAddress> SCoPVisitor::readVars(const NodeAddress &node) {
+	std::vector<VariableAddress> vars;
+
+	// here, a visitor visits every variable node in our code stub and records its address
+	core::visitDepthFirst(node, [&](const core::VariableAddress &v) {
+		vars.push_back(v);
+	});
+	return vars;
+}
+
 
 /// Generate a SCoP from the given for specification in Insieme IR style: lb ≤ iterator < up : step
 boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress iterator, MaybeAffine ub, MaybeAffine step) {
@@ -189,18 +213,23 @@ boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress i
 		maybe=SCoP();
 	}
 
+	// we could use:
+	// isl_basic_set_from_constraint_matrices
+	// isl_basic_set_(in)equalities_matrix
+
 	isl_ctx *ctx=isl_ctx_alloc();
 	isl_printer *printer=isl_printer_to_str(ctx);
-
-	// TODO: generate isl_aff from scratch and print it out
-	isl_aff *aff=0;//isl_aff_read_from_str(ctx, "3*x - 4*y - 7");
+	isl_aff *aff=isl_aff_read_from_str(ctx, "{ [x, y] -> [(3*x - 4*y - 7)] }");
 
 	printer=isl_printer_print_aff(printer, aff);
 	char *out=isl_printer_get_str(printer);
-	std::cout << "From ISL we got: " << /*out <<*/ std::endl;
-	if (out) free(out);
+	if (out) {
+		//std::cout << "From ISL we got: " << out << std::endl;
+		free(out);
+	}
+
 	isl_printer_free(printer);
-	if (aff) isl_aff_free(aff);
+	isl_aff_free(aff);
 	isl_ctx_free(ctx);
 
 	return maybe;

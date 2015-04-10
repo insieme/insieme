@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,7 +41,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
-
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_utils.h"
@@ -340,6 +340,58 @@ TEST(NodeReplacer, RecVarsReplacement) {
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<ref<array<real<4>,1>>> v1 =  var(undefined(type<ref<array<real<4>,1>>>))");
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "fun(ref<(ref<array<real<4>,1>>)> v1, ref<array<real<4>,1>> v2)");
 
+}
+
+
+TEST(NodeReplacer, ReplaceAllMapScope) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{
+		let test_array = (vector<'res,#l> a) -> unit {
+			vector<'res, #l> res;
+		};
+		let test_outer = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit ${
+			test_array(a);
+			matrix<'res, #x, #y> res2;
+		}$;
+
+		vector<int<4>, 8> a;
+		matrix<int<4>, 16, 32> b;
+		test_outer(a, b);
+	}
+	)raw");
+
+	NodeMap replacements;
+	auto l = builder.variableIntTypeParam('l');
+	auto x = builder.variableIntTypeParam('x');
+	auto y = builder.variableIntTypeParam('y');
+	auto c2 = builder.concreteIntTypeParam(2);
+	auto c4 = builder.concreteIntTypeParam(4);
+	auto c6 = builder.concreteIntTypeParam(6);
+	replacements.insert(std::make_pair(l, c2));
+	replacements.insert(std::make_pair(x, c4));
+	replacements.insert(std::make_pair(y, c6));
+
+	auto inner_not_replaced = transform::replaceAll(mgr, addresses[0].getAddressedNode(), replacements, true);
+
+	EXPECT_TRUE(analysis::contains(inner_not_replaced, l));
+	EXPECT_FALSE(analysis::contains(inner_not_replaced, x));
+	EXPECT_FALSE(analysis::contains(inner_not_replaced, y));
+
+	EXPECT_TRUE(analysis::contains(inner_not_replaced, c4));
+	EXPECT_TRUE(analysis::contains(inner_not_replaced, c6));
+
+	auto inner_replaced = transform::replaceAll(mgr, addresses[0].getAddressedNode(), replacements, false);
+
+	EXPECT_FALSE(analysis::contains(inner_replaced, l));
+	EXPECT_FALSE(analysis::contains(inner_replaced, x));
+	EXPECT_FALSE(analysis::contains(inner_replaced, y));
+
+	EXPECT_TRUE(analysis::contains(inner_replaced, c2));
+	EXPECT_TRUE(analysis::contains(inner_replaced, c4));
+	EXPECT_TRUE(analysis::contains(inner_replaced, c6));
 }
 
 } // end namespace core

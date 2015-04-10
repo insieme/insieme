@@ -245,7 +245,7 @@ namespace core {
 			typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
 		>
 		Address(Address<B>&& from) : path(std::move(from.getPath())) {}
-
+		
 		/**
 		 * Reinterprets this address to be referencing the requested element type.
 		 */
@@ -253,8 +253,7 @@ namespace core {
 		const Address<R>& reinterpret() const {
 			return reinterpret_cast<const Address<R>&>(*this);
 		}
-
-
+		
 		/**
 		 * A short-cut for static address casts followed by an extraction of
 		 * the targeted node.
@@ -344,6 +343,14 @@ namespace core {
 		 */
 		Address<T> switchRoot(const NodePtr& newRoot) const {
 			return Address<T>(path.switchRoot(newRoot));
+		}
+		
+		/**
+		 * Computes a new node address which can be obtained by exchanging the
+		 * root of this address by the given root, with a potentially different type.
+		 */
+		NodeAddress switchRootAndType(const NodePtr& newRoot) const {
+			return NodeAddress(path.switchRoot(newRoot));
 		}
 
 		/**
@@ -440,7 +447,7 @@ namespace core {
 		 * @param index the index of the child-node to be addressed within the current nodes child list.
 		 * @return the address of the child node
 		 */
-		virtual NodeAddress getAddressOfChild(unsigned index) const {
+		NodeAddress getAddressOfChild(unsigned index) const {
 			// extend path by child element
 			return NodeAddress(path.extendForChild(index));
 		}

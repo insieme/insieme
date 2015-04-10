@@ -43,11 +43,12 @@ namespace frontend {
 namespace extensions {
 
 class CilkFrontendExtension : public FrontendExtension {
+    bool flagActivated;
+public:
+    CilkFrontendExtension();
 
-	public:
-		CilkFrontendExtension();
-
-		virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
+    virtual tu::IRTranslationUnit IRVisit(tu::IRTranslationUnit& tu);
+    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
 };
 
 }   //end namespace extensions

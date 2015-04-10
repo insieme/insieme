@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -78,16 +78,7 @@ namespace cmd {
 
 	};
 
-	std::ostream& operator<<(std::ostream& out, const BackendHint& b) {
-		switch(b.backend) {
-			case BackendEnum::Runtime: out << "runtime"; break;
-			case BackendEnum::Sequential: out << "sequential"; break;
-			case BackendEnum::OpenCL: out << "opencl"; break;
-			case BackendEnum::Pthreads: out << "pthreads"; break;
-			default: out << "unknown";
-		}
-		return out;
-	}
+    std::ostream& operator<<(std::ostream& out, const BackendHint& b);
 
 	// holds all settings that are not part of a ConversionJob
 	struct Settings {
@@ -156,8 +147,6 @@ namespace cmd {
 
 	namespace detail {
 
-	typedef shared_ptr<insieme::frontend::extensions::FrontendExtension> FrontendExtensionPtr;
-
 		class OptionParser {
 
 			/**
@@ -182,6 +171,10 @@ namespace cmd {
 			vector<parser_step> parser_steps;
 
 		public:
+			/**
+			 * The Option object that is going to be filled.
+			 */
+			Options res;
 
 			/**
 			 * Creates a new instance of this option parser parsing the given arguments.
@@ -197,7 +190,7 @@ namespace cmd {
 			 * @param target the target to be used for storing whether the flag has been set or not
 			 * @param description the description of the parameter to be shown in the help message
 			 */
-			OptionParser& operator()(const string& name, char symbol, bool& flag, const char* description);
+			OptionParser& operator()(const string& name, const string& symbol, bool& flag, const char* description);
 
 			/**
 			 * Allows to add additional program options using a convenient syntax.

@@ -69,6 +69,12 @@ typedef struct _irt_wi_scheduling_data irt_wi_scheduling_data;
  */
 void irt_scheduling_set_dop(uint32 parallelism);
 
+/* Set the active degree of parallelism for the runtime system per socket
+ * Requires Hwloc
+ * Note that more threads may continue to run until a synchronization point is encountered
+ */
+void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops);
+
 /* The scheduling iteration for a worker. Responsibilities include
  * executing work items assigned to the worker (and potentially distributing
  * and/or splitting them) as well as checking the process-wide event queue

@@ -38,6 +38,8 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <vector>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -51,21 +53,24 @@
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 using namespace insieme;
 
-TEST(DatalayoutTransormTest, OclTest) {
+TEST(DatalayoutTransformTest, OclTest) {
 	Logger::get(std::cerr, INFO, 0);
 	core::NodeManager manager;
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_ROOT_DIR) << "transform/test/datalayout/inputs/sparsevec.c" << "' to IR...";
+    std::string inputFile = SRC_ROOT_DIR "transform/test/datalayout/inputs/sparsevec.c";
+    std::string includeA = "-I" SRC_ROOT_DIR "transform/test/datalayout/inputs/";
+    std::string includeB = "-I" CLANG_SRC_DIR "inputs";
+    std::vector<std::string> args = {"compiler", inputFile, includeA, includeB};
+    driver::cmd::Options options = driver::cmd::Options::parse(args);
+	options.job.setDefinition("INSIEME", "");
+	options.job.setDefinition("UNIX", "");
 
-	insieme::frontend::ConversionJob job(SRC_ROOT_DIR "transform/test/datalayout/inputs/sparsevec.c");
-	job.setDefinition("INSIEME", "");
-	job.setDefinition("UNIX", "");
-	job.addIncludeDirectory(SRC_ROOT_DIR "transform/test/datalayout/inputs/");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs"); // ocl_device.h
-//	job.setOption(frontend::ConversionJob::OpenCL);
-	core::ProgramPtr program = job.execute(manager, false);
+	core::ProgramPtr program = options.job.execute(manager, false);
 	LOG(INFO) << "Done.";
 
 	core::NodePtr prog = program->getElement(0);

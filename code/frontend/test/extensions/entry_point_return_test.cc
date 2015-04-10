@@ -42,7 +42,12 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/frontend/frontend.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "../test_utils.inc"
+
+using namespace insieme::driver;
 
 namespace insieme {
 namespace frontend {
@@ -72,8 +77,11 @@ TEST(EntryPointReturn, Apply1) {
 
 		// parse temporary file
 		core::NodeManager manager;
-		ConversionJob job(file);
-		auto code = job.execute(manager);
+        const boost::filesystem::path& fileName = file;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
+
+		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
 
 		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
@@ -108,8 +116,11 @@ TEST(EntryPointReturn, Apply2) {
 
 		// parse temporary file
 		core::NodeManager manager;
-		ConversionJob job(file);
-		auto code = job.execute(manager);
+        const boost::filesystem::path& fileName = file;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
+
+		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
 
 		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();
@@ -145,8 +156,11 @@ TEST(EntryPointReturn, Dont) {
 
 		// parse temporary file
 		core::NodeManager manager;
-		ConversionJob job(file);
-		auto code = job.execute(manager);
+        const boost::filesystem::path& fileName = file;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
+
+		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
 
 		auto lambdaExp = code->getEntryPoints()[0].as<LambdaExprPtr>();

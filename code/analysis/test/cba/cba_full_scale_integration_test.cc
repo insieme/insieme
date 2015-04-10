@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,6 +55,8 @@
 #include "insieme/analysis/cba/parallel_analysis.h"
 
 #include "insieme/utils/logging.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "cba_test.inc.h"
 
@@ -85,10 +87,10 @@ namespace cba {
 
 		// load file using the frontend
 		NodeManager mgr;
-		fe::ConversionJob job(file);
-		job.setOption(fe::ConversionJob::Cilk);
-		job.setOption(fe::ConversionJob::OpenMP);
-		auto prog = job.execute(mgr);
+        std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
+        insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+
+		auto prog = options.job.execute(mgr);
 
 		// running semantic checks
 		auto res = core::checks::check(prog);

@@ -73,6 +73,7 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace core {
@@ -893,8 +894,12 @@ namespace {
 		// deduce return type
 		core::TypeList argumentTypes;
 		::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-		// would be nice to have an assert here, but tests need to fail, to check whrong cases
-		return types::deduceReturnType(funType, argumentTypes);
+
+		TypePtr res = types::deduceReturnType(funType, argumentTypes, false);
+
+		assert_ne(TypePtr(), res) << "Unable to deduce return type!";
+
+		return res;
 	}
 
 	/**
@@ -1271,7 +1276,7 @@ TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
 
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
 	auto literalType = getTypeLiteralType(type);
-	return literal(literalType, toString(*literalType));
+	return literal(literalType, "type_literal");
 }
 
 LiteralPtr IRBuilder::getIdentifierLiteral(const string& value) const {

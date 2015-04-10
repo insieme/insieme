@@ -42,6 +42,8 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
@@ -77,7 +79,7 @@ namespace {
 } //end anonymous namespace
 
 
-CilkFrontendExtension::CilkFrontendExtension() {
+CilkFrontendExtension::CilkFrontendExtension() : flagActivated(false) {
 	//Define the macros which will replace the cilk keywords with inline pragmas
 	macros.insert(std::make_pair("cilk=", ""));
 	macros.insert(std::make_pair("spawn", "_Pragma(\"cilk spawn\")"));
@@ -95,6 +97,17 @@ tu::IRTranslationUnit CilkFrontendExtension::IRVisit(tu::IRTranslationUnit& tu) 
 	//We'll let the Cilk sema do the actual work here for every TU
 	return cilk::applySema(tu, tu.getNodeManager());
 }
+
+FrontendExtension::flagHandler CilkFrontendExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //register omp flag
+    optParser("fcilk", "", flagActivated, "Cilk support");
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        return flagActivated;
+    };
+    return lambda;
+}
+
 
 }   //end namespace extensions
 }   //end namespace frontend

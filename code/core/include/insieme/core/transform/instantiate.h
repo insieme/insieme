@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,40 +36,39 @@
 
 #pragma once
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace frontend {
-namespace extensions {
+namespace core {
+namespace transform {
+	
+/**
+ * A transformation which instantiates VariableIntTypeParams wherever possible
+ * from ConcreteIntTypeParams in each calls' argument list.
+ *
+ * @param root the node to start the instantiation from
+ * @return IR with the same root node, with all deducible VariableIntTypeParmas instantiated
+ */
+NodePtr instantiateIntTypeParams(const NodePtr& root);
 
+/**
+ * A transformation which instantiates TypeVariables wherever possible
+ * from concrete types in each calls' argument list.
+ *
+ * @param root the node to start the instantiation from
+ * @return IR with the same root node, with all deducible TypeVariables instantiated
+ */
+NodePtr instantiateTypeVariables(const NodePtr& root);
 
-// extension for OpenCl kernel files
+/**
+ * A transformation which instantiates all sources of genericity in types
+ * (VariableIntTypeParams and TypeVariables) from concrete types in each calls' argument list.
+ *
+ * @param root the node to start the instantiation from
+ * @return IR with the same root node, with all deducible types instantiated
+ */
+NodePtr instantiateTypes(const NodePtr& root);
 
-class OclKernelExtension : public FrontendExtension {
-public:
-	OclKernelExtension() : FrontendExtension(), flagActivated(false) {
-		injectedHeaders.push_back("./ocl_device.h");
-	}
-
-    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
-
-private:
-    bool flagActivated;
-
-	core::ExpressionPtr 				 Visit(const clang::Expr* expr, conversion::Converter& convFact);
-
-    core::TypePtr 						 Visit(const clang::QualType& type, conversion::Converter& convFact);
-
-    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
-															insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::TypePtr 		 TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type,
-														   insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr,
-														   insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
-
-    virtual core::ProgramPtr 			 IRVisit(core::ProgramPtr& prog);
-};
-
-} //namespace extensions
-} //namespace frontend
-} //namespace insieme
+} // end namespace transform
+} // end namespace core
+} // end namespace insieme
