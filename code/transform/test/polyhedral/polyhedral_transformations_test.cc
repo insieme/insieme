@@ -139,8 +139,8 @@ TEST(Transform, InterchangeAuto) {
 	LoopInterchange li(0, 1);
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 	
-	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
-					"for(int<4> v2 = 10 .. int.add(49, 1) : 1) {"
+	EXPECT_EQ( "for(int<4> v0 = 5 .. 25 : 1) {"
+					"for(int<4> v2 = 10 .. 50 : 1) {"
 						"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, uint.add(v2, v0));"
 					"};"
 				"}", toString(*newIR));
