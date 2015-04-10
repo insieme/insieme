@@ -75,6 +75,7 @@
 
     #include "insieme/core/annotations/naming.h"
     #include "insieme/core/analysis/ir_utils.h"
+    #include "insieme/core/encoder/lists.h"
 
     #define INSPIRE_MSG(l, n, msg) \
             if(!n) { driver.error(l, msg); YYABORT; }
@@ -145,6 +146,7 @@
   AUTO          "auto"    
   LAMBDA        "lambda"    
   CTOR          "ctor"    
+  METHOD        "method"    
   EXPR          "expr"    
 
   IF            "if"      
@@ -222,7 +224,7 @@
 
 // %type <std::pair<TypeList, IntParamList> > type_param_list gen_type
 %type <Gen_type> type_param_list gen_type
-%type <TypePtr> type tuple_or_function  struct_type named_type
+%type <TypePtr> type tuple_or_function  struct_type named_type just_name 
 %type <TypeList> type_list parent_list type_list_aux
 %type <FunctionKind> func_tok
 
@@ -322,8 +324,8 @@ type_list_aux : type ")"           { RULE $$.insert($$.begin(), $1); }
 type_list : ")" { }
           | type_list_aux { RULE std::swap($$, $1); }
 
-parent_list : type                 { RULE $$.insert($$.begin(), $1); }
-            | type "," parent_list { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
+parent_list : just_name                 { RULE $$.insert($$.begin(), $1); }
+            | just_name "," parent_list { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
             ;
 
 func_tok : "->" { RULE $$ = FK_PLAIN; }
@@ -339,36 +341,16 @@ tag_def : "{" member_list   { std::swap($$, $2); }
          ;
 
                      /* tuple */
-tuple_or_function : "(" type_list  { RULE 
-                            if($2.size() <2) error(@2, "tuple type must have 2 fields or more, sorry");
-                            $$ = driver.builder.tupleType($2); 
+tuple_or_function : type_list  { RULE 
+                            if($1.size() <2) error(@$, "tuple type must have 2 fields or more, sorry");
+                            $$ = driver.builder.tupleType($1); 
                         }
                      /* function/closure type */
-                  | "(" type_list func_tok type { RULE
-                            $$ = driver.genFuncType(@$, $2, $4, $3); 
+                  | type_list func_tok type { RULE
+                            $$ = driver.genFuncType(@$, $1, $3, $2); 
                             INSPIRE_GUARD(@$, $$);
                         }
-                     /*  constructor */
-                  | "ctor" type "::" "(" type_list { RULE
-                            TypePtr classType = driver.builder.refType($2);
-                            TypePtr retType = classType;
-                            $5.insert($5.begin(), classType);
-                            $$ = driver.builder.functionType($5, retType, FK_CONSTRUCTOR);
-                        }
-                     /* member function */
-                  | type "::" "(" type_list "->" type { RULE
-                            TypePtr classType = driver.builder.refType($1);
-                            TypePtr retType = $6;
-                            $4.insert($4.begin(), classType);
-                            $$ = driver.builder.functionType($4, retType, FK_MEMBER_FUNCTION);
-                        }
-                     /*  destructor */
-                  | "~" type "::" "(" ")" { RULE
-						    TypePtr classType = driver.builder.refType($2);
-                            $$ = driver.builder.functionType(toVector(classType), classType, FK_DESTRUCTOR);
-                        }
                   ;
-
 
 gen_type : type_param_list ">" { RULE std::swap($$.typeParams, $1.typeParams); std::swap($$.intParams, $1.intParams); }
          | ">"                 { }
@@ -388,27 +370,45 @@ struct_type : tag_def              { RULE $$ = driver.builder.structType(driver.
             ;
 
 
-type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, TypeList(), $3.typeParams, $3.intParams); }
-     | "identifier" { RULE         
-                            $$ = driver.findType(@1, $1);
-                            if(!$$) $$ = $$ = driver.genGenericType(@$, $1, TypeList(), TypeList(), IntParamList()); 
-                            if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
-                    }
-     | "type_var"           { RULE $$ = driver.builder.typeVariable($1);  }
-     | "struct" struct_type { RULE $$ = $2; }
+type : "struct" struct_type { RULE $$ = $2; }
      | "union"  union_type  { RULE $$ = driver.builder.unionType($2); }
-     | tuple_or_function    { RULE $$ = $1; }
+     | "ctor" just_name "::" "(" type_list { RULE
+                            TypePtr classType = driver.builder.refType($2);
+                            TypePtr retType = classType;
+                            $5.insert($5.begin(), classType);
+                            $$ = driver.builder.functionType($5, retType, FK_CONSTRUCTOR);
+                       }
+     | "method" just_name "::" "(" type_list "->" type { RULE
+                            TypePtr classType = driver.builder.refType($2);
+                            TypePtr retType = $7;
+                            $5.insert($5.begin(), classType);
+                            $$ = driver.builder.functionType($5, retType, FK_MEMBER_FUNCTION);
+                       }
+     | "~" just_name "::" "(" ")" { RULE
+                            TypePtr classType = driver.builder.refType($2);
+                            $$ = driver.builder.functionType(toVector(classType), classType, FK_DESTRUCTOR);
+                       }
+     | "(" tuple_or_function { RULE $$ = $2; }
+     | named_type            { RULE $$ = $1; }  
      ;
 
+just_name : "identifier" { RULE  $$ = driver.findType(@1, $1); 
+                           INSPIRE_MSG(@$,$$, format("Type %s was not defined", $1));
+                         }
+          | "type_var"   { RULE  $$ = driver.builder.typeVariable($1); }
+          //| "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams, $3.intParams); }
+          ;
+                
 named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams, $3.intParams); }
            | "identifier" { RULE         
                                   $$ = driver.findType(@1, $1);
                                   if(!$$) $$ = $$ = driver.genGenericType(@$, $1, TypeList(), TypeList(), IntParamList()); 
                                   if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                           }
-           | "indentifier" ":" parent_list "<"{ RULE
-                          }
-           | "type_var"           { RULE $$ = driver.builder.typeVariable($1);  }
+          | "identifier" ":" parent_list "<" gen_type { RULE
+                           INSPIRE_NOT_IMPLEMENTED(@$);
+                        }
+           | "type_var"   { RULE $$ = driver.builder.typeVariable($1);  }
            ;
 
 /* ~~~~~~~~~~~~~~~~~~~  STATEMENTS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -542,10 +542,19 @@ expression_list : expression                      { RULE $$.push_back($1); }
                 | expression "," expression_list  { RULE $3.insert($3.begin(), $1); std::swap($$, $3); }
  
 markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
+
             /* unary */
            | "*" expression { RULE $$ = driver.builder.deref($2); } %prec UDEREF
-           | "-" expression { RULE $$ = driver.builder.minus($2); } %prec UMINUS
+           | "-" expression { RULE 
+                                          auto tmp = driver.builder.tryDeref($2);
+                                          $$ = driver.builder.minus(tmp); 
+                            } %prec UMINUS
+           | "!" expression { RULE 
+                                          auto tmp = driver.builder.tryDeref($2);
+                                          $$ = driver.builder.logicNeg(tmp); 
+                            }%prec UNOT
            | expression "=" expression  { RULE $$ = driver.genBinaryExpression(@$, "=", $1, $3); }
+
             /* bitwise / logic / arithmetic / geometric */
            | expression "&" expression  { RULE $$ = driver.genBinaryExpression(@$, "&", $1, $3);  }
            | expression "|" expression  { RULE $$ = driver.genBinaryExpression(@$, "|", $1, $3);  }
@@ -565,12 +574,25 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
             /* data access */
            | expression "[" expression "]" { RULE $$ = driver.genBinaryExpression(@$, "[", $1, $3); }
            | expression "." "identifier" { RULE $$ = driver.genFieldAccess(@1, $1, $3); }
+           | expression "." "int"        { RULE $$ = driver.genTupleAccess(@1, $1, $3); }
                 
             /* ternary operator */
            | expression "?" expression ":" expression { RULE
 						$$ =  driver.builder.ite($1, driver.builder.wrapLazy($3), driver.builder.wrapLazy($5));
                     }
+
             /* call expr */
+           | expression "->" "identifier" "(" ")"{ RULE 
+                                        auto mf = driver.findSymbol(@3, $3);
+                                        INSPIRE_TYPE(@1, mf->getType(), FunctionTypePtr, "non callable expr"); 
+                                        $$ = driver.genCall(@$, mf, toVector($1));  
+                                }
+           | expression "->" "identifier" "(" expression_list ")"{ RULE 
+                                        auto mf = driver.findSymbol(@3, $3);
+                                        INSPIRE_TYPE(@1, mf->getType(), FunctionTypePtr, "non callable expr"); 
+                                        $5.insert($5.begin(), $1);
+                                        $$ = driver.genCall(@$, mf, $5);  
+                                }
            | expression "(" ")" { RULE 
                                         INSPIRE_TYPE(@1, $1->getType(), FunctionTypePtr, "non callable expr"); 
                                         $$ = driver.genCall(@$, $1, ExpressionList());  
@@ -579,6 +601,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                                         INSPIRE_TYPE(@1, $1->getType(), FunctionTypePtr, "non callable expr"); 
                                         $$ = driver.genCall(@$, $1, $3); 
                                 }
+
             /* parenthesis : tuple or expression */
            | "(" expression_list ")"  { RULE  
                                                   if ($2.size() == 1) $$ = $2[0];
@@ -588,7 +611,10 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            |  "lambda" lambda_expression  { RULE $$ = $2; }
             /* cast */ 
            | "CAST(" type ")" expression  { RULE $$ = driver.builder.castExpr($2, $4); }
-           | expression ".as(" type ")"   { RULE $$  = driver.builder.refParent($1, $3); }
+           | expression ".as(" type ")"   { RULE 
+                              INSPIRE_MSG(@1, $1.getType().isa<RefTypePtr>(), "can not get parent-reference of non referenced expression");
+                              $$  = driver.builder.refParent($1, $3); 
+                          }
             /* ref mamagement */
            | "undefined" "(" type ")"     { RULE $$ =  driver.builder.undefined( $3 ); }
            | "var" "(" expression ")"     { RULE $$ =  driver.builder.refVar( $3 ); }
@@ -612,6 +638,9 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "lit(" "stringlit" ")"          { RULE $$ = driver.builder.getIdentifierLiteral($2); }
            | "lit(" "stringlit" ":" type ")" { RULE $$ = driver.builder.literal($4, $2); }
            | "lit(" type ")"                 { RULE $$ = driver.builder.getTypeLiteral($2); }
+            /* list expression */
+           | "[" expression_list "]"         { RULE 
+                            $$ = encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(driver.mgr, $2); }
             /* struct / union expressions */
            | "struct" type "{" expression_list "}" { RULE $$ = driver.genTagExpression(@$, $2, $4); }
             /* async */
@@ -645,16 +674,16 @@ lambda_expression_aux :
                             }
                         } 
                             /* lambdas */
-                      | "(" variable_list "->" type ":" { driver.set_inhibit(driver.let_count);} expression {     
+        //              | "(" variable_list "->" type "?" { driver.set_inhibit(driver.let_count);} expression {     
 
-                            if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @7, $4, $2);
-                            }
-                            else{
-                                RULE $$ = driver.genLambda(@$, $2, $4, driver.builder.compoundStmt(driver.builder.returnStmt($7))); 
-                            }
-                            driver.set_inhibit(false);
-                        } 
+        //                    if (driver.let_count ==1 ){
+        //                        driver.add_let_lambda(@$, @1, @7, $4, $2);
+        //                    }
+        //                    else{
+        //                        RULE $$ = driver.genLambda(@$, $2, $4, driver.builder.compoundStmt(driver.builder.returnStmt($7))); 
+        //                    }
+        //                    driver.set_inhibit(false);
+        //                } 
                       | "(" variable_list "->" type "{" { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
                             if (driver.let_count ==1 ){
@@ -666,7 +695,7 @@ lambda_expression_aux :
                             driver.set_inhibit(false);
                         } 
                             /* member functions */
-                      | named_type "::" { driver.add_this(@1, $1); } "(" variable_list "->" type "{" 
+                      | just_name "::" { driver.add_this(@1, $1); } "(" variable_list "->" type "{" 
                                         { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@1, "this");
@@ -679,7 +708,7 @@ lambda_expression_aux :
                             }
                             driver.set_inhibit(false);
                         } 
-                      | "~" named_type "::" { driver.add_this(@1, $2); } "(" variable_list "{" 
+                      | "~" just_name "::" { driver.add_this(@1, $2); } "(" variable_list "{" 
                                             { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@1, "this");
@@ -692,7 +721,7 @@ lambda_expression_aux :
                             }
                             driver.set_inhibit(false);
                         } 
-                      | "ctor" named_type "::" { driver.add_this(@2, $2); } "(" variable_list "{" 
+                      | "ctor" just_name "::" { driver.add_this(@2, $2); } "(" variable_list "{" 
                                                { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@2, "this");
@@ -717,24 +746,26 @@ lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_a
 %nonassoc "else";
 %right "=>";
 %left "spawn" "sync" "syncAll";
-%right "->";
 %right "?";
-%right ":";
-%right ".";
-%right "[";
 %right "catch";
 %left "=";
+%left "->";
 %left ".cast(";
-%left ".as(";
-%left "==" "!=" "<" "<=" ">" ">=";
+%nonassoc ":";
+%left "&&" "||";
 %left "+" "-";
 %left "*" "/";
-%left "&&" "||";
 %left "&" "|" "^";
+%left "<";
+%left "==" "!=" "<=" ">" ">=";
+%right "[";
+%left ".as(";
+%nonassoc ".";
 %right "(";
 %nonassoc UMINUS;
 %nonassoc UDEREF;
 %nonassoc BOOL_OP;
+%nonassoc UNOT;
 
 %%
 // code after the second %% is copyed verbatim at the end of the parser .cpp file

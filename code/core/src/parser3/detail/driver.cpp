@@ -223,8 +223,9 @@ namespace detail{
         error(l, format("the symbol %s is not a operator", op));
         return nullptr;
     }
-    ExpressionPtr inspire_driver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname){
 
+    ExpressionPtr inspire_driver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname){
+        
             StructTypePtr structType;
             if (expr->getType().isa<StructTypePtr>()) {
                 structType = expr->getType().as<StructTypePtr>();
@@ -256,6 +257,47 @@ namespace detail{
                 return builder.refMember(expr, fieldname);
             }
             return builder.accessMember(expr, fieldname);
+    }
+
+    ExpressionPtr inspire_driver::genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member){
+
+        // check whether access is valid
+        TupleTypePtr tupleType;
+        if (expr->getType()->getNodeType() == NT_TupleType) {
+            tupleType = expr->getType().as<TupleTypePtr>();
+        } else if (expr->getType()->getNodeType() == NT_RefType) {
+            TypePtr type = expr->getType().as<RefTypePtr>()->getElementType();
+
+            if ( type->getNodeType() == core::NT_RecType ) {
+                type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
+            }
+
+            tupleType = type.isa<TupleTypePtr>();
+            if (!tupleType) {
+                 error(l, "Accessing element of non-tuple type!");
+                 return nullptr;
+            }
+        } else {
+            error(l, "Accessing element of non-tuple type!");
+            return nullptr;
+        }
+
+        // get index
+        int index = utils::numeric_cast<int>(member);
+
+        // check field
+        if (index < 0 || index >= (int)tupleType.size()) {
+            std::cout << "unknown field" << std::endl;
+            error(l, "Accessing unknown field!");
+            return nullptr;
+        }
+
+        // create access
+        if (expr->getType()->getNodeType() == NT_RefType) {
+            return builder.refComponent(expr, index);
+        }
+        return builder.accessComponent(expr, index);
+
     }
 
     TypePtr inspire_driver::genGenericType(const location& l, const std::string& name, const TypeList& parents,
@@ -346,7 +388,6 @@ namespace detail{
             error(l, "Not an outline-able context!");
             return nullptr;
         }
-
 
         // build bind expression
         return builder.bindExpr(params, call);

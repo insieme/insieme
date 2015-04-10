@@ -43,7 +43,7 @@ let Counter = struct {
 };
 
 int main() {
-	ref<Counter> c;
+	decl ref<Counter> c;
 //	c.reset();
 //	c.p();
 //	c.inc();

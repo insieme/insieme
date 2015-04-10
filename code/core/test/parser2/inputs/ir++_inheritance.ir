@@ -16,24 +16,24 @@ let C = struct : B {
 int main() {
 
 	// -------- handle an instance of A --------
-	ref<A> a;
+	decl ref<A> a;
 	a.x = 1;
 	
 	
 	// -------- handle an instance of B --------
-	ref<B> b;
+	decl ref<B> b;
 	
 	// direct access
 	b.as(A).x = 1;
 	b.y = 2;
 	
 	// indirect access of A's x
-	auto bA = b.as(A);
+	decl auto bA = b.as(A);
 	bA.x = 3;
 	
 	
 	// -------- handle an instance of C --------
-	ref<C> c;
+	decl ref<C> c;
 	
 	// access B's A's x
 	c.as(B).as(A).x = 1;
@@ -44,8 +44,8 @@ int main() {
 	// access C's z
 	c.z = 3;
 	
-	print("x = %d\n", *c.as(B).as(A).x);
-	print("y = %d\n", *c.as(B).y);
+	print("x = %d\n", *(c.as(B).as(A).x));
+	print("y = %d\n", *(c.as(B).y));
 	print("z = %d\n", *c.z);
 	
 }

@@ -6,19 +6,19 @@ let C = struct {
 };
 
 let Ctor = lambda ctor C::() {
-	this->sum = 0;
+	this.sum = 0;
 };
 
 let add = lambda C::(int x)->unit {
-	this->sum = this->sum + x;
+	this.sum = this.sum + x;
 };
 
 let getSum = lambda C::()->int {
-	return *this->sum;
+	return *this.sum;
 };
 
-let newObj = labmda ('a::() ctor)->ref<'a> {
-	return ctor(new(undefined(lit('a))));
+let newObj = lambda (ctor 'a::() x)->ref<'a> {
+	return x(new(undefined('a)));
 };
 
 unit main() {
@@ -27,8 +27,8 @@ unit main() {
     decl ref<C> c = newObj(Ctor);
 	
 	// work with the object
-	print("%d\n", c.getSum());
-	print("%d\n", c.add(3));
-	print("%d\n", c.getSum());
+	print("%d\n", c->getSum());
+	print("%d\n", c->add(3));
+	print("%d\n", c->getSum());
 	
 }

@@ -9,25 +9,25 @@ let B = struct : A {
 	int y;
 };
 
-let ctorA1 = lambda ctor A::() { this->x = 0; };
-let ctorA2 = lambda ctor A::(int x) { this->x = x; };
+let ctorA1 = lambda ctor A::() { this.x = 0; };
+let ctorA2 = lambda ctor A::(int x) { this.x = x; };
 
 int main() {
 
 	// create a stack based A
-	ref<A> a1 = ctorA1(var(A));
+	decl ref<A> a1 = ctorA1(var(undefined(A)));
 	
 	// create a heap based A
-	ref<A> a2 = ctorA1(new(A));
+	decl ref<A> a2 = ctorA1(new(undefined(A)));
 	
 	// create a stack based A with initial value
-	ref<A> a3 = ctorA2(var(A), 2);
+	decl ref<A> a3 = ctorA2(var(undefined(A)), 2);
 	
 	// create a stack based A with initial value
-	ref<A> a4 = ctorA2(new(A), 3);
+	decl ref<A> a4 = ctorA2(new(undefined(A)), 3);
 	
 	// re-initialize an existing variable (placement new)
-	ref<A> a5; ctorA2(a5, 4);
+	decl ref<A> a5; ctorA2(a5, 4);
 	
 	print("a1.x = %d\n", *a1.x);
 	print("a2.x = %d\n", *a2.x);

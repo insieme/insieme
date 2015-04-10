@@ -16,11 +16,11 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseType();
         if (driver.result) {  
-            dumpColor(driver.result);
+      //      dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ============== TEST ============ " << std::endl;
+     //   std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
 
     }
@@ -33,8 +33,8 @@ namespace parser3{
         EXPECT_TRUE(test_type(nm, "vector<'a, 4>"));
         EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b}"));
         EXPECT_TRUE(test_type(nm, "struct name { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type(nm, "struct name : papa<1> , mama<2> { int<4> a; int<5> b}"));
-        EXPECT_TRUE(test_type(nm, "struct name : papa<4> { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type(nm, "let papa, mama = t<11>, t<4>; struct name : papa, mama { int<4> a; int<5> b}"));
+        EXPECT_TRUE(test_type(nm, "let papa = t<11>; struct name : papa { int<4> a; int<5> b}"));
         EXPECT_TRUE(test_type(nm, "struct { int<4> a; int<5> b;}"));
         EXPECT_TRUE(test_type(nm, "let int = int<4>; int"));
 
@@ -44,15 +44,15 @@ namespace parser3{
 
         EXPECT_TRUE(test_type(nm, R"1N5P1RE(
                     let class = struct name { int<4> a; int<5> b};
-                    name::()->int<4>
+                    method class::()->int<4>
                 )1N5P1RE"));
         EXPECT_TRUE(test_type(nm, R"1N5P1RE(
                     let class = struct name { int<4> a; int<5> b};
-                    ~name::()
+                    ~class::()
                 )1N5P1RE"));
         EXPECT_TRUE(test_type(nm, R"1N5P1RE(
                     let class = struct name { int<4> a; int<5> b};
-                    ctor name::()
+                    ctor class::()
                 )1N5P1RE"));
 
         // member types
@@ -64,11 +64,11 @@ namespace parser3{
         driver.parseExpression();
         if (driver.result) {  
             std::cout << driver.result << std::endl;
-            dumpColor(driver.result);
+     //       dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ============== TEST ============ " << std::endl;
+     //   std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
     }
 
@@ -103,9 +103,9 @@ namespace parser3{
 
         EXPECT_FALSE(test_expression(nm, "x"));
 
-        EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool : true"));
-        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a :  x+CAST('a) 3"));
-        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a : (x+CAST('a) 3)"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool { return true; }"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
+        EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return(x+CAST('a) 3); }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) => x+CAST('a) 3"));
 
@@ -122,24 +122,24 @@ namespace parser3{
             )1N5P1RE"));
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
 		lambda (int<4> v, int<4> exp) -> int<4> { 
-			let one = lambda(int<4> _)-> int<4> : 4; 
-			let two = lambda(int<4> x)-> int<4> :x+5; 
+			let one = lambda(int<4> _)-> int<4> { return 4;  };
+			let two = lambda(int<4> x)-> int<4> { return x+5; };
             return one(two(exp));
 		}  
             )1N5P1RE"));
             
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
             let class = struct name { int<4> a; int<5> b};
-            lambda ctor name::() { }
+            lambda ctor class::() { }
         )1N5P1RE"));
 
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
             let class = struct name { int<4> a; int<5> b};
-            lambda name::()->int<4> { return 1; }
+            lambda class::()->int<4> { return 1; }
         )1N5P1RE"));
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
             let class = struct name { int<4> a; int<5> b};
-            lambda  ~name::() { }
+            lambda  ~class::() { }
         )1N5P1RE"));
 
     }
@@ -148,11 +148,11 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseStmt();
         if (driver.result) {  
-            dumpColor(driver.result);
+     //       dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ============== TEST ============ " << std::endl;
+     //   std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
     }
 
@@ -231,11 +231,11 @@ namespace parser3{
         inspire_driver driver(x, nm);
         driver.parseProgram();
         if (driver.result) {  
-            dumpColor(driver.result);
+     //       dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-        std::cout << " ============== TEST ============ " << std::endl;
+     //   std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
 
     }
@@ -258,14 +258,14 @@ namespace parser3{
         EXPECT_TRUE(test_program(mgr, R"1N5P1RE(
 
             let class = struct name { int<4> a; int<5> b};
-            let f,g = lambda name :: ()->unit{
+            let f,g = lambda class :: ()->unit{
                     g(this);
                 },
-                lambda name ::()->unit{
+                lambda class ::()->unit{
                     f(this);
                 }; 
             unit main() {  
-                decl ref<name> x;
+                decl ref<class> x;
                 f(x);
                 g(x);
             }

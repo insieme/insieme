@@ -3,6 +3,6 @@ let int = int<4>;
 
 unit main() {
 	
-	list<int> l = [1,2,3];
+	decl list<int> l = [1,2,3];
 	
 }

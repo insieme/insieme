@@ -124,6 +124,7 @@ paramvar #[a-zA-Z]
 "auto"    return inspire_parser::make_AUTO(loc);
 "lambda"  return inspire_parser::make_LAMBDA(loc);
 "ctor"  return inspire_parser::make_CTOR(loc);
+"method"  return inspire_parser::make_METHOD(loc);
 "expr"  return inspire_parser::make_EXPR(loc);
 
 "if"      return inspire_parser::make_IF(loc);

@@ -6,25 +6,25 @@ let Counter = struct {
 };
 
 let reset = lambda ctor Counter::(){
-	this->value = 0;
+	this.value = 0;
 };
 
 let inc = lambda Counter::()->int {
-	this->value = this->value + 1;
-	return *this->value;
+	this.value = this.value + 1;
+	return *this.value;
 };
 
 let dec = lambda Counter::()->int {
-	this->value = this->value - 1;
-	return *this->value;
+	this.value = this.value - 1;
+	return *this.value;
 };
 
 let get = lambda Counter::()->int {
-	return *this->value;
+	return *this.value;
 };
 
 let set = lambda Counter::(int x)->unit { 
-	this->value = x;
+	this.value = x;
 };
 
 let p = lambda Counter::()->unit {
@@ -32,15 +32,15 @@ let p = lambda Counter::()->unit {
 };
 
 int main() {
-	ref<Counter> c;
-	c.reset();
-	c.p();
-	c.inc();
-	c.p();
-	c.inc();
-	c.p();
-	c.dec();
-	c.p();
-	c.set(14);
-	c.p();
+	decl ref<Counter> c;
+	c->reset();
+	c->p();
+	c->inc();
+	c->p();
+	c->inc();
+	c->p();
+	c->dec();
+	c->p();
+	c->set(14);
+	c->p();
 }
