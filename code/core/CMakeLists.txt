@@ -43,6 +43,7 @@ IF(BISON_FOUND)
       ARGS -d
             --report=all
            -o ${BISON_O_FILE}
+           --graph 
           ${BISON_INPUT} 
       COMMENT "Generating inspire parser"
       DEPENDS ${BISON_INPUT}

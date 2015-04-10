@@ -38,8 +38,6 @@
 
 #include "insieme/frontend/extensions/while_to_for_extension.h"
 
-#include "insieme/core/parser2/ir_parser.h"
-
 namespace insieme {
 namespace core {
 namespace pattern {
