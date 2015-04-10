@@ -1164,6 +1164,8 @@ namespace measure {
 		compiler.addFlag("-DIRT_USE_PAPI");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
+		compiler.addFlag("-Wno-unused-but-set-variable");
+		compiler.addFlag("-Wno-unused-variable");
 
 		// compile code to binary
 		return utils::compiler::compileToBinary(*targetCode, compiler);
