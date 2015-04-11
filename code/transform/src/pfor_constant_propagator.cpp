@@ -91,7 +91,7 @@ const NodePtr PForConstantPropagator::resolveElement(const NodePtr& ptr) {
 
 				NodeMap replacements;
 
-				// TODO: fix apparent bug causing semantic errors for bt when replacing starting value (maybe it is wrongly working on pointers instead of addresses
+				// TODO: fix apparent bug causing semantic errors for bt when replacing starting value (maybe it is wrongly working on pointers instead of addresses?)
 //				if(arithmetic::toFormula(start).isConstant())
 //					replacements[startVar] = start;
 //				if(arithmetic::toFormula(end).isConstant())

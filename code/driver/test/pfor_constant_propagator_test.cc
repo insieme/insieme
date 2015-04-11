@@ -74,17 +74,32 @@ using namespace insieme::core;
 
 		ASSERT_TRUE(program);
 
-		//icp::TreePattern original = icp::irp::pfor(icp::any, icp::any, icp::any, icp::any);
+		icp::TreePattern forWithVariableStep = icp::irp::forStmt(icp::any, icp::any, icp::any, icp::irp::variable(), icp::any);
+		icp::TreePattern forWithConstantStep = icp::irp::forStmt(icp::any, icp::any, icp::any, icp::irp::literal(), icp::any);
+
+		auto resVar = icp::irp::collectAll(forWithVariableStep, program, false);
+		auto resCon = icp::irp::collectAll(forWithConstantStep, program, false);
+		ASSERT_EQ(1, resVar.size());
+		EXPECT_TRUE(resVar.front());
+		ASSERT_EQ(1, resCon.size());
+		EXPECT_TRUE(resCon.front());
 
 		insieme::transform::PForConstantPropagator propagator;
 
-		const auto result = propagator.map(program);
+		const auto newProgram = propagator.map(program);
 
-		ASSERT_TRUE(result);
+		ASSERT_TRUE(newProgram);
 
-		dumpColor(result);
+		auto resVar2 = icp::irp::collectAll(forWithVariableStep, newProgram, false);
+		auto resCon2 = icp::irp::collectAll(forWithConstantStep, newProgram, false);
+		ASSERT_EQ(0, resVar2.size());
+		ASSERT_EQ(2, resCon2.size());
+		EXPECT_TRUE(resCon2.front());
 	}
 	
 	
 } // end namespace driver
 } // end namespace insieme
+
+
+
