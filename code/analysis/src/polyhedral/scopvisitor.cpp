@@ -324,7 +324,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 
 	if ( stride.isOne() ) { return domain; }
 
-	// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
+	// stride needs to be constant, for variable step sizes the polyhedral library produces invalid IR
 	assert_true(stride.isConstant()) << "Stride value of for loop is not constant.";
 
 	int stride_size = stride.getTerms().front().second.getNumerator();
@@ -913,9 +913,8 @@ IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 
 			Formula &&step= arithmetic::toFormula(forPtr->getStep());
 
-			// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
+			// step size needs to be constant, for variable step sizes the polyhedral library produces invalid IR
 			 if (!step.isConstant()) {
-				std::cout << "non-constant stride detected!\n";
 			 	THROW_EXCEPTION(
 			 	NotASCoP, "Non constant stride in for statement not supported", forStmt.getAddressedNode());
 			 }
