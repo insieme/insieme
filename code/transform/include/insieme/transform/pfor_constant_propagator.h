@@ -42,24 +42,18 @@
 #include "insieme/core/ir_visitor.h"
 
 namespace insieme {
-namespace core {
 namespace transform {
-namespace utils {
 
 
 /**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
+ * NodeMapper that checks and performs constant propagation in bodies of for loops that are called in pfor calls with fixed parameters (start, end, step)
  */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
+class PForConstantPropagator : public insieme::core::transform::CachedNodeMapping {
 public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
+	PForConstantPropagator() {}
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 
 };
 
-}
-}
 }
 }

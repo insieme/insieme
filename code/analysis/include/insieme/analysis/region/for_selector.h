@@ -36,30 +36,27 @@
 
 #pragma once
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/analysis/region/region_selector.h"
 
 namespace insieme {
-namespace core {
-namespace transform {
-namespace utils {
+namespace analysis {
+namespace region {
+
+	/**
+	 * This region selector is picking all for loops.
+	 */
+	class ForSelector : public RegionSelector {
+
+	public:
+
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+
+	};
 
 
-/**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
- */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
-public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
-	const core::NodePtr resolveElement(const core::NodePtr& element);
-
-};
-
-}
-}
-}
-}
+} // end namespace region
+} // end namespace analysis
+} // end namespace insieme

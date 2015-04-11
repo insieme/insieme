@@ -93,9 +93,9 @@ int main(int argc, char **argv) {
 	}
 
 	// calculation
-	//#pragma omp parallel
+	#pragma omp parallel
 	for(int iter=0; iter<M; iter++) {
-		//#pragma omp for 
+		#pragma omp for 
 		//#pragma insieme tile(128,8)
 		for(int i=STENCIL_SIZE2; i<N-STENCIL_SIZE2; ++i) {
 			for(int j=STENCIL_SIZE2; j<N-STENCIL_SIZE2; ++j) {

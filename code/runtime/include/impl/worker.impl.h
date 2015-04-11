@@ -58,6 +58,7 @@
 #include "utils/impl/affinity.impl.h"
 #include "impl/error_handling.impl.h"
 #include "impl/instrumentation_events.impl.h"
+#include "meta_information/meta_infos.h"
 #include "utils/frequency.h"
 
 #ifdef IRT_VERBOSE

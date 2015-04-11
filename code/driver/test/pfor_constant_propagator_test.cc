@@ -34,32 +34,57 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
+
+#include "insieme/core/transform/sequentialize.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/inline.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/analysis/normalize.h"
+#include "insieme/core/pattern/ir_pattern.h"
+#include "insieme/core/pattern/pattern.h"
+#include "insieme/core/pattern/pattern_utils.h"
+
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/utils/test/test_utils.h"
+
+#include "insieme/driver/integration/tests.h"
+
+#include "insieme/analysis/region/pfor_selector.h"
+
+#include "insieme/transform/pfor_constant_propagator.h"
+
 
 namespace insieme {
-namespace core {
-namespace transform {
-namespace utils {
+namespace driver {
 
+using namespace insieme::core;
 
-/**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
- */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
-public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
-	const core::NodePtr resolveElement(const core::NodePtr& element);
+	TEST(PForConstantPropagator, Simple) {
+		namespace icp = insieme::core::pattern;
 
-};
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-}
-}
-}
-}
+		ProgramPtr program = insieme::driver::integration::loadIntegrationTest(mgr, "omp/simple_pfor", true);
+
+		ASSERT_TRUE(program);
+
+		//icp::TreePattern original = icp::irp::pfor(icp::any, icp::any, icp::any, icp::any);
+
+		insieme::transform::PForConstantPropagator propagator;
+
+		const auto result = propagator.map(program);
+
+		ASSERT_TRUE(result);
+
+		dumpColor(result);
+	}
+	
+	
+} // end namespace driver
+} // end namespace insieme

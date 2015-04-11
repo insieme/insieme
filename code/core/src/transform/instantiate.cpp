@@ -41,6 +41,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/address_mapper.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 namespace insieme {
 namespace core {
@@ -112,7 +113,9 @@ namespace {
 							});
 							auto newLambdaExp = builder.lambdaExpr(newFunType, newParamList, newBody);
 
-							return builder.callExpr(newLambdaExp, call->getArguments());
+							auto newCall = builder.callExpr(newLambdaExp, call->getArguments());
+							utils::migrateAnnotations(call, newCall);
+							return newCall;
 						}
 					}
 				}

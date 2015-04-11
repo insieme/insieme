@@ -34,32 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
+#include "insieme/analysis/region/parallel_selector.h"
+
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/normalize.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace core {
-namespace transform {
-namespace utils {
+namespace analysis {
+namespace region {
 
+	TEST(ParallelSelector, Basic) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-/**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
- */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
-public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
-	const core::NodePtr resolveElement(const core::NodePtr& element);
+		// load some code sample ...
+		auto res = core::analysis::normalize(builder.parseProgram(
+				"let fun000 = ()->unit {"
+					"ref<int<4>> v1 = var(3);"
+				"};"
 
-};
+				"int<4> main() {"
+					"ref<int<4>> v1 = var(0);"
+					"ref<int<4>> v5 = var(0);"
+					"{"
+						"parallel(job([1-1], fun000()));"
+					"};"
+					"return 0;"
+				"}"));
+		EXPECT_TRUE(res);
 
-}
-}
-}
-}
+		ParallelSelector selector;
+		vector<Region> regions = selector.getRegions(res);
+
+		EXPECT_EQ(regions.size(), 1);
+	}
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme
