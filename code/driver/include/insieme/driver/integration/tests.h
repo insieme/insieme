@@ -332,7 +332,7 @@ namespace integration {
 			insiemeccFlags["use_libmath"]="";
 			insiemeccFlags["use_libpthread"]="";
 			insiemeccFlags["use_omp"]="-fopenmp";
-			insiemeccFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
+			insiemeccFlags["standardFlags"]="--log-level=INFO";
 			insiemeccFlags["use_o3"]="-O3";
 			insiemeccFlags["use_c"]="";
 			insiemeccFlags["use_gnu99"]="";
