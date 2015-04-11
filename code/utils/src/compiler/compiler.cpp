@@ -63,7 +63,6 @@ namespace compiler {
 		res.addFlag("-x c");
 		res.addFlag("-Wall");
 		res.addFlag("--std=gnu99");
-		res.addFlag("-Wl,--no-as-needed");
 		return res;
 	}
 
@@ -79,7 +78,6 @@ namespace compiler {
 		res.addFlag("-lstdc++");
 		res.addFlag("-Wall");
 		res.addFlag("--std=c++98");
-		res.addFlag("-Wl,--no-as-needed");
 		res.addFlag("-fpermissive");
 		res.addFlag("-Wno-write-strings");
 		return res;
