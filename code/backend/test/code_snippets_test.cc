@@ -64,7 +64,7 @@ TEST(FunctionCall, templates) {
     core::ProgramPtr program = builder.parseProgram(
     	"int<4> main() {"
     	"	(type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
-    	"		return array.create.1D(dtype, size);"
+    	"		return ref.new(array.create.1D(dtype, size));"
     	"	} (lit(real<4>), 7u);"
     	"	return 0;"
     	"}"
