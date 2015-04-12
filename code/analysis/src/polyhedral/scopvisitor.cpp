@@ -244,7 +244,7 @@ AffineConstraintPtr ScopVisitor::extractFrom( IterationVector& iterVec, const Ex
 		bool isModulus = false;
 
 		// If the function is not an affine function and nor a piecewise affine function
-		// then we enter in the special cases of function which can be transfotmed (via
+		// then we enter in the special cases of function which can be transformed (via
 		// some manipulation) into piecewise affine functions. For example floor, ceil,
 		// min, max.
 		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) &&
@@ -324,7 +324,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 
 	if ( stride.isOne() ) { return domain; }
 
-	// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
+	// stride needs to be constant, for variable step sizes the polyhedral library produces invalid IR
 	assert_true(stride.isConstant()) << "Stride value of for loop is not constant.";
 
 	int stride_size = stride.getTerms().front().second.getNumerator();
@@ -334,7 +334,7 @@ template <class BoundType> AffineConstraintPtr ScopVisitor::buildStridedDomain(N
 	VariablePtr existenceVar = ret.getFreshVariable(mgr);
 	ret.add( Iterator( existenceVar, true ) );
 
-	// Gets the list of lower bounds as a disjunction of eleemnts
+	// Gets the list of lower bounds as a disjunction of elements
 	DisjunctionList&& bounds = getConjunctions(toDNF(lbCons));
 	assert_true(!bounds.empty() && !bounds.front().empty());
 
@@ -913,9 +913,8 @@ IterationVector ScopVisitor::visitForStmt(const ForStmtAddress& forStmt) {
 
 			Formula &&step= arithmetic::toFormula(forPtr->getStep());
 
-			// Commented, since it does not seem to be necessary for strides to be constant (Philipp G., Thomas P., 10.12.2014)
+			// step size needs to be constant, for variable step sizes the polyhedral library produces invalid IR
 			 if (!step.isConstant()) {
-				std::cout << "non-constant stride detected!\n";
 			 	THROW_EXCEPTION(
 			 	NotASCoP, "Non constant stride in for statement not supported", forStmt.getAddressedNode());
 			 }
@@ -1187,7 +1186,7 @@ IterationVector ScopVisitor::visitContinueStmt(const ContinueStmtAddress& contSt
 					);
 }
 
-// TODO: for now we force to break a SCoP anytime a RetStmt is encountred. This infact would
+// TODO: for now we force to break a SCoP anytime a RetStmt is encountered. This in fact would
 // mean a function is returning from anypoint and makes it complex to be supported in the
 // polyhedral model. However function which returns as last operation of the body can be
 // supported. A solution for have better support for function would be inlining.

@@ -320,7 +320,7 @@ namespace integration {
 			gccFlags["use_libmath"]="-lm";
 			gccFlags["use_libpthread"]="-lpthread";
 			gccFlags["use_omp"]="-fopenmp";
-			gccFlags["standardFlags"]="-fshow-column -Wall -lrt -Wl,--no-as-needed -pipe";
+			gccFlags["standardFlags"]="-fshow-column -Wall -lrt -pipe";
 			gccFlags["use_o3"]="-O3";
 			gccFlags["use_c"]="--std=c99";
 			gccFlags["use_cpp"]="--std=c++03";
@@ -332,7 +332,7 @@ namespace integration {
 			insiemeccFlags["use_libmath"]="";
 			insiemeccFlags["use_libpthread"]="";
 			insiemeccFlags["use_omp"]="-fopenmp";
-			insiemeccFlags["standardFlags"]="--col-wrap=120 --show-line-no --log-level=INFO";
+			insiemeccFlags["standardFlags"]="--log-level=INFO";
 			insiemeccFlags["use_o3"]="-O3";
 			insiemeccFlags["use_c"]="";
 			insiemeccFlags["use_gnu99"]="";
