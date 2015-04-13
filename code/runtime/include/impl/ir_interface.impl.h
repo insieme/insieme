@@ -179,6 +179,7 @@ double irt_time_wis_get_total() {
 	return ret;
 #else
 	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_time_wis_get_total called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0.0;
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 }
 
@@ -189,6 +190,7 @@ double irt_time_rts_get_total() {
 	return (ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0);
 #else
 	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_time_rts_get_total called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0.0;
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 }
 
