@@ -147,6 +147,13 @@ void* _irt_worker_func(void *argvp) {
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	IRT_ASSERT(pthread_getcpuclockid(t, &self->clockid) == 0, IRT_ERR_INIT, "Failed to retrieve thread clock id");
+	self->app_time_total = 0.0;
+	self->app_time_last_start = 0.0;
+	self->app_time_running = false;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
