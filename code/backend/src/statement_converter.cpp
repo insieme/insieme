@@ -708,7 +708,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
 
-		converter.getNameManager().pushVarScope(true);
+		converter.getNameManager().pushVarScope(false);
 
 		auto manager = converter.getCNodeManager();
 
@@ -757,7 +757,7 @@ namespace backend {
 
 		// create init and body
 		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
-		converter.getNameManager().pushVarScope(true);
+		converter.getNameManager().pushVarScope(false);
 		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
 		converter.getNameManager().popVarScope();
 
