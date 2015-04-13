@@ -136,10 +136,6 @@ public:
 		return ptr!=NULL;
 	}
 
-	bool operator!() const {
-		return ptr==NULL;
-	}
-
 	T& operator*() const {
 		assert_true(ptr != NULL) << "Illegal: dereferencing a NULL pointer!";
 		return *ptr;

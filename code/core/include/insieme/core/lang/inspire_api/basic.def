@@ -74,16 +74,19 @@ TYPE(UIntInf, "uint<#inf>")
 SUB_TYPE(Int1, Int2)
 SUB_TYPE(Int2, Int4)
 SUB_TYPE(Int4, Int8)
-SUB_TYPE(Int8, IntInf)
+SUB_TYPE(Int8, Int16)
+SUB_TYPE(Int16, IntInf)
 
 SUB_TYPE(UInt1, UInt2)
 SUB_TYPE(UInt2, UInt4)
 SUB_TYPE(UInt4, UInt8)
-SUB_TYPE(UInt8, UIntInf)
+SUB_TYPE(UInt8, UInt16)
+SUB_TYPE(UInt16, UIntInf)
 
 SUB_TYPE(UInt1, Int2)
 SUB_TYPE(UInt2, Int4)
 SUB_TYPE(UInt4, Int8)
+SUB_TYPE(UInt8, Int16)
 
 SUB_TYPE(UIntInf, IntInf)
 

@@ -101,7 +101,6 @@ INFO_STRUCT_END()
 /*
  * A struct providing information about region-based autotuning settings
  */
- 
 INFO_STRUCT_BEGIN(autotuning)
 	INFO_FIELD_EXT(frequencies,
 			struct { unsigned size; unsigned* data; },								{ 0 },

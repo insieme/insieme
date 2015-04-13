@@ -42,6 +42,8 @@
 #include "irt_loop_sched.h"
 #include "work_group.h"
 #include "utils/timing.h"
+#include "utils/affinity.h"
+#include "utils/frequency.h"
 #include "impl/irt_optimizer.impl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
@@ -294,10 +296,33 @@ inline static void irt_schedule_loop(
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
 
+	#ifdef IRT_ENABLE_AUTOTUNING
+	irt_wi_implementation_variant variant = impl->variants[0];
+	irt_worker* worker = irt_worker_get_current();
+	uint16 w_id = worker->id.thread;
+	if(variant.meta_info && variant.meta_info->autotuning.available) {
+		if(w_id < variant.meta_info->autotuning.map.size) {
+			irt_affinity_mask_clear(&(worker->affinity));
+			irt_affinity_mask_set(&(worker->affinity), variant.meta_info->autotuning.map.data[w_id], true);
+			irt_set_affinity(worker->affinity, worker->thread);
+		}
+		if(worker->id.thread < variant.meta_info->autotuning.frequencies.size) {
+			irt_cpu_freq_set_frequency_worker(worker, variant.meta_info->autotuning.frequencies.data[w_id]);
+		}
+	}
+	#endif // IRT_ENABLE_AUTOTUNING
+
 	// prepare policy if first loop to reach pfor
 	irt_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
 		//print_effort_estimation(impl, base_range, impl->variants[0].effort_estimator);
+
+		#ifdef IRT_ENABLE_AUTOTUNING
+			assert(variant.meta_info->autotuning.number_of_workers > 0 && "Number of workers must be set!");
+			group->cur_sched.participants = variant.meta_info->autotuning.number_of_workers;
+			group->cur_sched.type = variant.meta_info->autotuning.loop_scheduling;
+			group->cur_sched.param.chunk_size = variant.meta_info->autotuning.loop_scheduling_chunk_size;
+		#endif // IRT_ENABLE_AUTOTUNING
 
 		// run optimizer
 		#ifdef IRT_RUNTIME_TUNING

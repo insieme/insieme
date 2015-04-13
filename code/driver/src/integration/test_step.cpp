@@ -972,12 +972,14 @@ namespace integration {
 		// setup possible environment vars
 		std::stringstream env;
 		{
-			//set LD_LIBRARY_PATH
-			env << "LD_LIBRARY_PATH=";
-			for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
-				env << ldPath << ":";
+			if(!testConfig.get<vector<string>>("libPaths").empty()) {
+				//set LD_LIBRARY_PATH
+				env << "LD_LIBRARY_PATH=";
+				for(const auto& ldPath : testConfig.get<vector<string>>("libPaths")) {
+					env << ldPath << ":";
+				}
+				env<< "${LD_LIBRARY_PATH} ";
 			}
-			env<< "${LD_LIBRARY_PATH} ";
 
 			// set number of threads
 			if(setup.numThreads){
@@ -1039,7 +1041,7 @@ namespace integration {
 		string argumentString = string(" -f WALLTIME%e\nCPUTIME%U\nMEM%M\n ") + perfString + cmd + outfile;
 
 		// cpu time limit in seconds
-		unsigned cpuTimeLimit = 1200;
+		const unsigned cpuTimeLimit = 1200;
 
 		int retVal = executeWithTimeout(executable, argumentString, envString, setup.stdOutFile, setup.stdErrFile, cpuTimeLimit, execDir);
 

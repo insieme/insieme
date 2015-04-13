@@ -34,32 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
+#include "insieme/analysis/region/for_selector.h"
+
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace core {
-namespace transform {
-namespace utils {
+namespace analysis {
+namespace region {
 
+	TEST(ForSelector, Basic) {
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-/**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
- */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
-public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
-	const core::NodePtr resolveElement(const core::NodePtr& element);
+		// load some code sample ...
+		auto stmt = builder.parseStmt(
+			"for(int<4> k = 0..10) {"
+			"	for(int<4> i = 0..20) {"
+			"	}"
+			"}").as<core::ForStmtPtr>();
+		EXPECT_TRUE(stmt);
 
-};
+		ForSelector selector;
+		vector<Region> regions = selector.getRegions(stmt);
 
-}
-}
-}
-}
+		EXPECT_EQ(regions.size(), 2);
+	}
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

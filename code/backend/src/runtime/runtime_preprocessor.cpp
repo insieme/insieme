@@ -95,7 +95,7 @@ namespace runtime {
 			// define parameter of resulting lambda
 			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
 			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()->getElements()));
-			core::ExpressionPtr paramTypes = core::encoder::toIR(manager, tupleType);
+			core::ExpressionPtr paramTypes = builder.getTypeLiteral(tupleType);
 
 			vector<core::ExpressionPtr> argList;
 			unsigned counter = 0;
@@ -385,13 +385,13 @@ namespace runtime {
 			// create variable replacement map
 			core::TupleTypePtr tupleType = builder.tupleType(list);
 			core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
-			core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
+			core::ExpressionPtr paramTypeToken = builder.getTypeLiteral(dataItemType);
 			utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> varReplacements;
 			for_each(varIndex, [&](const std::pair<core::VariablePtr, unsigned>& cur) {
 				core::TypePtr varType = cur.first->getType();
 				core::ExpressionPtr index = coder::toIR(manager, cur.second);
 				core::ExpressionPtr access = builder.callExpr(varType, extensions.getWorkItemArgument,
-						toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, varType)));
+						toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(varType)));
 				varReplacements.insert(std::make_pair(cur.first, access));
 			});
 
@@ -729,14 +729,14 @@ namespace runtime {
 				core::StatementPtr loopBody = core::transform::tryInlineToStmt(manager, loopBodyCall);
 
 				// replace variables within loop body to fit new context
-				core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
+				core::ExpressionPtr paramTypeToken = builder.getTypeLiteral(dataItemType);
 				utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> varReplacements;
 				unsigned count = 0;
 				for_each(captured, [&](const core::VariablePtr& cur) {
 					core::TypePtr varType = cur->getType();
 					core::ExpressionPtr index = coder::toIR(manager, count++);
 					core::ExpressionPtr access = builder.callExpr(varType, ext.getWorkItemArgument,
-							toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, varType)));
+							toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(varType)));
 					varReplacements.insert(std::make_pair(cur, access));
 				});
 
@@ -829,7 +829,7 @@ namespace runtime {
 				core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
 				core::ExpressionPtr tuple = builder.tupleExpr(arguments);
 				core::ExpressionPtr data = builder.callExpr(dataItemType, ext.wrapLWData, toVector(tuple));
-				core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
+				core::ExpressionPtr paramTypeToken = builder.getTypeLiteral(dataItemType);
 
 				// --- Build Work Item Variations ---
 
@@ -867,7 +867,7 @@ namespace runtime {
 						core::TypePtr argType = arguments[i]->getType();
 						core::ExpressionPtr index = builder.uintLit(i);
 						newArgs.push_back(builder.callExpr(argType, ext.getWorkItemArgument,
-								toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, argType))));
+								toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(argType))));
 					}
 
 

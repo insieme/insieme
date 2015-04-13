@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/annotations/source_location.h"
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
@@ -245,9 +246,9 @@ TEST(TypeInstantiation, NameAnnotations) {
 		test(a);
 	}
 	)raw");
-	
+
 	EXPECT_EQ(addresses.size(), 3);
-	
+
 	auto result = instantiateTypes(addresses[0].getRootNode());
 
 	auto newAddr = addresses[0].switchRoot(result);
@@ -275,19 +276,47 @@ TEST(TypeInstantiation, TypeAnnotations) {
 		test(a);
 	}
 	)raw");
-	
+
 	EXPECT_EQ(addresses.size(), 1);
-	
+
 	auto declStmtType = addresses[0].getAddressedNode().as<DeclarationStmtPtr>()->getVariable()->getType();
 	annotations::attachName(declStmtType, "NewtypeGundam");
 
 	auto result = instantiateIntTypeParams(addresses[0].getRootNode());
-	
+
 	auto newAddr = addresses[0].switchRoot(result);
 	auto newDeclStmtType = newAddr.getAddressedNode().as<DeclarationStmtPtr>()->getVariable()->getType();
 	EXPECT_TRUE(annotations::hasNameAttached(newDeclStmtType));
 	EXPECT_EQ(annotations::getAttachedName(declStmtType), annotations::getAttachedName(newDeclStmtType));
 	EXPECT_EQ("NewtypeGundam", annotations::getAttachedName(newDeclStmtType));
+}
+
+TEST(TypeInstantiation, AnnotationsOnCallExp) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{
+		let test = (vector<'res,#l> a) -> unit {
+			vector<'res, #l> res;
+		};
+
+		vector<int<4>, 8> a;
+		$test(a)$;
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 1);
+
+	//attach a dummy annotation to the callExpr and check whether it is still there after the types have been instantiated
+	auto root = addresses[0].getRootNode();
+	annotations::attachLocation(addresses[0].getAddressedNode(), "dummy", 0, 1, 2, 3);
+	EXPECT_TRUE(annotations::hasAttachedLocation(addresses[0].getAddressedNode()));
+
+	auto result = instantiateTypes(root);
+	auto newAddr = addresses[0].switchRoot(result);
+	EXPECT_TRUE(annotations::hasAttachedLocation(newAddr.getAddressedNode()));
+	EXPECT_EQ(annotations::getLocation(addresses[0].getAddressedNode()), annotations::getLocation(newAddr.getAddressedNode()));
 }
 
 } // end namespace transform

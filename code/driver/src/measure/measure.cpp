@@ -43,10 +43,14 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "insieme/analysis/region/for_selector.h"
+#include "insieme/analysis/region/pfor_selector.h"
+
 #include "insieme/utils/config.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -54,10 +58,13 @@
 
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace driver {
 namespace measure {
+
+	using std::pair;
 
 	namespace bfs = boost::filesystem;
 
@@ -664,6 +671,38 @@ namespace measure {
 		return measure(regions, metrices, 1, executor, compiler, env)[0];
 	}
 
+//	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measureAll(
+//				const core::StatementAddress& stmt,
+//				const vector<MetricPtr>& metrices,
+//				unsigned numRuns, const ExecutorPtr& executor,
+//				const utils::compiler::Compiler& compiler,
+//				const std::map<string, string>& env) {
+//
+//			namespace iar = insieme::analysis::region;
+//
+//			iar::ForSelector forSelector;
+//			vector<core::StatementAddress> regions = forSelector.getRegions(stmt.getAddressedNode());
+//
+//			// create a stmt-address <-> region_id map
+//			std::map<core::StatementAddress, region_id> mappedRegions;
+//			region_id id = 0;
+//			for(const auto& cur : regions) {
+//				mappedRegions[cur] = id++;
+//			}
+//
+//			// run measurements
+//			auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
+//
+//			// un-pack results
+//			return ::transform(data, [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& data)->std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> {
+//				std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> res;
+//				for(const auto& cur : data) {
+//					res[regions[cur.first]] = cur.second;
+//				}
+//				return res;
+//			});
+//		}
+
 	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(
 			const vector<core::StatementAddress>& regions,
 			const vector<MetricPtr>& metrices,
@@ -919,6 +958,7 @@ namespace measure {
 		}
 
 		// fix static scheduling
+		// TODO: it is no longer necessary to fix to static scheduling, should we keep it?
 		auto modifiedCompiler = compiler;
 		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
 
@@ -1076,22 +1116,34 @@ namespace measure {
 
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
-		// instrument individual regions
 		core::NodePtr root = regions.begin()->first.getRootNode();
 
 		// sort addresses in descending order
-		vector<pair<core::StatementAddress, region_id>> sorted_regions(regions.begin(), regions.end());
-		std::sort(sorted_regions.rbegin(), sorted_regions.rend());
-
-		std::set<region_id> regionIDs;
-		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			core::StatementAddress tmp = cur.first.switchRoot(root);
-			root = core::transform::replaceNode(manager, tmp, instrument(tmp, cur.second));
-			regionIDs.insert(cur.second);
+		typedef std::pair<core::StatementAddress, region_id> region_pair;
+		vector<region_pair> sorted_regions(regions.begin(), regions.end());
+		std::sort(sorted_regions.begin(), sorted_regions.end(), [](const region_pair& first, const region_pair& second) {
+			return first.second > second.second;
 		});
 
+		// replace all regions with instrumented and optimized versions
+		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+			// obtain address with current root
+			core::StatementAddress tmp = cur.first.switchRoot(root);
+			// migrate autotuning information (and other annotations if present)
+			core::transform::utils::migrateAnnotations(cur.first, tmp);
+			// instrument the new region
+			core::StatementPtr instrumentedTmp = instrument(tmp, cur.second);
+			// replace region
+			root = core::transform::replaceNode(manager, tmp, instrumentedTmp);
+		});
+
+
 		// create resulting program
-		core::ProgramPtr program = wrapIntoProgram(root);
+		core::ProgramPtr program;
+		if(root->getNodeType() == core::NT_LambdaExpr)
+			program = core::Program::get(manager, toVector(root.as<core::ExpressionPtr>()));
+		else
+			program = wrapIntoProgram(root);
 
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
@@ -1107,16 +1159,17 @@ namespace measure {
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
-		compiler.addFlag("-DIRT_RUNTIME_TUNING");
+		compiler.addFlag("-DIRT_WORKER_SLEEPING");
+		compiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+		compiler.addFlag("-DIRT_USE_PAPI");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
+		compiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
+		compiler.addFlag("-Wno-unused-but-set-variable");
+		compiler.addFlag("-Wno-unused-variable");
 
 		// compile code to binary
 		return utils::compiler::compileToBinary(*targetCode, compiler);
 	}
-
-
-
 
 	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
 		workerDataStore[worker][region][metric].push_back(value);	// just add value

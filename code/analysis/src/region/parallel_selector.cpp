@@ -34,32 +34,44 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/region/parallel_selector.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
-namespace core {
-namespace transform {
-namespace utils {
+namespace analysis {
+namespace region {
 
+	RegionList ParallelSelector::getRegions(const core::NodePtr& node) const {
 
-/**
- * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
- * If not the type literal is replaced with the appropriate one
- */
-class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder& builder;
-public:
-	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
-	const core::NodePtr resolveElement(const core::NodePtr& element);
+		RegionList res;
+		auto parallel = node->getNodeManager().getLangBasic().getParallel();
+		core::visitDepthFirst(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
+			if (*cur.getAddressedNode()->getFunctionExpr() != *parallel) {
+				return false;
+			}
 
-};
+			core::JobExprAddress job = cur->getArgument(0).as<core::JobExprAddress>();
+			core::ExpressionAddress addr = job->getDefaultExpr();
 
-}
-}
-}
-}
+			if(addr->getNodeType() == core::NT_BindExpr) {
+				addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
+			}
+
+			if (addr->getNodeType() == core::NT_LambdaExpr) {
+				res.push_back(addr.as<core::LambdaExprAddress>()->getBody());
+			}
+
+			return true;
+
+		}, false);
+
+		return res;
+	}
+
+} // end namespace region
+} // end namespace analysis
+} // end namespace insieme
+
