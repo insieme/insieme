@@ -129,9 +129,9 @@ endif(MSVC)
 # --------------------------------------------------------------------- including libraries
 # set up insieme lib home either from THIRD_PARTY_LIBS_HOME or INSIEME_LIBS_HOME env var 
 if ( DEFINED ENV{THIRD_PARTY_LIBS_HOME} ) 
-	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home" )
+	set(THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home" )
 elseif ( DEFINED ENV{INSIEME_LIBS_HOME} ) 
-	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+	set(THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home" )
 endif()
 
 #------------------------------------------------------------- profiling

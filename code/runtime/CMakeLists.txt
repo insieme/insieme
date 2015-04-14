@@ -10,8 +10,10 @@ if (WIN32)
 endif()
 option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 
-if (NOT THIRD_PARTY_LIBS_HOME )
-	set ( THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third part library home")
+if (DEFINED ENV{THIRD_PARTY_LIBS_HOME} )
+	set ( THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home")
+elseif (DEFINED ENV{INSIEME_LIBS_HOME} )
+	set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home")
 endif()
 
 #to find the custom modules (for find_package)
