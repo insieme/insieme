@@ -1,7 +1,7 @@
 GCC Toolchain
 -------------
 
-Careful when using a custom GCC toolchain which is installed in a non-system-default path (i.e.
+Careful when using a custom GCC toolchain which is installed in a /non-system-default/ path (i.e.
 installed in THIRD_PARTY_LIBS_HOME). One needs to take care of providing the correct search path for
 linktime (-L) and runtime (LD_LIBRARY_PATH or setting rpath).
 Relying on the LD_LIBRARY_PATH is fine as long as there is no setuid bit involved (or capabilities)
@@ -19,6 +19,9 @@ CC=gcc
 CXX=g++
 
 To use ccache provide it as CC/CXX (i.e. CC="ccach gcc").
+
+As the integration tests use a backend compiler (which might be installed at a custom location), one
+should take care of the LD_LIBRARY_PATH
 
 TODO:
 Currently Insieme offers no CMake/Make install mechanism, whenever this comes up, one needs to take
@@ -39,12 +42,20 @@ If non of the above options are provided or if they are set to OFF, EVERYTHING i
 
 Careful the order in the CMakeLists.txt (of the add_subdirectory calls) matters!
 
-FIXME/TODO Document CMake options:
-- BUILD_DOXYGEN=ON|OFF
-- CONDUCT_MEMORY_CHECKS=ON|OFF
-- DOCS=ON|OFF
-- USE_OPENCL=ON|OFF
-- USE_ENERGY=ON|OFF
+Various CMake options
+-----------------------
+
+- BUILD_DOXYGEN=ON|OFF			: build doxygen (code) documentation
+
+- CONDUCT_MEMORY_CHECKS=ON|OFF	: run the unit tests with valgrind (some are excluded, mostly
+  runtime unit tests
+
+- DOCS=ON|OFF					: build insieme developer documentation (not doxygen)
+
+- USE_OPENCL=ON|OFF				: enable opencl
+
+- USE_ENERGY=ON|OFF				: enable energy measurement - papi
+
 
 Finding Third-Party-Libraries
 -----------------------------
@@ -82,6 +93,8 @@ over parallel job execution via job pool. This works with CMake 3.0 but bit shak
 it with CMake 3.2. 
 
 We have some checks for CMake 3.2 in the cases where we want to setup job pools. 
+
+In case of Ninja usage, use ctest to run the unit tests.
 
 
 Using ExternalProjects
