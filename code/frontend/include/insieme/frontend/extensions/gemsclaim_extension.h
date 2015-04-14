@@ -56,7 +56,7 @@ public:
 			    macros["_GEM"] = "";
         }
 
-        FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
             //register omp flag
             optParser("gem-cross-compile", "", flagActivated, "set cross compilation for the GEMSCLAIM");
             //create lambda

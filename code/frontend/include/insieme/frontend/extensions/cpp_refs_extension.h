@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -50,7 +50,8 @@ namespace extensions {
 class CppRefsCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
     public:
     FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
-	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+
+	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 
 

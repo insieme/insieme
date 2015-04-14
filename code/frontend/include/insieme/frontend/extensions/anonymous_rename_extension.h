@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -58,8 +58,20 @@ class AnonymousRenameExtension : public insieme::frontend::extensions::FrontendE
 	core::NodeMap renamedTypeDeclarations;
 
     std::map<core::NodePtr, std::string> nameMap;
+public:
 
-    core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res,
+    virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& job) const {
+    	//this should be the last
+
+    	if(job.getExtensions().back().get() != this) {
+    		return boost::optional<std::string>("AnonymousRenameExtension should be the last extension int the extension list");
+    	}
+
+    	//prerequisites are met
+    	return boost::optional<std::string>();
+    }
+
+    virtual core::TypePtr TypeDeclPostVisit(const clang::TypeDecl* decl, insieme::core::TypePtr res,
                                                 insieme::frontend::conversion::Converter& convFact){
 		core::IRBuilder builder (res->getNodeManager());
 
