@@ -34,59 +34,60 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
-#define __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
+#include "insieme/common/utils/gtest_utils.h"
 
-#include "declarations.h"
+#define IRT_CWBUFFER_LENGTH 2
 
-#ifndef IRT_CWBUFFER_LENGTH
-#define IRT_CWBUFFER_LENGTH 16
-#endif
+#define IRT_LIBRARY_MAIN
+#define IRT_LIBRARY_NO_MAIN_FUN
+#include "irt_library.hxx"
 
-#include "utils/circular_work_buffers.h"
+#define N 22
 
-typedef struct _irt_cw_data {
-	irt_circular_work_buffer queue;
-	irt_work_item *overflow_stack;
-	irt_spinlock overflow_stack_lock;
-#ifdef IRT_TASK_OPT
-	int64 demand;
-#endif //IRT_TASK_OPT
-} irt_cw_data;
+TEST(WIOversubscription, Simple) {
+	EXPECT_IN_TIME(10*1000, 
+	{
+		irt::init(3);
+		irt::run([]() {
+			irt::merge(irt::parallel(N, [] {
+				printf("Bla wi %d\n", irt_wi_get_current()->id.index);
+			}));
+		});
+		irt::shutdown();
+	});
+}
 
-#define irt_worker_scheduling_data irt_cw_data
+TEST(WIOversubscription, Barrier) {
+	EXPECT_IN_TIME(10*1000, 
+	{
+		irt::init(3);
+		irt::run([]() {
+			irt::merge(irt::parallel(N, [] {
+				irt::barrier();
+				printf("Bla wi %d\n", irt_wi_get_current()->id.index);
+				irt::barrier();
+			}));
+		});
+		irt::shutdown();
+	});
+}
 
-// placeholder, not required
-#define irt_wi_scheduling_data uint32
+int RecParCount(int n) {
+	if(n == 0) return 1;
+	int ret = 0;
+	irt::merge(irt::parallel(n, [&ret,n] {
+		ret = RecParCount(n-1)+1;
+	}));
+	return ret;
+}
 
-#ifdef IRT_TASK_OPT
-inline uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo);
-#endif //IRT_TASK_OPT
-
-#if 0
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////// 64 bit triplet implementation ////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-typedef struct _irt_circular_work_buffer {
-	uint64 front_free;
-	uint64 back_free;
-	int64 size;
-	irt_work_item* items[IRT_CWBUFFER_LENGTH];
-} irt_circular_work_buffer;
-
-typedef struct _irt_cw_data {
-	irt_circular_work_buffer queue;
-	irt_circular_work_buffer pool;
-} irt_cw_data;
-
-#define irt_worker_scheduling_data irt_cw_data
-
-// placeholder, not required
-#define irt_wi_scheduling_data uint32
-
-#endif // 64 bit triplet implementation
-
-
-#endif // ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
+TEST(WIOversubscription, Nested) {
+	EXPECT_IN_TIME(100*1000, 
+	{
+		irt::init(3);
+		irt::run([]() {
+			std::cout << RecParCount(5) << std::endl;
+		});
+		irt::shutdown();
+	});
+}
