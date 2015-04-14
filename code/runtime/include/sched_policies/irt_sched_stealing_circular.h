@@ -48,6 +48,8 @@
 
 typedef struct _irt_cw_data {
 	irt_circular_work_buffer queue;
+	irt_work_item *overflow_stack;
+	irt_spinlock overflow_stack_lock;
 #ifdef IRT_TASK_OPT
 	int64 demand;
 #endif //IRT_TASK_OPT
