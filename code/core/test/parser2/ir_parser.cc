@@ -117,7 +117,7 @@ namespace parser {
 		TypePtr C = builder.genericType("C");
 
 		// just some simple tuple types
-		EXPECT_EQ(builder.tupleType(), parse(manager, "()"));
+		EXPECT_EQ(builder.tupleType(), builder.parseType("()"));
 		EXPECT_EQ(builder.tupleType(toVector(A)), parse(manager, "(A)"));
 		EXPECT_EQ(builder.tupleType(toVector(A,B)), parse(manager, "(A,B)"));
 		EXPECT_EQ(builder.tupleType(toVector(A,B,C)), parse(manager, "(A,B,C)"));
