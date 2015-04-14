@@ -42,6 +42,7 @@
 #include "insieme/utils/config.h"
 
 #include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/runtime/runtime_backend.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -303,6 +304,46 @@ TEST(Literals, BoolLiterals) {
 	compiler.addFlag("-lm");
 	compiler.addFlag("-c"); // do not run the linker
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
+TEST(Parallel, Whatever) {
+       core::NodeManager mgr;
+       core::IRBuilder builder(mgr);
+
+        // create a code fragment allocating an array on the stack and using it
+        core::ProgramPtr program = builder.parseProgram(
+                R"(
+                let int = int<4>;
+                let uint = uint<4>;
+
+                let differentbla = ('b x) -> unit {
+                    auto m = x;
+                    auto l = m;
+                };
+
+                let bla = ('a f) -> unit {
+                    let anotherbla = ('a x) -> unit {
+                        auto m = x;
+                    };
+                    anotherbla(f);
+                    differentbla(f);
+                    parallel(job { auto l = f; });
+                };
+
+                int main() {
+                    // some bla
+                    int x = 10;
+                    bla(x);
+                    return 0;
+                }
+                )"
+        );
+        std::cout << "Program: " << *program << std::endl;
+
+        auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+        std::cout << "Converted Seq: \n" << *converted << std::endl;
+        auto converted_rt = runtime::RuntimeBackend::getDefault()->convert(program);
+        std::cout << "Converted Run: \n" << *converted_rt << std::endl;
 }
 
 

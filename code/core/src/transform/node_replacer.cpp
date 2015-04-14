@@ -67,13 +67,14 @@ class NodeReplacer : public CachedNodeMapping {
 	const PointerMap<NodePtr, NodePtr>& replacements;
 	const bool includesTypes;
 	const bool limitScope;
+	const std::function<bool(const NodePtr&)> skip;
 
 public:
 
-	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope)
+	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope, std::function<bool(const NodePtr&)> skip = [](const NodePtr& node) { return false; })
 		: manager(manager), replacements(replacements),
 		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })),
-		  limitScope(limitScope) { }
+		  limitScope(limitScope), skip(skip) { }
 
 private:
 
@@ -81,6 +82,9 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+	    // check if we shouldn't modify this node
+	    if(skip(ptr)) return ptr;
+
 		// check whether the element has been found
 		auto pos = replacements.find(ptr);
 		if(pos != replacements.end()) {
@@ -126,12 +130,13 @@ class SingleNodeReplacer : public CachedNodeMapping {
 	const NodePtr& replacement;
 	const bool visitTypes;
 	const bool limitScope;
+	const std::function<bool(const NodePtr&)> skip;
 
 public:
 
-	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool limit)
+	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool limit, std::function<bool(const NodePtr&)> skip = [](const NodePtr& node) { return false; })
 		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type ||
-				target->getNodeCategory() == NC_IntTypeParam || target->getNodeCategory() == NC_Support), limitScope(limit){ }
+				target->getNodeCategory() == NC_IntTypeParam || target->getNodeCategory() == NC_Support), limitScope(limit), skip(skip) { }
 
 private:
 
@@ -139,6 +144,8 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+	    // check if we shouldn't modify this node
+	    if(skip(ptr)) return ptr;
 
 		// handle replacement
 		if (*ptr == *target) {
@@ -178,17 +185,21 @@ class VariableReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const VariablePtr variable;
 	const NodePtr replacement;
+	const std::function<bool(const NodePtr&)> skip;
 
 public:
 
-	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement)
-		: manager(manager), variable(variable), replacement(replacement) { }
+	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement, std::function<bool(const NodePtr&)> skip = [](const NodePtr& node) { return false; })
+		: manager(manager), variable(variable), replacement(replacement), skip(skip) { }
 
 private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+	    // check if we shouldn't modify this node
+	    if(skip(ptr)) return ptr;
+
 		// check whether the element has been found
 		if (*ptr == *variable) {
 			return replacement;
@@ -1071,7 +1082,8 @@ NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, SimpleNodeMapping& 
 }
 
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements,
+                   bool limitScope, std::function<bool(const NodePtr&)> skip) {
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
@@ -1081,36 +1093,38 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replace
 	// handle single element case
 	if (replacements.size() == 1) {
 		auto pair = *replacements.begin();
-		return replaceAll(mgr, root, pair.first, pair.second, limitScope);
+		return replaceAll(mgr, root, pair.first, pair.second, limitScope, skip);
 	}
 
 	// handle entire map
-	auto mapper = ::NodeReplacer(mgr, replacements, limitScope);
+	auto mapper = ::NodeReplacer(mgr, replacements, limitScope, skip);
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace,
+                   const NodePtr& replacement, bool limitScope, std::function<bool(const NodePtr&)> skip) {
 
 	// check whether there is something to do
 	if (*toReplace == *replacement) return mgr.get(root);
 
 	if (limitScope && toReplace->getNodeType() == NT_Variable) {
-		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement);
+		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement, true, skip);
 	}
 
-	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope);
+	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope, skip);
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace,
+                   const NodePtr& replacement, bool limitScope, std::function<bool(const NodePtr&)> skip) {
 	// check whether there is something to do
 	if (*toReplace == *replacement) return mgr.get(root);
 
 	if(limitScope) {
-		auto mapper = ::VariableReplacer(mgr, toReplace, replacement);
+		auto mapper = ::VariableReplacer(mgr, toReplace, replacement, skip);
 		return applyReplacer(mgr, root, mapper);
 	} else {
-		auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope);
+		auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope, skip);
 		return applyReplacer(mgr, root, mapper);
 	}
 }

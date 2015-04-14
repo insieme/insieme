@@ -52,6 +52,10 @@ class IRBuilder;
 
 namespace transform {
 
+namespace {
+    static const std::function<bool(const NodePtr&)> falseReturner = [](const NodePtr& node) { return false; };
+}
+
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
  *
@@ -61,7 +65,8 @@ namespace transform {
  * @param replacement the node to be used as a substitution for the toReplace node
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true);
+		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true,
+		std::function<bool(const NodePtr&)> skip = falseReturner);
 
 /**
  * Replaces all occurrences of the specified variable within the given sub-tree with the given replacement.
@@ -72,7 +77,8 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param replacement the node to be used as a substitution for the toReplace node
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope = true);
+		const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope = true,
+		std::function<bool(const NodePtr&)> skip = falseReturner);
 
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
@@ -83,15 +89,19 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param replacements the map mapping nodes to their replacements
  * @return the modified version of the root node
  */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope = true);
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
+        const NodeMap& replacements, bool limitScope = true,
+        std::function<bool(const NodePtr&)> skip = falseReturner);
 
 /**
  * A generic wrapper for the function provided above. This operation returns the same kind of node
  * pointer is getting passed as an argument.
  */
 template<typename T>
-core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root, const NodeMap& replacements, bool limitScope = true) {
-	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limitScope));
+core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
+        const NodeMap& replacements, bool limitScope = true,
+        std::function<bool(const NodePtr&)> skip = falseReturner) {
+	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limitScope, skip));
 }
 
 /**
@@ -99,9 +109,10 @@ core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root, c
  * pointer is getting passed as an argument.
  */
 template<typename T>
-core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root, 
-		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true) {
-	return static_pointer_cast<T>(replaceAll(mgr, root, toReplace, replacement, limitScope));
+core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
+		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true,
+		std::function<bool(const NodePtr&)> skip = falseReturner) {
+	return static_pointer_cast<T>(replaceAll(mgr, root, toReplace, replacement, limitScope, skip));
 }
 
 
