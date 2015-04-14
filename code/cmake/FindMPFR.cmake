@@ -26,9 +26,11 @@ endif()
 
 # Search path for nonstandard locations
 if(MPFR_ROOT)
+	set(MPFR_INCLUDE_PATH PATHS "${MPFR_ROOT}/include" NO_DEFAULT_PATH)
+	set(MPFR_LIBRARY_PATH PATHS "${MPFR_ROOT}/lib" NO_DEFAULT_PATH)
+
+	#used for integration test config
 	set(MPFR_LIBRARY_DIRS "${MPFR_ROOT}/lib")
-	set(MPFR_INCLUDE_PATH PATHS "${MPFR_LIBRARY_DIRS}" NO_DEFAULT_PATH)
-  set(MPFR_LIBRARY_PATH PATHS "${MPFR_ROOT}/lib" NO_DEFAULT_PATH)
 endif()
 
 find_path(MPFR_INCLUDE_DIRS NAMES mpfr.h HINTS ${MPFR_INCLUDE_PATH})
