@@ -66,6 +66,7 @@ namespace core {
 		NodeManager& manager;
 
 	public:
+        virtual ~IRBuilder() { }
 
 		/**
 		 * A type used within some signatures mapping variables to values.

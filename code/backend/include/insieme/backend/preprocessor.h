@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -206,6 +206,15 @@ namespace backend {
 	 * recursive functions.
 	 */
 	class CorrectRecVariableUsage : public PreProcessor {
+	public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+	};
+
+	/**
+	 * It may happen that we try to forward generic arguments to inner lambdas. This preprocessor
+	 * should identify this issue and provide a correct instantiator for such lambdas.
+	 */
+	class RecursiveLambdaInstantiator : public PreProcessor {
 	public:
 		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};

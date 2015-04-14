@@ -1067,7 +1067,7 @@ using insieme::core::pattern::anyList;
 				VariablePtr sizeVar;
 				for_each(renamedArgsMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
 						VariablePtr var = variablePair.second.as<VariablePtr>();
-						if(insieme::core::annotations::hasNameAttached(var)){
+						if(insieme::core::annotations::hasAttachedName(var)){
 							 auto cName = insieme::core::annotations::getAttachedName(var);
 							 if (cName.compare("size") == 0){
 								 sizeVar = variablePair.first.as<VariablePtr>();

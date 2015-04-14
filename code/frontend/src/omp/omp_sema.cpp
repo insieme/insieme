@@ -701,7 +701,7 @@ protected:
 		visitDepthFirstPrunable(NodeAddress(stmtNode), [&](const ExpressionAddress& expA) -> bool {
 			// prune if new named lambda
 			auto lambda = expA.getAddressedNode().isa<LambdaExprPtr>();
-			if(lambda && core::annotations::hasNameAttached(lambda)) {
+			if(lambda && core::annotations::hasAttachedName(lambda)) {
 				return true;
 			}
 			// check if privatized expression

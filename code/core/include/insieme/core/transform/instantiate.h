@@ -41,7 +41,7 @@
 namespace insieme {
 namespace core {
 namespace transform {
-	
+
 /**
  * A transformation which instantiates VariableIntTypeParams wherever possible
  * from ConcreteIntTypeParams in each calls' argument list.
@@ -49,7 +49,8 @@ namespace transform {
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible VariableIntTypeParmas instantiated
  */
-NodePtr instantiateIntTypeParams(const NodePtr& root);
+NodePtr instantiateIntTypeParams(const NodePtr& root,
+    std::function<bool(const NodePtr& node)> skip = [&](const NodePtr& node) { return false; });
 
 /**
  * A transformation which instantiates TypeVariables wherever possible
@@ -58,7 +59,8 @@ NodePtr instantiateIntTypeParams(const NodePtr& root);
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible TypeVariables instantiated
  */
-NodePtr instantiateTypeVariables(const NodePtr& root);
+NodePtr instantiateTypeVariables(const NodePtr& root,
+    std::function<bool(const NodePtr& node)> skip = [&](const NodePtr& node) { return false; });
 
 /**
  * A transformation which instantiates all sources of genericity in types
@@ -67,7 +69,8 @@ NodePtr instantiateTypeVariables(const NodePtr& root);
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible types instantiated
  */
-NodePtr instantiateTypes(const NodePtr& root);
+NodePtr instantiateTypes(const NodePtr& root,
+    std::function<bool(const NodePtr& node)> skip = [&](const NodePtr& node) { return false; });
 
 } // end namespace transform
 } // end namespace core
