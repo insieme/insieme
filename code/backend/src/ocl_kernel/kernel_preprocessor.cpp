@@ -529,7 +529,7 @@ namespace {
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
                         core::VariablePtr var = cur.second.as<core::VariablePtr>();
-						if(core::annotations::hasNameAttached(cur.first)) {
+						if(core::annotations::hasAttachedName(cur.first)) {
 							core::annotations::attachName(var, core::annotations::getAttachedName(cur.first));
 						}
 						auto pos = varMap.find(var);
@@ -641,7 +641,7 @@ namespace {
 
 				for_each(params, [&](core::VariablePtr& cur) {
 					core::VariablePtr res = builder.variable(extensions.getType(varMap[cur], cur->getType()), cur->getId());
-					if(core::annotations::hasNameAttached(cur)) {
+					if(core::annotations::hasAttachedName(cur)) {
                         core::annotations::attachName(res, core::annotations::getAttachedName(cur));
 					}
 					cur = res;
@@ -653,7 +653,7 @@ namespace {
 				core::LambdaExprPtr newKernel = builder.lambdaExpr(kernelType, params, core);
 
 
-				if (core::annotations::hasNameAttached(kernel->getLambda())) {
+				if (core::annotations::hasAttachedName(kernel->getLambda())) {
 					auto name = core::annotations::getAttachedName(kernel->getLambda());
                     core::annotations::attachName(newKernel->getLambda(),name);
                 }

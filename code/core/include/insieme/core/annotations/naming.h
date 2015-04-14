@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -58,7 +58,7 @@ namespace annotations {
 	 * @param node the node to be tested
 	 * @return true if a name is attached, false otherwise
 	 */
-	bool hasNameAttached(const NodePtr& node);
+	bool hasAttachedName(const NodePtr& node);
 
 	/**
 	 * Obtains a reference to the name attached to the given node. If

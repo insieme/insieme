@@ -642,7 +642,7 @@ namespace backend {
 		if(init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size()==1)) {
 			core::TypePtr refType = core::analysis::getReferencedType(init->getType());
 			// only do this for intercepted types
-			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasNameAttached(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
+			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasAttachedName(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
                 core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
                 core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
                 if(arg == zeroInit)

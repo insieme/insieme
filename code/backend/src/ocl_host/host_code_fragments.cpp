@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -103,7 +103,7 @@ namespace ocl_host {
 
 		// fix name of kernel
 		std::string name;
-		if (insieme::core::annotations::hasNameAttached(kernelLambda)) {
+		if (insieme::core::annotations::hasAttachedName(kernelLambda)) {
 			name = insieme::core::annotations::getAttachedName(kernelLambda);
 		} else {
 			name = "main_kernel";
