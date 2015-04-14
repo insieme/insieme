@@ -166,7 +166,7 @@ bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& 
 		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
 			// extract the type to be allocated
 			type = call->getArgument(0)->getType().isa<GenericTypePtr>()->getTypeParameter(0);
-			assert(type && "Type could not be extracted!");
+			assert_true(type) << "Type could not be extracted!";
 
 			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
 				IRBuilder builder(arg->getNodeManager());
@@ -371,7 +371,7 @@ std::string extractQuotedString(core::NodePtr kernelNameExpr) {
 		std::string name = stringCandiate->getStringValue();
 		// check for " "
 		if(name.front() == '\"' && name.back() == '\"') {
-			assert(quotedString.empty() && "Kernel function name in clCreateKernel is ambiguous");
+			assert_true(quotedString.empty()) << "Kernel function name in clCreateKernel is ambiguous";
 			// remove " "
 			quotedString = name.substr(1, name.length()-2);
 		}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,7 +46,11 @@
 
 #include "insieme/utils/test/test_utils.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "test_utils.inc"
+
+using namespace insieme::driver;
 
 namespace insieme {
 namespace frontend {
@@ -65,15 +69,15 @@ namespace frontend {
 		Source src(
 				R"(
 
-					struct name{ 
+					struct name{
 						int a;
 					};
 
-					typedef struct oldname{ 
+					typedef struct oldname{
 						int a;
 					} renamed;
 
-					typedef struct { 
+					typedef struct {
 						int a;
 					} anon_renamed;
 
@@ -88,8 +92,12 @@ namespace frontend {
 
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
+		// parse temporary file
+        const boost::filesystem::path& fileName = src;
+        std::vector<std::string> argv = { "compiler",  fileName.string() };
+        cmd::Options options = cmd::Options::parse(argv);
 
-		core::ProgramPtr res = builder.normalize(ConversionJob(src).execute(mgr));
+		core::ProgramPtr res = builder.normalize(options.job.execute(mgr));
 		RUN_SEMA(res);
 
 		dumpPretty(res);
@@ -104,21 +112,21 @@ namespace frontend {
 			core::TypePtr type = body[0].as<core::DeclarationStmtPtr>()->getVariable()->getType();
 			type = type.as<core::RefTypePtr>()->getElementType();
 			EXPECT_EQ (toString(type), "AP(struct name <a:int<4>>)");
-			EXPECT_TRUE(core::annotations::hasNameAttached(type));
+			EXPECT_TRUE(core::annotations::hasAttachedName(type));
 			EXPECT_EQ (core::annotations::getAttachedName(type), "name");
 		}
 		{
 			core::TypePtr type = body[1].as<core::DeclarationStmtPtr>()->getVariable()->getType();
 			type = type.as<core::RefTypePtr>()->getElementType();
 			EXPECT_EQ (toString(type), "AP(struct oldname <a:int<4>>)");
-			EXPECT_TRUE(core::annotations::hasNameAttached(type));
+			EXPECT_TRUE(core::annotations::hasAttachedName(type));
 			EXPECT_EQ (core::annotations::getAttachedName(type), "oldname");
 		}
 		{
 			core::TypePtr type = body[2].as<core::DeclarationStmtPtr>()->getVariable()->getType();
 			type = type.as<core::RefTypePtr>()->getElementType();
 			EXPECT_EQ (toString(type), "AP(struct anon_renamed <a:int<4>>)");
-			EXPECT_TRUE(core::annotations::hasNameAttached(type));
+			EXPECT_TRUE(core::annotations::hasAttachedName(type));
 			EXPECT_EQ (core::annotations::getAttachedName(type), "anon_renamed");
 		}
 

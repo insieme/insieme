@@ -55,6 +55,8 @@
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/utils/config.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::core::annotations;
@@ -66,20 +68,21 @@ using namespace insieme::utils::log;
 TEST(ocl_hostKernel, vecadd_bare) {
 	NodeManager manager;
 	LOG(INFO) << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
-	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add_bare.c");
+	std::string fileName = CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add_bare.c";
+    std::vector<std::string> argv = {"compiler", fileName, "-flib-icl"};
+    insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 
 	// Frontend PATH
-	job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");					// this is for CL/cl.h in host.c
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/vec_add");
+	options.job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "inputs");					// this is for CL/cl.h in host.c
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/vec_add");
 
 	// Backend PATH
-	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	options.job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
 
 	// finally, do the conversion
-	auto program = job.execute(manager);
+	auto program = options.job.execute(manager);
 
 	LOG(INFO) << "#01 Converted vec_add and kernel to IR, have a look:" << std::endl
 			  << insieme::core::printer::PrettyPrinter(program) << std::endl << "#01 END" << std::endl << std::endl;
@@ -92,20 +95,21 @@ TEST(ocl_hostKernel, vecadd_bare) {
 TEST(ocl_hostKernel, vecadd) {
 	NodeManager manager;
 	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
-	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add.c");
+	std::string fileName = CLANG_SRC_DIR "../../../test/ocl/vec_add/vec_add.c";
+    std::vector<std::string> argv = {"compiler", fileName, "-flib-icl"};
+    insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 
 	// Frontend PATH
-	job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");					// this is for CL/cl.h in host.c
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/vec_add");
+	options.job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "inputs");					// this is for CL/cl.h in host.c
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/vec_add");
 
 	// Backend PATH
-	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	options.job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
-	auto program = job.execute(manager);
+	auto program = options.job.execute(manager);
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
@@ -122,21 +126,22 @@ TEST(ocl_hostKernel, vecadd) {
 TEST(ocl_hostKernel, matmul) {
 	NodeManager manager;
 	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
-	insieme::frontend::ConversionJob job(CLANG_SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c");
+	std::string fileName = CLANG_SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c";
+    std::vector<std::string> argv = {"compiler", fileName, "-flib-icl"};
+    insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
 
 	// Frontend PATH
-	job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");						// this is for CL/cl.h in host.c
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/mat_mul");
+	options.job.addIncludeDirectory(CLANG_SRC_DIR);								// this is for ocl_device.h in kernel.cl
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "inputs");						// this is for CL/cl.h in host.c
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");	// lib_icl
+	options.job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/mat_mul");
 
 	// Backend PATH
-	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
+	options.job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
 	//job.setOption(insieme::frontend::ConversionJob::OpenCL);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
-	auto program = job.execute(manager);
+	auto program = options.job.execute(manager);
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";

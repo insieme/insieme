@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -74,8 +74,14 @@ namespace backend {
 
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
 
+//		assert_true(core::checks::check(source).empty())
+//			<< "Invalid IR passed to backend: " << core::checks::check(source);
+
 		// pre-process program
 		core::NodePtr processed = getPreProcessor()->process(*this, source);
+
+//		assert_true(core::checks::check(processed).empty())
+//			<< "Errors introduced by pre-processors: " << core::checks::check(processed);
 
 		timer.stop();
 		LOG(INFO) << timer;
@@ -172,7 +178,7 @@ namespace backend {
 
 
 	const c_ast::SharedCNodeManager& Converter::getCNodeManager() const {
-		assert(fragmentManager);
+		assert_true(fragmentManager);
 		return fragmentManager->getNodeManager();
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -79,7 +79,7 @@ namespace features {
 	 *
 	 * @param type the type which's size should be estimated
 	 * @param unknownContainerSize the size used for estimating the size of a container
-	 * 			if it's size can not be determined (e.g. array types or vector<X,'a> types).
+	 * 			if its size can not be determined (e.g. array types or vector<X,'a> types).
 	 * @return the estimated size of an instance of the given type
 	 */
 	unsigned getSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize = 100);

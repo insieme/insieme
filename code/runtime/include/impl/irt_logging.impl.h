@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -113,6 +113,11 @@ void irt_log_init() {
 	irt_log_setting_s("IRT_USE_PAPI", "enabled");
 #else
 	irt_log_setting_s("IRT_USE_PAPI", "disabled");
+#endif
+#ifdef IRT_USE_HWLOC
+	irt_log_setting_s("IRT_USE_HWLOC", "enabled");
+#else
+	irt_log_setting_s("IRT_USE_HWLOC", "disabled");
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_log_setting_s("IRT_ENABLE_INSTRUMENTATION", "enabled");

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -187,7 +187,7 @@ namespace backend {
 		c_ast::CommentPtr convertToComment(const core::NodePtr& node) const;
 
 		const PreProcessorPtr& getPreProcessor() const {
-			assert(preProcessor);
+			assert_true(preProcessor);
 			return preProcessor;
 		}
 
@@ -196,7 +196,7 @@ namespace backend {
 		}
 
 		const PostProcessorPtr& getPostProcessor() const {
-			assert(postProcessor);
+			assert_true(postProcessor);
 			return postProcessor;
 		}
 
@@ -205,7 +205,7 @@ namespace backend {
 		}
 
 		NameManager& getNameManager() const {
-			assert(nameManager);
+			assert_true(nameManager);
 			return *nameManager;
 		}
 
@@ -214,7 +214,7 @@ namespace backend {
 		}
 
 		TypeManager& getTypeManager() const {
-			assert(typeManager);
+			assert_true(typeManager);
 			return *typeManager;
 		}
 
@@ -223,7 +223,7 @@ namespace backend {
 		}
 
 		StmtConverter& getStmtConverter() const {
-			assert(stmtConverter);
+			assert_true(stmtConverter);
 			return *stmtConverter;
 		}
 
@@ -232,7 +232,7 @@ namespace backend {
 		}
 
 		FunctionManager& getFunctionManager() const {
-			assert(functionManager);
+			assert_true(functionManager);
 			return *functionManager;
 		}
 
@@ -245,7 +245,7 @@ namespace backend {
 		}
 
 		const c_ast::SharedCodeFragmentManager& getFragmentManager() const {
-			assert(fragmentManager);
+			assert_true(fragmentManager);
 			return fragmentManager;
 		}
 

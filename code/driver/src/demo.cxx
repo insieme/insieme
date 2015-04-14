@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,7 @@
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/backend/runtime/runtime_backend.h"
-#include "insieme/driver/cmd/options.h"
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
@@ -74,11 +74,12 @@ int main(int argc, char** argv) {
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
 	unsigned unrollingFactor = 1;
-	cmd::Options options = cmd::Options::parse(argc, argv)
+    std::vector<std::string> arguments(argv, argv+argc);
+	cmd::Options options = cmd::Options::parse(arguments)
 		// one extra parameter - unrolling factor, default should be 5
 		("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
 	;
-	if (!options.valid) return (options.help)?0:1;
+	if (!options.valid) return (options.settings.help)?0:1;
 
 
 	// Step 2: load input code
@@ -123,7 +124,7 @@ int main(int argc, char** argv) {
 	cp::Compiler compiler = cp::Compiler::getDefaultC99Compiler();
 	compiler = cp::Compiler::getOptimizedCompiler(compiler);
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
+	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 
 	// done
 	return (success)?0:1;

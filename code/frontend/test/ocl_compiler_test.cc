@@ -51,6 +51,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -61,6 +63,7 @@ namespace core = insieme::core;
 //using namespace insieme::c_info;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
+using namespace insieme::driver;
 
 namespace {
 class OclTestVisitor : public core::IRVisitor<void> {
@@ -80,7 +83,7 @@ public:
     	// check if return type is an ocl vector, and if yes, if it is returned by value
     	if(core::RefTypePtr retTy = dynamic_pointer_cast<const core::RefType>(funTy.getReturnType())) {
     		if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(retTy.getElementType()))
-    			assert(false && "returns vector");
+    			assert_fail() << "returns vector";
     	}
 
 
@@ -128,7 +131,7 @@ public:
                 }
             }
        } else {
-            assert(funcType && "Function has unexpected type");
+            assert_true(funcType) << "Function has unexpected type";
         }
     }
 
@@ -154,12 +157,13 @@ TEST(OclCompilerTest, HelloCLTest) {
 
 	core::NodeManager manager;
 
-    fe::ConversionJob job(CLANG_SRC_DIR "inputs/hello.cl");
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-    job.registerFrontendExtension<fe::extensions::OclKernelExtension>();
+    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = CLANG_SRC_DIR "inputs/hello.cl";
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenclkernel" };
+    cmd::Options options = cmd::Options::parse(argv);
 
     LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-    core::ProgramPtr program = job.execute(manager, false);
+    core::ProgramPtr program = options.job.execute(manager, false);
     LOG(INFO) << "Done.";
 
     core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);

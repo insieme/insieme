@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -52,6 +52,7 @@
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/instantiate.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/transform/ir_cleanup.h"
@@ -71,6 +72,7 @@ namespace backend {
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		// steps.push_back(makePreProcessor<RedundancyElimination>());		// optional - disabled for performance reasons
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
+		steps.push_back(makePreProcessor<RecursiveLambdaInstantiator>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -130,8 +132,8 @@ namespace backend {
 				if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getVectorPointwise())) {
 
 					// get argument and result types!
-					assert(call->getType()->getNodeType() == core::NT_VectorType && "Result should be a vector!");
-					assert(call->getArgument(0)->getType()->getNodeType() == core::NT_VectorType && "Argument should be a vector!");
+					assert_eq(call->getType()->getNodeType(), core::NT_VectorType) << "Result should be a vector!";
+					assert_eq(call->getArgument(0)->getType()->getNodeType(), core::NT_VectorType) << "Argument should be a vector!";
 
 					core::VectorTypePtr argType = static_pointer_cast<const core::VectorType>(call->getArgument(0)->getType());
 					core::VectorTypePtr resType = static_pointer_cast<const core::VectorType>(call->getType());
@@ -140,7 +142,7 @@ namespace backend {
 					core::TypePtr in = argType->getElementType();
 					core::TypePtr out = resType->getElementType();
 
-					assert(resType->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam && "Result should be of fixed size!");
+					assert_eq(resType->getSize()->getNodeType(), core::NT_ConcreteIntTypeParam) << "Result should be of fixed size!";
 					core::ConcreteIntTypeParamPtr size = static_pointer_cast<const core::ConcreteIntTypeParam>(resType->getSize());
 
 					// extract operator
@@ -372,7 +374,7 @@ namespace backend {
 
 			// check whether there is a argument which is a vector but the parameter is not
 			const core::TypePtr& type = call->getFunctionExpr()->getType();
-			assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
+			assert_eq(type->getNodeType(), core::NT_FunctionType) << "Function should be of a function type!";
 			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
 			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
@@ -436,7 +438,7 @@ namespace backend {
 
 				// handle vector->array
 				if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
-					if (!ref) { assert(ref && "Cannot convert implicitly to array value!"); }
+					if (!ref) { assert_true(ref) << "Cannot convert implicitly to array value!"; }
 					// conversion needed
 					newArgs[i] = builder.callExpr(basic.getRefVectorToRefArray(), newArgs[i]);
 					changed = true;
@@ -472,6 +474,44 @@ namespace backend {
 			if (code->getNodeType() != core::NT_LambdaExpr) return code;
 			// use core library utility to fix recursive variable usage
 			return core::transform::correctRecursiveLambdaVariableUsage(manager, code.as<core::LambdaExprPtr>());
+		}).map(code);
+	}
+
+	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
+		// the recursive type instantiator does the magic.
+		// this pass has been implemented as part of the core manipulation utils
+		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
+			// only consider lambdas
+			if (code->getNodeType() != core::NT_LambdaExpr) return code;
+            // get the lambda and check if it contains recursive types
+			core::LambdaExprPtr lambda = code.as<core::LambdaExprPtr>();
+            bool containsRecType = false;
+            visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
+                    if(type.isa<core::RecTypePtr>()) containsRecType=true;
+            });
+            //if we have recurisve types in the lambda we must not use
+            //the instantiator, because it will iterate to infinity.
+            //The name "recurisve lambda instantiator" is used, because
+            //the instantiator is recursive and not the lambda itself!!
+            //FIXME: support for recurisve types in the instantiator
+            if(containsRecType) {
+                return lambda;
+            }
+			// use core library utility to fix types
+			lambda = core::transform::instantiateTypes(lambda, [&](const core::NodePtr& node) {
+                // only check expressions, this check is applied to all subelements
+                if(!node.isa<core::ExpressionPtr>())
+                    return false;
+                const core::ExpressionPtr& expr = node.as<core::ExpressionPtr>();
+                // skip builtins and sizeof literals
+                if(converter.getNodeManager().getLangBasic().isBuiltIn(expr) ||
+                   converter.getFunctionManager().isBuiltIn(expr)) {
+                    return true;
+                }
+                // do not skip any other nodes
+                return false;
+            }).as<core::LambdaExprPtr>();
+			return lambda;
 		}).map(code);
 	}
 

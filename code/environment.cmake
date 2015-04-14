@@ -182,9 +182,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic")
 	#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
-	# add flag allowing arbitrary library ordering (not default in newer distributions)
-	set (CMAKE_CXX_FLAGS "-Wl,--no-as-needed ${CMAKE_CXX_FLAGS}")
-
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")
   

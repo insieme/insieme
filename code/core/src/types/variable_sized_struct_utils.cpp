@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -69,7 +69,7 @@ bool isVariableSized(const TypePtr& cur) {
 }
 
 TypePtr getRepeatedType(const TypePtr& cur) {
-	assert(isVariableSized(cur) && "Only variable sized types contain repeated types.");
+	assert_true(isVariableSized(cur)) << "Only variable sized types contain repeated types.";
 
 	NodeType type = cur->getNodeType();
 	switch(type) {
@@ -92,7 +92,7 @@ TypePtr getRepeatedType(const TypePtr& cur) {
 	default: break;
 	}
 
-	assert(false && "Invalid classification as a variable sized type!");
+	assert_fail() << "Invalid classification as a variable sized type!";
 	return TypePtr();
 }
 

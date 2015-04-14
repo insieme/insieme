@@ -50,7 +50,7 @@
 
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 
 #include "insieme/utils/map_utils.h"
 
@@ -212,7 +212,7 @@ class Converter :  boost::noncopyable {
 	//////////////////////////////////////////////////
 	// IR building and managing tools
 	core::NodeManager& mgr;
-	const core::IRBuilder builder;
+	const core::FrontendIRBuilder builder;
 	const frontend::ir::FrontendIr feIR;
 
 	/**
@@ -240,7 +240,7 @@ public:
 	tu::IRTranslationUnit convert();
 
 	// Getters & Setters
-	const core::IRBuilder& getIRBuilder() const {
+	const core::FrontendIRBuilder& getIRBuilder() const {
 		return builder;
 	}
 	core::NodeManager& getNodeManager() const {
@@ -489,7 +489,7 @@ public:
 	core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 												const core::TypePtr& type, const bool zeroInit) ;
 
-	/** 
+	/**
 	 * extracts a list of statements and converts the scope into an function call
 	 * @param a statement to be extracted
 	 * @param the type the whole thing should return
@@ -497,7 +497,7 @@ public:
 	 * @return a call expression to the generated labda
 	 */
 core::ExpressionPtr createCallExprFromBody(const core::StatementPtr& stmt, const core::TypePtr& retType, bool lazy = false);
-	/** 
+	/**
 	 * extracts a list of statements and converts the scope into an function call
 	 * @param the list of statements to be converted
 	 * @param the type the whole thing should return
@@ -591,7 +591,7 @@ core::ExpressionPtr createCallExprFromBody(const core::StatementPtr& stmt, const
 	 * unstacks last tracked location
 	 */
 	void untrackSourceLocation ();
-	
+
 	/**
 	 *  returns readable location of the last registered source location
 	 */

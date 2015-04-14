@@ -44,6 +44,8 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include "insieme/utils/assert.h"
+
 template<typename T>
 struct id : public std::unary_function<const T&, const T&> {
 	const T& operator()(const T& element) const { return element; }

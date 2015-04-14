@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -250,7 +250,7 @@ namespace automata {
 		 * @param state the new state to be the initial state
 		 */
 		void setInitialState(state_type state) {
-			assert(containsState(state) && "Initial state must by a local state!");
+			assert_true(containsState(state)) << "Initial state must by a local state!";
 			initState = state;
 		}
 
@@ -281,7 +281,7 @@ namespace automata {
 		 */
 		template<typename ... T>
 		void setFinalStates(state_type state, T ... rest) {
-			assert(containsState(state, rest ...) && "Final states have to be part of this automata!");
+			assert_true(containsState(state, rest ...)) << "Final states have to be part of this automata!";
 			finalStates = set::toSet<std::set<state_type>>(state, rest ...);
 		}
 
@@ -291,7 +291,7 @@ namespace automata {
 		 * @param state the new final / accepting state
 		 */
 		void setFinalState(state_type state) {
-			assert(containsState(state) && "Final state should be handled by this automata!");
+			assert_true(containsState(state)) << "Final state should be handled by this automata!";
 			setFinalStates(state);
 		}
 
@@ -325,7 +325,7 @@ namespace automata {
 		 * @param to the sink of the transition
 		 */
 		void addEpsilonTransition(state_type from, state_type to) {
-			assert(containsStates(from ,to) && "From and to states have to be part of this automata!");
+			assert_true(containsStates(from ,to)) << "From and to states have to be part of this automata!";
 			State* source = const_cast<State*>(from);
 			source->transitions.insert(std::make_pair(epsilon, to));
 		}
@@ -338,7 +338,7 @@ namespace automata {
 		 * @param to the sink of the transition
 		 */
 		void addTransition(state_type from, const Pattern& pattern, state_type to) {
-			assert(containsStates(from ,to) && "From and to states have to be part of this automata!");
+			assert_true(containsStates(from ,to)) << "From and to states have to be part of this automata!";
 			// add transition to state
 			State* source = const_cast<State*>(from);
 			source->transitions.insert(std::make_pair(pattern, to));
@@ -575,7 +575,7 @@ namespace automata {
 		 * @param numStates the number of states to be contained
 		 */
 		NFA(unsigned numStates) : initialState(0), transitions(numStates), finalStates(numStates) {
-			assert(numStates > 0 && "NFA must not be empty!");
+			assert_gt(numStates, 0) << "NFA must not be empty!";
 		};
 
 		/**
@@ -596,7 +596,7 @@ namespace automata {
 		 * @param to the sink of the transition
 		 */
 		void addTransition(state_type from, const Pattern& pattern, state_type to) {
-			assert(hasState(from) && hasState(to) && "From and to-state have to be present!");
+			assert_true(hasState(from) && hasState(to)) << "From and to-state have to be present!";
 			// add transition
 			transitions[from].insert(std::make_pair(pattern, to));
 		}
@@ -607,7 +607,7 @@ namespace automata {
 		 * @param state the new initial state
 		 */
 		void setInitialState(state_type state) {
-			assert(hasState(state) && "Initial state has to be present!");
+			assert_true(hasState(state)) << "Initial state has to be present!";
 			initialState = state;
 		}
 
@@ -626,7 +626,7 @@ namespace automata {
 		 * @param state the state to be added
 		 */
 		void addFinalState(state_type state) {
-			assert(hasState(state) && "Final state must be a state of this automata!");
+			assert_true(hasState(state)) << "Final state must be a state of this automata!";
 			finalStates[state] = true;
 		}
 
@@ -637,7 +637,7 @@ namespace automata {
 		 * @return true if so, false otherwise
 		 */
 		bool isFinalState(state_type state) const {
-			assert(hasState(state) && "State not part of this automata!");
+			assert_true(hasState(state)) << "State not part of this automata!";
 			return finalStates[state];
 		}
 

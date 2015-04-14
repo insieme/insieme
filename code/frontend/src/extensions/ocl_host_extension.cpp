@@ -48,6 +48,8 @@
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace fe = insieme::frontend;
 
 using namespace insieme::frontend;
@@ -60,9 +62,20 @@ namespace extensions {
 using namespace insieme::core;
 using namespace insieme::frontend::ocl;
 
-OclHostExtension::OclHostExtension(const std::vector<boost::filesystem::path>& includeDirs)  : includeDirs(includeDirs) {
-
+FrontendExtension::flagHandler OclHostExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //register omp flag
+    optParser("fopencl", "", flagActivated, "OpenCL support");
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        if(!flagActivated)
+            return false;
+        std::cerr << "Warning: OpenCL frontend support still experimental, consider switching to ICL frontend.\n";
+        includeDirs = job.getIncludeDirectories();
+        return true;
+    };
+    return lambda;
 }
+
 
 core::ProgramPtr OclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	NodeManager& mgr = prog->getNodeManager();
@@ -91,7 +104,17 @@ core::ProgramPtr OclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	return prog;
 }
 
-IclHostExtension::IclHostExtension(const std::vector<boost::filesystem::path>& includeDirs) : includeDirs(includeDirs) {
+FrontendExtension::flagHandler IclHostExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //register omp flag
+    optParser("flib-icl", "", flagActivated, "ICL support");
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        if(!flagActivated)
+            return false;
+        includeDirs = job.getIncludeDirectories();
+        return true;
+    };
+    return lambda;
 }
 
 ExpressionPtr IclHostExtension::PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
@@ -106,7 +129,7 @@ ExpressionPtr IclHostExtension::PostVisit(const clang::Expr* expr, const insieme
 
 	core::pattern::TreePattern derefOfIclBuffer = irp::callExpr(pattern::atom(builder.refType(
 																					builder.arrayType(builder.genericType("_icl_buffer")))),
-																					pattern::atom(gen.getRefDeref()), 
+																					pattern::atom(gen.getRefDeref()),
 																					pattern::single(var("buffer", pattern::any)));
 
 

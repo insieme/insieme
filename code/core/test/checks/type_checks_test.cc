@@ -403,6 +403,25 @@ TEST(StructExprTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 }
 
+TEST(UnhandledMemberStructExprTypeCheck, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// conduct checks
+	CheckPtr typeCheck = make_check<StructExprTypeCheck>();
+    core::TypePtr structType = builder.parseType("struct { A a; B b; }");
+
+    // Create a example expressions
+	core::StringValuePtr name = builder.stringValue("x");
+	core::TypePtr typeA = builder.genericType("A");
+	core::ExpressionPtr valueA = builder.literal(typeA, "a");
+    NamedValueList members;
+	members.push_back(builder.namedValue(name, valueA));
+	core::StructExprPtr err = builder.structExpr(structType.as<core::StructTypePtr>(), members);
+	EXPECT_FALSE(check(err, typeCheck).empty());
+	EXPECT_TRUE(check(err, typeCheck).size() == 1);
+}
+
 TEST(MemberAccessElementTypeCheck, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

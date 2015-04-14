@@ -66,7 +66,7 @@ namespace lang {
 
         LANG_EXT_LITERAL(EnumElementAsUInt,      "enum.to.uint",          "('a) -> uint<4>");
 
-        LANG_EXT_DERIVED(EnumElementAsBool,      "('a i) -> bool { return lit(\"enum.to.int\":('a)->int<4>)(i) != 0; }");
+        LANG_EXT_DERIVED_WITH_NAME(EnumElementAsBool, "enum_element_as_bool",     "('a i) -> bool { return lit(\"enum.to.int\":('a)->int<4>)(i) != 0; }");
 
 		LANG_EXT_LITERAL(IntAsEnum,   "int.to.enum",    "(int<4>, type<'a> ) -> 'a");
 		LANG_EXT_LITERAL(UIntAsEnum,  "uint.to.enum",   "(uint<4>, type<'a> ) -> 'a");
@@ -115,7 +115,7 @@ namespace lang {
          * @return TypePtr that contains the enumeration name literal
          */
 		std::string getEnumName(const TypePtr& type) const {
-            assert(isEnumType(type) && "this is no enumeration type");
+            assert_true(isEnumType(type)) << "this is no enumeration type";
             core::GenericTypePtr gt = static_pointer_cast<const core::GenericType>(type);
             return gt->getFamilyName();
 		}

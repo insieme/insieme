@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -77,12 +77,12 @@ namespace arithmetic {
 			numerator = numerator/static_cast<int64_t>(GCD);
 			denominator /= GCD;
 
-			assert(denominator != 0);
+			assert_ne(denominator, 0);
 		}
 	}
 
 	Rational::Rational(int64_t num, uint64_t den) : numerator(num), denominator(den) {
-		assert(den != 0 && "Denominator must be > 0");
+		assert_ne(den, 0) << "Denominator must be > 0";
 		if (numerator == 0) {
 			denominator = 1;
 		} else if (denominator!=1) {
@@ -377,7 +377,7 @@ namespace arithmetic {
 
 	void markAsValueConstructor(const core::ExpressionPtr& expr) {
 		// expression has to be of a function type
-		assert(expr->getType()->getNodeType() == NT_FunctionType && "Non-function expression cannot be a value constructor.");
+		assert_eq(expr->getType()->getNodeType(), NT_FunctionType) << "Non-function expression cannot be a value constructor.";
 
 		expr->attachValue(ValueConstructorTag());
 	}
@@ -506,19 +506,19 @@ namespace arithmetic {
 
 	Formula::Formula(const Product& product, const Rational& coefficient)
 		: terms(toVector(std::make_pair(product, coefficient))) {
-		assert(!coefficient.isZero() && "Coefficient must be != 0!");
+		assert_false(coefficient.isZero()) << "Coefficient must be != 0!";
 	};
 
 	Formula::Formula(const core::VariablePtr& var, int exponent, const Rational& coefficient)
 		: terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
-		assert(exponent != 0 && "Exponent must be != 0!");
-		assert(!coefficient.isZero() && "Coefficient must be != 0!");
+		assert_ne(exponent, 0) << "Exponent must be != 0!";
+		assert_false(coefficient.isZero()) << "Coefficient must be != 0!";
 	};
 
 	Formula::Formula(const Value& value, int exponent, const Rational& coefficient)
 		: terms(toVector(Term(Product(value, exponent), coefficient))) {
-		assert(exponent != 0 && "Exponent must be != 0!");
-		assert(!coefficient.isZero() && "Coefficient must be != 0!");
+		assert_ne(exponent, 0) << "Exponent must be != 0!";
+		assert_false(coefficient.isZero()) << "Coefficient must be != 0!";
 	};
 
 	void Formula::appendValues(ValueSet& set) const {
@@ -559,7 +559,7 @@ namespace arithmetic {
 
 					// invert value
 					auto& terms = value.getTerms();
-					assert(value.getTerms().size() == 1 && "Cannot invert formulas!");
+					assert_eq(value.getTerms().size(), 1) << "Cannot invert formulas!";
 					const Formula::Term& prod = terms[0];
 
 					Product one;
@@ -666,7 +666,7 @@ namespace arithmetic {
 	}
 
 	Formula& Formula::operator/=(const Rational& divisor) {
-		assert(!divisor.isZero() && "Division by 0 detected");
+		assert_false(divisor.isZero()) << "Division by 0 detected";
 		for_each(terms, [&](Term& cur) {
 			cur.second /= divisor;
 		});
@@ -730,12 +730,12 @@ namespace arithmetic {
 	}
 
 	Rational Formula::getConstantValue() const {
-		assert(isConstant());
+		assert_true(isConstant());
 		return (terms.empty())?Rational(0):terms[0].second;
 	}
 
 	int64_t Formula::getIntegerValue() const {
-		assert(isInteger());
+		assert_true(isInteger());
 		return getConstantValue().getNumerator();
 	}
 
@@ -872,7 +872,7 @@ namespace arithmetic {
 
 			BDD(const BDDManagerPtr& manager, const CuddBDD& bdd)
 				: manager(manager), isTrue(bdd == manager->getTrue()), isFalse(bdd == manager->getFalse()), bdd(bdd) {
-				assert(manager->contains(bdd) && "Given BDD not managed by given manager!");
+				assert_true(manager->contains(bdd)) << "Given BDD not managed by given manager!";
 			};
 
 			BDDManagerPtr& getBDDManager() {
@@ -1007,7 +1007,7 @@ namespace arithmetic {
 					Nnv = Cudd_Not(Nnv);
 				}
 
-				assert(manager->getInequalityWithId(N->index) && "Index should be mapped to inequality!");
+				assert_true(manager->getInequalityWithId(N->index)) << "Index should be mapped to inequality!";
 				const Inequality& atom = *manager->getInequalityWithId(N->index);
 
 				// false path
@@ -1362,7 +1362,7 @@ namespace arithmetic {
 				case utils::ConstraintType::GE: return ge; break;
 				case utils::ConstraintType::GT: return ge && !(le && ge); break;
 				}
-				assert(false && "Unsupported constraint type encountered!");
+				assert_fail() << "Unsupported constraint type encountered!";
 				return Constraint::getFalse(manager);
 			}
 
@@ -1385,7 +1385,7 @@ namespace arithmetic {
 				if (bcc.isDisjunction()) {
 					return lhs || rhs;
 				} 
-				assert(false && "Unsupported binary constraint type encountered!");
+				assert_fail() << "Unsupported binary constraint type encountered!";
 				return Constraint::getFalse(manager);
 			}
 		};

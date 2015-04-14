@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -57,7 +57,7 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
                 std::string cname = insieme::core::annotations::getAttachedName(lambdaEx->getLambda());
                 if(!cname.empty()) {
     //std::cout << "Cname: " << cname->getName() << std::endl;
-                    assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+                    assert_eq(checkDuplicates[cname], 0) << "Multiple kernels with the same name not supported";
                     checkDuplicates[cname] = 1;
     //std::cout << "found " << kernelNames;
                     if(ExpressionPtr clKernel = kernelNames[cname]) {

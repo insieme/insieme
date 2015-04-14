@@ -37,9 +37,11 @@
 #include "insieme/frontend/extensions/cpp_refs_extension.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/frontend.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -86,7 +88,7 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insiem
 		core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
 		assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
-		core::IRBuilder builder(func->getNodeManager());
+		core::FrontendIRBuilder builder(func->getNodeManager());
 		const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 		const core::lang::IRppExtensions& ext = func->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 
@@ -181,6 +183,18 @@ insieme::frontend::tu::IRTranslationUnit CppRefsCleanupExtension::IRVisit(insiem
 	}
 	return tu;
 }
+
+FrontendExtension::flagHandler CppRefsCleanupExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    //create lambda
+    auto lambda = [&](const ConversionJob& job) {
+        //check if the default activated plugins have been deactivated manually
+        if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions))
+            return false;
+        return job.isCxx();
+    };
+    return lambda;
+}
+
 
 } // extensions
 } // frontend

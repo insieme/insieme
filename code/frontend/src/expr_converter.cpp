@@ -1666,12 +1666,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitAtomicExpr(const clang::Atomi
 
     switch(operation){
         //c11 atomic operations <stdatomic.h>
-        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_init: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_load: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_store: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_exchange: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_compare_exchange_strong: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_compare_exchange_weak: assert(false && "not implemented");
+        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_init: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_load: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_store: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_exchange: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_compare_exchange_strong: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__c11_atomic_compare_exchange_weak: assert_not_implemented();
 
         case clang::AtomicExpr::AtomicOp::AO__c11_atomic_fetch_add:
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicFetchAndAdd(), ptr, val);
@@ -1685,15 +1685,15 @@ core::ExpressionPtr Converter::ExprConverter::VisitAtomicExpr(const clang::Atomi
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicFetchAndXor(), ptr, val);
 
         //c++11 atomic operations <atomic>
-        case clang::AtomicExpr::AtomicOp::AO__atomic_load: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__atomic_load_n: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__atomic_store: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__atomic_store_n: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__atomic_exchange: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__atomic_exchange_n: assert(false && "not implemented");
+        case clang::AtomicExpr::AtomicOp::AO__atomic_load: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__atomic_load_n: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__atomic_store: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__atomic_store_n: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__atomic_exchange: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__atomic_exchange_n: assert_not_implemented();
 
-        case clang::AtomicExpr::AtomicOp::AO__atomic_compare_exchange: assert(false && "not implemented");
-        case clang::AtomicExpr::AtomicOp::AO__atomic_compare_exchange_n: assert(false && "not implemented");
+        case clang::AtomicExpr::AtomicOp::AO__atomic_compare_exchange: assert_not_implemented();
+        case clang::AtomicExpr::AtomicOp::AO__atomic_compare_exchange_n: assert_not_implemented();
 
         case clang::AtomicExpr::AtomicOp::AO__atomic_fetch_add:
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicFetchAndAdd(), ptr, val);
@@ -1706,7 +1706,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitAtomicExpr(const clang::Atomi
         case clang::AtomicExpr::AtomicOp::AO__atomic_fetch_xor:
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicFetchAndXor(), ptr, val);
 
-        case clang::AtomicExpr::AtomicOp::AO__atomic_fetch_nand: assert(false && "not implemented");
+        case clang::AtomicExpr::AtomicOp::AO__atomic_fetch_nand: assert_not_implemented();
 
         case clang::AtomicExpr::AtomicOp::AO__atomic_add_fetch:
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicAddAndFetch(), ptr, val);
@@ -1718,10 +1718,10 @@ core::ExpressionPtr Converter::ExprConverter::VisitAtomicExpr(const clang::Atomi
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicOrAndFetch(), ptr, val);
         case clang::AtomicExpr::AtomicOp::AO__atomic_xor_fetch:
             return builder.callExpr(val->getType(), mgr.getLangBasic().getAtomicXorAndFetch(), ptr, val);
-        case clang::AtomicExpr::AtomicOp::AO__atomic_nand_fetch: assert(false && "not implemented");
+        case clang::AtomicExpr::AtomicOp::AO__atomic_nand_fetch: assert_not_implemented();
     }
 
-    assert(false);
+    assert_fail();
     return core::ExpressionPtr();
 }
 

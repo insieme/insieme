@@ -158,4 +158,40 @@ void irt_merge(irt_joinable joinable) {
 	}
 }
 
+#if defined(IRT_ENABLE_APP_TIME_ACCOUNTING) && defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+#error IRT_ENABLE_APP_TIME_ACCOUNTING and IRT_ENABLE_REGION_INSTRUMENTATION do not work together
+#endif
+
+double irt_time_wis_get_total() {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	double ret = 0.0;
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		irt_worker *cur = irt_g_workers[i];
+		ret += cur->app_time_total;
+		double ls = cur->app_time_last_start;
+		if(cur->app_time_running) {
+			// add current running time
+			struct timespec ts;
+			clock_gettime(cur->clockid, &ts);
+			ret += (ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0) - cur->app_time_last_start;
+		}
+	}
+	return ret;
+#else
+	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_time_wis_get_total called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0.0;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+}
+
+double irt_time_rts_get_total() {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	struct timespec ts;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+	return (ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0);
+#else
+	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_time_rts_get_total called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0.0;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+}
+
 #endif // ifndef __GUARD_IMPL_IR_INTERFACE_IMPL_H

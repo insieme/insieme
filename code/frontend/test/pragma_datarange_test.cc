@@ -52,12 +52,15 @@
 
 #include "insieme/utils/config.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::annotations;
 using namespace insieme::frontend::conversion;
 
@@ -66,10 +69,11 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 
 	NodeManager manager;
 
-	ConversionSetup setup;
-	setup.frontendExtensionInit();
-
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_datarange.c", setup);
+    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_datarange.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
+    options.job.frontendExtensionInit(options.job);
+    TranslationUnit tu(manager, fileName, options.job);
 
 	EXPECT_NE(tu.pragmas_begin(), tu.pragmas_end());
 /*
@@ -80,7 +84,8 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 
 	LOG(INFO) << "Converting input program '" CLANG_SRC_DIR "/inputs/insieme_datarange.c' to IR...";
 
-	ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_datarange.c").execute(manager);
+    options = cmd::Options::parse(argv);
+	ProgramPtr program = options.job.execute(manager);
 	size_t cnt = 0, cntLoopAnnot = 0;
 
 	auto lookForAnnot = makeLambdaVisitor([&](const NodePtr& node) {

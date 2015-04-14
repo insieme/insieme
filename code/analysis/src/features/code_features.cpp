@@ -344,14 +344,14 @@ namespace {
 					cardinality = cardinality.replace(replacements);
 
 					// now it should be a formula
-					assert(cardinality.isFormula()
-					 	 && "Without variables, the cardinality should be a constant formula!");
+					assert_true(cardinality.isFormula())
+					 	 << "Without variables, the cardinality should be a constant formula!";
 
 
 					// get formula ..
 					core::arithmetic::Formula formula = cardinality.toFormula();
 
-					assert(formula.isConstant() && "Without variables, the formula should be constant!");
+					assert_true(formula.isConstant()) << "Without variables, the formula should be constant!";
 
 					// get number of executions
 					int64_t numExecutions = formula.getConstantValue();
@@ -399,7 +399,7 @@ namespace {
 			case FA_Real: 			return aggregateReal(node, extractor, numFor, numWhile, numRec);
 			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor, numFor, numWhile, numRec);
 			}
-			assert(false && "Invalid mode selected!");
+			assert_fail() << "Invalid mode selected!";
 			return Value();
 		}
 
@@ -637,7 +637,7 @@ namespace {
 					return core::analysis::isCallOf(reference, basic.getVectorRefElem()) ? 1 : 0;
 				}
 
-				assert(target == SCALAR);
+				assert_eq(target, SCALAR);
 
 				return (!(core::analysis::isCallOf(reference, basic.getArrayRefElem1D()) ||
 						  core::analysis::isCallOf(reference, basic.getArrayRefElemND()) ||
@@ -812,7 +812,7 @@ namespace {
 
 	ComposedFeatureSpec::ComposedFeatureSpec(const composingFctTy composingFct, const std::vector<FeaturePtr>& components)
 			: composingFct(composingFct), components(components) {
-		assert(components.size() > 0 && "Composed features cannot have no composing features");
+		assert_gt(components.size(), 0) << "Composed features cannot have no composing features";
 	}
 
 	Value ComposedFeatureSpec::extract(const core::NodePtr& node) const {

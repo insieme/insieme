@@ -1,3 +1,39 @@
+/**
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
 #ifndef __GEM_STDIO_H
 #define __GEM_STDIO_H
 
@@ -49,7 +85,7 @@ int gemfeof(FILE *stream) {
             return 0;
     }
     else {
-        assert(0 && "feof is not supported.");
+        assert_fail() << "feof is not supported.";
         return 1;
     }
 }
@@ -61,7 +97,7 @@ int gemferror(FILE *stream) {
     else if(stream == stdin) 
         return 0;
     else {
-        assert(0 && "ferror is not supported.");
+        assert_fail() << "ferror is not supported.";
         return 1;
     }
 }
@@ -71,7 +107,7 @@ int gemfflush(FILE *stream) {
     if(stream == stdout || stream == stderr) 
         return fflush(stream);
     else {
-        assert(0 && "fflush is not supported.");
+        assert_fail() << "fflush is not supported.";
         return EOF;
     }
 }
@@ -79,12 +115,12 @@ int gemfflush(FILE *stream) {
 /* READING FUNCTIONS */
 
 int gemfscanf(FILE *stream, const char *format, ...) {
-        assert(0 && "fscanf is not supported.");
+        assert_fail() << "fscanf is not supported.";
         return 0;
 }
 
 int gemvfscanf(FILE *stream, const char *format, va_list ap) {
-        assert(0 && "vfscanf is not supported.");
+        assert_fail() << "vfscanf is not supported.";
         return 0;
 }
 
@@ -111,7 +147,7 @@ size_t gemfread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
             return bytes;
         }
         else {
-            assert(0 && "fread is not supported.");
+            assert_fail() << "fread is not supported.";
             return 0; 
         }
 }
@@ -124,7 +160,7 @@ int gemfgetc(FILE *stream) {
 }
 
 char *gemfgets(char *s, int size, FILE *stream) {
-    assert(0 && "fgets is not supported.");
+    assert_fail() << "fgets is not supported.";
     return NULL; 
 }
 
@@ -138,7 +174,7 @@ int getchar(void) {
 }
 
 char *gets(char *s) {
-    assert(0 && "gets is not supported.");
+    assert_fail() << "gets is not supported.";
     return NULL; 
 }
 
@@ -148,7 +184,7 @@ int ungetc(int c, FILE *stream) {
         return c;
     }
     else {
-        assert(0 && "ungetc is not supported.");
+        assert_fail() << "ungetc is not supported.";
         return EOF; 
     }
 }

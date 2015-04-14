@@ -49,7 +49,7 @@ protected:
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
-			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems = core::ExpressionPtr());
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,

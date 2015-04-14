@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,7 +41,11 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
 
-#include <boost/filesystem.hpp> 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
+#include <boost/filesystem.hpp>
+
+using namespace insieme::driver;
 
 namespace insieme {
 namespace frontend {
@@ -76,7 +80,11 @@ namespace frontend {
 		core::IRBuilder builder(mgr);
 
 			std::cout << "testing: " <<  GetParam() << std::endl;
-		auto res = builder.normalize(ConversionJob(GetParam()).execute(mgr));
+		// parse temporary file
+        std::vector<std::string> argv = { "compiler",  GetParam() };
+        cmd::Options options = cmd::Options::parse(argv);
+
+		auto res = builder.normalize(options.job.execute(mgr));
 
 		EXPECT_TRUE ( core::checks::check(res).empty()) << core::checks::check(res);
 	}

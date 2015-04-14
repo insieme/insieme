@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -89,7 +89,7 @@ namespace cilk {
 							auto decl = cur.as<core::DeclarationStmtPtr>();
 
 							core::TypePtr type = decl->getVariable()->getType();
-							assert(type->getNodeType() == core::NT_RefType && "can only handle reference types!");
+							assert_eq(type->getNodeType(), core::NT_RefType) << "can only handle reference types!";
 
 							core::IRBuilder builder(manager);
 
@@ -98,7 +98,7 @@ namespace cilk {
 
 							// assign the value
 							core::ExpressionPtr init = decl->getInitialization();
-							assert(core::analysis::isCallOf(init, manager.getLangBasic().getRefVar()));
+							assert_true(core::analysis::isCallOf(init, manager.getLangBasic().getRefVar()));
 							init = init.as<core::CallExprPtr>()->getArgument(0);
 							newStmts.push_back(builder.parallel(builder.assign(decl.getVariable(), init),1));
 

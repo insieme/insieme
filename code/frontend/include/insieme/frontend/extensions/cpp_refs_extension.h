@@ -43,11 +43,13 @@ namespace frontend {
 namespace extensions {
 
 /**
- * since cpp refs are pure left side values, we can not determine when to return a ccp ref or not, 
+ * since cpp refs are pure left side values, we can not determine when to return a ccp ref or not,
  * The Return stmt lacks of the information to decide, so we just return.
  * here is the place to fix the right return value
  */
 class CppRefsCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
+    public:
+    FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
 	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 

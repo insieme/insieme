@@ -144,7 +144,7 @@ core::TypePtr  VariadicArgumentsExtension::PostVisit(const clang::QualType& type
 			core::IRBuilder builder = convFact.getIRBuilder();
 
 			auto irFunType = irType.as<core::FunctionTypePtr>();
-			assert(irFunType && "Type is not a FuntionType");
+			assert_true(irFunType) << "Type is not a FuntionType";
 
 			auto parameterTypes = irFunType->getParameterTypeList();
 
@@ -193,7 +193,7 @@ insieme::core::ExpressionPtr VariadicArgumentsExtension::FuncDeclPostVisit(const
 			auto funcTy = fe->getType();
 			auto lambda = builder.lambdaExpr(funcTy.as<core::FunctionTypePtr>(), params, body.as<core::CompoundStmtPtr>());
 
-			assert(lambda);
+			assert_true(lambda);
 			assert(lambda->getType() == symb->getType());
 
 			convFact.getIRTranslationUnit().replaceFunction(symb.as<core::LiteralPtr>(), lambda);

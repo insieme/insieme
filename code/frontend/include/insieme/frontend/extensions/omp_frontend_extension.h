@@ -36,11 +36,7 @@
 
 #include "insieme/frontend/extensions/frontend_extension.h"
 
-#include "insieme/frontend/pragma/matcher.h"
-
 using namespace insieme::frontend;
-using namespace insieme::frontend::pragma::tok;
-using namespace insieme::frontend::pragma;
 
 namespace insieme {
 namespace frontend {
@@ -48,8 +44,10 @@ namespace extensions {
 
 class OmpFrontendExtension : public FrontendExtension {
     std::list<core::ExpressionPtr> thread_privates;
+    bool flagActivated;
 public:
     OmpFrontendExtension();
+    virtual flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
 	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -271,6 +271,25 @@ namespace measure {
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
 			const std::map<string, string>& env = std::map<string, string>());
 
+//	/**
+//	 * Measures a list of metrics for a binary for a given number of times.
+//	 *
+//	 * @param stmt the statement to be converted into a binary and executed.
+//	 * @param metrics the metrics to be collected
+//	 * @param numRuns the number of runs to be conducted
+//	 * @param executor the executor to be used for running the program
+//	 * @param env the set of environment variables to be set up for the experiment run
+//	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
+//	 * 		values data indexed by the requested metrics.
+//	 * @throws a MeasureException if something goes wrong
+//	 */
+//	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measureAll(
+//					const core::StatementAddress& stmt,
+//					const vector<MetricPtr>& metrices,
+//					unsigned numRuns, const ExecutorPtr& executor,
+//					const utils::compiler::Compiler& compiler,
+//					const std::map<string, string>& env);
+
 
 	// --------------------------------------------------------------------------------------------
 	//										Building
@@ -298,6 +317,16 @@ namespace measure {
 	 */
 	std::string buildBinary(const std::map<core::StatementAddress, region_id>& regions,
 			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+
+	/**
+	 * Creates an instrumented binary based on all regions found within the given region using the given compiler.
+	 *
+	 * @param region the region within which to instrument regions.
+	 * @param compiler the compiler to be used to build the resulting binary. If the build fails,
+	 * 			an empty string will be returned.
+	 * @return the path to the produced binary
+	 */
+	std::string buildBinaryAll(const core::StatementAddress& region, const utils::compiler::Compiler& compiler);
 
 
 	// --------------------------------------------------------------------------------------------

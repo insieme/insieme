@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,7 +55,7 @@ namespace datapath {
 
 	DataPath DataPath::member(const ExpressionPtr& member) const {
 		auto& mgr = path.getNodeManager(); auto& basic = mgr.getLangBasic();
-		assert(basic.isIdentifier(member->getType()) && "Member identifier has to be an identifier!");
+		assert_true(basic.isIdentifier(member->getType())) << "Member identifier has to be an identifier!";
 		return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathMember(), path, member));
 	}
 
@@ -65,7 +65,7 @@ namespace datapath {
 
 	DataPath DataPath::element(const ExpressionPtr& element) const {
 		auto& mgr = path.getNodeManager(); auto& basic = mgr.getLangBasic();
-		assert(basic.isUnsignedInt(element->getType()) && "Index has to be an unsigned integer!");
+		assert_true(basic.isUnsignedInt(element->getType())) << "Index has to be an unsigned integer!";
 		return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathElement(), path, element));
 	}
 
@@ -75,7 +75,7 @@ namespace datapath {
 
 	DataPath DataPath::component(const LiteralPtr& component) const {
 		auto& mgr = path.getNodeManager(); auto& basic = mgr.getLangBasic();
-		assert(basic.isUnsignedInt(component->getType()) && "Index has to be an unsigned integer!");
+		assert_true(basic.isUnsignedInt(component->getType())) << "Index has to be an unsigned integer!";
 		return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathComponent(), path, component));
 	}
 
@@ -144,7 +144,7 @@ namespace datapath {
 				}
 
 				LOG(FATAL) << "Invalid data path encountered: " << core::printer::PrettyPrinter(call);
-				assert(false && "Invalid Data Path encountered!");
+				assert_fail() << "Invalid Data Path encountered!";
 
 			}
 

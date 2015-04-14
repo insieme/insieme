@@ -47,20 +47,24 @@ namespace extensions {
 
 class OclKernelExtension : public FrontendExtension {
 public:
-	OclKernelExtension() : FrontendExtension() {
+	OclKernelExtension() : FrontendExtension(), flagActivated(false) {
 		injectedHeaders.push_back("./ocl_device.h");
 	}
 
+    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+
 private:
+    bool flagActivated;
+
 	core::ExpressionPtr 				 Visit(const clang::Expr* expr, conversion::Converter& convFact);
 
     core::TypePtr 						 Visit(const clang::QualType& type, conversion::Converter& convFact);
 
-    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, 
+    virtual insieme::core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr,
 															insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::TypePtr 		 TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type, 
+    virtual insieme::core::TypePtr 		 TypeDeclPostVisit(const clang::TypeDecl* decl, core::TypePtr type,
 														   insieme::frontend::conversion::Converter& convFact);
-    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, 
+    virtual insieme::core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr,
 														   insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
     virtual core::ProgramPtr 			 IRVisit(core::ProgramPtr& prog);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -84,7 +84,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -103,7 +103,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -122,7 +122,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -141,7 +141,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -160,7 +160,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -179,7 +179,7 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 2u);
+			assert_eq(args.size(), 2u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
 			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
 			assert(a && b);
@@ -200,9 +200,9 @@ namespace irg {
 		impl::NodeMatchExpressionPtr matchExpression = std::make_shared<impl::expression::Combine<ptr_target>>(
 					toVector(a), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
 
-			assert(args.size() == 1u);
+			assert_eq(args.size(), 1u);
 			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
-			assert(a);
+			assert_true(a);
 
 			// simplify
 			return transform::simplify(a->getNodeManager(), a.as<NodePtr>());

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,6 +61,7 @@ namespace types {
 		TypePtr int2 = basic.getInt2();
 		TypePtr int4 = basic.getInt4();
 		TypePtr int8 = basic.getInt8();
+		TypePtr int16 = basic.getInt16();
 		TypePtr intI = basic.getIntInf();
 		TypePtr intG = basic.getIntGen();
 
@@ -68,6 +69,7 @@ namespace types {
 		TypePtr uint2 = basic.getUInt2();
 		TypePtr uint4 = basic.getUInt4();
 		TypePtr uint8 = basic.getUInt8();
+		TypePtr uint16 = basic.getUInt16();
 		TypePtr uintI = basic.getUIntInf();
 		TypePtr uintG = basic.getUIntGen();
 
@@ -75,14 +77,16 @@ namespace types {
 		EXPECT_EQ(toSet<TypeSet>(int2), getSuperTypes(int1));
 		EXPECT_EQ(toSet<TypeSet>(int4), getSuperTypes(int2));
 		EXPECT_EQ(toSet<TypeSet>(int8), getSuperTypes(int4));
-		EXPECT_EQ(toSet<TypeSet>(intI), getSuperTypes(int8));
+		EXPECT_EQ(toSet<TypeSet>(int16), getSuperTypes(int8));
+		EXPECT_EQ(toSet<TypeSet>(intI), getSuperTypes(int16));
 		EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(intI));
 		EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(intG));
 
 		EXPECT_EQ(toSet<TypeSet>(int2, uint2), getSuperTypes(uint1));
 		EXPECT_EQ(toSet<TypeSet>(int4, uint4), getSuperTypes(uint2));
 		EXPECT_EQ(toSet<TypeSet>(int8, uint8), getSuperTypes(uint4));
-		EXPECT_EQ(toSet<TypeSet>(uintI), getSuperTypes(uint8));
+		EXPECT_EQ(toSet<TypeSet>(int16, uint16), getSuperTypes(uint8));
+		EXPECT_EQ(toSet<TypeSet>(uintI), getSuperTypes(uint16));
 		EXPECT_EQ(toSet<TypeSet>(intI), getSuperTypes(uintI));
 		EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(intG));
 

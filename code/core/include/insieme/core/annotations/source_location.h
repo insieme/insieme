@@ -292,7 +292,7 @@ namespace annotations {
 		 * Obtains the file this location is referencing.
 		 */
 		const string& getFile() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return file->getValue();
 		}
 
@@ -300,7 +300,7 @@ namespace annotations {
 		 * Obtains the string value reference stored for referencing the source file.
 		 */
 		const StringValuePtr& getFileValue() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return file;
 		}
 
@@ -308,7 +308,7 @@ namespace annotations {
 		 * Obtains the start position referenced by this location.
 		 */
 		const TextPosition& getStart() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return start;
 		}
 
@@ -316,7 +316,7 @@ namespace annotations {
 		 * Obtains the end position referenced by this location.
 		 */
 		const TextPosition& getEnd() const {
-			assert(!isShared());
+			assert_false(isShared());
 			return end;
 		}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -68,7 +68,7 @@ namespace driver {
 	}
 
 	frontend::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file) {
-		assert(isInsiemeLib(file));
+		assert_true(isInsiemeLib(file));
 
 		// open file
 		std::ifstream in(file.string(), std::ios::in | std::ios::binary);
@@ -89,7 +89,7 @@ namespace driver {
 		out << MAGIC_NUMBER;		// start with magic number
 		frontend::tu::dump(out, unit);	// dump the rest
 
-		assert(boost::filesystem::exists(file));
+		assert_true(boost::filesystem::exists(file));
 	}
 
 } // end namespace driver

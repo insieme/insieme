@@ -66,12 +66,15 @@ class NodeReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const PointerMap<NodePtr, NodePtr>& replacements;
 	const bool includesTypes;
+	const bool limitScope;
+	const std::function<bool(const NodePtr&)> skip;
 
 public:
 
-	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements)
+	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope, std::function<bool(const NodePtr&)> skip = [](const NodePtr& node) { return false; })
 		: manager(manager), replacements(replacements),
-		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })) { }
+		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })),
+		  limitScope(limitScope), skip(skip) { }
 
 private:
 
@@ -79,6 +82,9 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+	    // check if we shouldn't modify this node
+	    if(skip(ptr)) return ptr;
+
 		// check whether the element has been found
 		auto pos = replacements.find(ptr);
 		if(pos != replacements.end()) {
@@ -89,6 +95,12 @@ private:
 		// the recursion can be pruned (since types only have other types as
 		// sub-nodes)
 		if (!includesTypes && ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// handle scope limiting elements
+		if (limitScope && ptr->getNodeType() == NT_LambdaExpr) {
+			// enters a new scope => variable will no longer occur
 			return ptr;
 		}
 
@@ -118,12 +130,13 @@ class SingleNodeReplacer : public CachedNodeMapping {
 	const NodePtr& replacement;
 	const bool visitTypes;
 	const bool limitScope;
+	const std::function<bool(const NodePtr&)> skip;
 
 public:
 
-	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool limit)
+	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool limit, std::function<bool(const NodePtr&)> skip = [](const NodePtr& node) { return false; })
 		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type ||
-				target->getNodeCategory() == NC_IntTypeParam || target->getNodeCategory() == NC_Support), limitScope(limit){ }
+				target->getNodeCategory() == NC_IntTypeParam || target->getNodeCategory() == NC_Support), limitScope(limit), skip(skip) { }
 
 private:
 
@@ -131,6 +144,8 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+	    // check if we shouldn't modify this node
+	    if(skip(ptr)) return ptr;
 
 		// handle replacement
 		if (*ptr == *target) {
@@ -170,17 +185,21 @@ class VariableReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const VariablePtr variable;
 	const NodePtr replacement;
+	const std::function<bool(const NodePtr&)> skip;
 
 public:
 
-	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement)
-		: manager(manager), variable(variable), replacement(replacement) { }
+	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement, std::function<bool(const NodePtr&)> skip = [](const NodePtr& node) { return false; })
+		: manager(manager), variable(variable), replacement(replacement), skip(skip) { }
 
 private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+	    // check if we shouldn't modify this node
+	    if(skip(ptr)) return ptr;
+
 		// check whether the element has been found
 		if (*ptr == *variable) {
 			return replacement;
@@ -512,7 +531,7 @@ private:
 	}
 
     CallExprPtr handleCallToLamba(const CallExprPtr& call) {
-		assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
+		assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
 
 		const LambdaExprPtr& lambda = call->getFunctionExpr().as<LambdaExprPtr>();
 		const ExpressionList& args = call->getArguments();
@@ -563,7 +582,7 @@ private:
 				manager.getLangBasic().getUnit() :
 				getSmallestCommonSuperType(returnTypes);
 
-		assert(returnType && "Cannot find a common supertype of all return statements");
+		assert_true(returnType) << "Cannot find a common supertype of all return statements";
 
 		// construct new function type
 		FunctionTypePtr funType = builder.functionType(extractTypes(newParams), returnType);
@@ -640,11 +659,11 @@ private:
 			}
 
 			// check return type
-			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
+			assert_eq(call->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
 
 			// extract function type
 			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
-			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
+			assert_eq(funType->getParameterTypes().size(), call->getArguments().size()) << "Invalid number of arguments!";
 /*
 			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
 				std::cout << "ARRR " << call << std::endl;
@@ -752,7 +771,7 @@ private:
 
 		LOG(ERROR) << fun;
 		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
-		assert(false && "Unsupported call-target encountered - sorry!");
+		assert_fail() << "Unsupported call-target encountered - sorry!";
 		return call;
 	}
 
@@ -761,7 +780,7 @@ private:
 		auto fun = call->getFunctionExpr();
 
 		// should only be called for built-in functions
-		assert(manager.getLangBasic().isBuiltIn(fun));
+		assert_true(manager.getLangBasic().isBuiltIn(fun));
 
 		// use type inference for the return type
 		if(manager.getLangBasic().isCompositeRefElem(fun)) {
@@ -856,7 +875,7 @@ private:
 				manager.getLangBasic().getUnit() :
 				getSmallestCommonSuperType(returnTypes);
 
-		assert(callTy && "Cannot find a common supertype of all return statements");
+		assert_true(callTy) << "Cannot find a common supertype of all return statements";
 
 		// assemble new lambda
 		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
@@ -875,7 +894,7 @@ private:
 		IRBuilder builder(manager);
 
 		// only supported for function types
-		assert(literal->getType()->getNodeType() == NT_FunctionType);
+		assert_eq(literal->getType()->getNodeType(), NT_FunctionType);
 
 		// assemble new argument types
 		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
@@ -934,7 +953,7 @@ public:
 
 	TypeVariableReplacer(NodeManager& manager, const SubstitutionOpt& substitution)
 		: manager(manager), substitution(substitution) {
-		assert(substitution && !substitution->empty() && "Substitution must not be empty!");
+		assert_true(substitution && !substitution->empty()) << "Substitution must not be empty!";
 	}
 
 private:
@@ -1008,7 +1027,7 @@ private:
 };
 
 
-class NodeAddressReplacer : public NodeMapping {
+class NodeAddressReplacer : public SimpleNodeMapping {
 	const unsigned indexToReplace;
 	const NodePtr& replacement;
 
@@ -1042,7 +1061,7 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper) {
+NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, SimpleNodeMapping& mapper) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
@@ -1063,7 +1082,8 @@ NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper
 }
 
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements,
+                   bool limitScope, std::function<bool(const NodePtr&)> skip) {
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
@@ -1073,36 +1093,38 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replace
 	// handle single element case
 	if (replacements.size() == 1) {
 		auto pair = *replacements.begin();
-		return replaceAll(mgr, root, pair.first, pair.second, limitScope);
+		return replaceAll(mgr, root, pair.first, pair.second, limitScope, skip);
 	}
 
 	// handle entire map
-	auto mapper = ::NodeReplacer(mgr, replacements);
+	auto mapper = ::NodeReplacer(mgr, replacements, limitScope, skip);
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace,
+                   const NodePtr& replacement, bool limitScope, std::function<bool(const NodePtr&)> skip) {
 
 	// check whether there is something to do
 	if (*toReplace == *replacement) return mgr.get(root);
 
 	if (limitScope && toReplace->getNodeType() == NT_Variable) {
-		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement);
+		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement, true, skip);
 	}
 
-	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope);
+	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope, skip);
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace,
+                   const NodePtr& replacement, bool limitScope, std::function<bool(const NodePtr&)> skip) {
 	// check whether there is something to do
 	if (*toReplace == *replacement) return mgr.get(root);
 
 	if(limitScope) {
-		auto mapper = ::VariableReplacer(mgr, toReplace, replacement);
+		auto mapper = ::VariableReplacer(mgr, toReplace, replacement, skip);
 		return applyReplacer(mgr, root, mapper);
 	} else {
-		auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope);
+		auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope, skip);
 		return applyReplacer(mgr, root, mapper);
 	}
 }
@@ -1151,7 +1173,7 @@ namespace {
 		const ExpressionList args = call->getArguments();
 
 		// check whether the function type has been preserved
-		assert(fun->getType()->getNodeType() == NT_FunctionType && "Call is no longer targeting function after replacement!");
+		assert_eq(fun->getType()->getNodeType(), NT_FunctionType) << "Call is no longer targeting function after replacement!";
 
 		FunctionTypePtr funType = fun->getType().as<FunctionTypePtr>();
 
@@ -1433,7 +1455,7 @@ NodePtr fixInterfaces(NodeManager& mgr, NodePtr root) {
 }
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
-	assert(root && "Root must not be a null pointer!");
+	assert_true(root) << "Root must not be a null pointer!";
 
 	// check whether there is something to do
 	if (!substitution || substitution->empty()) {
@@ -1450,7 +1472,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 	typedef std::pair<NodeAddress, NodePtr> Replacement;
 
 	// check preconditions
-	assert(!replacements.empty() && "Replacements must not be empty!");
+	assert_false(replacements.empty()) << "Replacements must not be empty!";
 
 	assert(all(replacements, [&](const Replacement& cur) {
 		return cur.first.isValid() && cur.second;
@@ -1476,7 +1498,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 }
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
-	assert( toReplace.isValid() && "Invalid node address provided!");
+	assert_true(toReplace.isValid()) << "Invalid node address provided!";
 
 	// short-cut for replacing the root
 	if (toReplace.isRoot()) return replacement;

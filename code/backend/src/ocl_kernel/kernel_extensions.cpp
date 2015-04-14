@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -145,7 +145,7 @@ namespace ocl_kernel{
 		case GLOBAL: return getGlobalType(type);
 		case CONSTANT: return getConstType(type);
 		}
-		assert(false && "Unsupported address space encountered!");
+		assert_fail() << "Unsupported address space encountered!";
 		return core::TypePtr();
 	}
 
@@ -165,23 +165,23 @@ namespace ocl_kernel{
 
 	const core::LiteralPtr& Extensions::getWrapper(AddressSpace space) const {
 		switch(space) {
-		case PRIVATE: assert(false && "Not supported!");
+		case PRIVATE: assert_fail() << "Not supported!";
 		case LOCAL: return wrapLocal;
 		case GLOBAL: return wrapGlobal;
 		case CONSTANT: return wrapConst;
 		}
-		assert(false && "Unsupported address space encountered!");
+		assert_fail() << "Unsupported address space encountered!";
 		return wrapGlobal;
 	}
 
 	const core::LiteralPtr& Extensions::getUnWrapper(AddressSpace space) const {
 		switch(space) {
-		case PRIVATE: assert(false && "Not supported!");
+		case PRIVATE: assert_fail() << "Not supported!";
 		case LOCAL: return unwrapLocal;
 		case GLOBAL: return unwrapGlobal;
 		case CONSTANT: return unwrapConst;
 		}
-		assert(false && "Unsupported address space encountered!");
+		assert_fail() << "Unsupported address space encountered!";
 		return unwrapGlobal;
 	}
 
@@ -235,7 +235,7 @@ namespace ocl_kernel{
 			return value;
 		}
 
-		assert(isWrapperType(addressSpace, value->getType()));
+		assert_true(isWrapperType(addressSpace, value->getType()));
 
 		core::IRBuilder builder(value->getNodeManager());
 

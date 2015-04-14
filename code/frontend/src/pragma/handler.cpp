@@ -61,12 +61,12 @@ namespace frontend {
 namespace pragma {
 
 void Pragma::setStatement(clang::Stmt const* stmt) {
-	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
+	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
 	mTargetNode = stmt;
 }
 
 void Pragma::setDecl(clang::Decl const* decl) {
-	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
+	assert_true(mTargetNode.isNull()) << "Pragma already associated with an AST node";
 	mTargetNode = decl;
 }
 
@@ -116,13 +116,9 @@ stmtutils::StmtWrapper attachPragma(    const stmtutils::StmtWrapper& 			node,
     stmtutils::StmtWrapper ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::StmtMap::value_type& curr) {
-			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
-				ret = pragma->attachTo(node, fact);
-				return;
-             } else if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-                 ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-                 return;
-             }
+			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
+				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+			}
 	});
 
 	return ret;
@@ -142,13 +138,9 @@ stmtutils::StmtWrapper attachPragma(const stmtutils::StmtWrapper& 			node,
     stmtutils::StmtWrapper ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::DeclMap::value_type& curr) {
-			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
-				ret = pragma->attachTo(node, fact);
-				return;
-             } else if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-                 ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-                 return;
-             }
+			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
+				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+			}
 	});
 
 	return ret;

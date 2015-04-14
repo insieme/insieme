@@ -82,7 +82,7 @@ namespace ocl_kernel {
 			}
 
 			BaseAnnotationPtr&& annotations = lambda->getAnnotation(BaseAnnotation::KEY);
-			assert(annotations && "BaseAnnotation is empty");
+			assert_true(annotations) << "BaseAnnotation is empty";
 
 			return any(annotations->getAnnotationList(), [](const BaseAnnotation::SubAnnotationPtr& cur) {
 				return dynamic_pointer_cast<KernelFctAnnotation>(cur);
@@ -461,12 +461,12 @@ namespace {
 					if (core::analysis::isCallOf(fun, extensions.kernelWrapper)) {
 						// ... drop final two arguments
 						const core::ExpressionList& args = call->getArguments();
-						assert(args.size() >= 2 && "Call should have 2 or more arguments");
+						assert_ge(args.size(), 2) << "Call should have 2 or more arguments";
 						core::ExpressionList newArgs = core::ExpressionList(args.begin(), args.end()-2);
 
 						core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 						const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
-						assert(paramTypes.size() == newArgs.size());
+						assert_eq(paramTypes.size(), newArgs.size());
 
 						// add type wrappers where necessary for the parameters of the kernel
 						for(std::size_t i = 0; i < paramTypes.size(); i++) {
@@ -529,7 +529,7 @@ namespace {
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
                         core::VariablePtr var = cur.second.as<core::VariablePtr>();
-						if(core::annotations::hasNameAttached(cur.first)) {
+						if(core::annotations::hasAttachedName(cur.first)) {
 							core::annotations::attachName(var, core::annotations::getAttachedName(cur.first));
 						}
 						auto pos = varMap.find(var);
@@ -641,7 +641,7 @@ namespace {
 
 				for_each(params, [&](core::VariablePtr& cur) {
 					core::VariablePtr res = builder.variable(extensions.getType(varMap[cur], cur->getType()), cur->getId());
-					if(core::annotations::hasNameAttached(cur)) {
+					if(core::annotations::hasAttachedName(cur)) {
                         core::annotations::attachName(res, core::annotations::getAttachedName(cur));
 					}
 					cur = res;
@@ -653,7 +653,7 @@ namespace {
 				core::LambdaExprPtr newKernel = builder.lambdaExpr(kernelType, params, core);
 
 
-				if (core::annotations::hasNameAttached(kernel->getLambda())) {
+				if (core::annotations::hasAttachedName(kernel->getLambda())) {
 					auto name = core::annotations::getAttachedName(kernel->getLambda());
                     core::annotations::attachName(newKernel->getLambda(),name);
                 }
@@ -663,7 +663,7 @@ namespace {
 				// dump the kernel if outFilePath is set
 				if(outFilePath.size() > 0) {
 					std::ofstream out(outFilePath.c_str());
-					assert(out.is_open() && "Cannot open file to write binary dump of kernel");
+					assert_true(out.is_open()) << "Cannot open file to write binary dump of kernel";
 
 					core::dump::binary::dumpIR(out, res);
 
@@ -673,7 +673,7 @@ namespace {
 				LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
 				LOG(INFO) << "Errors After Kernel preprocess: " << core::checks::check(newKernel, core::checks::getFullCheck());
 				auto err = core::checks::check(newKernel, core::checks::getFullCheck());;
-				assert(err.empty() && "YEAHHH... You broke the OpenCL Backend!!!");
+				assert_true(err.empty()) << "YEAHHH... You broke the OpenCL Backend!!!";
 				return res;
 			}
 		};

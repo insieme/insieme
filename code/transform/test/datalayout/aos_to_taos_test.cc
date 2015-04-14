@@ -350,7 +350,7 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(61, numberOfCompoundStmts(code));
+	EXPECT_EQ(77, numberOfCompoundStmts(code));
 	EXPECT_EQ(6, countMarshalledAccesses(code));
 	EXPECT_EQ(0, countMarshalledAssigns(code));
 }
@@ -391,14 +391,14 @@ let fun002 = fun(ref<array<type001,1>> v193, ref<array<real<4>,1>> v2, uint<8> v
 
 let fun003 = fun(ref<array<real<4>,1>> v1, ref<array<type001,1>> v192, uint<8> v3, vector<uint<8>,3> v4, vector<uint<8>,3> v5) -> unit {
     parallel(job([vector.reduction(v5, 1u, uint.mul)-vector.reduction(v5, 1u, uint.mul)]){
-        default: bind(){fun002(v192, v1, v3, v5, v4)}
+        bind(){fun002(v192, v1, v3, v5, v4)}
     });
 };
 
 let fun004 = fun(ref<array<type001,1>> v191, ref<array<real<4>,1>> v2, uint<8> v3, vector<uint<8>,3> v4, vector<uint<8>,3> v5) -> unit {
     decl vector<uint<8>,3> v6 = vector.pointwise(uint.div)(v4, v5);
     parallel(job([vector.reduction(v6, 1u, uint.mul)-vector.reduction(v6, 1u, uint.mul)]){
-        default: bind(){fun003(v2, v191, v3, v5, v4)}
+        bind(){fun003(v2, v191, v3, v5, v4)}
     });
      *v191&[0];
 };

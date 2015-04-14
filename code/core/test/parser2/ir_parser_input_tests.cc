@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -69,6 +69,7 @@ namespace parser {
 	TEST_P(IRParserTest, ReadFileTest) {
 
 		string file = ROOT_DIR + string(GetParam());
+        std::cout << "Testing: "<< GetParam() << std::endl;
 
 		SCOPED_TRACE(file);
 
@@ -86,6 +87,7 @@ namespace parser {
 
 		// it should have produced a result
 		ASSERT_TRUE(res);
+        //dumpColor(res);
 
 		// run semantic checks on files
 		auto msg = checks::check(res);
@@ -101,7 +103,7 @@ namespace parser {
 		vector<string> res;
 
 		fs::path root(ROOT_DIR);
-		assert(fs::is_directory(root));
+		assert_true(fs::is_directory(root));
 
 		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 			fs::path file = it->path();

@@ -98,7 +98,7 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 
 	/*
 	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
-	 * it's value is returned, otherwise an assertion is raised
+	 * its value is returned, otherwise an assertion is raised
 	 * @param
 	 * call A CallExprPtr with an integer literal as first argument
 	 * @return
@@ -106,7 +106,7 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 	 */
 	size_t extractIndexFromArg(CallExprPtr call) const {
 		ExpressionList args = call->getArguments();
-		assert(args.size() > 0 && "Call to opencl get id function must have one argument");
+		assert_gt(args.size(), 0) << "Call to opencl get id function must have one argument";
 		size_t retval = 0;
 
 		// try to read literal
@@ -120,7 +120,7 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 		if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
 			retval = dim->getValueAs<size_t>();
 
-		assert(retval <= 2 && "Argument of opencl get id function must be a literal between 0 an 2");
+		assert_le(retval, 2) << "Argument of opencl get id function must be a literal between 0 an 2";
 		return retval;
 	}
 
@@ -213,7 +213,7 @@ public:
 
 				if(isInductionVar(rhs)) {// an induction variable is assigned to another variable. Use the induction variable instead
 					replacements[lhs] = rhs;
-					// remove variable from chache since it's mapping has been changed now
+					// remove variable from chache since its mapping has been changed now
 					return builder.getNoOp();
 				}
 			}

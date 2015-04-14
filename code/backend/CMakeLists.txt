@@ -42,6 +42,7 @@ foreach ( case_file ${test_cases})
 	add_dependencies(${ut_prefix} ${case_name})
 
 	target_link_libraries(${case_name} insieme_core)
+	target_link_libraries(${case_name} insieme_driver)
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)

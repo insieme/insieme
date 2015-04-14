@@ -139,7 +139,7 @@ public:
 		VLOG(2) << declMap;
 		
 		core::ExpressionPtr topLevelTask = taskCache[topLevel];
-		assert(topLevelTask);
+		assert_true(topLevelTask);
 		bodyStmts.push_back(topLevelTask);
 
 		core::ExpressionPtr topLevelTaskExpr = irBuilder.createCallExprFromBody(irBuilder.compoundStmt(bodyStmts), irBuilder.getLangBasic().getUnit(), /*lazy=*/false);

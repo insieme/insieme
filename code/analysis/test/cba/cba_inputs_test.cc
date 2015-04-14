@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,6 +55,8 @@
 
 #include "insieme/analysis/cba/analysis/references.h"
 #include "insieme/analysis/cba/analysis/arithmetic.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "cba_test.inc.h"
 
@@ -107,10 +109,9 @@ namespace cba {
 
 		// load file using the frontend
 		NodeManager mgr;
-		fe::ConversionJob job(file);
-		job.setOption(fe::ConversionJob::Cilk);
-		job.setOption(fe::ConversionJob::OpenMP);
-		auto prog = job.execute(mgr);
+        std::vector<std::string> argv = {"compiler", file, "-fopenmp", "-fcilk"};
+        insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(argv);
+		auto prog = options.job.execute(mgr);
 
 		// running semantic checks
 		auto res = core::checks::check(prog);
@@ -246,7 +247,7 @@ namespace cba {
 		vector<string> res;
 
 		fs::path root(ROOT_DIR);
-		assert(fs::is_directory(root));
+		assert_true(fs::is_directory(root));
 
 		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
 			fs::path file = it->path();

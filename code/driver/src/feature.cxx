@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,7 @@
 
 #include "insieme/frontend/frontend.h"
 
-#include "insieme/driver/cmd/options.h"
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 	/**
 	 * This executable is accepting some program code and extracting a set of
@@ -118,8 +118,9 @@
 		cout << " --- Insieme Code Feature Extractor ---- \n";
 
 		// process handle command line arguments
-		cmd::Options options = cmd::Options::parse(argc, argv);
-		if (!options.valid) return (options.help)?0:1;
+        std::vector<std::string> arguments(argv, argv+argc);
+        cmd::Options options = cmd::Options::parse(arguments);
+		if (!options.valid) return (options.settings.help)?0:1;
 
 
 		// loading features

@@ -87,6 +87,13 @@ struct _irt_worker {
 	irt_work_item* share_stack_wi;
 #endif
 
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	clockid_t clockid;
+	double app_time_total;
+	double app_time_last_start;
+	bool app_time_running;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;
 #endif

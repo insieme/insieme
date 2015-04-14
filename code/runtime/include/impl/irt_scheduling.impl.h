@@ -40,6 +40,7 @@
 #include "irt_scheduling.h"
 #include "utils/timing.h"
 #include "impl/instrumentation_events.impl.h"
+#include "abstraction/sockets.h"
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/impl/irt_sched_static.impl.h"
@@ -66,6 +67,43 @@ void irt_scheduling_set_dop(uint32 parallelism) {
 	irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 }
 
+void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops) {
+	uint32 parallelism = 0;
+	for(uint32 s = 0; s<sockets; ++s) {
+		parallelism += dops[s];
+	}
+	irt_scheduling_set_dop(parallelism);
+
+	uint32 worker_num = 0;
+	for(uint32 s = 0; s<sockets; ++s) {
+		for(uint32 c = 0; c<dops[s]; ++c) {
+			irt_worker_move_to_socket(irt_g_workers[worker_num], s);
+			worker_num++;
+		}
+	}
+}
+
+bool _irt_scheduling_sleep_if_dop_inactive(irt_worker* self) {
+	if(self->id.thread >= irt_g_degree_of_parallelism) {
+		irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
+		if(self->state == IRT_WORKER_STATE_STOP) {
+			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
+			return true;
+		}
+		if(self->id.thread >= irt_g_degree_of_parallelism) {
+			irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_DISABLED, uint32);
+			// TODO: migrate queued wis if not a stealing policy
+			// wait for signal
+			int wait_err = irt_cond_wait(&self->dop_wait_cond, &irt_g_degree_of_parallelism_mutex);
+			IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
+			// we were woken up by the signal and now own the mutex
+			irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_RUNNING, uint32);
+		}
+		irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
+	}
+	return false;
+}
+
 void irt_scheduling_loop(irt_worker* self) {
 	while(self->state != IRT_WORKER_STATE_STOP) {
 #ifdef IRT_WORKER_SLEEPING
@@ -86,24 +124,9 @@ void irt_scheduling_loop(irt_worker* self) {
 				self->share_stack_wi = NULL;
 			}
 			#endif //IRT_ASTEROIDEA_STACKS
-			if(self->id.thread >= irt_g_degree_of_parallelism) {
-				irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
-				if(self->state == IRT_WORKER_STATE_STOP) {
-					irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
-					break;
-				}
-				if(self->id.thread >= irt_g_degree_of_parallelism) {
-					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_DISABLED, uint32);
-					// TODO: migrate queued wis if not a stealing policy
-					// wait for signal
-					int wait_err = irt_cond_wait(&self->dop_wait_cond, &irt_g_degree_of_parallelism_mutex);
-					IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
-					// we were woken up by the signal and now own the mutex
-					irt_atomic_val_compare_and_swap(&self->state, IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_RUNNING, uint32);
-				}
-				irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
-			}
+			if(_irt_scheduling_sleep_if_dop_inactive(self)) break;
 		}
+		_irt_scheduling_sleep_if_dop_inactive(self);
 #ifdef IRT_WORKER_SLEEPING
 		irt_mutex_lock(&irt_g_active_worker_mutex);
 		// check if self is the last worker

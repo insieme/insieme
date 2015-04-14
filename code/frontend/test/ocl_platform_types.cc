@@ -62,9 +62,12 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "test_utils.inc"
 
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::extensions;
@@ -103,14 +106,15 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
+    std::string fileName = CLANG_SRC_DIR "/inputs/ocl_host_types.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/ocl_host_types.c");
 
 	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	NodeManager mgr;
-	insieme::frontend::ConversionSetup setup;
-	setup.frontendExtensionInit();
-	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
+	insieme::frontend::conversion::Converter convFactory( mgr, tu, options.job);
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
@@ -133,7 +137,7 @@ TEST(StmtConversion, FileTest) {
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
 				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
-				assert(expr);
+				assert_true(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
 
 				// do semantics checking

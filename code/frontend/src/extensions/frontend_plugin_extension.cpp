@@ -40,6 +40,8 @@
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/pragma/handler.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
@@ -64,6 +66,16 @@ namespace extensions {
     insieme::frontend::pragma::node* PragmaHandler::getToken() {
         return tok;
     };
+
+    // ############ DRIVER STAGE ############ //
+    FrontendExtension::flagHandler FrontendExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        return [&](const ConversionJob& job) {
+                    //check if the default activated plugins have been deactivated manually
+                    if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions))
+                        return false;
+                    return true;
+        };
+    }
 
     // ############ PRE CLANG STAGE ############ //
     const FrontendExtension::macroMap& FrontendExtension::getMacroList() const {

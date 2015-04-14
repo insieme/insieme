@@ -277,7 +277,7 @@ namespace properties {
 		typename boost::disable_if<boost::is_same<T,Value>,int>::type =0
 	>
 	inline T getValue(const Value& value) {
-		assert(isTypeOf<T>(value) && "Tried reading value of incompatible Value instance!");
+		assert_true(isTypeOf<T>(value)) << "Tried reading value of incompatible Value instance!";
 		return boost::get<T>(value);
 	}
 
@@ -310,7 +310,7 @@ namespace properties {
 	 */
 	template<typename T, typename Value, typename ... Rest>
 	inline T getValue(const Value& value, int first, Rest ... rest) {
-		assert(isTypeOf<vector<Value>>(value) && "Not nested value encountered!");
+		assert_true(isTypeOf<vector<Value>>(value)) << "Not nested value encountered!";
 		return getValue<T>(boost::get<vector<Value>>(value)[first], rest ...);
 	}
 
@@ -609,7 +609,7 @@ namespace properties {
 		 * @return a pointer to the type of element stored within lists of this property
 		 */
 		const typename Property<Value>::ptr& getElementType() const {
-			assert(Property<Value>::getComponents().size() == 1u && "Invalid size of component vector!");
+			assert_eq(Property<Value>::getComponents().size(), 1u) << "Invalid size of component vector!";
 			return Property<Value>::getComponents()[0];
 		}
 	};
@@ -802,7 +802,7 @@ namespace properties {
 			}
 
 			std::cout << "ERROR: unexpeted parameter type: " << *ptr << "\n";
-			assert(false && "Unexpected Parameter type encountered!");
+			assert_fail() << "Unexpected Parameter type encountered!";
 		}
 
 	};

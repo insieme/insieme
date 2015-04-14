@@ -76,7 +76,7 @@ namespace iwir {
 	}
 
 	ConstraintMap getConstraintMapAttached(const insieme::core::NodePtr& node) {
-		assert(hasConstraintMapAttached(node) && "Does not have a IWIR::ConstraintMap attached");
+		assert_true(hasConstraintMapAttached(node)) << "Does not have a IWIR::ConstraintMap attached";
 		return node->getAttachedValue<ConstraintMapTag>().constraintMap;
 	}
 

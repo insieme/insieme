@@ -64,7 +64,7 @@ typedef Matrix<int> IntMatrix;
 class UnimodularMatrix : public IntMatrix {
 public:
 	UnimodularMatrix( size_t size ) : IntMatrix(size, size) { 
-		assert(!empty() && "Creation of empty Unimodular matrix is not allowed"); 
+		assert_false(empty()) << "Creation of empty Unimodular matrix is not allowed"; 
 	}
 
 	UnimodularMatrix( const IntMatrix& mat ) : IntMatrix(mat) { 

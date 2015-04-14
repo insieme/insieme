@@ -218,15 +218,15 @@ class MatchObject {
 
 			// we have an expression
 			if(fitV.empty()) {
-				assert(fitE.size() == 1);
+				assert_eq(fitE.size(), 1);
 				return fitE.at(0);
 			}
 			// we have a variable
 			if(fitE.empty()) {
-				assert(fitV.size() == 1);
+				assert_eq(fitV.size(), 1);
 				return fitV.at(0);
 			}
-			assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
+			assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
 			return core::ExpressionPtr();
 		}
 

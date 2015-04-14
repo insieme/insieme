@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,7 +48,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/frontend/frontend.h"
-#include "insieme/driver/cmd/options.h"
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/analysis/cba/parallel_analysis.h"
 #include "insieme/analysis/cba/framework/cba.h"
@@ -75,13 +75,15 @@ int main(int argc, char** argv) {
 	bool extract_execution_net = false;
 	bool extract_state_graph = false;
 	bool dump_equations = false;
-	cmd::Options options = cmd::Options::parse(argc, argv)
+    std::vector<std::string> arguments(argv, argv+argc);
+	cmd::detail::OptionParser optionParser = cmd::Options::parse(arguments);
 		// register the extra flags
-		("exec_net", 		'e', 	extract_execution_net, 		"extract the execution net from the program")
-		("state_graph", 	's', 	extract_state_graph, 		"extract the state graph from the program")
-		("dump_equations", 	'q', 	dump_equations, 			"dumps the equations utilized for computing the results")
-	;
-	if (!options.valid) return (options.help)?0:1;
+		optionParser("exec_net", 		"e", 	extract_execution_net, 		"extract the execution net from the program");
+		optionParser("state_graph", 	"s", 	extract_state_graph, 		"extract the state graph from the program");
+		optionParser("dump_equations", 	"q", 	dump_equations, 			"dumps the equations utilized for computing the results");
+
+	cmd::Options options = optionParser;
+	if (!options.valid) return (options.settings.help)?0:1;
 
 
 	// Step 2: load input code

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -75,7 +75,7 @@ bool isArrayType(const TypePtr& cur) {
 LambdaDefinitionAddress findEnclosingLambdaDefinition(const NodeAddress& addr) {
 	NodeAddress parent = addr;
 	while( (parent = parent.getParentAddress(1)) && (parent->getNodeType() != NT_LambdaDefinition) ) ;
-	assert(parent);
+	assert_true(parent);
 	return parent.as<LambdaDefinitionAddress>();
 }
 
@@ -171,7 +171,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 			lambdaVar = funcExpr.as<LambdaExprPtr>()->getVariable();
 		}
 
-		assert(lambdaDef && lambda && lambdaVar);
+		assert_true(lambdaDef && lambda && lambdaVar);
 
 		/**
 		 * If we never visited this lambda then we analyze it to determine the following properties:
@@ -281,7 +281,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 					type = core::analysis::getReferencedType(type); 
 				}
 				
-				assert(type->getNodeType() == NT_ArrayType);
+				assert_eq(type->getNodeType(), NT_ArrayType);
 		
 				type = type.as<ArrayTypePtr>()->getElementType();
 

@@ -328,13 +328,13 @@ namespace types {
 									 << " Parameter Type: " << typeA << std::endl
 									 << "  Argument Type: " << typeB << std::endl
 									 << " => the argument will be considered equal!!!";
-//						assert(false && "Sorry - not implemented!");
+//						assert_not_implemented();
 						constraints.makeUnsatisfiable();
 					}
 					break;
 				}
 				default:
-					assert(false && "Missed a kind of type!");
+					assert_fail() << "Missed a kind of type!";
 			}
 		}
 
@@ -394,7 +394,7 @@ namespace types {
 						}
 						break;
 					default:
-						assert(false && "Unknown int-type parameter encountered!");
+						assert_fail() << "Unknown int-type parameter encountered!";
 				}
 
 				// also make sure element types are equivalent

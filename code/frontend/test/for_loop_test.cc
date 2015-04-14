@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,6 +43,8 @@
 #include "insieme/frontend/tu/ir_translation_unit_check.h"
 
 #include "insieme/utils/test/test_utils.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "test_utils.inc"
 
@@ -106,7 +108,7 @@ namespace frontend {
 		auto code = toString(core::printer::PrettyPrinter(res));
 		EXPECT_PRED2(containsSubString, code, "while");
 	}
-	
+
 	TEST(StmtConversion, ForToWhileLoop2) {
 
 		Source src(
@@ -136,8 +138,8 @@ namespace frontend {
 		auto code = toString(core::printer::PrettyPrinter(res));
 		EXPECT_PRED2(containsSubString, code, "while");
 	}
-	
-	
+
+
 
 	TEST(StmtConversion, Materialization) {
 
@@ -169,7 +171,7 @@ namespace frontend {
 		EXPECT_PRED2(containsSubString, code, "decl ref<int<4>>");
 
 	}
-	
+
 	TEST(StmtConversion, IntInfBug) {
 
 		Source src(
@@ -231,15 +233,55 @@ namespace frontend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
-		ConversionJob job(src);
-		job.setOption(ConversionJob::OpenMP);
-		auto res = builder.normalize(job.execute(mgr));
+		const boost::filesystem::path& file = src;
+        std::vector<std::string> args = {"compiler", file.string(), "-fopenmp"};
+        insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
+
+		auto res = builder.normalize(options.job.execute(mgr));
 
 		//dump(res);
 
 		// check that there is no materialization
 		auto code = toString(core::printer::PrettyPrinter(res));
 		EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
+	}
+
+	TEST(StmtConversion, SimplePostCondition) {
+
+		Source src(
+				R"(
+					int main() {
+						int array[10][10];
+						 int i, j, k;
+
+						for(i = 1; i < 11; i+=3) {
+							for(j = 10; j < 20; ++j) {
+								array[i][j] = 0;
+							}
+						}
+						return 0;
+					}
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		const boost::filesystem::path& file = src;
+        std::vector<std::string> args = {"compiler", file.string()};
+        insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
+
+		auto res = builder.normalize(options.job.execute(mgr));
+
+		dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(notContainsSubString, code, "if");
+		EXPECT_PRED2(notContainsSubString, code, "20+1-20-v52-20-v3/1*1");
+		EXPECT_PRED2(containsSubString, code, "v3 := 20");
+		EXPECT_PRED2(notContainsSubString, code, "11-v2-11-v2/3*3");
+		EXPECT_PRED2(containsSubString, code, "v2 := 13");
 	}
 
 } // end namespace frontend

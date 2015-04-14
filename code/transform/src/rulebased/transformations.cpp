@@ -193,9 +193,9 @@ namespace rulebased {
 				core::IRBuilder builder(manager);
 
 				// resolve start/end variables
-				assert(match.isVarBound(var_start) && "Start variable not bound to value!");
-				assert(match.isVarBound(var_end)   && "End variable not bound to value!");
-				assert(match.isVarBound(var_step)  && "Step variable not bound to value!");
+				assert_true(match.isVarBound(var_start)) << "Start variable not bound to value!";
+				assert_true(match.isVarBound(var_end)) << "End variable not bound to value!";
+				assert_true(match.isVarBound(var_step)) << "Step variable not bound to value!";
 
 				const auto& start_value = match.getVarBinding(var_start).getValue();
 				const auto& end_value   = match.getVarBinding(var_end).getValue();

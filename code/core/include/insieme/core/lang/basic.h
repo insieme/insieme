@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -81,7 +81,7 @@ public:
 	enum Operator {
 	#define OPERATOR(_id, _str) \
 	_id,
-	#include "insieme/core/lang/lang.def"
+	#include "insieme/core/lang/inspire_api/lang.def"
 	};
 
 	#define TYPE(_id, _spec) \
@@ -108,7 +108,7 @@ public:
 	bool is##_id(const NodePtr& p) const; \
 	const vector<NodePtr>& get##_id##Group() const;
 
-	#include "insieme/core/lang/lang.def"
+	#include "insieme/core/lang/inspire_api/lang.def"
 
 	bool isBuiltIn(const NodePtr& node) const;
 	ExpressionPtr getBuiltIn(const std::string& name) const;

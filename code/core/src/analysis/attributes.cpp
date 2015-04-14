@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -60,14 +60,14 @@ namespace analysis {
 
 
 	bool hasAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert(isAttribute(attribute) && "Checking for non-attribute!");
+		assert_true(isAttribute(attribute)) << "Checking for non-attribute!";
 
 		// simple "dirty" implementation
 		return getAttributes(expr).contains(attribute);
 	}
 
 	ExpressionPtr addAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert(isAttribute(attribute) && "Cannot add non-attribute!");
+		assert_true(isAttribute(attribute)) << "Cannot add non-attribute!";
 
 		// simple "dirty" implementation
 		auto attributes = getAttributes(expr);
@@ -76,7 +76,7 @@ namespace analysis {
 	}
 
 	ExpressionPtr remAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert(isAttribute(attribute) && "Cannot remove non-attribute!");
+		assert_true(isAttribute(attribute)) << "Cannot remove non-attribute!";
 
 		// simple "dirty" implementation
 		auto attributes = getAttributes(expr);

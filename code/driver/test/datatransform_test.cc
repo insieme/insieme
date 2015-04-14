@@ -47,8 +47,11 @@
 #include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
+namespace driver = insieme::driver;
 namespace annot = insieme::annotations;
 namespace dl = insieme::transform::datalayout;
 using namespace insieme::utils::set;
@@ -62,10 +65,11 @@ TEST(DatatransformTest, SimplePragma) {
 	std::string srcDir = SRC_ROOT_DIR "driver/test/inputs/datatransform.c";
 
 	// create and customize conversion job
-	fe::ConversionJob job(srcDir);
+	std::vector<std::string> args = {"compiler", srcDir};
+	driver::cmd::Options options = driver::cmd::Options::parse(args);
 
 	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
-	core::ProgramPtr program = job.execute(manager);
+	core::ProgramPtr program = options.job.execute(manager);
 	LOG(INFO) << "Done.";
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);

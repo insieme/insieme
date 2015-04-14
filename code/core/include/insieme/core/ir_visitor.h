@@ -197,7 +197,7 @@ namespace detail {
 			inline virtual typename ir_visitor_return_type_trait<ReturnType, Ptr, CLASS, P...>::type visit ## CLASS(const Ptr<const CLASS>& ptr, P ... context) { \
 				typedef ir_visitor_return_type_trait<ReturnType, Ptr, CLASS, P...> Converter; \
 				static const Converter converter = Converter(); \
-				assert ( !!ptr && "Cannot visit NULL pointer!"); \
+				assert_false(!ptr) << "Cannot visit NULL pointer!"; \
 				return converter.TEMP_OP<CLASS,PARENT>(this->visit ## PARENT(ptr, context ...)); \
 			}
 			#include "ir_nodes.def"
@@ -241,7 +241,7 @@ namespace detail {
 
 		#define IS_A(CLASS, PARENT) \
 			inline virtual void visit ## CLASS(const Ptr<const CLASS>& ptr, P ... context) { \
-				assert ( !!ptr && "Cannot visit NULL pointer!"); \
+				assert_false(!ptr) << "Cannot visit NULL pointer!"; \
 				this->visit ## PARENT(ptr, context ...); \
 			}
 			#include "ir_nodes.def"
@@ -305,7 +305,7 @@ public:
 	virtual typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type visit(const Ptr<const Node>& element, P ... context) {
 		typedef typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type ResType;
 
-		assert ( element && "Cannot visit NULL element!");
+		assert_true(element) << "Cannot visit NULL element!";
 
 		// avoid visiting types if not necessary
 		if (!visitTypeNodes && element->getNodeCategory() == NC_Type) {
@@ -318,7 +318,7 @@ public:
 			// Generate all cases using node definition file
 			#define CONCRETE(name) \
 				case NT_ ## name : \
-					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
+					assert_true(dynamic_cast<const name*>(&*element)) << "Type token NT_" #name " does not match type!"; \
 					return this->visit ## name (cast.TEMP_OP<const name>(element), context...);
 
 					// take all nodes ...
@@ -328,7 +328,7 @@ public:
 		}
 
 		// fail => invalid node type!
-		assert ( false && "Cannot dispatch unknown node type!" );
+		assert_fail() << "Cannot dispatch unknown node type!";
 		return ResType();
 	}
 

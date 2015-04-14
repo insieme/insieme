@@ -65,9 +65,13 @@
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/utils/test/test_utils.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "test_utils.inc"
 
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 using namespace insieme::annotations::c;
@@ -133,14 +137,16 @@ TEST(Interception, SimpleInterception) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
-	auto tu = job.toIRTranslationUnit(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string interception = "--intercept=ns::.*";
+    std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03", interception };
+    cmd::Options options = cmd::Options::parse(argv);
+
+	auto tu = options.job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
-	auto retTy = builder.getLangBasic().getUnit(); 
+	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType( TypeList(), retTy);
 
 	//intercept_simpleFunc
@@ -186,12 +192,14 @@ TEST(Interception, SimpleFunction1) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
-	auto tu = job.toIRTranslationUnit(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+    std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03" };
+    cmd::Options option = cmd::Options::parse(argv);
 
-	auto retTy = builder.getLangBasic().getUnit(); 
+	auto tu = option.job.toIRTranslationUnit(mgr);
+
+	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType( TypeList(), retTy);
 
 
@@ -219,14 +227,16 @@ TEST(Interception, SimpleFunction2) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
-	auto tu = job.toIRTranslationUnit(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string interception = "--intercept=ns::.*";
+    std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
+    cmd::Options option = cmd::Options::parse(argv);
+
+	auto tu = option.job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
-	auto retTy = builder.getLangBasic().getUnit(); 
+	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType( TypeList(), retTy);
 
 	//intercept_simpleFunc
@@ -236,7 +246,7 @@ TEST(Interception, SimpleFunction2) {
 
 
 /////////////////////////////////////////////////////////////////////
-//   This check just assures that everithing is in there, so 
+//   This check just assures that everithing is in there, so
 //   the interceped one can be thrusted
 
 TEST(Interception, Types) {
@@ -269,10 +279,12 @@ TEST(Interception, Types) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
-	auto tu = job.toIRTranslationUnit(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+    std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03" };
+    cmd::Options option = cmd::Options::parse(argv);
+
+	auto tu = option.job.toIRTranslationUnit(mgr);
 
 	{
 		auto t = builder.genericType("ns_SomeStruct");
@@ -293,7 +305,7 @@ TEST(Interception, Types) {
 		auto owner = builder.genericType("ns_SomeClass");
 		TypeList list;
 		list.push_back(builder.refType(owner));
-		auto retTy = builder.getLangBasic().getInt4(); 
+		auto retTy = builder.getLangBasic().getInt4();
 		auto funcTy = builder.functionType( list, retTy, FK_MEMBER_FUNCTION);
 		auto func = builder.literal("ns_SomeClass_sum", funcTy);
 
@@ -341,11 +353,13 @@ TEST(Interception, TypesIntercepted) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
-	auto tu = job.toIRTranslationUnit(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string interception = "--intercept=ns::.*";
+    std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
+    cmd::Options option = cmd::Options::parse(argv);
+
+	auto tu = option.job.toIRTranslationUnit(mgr);
 
 	{
 		auto t = builder.genericType("ns_SomeStruct");
@@ -366,7 +380,7 @@ TEST(Interception, TypesIntercepted) {
 		auto owner = builder.genericType("ns_SomeClass");
 		TypeList list;
 		list.push_back(builder.refType(owner));
-		auto retTy = builder.getLangBasic().getInt4(); 
+		auto retTy = builder.getLangBasic().getInt4();
 		auto funcTy = builder.functionType( list, retTy, FK_MEMBER_FUNCTION);
 		auto func = builder.literal("ns_SomeClass_sum", funcTy);
 
@@ -375,7 +389,7 @@ TEST(Interception, TypesIntercepted) {
 	}
 
 	// ok, now check who do the ussages look like:
-	auto retTy = builder.getLangBasic().getUnit(); 
+	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType( TypeList(), retTy);
 
 	//intercept_simpleFunc
@@ -405,14 +419,16 @@ TEST(Interception, AttachedHeader) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-	fe::ConversionJob job(src);
-    job.addIncludeDirectory(CLANG_SRC_DIR "inputs/interceptor/");
-	job.addInterceptedNameSpacePattern( "ns::.*" );
-	job.registerFrontendExtension<fe::extensions::InterceptorExtension>(job.getInterceptedNameSpacePatterns());
-	auto tu = job.toIRTranslationUnit(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string interception = "--intercept=ns::.*";
+    std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
+    cmd::Options option = cmd::Options::parse(argv);
+
+	auto tu = option.job.toIRTranslationUnit(mgr);
 	//LOG(INFO) << tu;
 
-	auto retTy = builder.getLangBasic().getUnit(); 
+	auto retTy = builder.getLangBasic().getUnit();
 	auto funcTy = builder.functionType( TypeList(), retTy);
 
 	//intercept_simpleFunc
@@ -427,7 +443,7 @@ TEST(Interception, AttachedHeader) {
 		}
 		return false;
 	};
-	
+
 	visitDepthFirstPrunable(node.as<LambdaExprPtr>()->getBody(), checkDecl);
 
 	std::cout << tu << std::endl;

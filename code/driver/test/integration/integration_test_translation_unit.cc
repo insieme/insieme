@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -99,11 +99,11 @@ namespace insieme {
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
-		std::string step="main_run_compile";
+		std::string step="insiemecc_run_c_compile";
 		// switch to C++ compiler if necessary
 		if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
 			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
-			step="main_run_c++_compile";
+			step="insiemecc_run_c++_compile";
 		}
 
 		// add extra compiler flags from test case

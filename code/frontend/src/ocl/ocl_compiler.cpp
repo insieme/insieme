@@ -255,7 +255,7 @@ core::CallExprPtr KernelData::callBarrier(const core::ExpressionPtr& memFence) {
     }
 
     // TODO show warning
-    assert(false && "OpenCL barrier has unexpected argument. Has to be 0 or 1");
+    assert_fail() << "OpenCL barrier has unexpected argument. Has to be 0 or 1";
     return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
@@ -302,11 +302,11 @@ private:
 
     core::CallExprPtr resolveNative(const string& name, size_t preambleLength, const core::TypePtr& type,
             const core::ExpressionPtr accuracyFct, const vector<core::ExpressionPtr>& args) {
-        assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
+        assert_true((args.size() == 1 || args.size() == 2)) << "Only native OpenCL functions with one or two arguments are supported";
 
         core::LiteralPtr literal;
         core::FunctionTypePtr fType = dynamic_pointer_cast<const core::FunctionType>(type); // default (=scalar) case
-        assert(fType && "Native OpenCL function has invalid function type");
+        assert_true(fType) << "Native OpenCL function has invalid function type";
 
         bool isVector = false; //flag to inidicate if we are processing a vector function
         core::TypePtr resType = fType->getReturnType();
@@ -393,7 +393,7 @@ private:
 /*
 
  */
-        assert(false && "Type of OpenCL convert function is not a function Type");
+        assert_fail() << "Type of OpenCL convert function is not a function Type";
 
         return NULL;
     }
@@ -401,7 +401,7 @@ private:
     // extract the argument of a call to refVar function
     core::ExpressionPtr removeRefVar(core::DeclarationStmtPtr decl) {
         core::ExpressionPtr oldInit = decl->getInitialization();
-        // write the variable with it's initialization to the place the declaration was
+        // write the variable with its initialization to the place the declaration was
         if(core::CallExprPtr initCall = core::dynamic_pointer_cast<const core::CallExpr>(oldInit)) {
             // check if initCall calles the var() operation
             core::ExpressionPtr argument = core::dynamic_pointer_cast<const core::Expression>(initCall->getArgument(0));
@@ -527,68 +527,68 @@ public:
             if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
                 // reading parallel loop boundaries
                 if(literal->getStringValue() == "get_global_size") {
-                    assert(args.size() == 1 && "Function get_global_size must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function get_global_size must have exactly 1 argument";
 
                     return kd.accessRange(OPL_GLOBAL, args.at(0));
                 }
                 if(literal->getStringValue() == "get_num_groups") {
-                    assert(args.size() == 1 && "Function get_num_groups must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function get_num_groups must have exactly 1 argument";
 
                     return kd.accessRange(OPL_GROUP, args.at(0));
                 }
                 if(literal->getStringValue() == "get_local_size") {
-                    assert(args.size() == 1 && "Function get_local_size must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function get_local_size must have exactly 1 argument";
 
                     return kd.accessRange(OPL_LOCAL, args.at(0));
                 }
 
                 // thread identification
                 if(literal->getStringValue() == "get_global_id") {
-                    assert(args.size() == 1 && "Function get_global_id must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function get_global_id must have exactly 1 argument";
 
                     return kd.accessId(OPL_GLOBAL, args.at(0));
                 }
                 if(literal->getStringValue() == "get_group_id") {
-                    assert(args.size() == 1 && "Function get_group_id must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function get_group_id must have exactly 1 argument";
 
                     return kd.accessId(OPL_GROUP, args.at(0));
                 }
 
 
                 if(literal->getStringValue() == "get_local_id") {
-                    assert(args.size() == 1 && "Function get_local_id must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function get_local_id must have exactly 1 argument";
 
                     return kd.accessId(OPL_LOCAL, args.at(0));
                 }
 
                 // synchronization
                 if(literal->getStringValue() == "ocl_barrier") {
-                    assert(args.size() == 1 && "Function barrier must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Function barrier must have exactly 1 argument";
 
                     return kd.callBarrier(args.at(0));
                 }
 
                 // native math functions
                 if(literal->getStringValue().find("native_") == 0) {
-                    assert(args.size() >= 1 && "Native mathematical operations must have at least 1 arguments");
+                    assert_ge(args.size(), 1) << "Native mathematical operations must have at least 1 arguments";
 
                     return resolveNative(literal->getStringValue(), 7, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
                 if(literal->getStringValue().find("half_") == 0) { // since half is mapped to float we can use a low accuracy method
-                    assert(args.size() >= 1 && "Mathematical operations must have at least 1 argument");
+                    assert_ge(args.size(), 1) << "Mathematical operations must have at least 1 argument";
 
                     return resolveNative(literal->getStringValue(), 5, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
                 if(literal->getStringValue() == "mul24") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
-                    assert(args.size() == 2 && "mul24 must have 2 arguments");
+                    assert_eq(args.size(), 2) << "mul24 must have 2 arguments";
 
                     return resolveNative(literal->getStringValue(), 0, literal->getType(), BASIC.getAccuracyFastBinary(), args);
                 }
 
                 if(literal->getStringValue() == "fma") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
-                    assert(args.size() == 3 && "fma must have 3 arguments");
+                    assert_eq(args.size(), 3) << "fma must have 3 arguments";
 
                     // construct function type: all elements have the same (real) datatype, but only 2 instead of three arguments
                     core::TypePtr fctType = builder.functionType(toVector(args.at(0)->getType(), args.at(0)->getType()), args.at(0)->getType());
@@ -598,14 +598,14 @@ public:
 
                 // vector conversion function
                 if(literal->getStringValue().find("convert_") == 0) {
-                    assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "Convert operations must have exactly 1 argument";
 
                     return resolveConvert(literal->getStringValue(), literal->getType(), args);
                 }
 
                 // as_typen reinterpretation casts
                 if(literal->getStringValue().find("as_") == 0) {
-                    assert(args.size() == 1 && "as_typen operations must have exactly 1 argument");
+                    assert_eq(args.size(), 1) << "as_typen operations must have exactly 1 argument";
 
                     return relsolveAsTypeN(literal->getType(), args);
                 }
@@ -646,8 +646,8 @@ public:
 
                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                 return builder.getNoOp();
-                            // write the variable with it's initialization to the place the declaration was
-                            // if it was a call to refVar, remove it and replace it by it's argument
+                            // write the variable with its initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by its argument
                             return removeRefVar(decl);
                             break;
                         }
@@ -667,21 +667,21 @@ public:
 
                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                  return builder.getNoOp();
-                            // write the variable with it's initialization to the place the declaration was
-                            // if it was a call to refVar, remove it and replace it by it's argument
+                            // write the variable with its initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by its argument
                             return removeRefVar(decl);
                             break;
                         }
                         case annotations::ocl::AddressSpaceAnnotation::CONSTANT: {
-                            assert(false && "Address space CONSTANT not allowed for local variables");
+                            assert_fail() << "Address space CONSTANT not allowed for local variables";
                             break; // to avoid warnings
                         }
                         default:
-                            assert(false && "Unexpected OpenCL address space attribute for local variable");
+                            assert_fail() << "Unexpected OpenCL address space attribute for local variable";
                             break; // to avoid warnings
                         }
                     } else {
-                        assert(false && "No other OpenCL attribute than oclAddressSpaceAnnotation allowed for variables");
+                        assert_fail() << "No other OpenCL attribute than oclAddressSpaceAnnotation allowed for variables";
                     }
 
                 }
@@ -753,7 +753,7 @@ private:
 
     // function to calculate the product of all elements in a vector
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
-        assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
+        assert_eq(vec->getType()->getNodeType(), core::NodeType::NT_VectorType) << "function vecProduct is only allowed for vector variables\n";
 
         return builder.callExpr(BASIC.getUInt8(), BASIC.getVectorReduction(), vec, builder.uintLit(1u), BASIC.getUnsignedIntMul());
 
@@ -858,7 +858,7 @@ private:
         // in-body pointers to global variables, map to a new variable at local scope
         if(scope == OCL_LOCAL_JOB)
             createArgList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
-        else // map the existing variable to it's init expression
+        else // map the existing variable to its init expression
             initArgInList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
 
         kd.appendArguments(arguments, scope, argTypes);
@@ -905,11 +905,11 @@ public:
                     if(annotations::ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<annotations::ocl::WorkGroupSizeAnnotation>(annot)) {
                         workGroupSizeDefined = true;
                         wgs[0] = wgsap->getXdim();
-                        assert(wgs[0] > 0 && "Work group Size x-dimension has to be greater than 0.");
+                        assert_gt(wgs[0], 0) << "Work group Size x-dimension has to be greater than 0.";
                         wgs[1] = wgsap->getYdim();
-                        assert(wgs[1] > 0 && "Work group Size y-dimension has to be greater than 0.");
+                        assert_gt(wgs[1], 0) << "Work group Size y-dimension has to be greater than 0.";
                         wgs[2] = wgsap->getZdim();
-                        assert(wgs[2] > 0 && "Work group Size z-dimension has to be greater than 0.");
+                        assert_gt(wgs[2], 0) << "Work group Size z-dimension has to be greater than 0.";
                     }
                     if(annotations::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<annotations::ocl::KernelFctAnnotation>(annot)) {
 						isKernelFunction = kf->isKernelFct();
@@ -919,7 +919,7 @@ public:
 
                 assert(!(workGroupSizeDefined & !isKernelFunction) && "Attribute Reqd_work_group_size can only be defined for kernel functions");
 
-                const string& cName = insieme::core::annotations::hasNameAttached(func) ? insieme::core::annotations::getAttachedName(func) : "";
+                const string& cName = insieme::core::annotations::hasAttachedName(func) ? insieme::core::annotations::getAttachedName(func) : "";
                 auto sourceLoc = core::annotations::getLocation(func);
 
                 //if function is not a OpenCL kernel function recursively check for child nodes
@@ -967,7 +967,7 @@ public:
                                     break;
                                 }
                                 default:
-                                    assert(false && "Unexpected OpenCL address space attribute for kernel function argument");
+                                    assert_fail() << "Unexpected OpenCL address space attribute for kernel function argument";
                                 }
                             }
                         }
@@ -990,7 +990,7 @@ public:
                     core::TypePtr retTy = funcType->getReturnType();
 
                     //check return type
-                    assert(retTy->getNodeManager().getLangBasic().isUnit(retTy) && "Return type of kernel functions must be void.");
+                    assert_true(retTy->getNodeManager().getLangBasic().isUnit(retTy)) << "Return type of kernel functions must be void.";
 
                     core::TypeList args = funcType->getParameterTypes()->getElements();
                     args.push_back(kd.globalRange->getType());
@@ -999,7 +999,7 @@ public:
                     // function returns unit
                     newFuncType = builder.functionType(args, BASIC.getUnit());
                 } else {
-                    assert(funcType && "Function has unexpected type");
+                    assert_true(funcType) << "Function has unexpected type";
                 }
 
             	std::shared_ptr<insieme::annotations::DataRangeAnnotation> datarange;
@@ -1198,7 +1198,7 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
         return newProg;
     }
     else
-        assert(newProg && "OclCompiler corrupted the program");
+        assert_true(newProg) << "OclCompiler corrupted the program";
     return mProgram;
 }
 

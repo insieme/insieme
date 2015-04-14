@@ -47,6 +47,7 @@
 #include "abstraction/impl/threads.impl.h"
 #include "abstraction/memory.h"
 #include "abstraction/impl/memory.impl.h"
+#include "abstraction/sockets.h"
 
 #include "client_app.h"
 #include "irt_all_impls.h"
@@ -80,15 +81,19 @@ irt_mutex_obj irt_g_error_mutex;
 irt_mutex_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
-uint32 irt_g_degree_of_parallelism;
+volatile uint32 irt_g_degree_of_parallelism;
 irt_mutex_obj irt_g_degree_of_parallelism_mutex;
 uint32 irt_g_active_worker_count;
 irt_mutex_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
+bool irt_g_rt_is_initialized;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
 mqd_t irt_g_message_queue;
 #endif
+#ifdef IRT_USE_HWLOC
+hwloc_topology_t irt_g_hwloc_topology;
+#endif // IRT_USE_HWLOC
 
 IRT_CREATE_LOCKED_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS)
 IRT_CREATE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS)
@@ -106,6 +111,7 @@ void irt_init_globals() {
 	irt_g_globals_initialization_done = true;
 	irt_g_exit_handling_done = false;
 	irt_log_init();
+	irt_hwloc_init();
 
 	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
@@ -152,6 +158,7 @@ void irt_cleanup_globals() {
 	irt_tls_key_delete(irt_g_error_key);
 	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
+	irt_hwloc_cleanup();
 	irt_g_globals_initialization_done = false;
 }
 
@@ -339,7 +346,14 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		irt_log_comment("Running Insieme runtime with OpenCL!\n");
 		irt_ocl_init_devices();
 	#endif
+
+	irt_g_rt_is_initialized = true;
 }
+
+bool irt_runtime_is_inited() {
+	return irt_g_rt_is_initialized;
+}
+
 
 uint32 irt_get_default_worker_count() {
 	uint32 cores;

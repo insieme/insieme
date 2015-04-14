@@ -1185,7 +1185,7 @@ namespace cba {
 	namespace {
 
 		/**
-		 * ----------------------------- a Constraint Connecting the start of a thread with it's spawn point --------------------------------
+		 * ----------------------------- a Constraint Connecting the start of a thread with its spawn point --------------------------------
 		 */
 
 		/**

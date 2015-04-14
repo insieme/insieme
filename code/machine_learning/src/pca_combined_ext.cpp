@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -129,7 +129,7 @@ void PcaCombinedExt::genDefaultQuery() {
  */
 size_t PcaCombinedExt::calcPca(double toBeCovered) {
 	size_t nFeatures = staticFeatures.size() + dynamicFeatures.size();
-	assert(nFeatures > 0 && "Cannot do PCA without any features set");
+	assert_gt(nFeatures, 0) << "Cannot do PCA without any features set";
 
 	Array<double> in;
 	Array<int64> ids;
@@ -189,7 +189,7 @@ size_t PcaCombinedExt::calcPca(double toBeCovered) {
  */
 double PcaCombinedExt::calcPca(size_t nOutFeatures, size_t unused) {
 	size_t nFeatures = staticFeatures.size() + dynamicFeatures.size();
-	assert(nFeatures > 0 && "Cannot do PCA without any features set");
+	assert_gt(nFeatures, 0) << "Cannot do PCA without any features set";
 
 	Array<double> in;
 	Array<int64> ids;

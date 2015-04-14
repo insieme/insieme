@@ -35,7 +35,8 @@
  */
 
 #include <iomanip>
-#include <isl/schedule.h>
+#include <cstddef> // workaround for old GMP library (<5.1.3) - see https://gcc.gnu.org/gcc-4.9/porting_to.html
+#include <isl/schedule.h>                  // this is the culprit import for which the above comment holds true
 #include <memory>
 #include <set>
 
@@ -58,7 +59,7 @@ using namespace insieme::core;
 //==== IterationDomain ==============================================================================
 
 IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs) {
-	assert(lhs.getIterationVector() == rhs.getIterationVector());
+	assert_true(lhs.getIterationVector() == rhs.getIterationVector());
 	if(lhs.universe()) return rhs;
 	if(rhs.universe()) return lhs;
 
@@ -66,7 +67,7 @@ IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rh
 }
 
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs) {
-	assert(lhs.getIterationVector() == rhs.getIterationVector());
+	assert_true(lhs.getIterationVector() == rhs.getIterationVector());
 	if(lhs.universe()) return rhs;
 	if(rhs.universe()) return lhs;
 
@@ -101,7 +102,7 @@ IterationDomain makeVarRange(IterationVector& 				iterVec,
 	if(expr->getType()->getNodeType() == core::NT_RefType) {
 		expr = core::IRBuilder(var->getNodeManager()).deref(var);
 	}
-	assert(lb && "Lower bound not specified, argument required");
+	assert_true(lb) << "Lower bound not specified, argument required";
 	core::arithmetic::Formula lbf = core::arithmetic::toFormula(lb);
 	core::arithmetic::Formula ubf = ub ? core::arithmetic::toFormula(ub) : core::arithmetic::Formula();
 
@@ -171,7 +172,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 			parent->getAnnotation( scop::ScopRegion::KEY )->valid)
 		prev=parent;
 
-	assert(parent && "Scop entry not found");
+	assert_true(parent) << "Scop entry not found";
 
 	// Resolve the SCoP from the entry point
 	Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
@@ -222,7 +223,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 		for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
 			
 			auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
-				assert( lhs && rhs );
+				assert_true( lhs && rhs );
 				return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
 					   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
 			};
@@ -523,8 +524,8 @@ namespace {
 transformed into a corresponding Map. */
 MapPtr<> createScatteringMap(
 	CtxPtr<> &ctx, const IterationVector &iterVec, SetPtr<> &outer_domain, Stmt &cur, TupleName tn, size_t scat_size) {
-	auto &&domainSet= makeSet(ctx, cur.iterdomain, tn);
-	assert(domainSet && "Invalid domain");
+	auto &&domainSet = makeSet(ctx, cur.iterdomain, tn);
+	assert_true(domainSet) << "Invalid domain";
 
 	// Also the accesses can define restriction on the domain (e.g. MPI calls)
 	std::for_each(cur.accessmtx.begin(), cur.accessmtx.end(), [&](AccessInfoPtr &cur) {
@@ -585,7 +586,7 @@ void buildScheduling(CtxPtr<> &ctx,
 								writes += access * dom;
 								break;
 			default:
-				assert( false && "Usage kind not defined!" );
+				assert_fail() << "Usage kind not defined!";
 			}
 		});
 	});

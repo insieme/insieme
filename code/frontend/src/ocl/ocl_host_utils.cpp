@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -93,7 +93,7 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType) {
 
 /*
  * Function to get the type of an Expression
- * If it is a ref-type, it's element type is returned
+ * If it is a ref-type, its element type is returned
  */
 const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr) {
 	return getNonRefType(refExpr->getType());
@@ -268,7 +268,7 @@ core::ExpressionPtr tryRefReinterpret(core::ExpressionPtr expr, core::TypePtr ty
 		if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(type))
 			return builder.callExpr(refTy, BASIC.getRefReinterpret(), expr, builder.getTypeLiteral(refTy->getElementType()));
 		else
-			assert(refTy && "Cannot do a reinterpret on an non-ref kernel argument");
+			assert_true(refTy) << "Cannot do a reinterpret on an non-ref kernel argument";
 	}
 
 	return expr;

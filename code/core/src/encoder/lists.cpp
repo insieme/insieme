@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -99,7 +99,7 @@ namespace encoder {
 	}
 
 	const core::TypePtr getElementType(const core::TypePtr& listType) {
-		assert(isListType(listType) && "Not applicable to non-list type!");
+		assert_true(isListType(listType)) << "Not applicable to non-list type!";
 		return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()->getElement(0);
 	}
 

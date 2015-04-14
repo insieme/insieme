@@ -58,6 +58,7 @@
 #include "insieme/frontend/extensions/cpp_refs_extension.h"
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/frontend/extensions/ocl_host_extension.h"
+#include "insieme/frontend/extensions/ocl_kernel_extension.h"
 #include "insieme/frontend/extensions/semantic_check_extension.h"
 #include "insieme/frontend/extensions/builtin_function_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
@@ -91,58 +92,31 @@ namespace frontend {
 		return standard == Cxx03 || standard == Cxx98 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
 
-    //register frontend extensions
-    //be CAREFUL with the order of the extensions
-    //if a extension is stateful (e.g., OMP extension)
-    //insieme might generates malformed code.
-    //Example: anonymous record type replacements 
-    //done before omp threadprivate handling.
-    void ConversionSetup::frontendExtensionInit() {
-        registerFrontendExtension<extensions::InterceptorExtension>(getInterceptedNameSpacePatterns());
-        registerFrontendExtension<extensions::VariadicArgumentsExtension>();
-        registerFrontendExtension<extensions::ASMExtension>();
-        registerFrontendExtension<extensions::CppRefsCleanupExtension>();   //FIXME: make it only if cpp
-		registerFrontendExtension<extensions::BuiltinFunctionExtension>();
-		registerFrontendExtension<extensions::InstrumentationRegionExtension>();
-		registerFrontendExtension<extensions::TestPragmaExtension>();
-		registerFrontendExtension<extensions::InsiemePragmaExtension>();
-
-        if(hasOption(ConversionSetup::OpenMP)) {
-            registerFrontendExtension<extensions::OmpFrontendExtension>();
+    //This method calls the lambdas that were collected
+    //when the flags were registered. The lambda will decide
+    //if the extension is kept in the list or drops out.
+    //In a second pass the prerequisites are checked
+    //and an error message may be printed.
+    void ConversionSetup::frontendExtensionInit(const ConversionJob& job) {
+        // register all extensions that should be registered
+        for (auto it = extensions.begin(); it != extensions.end(); ++it) {
+            if (it->second(job)) {
+                extensionList.push_back(it->first);
+                //collect the kidnapped headers and add them to the list
+                for(auto kidnappedHeader : it->first->getKidnappedHeaderList())
+                    addSystemHeadersDirectory(kidnappedHeader);
+            }
         }
 
-        if(hasOption(ConversionSetup::Cilk)) {
-            registerFrontendExtension<extensions::CilkFrontendExtension>();
+        // check pre-requisites
+        for(auto ext : getExtensions()) {
+            //THIS WILL BE IMPLEMENTED BY BERNHARD
+            //std::cerr << ext->checkPrerequisites(*this).get();
         }
-
-        if(hasOption(ConversionJob::GemCrossCompile)) {
-            registerFrontendExtension<extensions::GemsclaimExtension>();
-        }
-
-        if(!getCrossCompilationSystemHeadersDir().empty()) {
-            registerFrontendExtension<extensions::CrossCompilationExtension>(getCrossCompilationSystemHeadersDir());
-        }
-
-        if (hasOption(ConversionSetup::StrictSemanticChecks)) {
-            registerFrontendExtension<extensions::SemanticCheckExtension>();
-        }
-
-        if(flags & OpenCL) {
-        	registerFrontendExtension<extensions::OclHostExtension>(includeDirs);
-		}
-       
-        if(flags & lib_icl) {
-        	registerFrontendExtension<extensions::IclHostExtension>(includeDirs);
-		}
-
-		registerFrontendExtension<extensions::FrontendCleanupExtension>();
-		registerFrontendExtension<extensions::AnonymousRenameExtension>();
 	}
 
     void ConversionSetup::setStandard(const Standard& standard) {
         this->standard = standard;
-        if(standard == Cxx11)
-                registerFrontendExtension<extensions::Cpp11Extension>();
     }
 
 
@@ -150,16 +124,33 @@ namespace frontend {
 	    ConversionSetup setup = *this;
 
 		// extension initialization
-		setup.frontendExtensionInit();
+		setup.frontendExtensionInit(*this);
+
 
 		// add definitions needed by the OpenCL frontend
-		if(hasOption(OpenCL)) {
+		// this checker checks if the open cl extension was registered
+        auto oclChecker = [&]() -> bool {
+            for(auto extPtr : setup.getExtensions()) {
+                if(dynamic_cast<insieme::frontend::extensions::OclHostExtension*>(extPtr.get()))
+                    return true;
+            }
+            return false;
+        };
+		// this checker checks if the lib icl extension was registered
+        auto libiclChecker = [&]() -> bool {
+            for(auto extPtr : setup.getExtensions()) {
+                if(dynamic_cast<insieme::frontend::extensions::IclHostExtension*>(extPtr.get()))
+                    return true;
+            }
+            return false;
+        };
+		if(oclChecker()) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR);
 			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
 
 			setup.setDefinition("INSIEME");
 		}
-		if(hasOption(lib_icl)) {
+		if(libiclChecker()) {
 			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
 			setup.addIncludeDirectory(CLANG_SRC_DIR);
 			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
@@ -207,7 +198,7 @@ namespace frontend {
 	    ConversionSetup setup = *this;
 
 		// extension initialization
-		setup.frontendExtensionInit();
+		setup.frontendExtensionInit(*this);
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -229,7 +220,7 @@ namespace frontend {
 	    ConversionSetup setup = *this;
 
 		// extension initialization
-		setup.frontendExtensionInit();
+		setup.frontendExtensionInit(*this);
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -263,26 +254,46 @@ namespace frontend {
 		return cppFile || cppLibs;
 	}
 
+	void ConversionJob::registerExtensionFlags(driver::cmd::detail::OptionParser& optParser) {
+        //register all plugins
+        registerFrontendExtension<extensions::InterceptorExtension>(optParser);
+        registerFrontendExtension<extensions::VariadicArgumentsExtension>(optParser);
+        registerFrontendExtension<extensions::ASMExtension>(optParser);
+        registerFrontendExtension<extensions::CppRefsCleanupExtension>(optParser);
+		registerFrontendExtension<extensions::BuiltinFunctionExtension>(optParser);
+		registerFrontendExtension<extensions::InstrumentationRegionExtension>(optParser);
+		registerFrontendExtension<extensions::TestPragmaExtension>(optParser);
+		registerFrontendExtension<extensions::InsiemePragmaExtension>(optParser);
+        registerFrontendExtension<extensions::OmpFrontendExtension>(optParser);
+        registerFrontendExtension<extensions::CilkFrontendExtension>(optParser);
+        registerFrontendExtension<extensions::GemsclaimExtension>(optParser);
+        registerFrontendExtension<extensions::CrossCompilationExtension>(optParser);
+        registerFrontendExtension<extensions::OclHostExtension>(optParser);
+        registerFrontendExtension<extensions::IclHostExtension>(optParser);
+        registerFrontendExtension<extensions::OclKernelExtension>(optParser);
+        registerFrontendExtension<extensions::Cpp11Extension>(optParser);
+
+		registerFrontendExtension<extensions::FrontendCleanupExtension>(optParser);
+		registerFrontendExtension<extensions::AnonymousRenameExtension>(optParser);
+    }
+
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {
         out << "~~~~~~CONVERSION SETUP~~~~~~\n";
         out << "input files: \n" << files << std::endl;
         out << "flags: \n" <<
 			"PrintDiag " << hasOption(ConversionSetup::PrintDiag) << "\n" <<
-			"OpenMP " << hasOption(ConversionSetup::OpenMP) << "\n" <<
-			"OpenCL " << hasOption(ConversionSetup::OpenCL) << "\n" <<
-			"Cilk " << hasOption(ConversionSetup::Cilk) << "\n" <<
 			"WinCrossCompile " << hasOption(ConversionSetup::WinCrossCompile) << "\n" <<
-			"GemCrossCompile " << hasOption(ConversionSetup::GemCrossCompile) << "\n" <<
 			"TAG_MPI " << hasOption(ConversionSetup::TAG_MPI) << "\n" <<
 			"ProgressBar " << hasOption(ConversionSetup::ProgressBar) << "\n" <<
 			"NoWarnings " << hasOption(ConversionSetup::NoWarnings) << "\n" <<
-			"StrictSemanticChecks " << hasOption(ConversionSetup::StrictSemanticChecks) << "\n" << std::endl;
+			"NoDefaultExtensions " << hasOption(ConversionSetup::NoDefaultExtensions) << "\n" << std::endl;
         out << "interceptions: \n" << getInterceptedNameSpacePatterns() << std::endl;
         out << "crosscompilation dir: \n" << getCrossCompilationSystemHeadersDir() << std::endl;
         out << "include dirs: \n" << getIncludeDirectories() << std::endl;
         out << "definitions: \n" << getDefinitions() << std::endl;
         out << "libraries: \n" << libs << std::endl;
         out << "standard: \n" << getStandard() << std::endl;
+        out << "number of registered extensions: \n" << getExtensions().size() << std::endl;
         out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
         return out;
 	}

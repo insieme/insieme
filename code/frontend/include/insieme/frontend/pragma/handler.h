@@ -82,18 +82,6 @@ class Converter;
 
 namespace pragma {
 
-/**
- * Defines an interface which pragmas which would like to be automatically transferred to the
- * generated IR must implement. If not the user is responsible of handling the attachment of pragmas
- * to the IR nodes.
- */
-struct AutomaticAttachable {
-
-	virtual stmtutils::StmtWrapper attachTo(const stmtutils::StmtWrapper& node, conversion::Converter& fact) const = 0;
-
-	virtual ~AutomaticAttachable() { }
-};
-
 // ------------------------------------ Pragma ---------------------------
 /**
  * Defines a generic pragma which contains the location (start,end), and the
@@ -197,14 +185,14 @@ class FrontendExtensionPragma : public Pragma {
      FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string&             type) : Pragma(startLoc, endLoc, type) {
-                             assert(false && "frontend pragma extension cannot be created without a function.");
+                             assert_fail() << "frontend pragma extension cannot be created without a function.";
                           }
 
      FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string&             type,
                           const MatchMap&                mmap) : Pragma(startLoc, endLoc, type) {
-                             assert(false && "frontend pragma extension cannot be created without a function.");
+                             assert_fail() << "frontend pragma extension cannot be created without a function.";
                           }
 
      FrontendExtensionPragma(const clang::SourceLocation& startLoc,

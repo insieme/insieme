@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -131,7 +131,7 @@ private:
 	const Scope& getEnclosingBlock(const Filter& filter) const {
 		auto it = std::find_if(rbegin(), rend(), filter);
 		// if the IR is well formed a continue statement is only allowed if an enclosing loop exists
-		assert(it != rend());
+		assert_true(it != rend());
 		return *it;
 	}
 };
@@ -157,7 +157,7 @@ public:
 		 * Release the pointer from the unique_ptr container so it does not get removed
 		 */
 		inline void release_block_ptr() {
-			assert (!pending() && "Cannot release, the blcok has not been inserted into the CFG");
+			assert_false(pending()) << "Cannot release, the blcok has not been inserted into the CFG";
 			std::get<0>(*this).release();
 		}
 
@@ -175,7 +175,7 @@ public:
 
 		inline BlockInfo& operator=(BlockInfo&& other) {
 
-			assert (((pending() && curr_block()->empty()) || !pending()) && "Block is dirty!" ) ;
+			assert_true(((pending() && curr_block()->empty()) || !pending())) << "Block is dirty!";
 			if (!pending()) { release_block_ptr(); }
 
 			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>::operator=(std::move(other));
@@ -211,7 +211,7 @@ public:
 	// Pass the ownership of the block info externally
 	BlockInfo get() { 
 		BlockInfo b ( std::move(bInfo) ); 
-		assert(b.curr_block());
+		assert_true(b.curr_block());
 		// allocate a new block
 		bInfo = BlockInfo(cfg);
 		return std::move(b);
@@ -291,7 +291,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		builder(root->getNodeManager()), 
 		blockMgr(cfg)
 	{
-		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
+		assert_false(cfg->hasSubGraph(root)) << "CFG for this root node already being built";
 		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
 		// initialize the entry/exit blocks for this CFG
 		entry = std::get<1>(bounds);
@@ -740,7 +740,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 	void visitTernaryOperator(const CallExprAddress& ternaryExpr) {
 
-		assert(false && "Ternarny operator support is still lacking the correct semantics");
+		assert_fail() << "Ternarny operator support is still lacking the correct semantics";
 
 		// append any pending block before we fork the CFG for inserting the for stmt
 		blockMgr.close();
@@ -932,7 +932,7 @@ CFGPtr CFG::buildCFG<MultiStmtPerBasicBlock>(const NodePtr& rootNode, CFGPtr cfg
 }
 
 CFG::VertexTy CFG::addBlock(cfg::Block* block) {
-	assert(block);
+	assert_true(block);
 	CFG::VertexTy&& v = boost::add_vertex(graph);
 	
 	block->setVertexID(v);
@@ -974,7 +974,7 @@ core::NodePtr CFG::getRootNode() const {
 			return entry_block == std::get<1>(curr.second) && 
 				   exit_block  == std::get<2>(curr.second); 
 		});
-	assert(it != subGraphs.end() && "Root node of the CFG not correctly stored");
+	assert_true(it != subGraphs.end()) << "Root node of the CFG not correctly stored";
 	return it->first;
 }
 
@@ -994,7 +994,7 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 		edges.push_back( graph[curr] );
 	});
 
-	assert(dest.size() == edges.size() && "Number of outgoing edges and children of the node should be the same");
+	assert_eq(dest.size(), edges.size()) << "Number of outgoing edges and children of the node should be the same";
 
 	boost::clear_in_edges(oldNode, graph);
 	boost::clear_out_edges(oldNode, graph);
@@ -1018,7 +1018,7 @@ CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::E
 	std::pair<EdgeTy, bool>&& edgeDesc = boost::add_edge(src, dest, graph);
 	// we don't allow to insert the same edge twice, if this happens something 
 	// is wrong in the construction of the CFG graph
-	assert( edgeDesc.second && "Tried to insert a duplicated edge, forbidden!");
+	assert_true(edgeDesc.second) << "Tried to insert a duplicated edge, forbidden!";
 
 	graph[edgeDesc.first] = edge;
 	return edgeDesc.first;
@@ -1027,7 +1027,7 @@ CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::E
 // Returns the Edge object associated to a graph edge connecting src and dest vertices 
 const cfg::Edge& CFG::getEdge(const CFG::VertexTy& src, const CFG::VertexTy& dest) const { 
 	auto edgeDescriptor = boost::edge(src, dest, graph);
-	assert(edgeDescriptor.second && "No edge exists between the two selected vertices");
+	assert_true(edgeDescriptor.second) << "No edge exists between the two selected vertices";
 	return graph[edgeDescriptor.first];
 }
 
@@ -1119,7 +1119,7 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 			core::NodeAddress trg = node;
 
 			if(isChildOf(src,trg)) {
-				assert(!found && "Another node already matched the requrested node");
+				assert_false(found) << "Another node already matched the requested node";
 				found = block;
 				return; 
 			}
@@ -1165,7 +1165,7 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 			while(tmpNode.getNodeType() != core::NT_DeclarationStmt) {
 				path.push_back(tmpNode.getIndex());
 				tmpNode = tmpNode.getParentAddress();
-				assert(tmpNode && "Addres became invalid");
+				assert_true(tmpNode) << "Address became invalid";
 			}
 			
 			for_each(path.rbegin(), path.rend(), [&]( const unsigned& idx ) {
@@ -1181,7 +1181,7 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 		addr = core::Address<const Node>::find(node.getAddressedNode(), addr.getAddressedNode());
 	}
 
-	assert(node.getAddressedNode() == addr.getAddressedNode() && "Search for node in the CFG failed");
+	assert_eq(node.getAddressedNode(), addr.getAddressedNode()) << "Search for node in the CFG failed";
 
 	return cfg::Address(found, stmtIdx, addr);
 }
@@ -1337,7 +1337,6 @@ std::ostream& Block::printTo(std::ostream& out) const {
 }
 
 std::ostream& Terminator::printTo(std::ostream& out) const {
-	// assert(type == Element::TERMINAL);
 	core::StatementPtr stmt = getAnalysisStatement();
 	switch ( stmt->getNodeType() ) {
 
@@ -1363,7 +1362,7 @@ std::ostream& Terminator::printTo(std::ostream& out) const {
 	case NT_ReturnStmt: 	return out << "RETURN\\l";
 
 	default:
-		assert(false && "Terminator statement is not supported");
+		assert_fail() << "Terminator statement is not supported";
 	}
 	return out;
 }

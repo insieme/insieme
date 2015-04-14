@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -72,7 +72,7 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 
 	/*
 	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
-	 * it's value is returned, otherwise an assertion is raised
+	 * its value is returned, otherwise an assertion is raised
 	 * @param
 	 * call A CallExprPtr with an integer literal as first argument
 	 * @return

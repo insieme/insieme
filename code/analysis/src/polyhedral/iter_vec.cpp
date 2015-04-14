@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -127,12 +127,12 @@ int IterationVector::getIdx(const Element& elem) const {
 		int idx = getIdxFrom(*param, params);
 		return (idx==-1?-1:idx+iters.size());	
 	}
-	assert( dynamic_cast<const Constant*>(&elem) != NULL && "Element not valid." ); 
+	assert_true(dynamic_cast<const Constant*>(&elem) != NULL) << "Element not valid."; 
 	return size()-1;
 }
 
 const Element& IterationVector::operator[](size_t idx) const { 
-	assert(idx >= 0 && idx < size() && "Index out of range");
+	assert_true(idx >= 0 && idx < size()) << "Index out of range";
 	if (idx<getIteratorNum()) {
 		return iters[idx];
 	} 
@@ -235,7 +235,7 @@ IterationVector merge(const IterationVector& a, const IterationVector& b) {
 }
 
 const IndexTransMap transform(const IterationVector& trg, const IterationVector& src) {
-	assert(trg.size() >= src.size()); //TODO: convert into an exception
+	assert_ge(trg.size(), src.size()); //TODO: convert into an exception
 
 	IndexTransMap transMap;
 	std::for_each(src.begin(), src.end(), [&](const Element& cur) {
@@ -245,10 +245,10 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 			} else {
 				idx = trg.getIdx(cur);
 			}
-			assert( idx != -1 && static_cast<size_t>(idx) < trg.size() );
+			assert_true(idx != -1 && static_cast<size_t>(idx) < trg.size());
 			transMap.push_back( idx ); 
 		});
-	assert(transMap.size() == src.size());
+	assert_eq(transMap.size(), src.size());
 	return transMap;
 }
 
@@ -282,13 +282,13 @@ void IterationVector::iterator::inc(size_t n) {
 }
 
 const Element& IterationVector::iterator::operator*() const {  
-	assert (valid && "Iterator not valid"); 
+	assert_true(valid) << "Iterator not valid"; 
 
 	if (iterIt != iterVec.iters.end())
 		return *iterIt;
 	else if (paramIt != iterVec.params.end())
 		return *paramIt;
-	assert(constant && "Iteration vector has no constant part");
+	assert_true(constant) << "Iteration vector has no constant part";
 	return iterVec.constant;
 }
 

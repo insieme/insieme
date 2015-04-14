@@ -75,7 +75,7 @@ namespace transform {
 					// a function reducing the level expression by 1
 					auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
 						auto formula = arithmetic::toFormula(level);
-						assert(formula.isConstant() && "Accessing thread-group using non-constant level index not supported!");
+						assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
 						if (formula.isZero()) return ExpressionPtr();
 						return arithmetic::toIR(level->getNodeManager(), formula-1);
 					};
@@ -195,8 +195,8 @@ namespace transform {
 					core::CallExprPtr newCall = call;
 
 					// push binds into the call
-					assert(newCall->getArgument(1)->getNodeType() == NT_BindExpr && "Expected atomic argument 1 to be a bind!");
-					assert(newCall->getArgument(2)->getNodeType() == NT_BindExpr && "Expected atomic argument 2 to be a bind!");
+					assert_eq(newCall->getArgument(1)->getNodeType(), NT_BindExpr) << "Expected atomic argument 1 to be a bind!";
+					assert_eq(newCall->getArgument(2)->getNodeType(), NT_BindExpr) << "Expected atomic argument 2 to be a bind!";
 
 					newCall = pushBindIntoLambda(manager, newCall, 2);		// start with 2 to keep argument 1 at correct position
 					newCall = pushBindIntoLambda(manager, newCall, 1);
@@ -215,7 +215,7 @@ namespace transform {
 				// check whether 1 is within job range
 				ExpressionPtr range = job->getThreadNumRange();
 
-				assert(range->getNodeType() == NT_CallExpr && "Range is not formed by call expression!");
+				assert_eq(range->getNodeType(), NT_CallExpr) << "Range is not formed by call expression!";
 
 				// resolve first argument (lower bound)
 				ExpressionPtr lowerBound = analysis::getArgument(range, 0);

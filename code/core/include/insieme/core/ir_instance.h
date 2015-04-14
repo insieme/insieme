@@ -467,7 +467,7 @@ namespace core {
 		 * @return a pointer to the root node.
 		 */
 		NodePtr getRootNode() const {
-			assert(path && "Invalid node address!");
+			assert_true(path) << "Invalid node address!";
 			// root = the pointer assigned to the first path element
 			return path.getRootNode();
 		}

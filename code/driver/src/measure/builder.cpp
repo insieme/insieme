@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -65,7 +65,7 @@ namespace measure {
 		// create a temporary local source file
 		char sourceFile[] = P_tmpdir "/srcXXXXXX";
 		int src = mkstemp(sourceFile);
-		assert(src != -1);
+		assert_ne(src, -1);
 		close(src);
 
 		// write source to file
@@ -97,7 +97,7 @@ namespace measure {
 			i++;
 		}
 		nfs::NetworkPath workDir = tmpDir / format("work_dir_%d", i);
-		assert(nfs::exists(workDir));
+		assert_true(nfs::exists(workDir));
 
 		bool res = true;
 

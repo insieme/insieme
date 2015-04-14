@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -213,7 +213,7 @@ void PcaSeparateExt::genDefaultDynamicQuery() {
 
 
 size_t PcaSeparateExt::calcPca(double toBeCovered) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
+	assert_gt((staticFeatures.size() + dynamicFeatures.size()), 0) << "Cannot do PCA without any features set";
 
 	size_t nPCs = 0;
 
@@ -230,7 +230,7 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
  * calculates the principal components of static features based on the given query and stores them in the database
  */
 double PcaSeparateExt::calcPca(size_t nDynamicOutFeatures, size_t nStaticOutFeatures) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
+	assert_gt((staticFeatures.size() + dynamicFeatures.size()), 0) << "Cannot do PCA without any features set";
 
 	double covered = 0.0, divisor = 0.0;
 

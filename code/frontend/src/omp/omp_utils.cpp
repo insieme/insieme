@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -78,7 +78,7 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 				ExpressionPtr initializer;
 				if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
 					initializer = build.undefined(analysis::getReferencedType(lit->getType()));
-				} else assert(false && "Unsupported OMP global type");
+				} else assert_fail() << "Unsupported OMP global type";
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
 			}
