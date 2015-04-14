@@ -478,9 +478,7 @@ namespace backend {
 	}
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
-		// the recursive type instantiator does the magic
-		core::NodeManager& manager = converter.getNodeManager();
-
+		// the recursive type instantiator does the magic.
 		// this pass has been implemented as part of the core manipulation utils
 		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
 			// only consider lambdas
