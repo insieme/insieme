@@ -55,8 +55,8 @@ TEST(SuperfluousCleanup, Simple) {
 	core::ProgramPtr program = builder.parseProgram(
 				R"(
 				int<4> main() {
-					ref<int<4>> i = ref.var(0);
-					ref<int<4>> j = ref.var(4);
+					decl ref<int<4>> i = ref_var(0);
+					decl ref<int<4>> j = ref_var(4);
 					for(int<4> v = 0 .. 100) {
 						j = j + 6;
 						i = i + 3;
@@ -89,8 +89,8 @@ TEST(SuperfluousCleanup, EnclosingLoops) {
 	core::ProgramPtr program = builder.parseProgram(
 		R"(
 		int<4> main() {
-			ref<int<4>> i = ref.var(0);
-			ref<int<4>> j = ref.var(4);
+			decl ref<int<4>> i = ref_var(0);
+			decl ref<int<4>> j = ref_var(4);
 			while (i<6) {
 				for(int<4> v = 0 .. 100) {
 					j = j + 6;

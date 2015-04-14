@@ -545,7 +545,7 @@ TEST(IterationDomain, FromVariable) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<iint<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	v[$i+b$]; "
 		"}$", symbols
@@ -572,7 +572,7 @@ TEST(IterationDomain, FromVariable2) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	if ( $i$<20 ) "
 		"		v[$i+b$]; "
@@ -611,7 +611,7 @@ TEST(IterationDomain, NotAScop) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. a*b : 1) { "
 		"	v[$i+b$]; "
 		"}$", symbols
@@ -635,7 +635,7 @@ TEST(IterationDomain, FromVariable3) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	if ( $i$<b ) "
 		"		v[$i+b$]; "
@@ -669,7 +669,7 @@ TEST(IterationDomain, FromVariable4) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( a > 20 ) { "
 		"	for(int<4> i = b .. a : 1) { "
 		"		if ( b < $i$ ) "
@@ -714,7 +714,7 @@ TEST(IterationDomain, FromVariableStrided) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( a > 20 ) { "
 		"	for(int<4> i = b .. a : 2) { "
 		"		if ( b<$i$ ) "
@@ -763,7 +763,7 @@ TEST(IterationDomain, FromVariable5) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( 1==1 ) { "
 		"	for(int<4> i = a .. a+10 : 2) { "
 		"		if ( i==a+2 ) "
@@ -799,7 +799,7 @@ TEST(IterationDomain, FromVariable6) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( a>4 ) { "
 		"	for(int<4> i = a .. a+10 : 2) { "
 		"		if ( i==a+1 ) "

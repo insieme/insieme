@@ -55,8 +55,8 @@ TEST(CFGAddress, Simple1) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
-		"$ref<int<4>> a = 10+$20$;$"
+    auto addresses = builder.parseAddressesStatement(
+		"$decl ref<int<4>> a = 10+$20$;$"
     );
 
     EXPECT_EQ(2u, addresses.size());
@@ -80,11 +80,11 @@ TEST(CFGAddress, Simple2) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${ "
-		"	int<4> a = 10;"
-		"	int<4> b = 20;"
-		"	$ref<int<4>> c = $a+$b$$;$"
+		"	decl int<4> a = 10;"
+		"	decl int<4> b = 20;"
+		"	$decl ref<int<4>> c = $a+$b$$;$"
 		"}$ "
     );
 
@@ -126,11 +126,11 @@ TEST(CFGAddress, Simple3) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${ "
-		"	int<4> a = 10;"
-		"	int<4> b = 20;"
-		"	$ref<int<4>> c = $a+$b$+b$;$"
+		"	decl int<4> a = 10;"
+		"	decl int<4> b = 20;"
+		"	$decl ref<int<4>> c = $a+$b$+b$;$"
 		"}$ "
     );
 

@@ -363,11 +363,11 @@ private:
 				unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
 				std::string irCode = format(
-					"(vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
-					"	ref<vector<'b,%i> > toVec = var( undefined(lit(vector<'b,%i>)) );"
+					"lambda (vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
+					"	decl ref<vector<'b,%i> > toVec = var( undefined(vector<'b,%i>) );"
 						""
 						"for(uint<8> i = 0u .. %iu ) "
-						"	toVec[i] = ('b) fromVec[i]; "
+						"	toVec[i] = CAST('b) fromVec[i]; "
 						""
 						"return *toVec; "
 					"}", length, length, length, length, length, length);

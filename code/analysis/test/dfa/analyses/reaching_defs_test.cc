@@ -136,7 +136,7 @@ TEST(ReachingDefinition, ScalarNoControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -168,7 +168,7 @@ TEST(ReachingDefinition, ScalarWithControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -211,7 +211,7 @@ TEST(ReachingDefinition, ScalarWithControl2) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -256,7 +256,7 @@ TEST(ReachingDefinition, ScalarWithControl3) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -301,7 +301,7 @@ TEST(ReachingDefinition, ScalarWithLoop) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	ref<int<4>> b = var(3); "
@@ -351,7 +351,7 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; int<4> b; }>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -381,7 +381,7 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 //	NodeManager mgr;
 //	IRBuilder builder(mgr);
 //
-//    auto addresses = builder.parseAddresses(
+//    auto addresses = builder.parseAddressesStatement(
 //		"${"
 //		"	int<4> i = 2; "
 //		"	int<4> b = 3; "
@@ -412,7 +412,7 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 //	NodeManager mgr;
 //	IRBuilder builder(mgr);
 //
-//    auto addresses = builder.parseAddresses(
+//    auto addresses = builder.parseAddressesStatement(
 //		"${"
 //		"	ref<struct{ int<4> a; int<4> b; }> s; "
 //		"	int<4> i = 2; "
@@ -459,7 +459,7 @@ TEST(ReachingDefinitions, StructMemberNested) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; struct{ int<4> b; } b; }>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -503,7 +503,7 @@ TEST(ReachingDefinitions, StructMemberNested2) {
 			"ref<struct{ int<4> a; struct{ int<4> a; struct { int<4> b; } b; } b; }>"
 		));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -551,7 +551,7 @@ TEST(ReachingDefinitions, StructMemberNested2) {
 //	NodeManager mgr;
 //	IRBuilder builder(mgr);
 //
-//    auto addresses = builder.parseAddresses(
+//    auto addresses = builder.parseAddressesStatement(
 //		"${"
 //		"	ref<vector<int<4>, 10>> v; "
 //		"	int<4> i = 2; "
@@ -588,7 +588,7 @@ TEST(ReachingDefinitions, VectorsWithControl) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -635,7 +635,7 @@ TEST(ReachingDefinitions, VectorsWithControl2) {
 			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
 		);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<2> i = 2; "
 		"	int<2> b = 3; "
@@ -674,7 +674,7 @@ TEST(ReachingDefinitions, VectorsWithControl3) {
 			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
 		);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -713,7 +713,7 @@ TEST(ReachingDefinitions, VectorsWithControl3) {
 //		builder.parseType("ref<vector<uint<4>,10>>")
 //	);
 //
-//	auto addresses = builder.parseAddresses(
+//	auto addresses = builder.parseAddressesStatement(
 //	"${"
 //	"	uint<4> a = 2u; "
 //	"	uint<4> b = 3u; "
@@ -771,7 +771,7 @@ TEST(ReachingDefinitions, Vectors2DWithControl5) {
 		builder.parseType("ref<vector<vector<uint<4>,10>,10>>")
 	);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
 	"	uint<4> a = 2u; "
 	"	uint<4> b = 3u; "
@@ -817,7 +817,7 @@ TEST(ReachingDefinitions, Vectors2DWithControl6) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
 	"	ref<vector<uint<4>,10>> v; "
 	"	uint<4> a = 2u; "
@@ -871,7 +871,7 @@ TEST(ReachingDefinitions, Vectors2DWithControl6) {
 //		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
 //	);
 //
-//	auto addresses = builder.parseAddresses(
+//	auto addresses = builder.parseAddressesStatement(
 //	"${"
 //	"	uint<4> a = 2u; "
 //	"	uint<4> b = 3u; "
@@ -920,7 +920,7 @@ TEST(ReachingDefinitions, Vectors2DWithControl7) {
 		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
 	);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
 	"	uint<4> a = 2u; "
 	"	uint<4> b = 3u; "
@@ -966,7 +966,7 @@ TEST(ReachingDefinitions, Vectors2DWithControl8) {
 		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
 	);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
 	"	uint<4> a = 2u; "
 	"	uint<4> b = 3u; "

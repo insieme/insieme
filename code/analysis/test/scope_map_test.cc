@@ -49,7 +49,7 @@ TEST(VariableScopeMap, Simple) {
 	IRBuilder builder(mgr);
 
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 			"${ "
 			"	int<4> a = 0; "
 			"	${ "
@@ -78,7 +78,7 @@ TEST(VariableScopeMap, Simple2) {
 	IRBuilder builder(mgr);
 
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 			"${ "
 			"	ref<int<4>> a = 0; "
 			"	a = 1; "
@@ -148,7 +148,7 @@ TEST(VariableScopeMap, Lambda) {
 	IRBuilder builder(mgr);
 
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 			"${ "
 			"	ref<int<4>> a = 0; "
 			"	a = 1; "

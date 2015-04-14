@@ -62,6 +62,7 @@ namespace {
         if (!driver.result) {
             if (onFailThrow ){
                 std::stringstream ss;
+                driver.print_errors(ss);
                 throw IRParserException(ss.str());
             }
             else{
@@ -209,46 +210,69 @@ namespace {
 			return parent.getAddressOfChild(cur.getIndex());
 		}
 
-	}
 
-	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, 
+        std::vector<NodeAddress> extract_addresses(NodePtr root){
+            // search all marked locations within the parsed code fragment
+            std::vector<NodeAddress> res;
+            core::visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
+                if (cur->hasAttachedValue<AddressMark>()) {
+                    // get address to marked sub-construct
+                    if(cur->getNodeType() == core::NT_MarkerExpr) {
+                        res.push_back(cur.as<core::MarkerExprAddress>()->getSubExpression());
+                    } else if (cur->getNodeType() == core::NT_MarkerStmt) {
+                        res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
+                    } else {
+                        assert(false && "Only marker expressions and statements should be marked.");
+                    }
+                }
+            });
+
+            // remove marks from code
+            root = removeMarks(root);
+
+            // remove marker nodes from addresses
+            for(NodeAddress& cur : res) {
+                cur = removeMarks(root, cur);
+            }
+
+            // return list of addresses
+            return res;
+        }
+
+	} // annon namespace
+
+
+
+	std::vector<NodeAddress> parse_addresses_statement(NodeManager& manager, const string& code, 
                                              bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
         save_symbol_table(driver, definitions);
         auto root =  driver.parseStmt();
+
+        // check the result
         if(!root) {
             checkErrors(driver, onFailThrow);
             return std::vector<NodeAddress>();
         }
 
+        return extract_addresses(root);
+    }
+
+	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, 
+                                             bool onFailThrow, const std::map<string, NodePtr>& definitions){
+        inspire_driver driver(code, manager);
+        save_symbol_table(driver, definitions);
+        auto root =  driver.parseProgram();
+
         // check the result
-
-        // search all marked locations within the parsed code fragment
-        std::vector<NodeAddress> res;
-        core::visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
-            if (cur->hasAttachedValue<AddressMark>()) {
-                // get address to marked sub-construct
-                if(cur->getNodeType() == core::NT_MarkerExpr) {
-                    res.push_back(cur.as<core::MarkerExprAddress>()->getSubExpression());
-                } else if (cur->getNodeType() == core::NT_MarkerStmt) {
-                    res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
-                } else {
-                    assert(false && "Only marker expressions and statements should be marked.");
-                }
-            }
-        });
-
-        // remove marks from code
-        root = removeMarks(root).as<StatementPtr>();
-
-        // remove marker nodes from addresses
-        for(NodeAddress& cur : res) {
-            cur = removeMarks(root, cur);
+        if(!root) {
+            checkErrors(driver, onFailThrow);
+            return std::vector<NodeAddress>();
         }
 
-        // return list of addresses
-        return res;
+        return extract_addresses(root);
     }
+
 
 } //  parser3
 } //  core

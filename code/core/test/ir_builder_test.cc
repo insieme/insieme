@@ -139,8 +139,8 @@ TEST(BuilderTest, CreateCallExprFromBody1) {
 	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.getZero(builder.refType(gen.getInt4())) );
 	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.getZero(builder.refType(gen.getInt4())) );
 
-	core::StatementPtr assignStmt1 = builder.parseStmt("var1 = var3;", symbols);
-	core::StatementPtr assignStmt2 = builder.parseStmt("var4 = var2;", symbols);
+	core::StatementPtr assignStmt1 = builder.parseStmt("var1 = *var3;", symbols);
+	core::StatementPtr assignStmt2 = builder.parseStmt("var4 = *var2;", symbols);
 
 	//body with 2 decl stmts and usage of 4 variables
 	core::StatementList bodyStmts;

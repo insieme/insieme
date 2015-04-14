@@ -182,7 +182,7 @@ namespace measure {
 //		NodeManager manager;
 //		IRBuilder builder(manager);
 //
-//		vector<NodeAddress> stmts= builder.parseAddresses(
+//		vector<NodeAddress> stmts= builder.parseAddressesStatement(
 //				"{"
 //				"	let load = (int<4> n)->int<4> {"
 //				"		ref<int<4>> sum = var(0);"
@@ -296,19 +296,19 @@ namespace measure {
 
 		EXPECT_TRUE(measure(builder.parseStmt("{ return; }"), Metric::WALL_TIME).isValid());
 
-		EXPECT_TRUE(measure(builder.parseAddresses("{ for(int<4> i= 0 .. 10) { ${ break; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ break; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
 
-		EXPECT_TRUE(measure(builder.parseAddresses("{ for(int<4> i= 0 .. 10) { ${ continue; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ for(int<4> i= 0 .. 10) { ${ continue; }$ } }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
 
 		EXPECT_TRUE(measure(builder.parseStmt("{ if(true) { return; } else { return; } }"), Metric::WALL_TIME).isValid());
 
 
 		// a return with a n expression
-		EXPECT_TRUE(measure(builder.parseAddresses("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ } } (); }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ } } (); }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
 
 
 		// two nested regions ending at the same point
-		vector<NodeAddress> addr = builder.parseAddresses("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } } (); }");
+		vector<NodeAddress> addr = builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } } (); }");
 		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME));
 
 		EXPECT_TRUE(res[addr[0].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());

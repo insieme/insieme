@@ -69,28 +69,28 @@ namespace lang {
 		 * Get real part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexReal,
-            "(struct { 'a _real; 'a _img; } x)->'a { return x._real; }"
+            "lambda (struct { 'a _real; 'a _img; } x)->'a { return x._real; }"
         );
 
         /**
 		 * Get real part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexReal,
-            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x._real; }"
+            "lambda (ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x._real; }"
         );
 
         /**
 		 * Get imaginary part of complex.
 		 */
 		LANG_EXT_DERIVED(ComplexImg,
-            "(struct { 'a _real; 'a _img; } x)->'a { return x._img; }"
+            "lambda (struct { 'a _real; 'a _img; } x)->'a { return x._img; }"
         );
 
         /**
 		 * Get imaginary part of complex ref.
 		 */
 		LANG_EXT_DERIVED(RefComplexImg,
-            "(ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x._img; }"
+            "lambda (ref<struct { 'a _real; 'a _img; }> x)->ref<'a> { return x._img; }"
         );
 
         /**
@@ -98,25 +98,25 @@ namespace lang {
 		 */
         LANG_EXT_DERIVED(ConstantToComplex,
                             "let res_t = struct {'a _real; 'a _img};"
-                            "('a c)->res_t {"
-                                "return (res_t) {c, ('a) 0};"
+                            "lambda ('a c)->res_t {"
+                                "return struct res_t {c, CAST('a) 0};"
                             "}");
 
         /**
 		 * Check if the real and imaginary part of the complex number are zero.
 		 */
 		LANG_EXT_DERIVED(ComplexToBool,
-            "(struct { 'a _real; 'a _img; } x)->bool { return ((x._img != ('a) 0.0) || (x._real != ('a) 0.0)); }"
+            "lambda (struct { 'a _real; 'a _img; } x)->bool { return ((x._img != CAST('a) 0.0) || (x._real != CAST('a) 0.0)); }"
         );
 
         /**
 		 * Cast a complex number of type a to a complex number of type b
 		 */
         LANG_EXT_DERIVED(ComplexToComplex,
-                            "(struct {'a _real; 'a _img} c, type<'b> t)->struct {'b _real; 'b _img} {"
-                                "return (struct {'b _real; 'b _img}) { ('b) c._real, ('b) c._img };"
+                            "let res_t = struct {'b _real; 'b _img};"
+                            "lambda (struct {'a _real; 'a _img} c, type<'b> t)->struct {'b _real; 'b _img} {"
+                                "return struct res_t { CAST('b) c._real, CAST('b) c._img };"
                             "}");
-
 
         /**
 		 * Creates a complex type out of a type

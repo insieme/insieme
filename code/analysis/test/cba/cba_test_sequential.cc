@@ -92,11 +92,11 @@ namespace cba {
 		map<string, NodePtr> symbols;
 		symbols["w"] = w;
 
-		auto pos = builder.parseAddresses("(int x, int y)->unit { "
+		auto pos = builder.parseAddressesStatement("lambda (int x, int y)->unit { "
 				"	$x$;"
 				"	$y$;"
 				"	$w$;"
-				"	int<4> z = 123;"
+				"	decl int<4> z = 123;"
 				"	$z$;"
 				"	{"
 				"		$z$;"
@@ -104,9 +104,9 @@ namespace cba {
 				"		$z$;"
 				"	};"
 				"	$z$;"
-				"	int<4> w = 123;"
+				"	decl int<4> w = 123;"
 				"	$w$;"
-				"	int<4> w = 123;"
+				"	decl int<4> w = 123;"
 				"	$w$;"
 				"}",
 				symbols
@@ -212,8 +212,8 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	int<4> a;"
-				"	ref<int<4>> b;"
+				"	decl int<4> a;"
+				"	decl ref<int<4>> b;"
 				"	a;"
 				"	*b;"
 				"	*c;"
@@ -256,8 +256,8 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	int<4> x = 12;"
-				"	auto y = (int<4> z)->unit {};"
+				"	decl int<4> x = 12;"
+				"	decl auto y = lambda (int<4> z)->unit {};"
 				"	y(14);"
 				"	y(16);"
 				"}"
@@ -331,12 +331,12 @@ namespace cba {
 		auto code = builder.parseStmt(
 				"{"
 				"	let id = ('a x)->'a { return x; };"
-				"	auto x = 1;"
-				"	auto x = id(2);"
-				"	auto x = id(x);"
-				"	auto x = id(id(3));"
-				"	auto x = id(id(x));"
-				"	auto x = id(id(id(4)));"
+				"	decl auto x = 1;"
+				"	decl auto x = id(2);"
+				"	decl auto x = id(x);"
+				"	decl auto x = id(id(3));"
+				"	decl auto x = id(id(x));"
+				"	decl auto x = id(id(id(4)));"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -364,7 +364,7 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
 				"	*x;"							// should be 1
 				"}"
 		).as<CompoundStmtPtr>();
@@ -389,12 +389,12 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(1);"		// set x to 1
-				"	auto y = *x;"					// y should be 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
+				"	decl auto y = *x;"					// y should be 1
 				"	x = 2;"							// set x to 2
-				"	auto z = *x;"					// z should be 2
+				"	decl auto z = *x;"					// z should be 2
 				"	x = 3;"							// set x to 3
-				"	auto w = *x;"					// z should be 3
+				"	decl auto w = *x;"					// z should be 3
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -423,10 +423,10 @@ namespace cba {
 				"{"
 
 				// init variables
-				"	ref<int<4>> x = var(1);"		// set x to 1
-				"	ref<int<4>> y = var(2);"		// set y to 2
-				"	ref<int<4>> z = x;"				// z is an alias of x
-				"	ref<ref<int<4>>> p = var(y);"	// p is a pointer on y
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> y = var(2);"		// set y to 2
+				"	decl ref<int<4>> z = x;"				// z is an alias of x
+				"	decl ref<ref<int<4>>> p = var(y);"	// p is a pointer on y
 
 				// read values
 				"	*x;"
@@ -501,7 +501,7 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
 				"	x = 2;"
 				"	x = 3;"
 				"	x = 4;"
@@ -570,11 +570,11 @@ namespace cba {
 		auto code = builder.parseStmt(
 				"{"
 				"	*e;"
-				"	e->flag = true;"
+				"	e.flag = true;"
 				"	*e;"
-				"	e->value[2] = 5;"
+				"	e.value[2] = 5;"
 				"	*e;"
-				"	e->value[2] = 8;"
+				"	e.value[2] = 8;"
 				"	*e;"
 				"}",
 				symbols
@@ -611,7 +611,7 @@ namespace cba {
 				"{"
 
 				// init variables
-				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
 				"	*x;"							// should be 1
 				"	if (x > 0) {"
 				"		*x;"						// should be 1
@@ -657,7 +657,7 @@ namespace cba {
 				"{"
 
 				// init variables
-				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
 				"	*x;"							// should be 1
 				"	if (x > e) {"
 				"		*x;"						// should be 1
@@ -703,7 +703,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
 				"	*x;"							// should be 1
 				"	while (x > 0) {"
 				"		*x;"						// should be 1 or unknown
@@ -739,7 +739,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	decl ref<int<4>> x = var(1);"		// set x to 1
 				"	*x;"							// should be 1
 				"	while (false) {"
 				"		x = 2;"
@@ -810,7 +810,7 @@ namespace cba {
 
 		auto in = builder.normalize(builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(0);"			// set x to 0
+				"	decl ref<int<4>> x = var(0);"			// set x to 0
 				"	*x;"								// should be 0
 				"	for (int<4> i = 0 .. 10 : 1) {"
 				"		i;"								// should be i .. symbolic
@@ -856,7 +856,7 @@ namespace cba {
 		auto in = builder.normalize(builder.parseStmt(
 				"{"
 				"	for (int<4> i = 0 .. 10 : 1) {"
-				"		auto x = 2*i + 3;"
+				"		decl auto x = 2*i + 3;"
 				"		for(int<4> j = 0 .. 10 : 1) {"
 				"			i;"
 				"			j;"
@@ -894,10 +894,10 @@ namespace cba {
 
 		auto in = builder.normalize(builder.parseStmt(
 				"{"
-				"	ref<int<4>> y = var(0);"
-				"	ref<int<4>> z = var(0);"
+				"	decl ref<int<4>> y = var(0);"
+				"	decl ref<int<4>> z = var(0);"
 				"	for (int<4> i = 0 .. 10 : 1) {"
-				"		auto x = var(2*i + 3);"
+				"		decl auto x = var(2*i + 3);"
 				"		x = x + 2 * i;"
 				"		*x;"
 				"		*y;"
@@ -931,7 +931,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> r = var(1);"
+				"	decl ref<int> r = var(1);"
 				"	for(int i = 1 .. 5 : 1) {"
 				"		r = r * i;"
 				"	}"
@@ -961,7 +961,7 @@ namespace cba {
 
 		auto in = builder.normalize(builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(0);"
+				"	decl ref<int<4>> x = var(0);"
 				"	*x;"		// should be 0
 				"	for (int<4> i = 0 .. 10 : 1) {"
 				"		x = 1;"
@@ -1049,17 +1049,17 @@ namespace cba {
 				"	17+4;"
 
 				// constant expressions with variables
-				"	auto x = 2;"
-				"	auto y = 3;"
+				"	decl auto x = 2;"
+				"	decl auto y = 3;"
 				"	x;"
 				"	2*x+1;"
 				"	2*x+4*y;"
 				"	2*x+4*y+e;"
 
-				"	ref<int<4>> z = var(10);"
-				"	ref<int<4>> w = var(5);"
-				"	ref<int<4>> a = z;"
-				"	ref<ref<int<4>>> p = var(z);"
+				"	decl ref<int<4>> z = var(10);"
+				"	decl ref<int<4>> w = var(5);"
+				"	decl ref<int<4>> a = z;"
+				"	decl ref<ref<int<4>>> p = var(z);"
 
 				"	*z;"
 				"	*p+2*z;"
@@ -1125,9 +1125,9 @@ namespace cba {
 		auto in = builder.parseStmt(
 			"{"
 			"	let int = int<4>;"
-			"	ref<int> a = var(3);"
-			"	ref<int> b = var(9 + (a * 5));"
-			"	ref<int> c;"
+			"	decl ref<int> a = var(3);"
+			"	decl ref<int> b = var(9 + (a * 5));"
+			"	decl ref<int> c;"
 			"	"
 			"	c = b * 4;"
 			"	if (c > 10) {"
@@ -1156,7 +1156,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 			"{"
 			"	let int = int<4>;"
-			"	let f = lit(\"xyz\": () -> int);"
+			"	let f = expr lit(\"xyz\": () -> int);"
 			"	f();"
 			"}"
 		).as<CompoundStmtPtr>();
@@ -1326,13 +1326,13 @@ namespace cba {
 				"{"
 
 				// simple function
-				"	auto y = (int<4> z)->int<4> { return z; };"
+				"	decl auto y = lamba (int<4> z)->int<4> { return z; };"
 				"	y(1);"								// this one should be { 1 }
 				"	y(2);"								// this one should be { 2 }
 				"	y(3);"								// this one should be { 2 }
 
 				// higher order functions
-				"	auto z = ((int<4>)->int<4> x, int<4> i)->int<4> { return x(i); };"
+				"	decl auto z = lambda ((int<4>)->int<4> x, int<4> i)->int<4> { return x(i); };"
 				"	z(y,4);"								// this one should be { 4 }
 				"	z(y,5);"								// this one should be { 5 }
 
@@ -1366,10 +1366,10 @@ namespace cba {
 				// prepare some functions
 				"	let inc = (ref<int<4>> x)->unit { x = x+1; };"
 				"	auto f = inc;"
-				"	auto apply = (ref<'a> loc, (ref<'a>)->unit op)->unit { op(loc); };"
+				"	decl auto apply = lambda (ref<'a> loc, (ref<'a>)->unit op)->unit { op(loc); };"
 
 				// apply them
-				"	ref<int<4>> x = var(1);"
+				"	decl ref<int<4>> x = var(1);"
 				"	*x;"							// should be 1
 				"	x = x+1;"
 				"	*x;"							// should be 2
@@ -1424,9 +1424,9 @@ namespace cba {
 				"{"
 
 				// prepare some functions
-				"	auto a = (ref<int<4>> x)->unit { x = x+1; };"
-				"	auto b = (ref<int<4>> x)->unit { x = x*2; };"
-				"	auto f = (ref<int<4>> x, (ref<int<4>>)->unit a, (ref<int<4>>)->unit b)->unit {"
+				"	decl auto a = (ref<int<4>> x)->unit { x = x+1; };"
+				"	decl auto b = (ref<int<4>> x)->unit { x = x*2; };"
+				"	decl auto f = (ref<int<4>> x, (ref<int<4>>)->unit a, (ref<int<4>>)->unit b)->unit {"
 				"		if (x < 3) {"
 				"			a(x);"
 				"		} else {"
@@ -1435,7 +1435,7 @@ namespace cba {
 				"	};"
 
 				// apply them
-				"	ref<int<4>> x = var(1);"
+				"	decl ref<int<4>> x = var(1);"
 				"	*x;"							// should be 1
 				"	f(x,a,b);"
 				"	*x;"							// should be 2
@@ -1559,8 +1559,8 @@ namespace cba {
 				"{"
 
 				// create a counter
-				"	int<4> x = 2;"
-				"	let inc = (int<4> z) => z + x;"
+				"	decl int<4> x = 2;"
+				"	let inc = lambda (int<4> z) => z + x;"
 
 				// create some bindings
 				"	inc(3);"
@@ -1584,7 +1584,7 @@ namespace cba {
 
 			auto in = builder.parseStmt(
 					"{"
-					"	auto inc = (int<4> x) => x + 1;"
+					"	decl auto inc = (int<4> x) => x + 1;"
 					"	inc(2);"
 					"	inc(4);"
 					"}"
@@ -1608,8 +1608,9 @@ namespace cba {
 
 			auto in = builder.parseStmt(
 					"{"
-					"	ref<int<4>> o = var(1);"
-					"	auto inc = let f = (int<4> a, ref<int<4>> b)->int<4> { return a + b; } in (int<4> x) => f(x,o);"
+					"	decl ref<int<4>> o = var(1);"
+                    "   let f = (int<4> a, ref<int<4>> b)->int<4> { return a + b; }"
+					"	decl auto inc = lambda (int<4> x) => f(x,o);"
 					"	inc(2);"
 					"	o = 2;"
 					"	inc(2);"
@@ -1639,10 +1640,10 @@ namespace cba {
 				"{"
 
 				// create a counter
-				"	ref<int<4>> c = var(0);"
-				"	auto inc = () => { c = c+1; };"
-				"	auto dec = () => { c = c-1; };"
-				"	auto inc2 = (int<4> z) => { c = c+z; };"
+				"	decl ref<int<4>> c = var(0);"
+				"	decl auto inc = lambda () => { c = c+1; };"
+				"	decl auto dec = lambda () => { c = c-1; };"
+				"	decl auto inc2 = lambda (int<4> z) => { c = c+z; };"
 
 				// create some bindings
 				"	*c;"
@@ -1652,7 +1653,7 @@ namespace cba {
 				"	*c;"
 				"	dec();"
 				"	*c;"
-				"	(int<4> z) => { c = c+z; }(4);"
+				"	lambda (int<4> z) => { c = c+z; }(4);"
 				"	*c;"
 				"	inc2(2);"
 				"	*c;"
@@ -1682,11 +1683,11 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 			"{"
-			"	auto f = (()->unit a)->unit { a(); };"
-			"	auto g = (()->unit a)->unit { a(); };"
-			"	f(()->unit {});"
-			"	f(()->unit {});"
-			"	g(()->unit {});"
+			"	auto f = lambda (()->unit a)->unit { a(); };"
+			"	auto g = lambda (()->unit a)->unit { a(); };"
+			"	f(lambda ()->unit {});"
+			"	f(lambda ()->unit {});"
+			"	g(lambda ()->unit {});"
 			"}"
 		).as<CompoundStmtPtr>();
 
@@ -1713,7 +1714,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let fac = (int<4> x)->int<4> {"
+				"	let fac = lambda (int<4> x)->int<4> {"
 				"		if (x == 0) return 1;"
 				"		return x * fac(x-1);"
 				"	};"
@@ -1753,11 +1754,11 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let even, odd = "
-				"		(int<4> x)->bool {"
+				"		lambda (int<4> x)->bool {"
 				"			if (x == 0) return true;"
 				"			return odd(x-1);"
 				"		},"
-				"		(int<4> x)->bool {"
+				"		lambda (int<4> x)->bool {"
 				"			if (x == 0) return false;"
 				"			return even(x-1);"
 				"		};"
@@ -1816,7 +1817,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let fac = (int<4> x)->int<4> {"
+				"	let fac = lambda (int<4> x)->int<4> {"
 				"		if (x == 0) return 1;"
 				"		return x * fac(x-1);"
 				"	};"
@@ -1860,11 +1861,11 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let even, odd = "
-				"		(int<4> x)->bool {"
+				"		lambda (int<4> x)->bool {"
 				"			if (x == 0) return true;"
 				"			return odd(x-1);"
 				"		},"
-				"		(int<4> x)->bool {"
+				"		lambda (int<4> x)->bool {"
 				"			if (x == 0) return false;"
 				"			return even(x-1);"
 				"		};"
@@ -1907,10 +1908,10 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	auto f = ()->ref<int> { return new(0); };"
+				"	decl auto f = ()->ref<int> { return new(0); };"
 				"	"
-				"	ref<int> a = f();"
-				"	ref<int> b = f();"
+				"	decl ref<int> a = f();"
+				"	decl ref<int> b = f();"
 				"	"
 				"	a = 4;"
 				"	b = 5;"
@@ -1950,9 +1951,9 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	let inc = (ref<int> a)->int { a = a + 1; return *a; };"
+				"	let inc = lambda (ref<int> a)->int { a = a + 1; return *a; };"
 				"	"
-				"	ref<int> x = new(0);"
+				"	decl ref<int> x = new(0);"
 				"	"
 				"	inc(x) + inc(x);"			// this should be 3 (1 + 2 in any evaluation order)
 				"	*x;"						// this should be 2 now
@@ -1984,12 +1985,12 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	vector.init.undefined(lit(int<4>),param(10));"
+				"	vector_init_undefined(lit(int<4>),param(10));"
 				"	"
-				"	vector.init.uniform(10,param(5));"
-				"	vector.init.uniform((c?4:5),param(5));"
+				"	vector_init_uniform(10,param(5));"
+				"	vector_init_uniform((c?4:5),param(5));"
 				"	"
-				"	array.create.1D(lit(int<4>),20u);"
+				"	array_create_1D(lit(int<4>),20u);"
 				"}", symbols
 		).as<CompoundStmtPtr>();
 

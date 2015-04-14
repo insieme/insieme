@@ -57,7 +57,7 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		CallExprAddress code = builder.parseAddresses( R"1N5P1RE(
+		CallExprAddress code = builder.parseAddressesStatement( R"1N5P1RE(
 			{ 
 				let int = int<4>; 
 				let fun = lambda (int a, int b) -> int { 
@@ -87,7 +87,7 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		CallExprAddress code = builder.parseAddresses(R"1N5P1RE(
+		CallExprAddress code = builder.parseAddressesStatement(R"1N5P1RE(
 			{ 
 				let int = int<4>; 
 				let fun = lambda (int a, int b) -> int { 
@@ -122,7 +122,7 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		CallExprAddress code = builder.parseAddresses(
+		CallExprAddress code = builder.parseAddressesStatement(
 			"{ "
 			"	let int = int<4>; "	
 			"	let fun = lambda (int a, int b) -> int { "

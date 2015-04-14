@@ -63,23 +63,23 @@ TEST(Preprocessor, GlobalElimination) {
 			builder.namedValue("f", builder.undefined(builder.parseType("real<8>")))
 	));
 
-	core::ProgramPtr program = builder.parseProgram(
-			"let gstruct = struct { vector<int<4>,20> a; real<8> f; };"
-			""
-			"int<4> main() {"
-			"	ref<gstruct> v1 = new(A);"
-			"	v1.a;"
-			"	composite.member.access(*v1, lit(\"a\" : identifier), lit(vector<int<4>,20>));"
-			"	(ref<gstruct> v2) -> int<4> {"
-			"		v2.a;"
-			"		composite.member.access(*v2, lit(\"a\" : identifier), lit(vector<int<4>,20>));"
-			"	} (v1);"
-			"	{"
-			"		v1.a = lit(\"X\":vector<int<4>,20>);"
-			"	}"
-			"	return 0;"
-			"}",
-			symbols
+	core::ProgramPtr program = builder.parseProgram(R"(
+			let gstruct = struct { vector<int<4>,20> a; real<8> f; };
+			
+			int<4> main() {
+				decl ref<gstruct> v1 = new(A);
+				v1.a;
+				composite_member_access(*v1, lit("a" : identifier), lit(vector<int<4>,20>));
+				lambda (ref<gstruct> v2) -> int<4> {
+					v2.a;
+					composite_member_access(*v2, lit("a" : identifier), lit(vector<int<4>,20>));
+				} (v1);
+				{
+					v1.a = lit("X":vector<int<4>,20>);
+				}
+				return 0;
+			}
+            )", symbols
 	);
 
 	EXPECT_TRUE(program);

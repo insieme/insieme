@@ -123,7 +123,7 @@ namespace lang {
 		);
 
 		/**
-		 * A construct supporting the construction and initialization of a _ector
+		 * A construct supporting the construction and initialization of a  two dimensional vector
 		 * of objects.
 		 */
 		LANG_EXT_DERIVED(VectorCtor2D,
@@ -211,15 +211,15 @@ namespace lang {
 		LANG_EXT_DERIVED(RefCppToConstCpp,
 				"let cppRef = struct { ref<'a> _cpp_ref };"
 				"let constCppRef = struct { src<'a> _const_cpp_ref }; "
-				"lambda (cppRef x)->constCppRef { return (constCppRef) { ref.src.cast(x._cpp_ref) }; }"
+				"lambda (cppRef x)->constCppRef { return struct constCppRef { ref_src_cast(x._cpp_ref) }; }"
 		);
 
 		/**
 		 * An operator converting an IR reference into a C++ right side reference.
 		 */
 		LANG_EXT_DERIVED(RefIRToRValCpp,
-				"let rValCppRef = struct { ref<'a> _rval_cpp_ref }in "
-				"lambda (ref<'a> x)->rValCppRef { return (rValCppRef) { x }; }"
+				"let rValCppRef = struct { ref<'a> _rval_cpp_ref }; "
+				"lambda (ref<'a> x)->rValCppRef { return struct rValCppRef { x }; }"
 		);
 
 		/**
@@ -244,7 +244,7 @@ namespace lang {
 		LANG_EXT_DERIVED(RefRValCppToConstCpp,
 				"let rValCppRef = struct { ref<'a> _rval_cpp_ref }; "
 				"let constCppRef = struct { src<'a> _const_cpp_ref }; "
-				"lambda (rValCppRef x)->constCppRef { return (constCppRef) { ref.src.cast(x._rval_cpp_ref) }; }"
+				"lambda (rValCppRef x)->constCppRef { return struct constCppRef { ref_src_cast(x._rval_cpp_ref) }; }"
 		);
 
 		/**
@@ -283,17 +283,17 @@ namespace lang {
 		LANG_EXT_LITERAL(StaticCastRefCppToRefCpp, "static_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref }; "
 				"let cppRefB = struct { ref<'b> _cpp_ref }; "
-				"lambda (cppRefA, type<cppRefB>)->cppRefB");
+				"(cppRefA, type<cppRefB>)->cppRefB");
 
 		LANG_EXT_LITERAL(StaticCastConstCppToConstCpp, "static_cast",
 				"let constCppRefA = struct { src<'a> _const_cpp_ref }; "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref }; "
-				"lambda (constCppRefA, type<constCppRefB>)->constCppRefB");
+				"(constCppRefA, type<constCppRefB>)->constCppRefB");
 
 		LANG_EXT_LITERAL(StaticCastRefCppToConstCpp, "static_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref }; "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref }; "
-				"lambda (cppRefA, type<constCppRefB>)->constCppRefB");
+				"(cppRefA, type<constCppRefB>)->constCppRefB");
 
 		/**
 		 * The literal to be used for encoding a dynamic cast operation within
@@ -304,30 +304,30 @@ namespace lang {
 		LANG_EXT_LITERAL(DynamicCastRefCppToRefCpp, "dynamic_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref }; "
 				"let cppRefB = struct { ref<'b> _cpp_ref }; "
-				"lambda (cppRefA, type<cppRefB>)->cppRefB");
+				"(cppRefA, type<cppRefB>)->cppRefB");
 
 		LANG_EXT_LITERAL(DynamicCastConstCppToConstCpp, "dynamic_cast",
 				"let constCppRefA = struct { src<'a> _const_cpp_ref }; "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref }; "
-				"lambda (constCppRefA, type<constCppRefB>)->constCppRefB");
+				"(constCppRefA, type<constCppRefB>)->constCppRefB");
 
 		LANG_EXT_LITERAL(DynamicCastRefCppToConstCpp, "dynamic_cast",
 				"let cppRefA = struct { ref<'a> _cpp_ref }; "
 				"let constCppRefB = struct { src<'b> _const_cpp_ref }; "
-				"lambda (cppRefA, type<constCppRefB>)->constCppRefB");
+				"(cppRefA, type<constCppRefB>)->constCppRefB");
 
 		/**
 		 * typeid implementation
 		 */
 		LANG_EXT_LITERAL(Typeid, "typeid",
-			"lambda ('a)->struct { src<std::type_info>  _const_cpp_ref; }"
+			"('a)->struct { src<std::type_info>  _const_cpp_ref; }"
 		);
 
 		/**
 		 *  std init list expr
 		 */
 		LANG_EXT_LITERAL(StdInitListExpr, "std_init_list_expr",
-            "lambda (list<'a>, type<'b>)->'b"
+            "(list<'a>, type<'b>)->'b"
         );
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -338,29 +338,29 @@ namespace lang {
 		 * the access is done by narrowing the given object to the defined element
 		 */
 		LANG_EXT_DERIVED(MemberPointerCtor, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; }; "
-											  "lambda (type<'a> classTy, identifier id, type<'b> ty) -> memb_ptr { "
-											  " return (memb_ptr) { classTy, id, ty };"
-											  "}");
+											"lambda (type<'a> classTy, identifier id, type<'b> ty) -> memb_ptr { "
+											" return struct memb_ptr { classTy, id, ty };"
+											"}");
 
 		/**
 		 * the access is done by narrowing the given object to the defined element
 		 */
 		LANG_EXT_DERIVED(MemberPointerAccess, "let memb_ptr = struct { type<'a> objType; identifier id; type<'b> membType; }; "
 											  "lambda (ref<'a> obj, memb_ptr m) -> ref<'b> { "
-											  " return ref.narrow(obj, dp.member(dp.root, m.id), m.membType );"
+											  " return ref_narrow(obj, dp_member(dp_root, m.id), m.membType );"
 											  "}");
 
 		/**
 		 * this is a special handling to check if a member pointer is null
 		 */
         LANG_EXT_LITERAL(MemberPointerCheck, "MemberPointerNotNull",
-		                                     "lambda (struct { type<'a> objType; identifier id; type<'b> membType; }) -> bool");
+		                                     "(struct { type<'a> objType; identifier id; type<'b> membType; }) -> bool");
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//   alignof c++11 keyword
 
-	LANG_EXT_LITERAL(Alignof, "alignof", "('a)->uint<8>");
+	    LANG_EXT_LITERAL(Alignof, "alignof", "('a)->uint<8>");
 
 	}; // extension class
 

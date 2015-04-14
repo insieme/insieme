@@ -40,10 +40,8 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/parser2/ir_parser.h"
-#include "insieme/core/parser2/grammar.h"
-#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
 namespace insieme {

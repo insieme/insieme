@@ -917,7 +917,7 @@ TEST(Manipulation, pushInto) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
         "{"
 		"let int = int<4>; "
 		"let f = lambda (int a)->int { return a + $1$ + $2$; }; "
@@ -952,7 +952,7 @@ TEST(Manipulation, pushIntoMultiple) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	auto addresses = builder.parseAddresses( 
+	auto addresses = builder.parseAddressesStatement( 
         "{"
 		"let int = int<4>; "
 		"let f = lambda (int a)->int { return a + $1$; }; "
@@ -993,7 +993,7 @@ TEST(Manipulation, pushIntoLazy) {
 	symbols["g"] = builder.literal("g",builder.refType(manager.getLangBasic().getInt4()));
 
 	// create a expression utilizing a lazy expression without closure
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 			"if (g>1 && g<$5$) {}", symbols
 	);
 
@@ -1026,7 +1026,7 @@ TEST(Manipulation, ReplaseVaresRecursive) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addr = builder.parseAddresses(
+	auto addr = builder.parseAddressesStatement(
 			"{"
 			"	decl ref<int<4>> A = var(0);"
 			"	decl ref<int<4>> B = var(0);"

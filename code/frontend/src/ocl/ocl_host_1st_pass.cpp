@@ -412,7 +412,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr, bool setErrcodeRe
 		"	ref<array<int<4>,1> > 	errorcode_ret"
 		") -> ref<array<'a, 1> >  { "
 		"		ref<array<'a,1>> devicePtr = new( array.create.1D( elemType, size ) ); "
-		"		ref<array<'a,1>> 		hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
+		"		ref<array<'a,1>> 		hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); "
 		"		for(uint<8> i = 0u .. size) { "
 		"			devicePtr[i] = *hp[i]; "
 		"		} "
@@ -485,7 +485,7 @@ ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
 		"	uint<8>				cb, "
 		"	ref<any>			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a, 1>)); "
+		"	ref<array<'a,1>> hp = ref_reinterpret(hostPtr, lit(array<'a, 1>)); "
 		"	uint<8> 	  	  o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. cb) { "
 		"		devicePtr[i + o] = *hp[i]; "
@@ -506,7 +506,7 @@ ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
 		"	uint<8>				cb, "
 		"	ref<any>			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
+		"	ref<array<'a,1>> hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8> 		  o = offset / sizeof( lit('a) ); "
         "	uint<8> 	   size = cb / sizeof( lit('a) ); "
         "	for(uint<8> i = 0u .. size) { "
@@ -528,7 +528,7 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 		"	uint<8>				cb, "
 		"	ref<any> 			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
+		"	ref<array<'a,1>> hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8>			  o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. cb) { "
 		"		hp[i] = *devicePtr[i + o]; "
@@ -549,7 +549,7 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 		"	uint<8> 			cb, "
 		"	ref<any> 			hostPtr"
 		") -> int<4> { "
-        "	ref<array<'a, 1> > hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
+        "	ref<array<'a, 1> > hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8> 		 size = cb / sizeof( lit('a) ); "
 		"	uint<8> 			o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. size) { "
@@ -888,7 +888,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			// updating of the type to update the deref operation in the argument done in third pass
 	);
 	ADD_Handler(builder, o2i, "icl_release_buffers",
-			// execute a ref.delete for each pointer in the argument list inside a compound statement
+			// execute a ref_delete for each pointer in the argument list inside a compound statement
 			StatementList dels;
 
 			if(const CallExprPtr varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(1))) {
@@ -1087,7 +1087,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 					// call resolve element to load the kernel using the appropriate handler
 					resolveElement(newCall);
 					ExpressionPtr kn = newCall->getArgument(2);
-					// usually kernel name is embedded in a "ref.vector.to.ref.array" call"
+					// usually kernel name is embedded in a "ref_vector_to_ref_array" call"
 					if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
 						kn = sacp->getArgument(0);
 					if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
@@ -1106,7 +1106,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getStringValue() == "clCreateKernel" ) {
 						ExpressionPtr kn = newCall->getArgument(1);
-						// usually kernel name is embedded in a "ref.vector.to.ref.array" call"
+						// usually kernel name is embedded in a "ref_vector_to_ref_array" call"
 						if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
 						kn = sacp->getArgument(0);
 						if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
@@ -1298,7 +1298,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 							const TypePtr& newType = newCall->getType();
 							const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
-							assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
+							assert(struct_ && "First argument of compostite_ref_elem has unexpected type, should be a struct variable");
 							VariablePtr newStruct;
 							// check if struct is already part of the replacement map
 							if(cl_mems.find(struct_) != cl_mems.end()) {
@@ -1308,7 +1308,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 								newStruct = struct_;
 
 							LiteralPtr id = dynamic_pointer_cast<const Literal>(lhsCall->getArgument(1));
-							assert(id && "Second argument of composite.ref.elem has unexpected type, should be a literal");
+							assert(id && "Second argument of composite_ref_elem has unexpected type, should be a literal");
 							StringValuePtr toChange = builder.stringValue(id->getStringValue());
 							StructTypePtr structType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct));
 							StructType::Entries entries = structType->getEntries(); // actual fields of the struct

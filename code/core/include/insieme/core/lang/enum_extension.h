@@ -62,14 +62,14 @@ namespace lang {
 
 	public:
 
-        LANG_EXT_LITERAL(EnumElementAsInt,      "enum_to_int",          "('a) -> int<4>");
+        LANG_EXT_LITERAL(EnumElementAsInt,      "enum_to_int",    "('a) -> int<4>");
 
-        LANG_EXT_LITERAL(EnumElementAsUInt,      "enum_to_uint",          "('a) -> uint<4>");
+        LANG_EXT_LITERAL(EnumElementAsUInt,     "enum_to_uint",   "('a) -> uint<4>");
 
-        LANG_EXT_DERIVED(EnumElementAsBool,      "lambda ('a i) -> bool { return lit(\"enum_to_int\":('a)->int<4>)(i) != 0; }");
+        LANG_EXT_DERIVED(EnumElementAsBool,     "lambda ('a i) -> bool { return lit(\"enum_to_int\":('a)->int<4>)(i) != 0; }");
 
-		LANG_EXT_LITERAL(IntAsEnum,   "int_to_enum",    "(int<4>, type<'a> ) -> 'a");
-		LANG_EXT_LITERAL(UIntAsEnum,  "uint_to_enum",   "(uint<4>, type<'a> ) -> 'a");
+		LANG_EXT_LITERAL(IntAsEnum,             "int_to_enum",    "(int<4>, type<'a> ) -> 'a");
+		LANG_EXT_LITERAL(UIntAsEnum,            "uint_to_enum",   "(uint<4>, type<'a> ) -> 'a");
 
 
         /**

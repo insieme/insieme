@@ -142,7 +142,6 @@ ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 	return Program::get(manager, entryPoints);
 }
 
-
 // ---------------------------- Parser Integration -----------------------------------
 
 NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
@@ -165,10 +164,12 @@ ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, No
 	return parser3::parse_program(manager, code, true, symbols);
 }
 
-vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser3::parse_addresses(manager, code, true, symbols);
+vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser3::parse_addresses_statement(manager, code, true, symbols);
 }
-
+vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser3::parse_addresses_program(manager, code, true, symbols);
+}
 
 // ---------------------------- Standard Nodes -----------------------------------
 
@@ -197,7 +198,6 @@ IntValuePtr IRBuilder::intValue(int value) const {
 UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 	return UIntValue::get(manager, value);
 }
-
 
 // ---------------------------- Convenience -------------------------------------
 

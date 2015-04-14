@@ -144,7 +144,12 @@ namespace parser3 {
 	 * @return a list of all addresses referencing marked sub-constructs within the parsed IR or an empty list of the parsing failed and onFailThrow was not set
 	 * @throw an IRParserException if the parsing failed and the onFailThrow flag was set; the Exception tries to explain the reason for the parsing error.
 	 */
-	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
+	std::vector<NodeAddress> parse_addresses_statement(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
+
+    /**
+     * equivalent to parse_addresses_statement but parsing a program, this avoids ambiguity in the grammar, allows us to use a sympler parser
+     */
+	std::vector<NodeAddress> parse_addresses_program(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
 	/**
 	 * The type of exception to be thrown by the parser in case the parsing was not successful.
@@ -163,7 +168,8 @@ namespace parser3 {
 		 * A simple constructor being called with a message describing the
 		 * potential reason for the failed parsing process.
 		 */
-		IRParserException(const string& msg) : msg(msg) {}
+		IRParserException(const string& msg) : msg(msg) {
+        }
 
 		/**
 		 * A virtual destructor - actually inherited from std::exception - promising to not

@@ -65,7 +65,7 @@ TEST(ScalarArrayIndexRangeCheck, Basic) {
                  };
 			}
             )1N5P1RE");
-		auto addrlist = builder.parseAddresses(R"1N5P1RE(
+		auto addrlist = builder.parseAddressesStatement(R"1N5P1RE(
             {
                 let uint = uint<8>;
                 lambda () -> unit { 

@@ -115,17 +115,17 @@ paramvar #[a-zA-Z]
 ","      return inspire_parser::make_COMA(loc);
 ".."     return inspire_parser::make_RANGE(loc);
 "."      return inspire_parser::make_DOT(loc);
-"$"     return inspire_parser::make_ADDRESS(loc);
+"$"      return inspire_parser::make_ADDRESS(loc);
 
-"CAST("  return inspire_parser::make_CAST(loc);
+"CAST("   return inspire_parser::make_CAST(loc);
 ".as("    return inspire_parser::make_PARENT(loc);
 "#inf"    return inspire_parser::make_INFINITE(loc);
 "let"     return inspire_parser::make_LET(loc);
 "auto"    return inspire_parser::make_AUTO(loc);
 "lambda"  return inspire_parser::make_LAMBDA(loc);
-"ctor"  return inspire_parser::make_CTOR(loc);
+"ctor"    return inspire_parser::make_CTOR(loc);
 "method"  return inspire_parser::make_METHOD(loc);
-"expr"  return inspire_parser::make_EXPR(loc);
+"expr"    return inspire_parser::make_EXPR(loc);
 
 "if"      return inspire_parser::make_IF(loc);
 "else"    return inspire_parser::make_ELSE(loc);
@@ -133,19 +133,20 @@ paramvar #[a-zA-Z]
 "while"   return inspire_parser::make_WHILE(loc);
 "decl"    return inspire_parser::make_DECL(loc);
 "try"     return inspire_parser::make_TRY(loc);
+"throw"   return inspire_parser::make_THROW(loc);
 "catch"   return inspire_parser::make_CATCH(loc);
 "return"  return inspire_parser::make_RETURN(loc);
 "switch"  return inspire_parser::make_SWITCH(loc);
-"case"  return inspire_parser::make_CASE(loc);
-"default"  return inspire_parser::make_DEFAULT(loc);
-"continue"  return inspire_parser::make_CONTINUE(loc);
-"break"  return inspire_parser::make_BREAK(loc);
+"case"    return inspire_parser::make_CASE(loc);
+"default" return inspire_parser::make_DEFAULT(loc);
+"continue" return inspire_parser::make_CONTINUE(loc);
+"break"   return inspire_parser::make_BREAK(loc);
 
 "var"     return inspire_parser::make_VAR(loc);
 "new"     return inspire_parser::make_NEW(loc);
 "loc"     return inspire_parser::make_LOC(loc);
 "delete"     return inspire_parser::make_DELETE(loc);
-"undefined"     return inspire_parser::make_UNDEFINED(loc);
+"undefined"  return inspire_parser::make_UNDEFINED(loc);
 
 "type("    return inspire_parser::make_TYPE_LITERAL(loc);
 "lit("     return inspire_parser::make_LITERAL(loc);
@@ -167,8 +168,8 @@ paramvar #[a-zA-Z]
 
 {stringlit}      {
     std::string tmp(yytext);
-    tmp.replace(0,1,"");
-    tmp.replace(tmp.size()-1,1,"");
+   // tmp.replace(0,1,"");
+   // tmp.replace(tmp.size()-1,1,"");
     return inspire_parser::make_STRING(tmp, loc);
 }
 {charlit}      {

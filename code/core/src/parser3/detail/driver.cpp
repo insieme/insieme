@@ -174,6 +174,13 @@ namespace detail{
             if (!left.getType().isa<RefTypePtr>()) {
                 error(l, format("left side on assignment must be a reference and is %s", toString(left.getType())));
             }
+            else if (left.getType().as<RefTypePtr>()->getElementType() != right->getType()){
+                error(l, format("right side expression of type %s can not be assingend to type %s", 
+                                toString(right.getType()),
+                                toString(left.getType())));
+
+            }
+
 
             return builder.assign(left, right);
         }
@@ -226,6 +233,11 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genFieldAccess(const location& l, const ExpressionPtr& expr, const std::string& fieldname){
         
+            if (!expr) {
+                error (l, "no expression");
+                return nullptr;
+            }
+
             StructTypePtr structType;
             if (expr->getType().isa<StructTypePtr>()) {
                 structType = expr->getType().as<StructTypePtr>();
@@ -238,11 +250,11 @@ namespace detail{
 
                 structType = type.isa<StructTypePtr>();
                 if (!structType) {
-                    error(l, "Accessing element of non-struct type!");
+                    error(l, "Accessing element of non-struct type");
                     return nullptr;
                 }
             } else {
-                error(l, "Accessing element of non-struct type!");
+                error(l, "Accessing element of non-struct type %s");
                 return nullptr;
             }
 
@@ -274,11 +286,11 @@ namespace detail{
 
             tupleType = type.isa<TupleTypePtr>();
             if (!tupleType) {
-                 error(l, "Accessing element of non-tuple type!");
+                 error(l, "Accessing element of non-tuple type");
                  return nullptr;
             }
         } else {
-            error(l, "Accessing element of non-tuple type!");
+            error(l, "Accessing element of non-tuple type");
             return nullptr;
         }
 
@@ -287,8 +299,7 @@ namespace detail{
 
         // check field
         if (index < 0 || index >= (int)tupleType.size()) {
-            std::cout << "unknown field" << std::endl;
-            error(l, "Accessing unknown field!");
+            error(l, "Accessing unknown field");
             return nullptr;
         }
 
@@ -336,13 +347,13 @@ namespace detail{
         }
         for (const auto& p : params){
             if(!p){
-                std::cout <<  "wrong parameter in paramenter list" << std::endl;
+                std::cerr <<  "wrong parameter in paramenter list" << std::endl;
                 abort();
             }
         }
         for (const auto& p : iparamlist){
             if(!p){
-                std::cout <<  "wrong parameter in paramenter list" << std::endl;
+                std::cerr <<  "wrong parameter in paramenter list" << std::endl;
                 abort();
             }
         }
@@ -382,7 +393,7 @@ namespace detail{
 
         // check whether call-conversion was successful
         if (!call) {
-            error(l, "Not an outline-able context!");
+            error(l, "Not an outline-able context");
             return nullptr;
         }
 
@@ -432,7 +443,7 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genTagExpression(const location& l, const TypePtr& type, const ExpressionList& list){
 
-		if (!type){  error(l, "Not a struct type!"); return nullptr; }
+		if (!type){  error(l, "Not a struct type"); return nullptr; }
 
         // retrieve struct type, (unroll rec types)
         StructTypePtr structType = type.isa<StructTypePtr>();
@@ -476,7 +487,7 @@ namespace detail{
     void inspire_driver::add_symb(const location& l, const std::string& name, NodePtr ptr){
 
         if (!ptr) {
-            error(l, format("symbol %s is not well form", name));
+            error(l, format("symbol %s is not well formed", name));
             return;
         }
 
@@ -515,11 +526,12 @@ namespace detail{
     }
 
 namespace {
-    bool contains_type_variables (const TypePtr& t){
+
+    bool contains_type_variables (const TypePtr& t, const TypeList& variables){
         
         bool contains = false;
         visitDepthFirstOnce(t, [&](const TypePtr& t){
-            if (t.isa<TypeVariablePtr>()) contains = true;
+            if (t.isa<TypeVariablePtr>() && (std::find(variables.begin(), variables.end(), t) != variables.end())) contains = true;
         });
         return contains;
     }
@@ -647,6 +659,7 @@ namespace {
         
                 // if all variables in body are defined, this is regular function
             if (funcs.size() == 1 && analysis::getFreeVariables(funcs[0].second).empty()){
+                annotations::attachName(funcs[0].second, let_names[0]);
                 add_symb(l, let_names[0], funcs[0].second);
             }
             else{
@@ -676,12 +689,18 @@ namespace {
             NodeMap non_recursive;
             unsigned count = 0;
 
+            TypeList variables;
+            for (const auto& name : let_names){
+                variables.push_back(builder.typeVariable(name));
+            }
+
             // check for non recursive types
             // if the type has no recursion inside, replace all uses of the type variable by a full type
             for (const auto& type : type_lets){
                 const std::string& name = let_names[count];
-                if(!contains_type_variables(type)) {
+                if(!contains_type_variables(type, variables)) {
                     non_recursive[builder.typeVariable(name)] = type;
+                    annotations::attachName(type, name);
                     add_symb(l, name, type);
                 }
                 count ++;
@@ -692,7 +711,7 @@ namespace {
             for (const auto& type : type_lets){
                 const std::string& name = let_names[count];
 
-                if(contains_type_variables(type)){
+                if(contains_type_variables(type, variables)){
                     auto tmp =transform::replaceAllGen(mgr, type, non_recursive);
                     std::cout << tmp << std::endl;
 
@@ -704,7 +723,11 @@ namespace {
 
             // generate a full recursive type and one entry point for each type variable
             RecTypeDefinitionPtr fullType = builder.recTypeDefinition(type_defs);
-            for (const auto& n : names) add_symb(l, n, builder.recType(builder.typeVariable(n), fullType));
+            for (const auto& n : names){
+                auto t = builder.recType(builder.typeVariable(n), fullType);
+                annotations::attachName(t, n);
+                add_symb(l, n, t);
+            }
 
             type_lets.clear();
         }

@@ -65,7 +65,7 @@ TEST(UnifiedAddress, IRAddress) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	{
-		auto addr = builder.parseAddresses("int<4> a = $10+20$;");
+		auto addr = builder.parseAddressesStatement("decl int<4> a = $10+20$;");
 
 		EXPECT_EQ(1u, addr.size());
 
@@ -76,7 +76,7 @@ TEST(UnifiedAddress, IRAddress) {
 	}
 	
 	{
-		auto addr = builder.parseAddresses("$int<4> a = $10+20$;$");
+		auto addr = builder.parseAddressesStatement("$decl int<4> a = $10+20$;$");
 
 		EXPECT_EQ(2u, addr.size());
 		CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(addr[0]);
@@ -100,9 +100,9 @@ TEST(Access, Scalars) {
 	IRBuilder builder(mgr);
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<int<4>> a;"
+			"	decl ref<int<4>> a;"
 			"	$a$;"
 			"}"
 		);
@@ -131,9 +131,9 @@ TEST(Access, Scalars) {
 	}
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{"
-			"	int<4> a;"
+			"	decl int<4> a;"
 			"	$a$;"
 			"}"
 		);
@@ -159,9 +159,9 @@ TEST(Access, Scalars) {
 	}
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{"
-			"	ref<int<4>> a;"
+			"	decl ref<int<4>> a;"
 			"	$*$a$$;"
 			"}"
 		);
@@ -178,9 +178,9 @@ TEST(Access, Scalars) {
 
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{"
-			"	ref<int<4>> a;"
+			"	decl ref<int<4>> a;"
 			"	$var(*a)$;"
 			"}"
 		);
@@ -198,9 +198,9 @@ TEST(Access, Scalars) {
 
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{"
-			"	ref<struct{int<4> a; int<4> b;}> s;"
+			"	decl ref<struct{int<4> a; int<4> b;}> s;"
 			"	$s$;"
 			"}"
 		);
@@ -223,11 +223,11 @@ TEST(Access, ScalarAliasedAccess) {
 	IRBuilder builder(mgr);
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{"
-			"	ref<int<4>> a;"
+			"	decl ref<int<4>> a;"
 			"	$*$a$$;"
-			"	$ref<int<4>> b = a;$"
+			"	$decl ref<int<4>> b = a;$"
 			"   $b$;"
 			"}"
 		);
@@ -270,9 +270,9 @@ TEST(Access, MemberAccess) {
 	IRBuilder builder(mgr);
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<struct{ int<4> a; int<4> b; }> s;"
+			"	decl ref<struct{ int<4> a; int<4> b; }> s;"
 			"	$$s$.a$;"
 			"}"
 		);
@@ -294,9 +294,9 @@ TEST(Access, MemberAccess) {
 	}
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	struct{ int<4> a; int<4> b; } s;"
+			"	decl struct{ int<4> a; int<4> b; } s;"
 			"	$$s$.a$;"
 			"	$s.b$;"
 			"	$s.a$;"
@@ -337,10 +337,10 @@ TEST(Access, CompoundMemberAccess) {
 	IRBuilder builder(mgr);
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<struct{ int<4> a; struct{ int<4> b; int<4> c;} b; }> s;"
-			"	$ref<struct{int<4> b; int<4> c;}> t1 = s.b;$"
+			"	decl ref<struct{ int<4> a; struct{ int<4> b; int<4> c;} b; }> s;"
+			"	$decl ref<struct{int<4> b; int<4> c;}> t1 = s.b;$"
 			"	$t1.b$;"
 			"}"
 		);
@@ -388,12 +388,12 @@ TEST(Access, CompoundMemberAccess2) {
 	IRBuilder builder(mgr);
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<struct{ int<4> a; struct{ int<4> b; int<4> c;} b; }> s;"
-			"	$ref<struct{int<4> b; int<4> c;}> t1 = s.b;$"
+			"	decl ref<struct{ int<4> a; struct{ int<4> b; int<4> c;} b; }> s;"
+			"	$decl ref<struct{int<4> b; int<4> c;}> t1 = s.b;$"
 			"	$t1.b$;"
-			"	$ref<struct{int<4> b; int<4> c;}> t2 = s.b;$"
+			"	$decl ref<struct{int<4> b; int<4> c;}> t2 = s.b;$"
 			"	$t2.b$;"
 			"}"
 		);
@@ -447,9 +447,9 @@ TEST(Access, ArrayAccess) {
 	IRBuilder builder(mgr);
 
 	{	
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<array<int<4>,1>> v;"
+			"	decl ref<array<int<4>,1>> v;"
 			"	$$v$[2u]$;"
 			"}"
 		);
@@ -476,9 +476,9 @@ TEST(Access, ArrayAccess) {
 	}
 
 	{	
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<array<int<4>,1>> v;"
+			"	decl ref<array<int<4>,1>> v;"
 			"	$*$v$[2u]$;"
 			"}"
 		);
@@ -505,9 +505,9 @@ TEST(Access, ArrayAccess) {
 	}
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<vector<int<4>,4>> v;"
+			"	decl ref<vector<int<4>,4>> v;"
 			"	$v[3u-1u]$;"
 			"}"
 		);
@@ -530,7 +530,7 @@ TEST(Access, ArrayAccess) {
 	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4(), 3);
 
 	{
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ $v[b]$; }", symbols
 		);
 		EXPECT_EQ(1u, code.size());
@@ -549,7 +549,7 @@ TEST(Access, ArrayAccess) {
 		
 	}
 //	{
-//		auto address = builder.parseAddresses(
+//		auto address = builder.parseAddressesStatement(
 //			"{"
 //			"	$if( b > 10u ) {"
 //			"		$v[b]$;"
@@ -579,7 +579,7 @@ TEST(Access, ArrayAccess) {
 //
 //	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4());
 ////	{
-////		auto address = builder.parseAddresses(
+////		auto address = builder.parseAddressesStatement(
 ////			"$if (b>0u && a<20u) {"
 ////			"	$uint<4> c = a+b;$"
 ////			"	$v[c]$; "
@@ -607,7 +607,7 @@ TEST(Access, ArrayAccess) {
 ////	}
 ////
 ////	{
-////		auto address = builder.parseAddresses(
+////		auto address = builder.parseAddressesStatement(
 ////			"$if (b>0u && a<20u) {"
 ////			"	$v[a*b]$; "
 ////			"}$", symbols
@@ -631,7 +631,7 @@ TEST(Access, ArrayAccess) {
 ////	}
 ////
 	{
-		auto address = builder.parseAddresses(
+		auto address = builder.parseAddressesStatement(
 			"${"
 			"	if (b>0u && a<20u) {"
 			"		$$v$[a+b]$; "
@@ -672,9 +672,9 @@ TEST(Access, ArrayAlias) {
 	IRBuilder builder(mgr);
 
 	{	
-		auto code = builder.parseAddresses(
+		auto code = builder.parseAddressesStatement(
 			"{ "
-			"	ref<array<int<4>,1>> v;"
+			"	decl ref<array<int<4>,1>> v;"
 			"	$ref<int<4>> e = v[2u];$"
 			"	$e$;"
 			"}"
@@ -716,7 +716,7 @@ TEST(Access, ArrayAlias) {
 ////	std::map<string, NodePtr> symbols;
 ////	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 ////
-////	auto address = builder.parseAddresses(
+////	auto address = builder.parseAddressesStatement(
 ////		"$for (uint<4> i = 0u .. 10 : 1) {"
 ////		"	$v[i]$; "
 ////		"	$v[i]$; "
@@ -755,7 +755,7 @@ TEST(Access, ArrayAlias) {
 ////	std::map<string, NodePtr> symbols;
 ////	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 ////
-////	auto address = builder.parseAddresses(
+////	auto address = builder.parseAddressesStatement(
 ////		"$for (uint<4> i = 0u .. 10 : 1) {"
 ////		"	$v[i]$; "
 ////		"	$v[i+1u]$; "
@@ -799,7 +799,7 @@ TEST(Access, CommonSubset) {
 	std::map<string, NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-	auto address = builder.parseAddresses(
+	auto address = builder.parseAddressesStatement(
 		"${ "
 		"	for (uint<4> i1 = 1u .. 11u : 1) {"
 		"		$v[i1]$; "
@@ -886,7 +886,7 @@ TEST(Access, EmptySubset) {
 	std::map<string, NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-	auto address = builder.parseAddresses(
+	auto address = builder.parseAddressesStatement(
 		"${ "
 		"	for (uint<4> i1 = 1u .. 5u : 1) {"
 		"		$v[i1]$; "
@@ -961,7 +961,7 @@ TEST(Access, CommonSubSubset) {
 	std::map<string, NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-	auto address = builder.parseAddresses(
+	auto address = builder.parseAddressesStatement(
 		"${ "
 		"	for (uint<4> i1 = 1u .. 5u : 1) {"
 		"		$v[i1]$; "
@@ -1072,7 +1072,7 @@ TEST(Access, CommonInnerSubset) {
 	std::map<string, NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-	auto address = builder.parseAddresses(
+	auto address = builder.parseAddressesStatement(
 		"${ "
 		"	for (uint<4> i1 = 1u .. 6u : 1) {"
 		"		$v[i1]$; "
@@ -1183,7 +1183,7 @@ TEST(Access, StridedSubset) {
 	std::map<string, NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"),1);
 
-	auto address = builder.parseAddresses(
+	auto address = builder.parseAddressesStatement(
 		"${ "
 		"	for (uint<4> i1 = 1u .. 5u : 2) {"
 		"		$v[i1]$; "
@@ -1239,11 +1239,11 @@ TEST(Access, MultipleAccessesSimple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> a=2; "
-		"	int<4> b=3; "
-		"	$int<4> c = $a$ + $b$;$ "
+		"	decl int<4> a=2; "
+		"	decl int<4> b=3; "
+		"	$decl int<4> c = $a$ + $b$;$ "
 		"}$");
 
 	EXPECT_EQ(4u, addresses.size());
@@ -1267,12 +1267,12 @@ TEST(Access, MultipleAccessesVector) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	vector<uint<4>,4> a; "
-		"	ref<uint<4>> b=3; "
-		"	ref<uint<4>> c; "
-		"	$c = $a[$b$]$ + $b$;$ "
+		"	decl vector<uint<4>,4> a; "
+		"	decl ref<uint<4>> b=3; "
+		"	decl ref<uint<4>> c; "
+		"	$decl c = $a[$b$]$ + $b$;$ "
 		"}$");
 
 	EXPECT_EQ(5u, addresses.size());
@@ -1299,11 +1299,11 @@ TEST(Access, MultipleAccessesVector2) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	vector<uint<4>,4> a; "
-		"	ref<uint<4>> b=3; "
-		"	$uint<4> c = $a[$b$]$ + 4u;$"
+		"	decl vector<uint<4>,4> a; "
+		"	decl ref<uint<4>> b=3; "
+		"	$decl uint<4> c = $a[$b$]$ + 4u;$"
 		"}$");
 
 	EXPECT_EQ(4u, addresses.size());

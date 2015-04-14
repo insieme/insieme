@@ -76,24 +76,24 @@ namespace printer {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<vector<uint<4>,10>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
 		symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
 
-		auto forStmt = analysis::normalize(builder.parseStmt(
-			"for(int<4> k = 0 .. 10) {"
-			"	for(int<4> i = 0 .. 20) {"
-			"		decl ref<int<4>> m = var(10);"
-			"		for(int<4> j = 0 .. 30) {"
-			"			v[i] = m;"
-			"           x = x + 1;"
-			"		}"
-			"	}"
-			"}", symbols).as<ForStmtPtr>());
+		auto forStmt = analysis::normalize(builder.parseStmt(R"(
+			for(int<4> k = 0 .. 10) {
+				for(int<4> i = 0 .. 20) {
+					decl ref<int<4>> m = var(10);
+					for(int<4> j = 0 .. 30) {
+						v[i] = *m;
+			           x = x + 1;
+					}
+				}
+			})", symbols).as<ForStmtPtr>());
 
 
 		string script = toLuaScript(forStmt);
 		EXPECT_PRED2(containsSubString, script, "(10 - 1)");
-		EXPECT_PRED2(containsSubString, script, "v1[v3] = v4");
+		EXPECT_PRED2(containsSubString, script, "v1[v3] = (v4)");
 		EXPECT_PRED2(containsSubString, script, "v2 = (v2) + 1");
 
 		// test whether script is syntactically correct

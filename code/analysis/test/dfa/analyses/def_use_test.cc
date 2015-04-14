@@ -60,7 +60,7 @@ TEST(DefUse, ScalarNoControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
@@ -95,7 +95,7 @@ TEST(DefUse, VectorsWithControl) {
 			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
 		);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "

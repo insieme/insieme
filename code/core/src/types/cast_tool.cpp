@@ -880,7 +880,7 @@ namespace {
 					return builder.callExpr(resType, basic.getRefVectorToRefArray(), call->getArgument(0));
 				}
 
-				// ... or array.ref.element ...
+				// ... or array_ref_element ...
 				if (basic.isArrayRefElem1D(call->getFunctionExpr()) && 
 					core::arithmetic::toFormula(call->getArgument(1)).isZero()
 				) {

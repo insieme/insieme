@@ -655,7 +655,7 @@ TEST(CFGBuilder, CallExpr) {
 	symbols["c"] = builder.variable(builder.parseType("int<4>"));
 	symbols["d"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses("$a=$b+$c+d$$;$", symbols);
+    auto addresses = builder.parseAddressesStatement("$a=$b+$c+d$$;$", symbols);
 
 	EXPECT_EQ(3u, addresses.size());
 
