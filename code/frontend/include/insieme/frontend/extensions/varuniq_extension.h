@@ -46,15 +46,15 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class VarUniqExtension: public insieme::frontend::extensions::FrontendExtension,
-        insieme::core::IRVisitor<void, insieme::core::Address> {
-	insieme::core::ProgramAddress prog;
+class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
+        insieme::frontend::extensions::FrontendExtension {
+	insieme::core::NodeAddress frag;
 
 public:
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
 
-	// virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+	insieme::core::NodeAddress IR();
 };
 
 }}}

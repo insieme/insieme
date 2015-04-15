@@ -46,27 +46,79 @@ TEST(VarUniq, Simple) {
 	NodeManager man;
 	IRBuilder builder(man);
 
-	core::ProgramPtr program = builder.parseProgram(
-				R"(
-				int<4> main() {
-					ref<int<4>> i = 0;
-					ref<int<4>> j = 4;
-					while (i < 10) {
-						ref<int<4>> i2 = i;
-						i = i + 3;
-					}
-					while (j!=0) {
-						j = j - 2;
-					}
-					return i;
-				}
-				)"
+	core::NodePtr fragment = builder.parseStmt(
+	            "{"
+				"	let twoElem = struct{int<4> int; real<4> float;};"
+				"	let tuple = (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>);"
+				""
+				"	let access = (ref<array<ref<array<twoElem,1>>, 1>> x)->unit {"
+				"		for(int<4> i = 0 .. 42 : 1) {"
+				"			ref.deref(x[0])[i].int = i;"
+				"		}"
+				"	};"
+				""
+				"	let writeToTuple = (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, "
+				"			ref<array<ref<array<twoElem,1>>,1>> x)->unit {"
+				"		(*x[0])[3].int = 7;"
+				"		tuple.ref.elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;"
+				"	};"
+				""
+				"	let actualWork = (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, "
+				"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+		//		"		ref<array<twoElem,1>> d = a;"
+		//		"		ref<array<twoElem,1>> e;"
+		//		"		e = a;"
+				"	};"
+				""
+				"	let local = (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, "
+				"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+				"		parallel(job([vector.reduction(local_size, 1u, uint.mul)-vector.reduction(local_size, 1u, uint.mul)]"
+				"		,	actualWork(a, b, c, local_size, global_size)"
+				"		));"
+				"	};"
+				""
+				"	let global = (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, "
+				"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
+				"		vector<uint<8>,3> groups = vector.pointwise(uint.div)(global_size, local_size);"
+				"		parallel(job([vector.reduction(groups, 1u, uint.mul)-vector.reduction(groups, 1u, uint.mul)]"
+				"		,	local(b, a, c, local_size, global_size)"
+				"		));"
+				"	};"
+				""
+				"	let kernelFct = (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {"
+				"		global("
+				"			*(tuple.member.access(kernel, 0u, lit(ref<array<ref<array<twoElem,1>>,1>>))[0]),"
+				"			*(tuple.member.access(kernel, 1u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0]),"
+				"			*(tuple.member.access(kernel, 2u, lit(ref<array<uint<8>,1>>))[0]),"
+				"			local_size, global_size);"
+				""
+				"		return 0;"
+				"	};"
+				""
+				"	ref<ref<array<twoElem,1>>> a;"
+				"	ref<ref<array<real<4>,1>>> b;"
+				"	ref<uint<8>> c;"
+				"	ref<ref<tuple>> t;"
+				"	t = new(undefined(lit( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)) ));"
+				"	ref.deref(a);"
+				"	access(scalar.to.array(a));"
+				"	tuple.ref.elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar.to.array(a);"
+				"	writeToTuple(*t, scalar.to.array(a));"
+				""
+				"	vector<uint<8>,3> ls;"
+				"	vector<uint<8>,3> gs;"
+				""
+				"	kernelFct(**t, ls, gs);"
+				""
+				"	ref.delete(*t);"
+				"}"
 			);
 
-	ASSERT_TRUE(program);
+	ASSERT_TRUE(fragment);
 
 	frontend::extensions::VarUniqExtension vu;
-	auto str=toString(vu.IRVisit(program));
+	vu.visit(NodeAddress(fragment));
+	auto str=toString(vu.IR());
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
 

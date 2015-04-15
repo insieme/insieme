@@ -45,20 +45,18 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
-void VarUniqExtension::visitNode(const insieme::core::NodeAddress &node) {
-	std::cout << "visiting node" << std::endl;
+void VarUniqExtension::visitNode(const core::NodeAddress &node) {
+	//std::cout << "visiting node" << std::endl;
 	for (auto child: node->getChildList()) visit(child);
 }
 
-void VarUniqExtension::visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node) {
-	std::cout << "visiting declaration" << std::endl;
+void VarUniqExtension::visitDeclarationStmt(const core::DeclarationStmtAddress &node) {
+	std::cout << "visiting declaration " << *(node.getAddressOfChild(0)) << std::endl;
 	for (auto child: node->getChildList()) visit(child);
 }
 
-/*insieme::core::ProgramPtr VarUniqExtension::IRVisit(insieme::core::ProgramPtr& prog) {
-	this->prog=insieme::core::ProgramAddress(prog);
-	visit(prog);
-	return prog;
-}*/
+core::NodeAddress VarUniqExtension::IR() {
+	return frag;
+}
 
 }}}
