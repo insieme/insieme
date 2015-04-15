@@ -14,26 +14,27 @@ Insieme contains 4 main sub-directories:
 Insieme is written in C++11 and relies on several third-party libraries: 
 
 ### List of Required Libraries and Software
-Name 		| Version | What's for |
+Name 		| Version | Purpose |
 --------|---------|------------|
-[G++](http://gcc.gnu.org/gcc-4.7/)	                                | >= 4.7  | Compiler |
+[G++](http://gcc.gnu.org/gcc-4.7/)	                            | >= 4.7   | Compiler |
 [CMake](http://www.cmake.org/)                                      | >= 2.8.x | Build System |
-[Google Test](https://code.google.com/p/googletest/)                | >= 1.6  | Unit testing |
-[Boost](http://www.boost.org/users/history/version_1_50_0.html)  	  | = 1.50 | Utilities, regex, filesystem, program options|
+[Google Test](https://code.google.com/p/googletest/)                | >= 1.6   | Unit testing |
+[Boost](http://www.boost.org/users/history/version_1_50_0.html)     | = 1.50   | Utilities, regex, filesystem, program options|
 [LLVM/Clang](http://llvm.org/) 	                                    | = 3.4 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.4.patch)) | C/C++ frontend | 
-[ISL](http://garage.kotnet.org/~skimo/isl/)			                    | = 0.10 | Polyhedral model representation & analysis |
-[CLooG](http://www.cloog.org/)		                                  | = 0.17 | Polyhedral model code generation |
-[Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35 | Polyhedral model cardinality |
-[CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	                  | >= 2.4.2 | Manipulation of decision diagrams |
-[LuaJIT](http://luajit.org/)                                  		  | >= 2.0.0 | Scripting |
+[ISL](http://garage.kotnet.org/~skimo/isl/)			    | = 0.10   | Polyhedral model representation & analysis |
+[CLooG](http://www.cloog.org/)		                            | = 0.17   | Polyhedral model code generation |
+[Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35   | Polyhedral model cardinality |
+[CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	            | >= 2.4.2 | Manipulation of decision diagrams |
+[LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
 [Shark](http://image.diku.dk/shark/sphinx_pages/build/html/index.html)	| >= 2.3.4 | Machine learning |
-[Kompex](http://sqlitewrapper.kompex-online.com/)             	  	| >= 1.7.9 | DBMS |
-[Ruby](http://www.ruby-lang.org/en/)                                | >= 2.8 | Scripting |
+[Kompex](http://sqlitewrapper.kompex-online.com/)             	    | >= 1.7.9 | DBMS |
+[Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
 
 ### List of Optional Libraries and Software
-Name 		| Version | What's for |
+Name 		| Version | Purpose |
 --------|---------|------------|
-[PAPI](http://icl.cs.utk.edu/papi/)	                                | >= 5.4.0  | Runtime system, for hardware information and event counters |
+[PAPI](http://icl.cs.utk.edu/papi/)	                            | >= 5.4.0 | Runtime system, for hardware information and event counters |
+[hwloc](http://www.open-mpi.org/projects/hwloc/)	            | >= 1.10  | Runtime system, for system architecture information |
 
 ### Preparing the Environment
 You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and applies patches. 
