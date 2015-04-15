@@ -119,6 +119,7 @@ TEST(VarUniq, Simple) {
 	frontend::extensions::VarUniqExtension vu;
 	vu.visit(NodeAddress(fragment));
 	auto str=toString(vu.IR());
+	std::cout << str;
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
 

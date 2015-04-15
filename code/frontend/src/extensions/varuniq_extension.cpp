@@ -40,10 +40,33 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/frontend/extensions/varuniq_extension.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
+
+/// Debug routine to print the given node and its immediate children. The node address is the only mandatory
+/// argument; the other arguments are a textual description, and a start index and a node count. The start index
+/// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
+/// n means the n-th child node. The count gives the number of child nodes which should be printed;
+/// 0 means print only the given node, 1 means print only one child node, etc.
+void VarUniqExtension::printNode(const core::NodeAddress &node, std::string descr, unsigned int start, int count) {
+	// determine total number of child nodes, and adjust count accordingly
+	auto children=node.getChildAddresses();
+	if (count<0) count=children.size();
+
+	// if requested (start=0), print the node itself with some debug information
+	if (start==0) {
+		if (!descr.empty()) descr=" ("+descr+")";
+		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
+		start++;
+	}
+
+	// iterate over the requested children to complete the output
+	for (unsigned int n=start-1; n<start-1+count; n++)
+		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
+}
 
 void VarUniqExtension::visitNode(const core::NodeAddress &node) {
 	//std::cout << "visiting node" << std::endl;
@@ -51,11 +74,24 @@ void VarUniqExtension::visitNode(const core::NodeAddress &node) {
 }
 
 void VarUniqExtension::visitDeclarationStmt(const core::DeclarationStmtAddress &node) {
-	std::cout << "visiting declaration " << *(node.getAddressOfChild(0)) << std::endl;
+	auto var=node.getAddressOfChild(0);
+	// printNode(var.getAddressOfChild(1));
+
+	// get variable number
+	unsigned int varid=var.getAddressOfChild(1).as<core::UIntValueAddress>()->getValue();
+	std::cout << "visiting declaration of variable " << varid << std::endl;
+
+	// increase count for given variable
+	auto mapiter=ctr.find(varid);
+	if (mapiter!=ctr.end()) *mapiter++;
+
+	// visit children
 	for (auto child: node->getChildList()) visit(child);
 }
 
 core::NodeAddress VarUniqExtension::IR() {
+	for (auto dups: ctr)
+		std::cout << "v" << dups << " found " << dups.second << std::endl;
 	return frag;
 }
 

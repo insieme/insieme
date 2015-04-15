@@ -36,9 +36,10 @@
 
 #pragma once
 
+#include <map>
 #include <string>
-#include <vector>
 
+#include "insieme/core/ir_values.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 
@@ -49,8 +50,10 @@ namespace extensions {
 class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
         insieme::frontend::extensions::FrontendExtension {
 	insieme::core::NodeAddress frag;
+	std::map<int, int> ctr;
 
 public:
+	void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
 
