@@ -41,6 +41,7 @@
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/analysis/defuse_collect.h"
+#include "insieme/analysis/cba/utils/cba_utils.h"
 
 namespace insieme {
 namespace transform {
@@ -132,44 +133,21 @@ bool sameAsDecl(const ExpressionAddress var, const ExpressionAddress decl) {
 	return false;
 }
 
-core::ExpressionAddress getDeclaration(const NodeAddress scope, const ExpressionAddress var) {
-	// if the variable is a literal, its a global variable and should therefore be the root
-	if(LiteralAddress lit = var.isa<LiteralAddress>()) {
-		if(lit.getType().isa<RefTypeAddress>()) { // check if literal was a global variable in the input code
-			return var;
-		}
-	}
-
-	vector<NodeAddress> childAddresses = scope.getChildAddresses();
-	for(auto I = childAddresses.rbegin(); I != childAddresses.rend(); ++I) {
-		NodeAddress child = *I;
-
-		// look for declaration in parameter lists
-		if(LambdaAddress lambda = child.isa<LambdaAddress>()) {
-			for(ExpressionAddress param : lambda->getParameters()) {
-				if(*param == *var)
-					return param;
-			}
-		}
-
-		// look for declaration in siblings of the scope
-		if(DeclarationStmtAddress decl = child.isa<DeclarationStmtAddress>()) {
-			if(*(decl->getVariable()) == *var)
-				return decl->getVariable();
-		}
-	}
-
-	//check if we already reached the top
-	if(scope.getDepth() <= 1)
-		return ExpressionAddress();
-
-	return getDeclaration(scope.getParentAddress(), var);
-}
-
 core::ExpressionAddress getDeclaration(const ExpressionAddress& var) {
 	if(!var)
 		return ExpressionAddress();
-	return getDeclaration(var.getParentAddress(), var);
+
+
+	// if the variable is a literal, its a global variable and should therefore be the root
+	if(var.isa<LiteralAddress>())
+		return var;
+
+	VariableAddress va = var.isa<VariableAddress>();
+
+	if(!va)
+		return ExpressionAddress();
+
+	return getDefinitionPoint(va);
 }
 
 NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
