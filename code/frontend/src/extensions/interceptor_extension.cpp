@@ -42,6 +42,16 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
+	boost::optional<std::string> InterceptorExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		//interceptor needs to be the first extension in the extension list
+		if(setup.getExtensions().begin()->get() != this) {
+			return boost::optional<std::string>("InterceptorExtension should be the first Extension");
+		}
+		
+		//prerequisites are met - no prerequisite is missing
+		return boost::optional<std::string>();
+	}
+
 	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 
 		if (const clang::CXXConstructExpr* ctorExpr =  llvm::dyn_cast<clang::CXXConstructExpr>(expr)){
