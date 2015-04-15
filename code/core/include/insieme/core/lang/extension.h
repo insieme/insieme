@@ -184,7 +184,7 @@ namespace lang {
 	 * @param TYPE the IR type to be represented as a string
 	 */
 	#define LANG_EXT_TYPE(NAME, TYPE) \
-		LANG_EXT_TYPE_WITH_NAME(NAME, "", TYPE)
+		LANG_EXT_TYPE_WITH_NAME(NAME, #NAME, TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a literal within a language extension
@@ -222,7 +222,7 @@ namespace lang {
 	 * @param TYPE the IR type of the literal
 	 */
 	#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) \
-		LANG_EXT_LITERAL_WITH_NAME(NAME, "", VALUE, TYPE)
+		LANG_EXT_LITERAL_WITH_NAME(NAME, #NAME, VALUE, TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
@@ -258,7 +258,7 @@ namespace lang {
 	 * @param SPEC the implementation of the derived construct (using INSPIRE)
 	 */
 	#define LANG_EXT_DERIVED(NAME, SPEC) \
-		LANG_EXT_DERIVED_WITH_NAME(NAME, "", SPEC)
+		LANG_EXT_DERIVED_WITH_NAME(NAME, #NAME, SPEC)
 
 } // end namespace lang
 } // end namespace core
