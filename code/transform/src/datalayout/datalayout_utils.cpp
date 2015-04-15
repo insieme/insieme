@@ -147,7 +147,7 @@ core::ExpressionAddress getDeclaration(const ExpressionAddress& var) {
 	if(!va)
 		return ExpressionAddress();
 
-	return getDefinitionPoint(va);
+	return insieme::analysis::cba::getDefinitionPoint(va);
 }
 
 NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
