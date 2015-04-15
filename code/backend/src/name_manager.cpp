@@ -56,7 +56,7 @@ namespace backend {
 		string getAttachedName(const core::NodePtr& ptr) {
 
 			// test whether the node has a name attached
-			if (core::annotations::hasNameAttached(ptr)) {
+			if (core::annotations::hasAttachedName(ptr)) {
 
 				// => take the attached name
 				return core::annotations::getAttachedName(ptr);

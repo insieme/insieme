@@ -994,7 +994,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 		//core::annotations::attachName(node,(funcDecl->getNameAsString()));
 		core::annotations::attachName(node,(utils::buildNameForFunction(funcDecl)));
 	}
-	if(core::annotations::hasNameAttached(node)) { VLOG(2) << "attachedName: " << core::annotations::getAttachedName(node);}
+	if(core::annotations::hasAttachedName(node)) { VLOG(2) << "attachedName: " << core::annotations::getAttachedName(node);}
 
 // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
 	/*

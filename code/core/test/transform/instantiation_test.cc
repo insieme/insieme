@@ -255,9 +255,9 @@ TEST(TypeInstantiation, NameAnnotations) {
 	auto newAnnAddr = addresses[1].switchRoot(result);
 	auto newAnnAddr2 = addresses[2].switchRoot(result);
 	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
-	EXPECT_TRUE(annotations::hasNameAttached(addresses[1].getAddressedNode()));
-	EXPECT_TRUE(annotations::hasNameAttached(newAnnAddr.getAddressedNode()));
-	EXPECT_TRUE(annotations::hasNameAttached(newAnnAddr2.getAddressedNode()));
+	EXPECT_TRUE(annotations::hasAttachedName(addresses[1].getAddressedNode()));
+	EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr.getAddressedNode()));
+	EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr2.getAddressedNode()));
 	EXPECT_EQ(annotations::getAttachedName(addresses[1].getAddressedNode()), annotations::getAttachedName(newAnnAddr.getAddressedNode()));
 	EXPECT_EQ(annotations::getAttachedName(addresses[2].getAddressedNode()), annotations::getAttachedName(newAnnAddr2.getAddressedNode()));
 }
@@ -286,7 +286,7 @@ TEST(TypeInstantiation, TypeAnnotations) {
 
 	auto newAddr = addresses[0].switchRoot(result);
 	auto newDeclStmtType = newAddr.getAddressedNode().as<DeclarationStmtPtr>()->getVariable()->getType();
-	EXPECT_TRUE(annotations::hasNameAttached(newDeclStmtType));
+	EXPECT_TRUE(annotations::hasAttachedName(newDeclStmtType));
 	EXPECT_EQ(annotations::getAttachedName(declStmtType), annotations::getAttachedName(newDeclStmtType));
 	EXPECT_EQ("NewtypeGundam", annotations::getAttachedName(newDeclStmtType));
 }

@@ -65,12 +65,12 @@ public:
 	/**
 	 * Used for processing previously established TransformationAnnotation objects
 	 */
-	insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& program);
+	virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& program);
 
 	/**
 	 * Used for adding previously identified entry points
 	 */
-	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 
 	/**
 	 * Visits the entire program to look for and process transformation annotations

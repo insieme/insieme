@@ -70,7 +70,7 @@ LambdaExprPtr getEntryPoint(const core::ProgramPtr& prog, const std::string& ent
 	{
 		LambdaExprPtr fun = (*it).as<LambdaExprPtr>();
 
-		if(core::annotations::hasNameAttached(fun) && core::annotations::getAttachedName(fun).compare(entry) == 0) {
+		if(core::annotations::hasAttachedName(fun) && core::annotations::getAttachedName(fun).compare(entry) == 0) {
 			return analysis::normalize(fun);
 		}
 	}

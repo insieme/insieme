@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,28 +34,31 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/common/utils/gtest_utils.h"
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#define IRT_ASTEROIDEA_STACKS
 
-namespace insieme {
-namespace frontend {
+#define IRT_LIBRARY_MAIN
+#define IRT_LIBRARY_NO_MAIN_FUN
+#include "irt_library.hxx"
 
-namespace cleanup {
-	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
+int RecParCount(int n) {
+	if(n == 0) return 1;
+	int ret = 0;
+	irt::parallel(n, [&ret,n] {
+		ret = RecParCount(n-1)+1;
+	});
+	irt::merge_all();
+	return ret;
 }
 
-/**
- * This plugin removes obviously superfluous code, including
- * - assignments
- * - variable declarations
- * - empty control flow
- * It uses a fixed point iteration and is quite slow
- */
-class SuperfluousCleanup : public insieme::frontend::extensions::FrontendPlugin {
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-};
-
-
-} // frontend
-} // insieme
+TEST(AsteroideaStacks, Nested) {
+	EXPECT_IN_TIME(100*1000, 
+	{
+		irt::init(2);
+		irt::run([]() {
+			std::cout << RecParCount(7) << std::endl;
+		});
+		irt::shutdown();
+	});
+}

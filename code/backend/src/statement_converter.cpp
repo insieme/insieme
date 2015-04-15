@@ -642,7 +642,7 @@ namespace backend {
 		if(init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size()==1)) {
 			core::TypePtr refType = core::analysis::getReferencedType(init->getType());
 			// only do this for intercepted types
-			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasNameAttached(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
+			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasAttachedName(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
                 core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
                 core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
                 if(arg == zeroInit)
@@ -708,7 +708,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
 
-		converter.getNameManager().pushVarScope(true);
+		converter.getNameManager().pushVarScope(false);
 
 		auto manager = converter.getCNodeManager();
 
@@ -757,7 +757,7 @@ namespace backend {
 
 		// create init and body
 		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
-		converter.getNameManager().pushVarScope(true);
+		converter.getNameManager().pushVarScope(false);
 		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
 		converter.getNameManager().popVarScope();
 

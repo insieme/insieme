@@ -614,8 +614,27 @@ void irt_inst_region_init_worker(irt_worker* worker) { }
 void irt_inst_region_finalize(irt_context* context) { }
 void irt_inst_region_finalize_worker(irt_worker* worker) { }
 void irt_inst_region_propagate_data_from_wi_to_regions(irt_work_item* wi) { }
-void irt_inst_region_start_measurements(irt_work_item* wi) { }
-void irt_inst_region_end_measurements(irt_work_item* wi) { }
+
+void irt_inst_region_start_measurements(irt_work_item* wi) {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_worker* self = irt_worker_get_current();
+	struct timespec ts;
+	clock_gettime(self->clockid, &ts);
+	self->app_time_last_start = ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0;
+	self->app_time_running = true;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+}
+
+void irt_inst_region_end_measurements(irt_work_item* wi) {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_worker* self = irt_worker_get_current();
+	struct timespec ts;
+	clock_gettime(self->clockid, &ts);
+	self->app_time_total += (ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0) - self->app_time_last_start;
+	self->app_time_running = false;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+}
+
 void irt_inst_region_start(irt_inst_region_id id) { }
 void irt_inst_region_end(irt_inst_region_id id) { }
 void irt_inst_region_select_metrics(const char* selection) { }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -76,6 +76,11 @@ namespace extensions {
                     return true;
         };
     }
+
+	boost::optional<std::string> FrontendExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		//prerequisites are met - no prerequisite is missing
+		return boost::optional<std::string>();
+	}
 
     // ############ PRE CLANG STAGE ############ //
     const FrontendExtension::macroMap& FrontendExtension::getMacroList() const {

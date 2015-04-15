@@ -77,6 +77,7 @@ namespace frontend {
 namespace extensions {
 
 namespace {
+        
 
 		/**
 		 * here the little trick, the translation unit is converted into a single expression to guarantee the
@@ -236,6 +237,19 @@ namespace {
 		}
 
 	} // anonymous namespace
+		
+
+	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		//second-last
+		auto it = setup.getExtensions().crbegin();
+		std::advance(it, 1);
+		if( it->get() != this ) {
+			return boost::optional<std::string>("FrontendCleanup needs to be the second-last Extension");
+		}
+
+		//prerequisites are met - no prerequisite is missing
+		return boost::optional<std::string>();
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog){

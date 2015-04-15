@@ -110,8 +110,10 @@ namespace frontend {
 
         // check pre-requisites
         for(auto ext : getExtensions()) {
-            //THIS WILL BE IMPLEMENTED BY BERNHARD
-            //std::cerr << ext->checkPrerequisites(*this).get();
+            auto isMissing = ext->isPrerequisiteMissing(*this);
+            if(isMissing) {
+				std::cerr << "Prerequisite for an extension is missing: " <<  *isMissing << std::endl;
+			}
         }
 	}
 
@@ -256,7 +258,10 @@ namespace frontend {
 
 	void ConversionJob::registerExtensionFlags(driver::cmd::detail::OptionParser& optParser) {
         //register all plugins
+
+		//interceptor wants to be first
         registerFrontendExtension<extensions::InterceptorExtension>(optParser);
+
         registerFrontendExtension<extensions::VariadicArgumentsExtension>(optParser);
         registerFrontendExtension<extensions::ASMExtension>(optParser);
         registerFrontendExtension<extensions::CppRefsCleanupExtension>(optParser);
@@ -273,7 +278,9 @@ namespace frontend {
         registerFrontendExtension<extensions::OclKernelExtension>(optParser);
         registerFrontendExtension<extensions::Cpp11Extension>(optParser);
 
+		//FE cleanup wants to be second-last 
 		registerFrontendExtension<extensions::FrontendCleanupExtension>(optParser);
+		//anonymousrename wants to be last
 		registerFrontendExtension<extensions::AnonymousRenameExtension>(optParser);
     }
 

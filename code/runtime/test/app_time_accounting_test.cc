@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,28 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/frontend/extensions/frontend_plugin.h"
+#define IRT_ENABLE_APP_TIME_ACCOUNTING
 
-namespace insieme {
-namespace frontend {
+#define IRT_LIBRARY_MAIN
+#define IRT_LIBRARY_NO_MAIN_FUN
+#include "irt_library.hxx"
 
-namespace cleanup {
-	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
+#define N 5000
+
+TEST(AppTimeAccounting, Simple) {
+	irt::init(4);
+	double init_t = irt_time_rts_get_total();
+	irt::run([]() {
+		irt::merge(irt::parallel([] {
+			double x = 0.0, last_app_t = 0.0;
+			for(int i=0; i<N; i++) {
+				for(int j=0; j<N; j++) {
+					x += 0.1;
+				}
+				irt::master([&] {
+					// check that time always increases when wis run
+					double app_t = irt_time_wis_get_total();
+					EXPECT_GT(app_t, last_app_t);
+				});
+			}
+			irt::master([x] {
+				std::cout << "x: " << x << "\n";
+			});
+		}));
+	});
+	double wi_t = irt_time_wis_get_total();
+	double rs_t = irt_time_rts_get_total() - init_t;
+	std::cout << "init_t: " << std::fixed << std::setw(11) << std::setprecision(2) << init_t << "\n";
+	std::cout << "wi_t:   " << std::fixed << std::setw(11) << std::setprecision(2) << wi_t << "\n";
+	std::cout << "rs_t:   " << std::fixed << std::setw(11) << std::setprecision(2) << rs_t << "\n";
+	// check that time doesn't increase when non-wis run in process
+	EXPECT_EQ(irt_time_wis_get_total(), wi_t);
+	// check that wi time is not larger than total process time
+	EXPECT_LE(wi_t, rs_t);
+	irt::shutdown();
 }
-
-/**
- * This plugin removes obviously superfluous code, including
- * - assignments
- * - variable declarations
- * - empty control flow
- * It uses a fixed point iteration and is quite slow
- */
-class SuperfluousCleanup : public insieme::frontend::extensions::FrontendPlugin {
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-};
-
-
-} // frontend
-} // insieme

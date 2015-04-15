@@ -52,27 +52,35 @@
 
 // ============================================================================ Scheduling (general)
 
-static inline void _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi) {
+static inline bool _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi) {
 	// if other full, find random worker
 	bool success = false;
-	while(!success) {
+	uint32 tries = 8;
+	while(!success && tries > 0) {
 		success = irt_cwb_push_back(&target->sched_data.queue, wi);
 		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
+		else irt_signal_worker(target);
+		tries--;
 	}
-	irt_signal_worker(target);
+	return success;
 }
-static inline void _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi) {
+static inline bool _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi) {
 	// if other full, find random worker
 	bool success = false;
-	while(!success) {
+	uint32 tries = 8;
+	while(!success && tries > 0) {
 		success = irt_cwb_push_front(&target->sched_data.queue, wi);
 		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
+		else irt_signal_worker(target);
+		tries--;
 	}
-	irt_signal_worker(target);
+	return success;
 }
 
 void irt_scheduling_init_worker(irt_worker* self) {
 	irt_cwb_init(&self->sched_data.queue);
+	self->sched_data.overflow_stack = NULL;
+	irt_spin_init(&self->sched_data.overflow_stack_lock);
 #ifdef IRT_TASK_OPT
 	self->sched_data.demand = IRT_CWBUFFER_LENGTH;
 #endif //IRT_TASK_OPT
@@ -81,12 +89,12 @@ void irt_scheduling_init_worker(irt_worker* self) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_YIELD, yielding_wi->id);
-	_irt_cwb_try_push_back(self, yielding_wi);
+	irt_scheduling_assign_wi(self, yielding_wi);
     _irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
-	_irt_cwb_try_push_front(target, wi);
+	irt_scheduling_assign_wi(target, wi);
 }
 
 irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
@@ -150,70 +158,45 @@ void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
 	irt_scheduling_assign_wi(target, wi);
 }
 
-// ============================================================================ Scheduling (LINEAR STEALING)
-#if 0
-
-void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
-	//if(irt_cwb_size(&target->sched_data.queue) == 0) {
-	//	irt_cwb_push_front(&target->sched_data.queue, wi);
-	//	irt_signal_worker(target);
-	//	// signal successor
-	//	int succ = (target->id.thread+1)%irt_g_worker_count;
-	//	irt_signal_worker(irt_g_workers[succ]);
-	//} else {
-		irt_cwb_push_front(&target->sched_data.queue, wi);
-	//}
-}
-
-int irt_scheduling_iteration(irt_worker* self) {
-	irt_work_item* wi = NULL;
-
-	// try to take a WI from the pool
-	if(wi = irt_cwb_pop_front(&self->sched_data.pool)) {
-		_irt_worker_switch_to_wi(self, wi);
-		return 1;
-	}
-	
-	// if that failed, try to take a work item from the queue
-	if(wi = irt_cwb_pop_front(&self->sched_data.queue)) {
-		_irt_worker_switch_to_wi(self, wi);
-		return 1;
-	}
-
-	// try to steal a work item from predecessor
-	irt_worker_instrumentation_event(self, WORKER_STEAL_TRY, self->id);
-	int pred = self->id.thread-1;
-	if(pred < 0) pred = irt_g_worker_count-1;
-	if(wi = irt_cwb_pop_back(&irt_g_workers[pred]->sched_data.queue)) {
-		irt_worker_instrumentation_event(self, WORKER_STEAL_SUCCESS, self->id);
-		_irt_worker_switch_to_wi(self, wi);
-		return 1;
-	}
-
-	// if that failed as well, look in the IPC message queue
-	if(_irt_sched_check_ipc_queue(self)) return 1;
-
-	// didn't find any work
-	return 0;
-}
-
-#endif // Scheduling (LINEAR STEALING)
-
 // ============================================================================ Scheduling (RANDOM STEALING)
-#if 1
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_QUEUED, wi->id);
+	bool succeeded = false;
 #ifdef IRT_STEAL_SELF_PUSH_FRONT
-	_irt_cwb_try_push_front(target, wi);
+	succeeded = _irt_cwb_try_push_front(target, wi);
 #else
-	_irt_cwb_try_push_back(target, wi);
+	succeeded = _irt_cwb_try_push_back(target, wi);
 #endif
+	if(!succeeded) {
+		//IRT_ASSERT(false, IRT_ERR_INTERNAL, "IRT circular stealing: ran out of worker queue");
+		irt_spin_lock(&target->sched_data.overflow_stack_lock);
+		wi->next_reuse = target->sched_data.overflow_stack;
+		target->sched_data.overflow_stack = wi;
+		irt_spin_unlock(&target->sched_data.overflow_stack_lock);
+	}
 }
 
 int irt_scheduling_iteration(irt_worker* self) {
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
+
+	// if there are WIs in the overflow stack, re-integrate as many as possible
+	if(self->sched_data.overflow_stack != NULL) {
+		irt_spin_lock(&self->sched_data.overflow_stack_lock);
+		irt_work_item *wi = self->sched_data.overflow_stack;
+		while(wi != NULL) {
+			irt_work_item *next = wi->next_reuse;
+			if(irt_cwb_push_back(&self->sched_data.queue, wi)) {
+				// got rid of this one
+				self->sched_data.overflow_stack = next;
+				wi = next;
+			} else {
+				wi = NULL;
+			}
+		};
+		irt_spin_unlock(&self->sched_data.overflow_stack_lock);
+	}
 
 	// try to take a work item from the queue
 #ifndef IRT_STEAL_SELF_POP_BACK
@@ -252,97 +235,5 @@ int irt_scheduling_iteration(irt_worker* self) {
 	// didn't find any work
 	return 0;
 }
-
-#endif // Scheduling (RANDOM STEALING)
-
-
-
-#if 0
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////// 64 bit triplet implementation ////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-static inline void irt_cwb_init(irt_circular_work_buffer* wb) {
-	wb->front_free = 5;
-	wb->back_free = 4;
-	wb->size = 0;
-}
-
-static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
-	for(;;) {
-		// try to increase size, see if still fits
-		if(irt_atomic_add_and_fetch(&wb->size, 1) >= IRT_CWBUFFER_LENGTH) {
-			irt_atomic_dec(&wb->size);
-			//pthread_yield();
-			continue;
-		}
-		// select slot, try to push item
-		uint64 pos = wb->front_free;
-		if(irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pos%IRT_CWBUFFER_LENGTH], (intptr_t)NULL, (intptr_t)wi)) {
-			irt_atomic_inc(&wb->front_free);
-			return;
-		}
-		// failed to put item, undo size change
-		irt_atomic_dec(&wb->size);
-		//pthread_yield();
-	}
-}
-
-static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
-	for(;;) {
-		// try to increase size, see if still fits
-		if(irt_atomic_add_and_fetch(&wb->size, 1) >= IRT_CWBUFFER_LENGTH) {
-			irt_atomic_dec(&wb->size);
-			//pthread_yield();
-			continue;
-		}
-		// select slot, try to push item
-		uint64 pos = wb->back_free;
-		if(irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pos%IRT_CWBUFFER_LENGTH], (intptr_t)NULL, (intptr_t)wi)) {
-			irt_atomic_dec(&wb->back_free);
-			return;
-		}
-		// failed to put item, undo size change
-		irt_atomic_dec(&wb->size);
-		//pthread_yield();
-	}
-}
-
-static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
-	// try to decrease size, see if there is something left
-	int64 post_size = irt_atomic_sub_and_fetch(&wb->size, 1);
-	if(post_size < 0) {
-		irt_atomic_inc(&wb->size);
-		return NULL;
-	}
-	// pop item from front
-	uint64 pop_index = irt_atomic_sub_and_fetch(&wb->front_free, 1);
-	irt_work_item* wi = wb->items[pop_index%IRT_CWBUFFER_LENGTH];
-	if(!irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pop_index%IRT_CWBUFFER_LENGTH], (intptr_t)wi, (intptr_t)NULL)) {
-		irt_throw_string_error(IRT_ERR_INTERNAL, "***ing ***hog A");
-	}
-	printf("Popped WI %p from front position %lu, post size %ld\n", (void*) wi, pop_index, post_size);
-	return wi;	
-}
-
-static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
-	// try to decrease size, see if there is something left
-	int64 post_size = irt_atomic_sub_and_fetch(&wb->size, 1);
-	if(post_size < 0) {
-		irt_atomic_inc(&wb->size);
-		return NULL;
-	}
-	// pop item from back
-	uint64 pop_index = irt_atomic_add_and_fetch(&wb->back_free, 1);
-	irt_work_item* wi = wb->items[pop_index%IRT_CWBUFFER_LENGTH];
-	if(!irt_atomic_bool_compare_and_swap((intptr_t*)&wb->items[pop_index%IRT_CWBUFFER_LENGTH], (intptr_t)wi, (intptr_t)NULL)) {
-		irt_throw_string_error(IRT_ERR_INTERNAL, "***ing ***hog B");
-	}
-	printf("Popped WI %p from back position %lu, post size %ld\n", (void*) wi, pop_index, post_size);
-	return wi;	
-}
-
-#endif // 64 bit triplet implementation
-
 
 #endif // ifndef __GUARD_SCHED_POLICIES_IMPL_IRT_SCHED_STEALING_CIRCULAR_IMPL_H

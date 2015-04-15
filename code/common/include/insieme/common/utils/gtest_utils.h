@@ -34,59 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
-#define __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
+#pragma once 
 
-#include "declarations.h"
-
-#ifndef IRT_CWBUFFER_LENGTH
-#define IRT_CWBUFFER_LENGTH 16
-#endif
-
-#include "utils/circular_work_buffers.h"
-
-typedef struct _irt_cw_data {
-	irt_circular_work_buffer queue;
-	irt_work_item *overflow_stack;
-	irt_spinlock overflow_stack_lock;
-#ifdef IRT_TASK_OPT
-	int64 demand;
-#endif //IRT_TASK_OPT
-} irt_cw_data;
-
-#define irt_worker_scheduling_data irt_cw_data
-
-// placeholder, not required
-#define irt_wi_scheduling_data uint32
-
-#ifdef IRT_TASK_OPT
-inline uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo);
-#endif //IRT_TASK_OPT
-
-#if 0
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////// 64 bit triplet implementation ////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-typedef struct _irt_circular_work_buffer {
-	uint64 front_free;
-	uint64 back_free;
-	int64 size;
-	irt_work_item* items[IRT_CWBUFFER_LENGTH];
-} irt_circular_work_buffer;
-
-typedef struct _irt_cw_data {
-	irt_circular_work_buffer queue;
-	irt_circular_work_buffer pool;
-} irt_cw_data;
-
-#define irt_worker_scheduling_data irt_cw_data
-
-// placeholder, not required
-#define irt_wi_scheduling_data uint32
-
-#endif // 64 bit triplet implementation
+#include <gtest/gtest.h>
+#include <future>
 
 
-#endif // ifndef __GUARD_SCHED_POLICIES_IRT_SCHED_STEALING_CIRCULAR_H
+#define EXPECT_IN_TIME(__time, __code) \
+	EXPECT_EXIT({ auto _ft = std::async(std::launch::async, [&]() { __code; }); \
+	auto ret = _ft.wait_for(std::chrono::milliseconds(__time)); \
+	exit(ret == std::future_status::timeout ? 1 : 0); }, [](int ret) { return ret == 0; }, "") << "Failed to complete in time (" #__time " ms)!";

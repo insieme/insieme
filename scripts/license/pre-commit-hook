@@ -8,7 +8,7 @@
 for f in `git diff --cached --name-only | grep -i "code/.*\.\(h\|hpp\|hxx\|c\|cpp\|cxx\|cl\|cc\|inc\|def\|in\)$"` ; do
 
 	# files which have execute permissions (as happens when edited via a Samba share) should have them removed
-	if [[ -x "$f" ]] ; then
+	if [ -x "$f" ] ; then
 		chmod -x $f
 		git add $f
 	fi

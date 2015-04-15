@@ -919,7 +919,7 @@ public:
 
                 assert(!(workGroupSizeDefined & !isKernelFunction) && "Attribute Reqd_work_group_size can only be defined for kernel functions");
 
-                const string& cName = insieme::core::annotations::hasNameAttached(func) ? insieme::core::annotations::getAttachedName(func) : "";
+                const string& cName = insieme::core::annotations::hasAttachedName(func) ? insieme::core::annotations::getAttachedName(func) : "";
                 auto sourceLoc = core::annotations::getLocation(func);
 
                 //if function is not a OpenCL kernel function recursively check for child nodes
