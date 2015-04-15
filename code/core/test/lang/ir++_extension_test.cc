@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/core/test/test_utils.h"
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/core/ir_node.h"
@@ -118,14 +119,7 @@ namespace lang {
 
 		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
 
-		const std::map<string, NodePtr> next = ext.getNamedIrExtensions();
-
-		for(auto cur : next) {
-//			dump(cur.second);
-
-			// just check whether the code is not exhibiting errors
-			EXPECT_TRUE(checks::check(cur.second).empty()) << checks::check(cur.second);
-		}
+		semanticCheckSecond(ext.getNamedIrExtensions());
 
 	}
 
