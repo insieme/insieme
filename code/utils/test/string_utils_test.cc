@@ -75,6 +75,12 @@ TEST(StringUtilsTest, split) {
 	EXPECT_EQ(toVector<string>(), split(""));
 }
 
+TEST(StringUtilsTest, camelcaseToUnderscore) {
+	EXPECT_EQ("hello", camelcaseToUnderscore("Hello"));
+	EXPECT_EQ("camelcase_to_underscore", camelcaseToUnderscore("camelcaseToUnderscore"));
+	EXPECT_EQ("camelcase_to_underscore", camelcaseToUnderscore("CamelcaseToUnderscore"));
+	EXPECT_EQ("camelcase_to_underscore", camelcaseToUnderscore("camelcase_to_underscore"));
+}
 
 TEST(EscapeTest, escape) {
 

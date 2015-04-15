@@ -119,6 +119,14 @@ namespace lang {
 			assert_true(result != extensionFactories.end()) << "Can't find extension with name \"" << extensionName << "\". Please check the name and also register it in the constructor of ExtensionRegistry";
 			return result->second;
 		}
+		/**
+		 * Returns all extension factories
+		 *
+		 * @return all factories and names of registered extensions which can be used to create the extension, given a NodeManager
+		 */
+		const std::map<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactories() const {
+			return extensionFactories;
+		}
 	};
 
 

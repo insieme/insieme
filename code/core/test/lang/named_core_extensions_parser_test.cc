@@ -43,6 +43,7 @@
 #include "insieme/core/parser2/ir_parser.h"
 
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/test/test_utils.h"
 
 #include "insieme/utils/assert.h"
 
@@ -141,6 +142,16 @@ namespace lang {
 		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.complex\" in { complex a; }", false, existingNames),
 				"The name \"complex\" introduced by extension \"ext.complex\" is already existing"););
 	}
+
+	TEST(ConstTypeExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const NamedCoreExtensionParserTestExtension& ext = nm.getLangExtension<NamedCoreExtensionParserTestExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
+
+
 
 } // end namespace lang
 } // end namespace core
