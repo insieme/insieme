@@ -243,7 +243,7 @@ namespace {
 		//second-last
 		auto it = setup.getExtensions().crbegin();
 		std::advance(it, 1);
-		if( (*it).get() != this ) {
+		if( it->get() != this ) {
 			return boost::optional<std::string>("FrontendCleanup needs to be the second-last Extension");
 		}
 

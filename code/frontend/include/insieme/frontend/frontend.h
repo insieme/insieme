@@ -376,7 +376,7 @@ namespace frontend {
         /**
          *  Return the list of all registered frontend extensions
          */
-        const std::list<FrontendExtensionPtr> getExtensions() const {
+        const std::list<FrontendExtensionPtr>& getExtensions() const {
             return extensionList;
         };
 	};
