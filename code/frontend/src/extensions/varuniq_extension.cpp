@@ -42,16 +42,19 @@
 #include "insieme/frontend/extensions/varuniq_extension.h"
 #include "insieme/utils/logging.h"
 
-namespace insieme {
-namespace frontend {
-namespace extensions {
+using namespace insieme::core;
+using namespace insieme::frontend::extensions;
+
+VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag) {
+	visit(frag);
+}
 
 /// Debug routine to print the given node and its immediate children. The node address is the only mandatory
 /// argument; the other arguments are a textual description, and a start index and a node count. The start index
 /// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
 /// n means the n-th child node. The count gives the number of child nodes which should be printed;
 /// 0 means print only the given node, 1 means print only one child node, etc.
-void VarUniqExtension::printNode(const core::NodeAddress &node, std::string descr, unsigned int start, int count) {
+void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
 	// determine total number of child nodes, and adjust count accordingly
 	auto children=node.getChildAddresses();
 	if (count<0) count=children.size();
@@ -68,17 +71,17 @@ void VarUniqExtension::printNode(const core::NodeAddress &node, std::string desc
 		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
 }
 
-void VarUniqExtension::visitNode(const core::NodeAddress &node) {
+void VarUniqExtension::visitNode(const NodeAddress &node) {
 	//std::cout << "visiting node" << std::endl;
 	for (auto child: node->getChildList()) visit(child);
 }
 
-void VarUniqExtension::visitDeclarationStmt(const core::DeclarationStmtAddress &node) {
+void VarUniqExtension::visitDeclarationStmt(const DeclarationStmtAddress &node) {
 	auto var=node.getAddressOfChild(0);
 	// printNode(var.getAddressOfChild(1));
 
 	// get variable number
-	unsigned int varid=var.getAddressOfChild(1).as<core::UIntValueAddress>()->getValue();
+	unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
 	std::cout << "visiting declaration of variable " << varid << std::endl;
 
 	// increase count for given variable
@@ -89,10 +92,55 @@ void VarUniqExtension::visitDeclarationStmt(const core::DeclarationStmtAddress &
 	for (auto child: node->getChildList()) visit(child);
 }
 
-core::NodeAddress VarUniqExtension::IR() {
+NodeAddress VarUniqExtension::IR() {
 	for (auto dups: ctr)
 		std::cout << "v" << dups << " found " << dups.second << std::endl;
 	return frag;
 }
 
-}}}
+/// Find the address where the given variable has been defined.
+VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
+	VariablePtr varptr = var.getAddressedNode();
+	NodeAddress cur=var;
+
+	while (!cur.isRoot()) {
+		NodeAddress var=cur.getParentAddress();
+
+		switch (var->getNodeType()) {
+		case NT_BindExpr: {
+			for (auto n: var.as<BindExprAddress>()->getParameters())
+				if (n.as<VariablePtr>()==varptr) return n;
+			break; }
+		case NT_CompoundStmt: {
+			auto compound=var.as<CompoundStmtAddress>();
+			for (int i=cur.getIndex(); i>=0; i--) {
+					auto n=compound[i].isa<DeclarationStmtAddress>()->getVariable();
+					if (n.as<VariablePtr>()==varptr) return n;
+			}
+			break; }
+		case NT_Parameters:
+			return var.as<VariableAddress>();   // FIXME: this variable is a parameter; trace var to outer scope
+		case NT_Lambda: {
+			for (auto n: var.as<LambdaAddress>()->getParameters())
+				if (n.as<VariablePtr>()==varptr) return n;
+			break; }
+		case NT_LambdaBinding: {
+			auto n=var.as<LambdaBindingAddress>()->getVariable();
+			if (n.as<VariablePtr>()==varptr) return n;
+			break; }
+		case NT_LambdaDefinition: {
+			if (auto n=var.as<LambdaDefinitionAddress>()->getBindingOf(varptr))
+				return n->getVariable();
+			break; }
+		case NT_ForStmt: {
+			auto n=var.as<ForStmtAddress>()->getIterator();
+			if (n.as<VariablePtr>()==varptr) return n;
+			break; }
+		default: break;
+		}
+		cur=var;
+	}
+
+	// return the variable address itself, as it was never bound
+	return var;
+}

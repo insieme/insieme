@@ -38,15 +38,14 @@
 #include "insieme/frontend/extensions/varuniq_extension.h"
 #include "insieme/core/parser2/ir_parser.h"
 
-namespace insieme {
-namespace core {
-using namespace core;
+using namespace insieme::core;
+using namespace insieme::frontend::extensions;
 
 TEST(VarUniq, Simple) {
 	NodeManager man;
 	IRBuilder builder(man);
 
-	core::NodePtr fragment = builder.parseStmt(
+	NodePtr fragment = builder.parseStmt(
 	            "{"
 				"	let twoElem = struct{int<4> int; real<4> float;};"
 				"	let tuple = (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>);"
@@ -65,9 +64,6 @@ TEST(VarUniq, Simple) {
 				""
 				"	let actualWork = (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, "
 				"			vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {"
-		//		"		ref<array<twoElem,1>> d = a;"
-		//		"		ref<array<twoElem,1>> e;"
-		//		"		e = a;"
 				"	};"
 				""
 				"	let local = (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, "
@@ -116,11 +112,8 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
-	frontend::extensions::VarUniqExtension vu;
-	vu.visit(NodeAddress(fragment));
-	auto str=toString(vu.IR());
-	std::cout << str;
+	VarUniqExtension vu((NodeAddress(fragment)));
+	auto result=vu.IR();
+	std::cout << *result;
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
-
-}}
