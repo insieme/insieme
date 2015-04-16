@@ -106,12 +106,17 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-    std::string fileName = CLANG_SRC_DIR "/inputs/ocl_host_types.c";
-    std::vector<std::string> argv = { "compiler",  fileName };
+    const std::string filename = CLANG_SRC_DIR "/inputs/ocl_host_types.c";
+	std::vector<std::string> argv = { "compiler", filename };
     cmd::Options options = cmd::Options::parse(argv);
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/ocl_host_types.c");
+    options.job.frontendExtensionInit(options.job);
+    insieme::frontend::TranslationUnit tu(manager, filename, options.job);
 
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test::expected"; };
+
+	const auto begin = tu.pragmas_begin(filter);
+
+	EXPECT_NE(begin, tu.pragmas_end());
 
 	NodeManager mgr;
 	insieme::frontend::conversion::Converter convFactory( mgr, tu, options.job);
@@ -119,7 +124,7 @@ TEST(StmtConversion, FileTest) {
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
-	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
+	for(auto it = begin; it != tu.pragmas_end(); ++it) {
 		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
 
 		if(tp.isStatement()) {

@@ -66,6 +66,7 @@
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace frontend {
@@ -178,8 +179,7 @@ namespace {
 				PragmaHandler("insieme", "kernelFile",
 				string_literal["arg"] >> pragma::tok::eod,
 				[](const pragma::MatchObject& object, StmtWrapper node) {
-
-					assert(object.getStrings("arg").size() == 1 && "Insieme KernelFile pragma cannot have more than one argument!");
+					assert_eq(1, object.getStrings("arg").size()) && "Insieme KernelFile pragma cannot have more than one argument!";
 					ia::ocl::KernelFileAnnotation kernelFile(object.getStrings("arg").front());
 					core::NodeAnnotationPtr annot = std::make_shared<ia::ocl::KernelFileAnnotation>(kernelFile);
 					auto& callExprPtr = dynamic_pointer_cast<const CallExprPtr>(node.front());
@@ -198,7 +198,7 @@ namespace {
 				[](const pragma::MatchObject& object, StmtWrapper node) {
 					const auto& exprs = object.getExprs("ranges");
 					const auto& vars = object.getVars("ranges");
-					assert(exprs.size() == (vars.size() * 2) && "Mismatching number of variables and expressions in insieme datarange pragma handling");
+					assert_eq(exprs.size(), vars.size() * 2) << "Mismatching number of variables and expressions in insieme datarange pragma handling";
 
 					ia::DataRangeAnnotation dataRanges;
 					auto exprIt = exprs.cbegin();
@@ -223,7 +223,7 @@ namespace {
 				string_literal["arg"] >> pragma::tok::eod,
 				[] (const pragma::MatchObject& object, StmtWrapper node) {
 
-					assert(object.getStrings("arg").size() == 1 && "Insieme DataTransform pragma must have exactly one argument");
+					assert_eq(1, object.getStrings("arg").size()) << "Insieme DataTransform pragma must have exactly one argument";
 					std::string datalayout = object.getStrings("arg").front();
 
 					const unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));

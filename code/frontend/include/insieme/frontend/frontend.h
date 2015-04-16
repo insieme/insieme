@@ -137,11 +137,11 @@ namespace frontend {
 		 */
 		string crossCompilationSystemHeadersDir;
 
-        /**
-         * A list of optimization flags (-f flags) that need to be used at least in the
-         * backend compiler
-         */
-        set<string> fflags;
+	        /**
+	         * A list of optimization flags (-f flags) that need to be used at least in the
+	         * backend compiler
+	         */
+	        set<string> fflags;
 
 		/**
 		 * Additional flags - a bitwise boolean combination of Options (see Option)
@@ -156,7 +156,7 @@ namespace frontend {
 
 	public:
 
-        /**
+        	/**
 		 * Creates a new setup covering the given include directories.
 		 */
 		ConversionSetup(const vector<path>& includeDirs = vector<path>());
@@ -316,19 +316,19 @@ namespace frontend {
 			this->crossCompilationSystemHeadersDir = crossCompilationSystemHeadersDir;
 		}
 
-        /**
-         * Adds a single optimization flag
-         */
-        void addFFlag(const string& flag) {
-            this->fflags.insert(flag);
-        }
+	        /**
+	         * Adds a single optimization flag
+	         */
+	        void addFFlag(const string& flag) {
+	            this->fflags.insert(flag);
+	        }
 
-        /**
-         * Obtains a reference to the currently defined f flags
-         */
-        const set<string>& getFFlags() const {
-            return fflags;
-        }
+	        /**
+	         * Obtains a reference to the currently defined f flags
+	         */
+	        const set<string>& getFFlags() const {
+	            return fflags;
+	        }
 
 		/**
 		 * A utility method to determine whether the given file should be
@@ -380,7 +380,7 @@ namespace frontend {
 		 */
 		ConversionJob(const path& file, const vector<path>& includeDirs = vector<path>())
 			: ConversionSetup(includeDirs), files(toVector(file)) {
-        }
+	        }
 
 		/**
 		 * Creates a new conversion job covering the given files.
@@ -389,12 +389,12 @@ namespace frontend {
 			: ConversionSetup(includeDirs), files(files) {
 			assert_false(files.empty());
 
-            // The user defined headers path is extended with c source files directories
-            auto inc = ConversionSetup::getIncludeDirectories();
-            for(auto cur : files) {
-                inc.push_back(cur.parent_path());
-            }
-            ConversionSetup::setIncludeDirectories(inc);
+	            // The user defined headers path is extended with c source files directories
+	            auto inc = ConversionSetup::getIncludeDirectories();
+	            for(auto cur : files) {
+	                inc.push_back(cur.parent_path());
+	            }
+	            ConversionSetup::setIncludeDirectories(inc);
 		}
 
 		/**
@@ -492,9 +492,9 @@ namespace frontend {
 			this->unparsedOptions = unparsed;
 		}
 
-        void registerExtensionFlags(boost::program_options::options_description& options);
+	        void registerExtensionFlags(boost::program_options::options_description& options);
 
-        /**
+	        /**
 		 *  Frontend extension initialization method
 		 */
 		void frontendExtensionInit();

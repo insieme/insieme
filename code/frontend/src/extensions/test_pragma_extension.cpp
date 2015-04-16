@@ -34,16 +34,19 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/transform.h"
+
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_expressions.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
+
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
+
 #include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
@@ -51,31 +54,22 @@ namespace frontend {
 namespace extensions {
 
 using namespace insieme::frontend::pragma;
+using namespace insieme::frontend::pragma::tok;
 
-std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
-TestPragmaExtension::getMarkerAttachmentLambda() {
-	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
-		std::cout << "pragma executed" << std::endl;
+TestPragmaExtension::TestPragmaExtension() : parameter("") {
+	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+			PragmaHandler("test", "expected", string_literal["arg"] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+				assert_eq(1, object.getStrings("arg").size()) << "Test expect pragma expects exactly one string argument!";
+				parameter = object.getString("arg");
+			return res;
+		})
+	));
 
-		stmtutils::StmtWrapper res;
-		const std::string want="expected";
-		if (object.stringValueExists(want))
-			expected = object.getString(want);
-		return res;
-	};
-}
-
-TestPragmaExtension::TestPragmaExtension(): Pragma(clang::SourceLocation(), clang::SourceLocation(), "", MatchMap()) {
-	pragmaHandlers.push_back
-			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
-}
-
-TestPragmaExtension::TestPragmaExtension(const clang::SourceLocation& s1, const clang::SourceLocation& s2, const string& str,
-					   const insieme::frontend::pragma::MatchMap& mm): Pragma(s1, s2, str, mm) {
-	pragmaHandlers.push_back
-			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
+	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+			PragmaHandler("test", "dummy", string_literal["arg"] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+			return res;
+		})
+	));
 }
 
 } // extensions

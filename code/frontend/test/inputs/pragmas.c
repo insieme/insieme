@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,19 +40,19 @@
 
 int main (){
 
-	#pragma test "first"
+	#pragma test dummy "first"
 	int x;
 
-#pragma test "macro"
+#pragma test dummy "macro"
 	FAKE(x)
 
-#pragma test "solo"
+#pragma test dummy "solo"
 	
 
 }
 
 
-#pragma test "function"
+#pragma test dummy "function"
 int f(){
 
 	return 0;
@@ -63,7 +63,7 @@ void g(){
 	int a;
 	int n;
   #pragma test \
-       "two lines"
+       dummy "two lines"
   for(a=0;a<n;a++) {
   }
 }
@@ -71,9 +71,9 @@ void g(){
 
 void h(int x){
 	FAKE(x);
-#pragma test "one"
-#pragma test "two"
-#pragma test "three"
+#pragma test dummy "one"
+#pragma test dummy "two"
+#pragma test dummy "three"
 	for (x =0; x < 10; x ++){
 	}
 

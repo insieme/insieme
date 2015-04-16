@@ -36,24 +36,25 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_program.h"
-
-#include "insieme/frontend/translation_unit.h"
-#include "insieme/utils/config.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
-
-#include "insieme/utils/logging.h"
-
 #include "clang/AST/ASTContext.h"
-
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
+#include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
+
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/translation_unit.h"
+
+#include "insieme/utils/config.h"
+#include "insieme/utils/logging.h"
 
 using namespace insieme;
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
 using namespace insieme::frontend::extensions;
@@ -61,11 +62,21 @@ using namespace insieme::frontend::extensions;
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
+	const std::string filename = CLANG_SRC_DIR "/inputs/casts.c";
+	std::vector<std::string> argv = { "compiler", filename };
+    cmd::Options options = cmd::Options::parse(argv);
+    options.job.frontendExtensionInit(options.job);
+	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
 	
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test::expected"; };
 
-	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
+	std::cout << tu.getPragmaList().size() << "\n";
+
+	const auto begin = tu.pragmas_begin(filter);
+
+	EXPECT_NE(begin, tu.pragmas_end());
+
+	for(auto it = begin; it != tu.pragmas_end(); ++it) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
