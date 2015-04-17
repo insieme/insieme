@@ -74,7 +74,7 @@ namespace lang {
 
 		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "let foo = FooType in (foo x)->foo { return x; }")
 
-		LANG_EXT_DERIVED_WITH_NAME(NamedDerived, "NamedDerived", "let foo = NamedType in (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED(NamedDerived, "let foo = NamedType in (foo x)->foo { return x; }")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {
@@ -93,7 +93,7 @@ namespace lang {
 		EXPECT_TRUE(definedNames.find("NamedLiteral")->second == extension.getNamedLiteral());
 
 		//Lookup a registered derived
-		EXPECT_TRUE(definedNames.find("NamedDerived")->second == extension.getNamedDerived());
+		EXPECT_TRUE(definedNames.find("named_derived")->second == extension.getNamedDerived());
 	}
 
 	TEST(NamedCoreExtensionTest, NamedTypes) {

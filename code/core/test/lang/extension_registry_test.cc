@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,39 +38,24 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/test/test_utils.h"
+#include "insieme/core/lang/extension_registry.h"
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/lang/const_extension.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(ConstTypeExtensionTest, Basic) {
-		NodeManager nm;
-		IRBuilder builder(nm);
-
-		auto& ext = nm.getLangExtension<ConstExtension>();
-
-		auto type = builder.parseType("A");
-
-		auto wrapped = ext.getConstType(type);
-
-		EXPECT_EQ("A", toString(*type));
-		EXPECT_EQ("const<A>", toString(*wrapped));
-
-		EXPECT_TRUE(ext.isConstType(wrapped));
-		EXPECT_FALSE(ext.isConstType(type));
-		EXPECT_EQ(type, ext.getWrappedConstType(wrapped));
-	}
-
-	TEST(ConstTypeExtensionTest, Semantic) {
+	TEST(ExtensionRegistry, Semantics) {
 		NodeManager nm;
 
-		const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
-
-		semanticCheckSecond(ext.getNamedIrExtensions());
+		const ExtensionRegistry& registry = ExtensionRegistry::getInstance();
+		auto extensions = registry.getExtensionFactories();
+		for(auto extFactPair : extensions) {
+			auto extFact = extFactPair.second;
+			semanticCheckSecond(extFact(nm).getNamedIrExtensions());
+		}
 	}
 } // end namespace lang
 } // end namespace core

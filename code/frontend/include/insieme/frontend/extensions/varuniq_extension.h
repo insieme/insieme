@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,50 +29,38 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/test/test_utils.h"
+#include <map>
+#include <string>
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/lang/const_extension.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_values.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
-namespace core {
-namespace lang {
+namespace frontend {
+namespace extensions {
 
-	TEST(ConstTypeExtensionTest, Basic) {
-		NodeManager nm;
-		IRBuilder builder(nm);
+class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
+        insieme::frontend::extensions::FrontendExtension {
+	insieme::core::NodeAddress frag;
+	std::map<int, int> ctr;
 
-		auto& ext = nm.getLangExtension<ConstExtension>();
+public:
+	VarUniqExtension(const insieme::core::NodeAddress frag);
 
-		auto type = builder.parseType("A");
+	void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
+	void visitNode(const insieme::core::NodeAddress &node);
+	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
 
-		auto wrapped = ext.getConstType(type);
+	insieme::core::NodeAddress IR();
+	insieme::core::VariableAddress getVarDefinition(const insieme::core::VariableAddress& var);
+};
 
-		EXPECT_EQ("A", toString(*type));
-		EXPECT_EQ("const<A>", toString(*wrapped));
-
-		EXPECT_TRUE(ext.isConstType(wrapped));
-		EXPECT_FALSE(ext.isConstType(type));
-		EXPECT_EQ(type, ext.getWrappedConstType(wrapped));
-	}
-
-	TEST(ConstTypeExtensionTest, Semantic) {
-		NodeManager nm;
-
-		const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
-
-		semanticCheckSecond(ext.getNamedIrExtensions());
-	}
-} // end namespace lang
-} // end namespace core
-} // end namespace insieme
-
+}}}

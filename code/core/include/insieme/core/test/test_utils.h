@@ -29,50 +29,43 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
+#pragma once
+
+#include <string>
 #include <gtest/gtest.h>
 
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/test/test_utils.h"
-
+#include "insieme/utils/string_utils.h"
 #include "insieme/core/ir_node.h"
-#include "insieme/core/lang/const_extension.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
+
+using std::string;
 
 namespace insieme {
 namespace core {
-namespace lang {
 
-	TEST(ConstTypeExtensionTest, Basic) {
-		NodeManager nm;
-		IRBuilder builder(nm);
+// -- A set of useful functions when implementing test cases which use core classes -------------
 
-		auto& ext = nm.getLangExtension<ConstExtension>();
+/**
+ * Performs semantic checks for all second elements in a map. Uses gtest EXPECT to verify that no errors occur.
+ *
+ * @param map The map which's second element should be checked
+ */
+template<typename T>
+void semanticCheckSecond(std::map<T, insieme::core::NodePtr> map) {
 
-		auto type = builder.parseType("A");
+	for(auto cur : map) {
+		auto errors = checks::check(cur.second).empty();
 
-		auto wrapped = ext.getConstType(type);
-
-		EXPECT_EQ("A", toString(*type));
-		EXPECT_EQ("const<A>", toString(*wrapped));
-
-		EXPECT_TRUE(ext.isConstType(wrapped));
-		EXPECT_FALSE(ext.isConstType(type));
-		EXPECT_EQ(type, ext.getWrappedConstType(wrapped));
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(errors) << errors;
 	}
+}
 
-	TEST(ConstTypeExtensionTest, Semantic) {
-		NodeManager nm;
 
-		const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
-
-		semanticCheckSecond(ext.getNamedIrExtensions());
-	}
-} // end namespace lang
-} // end namespace core
-} // end namespace insieme
-
+}
+}

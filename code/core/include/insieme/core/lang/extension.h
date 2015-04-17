@@ -38,6 +38,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "insieme/utils/string_utils.h"
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
@@ -65,7 +67,9 @@ namespace lang {
 	 * One can define named IR extensions by using the macros with the _WITH_NAME suffix
 	 * provided. Those can be used to create named types, literal and derived constructs.
 	 * Note that names used to identify these have to be unique - not just within this
-	 * extension but also across all other extensions.
+	 * extension but also across all other extensions. If an extension is created with
+	 * the the macro without _WITH_NAME, its IR_NAME will be converted from camelcase to
+	 * underscores and used as name. Also this name has to be unique.
 	 *
 	 * Each new extension should be registered with a unique name in the ExtensionRegistry.
 	 * This name can then be used to reference all the named constructs defined within
@@ -184,7 +188,7 @@ namespace lang {
 	 * @param TYPE the IR type to be represented as a string
 	 */
 	#define LANG_EXT_TYPE(NAME, TYPE) \
-		LANG_EXT_TYPE_WITH_NAME(NAME, #NAME, TYPE)
+		LANG_EXT_TYPE_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a literal within a language extension
@@ -222,7 +226,7 @@ namespace lang {
 	 * @param TYPE the IR type of the literal
 	 */
 	#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) \
-		LANG_EXT_LITERAL_WITH_NAME(NAME, #NAME, VALUE, TYPE)
+		LANG_EXT_LITERAL_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), VALUE, TYPE)
 
 	/**
 	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
@@ -258,7 +262,7 @@ namespace lang {
 	 * @param SPEC the implementation of the derived construct (using INSPIRE)
 	 */
 	#define LANG_EXT_DERIVED(NAME, SPEC) \
-		LANG_EXT_DERIVED_WITH_NAME(NAME, #NAME, SPEC)
+		LANG_EXT_DERIVED_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), SPEC)
 
 } // end namespace lang
 } // end namespace core

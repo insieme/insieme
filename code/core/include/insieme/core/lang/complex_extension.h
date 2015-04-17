@@ -63,7 +63,7 @@ namespace lang {
 		/**
 		 * Complex type.
 		 */
-		LANG_EXT_TYPE_WITH_NAME(Complex, "complex", "struct { 'a _real; 'a _img; }");
+		LANG_EXT_TYPE(Complex, "struct { 'a _real; 'a _img; }");
 
         /**
 		 * Get real part of complex.
