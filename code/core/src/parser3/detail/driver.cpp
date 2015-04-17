@@ -700,8 +700,6 @@ namespace {
             // if the type has no recursion inside, replace all uses of the type variable by a full type
             for (const auto& type : type_lets){
                 const std::string& name = let_names[count];
-                std::cout << "check type: " << type << std::endl;
-                std::cout << variables <<  std::endl;
                 if(!contains_type_variables(type, variables)) {
                     non_recursive[builder.typeVariable(name)] = type;
                     annotations::attachName(type, name);
@@ -841,6 +839,13 @@ namespace {
             int linee = err.l.end.line;
 
             out << RED << "ERROR: "  << RESET << err.l << " " << err.msg << std::endl;
+
+            assert_true(lineb > 0);
+            assert_true(linee > 0);
+            assert_true(buffer.size() > 0);
+            assert_true(lineb <= (int)buffer.size())  << "line beg " << lineb << " : buffer size " << buffer.size() << " \n" << buffer;
+            assert_true(linee <= (int)buffer.size()) << "line end " << linee << " : buffer size " << buffer.size() << " \n" << buffer;
+
             for (; line< lineb; ++line); 
             for (; line< linee; ++line); out << buffer[line-1] << std::endl;
 

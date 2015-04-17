@@ -81,8 +81,8 @@ namespace cba {
 				"	let int = int<4>;"
 				"	let point = struct { int a; int b; };"
 				"	"
-				"	decl point p1 = (point){ 1, 2 };"
-				"	decl point p2 = (point){ 3, 4 };"
+				"	decl point p1 = struct point { 1, 2 };"
+				"	decl point p2 = struct point { 3, 4 };"
 				"	"
 				"	p1;"
 				"	p2;"
@@ -119,7 +119,7 @@ namespace cba {
 				"	let point = struct { int x; int y; };"
 				"	let cycle = struct { point center; int r; };"
 				"	"
-				"	decl cycle c1 = (cycle){ (point) { 1, 2 } , 3 };"
+				"	decl cycle c1 = struct cycle { struct point { 1, 2 } , 3 };"
 				"	"
 				"	c1;"
 				"	c1.center;"
@@ -157,25 +157,25 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto in = builder.parseStmt(
-				"{"
-				"	decl auto a = dp_root;"
-				"	decl auto b = dp_member(a, lit(\"a\")); "
-				"	"
-				"	a;"
-				"	b;"
-				"	"
-				"	dp_element(b, 17u+4u);"
-				"	dp_element(b, 17u+4u+lit(\"c\":uint<4>));"
-				"	"
-				"	ref<datapath> x = var(dp_root);"
-				"	if (lit(\"?\":bool)) {"					// to bring in some confusion
-				"		x = dp_member(*x, lit(\"a\")); "
-				"	}"
-				"	*x;"
-				"	dp_member(*x, lit(\"b\"));"
-				"}"
-		).as<CompoundStmtPtr>();
+		auto in = builder.parseStmt(R"(
+				{
+					decl auto a = dp_root;
+					decl auto b = dp_member(a, lit("a")); 
+					
+					a;
+					b;
+					
+					dp_element(b, 17u+4u);
+					dp_element(b, 17u+4u+lit("c":uint<4>));
+					
+					decl ref<datapath> x = var(dp_root);
+					if (lit("?":bool)) {					// to bring in some confusion
+						x = dp_member(*x, lit("a")); 
+					}
+					*x;
+					dp_member(*x, lit("b"));
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
@@ -210,8 +210,8 @@ namespace cba {
 				"	let cycle = struct { point c; int r; };"
 				"	"
 				"	decl ref<int> a = var(4);"
-				"	decl ref<point> p = var((point){ 2, 3 });"
-				"	decl ref<cycle> c = var((cycle){ *p, 4 });"
+				"	decl ref<point> p = var(struct point { 2, 3 });"
+				"	decl ref<cycle> c = var(struct cycle { *p, 4 });"
 				"	"
 				"	a;"
 				"	p;"
@@ -258,8 +258,8 @@ namespace cba {
 				"	let int = int<4>;"
 				"	let point = struct { int a; int b; };"
 				"	"
-				"	decl auto p1 = var((point){ 1, 2 });"
-				"	decl auto p2 = var((point){ 3, 4 });"
+				"	decl auto p1 = var(struct point { 1, 2 });"
+				"	decl auto p2 = var(struct point { 3, 4 });"
 				"	decl ref<point> p3 = p1;"				// an alias
 				"	decl ref<ref<point>> p4 = var(p1);"		// a pointer
 				"	"
@@ -325,7 +325,7 @@ namespace cba {
 				"	*(*p4).b;"
 				"	"
 				"	"
-				"	*p4 = (point){ 7, 8 };"				// updating the values
+				"	*p4 = struct point { 7, 8 };"				// updating the values
 				"	"
 				"	*p1;"
 				"	*p2;"
@@ -433,7 +433,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	decl ref<array<int,1>> a = var(array.create.1D(lit(int), 10u));"
+				"	decl ref<array<int,1>> a = var(array_create_1D(lit(int), 10u));"
 				"	"
 				"	a[0] = 10;"
 				"	a[1] = 12;"
@@ -529,17 +529,17 @@ namespace cba {
 				"	let tuple = (int<4>, int<4>);"
 				"	"
 				""
-				"	tuple t1 = (1, 2);"
-				"	tuple t2 = (3, 4);"
+				"	decl tuple t1 = (1, 2);"
+				"	decl tuple t2 = (3, 4);"
 				""
 				""
 				"	"
 				"	t1;"
 				"	t2;"
-				"	tuple.member.access(t1,0u, lit(int<4>));"
-				"	tuple.member.access(t1,1u, lit(int<4>));"
-				"	tuple.member.access(t2,0u, lit(int<4>));"
-				"	tuple.member.access(t2,1u, lit(int<4>));"
+				"	tuple_member_access(t1,0u, lit(int<4>));"
+				"	tuple_member_access(t1,1u, lit(int<4>));"
+				"	tuple_member_access(t2,0u, lit(int<4>));"
+				"	tuple_member_access(t2,1u, lit(int<4>));"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -567,7 +567,7 @@ namespace cba {
 				"	let int = int<4>;"
 				"	let tuple = (int<4>, int<4>);"
 				"	"
-				"	let writeToTuple = (ref<tuple> lt, int<4> x)->unit {"
+				"	let writeToTuple = lambda (ref<tuple> lt, int<4> x)->unit {"
 				"		tuple_ref_elem(lt,0u, lit(int<4>)) = x;"
 				"	};"
 				""

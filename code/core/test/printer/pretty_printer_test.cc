@@ -329,9 +329,6 @@ TEST(PrettyPrinter, JustOuthermostScope) {
     "};\n"
     "\n"
     "{\n"
-    "    { };\n"
-    "    { };\n"
-    "    { };\n"
     "    decl ref<int<4>> v9 =  var(undefined(type<int<4>>));\n"
     "    decl ref<int<4>> v13 =  var(undefined(type<int<4>>));\n"
     "    decl ref<int<4>> v14 =  var(undefined(type<int<4>>));\n"
@@ -352,9 +349,6 @@ TEST(PrettyPrinter, JustOuthermostScope) {
 
 	EXPECT_EQ(res,toString(PrettyPrinter(stmt)));
 	std::string res2 = "{\n"
-                       "    { };\n"
-                       "    { };\n"
-                       "    { };\n"
                        "    decl ref<int<4>> v9 =  var(undefined(type<int<4>>));\n"
                        "    decl ref<int<4>> v13 =  var(undefined(type<int<4>>));\n"
                        "    decl ref<int<4>> v14 =  var(undefined(type<int<4>>));\n"

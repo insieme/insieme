@@ -933,18 +933,18 @@ TEST(Manipulation, pushInto) {
 
 	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1) {return int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(int_add(v1, 1), 2);}}(v1));}}(10);}", toString(*code));
+	EXPECT_EQ("{rec v0.{v0=fun(int<4> v1) {return int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(int_add(v1, 1), 2);}}(v1));}}(10);}", toString(*code));
 
 	// implant var
 	VariablePtr var = builder.variable(manager.getLangBasic().getInt4(), 1);
 	EXPECT_EQ("v1", toString(*var));
 
 	auto resA = analysis::normalize(transform::pushInto(manager, exprA, var));
-	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), 2);}}(v1, v2));}}(10, v1);}", toString(*resA.getRootNode()));
+	EXPECT_EQ("{rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), 2);}}(v1, v2));}}(10, v1);}", toString(*resA.getRootNode()));
 	EXPECT_TRUE(core::checks::check(resA.getRootNode()).empty()) << core::checks::check(resA.getRootNode());
 
 	auto resB = analysis::normalize(transform::pushInto(manager, exprB.switchRoot(resA.getRootNode()), var));
-	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), v2);}}(v1, v2));}}(10, v1);}", toString(*resB.getRootNode()));
+	EXPECT_EQ("{rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(int_add(v1, v2), v2);}}(v1, v2));}}(10, v1);}", toString(*resB.getRootNode()));
 	EXPECT_TRUE(core::checks::check(resB.getRootNode()).empty()) << core::checks::check(resB.getRootNode());
 }
 
@@ -968,7 +968,7 @@ TEST(Manipulation, pushIntoMultiple) {
 
 	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
 
-	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(v1, 1);}}(v1)), 2);}}(10);}", toString(*code));
+	EXPECT_EQ("{rec v0.{v0=fun(int<4> v1) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1) {return int_add(v1, 1);}}(v1)), 2);}}(10);}", toString(*code));
 
 	// variables to be implanted
 	VariablePtr varA = builder.variable(manager.getLangBasic().getInt4(), 1);
@@ -981,7 +981,7 @@ TEST(Manipulation, pushIntoMultiple) {
 	elements[exprB] = varB;
 
 	auto res = analysis::normalize(transform::pushInto(manager, elements));
-	EXPECT_EQ("{{}; {}; {}; rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(v1, v2);}}(v1, v3)), v2);}}(10, v2, v1);}", toString(*res));
+	EXPECT_EQ("{rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {return int_add(int_sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_add(v1, v2);}}(v1, v3)), v2);}}(10, v2, v1);}", toString(*res));
 	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 }
 

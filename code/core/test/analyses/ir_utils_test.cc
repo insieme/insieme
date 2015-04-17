@@ -387,7 +387,7 @@ namespace analysis {
 		EXPECT_EQ("[0-0-1-0-1-0,0-0-1-0-2-0]", toString(res));
 
 		res = getExitPoints(builder.parseStmt(" { let f = lambda ()->int<4> { return 0; }; f(); return 0; } "));
-		EXPECT_EQ("[0-2]", toString(res));
+		EXPECT_EQ("[0-1]", toString(res));
 
 		// ------------ break and continue ------------------------
 

@@ -86,7 +86,7 @@ TEST(ScalarArrayIndexRangeCheck, Basic) {
 		//NodeAddress errorAdr = NodeAddress(stmt_err).getAddressOfChild(2,0,1,2,1,1,2,0,1,2,1);
 		NodeAddress errorAdr = addrlist[0];
 
-		EXPECT_EQ("0-1-2-0-1-2-1-1-2-0-1-2-1", toString(errorAdr));
+		EXPECT_EQ("0-0-2-0-1-2-1-1-2-0-1-2-1", toString(errorAdr));
 		EXPECT_TRUE(dynamic_pointer_cast<CallExprPtr>(errorAdr.getAddressedNode())) << errorAdr.getAddressedNode();
 
 		EXPECT_EQ(toString(check(stmt_err, scalarArrayIndexRangeCheck)[0]), 

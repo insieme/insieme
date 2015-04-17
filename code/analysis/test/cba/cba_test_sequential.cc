@@ -92,24 +92,25 @@ namespace cba {
 		map<string, NodePtr> symbols;
 		symbols["w"] = w;
 
-		auto pos = builder.parseAddressesStatement("lambda (int x, int y)->unit { "
-				"	$x$;"
-				"	$y$;"
-				"	$w$;"
-				"	decl int<4> z = 123;"
-				"	$z$;"
-				"	{"
-				"		$z$;"
-				"		auto z = 1234;"
-				"		$z$;"
-				"	};"
-				"	$z$;"
-				"	decl int<4> w = 123;"
-				"	$w$;"
-				"	decl int<4> w = 123;"
-				"	$w$;"
-				"}",
-				symbols
+		auto pos = builder.parseAddressesStatement(R"(
+                lambda (int<4> x, int<4> y)->unit { 
+					$x$;
+					$y$;
+					$w$;
+					decl int<4> z = 123;
+					$z$;
+					{
+						$z$;
+						decl auto z = 1234;
+						$z$;
+					};
+					$z$;
+					decl int<4> w2= 123;
+					$w2$;
+					decl int<4> w3 = 123;
+					$w3$;
+				};
+                )", symbols
 		);
 
 		EXPECT_EQ(9u, pos.size());
@@ -192,7 +193,7 @@ namespace cba {
 		auto litB = builder.literal("var", refType);
 
 		auto expr = builder.integerLit(12);
-		auto alloc = builder.parseExpr("ref.alloc(  lit(int<4>), memloc.stack)");
+		auto alloc = builder.parseExpr("ref_alloc(  lit(int<4>), memloc_stack)");
 
 		EXPECT_FALSE(isMemoryConstructor(StatementAddress(litA)));
 		EXPECT_TRUE(isMemoryConstructor(StatementAddress(litB)));
@@ -304,9 +305,9 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	int<4> x = 12;"
-				"	auto y = (int<4> z)->int<4> { return 10; };"
-				"	int<4> z = y(x);"
+				"	decl int<4> x = 12;"
+				"	decl auto y = lambda (int<4> z)->int<4> { return 10; };"
+				"	decl int<4> z = y(x);"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -330,13 +331,13 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	let id = ('a x)->'a { return x; };"
-				"	decl auto x = 1;"
-				"	decl auto x = id(2);"
-				"	decl auto x = id(x);"
-				"	decl auto x = id(id(3));"
-				"	decl auto x = id(id(x));"
-				"	decl auto x = id(id(id(4)));"
+				"	let id = lambda ('a x)->'a { return x; };"
+				"	decl auto a = 1;"
+				"	decl auto b = id(2);"
+				"	decl auto c = id(b);"
+				"	decl auto d = id(id(3));"
+				"	decl auto e = id(id(d));"
+				"	decl auto f = id(id(id(4)));"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -1322,22 +1323,22 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto in = builder.parseStmt(
-				"{"
+		auto in = builder.parseStmt(R"(
+				{
 
 				// simple function
-				"	decl auto y = lamba (int<4> z)->int<4> { return z; };"
-				"	y(1);"								// this one should be { 1 }
-				"	y(2);"								// this one should be { 2 }
-				"	y(3);"								// this one should be { 2 }
+					decl auto y = lambda (int<4> z)->int<4> { return z; };
+					y(1);								// this one should be { 1 }
+					y(2);								// this one should be { 2 }
+					y(3);								// this one should be { 2 }
 
 				// higher order functions
-				"	decl auto z = lambda ((int<4>)->int<4> x, int<4> i)->int<4> { return x(i); };"
-				"	z(y,4);"								// this one should be { 4 }
-				"	z(y,5);"								// this one should be { 5 }
+					decl auto z = lambda ((int<4>)->int<4> x, int<4> i)->int<4> { return x(i); };
+					z(y,4);								// this one should be { 4 }
+					z(y,5);								// this one should be { 5 }
 
-				"}"
-		).as<CompoundStmtPtr>();
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
@@ -1364,9 +1365,9 @@ namespace cba {
 				"{"
 
 				// prepare some functions
-				"	let inc = (ref<int<4>> x)->unit { x = x+1; };"
-				"	auto f = inc;"
-				"	decl auto apply = lambda (ref<'a> loc, (ref<'a>)->unit op)->unit { op(loc); };"
+				"	let inc = lambda (ref<int<4>> x)->unit { x = x+1; };"
+				"	decl auto f = inc;"
+				"	decl auto apply = lambda (ref<'a> l, (ref<'a>)->unit op)->unit { op(l); };"
 
 				// apply them
 				"	decl ref<int<4>> x = var(1);"
@@ -1424,9 +1425,9 @@ namespace cba {
 				"{"
 
 				// prepare some functions
-				"	decl auto a = (ref<int<4>> x)->unit { x = x+1; };"
-				"	decl auto b = (ref<int<4>> x)->unit { x = x*2; };"
-				"	decl auto f = (ref<int<4>> x, (ref<int<4>>)->unit a, (ref<int<4>>)->unit b)->unit {"
+				"	decl auto a = lambda (ref<int<4>> x)->unit { x = x+1; };"
+				"	decl auto b = lambda (ref<int<4>> x)->unit { x = x*2; };"
+				"	decl auto f = lambda (ref<int<4>> x, (ref<int<4>>)->unit a, (ref<int<4>>)->unit b)->unit {"
 				"		if (x < 3) {"
 				"			a(x);"
 				"		} else {"
@@ -1478,8 +1479,8 @@ namespace cba {
 				"{"
 
 				// prepare some functions
-				"	auto a = true;"
-				"	auto b = false;"
+				"	decl auto a = true;"
+				"	decl auto b = false;"
 
 				// apply them
 				"	true;"
@@ -1497,8 +1498,8 @@ namespace cba {
 				"	false || false;"
 
 				// some combined stuff
-				"	ref<int<4>> x = var(1);"
-				"	ref<int<4>> y = var(2);"
+				"	decl ref<int<4>> x = var(1);"
+				"	decl ref<int<4>> y = var(2);"
 
 				"	(0 < x) && (x < 2);"
 				"	((0 < x) && (x < 2)) || ( y < x );"
@@ -1584,7 +1585,7 @@ namespace cba {
 
 			auto in = builder.parseStmt(
 					"{"
-					"	decl auto inc = (int<4> x) => x + 1;"
+					"	decl auto inc = lambda (int<4> x) => x + 1;"
 					"	inc(2);"
 					"	inc(4);"
 					"}"
@@ -1606,18 +1607,18 @@ namespace cba {
 			NodeManager mgr;
 			IRBuilder builder(mgr);
 
-			auto in = builder.parseStmt(
-					"{"
-					"	decl ref<int<4>> o = var(1);"
-                    "   let f = (int<4> a, ref<int<4>> b)->int<4> { return a + b; }"
-					"	decl auto inc = lambda (int<4> x) => f(x,o);"
-					"	inc(2);"
-					"	o = 2;"
-					"	inc(2);"
-					"	o = 5;"
-					"	inc(3);"
-					"}"
-			).as<CompoundStmtPtr>();
+			auto in = builder.parseStmt(R"(
+					{
+						decl ref<int<4>> o = var(1);
+                        let f = lambda (int<4> a, ref<int<4>> b)->int<4> { return a + b; };
+						decl auto inc = lambda (int<4> x) => f(x,o);
+						inc(2);
+						o = 2;
+						inc(2);
+						o = 5;
+						inc(3);
+					}
+			)").as<CompoundStmtPtr>();
 
 			ASSERT_TRUE(in);
 			CompoundStmtAddress code(in);
@@ -1641,8 +1642,8 @@ namespace cba {
 
 				// create a counter
 				"	decl ref<int<4>> c = var(0);"
-				"	decl auto inc = lambda () => { c = c+1; };"
-				"	decl auto dec = lambda () => { c = c-1; };"
+				"	decl auto inc  = lambda () => { c = c+1; };"
+				"	decl auto dec  = lambda () => { c = c-1; };"
 				"	decl auto inc2 = lambda (int<4> z) => { c = c+z; };"
 
 				// create some bindings
@@ -1683,8 +1684,8 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 			"{"
-			"	auto f = lambda (()->unit a)->unit { a(); };"
-			"	auto g = lambda (()->unit a)->unit { a(); };"
+			"	decl auto f = lambda (()->unit a)->unit { a(); };"
+			"	decl auto g = lambda (()->unit a)->unit { a(); };"
 			"	f(lambda ()->unit {});"
 			"	f(lambda ()->unit {});"
 			"	g(lambda ()->unit {});"
@@ -1908,7 +1909,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	decl auto f = ()->ref<int> { return new(0); };"
+				"	decl auto f = lambda ()->ref<int> { return new(0); };"
 				"	"
 				"	decl ref<int> a = f();"
 				"	decl ref<int> b = f();"

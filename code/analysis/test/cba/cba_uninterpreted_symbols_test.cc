@@ -59,9 +59,9 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let a = lit(\"a\":A);"
-				"	let b = lit(\"b\":B);"
-				"	let f = lit(\"f\":(A,B)->C);"
+				"	let a = expr lit(\"a\":A);"
+				"	let b = expr lit(\"b\":B);"
+				"	let f = expr lit(\"f\":(A,B)->C);"
 				"	"
 				"	decl auto x = var(a);"
 				"	decl auto y = var(b);"
@@ -93,9 +93,9 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let a = lit(\"a\":A);"
-				"	let b = lit(\"b\":A);"
-				"	let f = lit(\"f\":(A,A)->C);"
+				"	let a = expr lit(\"a\":A);"
+				"	let b = expr lit(\"b\":A);"
+				"	let f = expr lit(\"f\":(A,A)->C);"
 				"	"
 				"	decl auto x = var(a);"
 				"	decl auto y = var(b);"
@@ -136,8 +136,8 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	let x = lit(\"x\":X);"
-				"	let g = lit(\"g\":(X)->X);"
+				"	let x = expr lit(\"x\":X);"
+				"	let g = expr lit(\"g\":(X)->X);"
 				"	"
 				"	decl ref<X> a = var(x);"
 				"	"

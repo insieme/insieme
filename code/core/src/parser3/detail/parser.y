@@ -357,7 +357,6 @@ tag_def : "{" member_list   { std::swap($$, $2); }
 
                      /* tuple */
 tuple_or_function : type_list  { RULE 
-                            if($1.size() <2) error(@$, "tuple type must have 2 fields or more, sorry");
                             $$ = driver.builder.tupleType($1); 
                         }
                      /* function/closure type */
@@ -561,8 +560,13 @@ compound_stmt : "}" { RULE $$ = driver.builder.compoundStmt(); }
               | statement_list "}"{ RULE $$ = driver.builder.compoundStmt($1); }
               ;
 
-statement_list : statement { RULE $$.push_back($1); }
-               | statement statement_list { RULE $2.insert($2.begin(),$1); std::swap($$, $2); }
+statement_list : statement { RULE     
+                        if($1 != driver.builder.getNoOp())  $$.push_back($1); 
+                    }
+               | statement statement_list { RULE 
+                        if($1 != driver.builder.getNoOp())  $2.insert($2.begin(),$1); 
+                        std::swap($$, $2); 
+                    }
                ;
 
 /* ~~~~~~~~~~~~~~~~~~~  EXPRESSIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -704,10 +708,10 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                     auto bind = driver.builder.bindExpr(VariableList(), $9.as<CallExprPtr>());
                     $$ = driver.builder.jobExpr(driver.builder.getThreadNumRange($4, $6), std::vector<DeclarationStmtPtr>(), bind);
              }
-           | "task" "(" statement ")" { RULE 
+           | "task" "{" statement "}" { RULE 
                     $$ = driver.builder.jobExpr($3, 1);
              }
-           | "job" "(" statement ")" { RULE 
+           | "job" "{" statement "}" { RULE 
                     // builds a job for more than a sigle thread
                     $$ = driver.builder.jobExpr($3, -1);
              }
@@ -822,12 +826,11 @@ lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_a
 %nonassoc ":";
 %left LAMBDA;
 %left "&&" "||";
-%left "==" "!=" "<=" ">" ">=";
+%left "<" "==" "!=" "<=" ">" ">=";
 %left "%";
 %left "+" "-";
 %left "*" "/";
 %left "&" "|" "^";
-%left "<";
 %nonassoc UDEREF;
 %nonassoc UMINUS;
 %nonassoc BOOL_OP;

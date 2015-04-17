@@ -90,7 +90,7 @@ namespace cba {
 		EXPECT_EQ("[(BindExpr@0-1-1)]", toString(mgr.getCallee(callerB)));
 		EXPECT_EQ("[(0-1)]", toString(mgr.getCaller(calleeB)));
 
-		EXPECT_EQ("[int.add]", toString(mgr.getCallee(callerC)));
+		EXPECT_EQ("[int_add]", toString(mgr.getCallee(callerC)));
 		EXPECT_EQ("[(0-2)]", toString(mgr.getCaller(calleeC)));
 	}
 
@@ -101,13 +101,13 @@ namespace cba {
 
 		auto code = builder.parseStmt(R"(
 				{
-					auto f = lambda ()->unit {};
+					decl auto f = lambda ()->unit {};
 					f();				// a function call
 
-					auto g = lambda ()=> 2;
+					decl auto g = lambda ()=> 2;
 					g();				// a bind call
 
-					auto h = int_add;
+					decl auto h = int_add;
 					h(2,3);			    // a literal
 					h(1,h(2,3));		// used multiple times
 
@@ -142,7 +142,7 @@ namespace cba {
 		EXPECT_EQ("[(BindExpr@0-2-1)]", toString(mgr.getCallee(callerB)));
 		EXPECT_EQ("[(0-3)]", toString(mgr.getCaller(calleeB)));
 
-		EXPECT_EQ("[int.add]", toString(mgr.getCallee(callerC)));
+		EXPECT_EQ("[int_add]", toString(mgr.getCallee(callerC)));
 		EXPECT_EQ("[(0-5),(0-6),(0-6-3)]", toString(mgr.getCaller(calleeC)));
 
 		// - the same, yet not string based
@@ -166,7 +166,7 @@ namespace cba {
 
 					f(lambda ()->unit { });			// a function passing as an argument
 					f(lambda ()=> unit);			// a bind passed as an argument
-					f(lit(\"x\":()->unit));	        // a literal passed as an argument
+					f(lit("x":()->unit));	        // a literal passed as an argument
 
 				}
 		)").as<CompoundStmtPtr>();
@@ -369,7 +369,7 @@ namespace cba {
 				"{"
 				"	hide(lambda ()->unit {});"			// create a function and forward it somewhere
 				"	hide(lambda ()->unit {});"			// and another
-				"	hide(lambda (int x)->unit {});"		// and another with a different type
+				"	hide(lambda (int<4> x)->unit {});"		// and another with a different type
 				"	hide(lambda ()=> 2);"				// and a bind
 				"	lambda ()->unit {};"				// a function not being used ever
 				"	lambda ()=> 3;"						// a bind not being used ever
