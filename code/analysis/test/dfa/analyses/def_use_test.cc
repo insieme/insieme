@@ -62,11 +62,11 @@ TEST(DefUse, ScalarNoControl) {
 
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
-		"	$ref<int<4>> a = 0;$ "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
+		"	$decl ref<int<4>> a = 0;$ "
 		"	$a$ = i+b; "
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
     EXPECT_EQ(4u, addresses.size());
@@ -97,15 +97,15 @@ TEST(DefUse, VectorsWithControl) {
 
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
 		"	$v[1u].a$ = i+b; "
 		"	while (i<b) { "
 		"		$v[2u].a$ = i+b; "
 		"	}"
-		"	int<4> c1 = *$v[1u].a$;"
-		"	int<4> c2 = *$v[2u].b$;"
-		"	int<4> c3 = *$v[2u].a$;"
+		"	decl int<4> c1 = *$v[1u].a$;"
+		"	decl int<4> c2 = *$v[2u].b$;"
+		"	decl int<4> c3 = *$v[2u].a$;"
 		"}$", symbols
     );
 	EXPECT_EQ(6u, addresses.size());

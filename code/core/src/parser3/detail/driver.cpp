@@ -178,9 +178,7 @@ namespace detail{
                 error(l, format("right side expression of type %s can not be assingend to type %s", 
                                 toString(right.getType()),
                                 toString(left.getType())));
-
             }
-
 
             return builder.assign(left, right);
         }
@@ -646,7 +644,11 @@ namespace {
                 try{
                     ExpressionPtr lambda = let_driver.parseExpression();
                     if (!lambda) { 
+                        // write the location with the offset of the current call site
+                        // FIXME: due to the new string, locations get messed up
+                        let_driver.print_errors(std::cerr);
                         error(l, "lambda expression is wrong");
+                        
                         return;
                     }
                     funcs.push_back({funcVars[let_names[count]],lambda.as<LambdaExprPtr>()});
@@ -698,6 +700,8 @@ namespace {
             // if the type has no recursion inside, replace all uses of the type variable by a full type
             for (const auto& type : type_lets){
                 const std::string& name = let_names[count];
+                std::cout << "check type: " << type << std::endl;
+                std::cout << variables <<  std::endl;
                 if(!contains_type_variables(type, variables)) {
                     non_recursive[builder.typeVariable(name)] = type;
                     annotations::attachName(type, name);

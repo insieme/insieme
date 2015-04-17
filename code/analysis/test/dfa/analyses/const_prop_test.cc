@@ -82,8 +82,8 @@ TEST(ConstantPropagation, PropagateConstantNoControl) {
  
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	ref<int<4>> a = 1;"
-		"	int<4> c = *$a$;"
+		"	decl ref<int<4>> a = 1;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
  
@@ -116,11 +116,11 @@ TEST(ConstantPropagation, PropagateConstant) {
  
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	ref<int<4>> a = 1;"
+		"	decl ref<int<4>> a = 1;"
 		"	if ( a <= 0 ) { "
 		"		a = 1; "
 		"	} "
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
  
@@ -153,11 +153,11 @@ TEST(ConstantPropagation, PropagateNotConstant) {
 
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	ref<int<4>> a = 1;"
+		"	decl ref<int<4>> a = 1;"
 		"	if ( a <= 0 ) { "
 		"		a = 2; "
 		"	}"
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
 
@@ -195,7 +195,7 @@ TEST(ConstantPropagation, PropagateArrayElementConstant) {
     auto addresses = builder.parseAddressesStatement(
 		"${"
 		"	v[3u] = 2; "
-		"	int<4> c = *$v[3u]$;"
+		"	decl int<4> c = *$v[3u]$;"
 		"}$", symbols
     );
 
@@ -236,7 +236,7 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
 		" 	for( uint<4> i = 2u .. 10u : 2u) {"
 		"		v[i] = 4; "
 		"	} "
-		"	int<4> c = *$v[3u]$;"
+		"	decl int<4> c = *$v[3u]$;"
 		"}$", symbols
     );
 
@@ -273,10 +273,10 @@ TEST(ConstantPropagation, Formulas) {
 
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	ref<int<4>> a = 10; "
-		"	int<4> b = a+2; "
+		"	decl ref<int<4>> a = 10; "
+		"	decl int<4> b = a+2; "
 		"	a = b+a;"
-		"	int<4> c = $a$;"
+		"	decl int<4> c = $a$;"
 		"}$"
     );
 
@@ -313,12 +313,12 @@ TEST(ConstantPropagation, TransitivePropagation) {
 
     auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	ref<int<4>> a = 1;"
-		"	int<4> b = (10+a);"
+		"	decl ref<int<4>> a = 1;"
+		"	decl int<4> b = (10+a);"
 		"	if ( a <= 0 ) { "
 		"		a = 2; "
 		"	}"
-		"	int<4> c = $b$;"
+		"	decl int<4> c = $b$;"
 		"}$"
     );
 

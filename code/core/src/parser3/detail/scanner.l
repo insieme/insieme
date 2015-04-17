@@ -76,6 +76,7 @@ paramvar #[a-zA-Z]
 "+"      return inspire_parser::make_PLUS(loc);
 "*"      return inspire_parser::make_STAR(loc);
 "/"      return inspire_parser::make_SLASH(loc);
+"%"      return inspire_parser::make_PERCENT(loc);
 
 "("      return inspire_parser::make_LPAREN(loc);
 ")"      return inspire_parser::make_RPAREN(loc);
@@ -160,6 +161,8 @@ paramvar #[a-zA-Z]
 "spawn"   return inspire_parser::make_SPAWN(loc);
 "sync"    return inspire_parser::make_SYNC(loc);
 "syncAll" return inspire_parser::make_SYNCALL(loc);
+"job"     return inspire_parser::make_JOB(loc);
+"task"     return inspire_parser::make_TASK(loc);
 
 {paramvar} {
     // skip # char
@@ -168,8 +171,6 @@ paramvar #[a-zA-Z]
 
 {stringlit}      {
     std::string tmp(yytext);
-   // tmp.replace(0,1,"");
-   // tmp.replace(tmp.size()-1,1,"");
     return inspire_parser::make_STRING(tmp, loc);
 }
 {charlit}      {

@@ -51,9 +51,9 @@ TEST(VariableScopeMap, Simple) {
 
 	auto addresses = builder.parseAddressesStatement(
 			"${ "
-			"	int<4> a = 0; "
+			"	decl int<4> a = 0; "
 			"	${ "
-			"		int<4> a = 0; "
+			"		decl int<4> a = 0; "
 			"	}$ "
 			"}$"
 		);
@@ -80,11 +80,11 @@ TEST(VariableScopeMap, Simple2) {
 
 	auto addresses = builder.parseAddressesStatement(
 			"${ "
-			"	ref<int<4>> a = 0; "
+			"	decl ref<int<4>> a = 0; "
 			"	a = 1; "
 			"	${ "
 			"		a = 3; "
-			"		ref<int<4>> a = 0; "
+			"		decl ref<int<4>> a = 0; "
 			"		a = 4; "
 			"	}$ "
 			"	a = 6; "
@@ -114,7 +114,7 @@ TEST(VariableScopeMap, Simple3) {
 
 	auto code = builder.parse(
 			"{"
-			"	ref<int<4>> a = 0; "
+			"	decl ref<int<4>> a = 0; "
 			"	a = 4; "
 			"}"
 		).as<StatementPtr>();
@@ -150,10 +150,10 @@ TEST(VariableScopeMap, Lambda) {
 
 	auto addresses = builder.parseAddressesStatement(
 			"${ "
-			"	ref<int<4>> a = 0; "
+			"	decl ref<int<4>> a = 0; "
 			"	a = 1; "
 			"	${ "
-			"		(int<4> a) -> int<4> ${ return a+1; }$ (3);"
+			"		lambda (int<4> a) -> int<4> { $return a+1;$ } (3);"
 			"		a = 4; "
 			"	}$ "
 			"	a = 6; "

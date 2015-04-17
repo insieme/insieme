@@ -52,16 +52,17 @@ namespace cba {
 		NodeManager nodeMgr;
 		IRBuilder builder(nodeMgr);
 
-		auto code = builder.parseStmt(
-				"{"
-				"	let f = ()->unit {};"
-				"	f();"				// a function call
-				"	()=> 2 ();"			// a bind call
-				"	1 + 2;"				// a literal
-				"}"
-		).as<CompoundStmtPtr>();
+		auto code = builder.parseStmt(R"(
+				{
+					let f = lambda ()->unit {};
+					f();				// a function call
+					(lambda ()=> 2) (); // a bind call
+					1 + 2;				// a literal
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(code);
+        dumpPretty(code);
 
 		CompoundStmtInstance root(code);
 
@@ -98,20 +99,20 @@ namespace cba {
 		NodeManager nodeMgr;
 		IRBuilder builder(nodeMgr);
 
-		auto code = builder.parseStmt(
-				"{"
-				"	auto f = ()->unit {};"
-				"	f();"				// a function call
+		auto code = builder.parseStmt(R"(
+				{
+					auto f = lambda ()->unit {};
+					f();				// a function call
 
-				"	auto g = ()=> 2;"
-				"	g();"				// a bind call
+					auto g = lambda ()=> 2;
+					g();				// a bind call
 
-				"	auto h = int.add;"
-				"	h(2,3);"			// a literal
-				"	h(1,h(2,3));"		// used multiple times
+					auto h = int_add;
+					h(2,3);			    // a literal
+					h(1,h(2,3));		// used multiple times
 
-				"}"
-		).as<CompoundStmtPtr>();
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(code);
 
@@ -159,16 +160,16 @@ namespace cba {
 		NodeManager nodeMgr;
 		IRBuilder builder(nodeMgr);
 
-		auto code = builder.parseStmt(
-				"{"
-				"	let f = (()=>unit g)->unit { g(); };"
+		auto code = builder.parseStmt(R"(
+				{
+					let f = lambda (()=>unit g)->unit { g(); };
 
-				"	f(()->unit { });"			// a function passing as an argument
-				"	f(()=> unit);"				// a bind passed as an argument
-				"	f(lit(\"x\":()->unit));"	// a literal passed as an argument
+					f(lambda ()->unit { });			// a function passing as an argument
+					f(lambda ()=> unit);			// a bind passed as an argument
+					f(lit(\"x\":()->unit));	        // a literal passed as an argument
 
-				"}"
-		).as<CompoundStmtPtr>();
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(code);
 
@@ -207,16 +208,15 @@ namespace cba {
 		NodeManager nodeMgr;
 		IRBuilder builder(nodeMgr);
 
-		auto code = builder.parseStmt(
-				"{"
-				"	let f = (int<4> x)->int<4> { f(x); };"		// a recursive function
-				"	f(3);"									// a direct call to a recursive function
+		auto code = builder.parseStmt(R"(
+				{
+					let f = lambda (int<4> x)->int<4> { f(x); };		// a recursive function
+					f(3);									            // a direct call to a recursive function
 
-				"	auto g = f;"
-				"	g(4);"									// an indirect call to a recursive function
-
-				"}"
-		).as<CompoundStmtPtr>();
+					decl auto g = f;
+					g(4);									            // an indirect call to a recursive function
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(code);
 
@@ -258,8 +258,8 @@ namespace cba {
 		auto code = builder.parseStmt(
 				"{"
 				"	let f,g = "
-				"			(int<4> x)->int<4> { g(x); },"
-				"			(int<4> x)->int<4> { f(x); };"		// tow mutually recursive functions
+				"			lambda (int<4> x)->int<4> { g(x); },"
+				"			lambda (int<4> x)->int<4> { f(x); };"		// tow mutually recursive functions
 				"	f(3);"									// a direct call to a recursive function f
 				"}"
 		).as<CompoundStmtPtr>();
@@ -303,8 +303,8 @@ namespace cba {
 		auto code = builder.parseStmt(
 				"{"
 				"	let f,g = "
-				"			(int<4> x)->int<4> { g(x); f(x); },"
-				"			(int<4> x)->int<4> { f(x); g(x); };"		// tow mutually recursive functions with mutliple recursive calls
+				"			lambda (int<4> x)->int<4> { g(x); f(x); },"
+				"			lambda (int<4> x)->int<4> { f(x); g(x); };"		// tow mutually recursive functions with mutliple recursive calls
 				"	f(3);"										// a direct call to a recursive function f
 				"}"
 		).as<CompoundStmtPtr>();
@@ -367,12 +367,12 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	hide(()->unit {});"					// create a function and forward it somewhere
-				"	hide(()->unit {});"					// and another
-				"	hide((int x)->unit {});"			// and another with a different type
-				"	hide(()=> 2);"						// and a bind
-				"	()->unit {};"						// a function not being used ever
-				"	()=> 3;"							// a bind not being used ever
+				"	hide(lambda ()->unit {});"			// create a function and forward it somewhere
+				"	hide(lambda ()->unit {});"			// and another
+				"	hide(lambda (int x)->unit {});"		// and another with a different type
+				"	hide(lambda ()=> 2);"				// and a bind
+				"	lambda ()->unit {};"				// a function not being used ever
+				"	lambda ()=> 3;"						// a bind not being used ever
 				"	get()();"							// retrieve some 'hidden' function and call it
 				"}", symbols
 		).as<CompoundStmtPtr>();

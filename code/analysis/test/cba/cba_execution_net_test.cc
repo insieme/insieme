@@ -60,7 +60,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
@@ -99,7 +99,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				"}"
@@ -137,7 +137,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				" 	spawn a = 3;"
@@ -177,13 +177,13 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
-				"	auto c = channel.create(lit(int<4>),param(1));"
-				" 	auto t1 = spawn {"
+				"	decl auto a = var(0);"
+				"	decl auto c = channel.create(lit(int<4>),param(1));"
+				" 	decl auto t1 = spawn {"
 				"		a = 1;"
 				"		channel.send(c,1);"
 				"	};"
-				" 	auto t2 = spawn {"
+				" 	decl auto t2 = spawn {"
 				"		channel.recv(c);"
 				"		a = 2;"
 				"	};"
@@ -230,10 +230,10 @@ namespace cba {
 				"	let int = int<4>;"
 				"	ref<int> x = var(12);"
 				"	"
-				"	auto j1 = task { x = 1; };"
-				"	auto j2 = task { x = 2; };"
+				"	decl auto j1 = task { x = 1; };"
+				"	decl auto j2 = task { x = 2; };"
 				"	"
-				"	auto t = parallel((c)?j1:j2);"
+				"	decl auto t = parallel((c)?j1:j2);"
 				"	sync t;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
@@ -273,12 +273,12 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
-				"	auto j1 = job { x = 1; };"
-				"	auto j2 = job { x = 2; };"
+				"	decl auto j1 = job { x = 1; };"
+				"	decl auto j2 = job { x = 2; };"
 				"	"
-				"	auto t = parallel((c)?j1:j2);"
+				"	decl auto t = parallel((c)?j1:j2);"
 				"	sync t;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
@@ -318,12 +318,12 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
-				"	auto j1 = task { x = 1; };"
-				"	auto j2 = job { x = 2; };"
+				"	decl auto j1 = task { x = 1; };"
+				"	decl auto j2 = job { x = 2; };"
 				"	"
-				"	auto t = parallel((c)?j1:j2);"
+				"	decl auto t = parallel((c)?j1:j2);"
 				"	sync t;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
@@ -360,8 +360,8 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
-				"	auto c = channel.create(lit(int<4>),param(1));"
+				"	decl auto a = var(0);"
+				"	decl auto c = channel.create(lit(int<4>),param(1));"
 				" 	spawn {"
 				"		a = 1;"
 				"	};"
@@ -369,7 +369,7 @@ namespace cba {
 				"		a = 2;"
 				"	};"
 				"	a = 3;"
-				"	sync;"
+				"	syncAll;"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -408,13 +408,13 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	parallel(job {"
 				"		a = 1;"
 				"	});"
 				"	"
-				"	auto j1 = task { a = 1; };"
-				"	auto j2 = job { a = 2; };"
+				"	decl auto j1 = task { a = 1; };"
+				"	decl auto j2 = job { a = 2; };"
 				"	"
 				"	parallel((c)?j1:j2);"
 				"	"
@@ -422,7 +422,7 @@ namespace cba {
 				"		a = 2;"
 				"	};"
 				"	a = 3;"
-				"	sync;"
+				"	syncAll;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
 
@@ -458,8 +458,8 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
-				"	auto c = channel.create(lit(int<4>),param(1));"
+				"	decl auto a = var(0);"
+				"	decl auto c = channel.create(lit(int<4>),param(1));"
 				" 	spawn {"
 				"		a = 1;"
 				"		channel.send(c,1);"
@@ -469,7 +469,7 @@ namespace cba {
 				"		a = 2;"
 				"	};"
 				"	a = 3;"
-				"	sync;"
+				"	syncAll;"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -507,7 +507,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				" 	merge(parallel(job {"
-				"		int<4> a = 1;"
+				"		decl int<4> a = 1;"
 				"	}));"
 				"}"
 		).as<CompoundStmtPtr>();

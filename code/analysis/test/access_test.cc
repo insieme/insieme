@@ -479,7 +479,7 @@ TEST(Access, ArrayAccess) {
 		auto code = builder.parseAddressesStatement(
 			"{ "
 			"	decl ref<array<int<4>,1>> v;"
-			"	$*$v$[2u]$;"
+			"	$*($v$[2u])$;"
 			"}"
 		);
 		EXPECT_EQ(2u, code.size());
@@ -675,7 +675,7 @@ TEST(Access, ArrayAlias) {
 		auto code = builder.parseAddressesStatement(
 			"{ "
 			"	decl ref<array<int<4>,1>> v;"
-			"	$ref<int<4>> e = v[2u];$"
+			"	$decl ref<int<4>> e = v[2u];$"
 			"	$e$;"
 			"}"
 		);
@@ -1267,13 +1267,13 @@ TEST(Access, MultipleAccessesVector) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddressesStatement(
-		"${"
-		"	decl vector<uint<4>,4> a; "
-		"	decl ref<uint<4>> b=3; "
-		"	decl ref<uint<4>> c; "
-		"	$decl c = $a[$b$]$ + $b$;$ "
-		"}$");
+	auto addresses = builder.parseAddressesStatement(R"(
+		${
+			decl vector<uint<4>,4> a; 
+			decl ref<uint<4>> b=3; 
+			decl ref<uint<4>> c; 
+			$c = $a[$b$]$ + $b$;$ 
+		}$)");
 
 	EXPECT_EQ(5u, addresses.size());
 

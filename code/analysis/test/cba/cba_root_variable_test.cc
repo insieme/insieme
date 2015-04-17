@@ -84,7 +84,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let sA = (real<4> arg1)->ref<real<4>> { ref<real<4>> local1 = var(arg1); return local1;};"
-				"	let sB = (ref<uint<8>> arg2)->unit { ref<uint<8>> local2; local2 = ref.deref(arg2); };"
+				"	let sB = (ref<uint<8>> arg2)->unit { ref<uint<8>> local2; local2 = ref_deref(arg2); };"
 				"	let sC = (int<4> arg3, ref<int<4>> arg4)->unit { arg4 = arg3;};"
 				"	globalVar = 7;"
 				"	"
@@ -93,9 +93,9 @@ namespace cba {
 				"	declC;"
 				"	declD;"
 				"	"
-				"	sA((real<4>)(ref.deref(A)));"
-				"	sB(var(int.to.uint(ref.deref(D), param(8))));"
-				"	sC(ref.deref(A), C);"
+				"	sA((real<4>)(ref_deref(A)));"
+				"	sB(var(int_to_uint(ref_deref(D), param(8))));"
+				"	sC(ref_deref(A), C);"
 				"}", symbols
 		).as<CompoundStmtPtr>();
 

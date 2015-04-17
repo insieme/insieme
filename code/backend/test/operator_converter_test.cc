@@ -53,7 +53,7 @@ namespace backend {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		ProgramPtr prog = builder.parse(R"(
+		ProgramPtr prog = builder.parseProgram(R"(
 			
 			let int = int<4>;
 			
@@ -77,7 +77,7 @@ namespace backend {
 				print("o.a = %d\n", *o.a);
 			
 				// updated member a directly
-				ref<int> x = ref_narrow(o, dp_member(dp_root, lit(\"a\")), lit(int));
+				decl ref<int> x = ref_narrow(o, dp_member(dp_root, lit("a")), lit(int));
 				x = 12;
 				print("Equal: %d\n", ref_eq(o.a, x));
 				print("x = %d \t o.a = %d\n", *x, *o.a);
@@ -87,14 +87,14 @@ namespace backend {
 				o.b[2u] = 0;
 				print("o.b[2] = %d\n", *o.b[2u]);
 			
-				ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root, lit(\"b\")), 2u), lit(int));
+				decl ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root, lit("b")), 2u), lit(int));
 				y = 12;
 				print("Equal: %d\n", ref_eq(o.b[2u], y));
 				print("y = %d \t o.b[2] = %d\n", *y, *o.b[2u]);
 		
 			
 				// expand a definition
-				ref<vector<int,4>> v = ref_expand(y, dp_element(dp_root, 2u), lit(vector<int,4>));
+				decl ref<vector<int,4>> v = ref_expand(y, dp_element(dp_root, 2u), lit(vector<int,4>));
 				v[1u] = 10;
 				v[2u] = 14;
 			
@@ -104,13 +104,13 @@ namespace backend {
 			
 			
 				// handle nested element
-				ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root, lit(\"c\")), lit(\"first\")), lit(int));
+				decl ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root, lit("c")), lit("first")), lit(int));
 			
 				// check reference equality
 				print("Equal: %d\n", ref_eq(o.c.first, first));
 			
 				// and the reverse
-				ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root, lit(\"c\")), lit(\"first\")), lit(obj));
+				decl ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root, lit("c")), lit("first")), lit(obj));
 				print("Equal: %d\n", ref_eq(o,full));
 			}
 		)").as<core::ProgramPtr>();

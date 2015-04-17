@@ -56,9 +56,14 @@ namespace parser3{
                 )1N5P1RE"));
 
         EXPECT_TRUE(test_type(nm, "struct C { int<4> field; }" ));
+        EXPECT_TRUE(test_type(nm, "(ref<array<ref<array<struct{int<4> int; real<4> float },1>>,1>>,"
+                                  " ref<array<ref<array<real<4>,1>>,1>>,"
+                                  " ref<array<uint<8>,1>>)"));
 
         // failing types
         EXPECT_FALSE(test_type(nm, "vector<int<4>>"));
+
+
     }
 
     bool test_expression(NodeManager& nm, const std::string& x){
@@ -143,18 +148,20 @@ namespace parser3{
             let class = struct name { int<4> a; int<5> b};
             lambda  ~class::() { }
         )1N5P1RE"));
-
     }
 
     bool test_statement(NodeManager& nm, const std::string& x){
         inspire_driver driver(x, nm);
         driver.parseStmt();
         if (driver.result) {  
-     //       dumpColor(driver.result);
+            dumpColor(driver.result);
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
-     //   std::cout << " ============== TEST ============ " << std::endl;
+        else{
+            driver.print_errors();
+        }
+        std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
     }
 
@@ -228,6 +235,16 @@ namespace parser3{
             let B = struct : A { int b; };  
             decl ref<B> b;  
             decl auto x = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );
+        }
+        )1N5P1RE"));
+
+        EXPECT_TRUE(test_statement(nm, R"1N5P1RE(
+        {
+            let class = struct name { int<2> a};
+            let collection = vector<class, 10>;
+            decl ref<collection> x;
+            decl int<2> y;
+            x[5].a = y;
         }
         )1N5P1RE"));
     }

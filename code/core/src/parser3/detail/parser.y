@@ -100,6 +100,7 @@
   PLUS    "+"
   STAR    "*"
   SLASH   "/"
+  PERCENT "%"
 
   LPAREN  "("
   RPAREN  ")"
@@ -183,6 +184,9 @@
   SYNC          "sync"
   SYNCALL       "syncAll"
 
+  JOB           "job"
+  TASK          "task"
+
   TYPE_ONLY
   EXPRESSION_ONLY
   STMT_ONLY
@@ -234,6 +238,7 @@
 %type <NamedTypeList> member_list tag_def union_type 
 
 %type <std::string> namespaced_type
+%type <std::vector<DeclarationStmtPtr>> job_decl_list
 
 %printer { yyoutput << $$; } <std::string>
 
@@ -400,6 +405,8 @@ type : "struct" struct_type { RULE $$ = $2; }
                        }
      | "(" tuple_or_function { RULE $$ = $2; }
      | named_type            { RULE $$ = $1; }  
+            /* job is a keyword for job expressions but it could also apear as type, */
+     | "job" { RULE $$ = driver.genGenericType(@$, "job", ParentList(), TypeList(), IntParamList()); }
      ;
 
 just_name : "identifier" { RULE  $$ = driver.findType(@1, $1); 
@@ -570,8 +577,8 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
 
             /* unary */
            | "*" expression { RULE  
-                                INSPIRE_TYPE(@2, $2->getType(), RefTypePtr, "cannot deref non ref type");
-                                $$ = driver.builder.deref($2); } %prec UDEREF
+                                          INSPIRE_TYPE(@2, $2->getType(), RefTypePtr, "cannot deref non ref type");
+                                          $$ = driver.builder.deref($2); } %prec UDEREF
            | "-" expression { RULE 
                                           auto tmp = driver.builder.tryDeref($2);
                                           $$ = driver.builder.minus(tmp); 
@@ -592,6 +599,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | expression "-" expression  { RULE $$ = driver.genBinaryExpression(@$, "-", $1, $3);  }
            | expression "*" expression  { RULE $$ = driver.genBinaryExpression(@$, "*", $1, $3);  }
            | expression "/" expression  { RULE $$ = driver.genBinaryExpression(@$, "/", $1, $3);  }
+           | expression "%" expression  { RULE $$ = driver.genBinaryExpression(@$, "%", $1, $3);  }
            | expression "==" expression { RULE $$ = driver.genBinaryExpression(@$, "==", $1, $3);  }
            | expression "!=" expression { RULE $$ = driver.genBinaryExpression(@$, "!=", $1, $3);  }
            | expression "<" expression  { RULE $$ = driver.genBinaryExpression(@$, "<", $1, $3);  }
@@ -685,7 +693,37 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "syncAll" { RULE 
                     $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getLangBasic().getMergeAll()); 
                 }
+            /* job expressions */
+           | "job" "(" "[" expression ":" expression "]" "[" job_decl_list "]" "," expression ")"  { RULE
+                    INSPIRE_TYPE(@12, $12, CallExprPtr, "expresion in job must be a call expression");
+                    auto bind = driver.builder.bindExpr(VariableList(), $12.as<CallExprPtr>());
+                    $$ = driver.builder.jobExpr(driver.builder.getThreadNumRange($4, $6), $9, bind);
+             }
+           | "job" "(" "[" expression ":" expression "]" "," expression ")" { RULE
+                    INSPIRE_TYPE(@9, $9, CallExprPtr, "expresion in job must be a call expression");
+                    auto bind = driver.builder.bindExpr(VariableList(), $9.as<CallExprPtr>());
+                    $$ = driver.builder.jobExpr(driver.builder.getThreadNumRange($4, $6), std::vector<DeclarationStmtPtr>(), bind);
+             }
+           | "task" "(" statement ")" { RULE 
+                    $$ = driver.builder.jobExpr($3, 1);
+             }
+           | "job" "(" statement ")" { RULE 
+                    // builds a job for more than a sigle thread
+                    $$ = driver.builder.jobExpr($3, -1);
+             }
            ;
+
+job_decl_list : type "identifier" "=" expression { RULE 
+                    DeclarationStmtPtr decl = driver.builder.declarationStmt($1, $4);
+                    annotations::attachName(decl->getVariable(), $2);
+                    $$.push_back(decl);
+                }
+              | type "identifier" "=" expression "," job_decl_list { RULE 
+                    DeclarationStmtPtr decl = driver.builder.declarationStmt($1, $4);
+                    annotations::attachName(decl->getVariable(), $2);
+                    $6.insert($6.begin(), decl);
+                }
+
 
 lambda_expression_aux : 
                             /* closures */
@@ -697,7 +735,8 @@ lambda_expression_aux :
                             else {
                                 $$ = driver.genClosure(@$, $2, $4);
                             }
-                        } 
+                        } %prec LAMBDA
+
                       | "(" variable_list "=>" "{" compound_stmt  { RULE
                             
                             if (driver.let_count == 1) {
@@ -706,18 +745,8 @@ lambda_expression_aux :
                             else{
                                  $$ = driver.genClosure(@$, $2, $5);
                             }
-                        } 
+                        } %prec LAMBDA
                             /* lambdas */
-        //              | "(" variable_list "->" type "?" { driver.set_inhibit(driver.let_count);} expression {     
-
-        //                    if (driver.let_count ==1 ){
-        //                        driver.add_let_lambda(@$, @1, @7, $4, $2);
-        //                    }
-        //                    else{
-        //                        RULE $$ = driver.genLambda(@$, $2, $4, driver.builder.compoundStmt(driver.builder.returnStmt($7))); 
-        //                    }
-        //                    driver.set_inhibit(false);
-        //                } 
                       | "(" variable_list "->" type "{" { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
                             if (driver.let_count ==1 ){
@@ -727,7 +756,8 @@ lambda_expression_aux :
                                   RULE $$ = driver.genLambda(@$, $2, $4, $7); 
                             }
                             driver.set_inhibit(false);
-                        } 
+                        } %prec LAMBDA
+
                             /* member functions */
                       | just_name "::" { driver.add_this(@1, $1); } "(" variable_list "->" type "{" 
                                         { driver.set_inhibit(driver.let_count);} compound_stmt { 
@@ -741,7 +771,8 @@ lambda_expression_aux :
                                 RULE $$ = driver.genLambda(@$, $5, $7, $10, FK_MEMBER_FUNCTION); 
                             }
                             driver.set_inhibit(false);
-                        } 
+                        } %prec LAMBDA
+
                       | "~" just_name "::" { driver.add_this(@1, $2); } "(" variable_list "{" 
                                             { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
@@ -754,7 +785,8 @@ lambda_expression_aux :
                                 RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $9, FK_DESTRUCTOR); 
                             }
                             driver.set_inhibit(false);
-                        } 
+                        } %prec LAMBDA
+
                       | "ctor" just_name "::" { driver.add_this(@2, $2); } "(" variable_list "{" 
                                                { driver.set_inhibit(driver.let_count);} compound_stmt { 
 
@@ -767,13 +799,16 @@ lambda_expression_aux :
                                 RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $9, FK_CONSTRUCTOR); 
                             }
                             driver.set_inhibit(false);
-                        } 
+                        }  %prec LAMBDA
                      ;
 
 
 lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_aux 
                     { driver.close_scope(@$, "lambda expr"); $$ = $2; }
                   ;
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Precedence list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// the lowest in list, the highest precedence
 
 %nonassoc "::" ;
 %nonassoc ")";
@@ -784,22 +819,23 @@ lambda_expression : { driver.open_scope(@$,"lambda expr"); } lambda_expression_a
 %right "catch";
 %left "=";
 %left "->";
-%left ".cast(";
 %nonassoc ":";
+%left LAMBDA;
 %left "&&" "||";
+%left "==" "!=" "<=" ">" ">=";
+%left "%";
 %left "+" "-";
 %left "*" "/";
 %left "&" "|" "^";
 %left "<";
-%left "==" "!=" "<=" ">" ">=";
+%nonassoc UDEREF;
+%nonassoc UMINUS;
+%nonassoc BOOL_OP;
+%nonassoc UNOT;
 %right "[";
 %left ".as(";
 %nonassoc ".";
 %right "(";
-%nonassoc UMINUS;
-%nonassoc UDEREF;
-%nonassoc BOOL_OP;
-%nonassoc UNOT;
 
 %%
 // code after the second %% is copyed verbatim at the end of the parser .cpp file

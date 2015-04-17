@@ -58,7 +58,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
@@ -84,7 +84,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				"}"
@@ -117,7 +117,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				" 	spawn a = 3;"
@@ -156,8 +156,8 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
-				"	auto c = channel.create(lit(int<4>),param(1));"
+				"	decl auto a = var(0);"
+				"	decl auto c = channel.create(lit(int<4>),param(1));"
 				" 	spawn {"
 				"		a = 1;"
 				"		channel.send(c,1);"

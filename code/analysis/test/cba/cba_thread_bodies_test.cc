@@ -90,7 +90,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
 				"	parallel(job {"
 				"		x = 15;"
@@ -131,10 +131,10 @@ namespace cba {
 				"	let int = int<4>;"
 				"	ref<int> x = var(12);"
 				"	"
-				"	auto j1 = task { x = 1; };"
-				"	auto j2 = task { x = 2; };"
+				"	decl auto j1 = task { x = 1; };"
+				"	decl auto j2 = task { x = 2; };"
 				"	"
-				"	auto t = parallel((c)?j1:j2);"
+				"	decl auto t = parallel((c)?j1:j2);"
 				"	sync t;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
@@ -177,10 +177,10 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
-				"	auto j1 = task { x = 1; };"
-				"	auto j2 = task { x = 2; };"
+				"	decl auto j1 = task { x = 1; };"
+				"	decl auto j2 = task { x = 2; };"
 				"	"
 				"	parallel((c)?j1:j2);"
 				"	sync;"
