@@ -77,16 +77,12 @@ void VarUniqExtension::visitNode(const NodeAddress &node) {
 }
 
 void VarUniqExtension::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	auto var=node.getAddressOfChild(0);
-	// printNode(var.getAddressOfChild(1));
+	VariableAddress var=node.getAddressOfChild(0).as<VariableAddress>();
 
-	// get variable number
+	// get variable number and increase counter for given variable
 	unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
-	std::cout << "visiting declaration of variable " << varid << std::endl;
-
-	// increase count for given variable
-	auto mapiter=ctr.find(varid);
-	if (mapiter!=ctr.end()) *mapiter++;
+	ctr[varid]++;
+	std::cout << "def of v" << varid << " at pos " << getVarDefinition(var) << std::endl;
 
 	// visit children
 	for (auto child: node->getChildList()) visit(child);
@@ -94,7 +90,7 @@ void VarUniqExtension::visitDeclarationStmt(const DeclarationStmtAddress &node) 
 
 NodeAddress VarUniqExtension::IR() {
 	for (auto dups: ctr)
-		std::cout << "v" << dups << " found " << dups.second << std::endl;
+		std::cout << "v" << dups.first << " found " << dups.second << "×" << std::endl;
 	return frag;
 }
 
