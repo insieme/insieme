@@ -56,17 +56,21 @@ namespace extensions {
 using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::pragma::tok;
 
-TestPragmaExtension::TestPragmaExtension() : parameter("") {
+#define ARG_LABEL "arg"
+
+TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-			PragmaHandler("test", "expected", string_literal["arg"] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
-				assert_eq(1, object.getStrings("arg").size()) << "Test expect pragma expects exactly one string argument!";
-				parameter = object.getString("arg");
+			PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
+				expected = object.getString(ARG_LABEL);
 			return res;
 		})
 	));
 
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-			PragmaHandler("test", "dummy", string_literal["arg"] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+			PragmaHandler("test", "dummy", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test dummy pragma expects exactly one string argument!";
+				dummyArguments.push_back(object.getString(ARG_LABEL));
 			return res;
 		})
 	));

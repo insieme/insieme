@@ -500,8 +500,9 @@ TEST(TypeConversion, FileTest) {
 	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test::expected"; };
 
 	const auto begin = tu.pragmas_begin(filter);
+	const auto end = tu.pragmas_end();
 
-	EXPECT_NE(begin, tu.pragmas_end());
+	EXPECT_NE(begin, end);
 
 	// we use an internal manager to have private counter for variables so we can write independent tests
 	NodeManager mgr;
@@ -513,19 +514,19 @@ TEST(TypeConversion, FileTest) {
 		return convFactory.getIRTranslationUnit().resolve(cur);
 	};
 
-	for(auto it = begin; it != tu.pragmas_end(); ++it) {
+	for(auto it = begin; it != end; ++it) {
+		const auto pragma = *it;
+		const auto tpe = options.job.getExtension<TestPragmaExtension>();
 
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
-
-		if(tp.isStatement()) {
-			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+		if(pragma->isStatement()) {
+			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt(pragma->getStatement()))).as<StatementPtr>();
             std::string match = toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE));
-   			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+   			EXPECT_EQ(tpe->getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		} else {
-			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-   				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() ))->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
+			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
+   				EXPECT_EQ(tpe->getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() ))->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
+				EXPECT_EQ(tpe->getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
 			}
 		}
 	}

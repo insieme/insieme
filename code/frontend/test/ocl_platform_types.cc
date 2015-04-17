@@ -115,8 +115,9 @@ TEST(StmtConversion, FileTest) {
 	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test::expected"; };
 
 	const auto begin = tu.pragmas_begin(filter);
+	const auto end = tu.pragmas_end();
 
-	EXPECT_NE(begin, tu.pragmas_end());
+	EXPECT_NE(begin, end);
 
 	NodeManager mgr;
 	insieme::frontend::conversion::Converter convFactory( mgr, tu, options.job);
@@ -124,26 +125,27 @@ TEST(StmtConversion, FileTest) {
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
-	for(auto it = begin; it != tu.pragmas_end(); ++it) {
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
+	for(auto it = begin; it != end; ++it) {
+		const auto pragma = *it;
+		const auto tpe = options.job.getExtension<TestPragmaExtension>();
 
-		if(tp.isStatement()) {
-			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
-			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
+		if(pragma->isStatement()) {
+			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt(pragma->getStatement()))).as<StatementPtr>();
+			EXPECT_EQ(tpe->getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking
 			checkSemanticErrors(stmt);
 
 		} else {
-			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
+			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
 				TypePtr type = resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )).as<TypePtr>();
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
+				EXPECT_EQ(tpe->getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(type);
-			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
+			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(pragma->getDecl())) {
 				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
 				assert_true(expr);
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
+				EXPECT_EQ(tpe->getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
 
 				// do semantics checking
 				checkSemanticErrors(expr);

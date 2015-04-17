@@ -70,27 +70,28 @@ TEST(TypeCast, FileTest) {
 	
 	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test::expected"; };
 
-	std::cout << tu.getPragmaList().size() << "\n";
-
 	const auto begin = tu.pragmas_begin(filter);
+	const auto end = tu.pragmas_end();
 
-	EXPECT_NE(begin, tu.pragmas_end());
+	EXPECT_NE(begin, end);
 
-	for(auto it = begin; it != tu.pragmas_end(); ++it) {
+	for(auto it = begin; it != end; ++it) {
+		const auto pragma = *it;
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
 		Converter convFactory( mgr, tu);
+		convFactory.convert();
 
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
+		const auto tpe = options.job.getExtension<TestPragmaExtension>();
 
-		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+		if(pragma->isStatement())
+			EXPECT_EQ(tpe->getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt(pragma->getStatement())), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		else {
-			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
+				EXPECT_EQ(tpe->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
+				EXPECT_EQ(tpe->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
 			}
 		}
 	}

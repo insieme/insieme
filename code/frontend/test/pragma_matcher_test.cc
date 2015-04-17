@@ -107,6 +107,10 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 	insieme::frontend::conversion::Converter converter(manager, tu, options.job);
 	converter.convert();
 
+	const auto testPragmaExtension = options.job.getExtension<TestPragmaExtension>();
+	const auto dummyArgList = testPragmaExtension->getDummyArguments();
+	auto dummyArgListIt = dummyArgList.begin();
+
 	PragmaPtr p;
 	p = pl[0];
 	{
@@ -116,12 +120,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 28);
 
 		EXPECT_EQ("test::dummy", p->getType());
-
-//		const auto tp = options.job.getExtension<TestPragmaExtension>();
-//		std::cout << p->toStr(comp.getSourceManager()) << "\n";
-//		ASSERT_TRUE(false);
-
-//		EXPECT_EQ( "\"first\"", tp->getParameter());
+		EXPECT_EQ( "\"first\"", *dummyArgListIt++);
 
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
@@ -141,8 +140,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 46, 27);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"macro\"");
+		EXPECT_EQ( "\"macro\"", *dummyArgListIt++);
 
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
@@ -163,8 +161,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 49, 26);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"solo\"");
+		EXPECT_EQ( "\"solo\"", *dummyArgListIt++);
 
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
@@ -184,8 +181,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 55, 30);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"function\"");
+		EXPECT_EQ( "\"function\"", *dummyArgListIt++);
 
 		// pragma associated to a function
 		EXPECT_FALSE(p->isStatement());
@@ -204,8 +200,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 66, 25);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"two lines\"");
+		EXPECT_EQ( "\"two lines\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
@@ -226,8 +221,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 74, 25);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"one\"");
+		EXPECT_EQ( "\"one\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
@@ -245,8 +239,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 75, 25);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"two\"");
+		EXPECT_EQ( "\"two\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
@@ -264,8 +257,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 76, 27);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"three\"");
+		EXPECT_EQ( "\"three\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
@@ -292,6 +284,13 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 
+	insieme::frontend::conversion::Converter converter(manager, tu, options.job);
+	converter.convert();
+
+	const auto testPragmaExtension = options.job.getExtension<TestPragmaExtension>();
+	const auto dummyArgList = testPragmaExtension->getDummyArguments();
+	auto dummyArgListIt = dummyArgList.begin();
+
 	ASSERT_EQ((size_t) 3, pl.size());
 
 	PragmaPtr p = pl[0];
@@ -302,8 +301,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 9);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"first\"");
+		EXPECT_EQ( "\"first\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
@@ -322,8 +320,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 47, 10);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"second\"");
+		EXPECT_EQ( "\"second\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
@@ -342,8 +339,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 51, 9);
 
 		EXPECT_EQ("test::dummy", p->getType());
-//		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*p);
-//		EXPECT_EQ(tp.getExpected(), "\"third\"");
+		EXPECT_EQ( "\"third\"", *dummyArgListIt++);
 
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
