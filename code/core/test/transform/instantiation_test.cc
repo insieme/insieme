@@ -319,6 +319,33 @@ TEST(TypeInstantiation, AnnotationsOnCallExp) {
 	EXPECT_EQ(annotations::getLocation(addresses[0].getAddressedNode()), annotations::getLocation(newAddr.getAddressedNode()));
 }
 
+TEST(TypeInstantiation, HigherOrderFunction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(R"raw(
+	{
+		let foo = ('a v) -> 'a {
+			return $v$;
+		};
+		
+		let test = (vector<'res,#l> v, ('res) -> 'res f) -> unit {
+			f(v[0]);
+		};
+		
+		vector<int<4>, 8> a;
+		test(a, foo);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 1);
+
+	auto result = instantiateTypes(addresses[0].getRootNode());
+
+	auto newAddr = addresses[0].switchRoot(result);
+	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>().getType());
+}
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme
