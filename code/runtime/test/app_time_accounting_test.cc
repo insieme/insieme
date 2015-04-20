@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#define _GLIBCXX_USE_NANOSLEEP
+
 #include <gtest/gtest.h>
 #include <future>
 #include <chrono>
