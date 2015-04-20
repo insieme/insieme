@@ -37,7 +37,6 @@
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
 
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ir_visitor.h"
@@ -1116,9 +1115,9 @@ namespace {
         return tu;
 	}
 
-    FrontendExtension::flagHandler OmpFrontendExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+    FrontendExtension::flagHandler OmpFrontendExtension::registerFlag(boost::program_options::options_description& options) {
         //register omp flag
-        optParser("fopenmp", "", flagActivated, "OpenMP support");
+        options.add_options()("fopenmp", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "OpenMP support");
         //create lambda
         auto lambda = [&](const ConversionJob& job) {
             return flagActivated;

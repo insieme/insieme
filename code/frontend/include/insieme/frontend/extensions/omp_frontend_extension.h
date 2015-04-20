@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 using namespace insieme::frontend;
@@ -48,7 +47,7 @@ class OmpFrontendExtension : public FrontendExtension {
     bool flagActivated;
 public:
     OmpFrontendExtension();
-    virtual flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+    virtual flagHandler registerFlag(boost::program_options::options_description& options);
 	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 

@@ -252,7 +252,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	// the user kidnapped header files won't be recognized
 	for(auto extension : config.getExtensions()) {
         for(auto kidnappedHeader : extension->getKidnappedHeaderList()) {
-            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader, clang::frontend::System, false, false);  
+            pimpl->clang.getHeaderSearchOpts().AddPath (kidnappedHeader.string(), clang::frontend::System, false, false);
         }
 	}
 

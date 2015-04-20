@@ -87,7 +87,7 @@ TEST(InsiemePragmaTest, checkPragmas) {
     std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
     std::vector<std::string> argv = { "compiler",  fileName };
     cmd::Options options = cmd::Options::parse(argv);
-    options.job.frontendExtensionInit(options.job);
+    options.job.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", options.job);
 

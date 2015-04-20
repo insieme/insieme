@@ -97,14 +97,24 @@ namespace frontend {
     //if the extension is kept in the list or drops out.
     //In a second pass the prerequisites are checked
     //and an error message may be printed.
-    void ConversionSetup::frontendExtensionInit(const ConversionJob& job) {
+    void ConversionJob::frontendExtensionInit() {
+    	//reset extensions list in case extensions changed, we do not want duplicates
+    	extensionList.clear();
+
         // register all extensions that should be registered
         for (auto it = extensions.begin(); it != extensions.end(); ++it) {
-            if (it->second(job)) {
+            if (it->second(*this)) {
                 extensionList.push_back(it->first);
+
                 //collect the kidnapped headers and add them to the list
-                for(auto kidnappedHeader : it->first->getKidnappedHeaderList())
+                for(auto kidnappedHeader : it->first->getKidnappedHeaderList()) {
                     addSystemHeadersDirectory(kidnappedHeader);
+                }
+
+                //add additional include directories
+                for(auto includeDir : it->first->getIncludeDirList()) {
+                	addIncludeDirectory(includeDir);
+                }
             }
         }
 
@@ -122,52 +132,17 @@ namespace frontend {
     }
 
 
-	tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) const {
-	    ConversionSetup setup = *this;
+	tu::IRTranslationUnit ConversionJob::toIRTranslationUnit(core::NodeManager& manager) {
 
 		// extension initialization
-		setup.frontendExtensionInit(*this);
-
-
-		// add definitions needed by the OpenCL frontend
-		// this checker checks if the open cl extension was registered
-        auto oclChecker = [&]() -> bool {
-            for(auto extPtr : setup.getExtensions()) {
-                if(dynamic_cast<insieme::frontend::extensions::OclHostExtension*>(extPtr.get()))
-                    return true;
-            }
-            return false;
-        };
-		// this checker checks if the lib icl extension was registered
-        auto libiclChecker = [&]() -> bool {
-            for(auto extPtr : setup.getExtensions()) {
-                if(dynamic_cast<insieme::frontend::extensions::IclHostExtension*>(extPtr.get()))
-                    return true;
-            }
-            return false;
-        };
-		if(oclChecker()) {
-			setup.addIncludeDirectory(CLANG_SRC_DIR);
-			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-
-			setup.setDefinition("INSIEME");
-		}
-		if(libiclChecker()) {
-			setup.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
-			setup.addIncludeDirectory(CLANG_SRC_DIR);
-			setup.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-
-			setup.setDefinition("INSIEME");
-		}
+		frontendExtensionInit();
 
 		// convert files to translation units
 		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
-			auto res = convert(manager, file, setup);
-
-			//FIXME: who takes care of applying MPI sema/OCL
+			auto res = convert(manager, file, *this);
 
             // maybe a visitor wants to manipulate the IR program
-            for(auto extension : setup.getExtensions())
+            for(auto extension : getExtensions())
                 res = extension->IRVisit(res);
 
 			// done
@@ -182,25 +157,23 @@ namespace frontend {
 		return singleTu;
 	}
 
-	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, core::ProgramPtr& program, ConversionSetup& setup) const {
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, core::ProgramPtr& program) {
 		// strip of OMP annotation since those may contain references to local nodes
 		core::visitDepthFirstOnce(program, [](const core::NodePtr& cur) {
 			cur->remAnnotation(omp::BaseAnnotation::KEY);
 		});
 
         // maybe a visitor wants to manipulate the IR translation unit
-        for(auto extension : setup.getExtensions())
+        for(auto extension : getExtensions())
             program = extension->IRVisit(program);
 
 		// return instance within global manager
 		return core::transform::utils::migrate(program, manager);
 	}
 
-	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
-	    ConversionSetup setup = *this;
-
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
 		// extension initialization
-		setup.frontendExtensionInit(*this);
+		frontendExtensionInit();
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -215,14 +188,12 @@ namespace frontend {
 		else
 			res = tu::toProgram(tmpMgr, unit);
 
-		return execute(manager, res, setup);
+		return execute(manager, res);
 	}
 
-	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
-	    ConversionSetup setup = *this;
-
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) {
 		// extension initialization
-		setup.frontendExtensionInit(*this);
+		frontendExtensionInit();
 
 		// create a temporary manager
 	    core::NodeManager& tmpMgr = manager;	// for performance we are just using the same manager
@@ -234,13 +205,7 @@ namespace frontend {
 		// convert units to a single program
 		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
 
-		// apply OpenCL conversion
-/*		if(hasOption(OpenCL)) {
-			frontend::ocl::HostCompiler oclHostCompiler(res, *this);
-			res = oclHostCompiler.compile();
-		}
-*/
-		return execute(manager, res, setup);
+		return execute(manager, res);
 	}
 
 	bool ConversionJob::isCxx() const {
@@ -256,32 +221,32 @@ namespace frontend {
 		return cppFile || cppLibs;
 	}
 
-	void ConversionJob::registerExtensionFlags(driver::cmd::detail::OptionParser& optParser) {
+	void ConversionJob::registerExtensionFlags(boost::program_options::options_description& options) {
         //register all plugins
 
 		//interceptor wants to be first
-        registerFrontendExtension<extensions::InterceptorExtension>(optParser);
+        registerFrontendExtension<extensions::InterceptorExtension>(options);
 
-        registerFrontendExtension<extensions::VariadicArgumentsExtension>(optParser);
-        registerFrontendExtension<extensions::ASMExtension>(optParser);
-        registerFrontendExtension<extensions::CppRefsCleanupExtension>(optParser);
-		registerFrontendExtension<extensions::BuiltinFunctionExtension>(optParser);
-		registerFrontendExtension<extensions::InstrumentationRegionExtension>(optParser);
-		registerFrontendExtension<extensions::TestPragmaExtension>(optParser);
-		registerFrontendExtension<extensions::InsiemePragmaExtension>(optParser);
-        registerFrontendExtension<extensions::OmpFrontendExtension>(optParser);
-        registerFrontendExtension<extensions::CilkFrontendExtension>(optParser);
-        registerFrontendExtension<extensions::GemsclaimExtension>(optParser);
-        registerFrontendExtension<extensions::CrossCompilationExtension>(optParser);
-        registerFrontendExtension<extensions::OclHostExtension>(optParser);
-        registerFrontendExtension<extensions::IclHostExtension>(optParser);
-        registerFrontendExtension<extensions::OclKernelExtension>(optParser);
-        registerFrontendExtension<extensions::Cpp11Extension>(optParser);
+        registerFrontendExtension<extensions::VariadicArgumentsExtension>(options);
+        registerFrontendExtension<extensions::ASMExtension>(options);
+        registerFrontendExtension<extensions::CppRefsCleanupExtension>(options);
+		registerFrontendExtension<extensions::BuiltinFunctionExtension>(options);
+		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);
+		registerFrontendExtension<extensions::TestPragmaExtension>(options);
+		registerFrontendExtension<extensions::InsiemePragmaExtension>(options);
+        registerFrontendExtension<extensions::OmpFrontendExtension>(options);
+        registerFrontendExtension<extensions::CilkFrontendExtension>(options);
+        registerFrontendExtension<extensions::GemsclaimExtension>(options);
+        registerFrontendExtension<extensions::CrossCompilationExtension>(options);
+        registerFrontendExtension<extensions::OclHostExtension>(options);
+        registerFrontendExtension<extensions::IclHostExtension>(options);
+        registerFrontendExtension<extensions::OclKernelExtension>(options);
+        registerFrontendExtension<extensions::Cpp11Extension>(options);
 
 		//FE cleanup wants to be second-last 
-		registerFrontendExtension<extensions::FrontendCleanupExtension>(optParser);
+		registerFrontendExtension<extensions::FrontendCleanupExtension>(options);
 		//anonymousrename wants to be last
-		registerFrontendExtension<extensions::AnonymousRenameExtension>(optParser);
+		registerFrontendExtension<extensions::AnonymousRenameExtension>(options);
     }
 
 	std::ostream& ConversionJob::printTo(std::ostream& out) const {
