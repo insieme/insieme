@@ -150,7 +150,7 @@ TEST(DataLayout, AosToTaos) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(136, numberOfCompoundStmts(code));
+	EXPECT_EQ(132, numberOfCompoundStmts(code));
 	EXPECT_EQ(18, countMarshalledAccesses(code));
 	EXPECT_EQ(9, countMarshalledAssigns(code));
 }

@@ -690,10 +690,16 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
             /* struct / union expressions */
            | "struct" type "{" expression_list "}" { RULE $$ = driver.genTagExpression(@$, $2, $4); }
             /* async */
-           | "spawn" expression { RULE $$ = driver.builder.parallel($2);  }
-           | "sync" expression  { RULE $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), 
-                                                                    driver.builder.getLangBasic().getMerge(), $2);
-                                }
+           | "spawn" expression { RULE 
+                        $$ = driver.builder.parallel($2, 1);  
+                }
+           | "spawn" "{" compound_stmt { RULE
+                        $$ = driver.builder.parallel($3, 1);
+                }
+           | "sync" expression  { RULE 
+                        $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), 
+                                                     driver.builder.getLangBasic().getMerge(), $2);
+                }
            | "syncAll" { RULE 
                     $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getLangBasic().getMergeAll()); 
                 }

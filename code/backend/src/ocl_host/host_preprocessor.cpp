@@ -95,7 +95,7 @@ using insieme::core::pattern::anyList;
 	};
 
 	/*
-	 * Builds a ref.deref call around an expression if the it is of ref-type
+	 * Builds a ref_deref call around an expression if the it is of ref-type
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
 		// core::ExpressionPtr retExpr = expr;
@@ -650,7 +650,7 @@ using insieme::core::pattern::anyList;
 																									   irp::forStmt(irp::assignment(aT(irp::arrayRefElem1D(var("leftVar"), any)), aT(irp::arrayRefElem1D(var("rightVar"), any)))) <<
 																									   *any)))), aT(var("bufVar", irp::variable(any, any))) << *any);
 
-			TreePattern delTree = irp::callExpr(irp::literal("ref.delete"), irp::callExpr(manager.getLangBasic().getRefDeref(), single(var("delVar", irp::variable(any, any)))));
+			TreePattern delTree = irp::callExpr(irp::literal("ref_delete"), irp::callExpr(manager.getLangBasic().getRefDeref(), single(var("delVar", irp::variable(any, any)))));
 
 			TreePattern tupleAssign = irp::assignment(irp::tupleRefElem(var("innerTupleVar"),var("index"),any), irp::scalarToArray(var("innerBufVar")));
 
