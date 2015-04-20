@@ -68,6 +68,8 @@ namespace types {
 
 	public:
 
+		TypeMapping() {}
+
 		/**
 		 * Test whether this mapping is empty.
 		 */
