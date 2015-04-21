@@ -55,7 +55,7 @@ namespace lang {
 	}
 	
 	VectorTypePtr getSIMDVectorType(const TypePtr& type) {
-		assert( core::lang::isSIMDVector(type) );
+		assert_true(core::lang::isSIMDVector(type));
 		return core::static_pointer_cast<const core::GenericType>( type )->getTypeParameter()[0].as<core::VectorTypePtr>();
 	}
 

@@ -210,7 +210,7 @@ using insieme::core::pattern::anyList;
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
-				assert(false && "Sizeof not present :(");
+				assert_fail() << "Sizeof not present :(";
 
             // case of a buffer that is not "size" long.
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
@@ -224,7 +224,7 @@ using insieme::core::pattern::anyList;
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
-				assert(false && "Sizeof not present :(");
+				assert_fail() << "Sizeof not present :(";
 
             // case of a buffer that is not "size" long.
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
@@ -340,14 +340,14 @@ using insieme::core::pattern::anyList;
 		 * replaces the sizeof(type) expressions inside dataToTransfer with integer literals
 		 */
 		void transformTypeToItsSize(ExpressionPtr& expr) {
-			NodeMapping* sizeofEvaluator;
+			SimpleNodeMapping* sizeofEvaluator;
 
 			NodeManager& mgr = builder.getNodeManager();
 			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 				if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(element)) {
 					if(mgr.getLangBasic().isSizeof(call->getFunctionExpr())) {
 						TypePtr ty = call->getArgument(0)->getType().as<GenericTypePtr>()->getTypeParameter(0);
-						// replace the sizeof call with an estimation of it's result
+						// replace the sizeof call with an estimation of its result
 						return builder.intLit(analysis::features::getSizeInBytes(ty));
 					}
 				}
@@ -369,7 +369,7 @@ using insieme::core::pattern::anyList;
 			transformTypeToItsSize(dataToTransfer.nonSplittableFromDevice);
 
 			std::ofstream os(filename);
-			assert(os.is_open() && "Could not open file to write data to transfer");
+			assert_true(os.is_open()) << "Could not open file to write data to transfer";
 			if(dataToTransfer.splittalbeToDevice )
 				os << printer::PrettyPrinter(dataToTransfer.splittalbeToDevice) << std::endl;
 			else
@@ -786,7 +786,9 @@ using insieme::core::pattern::anyList;
 			});
 		}
 
-		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, true);
+		// this used to enable limitScope, but *actually* limiting the scope breaks a unit test.
+		// someone familiar with this code should investigate
+		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, false);
 
 		nodeMap.clear();
 		for (uint n = 0; n < vecBufVarNames.size(); ++n) {
@@ -931,7 +933,7 @@ using insieme::core::pattern::anyList;
 				}
 				if (fun->getNodeType() == core::NT_LambdaExpr) {
 					LOG(INFO) << "\t Context:\n" << printer::PrettyPrinter(fun, printer::PrettyPrinter::PRINT_DEREFS |
-																	   printer::PrettyPrinter::JUST_OUTHERMOST_SCOPE |
+																	   printer::PrettyPrinter::JUST_OUTERMOST_SCOPE |
 																	   printer::PrettyPrinter::PRINT_CASTS) << std::endl;
 				}
 			});
@@ -1065,7 +1067,7 @@ using insieme::core::pattern::anyList;
 				VariablePtr sizeVar;
 				for_each(renamedArgsMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
 						VariablePtr var = variablePair.second.as<VariablePtr>();
-						if(insieme::core::annotations::hasNameAttached(var)){
+						if(insieme::core::annotations::hasAttachedName(var)){
 							 auto cName = insieme::core::annotations::getAttachedName(var);
 							 if (cName.compare("size") == 0){
 								 sizeVar = variablePair.first.as<VariablePtr>();
@@ -1362,7 +1364,7 @@ using insieme::core::pattern::anyList;
 			}
 		});
 
-		assert(!foundErrors && "Semantic errors when generating the splitting");
+		assert_false(foundErrors) << "Semantic errors when generating the splitting";
 
 		return code2;
 	}

@@ -122,6 +122,7 @@ paramvar #[a-zA-Z]
 ".as("    return inspire_parser::make_PARENT(loc);
 "#inf"    return inspire_parser::make_INFINITE(loc);
 "let"     return inspire_parser::make_LET(loc);
+"using"     return inspire_parser::make_USING(loc);
 "auto"    return inspire_parser::make_AUTO(loc);
 "lambda"  return inspire_parser::make_LAMBDA(loc);
 "ctor"    return inspire_parser::make_CTOR(loc);

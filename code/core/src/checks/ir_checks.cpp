@@ -48,7 +48,7 @@ namespace checks {
 CodeLocation CodeLocation::shift(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const {
 
 	// make some assumptions
-	assert(outer.hasAnnotation(key));
+	assert_true(outer.hasAnnotation(key));
 	assert(any(outer.getAnnotation(key)->getChildNodes(), [&](const NodePtr& cur) { return cur == address.getRootNode(); }));
 
 	// create a copy of this instance
@@ -217,7 +217,7 @@ namespace {
 			// check annotations of current node
 			for (const auto& cur : node->getAnnotations()) {
 				for(const NodePtr& innerNode : cur.second->getChildNodes()) {
-					assert(innerNode && "Nodes must not be null!");
+					assert_true(innerNode) << "Nodes must not be null!";
 
 					// create an inner list of issues
 					OptionalMessageList innerList;
@@ -243,7 +243,7 @@ namespace {
 			}
 
 			// pop from trace
-			assert(!trace.empty() && "Invalid stack state!");
+			assert_false(trace.empty()) << "Invalid stack state!";
 			assert(trace.back() == node.as<NodePtr>() && "Invalid stack state!");
 			trace.pop_back();
 		}
@@ -342,7 +342,7 @@ namespace {
 			auto annotations = cur->getAnnotations();		// annotations might mutate while iterating through them
 			for (const auto& entry : annotations) {
 				for(const NodePtr& innerNode : entry.second->getChildNodes()) {
-					assert(innerNode && "Nodes must not be null!");
+					assert_true(innerNode) << "Nodes must not be null!";
 
 					// create a inner list of locations
 					vector<CodeLocation> innerList;

@@ -48,8 +48,7 @@ using namespace insieme::transform::polyhedral::novel;
 
 // constructor
 SCoP::SCoP(unsigned int valid) {
-	std::cout << "Hello from SCoP Constructor Nouvelle!" << std::endl;
-	if (valid<2) obeysDeps=boost::optional<int>(valid); // else we don't know yet
+	if (valid<2) obeysDeps=boost::optional<int>(valid); // valid=2 (default) means that we don't know yet
 }
 
 /// valid returns true if the SCoP does obey all dependences; false otherwise. The validity does not change (as

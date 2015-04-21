@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -282,7 +283,7 @@ namespace core {
 		 */
 
 		NodeManager mgr;
-		IRBuilder builder(mgr);
+		FrontendIRBuilder builder(mgr);
 
 		// create a type
 		TypePtr type = builder.parseType("struct { int<4> x; int<4> y; }");

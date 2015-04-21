@@ -138,8 +138,8 @@ namespace core {
 		 * @return a pointer to the requested child
 		 */
 		const NodePtr& getChild(std::size_t index) const {
-			assert(!isValue() && "Node represents a value!");
-			assert((index < getNode().children.size()) && "Index out of bound!");
+			assert_false(isValue()) << "Node represents a value!";
+			assert_lt(index, getNode().children.size()) << "Index out of bound!";
 			return getNode().children[index];
 		}
 
@@ -150,7 +150,7 @@ namespace core {
 		 * @return a reference to the manager maintaining this node
 		 */
 		inline NodeManager& getNodeManager() const {
-			assert(getNode().manager && "NodeManager must not be null - unmanaged node detected!");
+			assert_true(getNode().manager) << "NodeManager must not be null - unmanaged node detected!";
 			return *getNode().manager;
 		}
 
@@ -170,10 +170,25 @@ namespace core {
 		 *
 		 * @param manager the manager to be used to create the new node
 		 * @param mapper the mapper used to translate child node references
+		 * @param context the mapping context information to be forwarded
 		 * @return a pointer to the modified node.
 		 */
-		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping& mapper) const {
-			return getNode().substituteInternal(manager, mapper).template as<Ptr<const node_type>>();
+		template<typename Context>
+		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping<Context>& mapper, Context& c) const {
+			return getNode().substituteInternal(manager, mapper, c).template as<Ptr<const node_type>>();
+		}
+
+		/**
+		 * Creates a new version of this node where every reference to a child node
+		 * is replaced by a pointer to the node returned by the given mapper.
+		 *
+		 * @param manager the manager to be used to create the new node
+		 * @param mapper the mapper used to translate child node references
+		 * @return a pointer to the modified node.
+		 */
+		Ptr<const node_type> substitute(NodeManager& manager, SimpleNodeMapping& mapper) const {
+			int ctxt = 0; // yes, it is ugly, but a future revision of the mapper may get rid of it
+			return getNode().substituteInternal(manager, mapper, ctxt).template as<Ptr<const node_type>>();
 		}
 
 		/**
@@ -190,7 +205,7 @@ namespace core {
 		 * @return a reference to the internally maintained value
 		 */
 		const NodeValue& getNodeValue() const {
-			assert(isValue() && "Node does not represent a value!");
+			assert_true(isValue()) << "Node does not represent a value!";
 			return getNode().value;
 		}
 

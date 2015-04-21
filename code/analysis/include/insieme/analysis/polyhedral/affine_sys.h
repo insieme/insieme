@@ -96,7 +96,7 @@ public:
 	/// Copy constructor, copying the affine functions as well as the iteration vector
 	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) {
 		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
-		assert( other.funcs.size() == funcs.size() );
+		assert_eq(other.funcs.size(), funcs.size());
 	}
 
 	/// Copy constructor with new user-provided iteration vector
@@ -104,7 +104,7 @@ public:
 		iterVec(iterVec) 
 	{
 		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
-		assert( other.funcs.size() == funcs.size() );
+		assert_eq(other.funcs.size(), funcs.size());
 	}
 
 	/**
@@ -182,11 +182,11 @@ public:
 
 	// Return the Affine function at position N of this Affine system 
 	inline AffineFunction& operator[]( size_t n ) { 
-		assert( n < funcs.size() && "Index out of array bounds" );
+		assert_lt(n, funcs.size()) << "Index out of array bounds";
 		return *funcs[n]; 
 	}
 	inline const AffineFunction& operator[]( size_t n ) const { 
-		assert( n < funcs.size() && "Index out of array bounds" );
+		assert_lt(n, funcs.size()) << "Index out of array bounds";
 		return *funcs[n];
 	}
 

@@ -41,6 +41,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/test/test_utils.h"
 
 namespace insieme {
 namespace core {
@@ -78,6 +79,16 @@ namespace lang {
 		// just check whether the code is not exhibiting errors
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
 	}
+
+
+	TEST(StaticVarExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
+
 
 } // end namespace lang
 } // end namespace core

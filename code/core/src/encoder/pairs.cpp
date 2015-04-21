@@ -89,12 +89,12 @@ namespace encoder {
 	}
 
 	const core::TypePtr getFirstElementType(const core::TypePtr& pairType) {
-		assert(isPairType(pairType) && "Not applicable to non-pair type!");
+		assert_true(isPairType(pairType)) << "Not applicable to non-pair type!";
 		return pairType.as<GenericTypePtr>()->getTypeParameter(0);
 	}
 
 	const core::TypePtr getSecondElementType(const core::TypePtr& pairType) {
-		assert(isPairType(pairType) && "Not applicable to non-pair type!");
+		assert_true(isPairType(pairType)) << "Not applicable to non-pair type!";
 		return pairType.as<GenericTypePtr>()->getTypeParameter(1);
 	}
 

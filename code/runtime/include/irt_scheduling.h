@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -68,6 +68,12 @@ typedef struct _irt_wi_scheduling_data irt_wi_scheduling_data;
  * Note that more threads may continue to run until a synchronization point is encountered
  */
 void irt_scheduling_set_dop(uint32 parallelism);
+
+/* Set the active degree of parallelism for the runtime system per socket
+ * Requires Hwloc
+ * Note that more threads may continue to run until a synchronization point is encountered
+ */
+void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops);
 
 /* The scheduling iteration for a worker. Responsibilities include
  * executing work items assigned to the worker (and potentially distributing

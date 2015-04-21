@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -87,7 +87,7 @@ namespace pragma {
 // ------------------------------------ ValueUnion ---------------------------
 ValueUnion::~ValueUnion() {
 	if ( ptrOwner && is<clang::Stmt*>() ) {
-		assert(clangCtx && "Invalid ASTContext associated with this element.");
+		assert_true(clangCtx) << "Invalid ASTContext associated with this element.";
 		clangCtx->Deallocate(get<Stmt*>());
 	}
 	if(ptrOwner && is<std::string*>())
@@ -141,18 +141,18 @@ core::ExpressionPtr MatchObject::getExpr(const ValueUnionPtr& p, conversion::Con
     clang::Stmt* stmt = p->get<clang::Stmt*>();
     if(auto expr = llvm::dyn_cast<clang::Expr>(stmt)) {
         core::ExpressionPtr&& varExpr = fact.convertExpr( expr );
-        assert(varExpr && "Conversion a to Insieme node failed!");
+        assert_true(varExpr) << "Conversion a to Insieme node failed!";
         return varExpr;
     }
-    assert(false && "expression used in pragma seems to be no expression");
+    assert_fail() << "expression used in pragma seems to be no expression";
 	return core::ExpressionPtr();
 }
 
 core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Converter& fact) {
     clang::Stmt* varIdent = p->get<clang::Stmt*>();
-    assert(varIdent && "Clause not containing var exps");
+    assert_true(varIdent) << "Clause not containing var exps";
     clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);
-    assert(refVarIdent && "Clause not containing a DeclRefExpr");
+    assert_true(refVarIdent) << "Clause not containing a DeclRefExpr";
     core::ExpressionPtr&& varExpr = fact.convertExpr( refVarIdent );
     //this is a special case, where we cannot decide
     //if the clang stmt gets an variable or an expr.
@@ -228,7 +228,7 @@ void ParserStack::discardRecord(size_t recordId) { mRecords[recordId] = LocError
 size_t ParserStack::getFirstValidRecord() {
 	for ( size_t i=0; i<mRecords.size(); ++i )
 		if ( !mRecords[i].empty() ) return i;
-	assert(false);
+	assert_fail();
 	return 0;
 }
 
@@ -458,7 +458,7 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 		LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
 		if (!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
 			// TODO: Identifier could not be resolved => report error!
-			assert(false && "Unable to obtain declaration of identifier!");
+			assert_fail() << "Unable to obtain declaration of identifier!";
 		}
 		auto varDecl = res.getAsSingle<clang::VarDecl>();
 

@@ -144,6 +144,7 @@
   CAST          "CAST("
   INFINITE      "#inf"
   LET           "let"    
+  USING         "using"    
   AUTO          "auto"    
   LAMBDA        "lambda"    
   CTOR          "ctor"    
@@ -217,7 +218,7 @@
 %type <NodePtr> start_rule
 %type <ProgramPtr> program
 
-%type <StatementPtr> statement decl_stmt compound_stmt statement_aux
+%type <StatementPtr> statement decl_stmt compound_stmt markable_compound_stmt statement_aux 
 %type <StatementList>  statement_list
 %type <For_decl> for_decl
 %type <VariablePtr> var_decl
@@ -240,6 +241,8 @@
 %type <std::string> namespaced_type
 %type <std::vector<DeclarationStmtPtr>> job_decl_list
 
+%type <std::vector<std::string>> string_list
+
 %printer { yyoutput << $$; } <std::string>
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -257,7 +260,7 @@ start_rule : TYPE_ONLY declarations type             { RULE if(!driver.where_err
 /* ~~~~~~~~~~~~~~~~~~~  LET ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 let_defs : "lambda" lambda_expression ";" 
-         | "lambda" lambda_expression "," let_defs 
+         | "lambda" lambda_expression "," let_defs  
          | "expr" expression ";" { RULE driver.add_let_expression(@1, $2); }
          | "expr" expression "," let_defs { RULE driver.add_let_expression(@1, $2); }
          | type ";" { RULE driver.add_let_type(@1, $1); }
@@ -272,19 +275,24 @@ let_chain : let_decl { driver.close_let_statement(@$); }
           | let_decl { driver.close_let_statement(@$); } "let" { driver.let_count++; } let_chain { }
           ;
 
+string_list : "stringlit"  { RULE $$.push_back($1); }
+            | "stringlit" "," string_list { $3.insert($3.begin(), $1); std::swap($$, $3); }
+            ;
+
 declarations : /* empty */ { } 
              | "let" { driver.let_count++; } let_chain { }
+             | "using" string_list ";" declarations { RULE driver.using_scope_handle(@$, $2); }
              ;
 
 /* ~~~~~~~~~~~~~~~~~~~  PROGRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-program : type "identifier" "(" variable_list "{" compound_stmt { RULE
+program : type "identifier" "(" variable_list markable_compound_stmt { RULE
                              INSPIRE_GUARD(@1, $1); 
                              driver.close_scope(@$, "program");
                              TypeList paramTys;
                              for (const auto& var : $4) paramTys.push_back(var.getType());
                              FunctionTypePtr funcType = driver.builder.functionType(paramTys, $1); 
-						     ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, $6);
+						     ExpressionPtr main = driver.builder.lambdaExpr(funcType, $4, $5);
 						     $$ = driver.builder.createProgram(toVector(main));
                         }
         ;
@@ -447,9 +455,10 @@ statement : statement_aux         { RULE INSPIRE_GUARD(@1, $1); $$ = $1; }
 statement_aux  : ";" { RULE $$ = driver.builder.getNoOp(); } 
                | expression ";" { RULE $$ = $1; }
                | "let" { driver.let_count++; } let_decl { driver.close_let_statement(@$); RULE $$ =  driver.builder.getNoOp(); }
+               | "using" string_list ";" { RULE driver.using_scope_handle(@$, $2); $$ = driver.builder.getNoOp(); }
                      /* compound statement */ 
-               | "{"  { RULE driver.open_scope(@$, "compound"); } compound_stmt  {RULE  
-                                         driver.close_scope(@$, "compound_end"); $$ =$3; 
+               | { RULE driver.open_scope(@$, "compound"); } compound_stmt  {RULE  
+                                         driver.close_scope(@$, "compound_end"); $$ =$2; 
                       }
 
                      /* variable declarations */
@@ -556,9 +565,13 @@ switch_case :  "case" expression ":" statement { RULE
                }
             ;
 
-compound_stmt : "}" { RULE $$ = driver.builder.compoundStmt(); }
-              | statement_list "}"{ RULE $$ = driver.builder.compoundStmt($1); }
-              ;
+compound_stmt : "{" "}" { RULE $$ = driver.builder.compoundStmt(); }
+                  | "{" statement_list "}"{ RULE $$ = driver.builder.compoundStmt($2); }
+                  ;
+
+markable_compound_stmt :  compound_stmt         { RULE INSPIRE_GUARD(@1, $1); $$ = $1; } 
+                       | "$" compound_stmt "$" {  RULE INSPIRE_GUARD(@2, $2); $$ = driver.mark_address(@2, $2); } 
+                       ;
 
 statement_list : statement { RULE     
                         if($1 != driver.builder.getNoOp())  $$.push_back($1); 
@@ -693,8 +706,8 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "spawn" expression { RULE 
                         $$ = driver.builder.parallel($2, 1);  
                 }
-           | "spawn" "{" compound_stmt { RULE
-                        $$ = driver.builder.parallel($3, 1);
+           | "spawn" markable_compound_stmt { RULE
+                        $$ = driver.builder.parallel($2, 1);
                 }
            | "sync" expression  { RULE 
                         $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), 
@@ -747,66 +760,66 @@ lambda_expression_aux :
                             }
                         } %prec LAMBDA
 
-                      | "(" variable_list "=>" "{" compound_stmt  { RULE
+                      | "(" variable_list "=>" markable_compound_stmt  { RULE
                             
                             if (driver.let_count == 1) {
-                                driver.add_let_expression(@$, driver.genClosure(@1, $2, $5));
+                                driver.add_let_expression(@$, driver.genClosure(@1, $2, $4));
                             }
                             else{
-                                 $$ = driver.genClosure(@$, $2, $5);
+                                 $$ = driver.genClosure(@$, $2, $4);
                             }
                         } %prec LAMBDA
                             /* lambdas */
-                      | "(" variable_list "->" type "{" { driver.set_inhibit(driver.let_count);} compound_stmt { 
+                      | "(" variable_list "->" type { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
 
                             if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @7, $4, $2);
+                                driver.add_let_lambda(@$, @1, @6, $4, $2);
                             }
                             else{
-                                  RULE $$ = driver.genLambda(@$, $2, $4, $7); 
+                                  RULE $$ = driver.genLambda(@$, $2, $4, $6); 
                             }
                             driver.set_inhibit(false);
                         } %prec LAMBDA
 
                             /* member functions */
-                      | just_name "::" { driver.add_this(@1, $1); } "(" variable_list "->" type "{" 
-                                        { driver.set_inhibit(driver.let_count);} compound_stmt { 
+                      | just_name "::" { driver.add_this(@1, $1); } "(" variable_list "->" type 
+                                        { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@1, "this");
                             $5.insert($5.begin(), thisvar.as<VariablePtr>());
                             if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @10, $7, $5, FK_MEMBER_FUNCTION);
+                                driver.add_let_lambda(@$, @1, @9, $7, $5, FK_MEMBER_FUNCTION);
                             }
                             else{
-                                RULE $$ = driver.genLambda(@$, $5, $7, $10, FK_MEMBER_FUNCTION); 
+                                RULE $$ = driver.genLambda(@$, $5, $7, $9, FK_MEMBER_FUNCTION); 
                             }
                             driver.set_inhibit(false);
                         } %prec LAMBDA
 
-                      | "~" just_name "::" { driver.add_this(@1, $2); } "(" variable_list "{" 
-                                            { driver.set_inhibit(driver.let_count);} compound_stmt { 
+                      | "~" just_name "::" { driver.add_this(@1, $2); } "(" variable_list 
+                                            { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@1, "this");
                             $6.insert($6.begin(),  thisvar.as<VariablePtr>());
                             if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @9, thisvar->getType(), $6, FK_DESTRUCTOR);
+                                driver.add_let_lambda(@$, @1, @8, thisvar->getType(), $6, FK_DESTRUCTOR);
                             }
                             else{
-                                RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $9, FK_DESTRUCTOR); 
+                                RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $8, FK_DESTRUCTOR); 
                             }
                             driver.set_inhibit(false);
                         } %prec LAMBDA
 
-                      | "ctor" just_name "::" { driver.add_this(@2, $2); } "(" variable_list "{" 
-                                               { driver.set_inhibit(driver.let_count);} compound_stmt { 
+                      | "ctor" just_name "::" { driver.add_this(@2, $2); } "(" variable_list 
+                                               { driver.set_inhibit(driver.let_count);} markable_compound_stmt { 
 
                             auto thisvar = driver.findSymbol(@2, "this");
                             $6.insert($6.begin(), thisvar.as<VariablePtr>());
                             if (driver.let_count ==1 ){
-                                driver.add_let_lambda(@$, @1, @9, thisvar->getType(), $6, FK_CONSTRUCTOR);
+                                driver.add_let_lambda(@$, @1, @8, thisvar->getType(), $6, FK_CONSTRUCTOR);
                             }
                             else{
-                                RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $9, FK_CONSTRUCTOR); 
+                                RULE $$ = driver.genLambda(@$, $6, thisvar->getType(), $8, FK_CONSTRUCTOR); 
                             }
                             driver.set_inhibit(false);
                         }  %prec LAMBDA

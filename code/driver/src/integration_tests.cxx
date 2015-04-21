@@ -96,7 +96,7 @@ namespace{
 				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
 				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
 				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
-				("clean",				"remove all output files")
+				("no-clean",				"keep all output files")
 				("nocolor",				"no highlighting of output")
 		;
 
@@ -142,11 +142,11 @@ namespace{
 		}
 
 		res.mockrun = map.count("mock");
-		res.clean=map.count("clean");
+		res.no_clean=map.count("no-clean");
 		res.color=!map.count("nocolor");
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
-		res.num_repeditions = map["repeat"].as<int>();
+		res.num_repetitions = map["repeat"].as<int>();
 		res.perf = false;
 
 		res.list_only = map.count("list");
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "#" << boost::format(centerAlign) % insiemeVersion << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.num_repeditions) + " time(s)");
+	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.num_repetitions) + " time(s)");
 	std::cout << "#" << boost::format(centerAlign) % benchmarkHeader << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	int totalTests = cases.size() * options.num_repeditions;
+	int totalTests = cases.size() * options.num_repetitions;
 	int maxCounterStringLength = to_string(totalTests).length();
 	string maxCounterStringLengthAsString(to_string(maxCounterStringLength));
 
@@ -246,7 +246,7 @@ int main(int argc, char** argv) {
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
-	setup.clean=options.clean;
+	setup.clean=!options.no_clean;
 	setup.perf=options.perf;
 	setup.executionDir="";
 
@@ -254,14 +254,12 @@ int main(int argc, char** argv) {
 
 	// setup highlighted tests:
 	std::set<std::string> highlight;
-	highlight.insert("main_seq_execute");
-	highlight.insert("main_seq_c++_execute");
-	highlight.insert("main_run_execute");
-	highlight.insert("main_run_c++_execute");
+	highlight.insert("insiemecc_seq_c_execute");
+	highlight.insert("insiemecc_seq_c++_execute");
+	highlight.insert("insiemecc_run_c_execute");
+	highlight.insert("insiemecc_run_c++_execute");
 	highlight.insert("ref_c_execute");
 	highlight.insert("ref_c++_execute");
-	highlight.insert("insiemecc_c_execute");
-	highlight.insert("insiemecc_c++_execute");
 
 	// run test cases in parallel
 	vector<TestCase> ok;
@@ -272,7 +270,7 @@ int main(int argc, char** argv) {
 	bool panic = false;
 	int act = 0;
 
-	for(int i=0; i<options.num_repeditions; i++) {
+	for(int i=0; i<options.num_repetitions; i++) {
         //get instance of the test runner
         itc::TestRunner& runner = itc::TestRunner::getInstance();
         //set lambda to print some execution summary at the end
@@ -348,7 +346,7 @@ int main(int argc, char** argv) {
 
 						success = success && curRes.second.wasSuccessfull();
 					}
-					if(options.clean) {
+					if(!options.no_clean) {
 						curRes.second.clean();
 					}
 

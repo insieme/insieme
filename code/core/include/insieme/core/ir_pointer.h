@@ -204,7 +204,6 @@ static_pointer_cast(Pointer<T>& src) {
 			<< "  source type: " << node_type<T>::getName() << "\n"
 			<< "  actual type: " << src->getNodeType() << "\n"
 			<< "  target type: " << node_type<B>::getName() << "\n";
-	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 

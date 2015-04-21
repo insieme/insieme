@@ -147,7 +147,7 @@ TEST(LangBasic, DerivedMembership) {
         CHECK(_id); EXPECT_TRUE(isDerived(gen.get##_id())); \
     }
 
-#include "insieme/core/lang/lang.def"
+#include "insieme/core/lang/inspire_api/lang.def"
 
 #undef DERIVED
 #undef LITERAL

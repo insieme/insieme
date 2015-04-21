@@ -94,7 +94,7 @@ namespace {
 
 			if (llvm::isa<clang::TypedefDecl> (*i)) {
 				std::cerr << "this is a typedef aliased type" << std::endl;
-				assert(false);
+				assert_fail();
 			}
 
 			if (i->isCompleteDefinition()){
@@ -668,7 +668,7 @@ core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type)
 			bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(recDecl->getCanonicalDecl()->getSourceRange().getBegin());
 			if(systemHeaderOrigin) {
 				VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
-				if( core::annotations::hasNameAttached(symbol) ) {
+				if( core::annotations::hasAttachedName(symbol) ) {
                     if(recDecl->isStruct())
 					    name  = "struct " + core::annotations::getAttachedName(symbol);
                     else if(recDecl->isUnion())

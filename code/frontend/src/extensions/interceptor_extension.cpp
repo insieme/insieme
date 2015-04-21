@@ -42,6 +42,16 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
+	boost::optional<std::string> InterceptorExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		//interceptor needs to be the first extension in the extension list
+		if(setup.getExtensions().begin()->get() != this) {
+			return boost::optional<std::string>("InterceptorExtension should be the first Extension");
+		}
+		
+		//prerequisites are met - no prerequisite is missing
+		return boost::optional<std::string>();
+	}
+
 	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 
 		if (const clang::CXXConstructExpr* ctorExpr =  llvm::dyn_cast<clang::CXXConstructExpr>(expr)){
@@ -134,7 +144,7 @@ namespace extensions {
 
 					//we expect globals to be literals -- get the "standard IR"which we need to change
 					core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
-					assert(globalLit);
+					assert_true(globalLit);
 					VLOG(2) << globalLit;
 
 					auto globals = convFact.getIRTranslationUnit().getGlobals();
@@ -177,6 +187,7 @@ namespace extensions {
 		}
         return nullptr;
 	}
+
     core::TypePtr InterceptorExtension::TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact){
 
 		if (llvm::isa<clang::TypedefDecl>(decl)){
@@ -206,7 +217,6 @@ namespace extensions {
 		}
 		return nullptr;
 	}
-
 
     /**
      * This post visitor is needed to check if we have a ctor that contains a default argument
@@ -273,6 +283,17 @@ namespace extensions {
         return irExpr;
     }
 
+    FrontendExtension::flagHandler InterceptorExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        //create lambda
+        auto lambda = [&](const ConversionJob& job) {
+            //check if the default activated plugins have been deactivated manually
+            if(job.hasOption(frontend::ConversionJob::NoDefaultExtensions))
+                return false;
+            this->setInterceptor(job.getInterceptedNameSpacePatterns());
+            return true;
+        };
+        return lambda;
+    }
 } // extensions
 } // frontend
 } // insieme

@@ -22,16 +22,16 @@ namespace detail{
  *  The declaration context keeps track of all the symbols available in the scope,
  *  it is useful to keep track of the let bindings
  */
-class DeclarationContext{
+struct DeclarationContext{
     using ctx_map_type = std::map<std::string, NodePtr>;
 
     std::vector<ctx_map_type> scope_stack;
     ctx_map_type global_scope;
 
-public:
+//public:
 
     DeclarationContext()
-    {}
+    { }
     DeclarationContext(const DeclarationContext& o) 
     :global_scope(o.global_scope.begin(), o.global_scope.end())
     {
@@ -153,6 +153,8 @@ public:
     // syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
     bool inhibit_building()const;
     void set_inhibit(bool flag =true);
+
+    void using_scope_handle (const location& l, const std::vector<std::string>& extension_names);
 
     // debug
     void print_location(const location& l)const;

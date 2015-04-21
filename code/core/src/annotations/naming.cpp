@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -66,19 +66,19 @@ namespace annotations {
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
 			return std::make_shared<annotation_type>(NameTag(encoder::toValue<string>(node)));
 		}
 	};
 
 	// ----------------------------------------------------
 
-	bool hasNameAttached(const NodePtr& node) {
+	bool hasAttachedName(const NodePtr& node) {
 		return node->hasAttachedValue<NameTag>();
 	}
 
 	const string& getAttachedName(const NodePtr& node) {
-		assert(hasNameAttached(node) && "Does not have a name annotation!");
+		assert_true(hasAttachedName(node)) << "Does not have a name annotation!";
 		return node->getAttachedValue<NameTag>().name;
 	}
 

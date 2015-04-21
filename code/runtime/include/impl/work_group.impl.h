@@ -283,6 +283,9 @@ void irt_wg_barrier_smart(irt_work_group* wg) {
 }
 inline void irt_wg_barrier(irt_work_group* wg) {
 	irt_wg_barrier_scheduled(wg);
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_atomic_add_and_fetch(&irt_g_app_progress, 1, uint64);
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 }
 
 

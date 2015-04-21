@@ -46,8 +46,19 @@
 #include "insieme/frontend/clang_forward.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include <boost/optional.hpp>
+
 
 namespace insieme {
+
+namespace driver {
+namespace cmd {
+namespace detail {
+    class OptionParser;
+}
+}
+}
+
 namespace frontend {
 
 namespace stmtutils {
@@ -66,6 +77,9 @@ namespace tu {
 namespace conversion {
     class Converter;
 }
+
+class ConversionJob;
+class ConversionSetup;
 
 namespace extensions {
 
@@ -117,7 +131,28 @@ namespace extensions {
         headerVec kidnappedHeaders;
 
 	public:
+        typedef std::function<bool(const ConversionJob&)> flagHandler;
+
         virtual ~FrontendExtension(){}
+
+        /*****************DRIVER STAGE*****************/
+        /**
+         *  This method registers the flags in the OptionParser
+         *  that are needed to activate and configures the plugin.
+         *  @param optParser Reference to the OptionParser
+         *  @return lambda that is called after the insiemecc call was parsed
+         */
+         virtual flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+
+        /**
+         * Check if the setup the current ConversionJob is correct regarding userprovided flags and
+         * options, position of the extension in  comparions to other extensions, or if certain
+         * extensions we depend on are enabled.
+         * If the prerequisites are not met, give an expressive error message.
+         * @return boost::optional is true if prerequisites are missing with an error message,
+         * false if no prerequisite are missing
+         * */
+        virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
 
         /*****************PRE CLANG STAGE*****************/
         /**
@@ -179,7 +214,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return NodePtr that can either be an expression or a type
          */
-        insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
+        virtual insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**
          *  User provided clang type decl visitor. Will be called before clang type decl
@@ -257,7 +292,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return modified version of IR input
          */
-        insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir,
+        virtual insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir,
                                          insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**

@@ -50,6 +50,8 @@
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "insieme/utils/logging.h"
 
 namespace fe = insieme::frontend;
@@ -57,6 +59,7 @@ namespace core = insieme::core;
 namespace annot = insieme::annotations;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
+using namespace insieme::driver;
 
 void checkKernel(core::NodePtr program, const core::NodeManager& manager) {
 
@@ -93,16 +96,14 @@ void runOclTest(const std::string inputFile) {
 	core::NodeManager manager;
 
 	// create and customize conversion job
-	fe::ConversionJob job(inputFile);
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.addIncludeDirectory(CLANG_SRC_DIR);
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
-	job.setOption(fe::ConversionJob::OpenCL);
+	std::string includeA = "-I" CLANG_SRC_DIR "inputs";
+	std::string includeB = "-I" CLANG_SRC_DIR;
+	std::string includeC = "-I" CLANG_SRC_DIR "../../../test/ocl/common/";
+    std::vector<std::string> argv = { "compiler",  inputFile, includeA, includeB, includeC, "-fopencl" };
+    cmd::Options options = cmd::Options::parse(argv);
 
-	std::string srcDir = CLANG_SRC_DIR "inputs/hello_host.c";
-
-	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
-	core::ProgramPtr program = job.execute(manager);
+	LOG(INFO) << "Converting input program '" << inputFile << "' to IR...";
+	core::ProgramPtr program = options.job.execute(manager);
 	LOG(INFO) << "Done.";
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);
@@ -167,17 +168,18 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	core::NodeManager manager;
 
 	// create and customize conversion job
-	fe::ConversionJob job(CLANG_SRC_DIR "../../backend/test/ocl_kernel/vec_add.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../backend/test/ocl_kernel");
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
-	job.addIncludeDirectory(PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/");
+	std::string inputFile = CLANG_SRC_DIR "../../backend/test/ocl_kernel/vec_add.c";
+	std::string includeA = "-I" CLANG_SRC_DIR "inputs";
+	std::string includeB = "-I" CLANG_SRC_DIR "../../backend/test/ocl_kernel";
+	std::string includeC = "-I" CLANG_SRC_DIR "../../../test/ocl/common/";
+	std::string includeD = "-I" PAPI_HOME "/../llvm-latest/lib/clang/3.4/include/";
+    std::vector<std::string> argv = { "compiler",  inputFile, includeA, includeB, includeC, includeD, "-flib-icl" };
+    cmd::Options options = cmd::Options::parse(argv);
 
-	job.setOption(fe::ConversionJob::lib_icl);
-	job.setDefinition("INSIEME", "");
+	options.job.setDefinition("INSIEME", "");
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
-	core::ProgramPtr program = job.execute(manager);
+	core::ProgramPtr program = options.job.execute(manager);
 	LOG(INFO) << "Done.";
 
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);

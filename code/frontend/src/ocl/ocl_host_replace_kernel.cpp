@@ -50,12 +50,13 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/cast_tool.h"
 
-
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/logging.h"
 
@@ -172,7 +173,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	// if there is still no match, try the paths of the input files
 /*	no job, no current file :/
 	if (check.fail()) {
-		assert(job.getFiles().size() == 1u);
+		assert_eq(job.getFiles().size(), 1u);
 		string ifp = job.getFiles()[0].string();
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
@@ -187,12 +188,17 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
-	ConversionJob kernelJob(path, includeDirs);
-	kernelJob.registerFrontendExtension<extensions::OclKernelExtension>();
-	kernelJob.setDefinition("INSIEME", "");
+	//create call to convert the kernel file
+	std::vector<std::string> argv {"kernelcompiler", "-fopenclkernel", path};
+    for(auto incl : includeDirs) {
+        std::string newIncl = "-I"+incl.string();
+        argv.push_back(newIncl);
+    }
+	driver::cmd::Options opt = driver::cmd::Options::parse(argv);
+	opt.job.setDefinition("INSIEME", "");
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));
-	return kernelJob.execute(builder.getNodeManager(), false);
+	return opt.job.execute(builder.getNodeManager(), false);
 }
 
 /* Assumptions:
@@ -223,16 +229,16 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 
 	// check work dimension
 	const LiteralPtr dim = dynamic_pointer_cast<const Literal>(workDim);
-	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
+	assert_true(dim) << "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!";
 	wd = dim->getValueAs<unsigned int>();
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
-	assert(wd < 3u && "Invalid work_dim. Should be 1 - 3!");
+	assert_lt(wd, 3u) << "Invalid work_dim. Should be 1 - 3!";
 
 	// check if there is a x to array called
 	if(const CallExprPtr toArray = dynamic_pointer_cast<const CallExpr>(size)) {
 		if(toArray->getFunctionExpr() == gen.getScalarToArray()) {
 			// check consistency with workDim, should be 1
-			assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
+			assert_eq(wd, 1) << "Scalar group size passed to a multi dimensional work_dim";
 
 			arg = toArray->getArgument(0);
 		} else if(isPtrDecay(toArray->getFunctionExpr())) {
@@ -241,13 +247,13 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 			arg = toArray[0];
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
-			assert(false && "Unexpected function in OpenCL size argument");
+			assert_fail() << "Unexpected function in OpenCL size argument";
 		}
 		argTy = arg->getType();
 		param = builder.variable(argTy);
 	} else { // the argument is an array
 		size = utils::removeDoubleRef(size);
-//		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
+//		assert_eq(size->getType()->getNodeType(), NT_RefType) << "Called clEnqueueNDRangeKernel with invalid group argument";
 		arg = size;
 		argTy = arg->getType();
 		param = builder.variable(argTy);
@@ -271,7 +277,7 @@ const ExpressionPtr anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 		vDecl = builder.declarationStmt(vecTy,
 				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(gen.getUInt8(), "1"), builder.literal(gen.getUInt8(), "1"))));
 	} else {
-		assert(isArray && "Size argument of multidimensional group is no vector or array");
+		assert_true(isArray) << "Size argument of multidimensional group is no vector or array";
 
 		vector<ExpressionPtr> subscripts;
 		subscripts.push_back(builder.arrayAccess(init, builder.literal(gen.getUInt8(), "0")));
@@ -517,7 +523,7 @@ void KernelReplacer::collectArguments() {
 			TypePtr type;
 			ExpressionPtr hostPtr;
 			utils::extractSizeFromSizeof(sizeArg, size, type);
-			assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+			assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
 not needed since we store the entire sizeArg to avoid confusions with different types
 +*/
 			// only store size of local mem arrays, therefore it's always uint<8>
@@ -645,8 +651,8 @@ void KernelReplacer::storeKernelLambdas(std::vector<ExpressionPtr>& kernelEntrie
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 		if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
 			std::string cname = insieme::core::annotations::getAttachedName(lambdaEx);
-			assert(!cname.empty() && "cannot find the name of the kernel function");
-			assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+			assert_false(cname.empty()) << "cannot find the name of the kernel function";
+			assert_eq(checkDuplicates[cname], 0) << "Multiple kernels with the same name not supported";
 			checkDuplicates[cname] = 1;
 			kernelFunctions[kernelNames[cname]] = lambdaEx;
 		}
@@ -904,7 +910,7 @@ void IclKernelReplacer::inlineKernelCode() {
 		replacements[matchAddress >> runKernel.getRoot()] = builder.createCallExprFromBody(builder.compoundStmt(tupleCreation), gen.getUnit());
 	});
 
-	assert(!replacements.empty() && "No kernels found");
+	assert_false(replacements.empty()) << "No kernels found";
 
 	prog = transform::replaceAll(mgr, replacements);
 

@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/core/test/test_utils.h"
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/core/ir_node.h"
@@ -110,6 +111,15 @@ namespace lang {
 			// just check whether the code is not exhibiting errors
 			EXPECT_TRUE(checks::check(cur).empty()) << checks::check(cur);
 		}
+
+	}
+
+	TEST(IRppExtensions, AllSemantics) {
+		NodeManager nm;
+
+		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
 
 	}
 

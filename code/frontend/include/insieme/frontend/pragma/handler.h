@@ -185,14 +185,14 @@ class FrontendExtensionPragma : public Pragma {
      FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string&             type) : Pragma(startLoc, endLoc, type) {
-                             assert(false && "frontend pragma extension cannot be created without a function.");
+                             assert_fail() << "frontend pragma extension cannot be created without a function.";
                           }
 
      FrontendExtensionPragma(const clang::SourceLocation& startLoc,
                           const clang::SourceLocation& endLoc,
                           const std::string&             type,
                           const MatchMap&                mmap) : Pragma(startLoc, endLoc, type) {
-                             assert(false && "frontend pragma extension cannot be created without a function.");
+                             assert_fail() << "frontend pragma extension cannot be created without a function.";
                           }
 
      FrontendExtensionPragma(const clang::SourceLocation& startLoc,

@@ -212,7 +212,7 @@ namespace addons {
 		            if(initValue->getType().isa<core::VectorTypePtr>() && mgr.getLangBasic().isChar(initValue->getType().as<core::VectorTypePtr>()->getElementType())) {
 		                const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(initValue->getType());
 		                c_ast::InitializerPtr structInit = c_ast::init(C_NODE_MANAGER->create<c_ast::StructType>(static_pointer_cast<c_ast::NamedType>(info.lValueType)->name));
-		                assert(core::analysis::isCallOf(initValue, mgr.getLangBasic().getRefDeref()));
+		                assert_true(core::analysis::isCallOf(initValue, mgr.getLangBasic().getRefDeref()));
                         structInit->values.push_back(CONVERT_EXPR(core::analysis::getArgument(initValue, 0)));
                         return structInit;
                     }

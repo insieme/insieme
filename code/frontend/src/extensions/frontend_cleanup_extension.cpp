@@ -77,6 +77,7 @@ namespace frontend {
 namespace extensions {
 
 namespace {
+        
 
 		/**
 		 * here the little trick, the translation unit is converted into a single expression to guarantee the
@@ -236,6 +237,19 @@ namespace {
 		}
 
 	} // anonymous namespace
+		
+
+	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		//second-last
+		auto it = setup.getExtensions().crbegin();
+		std::advance(it, 1);
+		if( it->get() != this ) {
+			return boost::optional<std::string>("FrontendCleanup needs to be the second-last Extension");
+		}
+
+		//prerequisites are met - no prerequisite is missing
+		return boost::optional<std::string>();
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog){
@@ -338,7 +352,7 @@ namespace {
 				core::LambdaExprPtr func = pair.second;
 
 				core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
-				assert( retType == func->getType().as<core::FunctionTypePtr>()->getReturnType());
+				assert_eq(retType, func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
 				core::IRBuilder builder(func->getNodeManager());
 				const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
@@ -410,7 +424,7 @@ namespace {
 
 	core::StatementPtr collectAssignments (const core::StatementPtr& stmt, const core::NodePtr& feAssign, core::StatementPtr& lastExpr, core::StatementList& preProcess, bool isCXX){
 
-			assert(stmt && "no stmt, no fun");
+			assert_true(stmt) << "no stmt, no fun";
 			core::IRBuilder builder (stmt->getNodeManager());
 
 			// the maper should never leave the first nested scope

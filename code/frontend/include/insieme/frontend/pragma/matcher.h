@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -218,15 +218,15 @@ class MatchObject {
 
 			// we have an expression
 			if(fitV.empty()) {
-				assert(fitE.size() == 1);
+				assert_eq(fitE.size(), 1);
 				return fitE.at(0);
 			}
 			// we have a variable
 			if(fitE.empty()) {
-				assert(fitV.size() == 1);
+				assert_eq(fitV.size(), 1);
 				return fitV.at(0);
 			}
-			assert(false && "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.");
+			assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
 			return core::ExpressionPtr();
 		}
 

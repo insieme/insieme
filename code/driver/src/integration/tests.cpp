@@ -37,6 +37,8 @@
 #include "insieme/driver/integration/tests.h"
 
 #include <iostream>
+#include <vector>
+#include <string>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/tokenizer.hpp>
@@ -50,6 +52,8 @@
 
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace insieme {
 namespace driver {
 namespace integration {
@@ -59,28 +63,41 @@ namespace integration {
 		frontend::ConversionJob toJob(const IntegrationTestCase& testCase) {
 
 			// load code using frontend
-			auto job = frontend::ConversionJob(testCase.getFiles(), testCase.getIncludeDirs());
-			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
-			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
-			job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
+			std::vector<std::string> args = {"compiler"};
+			for(auto file : testCase.getFiles()) {
+                args.push_back(file.string());
+			}
+			for(auto includeDir : testCase.getIncludeDirs()) {
+                std::string include = "-I"+includeDir.string();
+                args.push_back(include);
+			}
+			if(testCase.isEnableOpenMP()) {
+                args.push_back("-fopenmp");
+			}
+            if(testCase.isEnableOpenCL()) {
+                args.push_back("-fopencl");
+            }
 
-			std::string step="main_run_convert";
+			driver::cmd::Options options = driver::cmd::Options::parse(args);
+			options.job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
+
+			std::string step="insiemecc_run_c_convert";
 			if (testCase.isCXX11()){
-				job.setStandard(frontend::ConversionSetup::Cxx11);
-				step="main_run_c++_convert";
+				options.job.setStandard(frontend::ConversionSetup::Cxx11);
+				step="insiemecc_run_c++_convert";
 			}
 
 			// add pre-processor definitions
 			for_each(testCase.getDefinitions(step), [&](const std::pair<string,string>& def) {
-				job.setDefinition(def.first, def.second);
+				options.job.setDefinition(def.first, def.second);
 			});
 
 			// add interceptor configuration
-			job.addInterceptedNameSpacePatterns(testCase.getInterceptedNameSpaces());
-			job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
+			options.job.addInterceptedNameSpacePatterns(testCase.getInterceptedNameSpaces());
+			options.job.setInterceptedHeaderDirs(testCase.getInterceptedHeaderFileDirectories());
 
 			// done
-			return job;
+			return options.job;
 		}
 
 	}
@@ -250,7 +267,7 @@ namespace integration {
 
 
 		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, bool forceCommented = false) {
-			
+
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
@@ -286,7 +303,7 @@ namespace integration {
 					testCase = testCase.substr(0,testCase.find("#",0));
 				else		//only remove first "#"
 					testCase=testCase.substr(testCase.find("#")+1);
-				
+
 				// trim
 				testCase.erase(0, testCase.find_first_not_of(" "));
 				testCase.erase(testCase.find_last_not_of(" ")+1);
@@ -379,9 +396,9 @@ namespace integration {
 	namespace {
 
 		bool isParentOf(const fs::path& parent, const fs::path& child) {
-			assert(parent.is_absolute());
+			assert_true(parent.is_absolute());
 			//assertion fails if child is empty
-			//assert(child.is_absolute());
+			//assert_true(child.is_absolute());
 
 			// if it is the same => done
 			if (parent == child) return true;
@@ -402,7 +419,7 @@ namespace integration {
 
 		// first check if it's an individual test case
 		const fs::path testConfig = absolute_path / "test.cfg";
-		if (!fs::exists(testConfig)) { 
+		if (!fs::exists(testConfig)) {
 			//individual test cases have no "test.cfg"
 			auto testCase = loadTestCase(path);
 			if (testCase) {
@@ -423,15 +440,23 @@ namespace integration {
 		}
 
 		// load code using frontend - using given options
-		auto job = frontend::ConversionJob(curCase->getFiles(), curCase->getIncludeDirs());
-		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
+		std::vector<std::string> args = {"compiler"};
+		for(auto file : curCase->getFiles()) {
+            args.push_back(file.string());
+		}
+        for(auto incl : curCase->getIncludeDirs()) {
+            std::string inc = "-I"+incl.string();
+            args.push_back(inc);
+        }
+        if(enableOpenMP) args.push_back("-fopenmp");
+		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
 
 		// add pre-processor definitions
 		for(const auto& cur : definitions) {
-			job.setDefinition(cur.first, cur.second);
+			options.job.setDefinition(cur.first, cur.second);
 		}
 
-		return job.execute(manager);
+		return options.job.execute(manager);
 
 	}
 

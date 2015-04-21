@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -184,7 +184,7 @@ namespace cba {
 	}
 
 	inline core::ExpressionInstance getLocationDefinitionPoint(const core::StatementInstance& stmt) {
-		assert(isMemoryConstructor(stmt));
+		assert_true(isMemoryConstructor(stmt));
 
 		// globals are globals => always the same
 		if (auto lit = stmt.isa<core::LiteralPtr>()) {
@@ -192,7 +192,7 @@ namespace cba {
 		}
 
 		// locations created by ref.alloc calls are created at the call side
-		assert(stmt.isa<core::CallExprInstance>());
+		assert_true(stmt.isa<core::CallExprInstance>());
 		return stmt.as<core::CallExprInstance>();
 	}
 
@@ -200,7 +200,7 @@ namespace cba {
 	template<typename Context>
 	Location<Context> getLocation(const core::ExpressionInstance& ctor, const Context& ctxt) {
 
-		assert(isMemoryConstructor(ctor));
+		assert_true(isMemoryConstructor(ctor));
 
 		// obtain address of definition point
 		auto def = getLocationDefinitionPoint(ctor);

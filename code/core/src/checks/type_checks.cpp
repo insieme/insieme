@@ -169,7 +169,7 @@ namespace {
 		}
 
 		std::cerr << "Invalid DataPath step encountered: " << *step << "\n";
-		assert(false && "Unsupported DataPath step encountered!");
+		assert_fail() << "Unsupported DataPath step encountered!";
 
 		return fail;
 	}
@@ -353,7 +353,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 
 	// obtain function type ...
 	TypePtr funType = address->getFunctionExpr()->getType();
-	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	assert_eq(address->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Illegal function expression!";
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
 	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
@@ -561,7 +561,7 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	}
 
 	// check type of recursive variable
-	assert(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
+	assert_true(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
 	is = lambda->getVariable()->getType();
 	should = lambda->getDefinition()->getDefinitionOf(lambda->getVariable())->getType();
 	if (*is != *should) {
@@ -845,8 +845,16 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 	for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
 		core::TypePtr requiredType = structType->getTypeOfMember(cur->getName());
 		core::TypePtr isType = cur->getValue()->getType();
-
-		if (*requiredType != *isType) {
+        if (!requiredType) {
+           add(res, Message(address,
+                   EC_TYPE_INVALID_INITIALIZATION_EXPR,
+                   format(
+                           "No member %s in struct type %s",
+                           toString(cur->getName()).c_str(),
+                           toString(*structType).c_str()
+                   ), Message::ERROR)
+            );
+        } else if (*requiredType != *isType) {
 			add(res, Message(address,
 				EC_TYPE_INVALID_INITIALIZATION_EXPR,
 				format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s",
@@ -1247,7 +1255,7 @@ namespace {
 			return true;
 		}
 
-		// also allow function pointers to be casted to different type function pointers 
+		// also allow function pointers to be casted to different type function pointers
 		if (src->getNodeType() == NT_FunctionType && trg->getNodeType() == NT_FunctionType) return true;
 
 		// everything else is invalid
@@ -1314,7 +1322,7 @@ OptionalMessageList GenericZeroCheck::visitCallExpr(const CallExprAddress& addre
 //		- type of the expected inner object
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
-	
+
 	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
@@ -1354,7 +1362,7 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 		return res;
 	}
 
-	// generic types can not be checked, we must trust 
+	// generic types can not be checked, we must trust
 	if (narrowType.isa<GenericTypePtr>())
 		return res;
 
@@ -1376,7 +1384,7 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 ///      Expand check
 ///	Expand construction is a function call in which there are 3 parameters
 //		- variable of any type which belongs as member to a structure/array/tuple
-//		- datapath of this variable inside of the outhermost structure/array/tuple
+//		- datapath of this variable inside of the outermost structure/array/tuple
 //		- type of the expected object
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
@@ -1396,7 +1404,7 @@ OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
 	// Obtain argument type
 	ExpressionPtr srcArg = callExpr->getArgument(0);  // variable
 	ExpressionPtr dpArg  = callExpr->getArgument(1);  // datapath
-	ExpressionPtr trgArg = callExpr->getArgument(2);  // outher data structure type literal
+	ExpressionPtr trgArg = callExpr->getArgument(2);  // outer data structure type literal
 
 	// test whether source is a reference
 	auto srcType = analysis::getReferencedType(srcArg->getType());

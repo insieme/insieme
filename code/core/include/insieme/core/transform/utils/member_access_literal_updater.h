@@ -48,7 +48,7 @@ namespace utils {
 
 
 /**
- * NodeMapper which checks if the type literal argument of compostite and tuple calls are aligned witht the actual type of the struct/tuple.
+ * NodeMapper which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
  * If not the type literal is replaced with the appropriate one
  */
 class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {

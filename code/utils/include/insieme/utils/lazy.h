@@ -66,7 +66,7 @@ namespace utils {
 		 * Obtains a reference to the represented value in case it has been evaluated.
 		 */
 		V& getValue() {
-			assert(evaluated && "Unsupported access to unevaluated value!");
+			assert_true(evaluated) << "Unsupported access to unevaluated value!";
 			return value;
 		}
 
@@ -74,7 +74,7 @@ namespace utils {
 		 * Obtains a reference to the represented value in case it has been evaluated.
 		 */
 		const V& getValue() const {
-			assert(evaluated && "Unsupported access to unevaluated value!");
+			assert_true(evaluated) << "Unsupported access to unevaluated value!";
 			return value;
 		}
 
@@ -85,7 +85,7 @@ namespace utils {
 		 * @return a reference to the internally stored value
 		 */
 		const V& setValue(const V& newValue) {
-			assert(!evaluated && "Cannot update value twice!");
+			assert_false(evaluated) << "Cannot update value twice!";
 			value = newValue;
 			evaluated = true;
 			return value;

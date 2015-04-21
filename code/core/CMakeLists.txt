@@ -8,6 +8,9 @@ include(../environment.cmake)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
+# find modules
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
+
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_core_incs 	include/*.h include/*.def include/*.inc )
