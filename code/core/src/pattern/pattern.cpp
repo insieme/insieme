@@ -109,7 +109,7 @@ namespace pattern {
 
 			// a list of all types of tree pattern constructs
 			enum Type {
-				Value, Constant, LazyConstant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion
+				Value, Constant, LazyConstant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion, Lambda
 			};
 
 			/**
@@ -221,8 +221,7 @@ namespace pattern {
 					return out << "_";
 				}
 			};
-
-
+			
 			// A simple variable
 			struct Variable : public TreePattern {
 				const static TreePatternPtr any;
@@ -330,7 +329,7 @@ namespace pattern {
 
 			};
 
-
+			// Matches any subtree containing one of the subpatterns
 			struct Descendant : public TreePattern {
 				const std::vector<TreePatternPtr> subPatterns;
 
@@ -343,6 +342,26 @@ namespace pattern {
 				}
 			};
 
+			// A generic lambda evaluating a match
+			struct Lambda : public TreePattern {
+
+				typedef std::function<bool(const core::NodePtr&)> ptr_condition_type;
+				typedef std::function<bool(const core::NodeAddress&)> addr_condition_type;
+
+				boost::variant<ptr_condition_type, addr_condition_type> condition;
+
+				Lambda(const ptr_condition_type& condition, bool mayBeType = true)
+					: TreePattern(TreePattern::Lambda, true, mayBeType), condition(condition) {}
+				Lambda(const addr_condition_type& condition, bool mayBeType = true)
+					: TreePattern(TreePattern::Lambda, true, mayBeType), condition(condition) {}
+
+				virtual std::ostream& printTo(std::ostream& out) const {
+					core::NodeManager mgr;
+					return out << "LambdaTreePattern(" << (isPtrCondition() ? "NodePtr" : "NodeAddress") << ")";
+				}
+
+				bool isPtrCondition() const { return condition.which() == 0; }
+			};
 		}
 
 		namespace list {
@@ -457,6 +476,13 @@ namespace pattern {
 			};
 
 		} // end namespace list
+
+		insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodePtr&)>& condition) {
+			return insieme::core::pattern::TreePattern(std::make_shared<impl::tree::Lambda>(condition));
+		}
+		insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodeAddress&)>& condition) {
+			return insieme::core::pattern::TreePattern(std::make_shared<impl::tree::Lambda>(condition));
+		}
 
 	} // end namespace impl
 
@@ -989,7 +1015,7 @@ namespace pattern {
 
 		// -- Match Tree Patterns -------------------------------------------------------
 
-		// Atom, Variable, Wildcard, Node, Negation, Alternative, Descendant, Recursion
+		// Atom, Variable, Wildcard, Node, Negation, Alternative, Descendant, Recursion, Lambda
 
 		namespace tree {
 
@@ -1200,6 +1226,25 @@ namespace pattern {
 				return match(pattern.pattern2, context, tree, delayedCheck);
 			}
 
+			// lambda implementation is specialized for IR nodes and addresses
+			inline bool matchLambda(const pattern::impl::tree::Lambda& pattern, MatchContext<ptr_target>& context, const NodePtr& tree, const std::function<bool(MatchContext<ptr_target>&)>& delayedCheck) {
+				assert_true(pattern.isPtrCondition()) 
+					<< "Pattern " << pattern << " features an address condition but is applied during pointer visiting. This will very likely not do what you want.";
+				return boost::get<pattern::impl::tree::Lambda::ptr_condition_type>(pattern.condition)(tree) && delayedCheck(context);
+			}
+			inline bool matchLambda(const pattern::impl::tree::Lambda& pattern, MatchContext<address_target>& context, const NodeAddress& tree, const std::function<bool(MatchContext<address_target>&)>& delayedCheck) {
+				bool match = false;
+				if(pattern.isPtrCondition()) {
+					match = boost::get<pattern::impl::tree::Lambda::ptr_condition_type>(pattern.condition)(tree.getAddressedNode());
+				} else {
+					match = boost::get<pattern::impl::tree::Lambda::addr_condition_type>(pattern.condition)(tree);
+				}
+				return match && delayedCheck(context);
+			}
+			inline bool matchLambda(const pattern::impl::tree::Lambda& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
+				return false;
+			}
+
 			// -- for test structure only --
 
 			// a specialization for tree pointers
@@ -1227,14 +1272,13 @@ namespace pattern {
 				return match(pattern.pattern, context, children.begin(), children.end(), delayedCheck) && delayedCheck(context);
 			}
 
-
 		#undef MATCH
 
 		} // end namespace tree
 
 		namespace list {
 
-		// Empty, Single, Variable, Alternative, Sequence, Repedition
+		// Empty, Single, Variable, Alternative, Sequence, Repetition
 
 		#define MATCH(NAME) \
 			template<typename T, typename iterator = typename T::value_iterator> \
@@ -1418,6 +1462,7 @@ namespace pattern {
 						CASE(Disjunction);
 						CASE(Descendant);
 						CASE(Recursion);
+						CASE(Lambda);
 					#undef CASE
 				}
 				assert_fail() << "Missed a pattern type!";
