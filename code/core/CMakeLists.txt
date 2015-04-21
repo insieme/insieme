@@ -30,9 +30,16 @@ endif()
 
 # =============================================  bison builds the parser  =====================================
 
+
+set(BISON_ROOT ${third_part_libs_home}/bison-latest)
 FIND_PACKAGE(BISON 3.0 REQUIRED)
 
-IF(BISON_FOUND)
+#FIND_PROGRAM(BISON_EXECUTABLE bison HINTS ${third_part_libs_home}/bison-latest/bin)
+IF(BISON_EXECUTABLE-NOTFOUND)
+    message(FATAL_ERROR "bisson not found")
+
+ELSE()
+    message(STATUS "bison found @ ${BISON_EXECUTABLE}")
 
     set(BISON_INPUT ${insieme_core_yy})
     set(BISON_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bison-flex/)
@@ -53,12 +60,17 @@ IF(BISON_FOUND)
       WORKING_DIRECTORY ${BISON_OUTPUT_PATH}
       OUTPUT ${BISON_OUTPUT}
 )
-ENDIF(BISON_FOUND)
+ENDIF()
 
 # =============================================  flex builds the scanner  =====================================
 
+set(FLEX_ROOT ${third_part_libs_home}/flex-latest)
 FIND_PACKAGE(FLEX 2.5 REQUIRED)
-IF(FLEX_FOUND)
+
+IF(FLEX_EXECUTABLE-NOTFOUND)
+    message(FATAL_ERROR "flex not found")
+ELSE()
+    message(STATUS "flex found @ ${FLEX_EXECUTABLE}")
 
     set(FLEX_INPUT ${insieme_core_ll})
     set(FLEX_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bison-flex/)
@@ -74,10 +86,14 @@ IF(FLEX_FOUND)
       WORKING_DIRECTORY ${FLEX_OUTPUT_PATH}
       OUTPUT ${FLEX_OUTPUT}
 )
-ENDIF(FLEX_FOUND)
+ENDIF()
 
+# make the build aware of generated headers
 include_directories( ${FLEX_OUTPUT_PATH} )
 include_directories( ${BISON_OUTPUT_PATH} )
+
+# flex needs a header in installation
+include_directories( ${FLEX_INCLUDE_DIRS} )
 
 # =============================================  build insieme core .so  =====================================
 
