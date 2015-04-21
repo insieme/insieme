@@ -226,6 +226,21 @@ namespace pattern {
 
 	TreePattern lazyAtom(const std::function<core::NodePtr(core::NodeManager&)>& factory);
 
+	// The following piece of code resolves the issue of overloads on std::function being ambiguous 
+	namespace impl {
+		insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodePtr&)>& condition);
+		insieme::core::pattern::TreePattern lambda(const std::function<bool(const core::NodeAddress&)>& condition);
+	}
+	template<typename T>
+	typename std::enable_if<std::is_same<typename lambda_traits<T>::argument_type, const core::NodePtr&>::value, 
+	TreePattern>::type lambda(const T& condition) {
+		return impl::lambda(static_cast<const std::function<bool(const core::NodePtr&)>&>(condition));
+	}
+	template<typename T>
+	typename std::enable_if<std::is_same<typename lambda_traits<T>::argument_type, const core::NodeAddress&>::value,
+	TreePattern>::type lambda(const T& condition) {
+		return impl::lambda(static_cast<const std::function<bool(const core::NodeAddress&)>&>(condition));
+	}
 
 	ListPattern single(const TreePattern& pattern);
 
