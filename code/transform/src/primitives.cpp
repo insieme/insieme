@@ -57,7 +57,7 @@ namespace transform {
 
 	LambdaTransformation::LambdaTransformation(const parameter::Value& value)
 		: Transformation(LambdaTransformationType::getInstance(), parameter::emptyValue) {
-		assert(false && "Lambda Transformations can not be instantiated using parameters!");
+		assert_fail() << "Lambda Transformations can not be instantiated using parameters!";
 		throw InvalidParametersException("Parameter-based instantiation not supported by lambda transformation!");
 	};
 

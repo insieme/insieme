@@ -66,7 +66,7 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt(
 				"{"
-				"	ref<int<4>> sum = var(0);"
+				"	decl ref<int<4>> sum = var(0);"
 				"	for(uint<4> i = 10 .. 50 : 1) {"
 				"		sum = sum + 1;"
 				"	}"
@@ -96,7 +96,7 @@ namespace measure {
 
 		StatementPtr stmt = builder.parseStmt(
 				"{"
-				"	ref<int<4>> sum = var(0);"
+				"	decl ref<int<4>> sum = var(0);"
 				"	for(uint<4> i = 10 .. 50 : 1) {"
 				"		sum = sum + 1;"
 				"	}"
@@ -170,123 +170,122 @@ namespace measure {
 		}
 	}
 
-//	TEST(Measuring, NestedRegions) {
-//
+	TEST(Measuring, NestedRegions) {
+
 //		FIXME: this code produces a division by 0 (see sum / i ) 
 //		any kind of hack i tried ended up in deadlock/infinite loop 
 //			this is related with measures, tests and runtime...
-//
-//
-//		Logger::setLevel(WARNING);
-//
-//		NodeManager manager;
-//		IRBuilder builder(manager);
-//
-//		vector<NodeAddress> stmts= builder.parseAddressesStatement(
-//				"{"
-//				"	let load = (int<4> n)->int<4> {"
-//				"		ref<int<4>> sum = var(0);"
-//				"		for(int<4> i = 0 .. n) {"
-//				" 			sum = sum / i;"
-//				"			for(int<4> j = 0 .. 100000) {"
-//				"				sum = sum + j;"
-//				"			}"
-//				"		}"
-//				"		return *sum;"
-//				"	};"
-//				"	"
-//				"	ref<int<4>> res = var(0);"
-//				"	$for(int<4> i = 0 .. 5000) {"
-//				"		$for(int<4> j = 0 .. 5000) {"
-//				"			res = res + load(100000);"
-//				"		}$"
-//				"		$for(int<4> k = 0 .. 50) {"
-//				"			$for(int<4> l = 0 .. 100) {"
-//				"				res = res + load(100000);"
-//				"			}$"
-//				"		}$"
-//				"	}$"
-//				"}"
-//		);
-//
-//
-//		ASSERT_EQ(4u, stmts.size());
-//
-//		ForStmtAddress forI = stmts[0].as<ForStmtAddress>();
-//		ForStmtAddress forJ = stmts[1].as<ForStmtAddress>();
-//		ForStmtAddress forK = stmts[2].as<ForStmtAddress>();
-//		ForStmtAddress forL = stmts[3].as<ForStmtAddress>();
-//		StatementAddress root(forI.getRootNode().as<StatementPtr>());
-//
-//		//std::cout << "\n------------------------ Loop I: \n"; dump(forI);
-//		//std::cout << "\n------------------------ Loop J: \n"; dump(forJ);
-//		//std::cout << "\n------------------------ Loop K: \n"; dump(forK);
-//		//std::cout << "\n------------------------ Loop L: \n"; dump(forL);
-//		//std::cout << "\n------------------------ Root: \n"; dump(root);
-//
-//		// measure execution times
-//		auto res = measure(toVector<StatementAddress>(root, forI, forJ, forK, forL), toVector(Metric::WALL_TIME, Metric::CPU_TIME, Metric::NUM_EXEC));
-//
-//		// check whether data is valid
-//		EXPECT_TRUE(res[root][Metric::WALL_TIME].isValid());
-//		EXPECT_TRUE(res[forI][Metric::WALL_TIME].isValid());
-//		EXPECT_TRUE(res[forJ][Metric::WALL_TIME].isValid());
-//		EXPECT_TRUE(res[forK][Metric::WALL_TIME].isValid());
-//		EXPECT_TRUE(res[forL][Metric::WALL_TIME].isValid());
-//
-//		EXPECT_TRUE(res[root][Metric::CPU_TIME].isValid());
-//		EXPECT_TRUE(res[forI][Metric::CPU_TIME].isValid());
-//		EXPECT_TRUE(res[forJ][Metric::CPU_TIME].isValid());
-//		EXPECT_TRUE(res[forK][Metric::CPU_TIME].isValid());
-//		EXPECT_TRUE(res[forL][Metric::CPU_TIME].isValid());
-//
-//		EXPECT_TRUE(res[root][Metric::NUM_EXEC].isValid());
-//		EXPECT_TRUE(res[forI][Metric::NUM_EXEC].isValid());
-//		EXPECT_TRUE(res[forJ][Metric::NUM_EXEC].isValid());
-//		EXPECT_TRUE(res[forK][Metric::NUM_EXEC].isValid());
-//		EXPECT_TRUE(res[forL][Metric::NUM_EXEC].isValid());
-//
-//		// check whether data is not 0
-//		EXPECT_LT(0.0, res[root][Metric::WALL_TIME].getValue());
-//		EXPECT_LT(0.0, res[forI][Metric::WALL_TIME].getValue());
-//		EXPECT_LT(0.0, res[forJ][Metric::WALL_TIME].getValue());
-//		EXPECT_LT(0.0, res[forK][Metric::WALL_TIME].getValue());
-//		EXPECT_LT(0.0, res[forL][Metric::WALL_TIME].getValue());
-//
-//		// check whether data is valid
-//		EXPECT_LT(0.0, res[root][Metric::CPU_TIME].getValue());
-//		EXPECT_LT(0.0, res[forI][Metric::CPU_TIME].getValue());
-//		EXPECT_LT(0.0, res[forJ][Metric::CPU_TIME].getValue());
-//		EXPECT_LT(0.0, res[forK][Metric::CPU_TIME].getValue());
-//		EXPECT_LT(0.0, res[forL][Metric::CPU_TIME].getValue());
-//
-//		EXPECT_LT(0.0, res[root][Metric::NUM_EXEC].getValue());
-//		EXPECT_LT(0.0, res[forI][Metric::NUM_EXEC].getValue());
-//		EXPECT_LT(0.0, res[forJ][Metric::NUM_EXEC].getValue());
-//		EXPECT_LT(0.0, res[forK][Metric::NUM_EXEC].getValue());
-//		EXPECT_LT(0.0, res[forL][Metric::NUM_EXEC].getValue());
-//
-//		// root has to be the sum of the loops
-//		EXPECT_GT(res[root][Metric::WALL_TIME], res[forI][Metric::WALL_TIME]);
-//		EXPECT_GT(res[root][Metric::CPU_TIME], res[forI][Metric::CPU_TIME]);
-//
-//		// loop I is bigger than sum of J and K
-//		EXPECT_GT(res[forI][Metric::WALL_TIME], res[forJ][Metric::WALL_TIME] + res[forK][Metric::WALL_TIME]);
-//		EXPECT_GT(res[forI][Metric::CPU_TIME], res[forJ][Metric::CPU_TIME] + res[forK][Metric::CPU_TIME]);
-//
-//		// loop K is bigger than L
-//		EXPECT_GT(res[forK][Metric::WALL_TIME], res[forL][Metric::WALL_TIME]);
-//		EXPECT_GT(res[forK][Metric::CPU_TIME], res[forL][Metric::CPU_TIME]);
-//
-//
-//		// check number of executions
-//		EXPECT_EQ(1, (int)res[root][Metric::NUM_EXEC].getValue());
-//		EXPECT_EQ(1, (int)res[forI][Metric::NUM_EXEC].getValue());
-//		EXPECT_EQ(5000, (int)res[forJ][Metric::NUM_EXEC].getValue());
-//		EXPECT_EQ(5000, (int)res[forK][Metric::NUM_EXEC].getValue());
-//		EXPECT_EQ(5000*50, (int)res[forL][Metric::NUM_EXEC].getValue());
-//
-//	}
+
+		Logger::setLevel(WARNING);
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		vector<NodeAddress> stmts= builder.parseAddressesStatement(
+				"{"
+				"	let load = lambda (int<4> n)->int<4> {"
+				"		decl ref<int<4>> sum = var(0);"
+				"		for(int<4> i = 0 .. n) {"
+				" 			sum = sum / i;"
+				"			for(int<4> j = 0 .. 100000) {"
+				"				sum = sum + j;"
+				"			}"
+				"		}"
+				"		return *sum;"
+				"	};"
+				"	"
+				"	decl ref<int<4>> res = var(0);"
+				"	$for(int<4> i = 0 .. 5000) {"
+				"		$for(int<4> j = 0 .. 5000) {"
+				"			res = res + load(100000);"
+				"		}$"
+				"		$for(int<4> k = 0 .. 50) {"
+				"			$for(int<4> l = 0 .. 100) {"
+				"				res = res + load(100000);"
+				"			}$"
+				"		}$"
+				"	}$"
+				"}"
+		);
+
+
+		ASSERT_EQ(4u, stmts.size());
+
+		ForStmtAddress forI = stmts[0].as<ForStmtAddress>();
+		ForStmtAddress forJ = stmts[1].as<ForStmtAddress>();
+		ForStmtAddress forK = stmts[2].as<ForStmtAddress>();
+		ForStmtAddress forL = stmts[3].as<ForStmtAddress>();
+		StatementAddress root(forI.getRootNode().as<StatementPtr>());
+
+		//std::cout << "\n------------------------ Loop I: \n"; dump(forI);
+		//std::cout << "\n------------------------ Loop J: \n"; dump(forJ);
+		//std::cout << "\n------------------------ Loop K: \n"; dump(forK);
+		//std::cout << "\n------------------------ Loop L: \n"; dump(forL);
+		//std::cout << "\n------------------------ Root: \n"; dump(root);
+
+		// measure execution times
+		auto res = measure(toVector<StatementAddress>(root, forI, forJ, forK, forL), toVector(Metric::WALL_TIME, Metric::CPU_TIME, Metric::NUM_EXEC));
+
+		// check whether data is valid
+		EXPECT_TRUE(res[root][Metric::WALL_TIME].isValid());
+		EXPECT_TRUE(res[forI][Metric::WALL_TIME].isValid());
+		EXPECT_TRUE(res[forJ][Metric::WALL_TIME].isValid());
+		EXPECT_TRUE(res[forK][Metric::WALL_TIME].isValid());
+		EXPECT_TRUE(res[forL][Metric::WALL_TIME].isValid());
+
+		EXPECT_TRUE(res[root][Metric::CPU_TIME].isValid());
+		EXPECT_TRUE(res[forI][Metric::CPU_TIME].isValid());
+		EXPECT_TRUE(res[forJ][Metric::CPU_TIME].isValid());
+		EXPECT_TRUE(res[forK][Metric::CPU_TIME].isValid());
+		EXPECT_TRUE(res[forL][Metric::CPU_TIME].isValid());
+
+		EXPECT_TRUE(res[root][Metric::NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forI][Metric::NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forJ][Metric::NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forK][Metric::NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forL][Metric::NUM_EXEC].isValid());
+
+		// check whether data is not 0
+		EXPECT_LT(0.0, res[root][Metric::WALL_TIME].getValue());
+		EXPECT_LT(0.0, res[forI][Metric::WALL_TIME].getValue());
+		EXPECT_LT(0.0, res[forJ][Metric::WALL_TIME].getValue());
+		EXPECT_LT(0.0, res[forK][Metric::WALL_TIME].getValue());
+		EXPECT_LT(0.0, res[forL][Metric::WALL_TIME].getValue());
+
+		// check whether data is valid
+		EXPECT_LT(0.0, res[root][Metric::CPU_TIME].getValue());
+		EXPECT_LT(0.0, res[forI][Metric::CPU_TIME].getValue());
+		EXPECT_LT(0.0, res[forJ][Metric::CPU_TIME].getValue());
+		EXPECT_LT(0.0, res[forK][Metric::CPU_TIME].getValue());
+		EXPECT_LT(0.0, res[forL][Metric::CPU_TIME].getValue());
+
+		EXPECT_LT(0.0, res[root][Metric::NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forI][Metric::NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forJ][Metric::NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forK][Metric::NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forL][Metric::NUM_EXEC].getValue());
+
+		// root has to be the sum of the loops
+		EXPECT_GT(res[root][Metric::WALL_TIME], res[forI][Metric::WALL_TIME]);
+		EXPECT_GT(res[root][Metric::CPU_TIME], res[forI][Metric::CPU_TIME]);
+
+		// loop I is bigger than sum of J and K
+		EXPECT_GT(res[forI][Metric::WALL_TIME], res[forJ][Metric::WALL_TIME] + res[forK][Metric::WALL_TIME]);
+		EXPECT_GT(res[forI][Metric::CPU_TIME], res[forJ][Metric::CPU_TIME] + res[forK][Metric::CPU_TIME]);
+
+		// loop K is bigger than L
+		EXPECT_GT(res[forK][Metric::WALL_TIME], res[forL][Metric::WALL_TIME]);
+		EXPECT_GT(res[forK][Metric::CPU_TIME], res[forL][Metric::CPU_TIME]);
+
+
+		// check number of executions
+		EXPECT_EQ(1, (int)res[root][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(1, (int)res[forI][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(5000, (int)res[forJ][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(5000, (int)res[forK][Metric::NUM_EXEC].getValue());
+		EXPECT_EQ(5000*50, (int)res[forL][Metric::NUM_EXEC].getValue());
+
+	}
 
 	TEST(Measuring, MultipleExitPoints) {
 		Logger::setLevel(WARNING);
@@ -304,11 +303,11 @@ namespace measure {
 
 
 		// a return with a n expression
-		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ } } (); }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
+		EXPECT_TRUE(measure(builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ return 1 + 2; }$ } } (); }")[0].as<core::StatementAddress>(), Metric::WALL_TIME).isValid());
 
 
 		// two nested regions ending at the same point
-		vector<NodeAddress> addr = builder.parseAddressesStatement("{ ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } } (); }");
+		vector<NodeAddress> addr = builder.parseAddressesStatement("{ lambda ()->int<4> { for(int<4> i= 0 .. 10) { ${ 2 + 3; ${ return 1 + 2; }$ }$ } } (); }");
 		auto res = measure(toVector(addr[0].as<core::StatementAddress>(), addr[1].as<core::StatementAddress>()), toVector(Metric::WALL_TIME));
 
 		EXPECT_TRUE(res[addr[0].as<core::StatementAddress>()][Metric::WALL_TIME].isValid());
@@ -324,7 +323,7 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt(
 				"{"
-				"	ref<int<4>> sum = var(0);"
+				"	decl ref<int<4>> sum = var(0);"
 				"	for(uint<4> i = 10 .. 50 : 1) {"
 				"		sum = sum + 1;"
 				"	}"
@@ -367,7 +366,7 @@ namespace measure {
 // 		IRBuilder builder(manager);
 // 		StatementPtr stmt = builder.parseStmt(
 // 				"{"
-// 				"	ref<int<4>> sum = var(0);"
+// 				"	decl ref<int<4>> sum = var(0);"
 // 				"	for(uint<4> i = 10 .. 50 : 1) {"
 // 				"		sum = sum + 1;"
 // 				"	}"
@@ -405,7 +404,7 @@ namespace measure {
 //		IRBuilder builder(manager);
 //		StatementPtr stmt = builder.parseStmt(
 //				"{"
-//				"	ref<int<4>> sum = var(0);"
+//				"	decl ref<int<4>> sum = var(0);"
 //				"	for(uint<4> i = 10 .. 50 : 1) {"
 //				"		sum = sum + 1;"
 //				"	}"
@@ -463,7 +462,7 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt(
 				"{"
-				"	ref<int<4>> sum = var(0);"
+				"	decl ref<int<4>> sum = var(0);"
 				"	for(uint<4> i = 10 .. 50 : 1) {"
 				"		for(uint<4> j = 0 .. 80 : 1) {"
 				"			sum = sum + 1;"
@@ -557,7 +556,7 @@ namespace measure {
 		IRBuilder builder(manager);
 		StatementPtr stmt = builder.parseStmt(
 				"{"
-				"	ref<int<4>> sum = var(0);"
+				"	decl ref<int<4>> sum = var(0);"
 				"	for(uint<4> i = 1 .. 5000 : 1) {"
 				"		for(uint<4> j = 1 .. 5000 : 1) {"
 				"			sum = sum + 1;"
@@ -618,7 +617,7 @@ namespace measure {
 //		IRBuilder builder(manager);
 //		StatementPtr stmt = builder.parseStmt(
 //				"{"
-//				"	ref<int<4>> sum = var(0);"
+//				"	decl ref<int<4>> sum = var(0);"
 //				"	for(uint<4> i = 10 .. 50 : 1) {"
 //				"		sum = sum + 1;"
 //				"	}"
@@ -646,7 +645,7 @@ namespace measure {
 //		IRBuilder builder(manager);
 //		StatementPtr stmt = builder.parseStmt(
 //				"{"
-//				"	ref<int<4>> sum = var(0);"
+//				"	decl ref<int<4>> sum = var(0);"
 //				"	for(uint<4> i = 10 .. 50 : 1) {"
 //				"		sum = sum + 1;"
 //				"	}"

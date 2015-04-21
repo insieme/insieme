@@ -246,7 +246,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	LOG_EXPR_CONVERSION(callExpr, ret);
 	// TODO: static methods
 
-	const core::IRBuilder& builder = convFact.builder;
+	const core::FrontendIRBuilder& builder = convFact.builder;
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	if (!methodDecl){
@@ -345,7 +345,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 			ownerObj =  builder.refVar (ownerObj);
 		}
 
-		// incorporate this to the begining of the args list
+		// incorporate this to the beginning of the args list
 		args.insert (args.begin(), ownerObj);
 	}
 	else if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
@@ -373,7 +373,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(callExpr, retIr);
-	const core::IRBuilder& builder = convFact.builder;
+	const core::FrontendIRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
     const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();

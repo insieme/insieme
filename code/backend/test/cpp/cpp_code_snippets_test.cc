@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/frontend_ir_builder.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -235,7 +236,7 @@ namespace backend {
 	TEST(CppSnippet, ClassMetaInfo) {
 
 		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
+		core::FrontendIRBuilder builder(mgr);
 
 		// create a class type
 		auto counterType = builder.parseType("let Counter = struct { int<4> value; }; Counter");
@@ -361,7 +362,7 @@ namespace backend {
 	TEST(CppSnippet, VirtualFunctionCall) {
 
 		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
+		core::FrontendIRBuilder builder(mgr);
 
 		std::map<string, core::NodePtr> symbols;
 

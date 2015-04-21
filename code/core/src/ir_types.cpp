@@ -90,7 +90,7 @@ namespace core {
 
 		// handle destructor
 		if (isDestructor()) {
-			assert(1u == getParameterTypes().size());
+			assert_eq(1u, getParameterTypes().size());
 			return out << "(~" << *objType << "::())";
 		}
 

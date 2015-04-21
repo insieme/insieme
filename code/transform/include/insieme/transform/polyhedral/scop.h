@@ -38,13 +38,11 @@
 #define NEWSCOP_H
 
 #include "boost/optional.hpp"
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
 class SCoP {
-
 	boost::optional<unsigned int> obeysDeps;
 
 public:

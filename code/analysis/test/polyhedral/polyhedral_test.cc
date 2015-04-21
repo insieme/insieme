@@ -205,7 +205,7 @@ TEST(AffineFunction, Creation) {
 
 	// convertion to IR 
 	ExpressionPtr expr = toIR(mgr, af);
-	EXPECT_EQ("int_add(int_add(v2, int_mul(2, v3)), 10)", toString(*expr));
+	EXPECT_EQ("int_add(int_add(v2, int_mul(2, v3)), 10)", toString(*insieme::core::analysis::normalize(expr)));
 }
 
 TEST(AffineFunction, CreationFromExpr) {
@@ -258,7 +258,7 @@ TEST(AffineFunction, ToExpr) {
 
 	ExpressionPtr expr = toIR(mgr, af);
 
-	EXPECT_EQ("int_add(v1, v3)", toString(*expr));
+	EXPECT_EQ("int_add(v1, v3)", toString(*insieme::core::analysis::normalize(expr)));
 
 	AffineFunction af2(iterVec, expr);
 	EXPECT_EQ(*expr, *toIR(mgr,af2));
@@ -406,20 +406,16 @@ TEST(Constraint, Combiner) {
 
 	AffineFunction af(iterVec, {0,1,2,10}); //FIXE LE
 	AffineConstraint c1(af, ConstraintType::EQ);
-	EXPECT_EQ("int_le(int_add(int_add(v2, int_mul(2, v3)), 10), 0)", toString(*toIR(mgr,c1)));
+	EXPECT_EQ("int_le(int_add(int_add(v2, int_mul(2, v3)), 10), 0)", toString(*insieme::core::analysis::normalize(toIR(mgr,c1))));
 
 	AffineFunction af2(iterVec, {2,3,0,10});
 	AffineConstraint c2(af2, ConstraintType::LT);
-	EXPECT_EQ( "int_le(int_add(int_add(int_mul(2, v1), int_mul(3, v2)), 10), 0)", toString(*toIR(mgr,c2)) );
+	EXPECT_EQ( "int_le(int_add(int_add(int_mul(2, v1), int_mul(3, v2)), 10), 0)", toString(*insieme::core::analysis::normalize(toIR(mgr,c2))) );
 
 	AffineConstraintPtr&& ptr = c1 or not_(c2);
 
 	ExpressionPtr expr = toIR(mgr, ptr);
-	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return true;} else {}; return v2();}}"
-			  "(int_le(int_add(int_add(v2, int_mul(2, v3)), 10), 0), "
-			  "bind(){rec v0.{v0=fun(int<4> v4, int<4> v5) {"
-			  	"return bool_not(int_le(int_add(int_add(int_mul(2, v4), int_mul(3, v5)), 10), 0));"
-			  "}}(v1, v2)})", toString(*expr));
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return true;} else {}; return v2();}}(int_le(int_add(int_add(v2, int_mul(2, v3)), 10), 0), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return bool_not(int_le(int_add(int_add(int_mul(2, v1), int_mul(3, v2)), 10), 0));}}(v1, v2)})" ,toString(*insieme::core::analysis::normalize(expr)));
 	
 }
 
@@ -921,11 +917,11 @@ TEST(Transformations, Interchange) {
 
 	NodePtr ir = scop.toIR(mgr);
 	
-	EXPECT_EQ( "for(int<4> v7 = 0 .. int_add(100, 1) : 1) {"
-				 "for(int<4> v8 = 0 .. int_add(100, 1) : 1) {"
-				 	"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v7), v8)));"
+	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 1) {"
+				 "for(int<4> v1 = 0 .. 101 : 1) {"
+				 	"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v0), v1)));"
 				  "};"
-			   "}", toString(*ir));
+			   "}", toString(*insieme::core::analysis::normalize(ir)));
 
 	// perform interchange 
 	AffineSystem& schedule = scop[0].getSchedule();
@@ -933,11 +929,11 @@ TEST(Transformations, Interchange) {
 					{ 1, 0, 0} } );
 
 	ir = scop.toIR(mgr);
-	EXPECT_EQ( "for(int<4> v9 = 0 .. int_add(100, 1) : 1) {"
-					"for(int<4> v10 = 0 .. int_add(100, 1) : 1) {"
-						"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v10), v9)));"
+	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 1) {"
+					"for(int<4> v1 = 0 .. 101 : 1) {"
+						"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v1), v0)));"
 					"};"
-				"}", toString(*ir));
+				"}", toString(*insieme::core::analysis::normalize(ir)));
 }
 
 TEST(Transformations, Tiling) {
@@ -983,11 +979,12 @@ TEST(Transformations, Tiling) {
 	scop.push_back(s);
 
 	NodePtr ir = scop.toIR(mgr);
-	EXPECT_EQ( "for(int<4> v8 = 0 .. int_add(100, 1) : 1) {"
-					"for(int<4> v9 = 0 .. int_add(100, 1) : 1) {"
-						"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v8), v9)));"
+
+	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 1) {"
+					"for(int<4> v1 = 0 .. 101 : 1) {"
+						"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v0), v1)));"
 					"};"
-				"}", toString(*ir));
+				"}", toString(*insieme::core::analysis::normalize(ir)));
 
 	// perform interchange 
 	AffineSystem& schedule = scop[0].getSchedule();
@@ -1027,13 +1024,13 @@ TEST(Transformations, Tiling) {
 	schedule[1].setCoeff(iter2, 0);
 
 	ir = scop.toIR(mgr);
-	EXPECT_EQ( "for(int<4> v11 = 0 .. int_add(100, 1) : 25) {"
-					"for(int<4> v12 = v11 .. int_add(select(int_add(cast<int<4>>(v11), cast<int<4>>(25)), 100, int_lt), 1) : 1) {"
-						"for(int<4> v13 = 0 .. int_add(100, 1) : 1) {"
-							"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v12), v13)));"
+	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 25) {"
+					"for(int<4> v1 = v0 .. int_add(select(int_add(v0, 25), 100, int_lt), 1) : 1) {"
+						"for(int<4> v2 = 0 .. 101 : 1) {"
+							"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v1), v2)));"
 						"};"
 					"};"
-				"}", toString(*ir));
+				"}", toString(*insieme::core::analysis::normalize(ir)));
 
 }
 
@@ -1130,13 +1127,13 @@ TEST(Transformations, Fusion) {
 
 
 	EXPECT_EQ("{"
-				"for(int<4> v9 = 0 .. int_add(90, 1) : 1) {"
-					"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v9), 0)));"
+				"for(int<4> v0 = 0 .. 91 : 1) {"
+					"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v0), 0)));"
 			   "}; "
-			   "for(int<4> v10 = 0 .. int_add(100, 1) : 1) {"
-					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v10), 0))));"
+			   "for(int<4> v1 = 0 .. 101 : 1) {"
+					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v1), 0))));"
 				"};"
-			  "}", toString(*ir));
+			  "}", toString(*insieme::core::analysis::normalize(ir)));
 
 
 	// Add an outer loop 
@@ -1172,13 +1169,13 @@ TEST(Transformations, Fusion) {
 	ir = scop.toIR(mgr);
 
 	EXPECT_EQ("{"
-				"for(int<4> v11 = 0 .. int_add(90, 1) : 1) {"
-					"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v11), 0))); "
-					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v11), 0))));"
+				"for(int<4> v0 = 0 .. 91 : 1) {"
+					"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v0), 0))); "
+					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v0), 0))));"
 				"}; "
-				"for(int<4> v12 = 91 .. int_add(100, 1) : 1) {"
-					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v12), 0))));"
+				"for(int<4> v1 = 91 .. 101 : 1) {"
+					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v1), 0))));"
 				"};"
-			  "}", toString(*ir));
+			  "}", toString(*insieme::core::analysis::normalize(ir)));
 }
  

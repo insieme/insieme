@@ -70,7 +70,7 @@ typename AnalysisData::value_type find_constant_value(const AccessClassSet& clas
 		if (fit!=in.end()) { return *fit; }
 	}
 	
-	assert(false && "Big problem");
+	assert_fail() << "Big problem";
 	return AnalysisData::value_type();
 }
 
@@ -101,7 +101,7 @@ TEST(ConstantPropagation, PropagateConstantNoControl) {
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -137,7 +137,7 @@ TEST(ConstantPropagation, PropagateConstant) {
 
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor( accPtr );
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -174,7 +174,7 @@ TEST(ConstantPropagation, PropagateNotConstant) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -212,7 +212,7 @@ TEST(ConstantPropagation, PropagateArrayElementConstant) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -257,7 +257,7 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 	
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -297,7 +297,7 @@ TEST(ConstantPropagation, Formulas) {
  
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 	
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);
@@ -334,7 +334,7 @@ TEST(ConstantPropagation, TransitivePropagation) {
 
 	auto accPtr = getImmediateAccess(mgr, addresses[1]);
 	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
-	assert( !accClasses.empty() );
+	assert_false(accClasses.empty());
 	
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 	auto cons = find_constant_value(accClasses, consts);

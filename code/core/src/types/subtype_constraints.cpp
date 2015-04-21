@@ -179,7 +179,7 @@ namespace types {
 				// compute (reverse) topological order
 				boost::topological_sort(graph, std::back_inserter(order));
 			} catch(boost::not_a_dag e) {
-				assert(0 && "There should not be any cycles!");
+				assert_fail() << "There should not be any cycles!";
 			}
 
 			// reverse order and return result
@@ -369,7 +369,7 @@ namespace types {
 			// get types of current node
 			vertex_descriptor vertex = order[i];
 			vector<TypePtr>& curList = graph[vertex];
-			assert(curList.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
+			assert_eq(curList.size(), 1) << "Graph-Vertices are not supposed to contain more than 1 type!";
 
 			TypePtr cur = curList[0];
 
@@ -384,7 +384,7 @@ namespace types {
 			boost::tie(begin, end) = boost::in_edges(vertex, graph);
 			for (auto it = begin; it!=end; ++it) {
 				vector<TypePtr>& sub = graph[source(*it, graph)];
-				assert(sub.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
+				assert_eq(sub.size(), 1) << "Graph-Vertices are not supposed to contain more than 1 type!";
 				subTypes.push_back(sub[0]);
 			}
 
@@ -436,7 +436,7 @@ namespace types {
 				boost::tie(begin, end) = boost::out_edges(vertex, graph);
 				for (auto it = begin; it!=end; ++it) {
 					vector<TypePtr>& super = graph[target(*it, graph)];
-					assert(super.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
+					assert_eq(super.size(), 1) << "Graph-Vertices are not supposed to contain more than 1 type!";
 					superTypes.push_back(super[0]);
 				}
 

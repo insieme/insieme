@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -98,12 +98,12 @@ namespace ocl_host {
 		unsigned id = codes.size();
 		kernelMap.insert(std::make_pair(kernel, id));
 
-		assert(kernel->getNodeType() == core::NT_CallExpr);
+		assert_eq(kernel->getNodeType(), core::NT_CallExpr);
 		core::ExpressionPtr kernelLambda = core::analysis::getArgument(kernel, 0);
 
 		// fix name of kernel
 		std::string name;
-		if (insieme::core::annotations::hasNameAttached(kernelLambda)) {
+		if (insieme::core::annotations::hasAttachedName(kernelLambda)) {
 			name = insieme::core::annotations::getAttachedName(kernelLambda);
 		} else {
 			name = "main_kernel";

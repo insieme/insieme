@@ -57,9 +57,9 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 	NodeManager& m = Baseclass::mgr;
 	IRBuilder builder(m);
 
-for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
-	std::cout << "      things " << *dudu.first << std::endl;
-}
+//for(std::pair<ExpressionAddress, StatementPtr> dudu : varsToPropagate) {
+//	std::cout << "      things " << dudu.first << " " << *dudu.first << std::endl;
+//}
 	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
 		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
 		if(CallExprAddress call = expr.isa<CallExprAddress>()) {
@@ -72,7 +72,7 @@ for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
 //std::cout << "\nat the tuple member access " << oldRootVar << "\n";
 
 			if(newRootVarIter != varsToPropagate.end()) { // tuple has been updated, check if it was the current field
-				ExpressionPtr newRootVar = newRootVarIter->second;
+				ExpressionPtr newRootVar = newRootVarIter->second.as<ExpressionPtr>();
 
 				RefTypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
 						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>()).as<RefTypePtr>();
@@ -96,7 +96,7 @@ for(std::pair<ExpressionAddress, ExpressionPtr> dudu : varsToPropagate) {
 				if(!lambda){
 					return;
 				}
-dumpPretty(lambda);
+
 				globalLambdas.push_back(lambda);
 
 				for_range(make_paired_range(parent->getArguments(), lambda->getLambda()->getParameters()->getElements()),
@@ -110,6 +110,13 @@ dumpPretty(lambda);
 						structs[pair.second] = pair.first->getType().as<RefTypePtr>();
 //						varsToPropagate[pair.second] = newParam;
 //std::cout << ": \nAdding: " << pair.second << " " << *pair.second << " - " << structs.size() << std::endl;
+//std::cout << ": from: " << getDeclaration(call->getArgument(0)) << " " << *oldRootVar << " - " << structs.size() << std::endl;
+//NodeManager& m = call->getNodeManager();
+//ExpressionAddress localTuple = getDeclaration(call->getArgument(0));
+//varsToPropagate[localTuple] = builder.variable(
+//		core::transform::replaceAllGen(m, localTuple->getType().getAddressedNode(), builder.refType(builder.arrayType(oldStructType)), newStructType));
+//replacements[localTuple] = varsToPropagate[localTuple];
+//						structs[getDeclaration(call->getArgument(0))] = pair.first->getType().as<RefTypePtr>();
 					}
 				});
 			}
@@ -153,11 +160,11 @@ dumpPretty(lambda);
 }
 
 template<class Baseclass>
-StatementList ParSecTransform<Baseclass>::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const VariablePtr& newVar,
+StatementList ParSecTransform<Baseclass>::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(Baseclass::mgr);
 
-	// replace declaration with compound statement containing only the declaration of the new variable and it's initialization
+	// replace declaration with compound statement containing only the declaration of the new variable and its initialization
 	StatementList allDecls;
 
 	NodeMap inInitReplacementsInCaseOfNovarInInit;
@@ -202,7 +209,7 @@ void ParSecTransform<Baseclass>::transform() {
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 			TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), oldStructType,
 					newStructType).as<TypePtr>();
-std::cout << "NT: " << newStructType << " var " << *oldVar << std::endl;
+//std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -231,7 +238,7 @@ std::cout << "NT: " << newStructType << " var " << *oldVar << std::endl;
 //		}
 
 		//replace arguments
-		for(std::pair<ExpressionAddress, ExpressionPtr> vr : varReplacements) {
+		for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 //			std::cout << "from " << *vr.first << " to " << *vr.second << std::endl;
 
 			if(vr.first.isa<VariableAddress>())

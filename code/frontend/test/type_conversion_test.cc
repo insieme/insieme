@@ -59,8 +59,11 @@
 
 #include "test_utils.inc"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 using namespace insieme;
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
 using namespace insieme::frontend::extensions;
@@ -498,9 +501,11 @@ TEST(TypeConversion, FileTest) {
 	NodeManager mgr;
 
 
-	insieme::frontend::ConversionSetup setup;
-	setup.frontendExtensionInit();
-	insieme::frontend::conversion::Converter convFactory( mgr, tu, setup);
+    std::string fileName = CLANG_SRC_DIR "/inputs/types.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
+
+	insieme::frontend::conversion::Converter convFactory( mgr, tu, options.job);
 	convFactory.convert();
 
 	auto resolve = [&](const core::NodePtr& cur) {

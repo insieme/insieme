@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -289,7 +289,7 @@ public:
 };
 
 inline const core::StatementAddress& DependenceGraph::getStatementAddress(const VertexTy& v) const {
-	assert( v < size() && "Vertex id is not part of the graph" );
+	assert_true( v < size()) << "Vertex id is not part of the graph";
 	return graph[v]->m_addr;
 }
 

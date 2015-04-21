@@ -11,8 +11,11 @@
 
 #include "insieme/core/parser3/detail/scanner.h"
 
+#include "insieme/core/lang/extension.h"
+
 // this last one is generated and the path will be provided to the command
 #include "inspire_parser.hpp"
+
 
 namespace insieme{
 namespace core{
@@ -23,19 +26,22 @@ namespace detail{
 
 
     void DeclarationContext::open_scope(const std::string& msg){
-        //for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+       //// for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
         scope_stack.push_back(ctx_map_type());
     }
     void DeclarationContext::close_scope(const std::string& msg){
         scope_stack.pop_back();
-        //for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
+      //  for (unsigned i =0; i< scope_stack.size(); ++i) std::cout << " ";
     }
 
     bool DeclarationContext::add_symb(const std::string& name, NodePtr node){
+
         if (scope_stack.empty()) {
+
             if (global_scope.find(name) != global_scope.end()) { 
                 return false;
             }
+
             global_scope[name] =  node;
         }
         else  {
@@ -489,6 +495,11 @@ namespace detail{
             return;
         }
 
+        if (name.find(".") != std::string::npos) {
+            error(l, format("symbol names can not contain dot chars: %s", name));
+            return;
+        }
+
         // ignore wildcard for unused variables
         if (name == "_") return;
 
@@ -582,8 +593,7 @@ namespace {
     void inspire_driver::add_let_lambda(const location& l, const location& begin, const location& end, 
                                         const TypePtr& retType, const VariableList& params, const FunctionKind& fk){
 
-        // if there are lambdas inside of the derefed lambda, those will be handled by the nested driver
-        if (inhibit_building_count >1) return;
+        if (inhibit_building_count > 1) return;
         lambda_lets.push_back(Lambda_let(retType, params, get_body_string(str, begin, end), fk));
     }
 
@@ -610,17 +620,16 @@ namespace {
 
     void inspire_driver::close_let_statement(const location& l){
 
-         //std::cout << "finish let "<< std::endl;
-         // print_location(l);
-         // std::cout << "    let count" << let_count << std::endl;
-         // std::cout << "    inhibitcount" << inhibit_building_count << std::endl;
-         // std::cout << "    let_mames " << let_names << std::endl;
-         // std::cout << "    let_type " << type_lets << std::endl;
-         // std::cout << "    let_lambd " << lambda_lets.size() << std::endl;
+        // if we are inside of a let in a let
+        if (let_count >1) {
+            let_count --;
+            set_inhibit(false);
+            return;
+        }
   
         // LAMBDA LETS (functions):
         if(let_names.size() == lambda_lets.size()){
-            DeclarationContext temp_scope (scopes);
+            //DeclarationContext temp_scope (scopes);
 
             std::map<std::string, VariablePtr> funcVars;
             unsigned count = 0;
@@ -639,10 +648,12 @@ namespace {
             std::vector<std::pair<VariablePtr, LambdaExprPtr>> funcs;
             count =0;
             for(const auto& let : lambda_lets){
-                inspire_driver let_driver(let.expression, mgr, temp_scope);
+                inspire_driver let_driver(let.expression, mgr, scopes);
                 for (const auto pair : funcVars) let_driver.add_symb(pair.first, pair.second);
                 try{
+
                     ExpressionPtr lambda = let_driver.parseExpression();
+
                     if (!lambda) { 
                         // write the location with the offset of the current call site
                         // FIXME: due to the new string, locations get messed up
@@ -651,6 +662,7 @@ namespace {
                         
                         return;
                     }
+
                     funcs.push_back({funcVars[let_names[count]],lambda.as<LambdaExprPtr>()});
                 }catch(...){
                     error(l, "something went really wrong parsing lambda body");
@@ -715,7 +727,6 @@ namespace {
 
                 if(contains_type_variables(type, variables)){
                     auto tmp =transform::replaceAllGen(mgr, type, non_recursive);
-                    std::cout << tmp << std::endl;
 
                     type_defs.push_back(builder.recTypeBinding(builder.typeVariable(name), tmp));
                     names.push_back(name);
@@ -744,17 +755,27 @@ namespace {
             expr_lets.clear();
         }
         else{ 
+
+//            std::cout << "let count: " << let_count << std::endl;
+//            std::cout << " ihibit? " << inhibit_building_count <<  std::endl;
+//
+//            std::cout << "let_mames " << let_names << std::endl;
+//            std::cout << "let_type " << type_lets << std::endl;
+//            std::cout << "let_expr " << expr_lets << std::endl;
+//            std::cout << "let_lambd " << lambda_lets.size() << std::endl;
+
+            if (lambda_lets.size() + type_lets.size() + expr_lets.size() !=  let_names.size() ){
+                error(l, "not all let names were defined");
+                return;
+            }
     
-            std::cout << "let_mames " << let_names << std::endl;
-            std::cout << "let_type " << type_lets << std::endl;
-            std::cout << "let_expr " << expr_lets << std::endl;
-            std::cout << "let_lambd " << lambda_lets.size() << std::endl;
             error(l, "mixed type/function/closure let not allowed");
         }
+
        
         let_names.clear();
         let_count --;
-        inhibit_building_count = false;
+        set_inhibit(false);
     }
 
     void inspire_driver::open_scope(const location& l, const std::string& name){
@@ -777,6 +798,24 @@ namespace {
     bool inspire_driver::inhibit_building()const{
         return inhibit_building_count > 0;
     }
+
+
+    void inspire_driver::using_scope_handle (const location& l, const std::vector<std::string>& extension_names){
+
+        for ( std::string extensionName : extension_names){
+
+            extensionName.replace(0,1,"");
+            extensionName.replace(extensionName.size()-1,1,"");
+
+            const lang::Extension& extension = mgr.getLangExtensionByName(extensionName);
+
+            for(const std::pair<string, NodePtr>& cur : extension.getNamedIrExtensions()) {
+                add_symb(l, cur.first, cur.second);
+            }
+        }
+
+    }
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Debug tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 namespace {

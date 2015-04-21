@@ -258,7 +258,7 @@ void irt_cap_profile_get_value(void* target, uint16 region_id, uint16 tag, uint3
 	}
 
 	// fail!
-	assert(false && "Requested data block not found!");
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Requested data block not found!");
 }
 
 

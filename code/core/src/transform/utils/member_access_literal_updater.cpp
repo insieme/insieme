@@ -48,7 +48,7 @@ namespace utils {
 #define BASIC builder.getNodeManager().getLangBasic()
 
 /**
- * Visitor which checks if the type literal argument of compostite and tuple calls are aligned with the actual type of the struct/tuple.
+ * Visitor which checks if the type literal argument of composite and tuple calls are aligned with the actual type of the struct/tuple.
  * If not the type literal is replaced with the appropriate one
  */
 const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
@@ -113,14 +113,14 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 
 			if(!visitDepthFirstInterruptible(arg, lambdaVisitor) || idx == -1){
 				LOG(ERROR) << fun;
-				assert(false && "Tuple access does not contain a literal as index");
+				assert_fail() << "Tuple access does not contain a literal as index";
 			}
 
 			const RefTypePtr& isRef = dynamic_pointer_cast<const RefType>(call->getArgument(0)->getType());
 			const TupleTypePtr tupleTy = dynamic_pointer_cast<const TupleType>( isRef ? isRef->getElementType() : call->getArgument(0)->getType());
 if(!tupleTy) //TODO remove dirty workaround
 	return res;
-			assert(tupleTy && "Tuple acces on a non tuple variable called");
+			assert_true(tupleTy) << "Tuple acces on a non tuple variable called";
 			const TypePtr& elemTy = tupleTy->getElement(idx);
 
 

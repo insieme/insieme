@@ -128,7 +128,7 @@ namespace runtime {
 
 		table[ext.wrapLWData] = OP_CONVERTER({
 			// check arguments
-			assert(ARG(0)->getNodeType() == core::NT_TupleExpr && "Only supported for tuple expressions!");
+			assert_eq(ARG(0)->getNodeType(), core::NT_TupleExpr) << "Only supported for tuple expressions!";
 
 			// add type dependency
 			const TypeInfo& info = GET_TYPE_INFO(call->getType());
@@ -151,7 +151,7 @@ namespace runtime {
 
 		table[ext.getWorkItemArgument] = OP_CONVERTER({
 			// access work item member and cast to proper value
-			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::encoder::toValue<core::TypePtr>(ARG(2))));
+			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(2))));
 			c_ast::ExpressionPtr inner = c_ast::cast(paramPtr, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "parameters"));
 			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1))+1));
 		});

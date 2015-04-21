@@ -309,7 +309,7 @@ namespace transform {
 	}
 
 	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) 	{
-		assert ( first && "Transformation must be valid!");
+		assert_true(first) << "Transformation must be valid!";
 		return first;
 	}
 

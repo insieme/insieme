@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,6 +48,8 @@
 
 typedef struct _irt_cw_data {
 	irt_circular_work_buffer queue;
+	irt_work_item *overflow_stack;
+	irt_spinlock overflow_stack_lock;
 #ifdef IRT_TASK_OPT
 	int64 demand;
 #endif //IRT_TASK_OPT

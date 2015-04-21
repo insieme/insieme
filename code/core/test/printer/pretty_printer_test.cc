@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -286,7 +286,7 @@ TEST(PrettyPrinter, DerivedLiterals) {
 	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(type000 v1) -> unit { };\n\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
 }
 
-TEST(PrettyPrinter, JustOuthermostScope) {
+TEST(PrettyPrinter, JustOutermostScope) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
@@ -367,6 +367,6 @@ TEST(PrettyPrinter, JustOuthermostScope) {
                        "    };\n"
                        "}";
 
-	EXPECT_EQ(res2,toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTHERMOST_SCOPE)));
+	EXPECT_EQ(res2,toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTERMOST_SCOPE)));
 
 }

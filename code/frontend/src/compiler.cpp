@@ -224,7 +224,7 @@ struct ClangCompiler::ClangCompilerImpl {
 };
 
 ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl), config(config) {
-    //assert(!is_obj);
+    //assert_false(is_obj);
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
 

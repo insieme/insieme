@@ -196,7 +196,7 @@ namespace runtime {
                 return addType(static_pointer_cast<c_ast::ReferenceType>(type));
 			default:
 				LOG(FATAL) << "Unsupported type: " << c_ast::toC(type);
-				assert(false && "Unsupported type encountered!");
+				assert_fail() << "Unsupported type encountered!";
 			}
 			return unknown;
 		}

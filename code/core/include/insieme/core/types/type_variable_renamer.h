@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -67,6 +67,8 @@ namespace types {
 		utils::map::PointerMap<NodePtr, NodePtr> backward;
 
 	public:
+
+		TypeMapping() {}
 
 		/**
 		 * Test whether this mapping is empty.
@@ -108,14 +110,14 @@ namespace types {
 		/**
 		 * Applies the forward substitution represented by this mapping to the given type.
 		 */
-		TypePtr applyForward(const TypePtr& type) {
+		TypePtr applyForward(const TypePtr& type) const {
 			return applyForward(type->getNodeManager(), type);
 		}
 
 		/**
 		 * Applies the forward substitution on the given list of types.
 		 */
-		inline TypeList applyForward(NodeManager& manager, const TypeList& list) {
+		inline TypeList applyForward(NodeManager& manager, const TypeList& list) const {
 			TypeList res;
 			for (auto it = list.begin(); it != list.end(); ++it) {
 				res.push_back(applyForward(manager, *it));
@@ -126,19 +128,19 @@ namespace types {
 		/**
 		 * Applies the forward substitution represented by this mapping to the given type using the given manager.
 		 */
-		TypePtr applyForward(NodeManager& manager, const TypePtr& type);
+		TypePtr applyForward(NodeManager& manager, const TypePtr& type) const;
 
 		/**
 		 * Applies the reverse substitution represented by this mapping to the given type.
 		 */
-		TypePtr applyBackward(const TypePtr& type) {
+		TypePtr applyBackward(const TypePtr& type) const {
 			return applyBackward(type->getNodeManager(), type);
 		}
 
 		/**
 		 * Applies the forward substitution on the given list of types.
 		 */
-		inline TypeList applyBackward(NodeManager& manager, const TypeList& list) {
+		inline TypeList applyBackward(NodeManager& manager, const TypeList& list) const {
 			TypeList res;
 			for (auto it = list.begin(); it != list.end(); ++it) {
 				res.push_back(applyBackward(manager, *it));
@@ -149,12 +151,12 @@ namespace types {
 		/**
 		 * Applies the reverse substitution represented by this mapping to the given type using the given manager.
 		 */
-		TypePtr applyBackward(NodeManager& manager, const TypePtr& type);
+		TypePtr applyBackward(NodeManager& manager, const TypePtr& type) const;
 
 		/**
 		 * Applies the forward substitution represented by this mapping to the given int type parameter using the given manager.
 		 */
-		IntTypeParamPtr applyForward(NodeManager& manager, const IntTypeParamPtr& param) {
+		IntTypeParamPtr applyForward(NodeManager& manager, const IntTypeParamPtr& param) const {
 			auto pos = forward.find(param);
 			if (pos != forward.end()) {
 				return static_pointer_cast<const IntTypeParam>(pos->second);
@@ -165,7 +167,7 @@ namespace types {
 		/**
 		 * Applies the reverse substitution represented by this mapping to the given int type parameter using the given manager.
 		 */
-		IntTypeParamPtr applyBackward(NodeManager& manager, const IntTypeParamPtr& param) {
+		IntTypeParamPtr applyBackward(NodeManager& manager, const IntTypeParamPtr& param) const {
 			auto pos = backward.find(param);
 			if (pos != backward.end()) {
 				return static_pointer_cast<const IntTypeParam>(pos->second);
@@ -214,6 +216,11 @@ namespace types {
 		 * A counter used to generate fresh int-type-param names.
 		 */
 		int varParamCounter;
+		
+		/**
+		 * Used as default parameter (to allow passing by reference).
+		 */
+		static const TypeMapping emptyMapping;
 
 	public:
 
@@ -256,8 +263,8 @@ namespace types {
 		 * new names a fresh considering the re-naming proposals previously computed
 		 * by the same instance.
 		 */
-		TypeMapping mapVariables(const TypePtr& target) {
-			return mapVariables(target->getNodeManager(), toVector(target));
+		TypeMapping mapVariables(const TypePtr& target, const TypeMapping& base = emptyMapping) {
+			return mapVariables(target->getNodeManager(), toVector(target), base);
 		}
 
 		/**
@@ -266,32 +273,33 @@ namespace types {
 		 * new names a fresh considering the re-naming proposals previously computed
 		 * by the same instance.
 		 */
-		TypeMapping mapVariables(NodeManager& manager, const TypePtr& target) {
-			return mapVariables(manager, toVector(target));
+		TypeMapping mapVariables(NodeManager& manager, const TypePtr& target, const TypeMapping& base = emptyMapping) {
+			return mapVariables(manager, toVector(target), base);
 		}
 
 		/**
 		 * A template to be capable of handling containers as inputs.
 		 */
 		template<class Container>
-		TypeMapping mapVariables(NodeManager& manager, const Container& container) {
-			return mapVariables(manager, container.begin(), container.end());
+		TypeMapping mapVariables(NodeManager& manager, const Container& container, const TypeMapping& base = emptyMapping) {
+			return mapVariables(manager, container.begin(), container.end(), base);
 		}
 
 		/**
 		 * A template to be capable of handling ranges as inputs.
 		 */
 		template<class Iterator>
-		TypeMapping mapVariables(NodeManager& manager, const std::pair<Iterator, Iterator>& range) {
-			return mapVariables(manager, range.first, range.second);
+		TypeMapping mapVariables(NodeManager& manager, const std::pair<Iterator, Iterator>& range, const TypeMapping& base = emptyMapping) {
+			return mapVariables(manager, range.first, range.second, base);
 		}
-
+				
 		/**
 		 * This method is proposing a substitution where all the type and parameter variables within
 		 * the given range of types are replaced by a consistent set of new variables.
+		 * If a base mapping is supplied, entries from it are re-used.
 		 */
 		template<class Iterator>
-		TypeMapping mapVariables(NodeManager& manager, const Iterator& begin, const Iterator& end) {
+		TypeMapping mapVariables(NodeManager& manager, const Iterator& begin, const Iterator& end, const TypeMapping& base = emptyMapping) {
 
 			TypeMapping res;
 
@@ -302,12 +310,16 @@ namespace types {
 				NodeType type = node->getNodeType();
 				if (type == NT_TypeVariable) {
 					const TypeVariablePtr& var = static_pointer_cast<const TypeVariable>(node);
-					if (!res.containsMappingFor(var)) {
+					if (base.containsMappingFor(var)) {
+						res.addMapping(var, base.applyForward(manager, var));
+					} else if (!res.containsMappingFor(var)) {
 						res.addMapping(var, getFreshVariable(manager));
 					}
 				} else if (type == NT_VariableIntTypeParam) {
 					const VariableIntTypeParamPtr& var = static_pointer_cast<const VariableIntTypeParam>(node);
-					if (!res.containsMappingFor(var)) {
+					if (base.containsMappingFor(var)) {
+						res.addMapping(var, base.applyForward(manager, var));
+					} else if (!res.containsMappingFor(var)) {
 						res.addMapping(var, getFreshParameter(manager));
 					}
 				} else if (type == NT_RecType) {

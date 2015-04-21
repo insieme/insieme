@@ -69,7 +69,7 @@ bool isVariableSized(const TypePtr& cur) {
 }
 
 TypePtr getRepeatedType(const TypePtr& cur) {
-	assert(isVariableSized(cur) && "Only variable sized types contain repeated types.");
+	assert_true(isVariableSized(cur)) << "Only variable sized types contain repeated types.";
 
 	NodeType type = cur->getNodeType();
 	switch(type) {
@@ -92,7 +92,7 @@ TypePtr getRepeatedType(const TypePtr& cur) {
 	default: break;
 	}
 
-	assert(false && "Invalid classification as a variable sized type!");
+	assert_fail() << "Invalid classification as a variable sized type!";
 	return TypePtr();
 }
 

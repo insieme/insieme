@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -178,7 +178,7 @@ namespace core {
 				  nodeCategory(nodeCategory), manager(0), equalityID(0) {
 
 				// ensure that there no non-value node is of the value type
-				assert(nodeCategory != NC_Value && "Must not be a value node!");
+				assert_ne(nodeCategory, NC_Value) << "Must not be a value node!";
 			}
 
 			/**
@@ -275,7 +275,7 @@ namespace core {
 			 * @return a pointer to the requested child
 			 */
 			const NodePtr& getChildInternal(std::size_t index) const {
-				assert((index < children.size()) && "Index out of bound!");
+				assert_lt(index, children.size()) << "Index out of bound!";
 				return children[index];
 			}
 
@@ -295,7 +295,7 @@ namespace core {
 			 * @return a reference to the manager maintaining this node
 			 */
 			inline NodeManager& getNodeManagerInternal() const {
-				assert(manager && "NodeManager must not be null - unmanaged node detected!");
+				assert_true(manager) << "NodeManager must not be null - unmanaged node detected!";
 				return *manager;
 			}
 
@@ -317,7 +317,14 @@ namespace core {
 			 * @param mapper the mapper used to translate child node references
 			 * @return a pointer to the modified node.
 			 */
-			NodePtr substituteInternal(NodeManager& manager, NodeMapping& mapper) const;
+			template<typename Context>
+			NodePtr substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, Context& c) const;
+
+			
+			/**
+			 * Migrates annotations from this node to the target.
+			 */
+			void migrateAnnotationsInternal(const NodePtr& target) const;
 
 		public:
 
@@ -392,7 +399,7 @@ namespace core {
 						other.equalityID = equalityID;
 					} else {
 						// both are != 0
-						assert(equalityID != 0 && other.equalityID != 0 && "Equality IDs should be != 0");
+						assert_true(equalityID != 0 && other.equalityID != 0) << "Equality IDs should be != 0";
 
 						// pick smaller ID for both
 						if (equalityID < other.equalityID) {
@@ -441,7 +448,7 @@ namespace core {
 			 * @return a reference to the internally maintained value
 			 */
 			const NodeValue& getNodeValue() const {
-				assert(isValueInternal() && "Node does not represent a value!");
+				assert_true(isValueInternal()) << "Node does not represent a value!";
 				return value;
 			}
 
@@ -671,6 +678,8 @@ namespace core {
 			return getLangExtension<E>();
 		}
 
+		const lang::Extension& getLangExtensionByName(const string& name);
+
 		/**
 		 * Obtains a fresh ID to be used within a node.
 		 */
@@ -688,6 +697,39 @@ namespace core {
 
 	};
 
+	// **********************************************************************************
+	// Node::substituteInternal needs to be in this header since it's a template method
+	// but it cannot be done directly inline in Node since it requires NodeManager to be defined
+	// **********************************************************************************
+	
+	template<typename Context>
+	NodePtr Node::substituteInternal(NodeManager& manager, NodeMapping<Context>& mapper, Context& c) const {
+		// skip operation if it is a value node
+		if (isValueInternal()) {
+			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
+		}
+
+		// compute new child node list
+		NodeList children = mapper.mapAll(getChildListInternal(), c);
+		if (::equals(children, getChildListInternal(), equal_target<NodePtr>())) {
+			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
+		}
+
+		// create a version having everything substituted
+		Node* node = createInstanceUsing(children);
+
+		// obtain element within the manager
+		NodePtr res = manager.get(node);
+
+		// free temporary instance
+		delete node;
+
+		// migrate annotations
+		this->migrateAnnotationsInternal(res);
+
+		// return instance maintained within manager
+		return res;
+	}
 
 
 	// **********************************************************************************
@@ -748,7 +790,7 @@ namespace core {
 		 */
 		FixedSizeNodeHelper(const NodeList& children) {
 			// verify the proper composition of the child node list
-			assert((checkChildList(children) || printChildListTypes(children)) && "Invalid composition of Child-Nodes discovered!");
+			assert_true(checkChildList(children) || printChildListTypes(children)) << "Invalid composition of Child-Nodes discovered!";
 		}
 
 		/**
@@ -859,7 +901,7 @@ namespace core {
 			) {
 
 			// verify the proper composition of the child node list
-			assert((checkChildList(children) || printChildListTypes(children)) && "Invalid composition of Child-Nodes discovered!");
+			assert_true(checkChildList(children) || printChildListTypes(children)) << "Invalid composition of Child-Nodes discovered!";
 		}
 
 		/**
@@ -1048,7 +1090,7 @@ namespace core {
 		 * Obtains a reference to the first element within this list.
 		 */
 		const Ptr<const ElementType>& front() const {
-			assert(size() > 0u);
+			assert_gt(size(), 0u);
 			return *begin();
 		}
 
@@ -1056,7 +1098,7 @@ namespace core {
 		 * Obtains a reference to the last element within this list.
 		 */
 		const Ptr<const ElementType>& back() const {
-			assert(size() > 0u);
+			assert_gt(size(), 0u);
 			return *(end() - 1);
 		}
 

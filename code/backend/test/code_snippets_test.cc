@@ -42,6 +42,7 @@
 #include "insieme/utils/config.h"
 
 #include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/runtime/runtime_backend.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -64,7 +65,7 @@ TEST(FunctionCall, templates) {
     core::ProgramPtr program = builder.parseProgram(
     	"int<4> main() {"
     	"	lambda (type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
-    	"		return array_create_1D(dtype, size);"
+    	"		return ref_new(array_create_1D(dtype, size));"
     	"	} (lit(real<4>), 7u);"
     	"	return 0;"
     	"}"
@@ -303,6 +304,46 @@ TEST(Literals, BoolLiterals) {
 	compiler.addFlag("-lm");
 	compiler.addFlag("-c"); // do not run the linker
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
+TEST(Parallel, Whatever) {
+       core::NodeManager mgr;
+       core::IRBuilder builder(mgr);
+
+        // create a code fragment allocating an array on the stack and using it
+        core::ProgramPtr program = builder.parseProgram(
+                R"(
+                let int = int<4>;
+                let uint = uint<4>;
+
+                let differentbla = lambda ('b x) -> unit {
+                    decl auto m = x;
+                    decl auto l = m;
+                };
+
+                let bla = lambda ('a f) -> unit {
+                    let anotherbla = lambda ('a x) -> unit {
+                        decl auto m = x;
+                    };
+                    anotherbla(f);
+                    differentbla(f);
+                    parallel(job { decl auto l = f; });
+                };
+
+                int main() {
+                    // some bla
+                    decl int x = 10;
+                    bla(x);
+                    return 0;
+                }
+                )"
+        );
+        std::cout << "Program: " << *program << std::endl;
+
+        auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+        std::cout << "Converted Seq: \n" << *converted << std::endl;
+        auto converted_rt = runtime::RuntimeBackend::getDefault()->convert(program);
+        std::cout << "Converted Run: \n" << *converted_rt << std::endl;
 }
 
 

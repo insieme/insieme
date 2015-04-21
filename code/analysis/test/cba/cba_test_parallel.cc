@@ -419,25 +419,25 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto in = builder.parseStmt(
-				"{"
-				"	let int = int<4>;"
-				"	let point = struct { int x; int y; };"
-				"	"
-				"	decl ref<point> x = var((point){0,0});"
-				"	"
-				"	decl auto t1 = spawn {"
-				"		*x;"
-				"	};"
-				"	decl auto t2 = spawn {"
-				"		*x;"
-				"	};"
-				"	sync t1;"
-				"	sync t2;"
-				"	"
-				"	*x;"		// should be (0,0)
-				"}"
-		).as<CompoundStmtPtr>();
+		auto in = builder.parseStmt(R"(
+				{
+					let int = int<4>;
+					let point = struct { int x; int y; };
+					
+					decl ref<point> x = var(struct point{0,0});
+					
+					decl auto t1 = spawn {
+						*x;
+					};
+					decl auto t2 = spawn {
+						*x;
+					};
+					sync t1;
+					sync t2;
+					
+					*x;		// should be (0,0)
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);

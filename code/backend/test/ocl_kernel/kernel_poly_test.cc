@@ -57,7 +57,10 @@
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 #include "insieme/utils/config.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::core::lang;
 using namespace insieme::core::annotations;
 using namespace insieme::utils::set;
@@ -68,20 +71,19 @@ TEST(KernelPoly, RangeTest) {
 	Logger::get(std::cerr, INFO);
 
 	// Frontend PATH
-	insieme::frontend::ConversionJob job(OCL_KERNEL_TEST_DIR "vec_add.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR); // this is for ocl_device.h in kernel.cl
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs"); // this is for CL/cl.h in host.c
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/"); // lib_icl
-
-	// Backend PATH
-	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
-	job.setOption(insieme::frontend::ConversionJob::lib_icl);
+	std::string includeA = "-I" CLANG_SRC_DIR;
+	std::string includeB = "-I" CLANG_SRC_DIR "inputs";
+	std::string includeC = "-I" CLANG_SRC_DIR "../../../test/ocl/common/";
+	std::string includeD = "-I" OCL_KERNEL_TEST_DIR;
+	std::string fileName = OCL_KERNEL_TEST_DIR "vec_add.c";
+    std::vector<std::string> argv = { "compiler",  fileName, includeA, includeB, includeC, includeD, "-flib-icl"};
+    cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "vec_add.c" << "' to IR...\n";
 
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
-	ProgramPtr program = job.execute(manager);
+	ProgramPtr program = options.job.execute(manager);
 
 	LOG(INFO) << "Start OpenCL analysis\n";
 

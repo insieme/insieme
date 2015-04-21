@@ -93,7 +93,7 @@ void printNodes(const insieme::core::Address<const insieme::core::Node> n,
     Is called from postProcessSCoP, as well as recursively.
 */
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
-	assert ( scop->hasAnnotation(scop::ScopRegion::KEY) );
+	assert_true(scop->hasAnnotation(scop::ScopRegion::KEY));
 
 	scop::ScopRegion& region = *scop->getAnnotation(scop::ScopRegion::KEY );
 	const std::vector<scop::Stmt>& stmts = region.getDirectRegionStmts();
@@ -199,7 +199,7 @@ boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
 		// or the the extracted scop is not the top level node
 		return boost::optional<Scop>();
 	}
-	assert(root->hasAnnotation(ScopRegion::KEY));
+	assert_true(root->hasAnnotation(ScopRegion::KEY));
 	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
 
 	ann.resolve();
@@ -220,7 +220,6 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 				 Scop& 							scat) 
 {
 	typedef std::set<Iterator> IteratorSet;
-	// assert( parentDomain->getIterationVector() == iterVec );
 	IterationDomain currDomain = parentDomain && IterationDomain(iterVec, region.getDomainConstraints());
 	const std::vector<Stmt>& scopStmts = region.getDirectRegionStmts();
 	
@@ -228,13 +227,13 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const Stmt& cur) {
 			
 		StatementPtr&& curPtr = cur.addr.getAddressedNode();
-		assert(curPtr->getNodeType() != core::NT_MarkerExpr && curPtr->getNodeType() != core::NT_MarkerStmt);
+		assert_true(curPtr->getNodeType() != core::NT_MarkerExpr && curPtr->getNodeType() != core::NT_MarkerStmt);
 	
 		IterationDomain thisDomain = currDomain;
 
 		AffineSystem newScat(curScat);
 		const IterationVector& iterVec = curScat.getIterationVector();
-		assert(&newScat.getIterationVector() == &iterVec); 
+		assert_true(&newScat.getIterationVector() == &iterVec); 
 		AffineFunction af( iterVec );
 
 		// check wheather the statement is a SCoP
@@ -250,7 +249,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 			thisDomain &= IterationDomain(iterVec, fit->second);
 
 			if(curPtr->getNodeType() != NT_ForStmt) {
-				assert(curPtr->hasAnnotation(ScopRegion::KEY));
+				assert_true(curPtr->hasAnnotation(ScopRegion::KEY));
 				resolveScop( iterVec, 
 							 thisDomain, 
 							 *curPtr->getAnnotation(ScopRegion::KEY), 
@@ -317,11 +316,11 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 				idx.append(AffineFunction(iterVec));
 				break;
 			case Ref::ARRAY: {
-				assert((!curRef->indecesExpr.empty() || curRef->range) && "Array access without index specifier");
+				assert_true((!curRef->indecesExpr.empty() || curRef->range)) << "Array access without index specifier";
 
 				if (curRef->range) {
 					// This is a range access
-					assert(curRef->indecesExpr.size() == 1);
+					assert_eq(curRef->indecesExpr.size(), 1);
 					domain= std::make_shared<IterationDomain>(cloneConstraint(iterVec, curRef->range));
 
 					// This statements introduced an iterator, therefore we have to make sure we do not set it zero
@@ -336,7 +335,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 				}
 
 				for_each(curRef->indecesExpr, [&](const ExpressionPtr &cur) {
-					assert(cur->hasAnnotation(scop::AccessFunction::KEY));
+					assert_true(cur->hasAnnotation(scop::AccessFunction::KEY));
 					scop::AccessFunction &ann= *cur->getAnnotation(scop::AccessFunction::KEY);
 					idx.append(ann.getAccessFunction().toBase(iterVec));
 				});
@@ -345,7 +344,7 @@ void ScopRegion::resolveScop(const IterationVector& 		iterVec,
 			default:
 				VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->type) << " not handled!";
 			}
-			assert(domain);
+			assert_true(domain);
 
 			accInfo.push_back(std::make_shared<AccessInfo>(
 				static_address_cast<const Expression>(concat<Node>(cur.addr, curRef->refExpr)),
@@ -426,7 +425,7 @@ std::map<core::VariablePtr, core::VariableList> ScopRegion::collectLocalVars(con
 /** Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level and cache all the
 scattering info at this level */
 void ScopRegion::resolve() {
-	assert(valid && "Error Try to resolve an invalid SCoP");
+	assert_true(valid) << "Error Try to resolve an invalid SCoP";
 
 	// If the region has been already resolved, we simply return the cached result
 	if ( isResolved() ) { return; }
@@ -505,7 +504,7 @@ void ScopRegion::resolve() {
 		});
 	});
 
-	assert( isResolved() );
+	assert_true(isResolved());
 }
 
 //===== AccessFunction ============================================================

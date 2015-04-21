@@ -66,7 +66,7 @@ struct StmtWrapper: public StatementList {
 	}
 
 	StatementPtr getSingleStmt() const {
-		assert(size() == 1 && "More than 1 statement present");
+		assert_eq(size(), 1) << "More than 1 statement present";
 		return front();
 	}
 

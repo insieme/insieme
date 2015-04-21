@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -61,9 +61,12 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/test/test_utils.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "../test_utils.inc"
 
 using namespace insieme::frontend;
+using namespace insieme::driver;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -81,10 +84,12 @@ std::function<void (const NodePtr&)> getCheckingLambda() {
 TEST(InsiemePragmaTest, checkPragmas) {
 	NodeManager manager;
 
-	ConversionSetup setup;
-	setup.frontendExtensionInit();
+    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
+    options.job.frontendExtensionInit(options.job);
 
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", setup);
+	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", options.job);
 
 	EXPECT_EQ(17, tu.getPragmaList().size());
 //	for(const auto& e : tu.getPragmaList())
@@ -94,7 +99,11 @@ TEST(InsiemePragmaTest, checkPragmas) {
 TEST(InsiemePragmaTest, checkAnnotations) {
 	NodeManager manager;
 
-	const auto& tu = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").toIRTranslationUnit(manager);
+    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
+
+	const auto& tu = options.job.toIRTranslationUnit(manager);
 	const auto& ir = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
 	EXPECT_TRUE(ir);
 
@@ -109,7 +118,11 @@ TEST(InsiemePragmaTest, checkAnnotations) {
 
 TEST(InsiemePragmaTest, checkMark) {
 	NodeManager manager;
-	const ProgramPtr program = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").execute(manager);
+    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 	auto& entryPoints = program->getEntryPoints();
 	EXPECT_EQ(2, entryPoints.size());
@@ -121,7 +134,11 @@ TEST(InsiemePragmaTest, checkMark) {
 
 TEST(InsiemePragmaTest, checkTransformations) {
 	NodeManager manager;
-	const auto& tu = ConversionJob(CLANG_SRC_DIR "/inputs/insieme_pragmas.c").toIRTranslationUnit(manager);
+    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    std::vector<std::string> argv = { "compiler",  fileName };
+    cmd::Options options = cmd::Options::parse(argv);
+
+	const auto& tu = options.job.toIRTranslationUnit(manager);
 	const auto& ir = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
 	EXPECT_TRUE(ir);
 
@@ -143,13 +160,16 @@ return muha(i-1)+2;
 }
 int main() {
 					int arrayA[10];
-					
+
 					muha(42);
 					return 0;
 				}
 			)");
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	dumpPretty(program);
@@ -218,7 +238,11 @@ TEST(InsiemePragmaTest, checkParallelize) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -247,7 +271,11 @@ TEST(InsiemePragmaTest, checkReschedule) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -278,7 +306,11 @@ TEST(InsiemePragmaTest, checkStamp) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -312,7 +344,11 @@ TEST(InsiemePragmaTest, checkTile) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -344,7 +380,11 @@ TEST(InsiemePragmaTest, checkStrip) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -376,7 +416,11 @@ TEST(InsiemePragmaTest, checkSplit) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -408,7 +452,11 @@ TEST(InsiemePragmaTest, checkUnroll) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -445,7 +493,11 @@ TEST(InsiemePragmaTest, checkFuse) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
@@ -468,9 +520,10 @@ TEST(InsiemePragmaTest, checkInterchange) {
 	Source src(
 			R"(int main() {
 					int array[10][10];
+					int i, j;
 					#pragma insieme interchange (0,1)
-					for(int i = 0; i < 10; ++i) {
-						for(int j = 10; j < 20; ++j) {
+					for( i = 0; i < 10; ++i) {
+						for( j = 10; j < 20; ++j) {
 							array[i][j] = 0;
 						}
 					}
@@ -478,16 +531,20 @@ TEST(InsiemePragmaTest, checkInterchange) {
 				}
 			)");
 
-	const ProgramPtr program = ConversionJob(src).execute(manager);
+	const boost::filesystem::path& fileName = src;
+    std::vector<std::string> argv = { "compiler",  fileName.string()};
+    cmd::Options options  = cmd::Options::parse(argv);
+
+	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 	// expect swapped lower loop boundaries
 	TreePattern pattern =
-			irp::forStmt(icp::any, at("10"), icp::any, at("1"),
-					irp::forStmt(icp::any, at("0"), icp::any, at("1"),
+			irp::forStmt(icp::any, at("10"), at("20"), at("1"),
+					irp::forStmt(icp::any, at("0"), at("10"), at("1"),
 							irp::assignment()));
-
+dumpPretty(program);
 	auto res = irp::collectAll(pattern, program, false);
 	ASSERT_EQ(1, res.size());
 	EXPECT_TRUE(res.front());

@@ -75,6 +75,9 @@ namespace parser3{
             auto msg = checks::check(driver.result);
             EXPECT_TRUE(msg.empty()) << msg;
         }
+        else{
+            driver.print_errors();
+        }
      //   std::cout << " ============== TEST ============ " << std::endl;
         return driver.result; 
     }
@@ -121,18 +124,18 @@ namespace parser3{
         EXPECT_TRUE(test_expression(nm, "let f = lambda ()->unit {  5;  lambda ()->unit { f(); } (); }; f"));
 
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-		lambda (int<4> v, int<4> exp) -> int<4> { 
-			let one = lambda(int<4> _)=>4; 
-			let two = lambda(int<4> x)=>x+exp; 
+    	lambda (int<4> v, int<4> exp) -> int<4> { 
+    		let one = lambda(int<4> _)=>4; 
+    		let two = lambda(int<4> x)=>x+exp; 
             return one(two(exp));
-		}  
+    	}  
             )1N5P1RE"));
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-		lambda (int<4> v, int<4> exp) -> int<4> { 
-			let one = lambda(int<4> _)-> int<4> { return 4;  };
-			let two = lambda(int<4> x)-> int<4> { return x+5; };
+    	lambda (int<4> v, int<4> exp) -> int<4> { 
+    		let one = lambda(int<4> _)-> int<4> { return 4;  };
+    		let two = lambda(int<4> x)-> int<4> { return x+5; };
             return one(two(exp));
-		}  
+    	}  
             )1N5P1RE"));
             
         EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
@@ -322,6 +325,50 @@ namespace parser3{
                 unit main() { f(1); }
 
         )1N5P1RE"));
+
+         EXPECT_TRUE(test_program(nm,
+                R"(
+                let int = int<4>;
+                let uint = uint<4>;
+
+                let differentbla = lambda ('b x) -> unit {
+                    decl auto m = x;
+                    decl auto l = m;
+                };
+
+                let bla = lambda ('a f) -> unit {
+                    let anotherbla = lambda ('a x) -> unit {
+                        decl auto m = x;
+                    };
+                    anotherbla(f);
+                    differentbla(f);
+                    parallel(job { decl auto l = f; });
+                };
+
+                int main() {
+                    // some bla
+                    decl int x = 10;
+                    bla(x);
+                    return 0;
+                }
+                )"
+        ));
+    }
+
+
+    TEST(IR_Parser3, Scopes) {
+
+        NodeManager nm;
+//        EXPECT_FALSE (test_expression(nm, R"(
+//            let a = lambda()->unit {};  let a = lambda ()->int<4>{ return 0; };  a
+//        )"));
+//        EXPECT_TRUE (test_expression(nm, R"(
+//            let a = lambda()->unit {};  let b = ()->int{ return 0; };  a
+//        )"));
+//
+        EXPECT_FALSE (test_expression(nm, R"(
+            let a = int<4>;  let a = float<4>;  1 
+        )"));
     }
 
 } // parser3

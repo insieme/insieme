@@ -57,7 +57,7 @@ namespace ir{
 			/**
 			 * 	frontend assignment operator
 			 */
-			LANG_EXT_LITERAL(RefAssign, "FE.RefAssign", isCXX? "(ref<'a>, 'a)->ref<'a>":"(ref<'a>, 'a)->'a");
+			LANG_EXT_LITERAL_WITH_NAME(RefAssign, "fe_ref_assign", "FE_RefAssign", isCXX? "(ref<'a>, 'a)->ref<'a>":"(ref<'a>, 'a)->'a");
 		};
 
 

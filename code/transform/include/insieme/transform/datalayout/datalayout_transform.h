@@ -64,7 +64,7 @@ struct VariableMap : public std::map<core::ExpressionAddress, ValueType, Variabl
 struct ExprAddressSet : public std::set<core::ExpressionAddress, VariableComparator> {};
 
 typedef VariableMap<core::RefTypePtr> ExprAddressRefTypeMap;
-typedef VariableMap<core::ExpressionPtr> ExprAddressMap;
+typedef VariableMap<core::StatementPtr> ExprAddressMap;
 //typedef std::set<core::ExpressionAddress> ExprAddressSet;
 typedef std::function<ExprAddressRefTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
@@ -90,7 +90,7 @@ protected:
 			core::StringValuePtr fieldName = core::StringValuePtr());
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
-			const core::VariablePtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems = core::ExpressionPtr()) =0;
 	void addNewDecls(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
@@ -154,6 +154,7 @@ public:
 };
 
 class VariableAdder {
+protected:
 	core::NodeManager& mgr;
 	ExprAddressMap& varsToReplace;
 //	std::map<core::NodeAddress, core::NodePtr>& replacements;
@@ -164,6 +165,8 @@ class VariableAdder {
 
 	std::map<int, core::ExpressionPtr> searchInArgumentList(const std::vector<core::ExpressionAddress>& args);
 	core::ExpressionPtr updateArgument(const core::ExpressionAddress& oldArg);
+	virtual core::NodePtr generateNewCall(const core::CallExprAddress& oldCall, const core::StatementPtr& newVar,
+			const int argIdx);
 
 public:
 	VariableAdder(core::NodeManager& mgr, ExprAddressMap& varReplacements);
@@ -186,7 +189,7 @@ public:
 
     virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
 		after->addAnnotation(ptr);
 		return true;
 	}

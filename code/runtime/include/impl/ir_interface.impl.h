@@ -78,6 +78,10 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 	irt_optimizer_remove_dvfs(&(impl->variants[0]));
 	irt_optimizer_compute_optimizations(&(impl->variants[0]), NULL, true);
 	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), old_data);
+
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_atomic_add_and_fetch(&irt_g_app_progress, 1, uint64);
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 }
 
 
@@ -105,6 +109,9 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	if(num_threads<job->min) num_threads = job->min;
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
 	irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0], &(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]));
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_atomic_add_and_fetch(&irt_g_app_progress, num_threads, uint64);
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 	irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
 	for(uint32 i=0; i<num_threads; ++i) {
 		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);
@@ -126,6 +133,9 @@ void irt_set_default_parallel_wi_count(int num_wis) {
 }
 
 irt_joinable irt_task(const irt_parallel_job* job) {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_atomic_add_and_fetch(&irt_g_app_progress, 1, uint64);
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 	irt_worker* target = irt_worker_get_current();
 	IRT_ASSERT(job->max == 1, IRT_ERR_INIT, "Task invalid range");
 	return irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl, job->args);
@@ -149,6 +159,10 @@ void irt_region(const irt_parallel_job* job) {
 }
 
 void irt_merge(irt_joinable joinable) {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	irt_atomic_add_and_fetch(&irt_g_app_progress, 1, uint64);
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+
 	if(joinable.wi_id.full == irt_work_item_null_id().full) return;
 
 	if(joinable.wi_id.id_type == IRT_ID_work_group) {
@@ -156,6 +170,52 @@ void irt_merge(irt_joinable joinable) {
 	} else {
 		irt_wi_join(joinable.wi_id);
 	}
+}
+
+#if defined(IRT_ENABLE_APP_TIME_ACCOUNTING) && defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+#error IRT_ENABLE_APP_TIME_ACCOUNTING and IRT_ENABLE_REGION_INSTRUMENTATION do not work together
+#endif
+
+double irt_time_wis_get_total() {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	double ret = 0.0;
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		irt_worker *cur = irt_g_workers[i];
+		ret += cur->app_time_total;
+		double ls = cur->app_time_last_start;
+		if(cur->app_time_running) {
+			// add current running time
+			struct timespec ts;
+			clock_gettime(cur->clockid, &ts);
+			ret += (ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0) - cur->app_time_last_start;
+		}
+	}
+	return ret;
+#else
+	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_time_wis_get_total called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0.0;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+}
+
+double irt_time_rts_get_total() {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	struct timespec ts;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+	return (ts.tv_sec * 1000000.0 + ts.tv_nsec/1000.0);
+#else
+	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_time_rts_get_total called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0.0;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+}
+
+
+uint64 irt_app_progress_get() {
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+	return irt_g_app_progress;
+#else
+	IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "irt_app_progress_get called without compiling with IRT_ENABLE_APP_TIME_ACCOUNTING");
+	return 0;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
 }
 
 #endif // ifndef __GUARD_IMPL_IR_INTERFACE_IMPL_H

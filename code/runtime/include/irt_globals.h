@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,19 +43,10 @@
 #include "irt_inttypes.h"
 #include "runtime.h"
 
-extern irt_tls_key irt_g_error_key;
-extern irt_mutex_obj irt_g_error_mutex;
+#ifdef IRT_USE_HWLOC
+#include <hwloc.h>
+#endif
 
-extern irt_tls_key irt_g_worker_key;
-extern uint32 irt_g_worker_count;
-extern uint32 irt_g_degree_of_parallelism;
-extern irt_mutex_obj irt_g_degree_of_parallelism_mutex;
-extern uint32 irt_g_active_worker_count;
-extern irt_mutex_obj irt_g_active_worker_mutex;
-struct _irt_worker;
-extern struct _irt_worker **irt_g_workers;
-
-extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
-
+#include "irt_globals.inc"
 
 #endif // ifndef __GUARD_GLOBALS_H

@@ -59,7 +59,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
 				"	decl auto j = job {"
 				"		x = 15;"

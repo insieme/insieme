@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script provides setup functionality for energy measurements using cpufreq and RAPL
+
 if [ `whoami` != root ]; then
 	echo "Please run this script as root or using sudo"
 	exit

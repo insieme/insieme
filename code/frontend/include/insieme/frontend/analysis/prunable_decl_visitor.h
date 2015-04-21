@@ -243,7 +243,7 @@ class PrunableDeclVisitor{
 
 			default:
 				std::cout << " ==================  default: " << decl->getDeclKindName() << " ====================== " <<std::endl;
-				assert(false && "not implemented type of Decl");
+				assert_not_implemented();
 				return;
 		}
 	}

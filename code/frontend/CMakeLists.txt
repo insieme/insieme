@@ -17,6 +17,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${LLVM_HOME}/include
 	${insieme_utils_include_dir}
+	${insieme_driver_include_dir}
 	${insieme_core_include_dir}
 	${insieme_analysis_include_dir}
 	${insieme_annotations_include_dir}
@@ -42,6 +43,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
+	target_link_libraries(${case_name} insieme_driver)
     target_link_libraries(${case_name} insieme_backend)
     target_link_libraries(${case_name} insieme_analysis)
     target_link_libraries(${case_name} insieme_transform)

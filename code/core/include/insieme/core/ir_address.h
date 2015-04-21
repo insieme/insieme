@@ -245,7 +245,7 @@ namespace core {
 			typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
 		>
 		Address(Address<B>&& from) : path(std::move(from.getPath())) {}
-
+		
 		/**
 		 * Reinterprets this address to be referencing the requested element type.
 		 */
@@ -253,8 +253,7 @@ namespace core {
 		const Address<R>& reinterpret() const {
 			return reinterpret_cast<const Address<R>&>(*this);
 		}
-
-
+		
 		/**
 		 * A short-cut for static address casts followed by an extraction of
 		 * the targeted node.
@@ -333,7 +332,7 @@ namespace core {
 		 * @return a pointer to the root node.
 		 */
 		NodePtr getRootNode() const {
-			assert(path && "Invalid node address!");
+			assert_true(path) << "Invalid node address!";
 			// root = the pointer assigned to the first path element
 			return path.getRootNode();
 		}
@@ -344,6 +343,14 @@ namespace core {
 		 */
 		Address<T> switchRoot(const NodePtr& newRoot) const {
 			return Address<T>(path.switchRoot(newRoot));
+		}
+		
+		/**
+		 * Computes a new node address which can be obtained by exchanging the
+		 * root of this address by the given root, with a potentially different type.
+		 */
+		NodeAddress switchRootAndType(const NodePtr& newRoot) const {
+			return NodeAddress(path.switchRoot(newRoot));
 		}
 
 		/**
@@ -429,7 +436,7 @@ namespace core {
 			visitPathBottomUpInterruptible(*this, visitor);
 			return ret;
 
-			assert(false && "Requested parent address of this type does not exist");
+			assert_fail() << "Requested parent address of this type does not exist";
 			return NodeAddress();
 		}
 
@@ -769,7 +776,7 @@ namespace core {
 		assert(addr.getRootAddress() == newRoot.getRootAddress() && "Root of the two addresses must be the same");
 
 		// Make sure that the newRoot is a child of addr*/
-		assert( isChildOf(newRoot, addr) && "addr must be a child of newRoot");
+		assert_true(isChildOf(newRoot, addr)) << "addr must be a child of newRoot";
 
 		std::vector<unsigned> newPath;
 		auto visitor = [&](const NodeAddress& cur) -> bool {
@@ -779,7 +786,7 @@ namespace core {
 
 		auto lambdaVisitor = makeLambdaVisitor(visitor);
 		bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
-		if (!ret) assert(ret && "The new root was not find within the src address");
+		if (!ret) assert_true(ret) << "The new root was not find within the src address";
 
 		NodeAddress newAddr(newRoot.getAddressedNode());
 		for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) {

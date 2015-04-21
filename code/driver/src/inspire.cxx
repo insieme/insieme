@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -71,6 +71,7 @@
 		bool valid;
 		string inputFile;
 		string outFile;
+		string dumpFile;
 	};
 
 	/**
@@ -119,6 +120,11 @@
 		}
 		double time = timer.stop();
 
+		if (!options.dumpFile.empty()) {
+			std::ofstream out(options.dumpFile);
+			out << dumpPretty(res) << std::endl;
+		}
+
 //std::cout << core::printer::PrettyPrinter(res) << "\n";
 		std::cout << "Parsing took " << time << "sec.\n";
 
@@ -162,6 +168,7 @@ std::cout << *code;
 				("help,h", "produce help message")
 				("input,i", 			bpo::value<string>()->default_value(""), 		"the code file to be parsed")
 				("output,o", 			bpo::value<string>()->default_value("a.out"), 	"the binary build from the code")
+				("dump-ir,d", 			bpo::value<string>()->default_value(""), 	"file to dump the IR to")
 		;
 
 		// define positional options (all options not being named)
@@ -185,12 +192,8 @@ std::cout << *code;
 		CmdOptions res;
 		res.valid = true;
 		res.inputFile = map["input"].as<string>();
-
-		if (map.count("output")) {
-			res.outFile = map["output"].as<string>();
-		} else {
-			res.outFile = "a.out";
-		}
+		res.outFile = map["output"].as<string>();
+		res.dumpFile = map["dump-ir"].as<string>();
 
 		// accumulation complete
 		return res;

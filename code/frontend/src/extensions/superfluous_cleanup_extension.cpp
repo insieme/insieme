@@ -258,7 +258,7 @@ LambdaExprPtr removeObviouslySuperfluousCode(LambdaExprPtr lambda) {
 		//		dumpPretty(lambda);
 		//		std::cout << "\n\n===== After:\n\n";
 		//		dumpPretty(ret);
-		//		assert(false && "Errors during cleanup");
+		//		assert_fail() << "Errors during cleanup";
 		//	}
 		//}
 		ret = removeSuperfluousControlFlowIteration(ret);
@@ -271,7 +271,7 @@ LambdaExprPtr removeObviouslySuperfluousCode(LambdaExprPtr lambda) {
 		//		dumpPretty(lambda);
 		//		std::cout << "\n\n===== After:\n\n";
 		//		dumpPretty(ret);
-		//		assert(false && "Errors during cleanup");
+		//		assert_fail() << "Errors during cleanup";
 		//	}
 		//}
 	} while(ret != lambda);

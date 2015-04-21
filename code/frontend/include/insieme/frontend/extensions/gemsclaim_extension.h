@@ -39,6 +39,8 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/utils/config.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
@@ -47,11 +49,21 @@ namespace extensions {
 using namespace insieme;
 
 class GemsclaimExtension : public insieme::frontend::extensions::FrontendExtension {
-
+    bool flagActivated;
 public:
-        GemsclaimExtension() {
+        GemsclaimExtension() : flagActivated(false) {
                 kidnappedHeaders.push_back(GEM_SYSTEM_HEADER_REPLACEMENTS_DIR);
 			    macros["_GEM"] = "";
+        }
+
+        virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+            //register omp flag
+            optParser("gem-cross-compile", "", flagActivated, "set cross compilation for the GEMSCLAIM");
+            //create lambda
+            auto lambda = [&](const ConversionJob& job) {
+                return flagActivated;
+            };
+            return lambda;
         }
 };
 

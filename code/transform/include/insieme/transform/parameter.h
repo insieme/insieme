@@ -376,7 +376,7 @@ namespace parameter {
 				if (auto cur = dynamic_pointer_cast<TargetFilterParameter>(parameter)) {
 					return factory(cur);
 				}
-				assert(false && "Invalid Atomic Parameter Type encountered.");
+				assert_fail() << "Invalid Atomic Parameter Type encountered.";
 			}
 
 			if (auto cur = dynamic_pointer_cast<ListParameter>(parameter)) {
@@ -385,7 +385,7 @@ namespace parameter {
 			if (auto cur = dynamic_pointer_cast<TupleParameter>(parameter)) {
 				return factory(cur);
 			}
-			assert(false && "Invalid Parameter Type encountered.");
+			assert_fail() << "Invalid Parameter Type encountered.";
 			return 0;
 		}
 
@@ -404,7 +404,7 @@ namespace parameter {
 	template<typename ValueFactory>
 	Value createValue(const ParameterPtr& parameter, ValueFactory& factory) {
 		Value res = createValueInternal(parameter, factory);
-		assert(parameter->isValid(res) && "Invalid value produced by factory!");
+		assert_true(parameter->isValid(res)) << "Invalid value produced by factory!";
 		return res;
 	}
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,9 +48,13 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 namespace core = insieme::core;
 namespace fe = insieme::frontend;
 namespace p = insieme::core::pattern;
+
+using namespace insieme::driver;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
 	Logger::get(std::cerr, ERROR, 0);
@@ -58,12 +62,14 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::NodeManager manager;
 
 	// create and customize conversion job
-	fe::ConversionJob job(CLANG_SRC_DIR  "inputs/ocl_functions.c");
-	job.addIncludeDirectory(CLANG_SRC_DIR "inputs");
-	job.addIncludeDirectory(CLANG_SRC_DIR);
-	job.addIncludeDirectory(CLANG_SRC_DIR "../../../test/ocl/common/");
+    std::string inputFile = CLANG_SRC_DIR  "inputs/ocl_functions.c";
+	std::string includeA = "-I" CLANG_SRC_DIR "inputs";
+	std::string includeB = "-I" CLANG_SRC_DIR;
+	std::string includeC = "-I" CLANG_SRC_DIR "../../../test/ocl/common/";
+    std::vector<std::string> argv = { "compiler",  inputFile, includeA, includeB, includeC };
+    cmd::Options options = cmd::Options::parse(argv);
 
-	core::ProgramPtr program = job.execute(manager);
+	core::ProgramPtr program = options.job.execute(manager);
 	LOG(INFO) << "Done.";
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);

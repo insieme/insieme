@@ -215,7 +215,7 @@ void BufferReplacer::collectInformation(TreePattern& clCreateBuffer) {
 		if(usePtr || copyPtr) {
 			hostPtr = utils::tryRemove(gen.getRefReinterpret(), createBuffer["host_ptr"].getValue().as<ExpressionPtr>());
 			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(hostPtr)) {
-				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+				assert_false(copyPtr) << "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer";
 				if(c->getSubExpression()->getType() != gen.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
 					hostPtr = builder.callExpr(gen.getRefVar(), c->getSubExpression());
 				}
@@ -228,7 +228,7 @@ void BufferReplacer::collectInformation(TreePattern& clCreateBuffer) {
 		TypePtr type;
 		__unused bool check = utils::extractSizeFromSizeof(createBuffer["size"].getValue().as<ExpressionPtr>(), size, type, false);
 
-		assert(check && "cannot extract size and type from size paramater for clCreateBuffer");
+		assert_true(check) << "cannot extract size and type from size paramater fo clCreateBuffer";
 
 // 			std::cout << "\nyipieaiey: " << lhs << std::endl << std::endl;
 
@@ -272,7 +272,7 @@ bool BufferReplacer::alreadyThereAndCorrect(ExpressionAddress& bufferExpr, const
 					correct = true;
 					return;
 				} else*/ // if the types are not related, fail
-					assert(false && "Buffer used twice with different types. Not supported by Insieme.");
+					assert_fail() << "Buffer used twice with different types. Not supported by Insieme.";
 			} else
 				correct = true;
 		}
@@ -299,7 +299,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 
 //std::cout << "arr: " << expr << " root " << getRootVariable(expr) << std::endl;
 			expr = utils::getRootVariable(expr).as<ExpressionAddress>();
-			assert(expr && "cannot found root variable");
+			assert_true(expr) << "cannot found root variable";
 
 			if(alreadyThereAndCorrect(expr, newArrType)) return;
 
@@ -308,7 +308,7 @@ void BufferReplacer::generateReplacements(TypePtr clMemTy) {
 			return;
 		}
 		ExpressionAddress rootExpr = utils::getRootVariable(bufferExpr).as<ExpressionAddress>();
-		assert(rootExpr && "cannot found root variable");
+		assert_true(rootExpr) << "cannot found root variable";
 
 		TypePtr newType = transform::replaceAll(mgr, bufferExpr->getType(), clMemTy, meta.second.type).as<TypePtr>();
 		// update structs if required

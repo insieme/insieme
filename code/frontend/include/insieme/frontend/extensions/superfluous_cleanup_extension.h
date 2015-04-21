@@ -54,7 +54,7 @@ namespace cleanup {
  * It uses a fixed point iteration and is quite slow
  */
 class SuperfluousCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 
 } // extensions

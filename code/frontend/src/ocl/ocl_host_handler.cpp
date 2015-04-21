@@ -75,7 +75,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 	// if there is still no match, try the paths of the input files
 	if (check.fail()) {
-		assert(job.getFiles().size() == 1u);
+		assert_eq(job.getFiles().size(), 1u);
 		string ifp = job.getFiles()[0].string();
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
@@ -246,7 +246,7 @@ const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, con
 	TypePtr type;
 	ExpressionPtr size;
 	o2i.extractSizeFromSizeof(sizeArg, size, type);
-	assert(size && type && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
+	assert_true(size && type) << "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.";
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
@@ -276,7 +276,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	if (idxExpr.isa<core::CallExprPtr>() && gen.isScalarCast(idxExpr.as<core::CallExprPtr>()->getFunctionExpr())){
 		idx = idxExpr.as<core::CallExprPtr>()->getArgument(0).isa<core::LiteralPtr>();
 	}
-	assert(idx && "idx MUST be a literal");
+	assert_true(idx) << "idx MUST be a literal";
 
 	VariablePtr tuple = builder.variable(kernel->getType());
 	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
@@ -293,7 +293,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		TypePtr type;
 		ExpressionPtr hostPtr;
 		o2i.extractSizeFromSizeof(sizeArg, size, type);
-		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+		assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
 
 		// refresh variables used in the generation of the local variable
 		VariableMap varMapping;
@@ -388,7 +388,7 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
 			// extract the type to be allocated
 			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
-			assert(type && "Type could not be extracted!");
+			assert_true(type) << "Type could not be extracted!";
 
 			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
 				size = builder.literal(BASIC.getUInt8(), "1");
@@ -640,7 +640,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 
 			hostPtr = node->getArgument(3);
 			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
-				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
+				assert_false(copyPtr) << "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer";
 				if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
 					hostPtr = builder.callExpr(BASIC.getRefVar(), c->getSubExpression());
 				}
@@ -845,7 +845,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 							TypePtr type;
 
 							o2i.extractSizeFromSizeof(sizeArg, size, type);
-							assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+							assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
 
 							// declare a new variable to be used as argument
 							VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
