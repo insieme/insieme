@@ -292,7 +292,7 @@ namespace irp {
 	 */
 	inline TreePattern innerMostForLoop(unsigned level = 1) {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
-		return irp::forStmt(rT( innerMostForLoop(level-1) | (!irp::forStmt() & step(recurse))));
+		return irp::forStmt(rT( innerMostForLoop(level-1) | ((!irp::forStmt()) & step(recurse))));
 	}
 
 	/**
@@ -300,7 +300,7 @@ namespace irp {
 	 */
 	inline TreePattern innerMostForLoopNest(unsigned level = 1) {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
-		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
+		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | ((!irp::forStmt()) & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
 	}
 	
 

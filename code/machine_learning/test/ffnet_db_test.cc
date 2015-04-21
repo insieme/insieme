@@ -313,7 +313,8 @@ TEST_F(MlTest, CreateDb) {
 			std::stringstream linestream(line);
 			// read the four features
 			for(size_t fid = 0; fid < nFeatures; ++fid) {
-			    EXPECT_TRUE(linestream >> buf);
+			    linestream >> buf;
+			    EXPECT_FALSE(linestream.fail());
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
 			}
 
