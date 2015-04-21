@@ -53,11 +53,14 @@ class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Add
 	std::map<int, int> ctr;
 
 public:
+	VarUniqExtension(const insieme::core::NodeAddress frag);
+
 	void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
 
 	insieme::core::NodeAddress IR();
+	insieme::core::VariableAddress getVarDefinition(const insieme::core::VariableAddress& var);
 };
 
 }}}

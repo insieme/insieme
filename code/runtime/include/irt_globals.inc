@@ -34,3 +34,37 @@
  * regarding third party software licenses.
  */
 
+#ifndef __EXTERN
+#define __EXTERN extern
+#endif
+
+__EXTERN irt_tls_key irt_g_error_key;
+__EXTERN irt_mutex_obj irt_g_error_mutex;
+
+__EXTERN irt_tls_key irt_g_worker_key;
+__EXTERN uint32 irt_g_worker_count;
+__EXTERN volatile uint32 irt_g_degree_of_parallelism;
+__EXTERN irt_mutex_obj irt_g_degree_of_parallelism_mutex;
+__EXTERN uint32 irt_g_active_worker_count;
+__EXTERN irt_mutex_obj irt_g_active_worker_mutex;
+struct _irt_worker;
+__EXTERN struct _irt_worker **irt_g_workers;
+
+__EXTERN bool irt_g_rt_is_initialized;
+__EXTERN irt_runtime_behaviour_flags irt_g_runtime_behaviour;
+
+__EXTERN irt_mutex_obj irt_g_exit_handler_mutex;
+
+#ifdef IRT_USE_HWLOC
+__EXTERN hwloc_topology_t irt_g_hwloc_topology;
+#endif // IRT_USE_HWLOC
+
+#ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
+__EXTERN uint64 irt_g_app_progress;
+#endif // IRT_ENABLE_APP_TIME_ACCOUNTING
+
+#ifndef IRT_MIN_MODE
+__EXTERN mqd_t irt_g_message_queue;
+#endif // IRT_MIN_MODE
+
+#undef __EXTERN

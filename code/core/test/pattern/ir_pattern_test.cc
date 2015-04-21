@@ -41,6 +41,7 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -624,7 +625,6 @@ TEST(PatternTests, AllVarDecls) {
 
 	ASSERT_TRUE(res);
 	EXPECT_EQ("Match({x=[AP(v0),AP(v1),null,AP(v2)]})", toString(*res));
-
 }
 
 TEST(PatternTests, VarUsage) {
@@ -692,6 +692,76 @@ TEST(PatternTests, PFor) {
 	TreePattern pattern = irp::pfor();
 
 	EXPECT_PRED2(isMatch, pattern, pforStmt);
+}
+
+TEST(PatternTests, LambdaPattern) {
+
+	core::NodeManager manager;
+	IRBuilder builder(manager);
+
+	core::NodePtr node = builder.normalize(builder.parseStmt(
+		R"(
+			{
+				int<4> foo = 17;
+				int<4> a = 1;
+				int<4> b = 2;
+				a;
+				int<4> c = 5;
+			}
+		)"
+	));
+
+	ASSERT_TRUE(node);
+	
+	auto litlt5Decl = irp::declarationStmt(var("x"), lambda([&](const core::NodePtr& initExp) {
+		return core::arithmetic::toFormula(initExp.isa<LiteralPtr>()).getIntegerValue() < 5;
+	}));
+
+	auto pattern = irp::compoundStmt(*(litlt5Decl | any));
+
+	// match the pattern
+	auto res = pattern.matchPointer(node);
+	ASSERT_TRUE(res);
+	EXPECT_EQ("Match({x=[null,AP(v1),AP(v2),null,null]})", toString(*res));
+
+	// match the pattern to an address
+	auto resA = pattern.matchAddress(NodeAddress(node));
+	ASSERT_TRUE(resA);
+	EXPECT_EQ("Match({x=[null,0-1-0,0-2-0,null,null]})", toString(*resA));
+}
+
+TEST(PatternTests, LambdaAddressPattern) {
+
+	core::NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto addresses = builder.parseAddresses(
+		R"(
+			{
+				int<4> foo = 17;
+				int<4> a = 1;
+				int<4> b = $2$;
+				a;
+				int<4> c = 5;
+			}
+		)"
+	);
+
+	ASSERT_EQ(addresses.size(), 1);
+
+	auto addrPattern = irp::declarationStmt(var("x"), lambda([&](const core::NodeAddress& initExp) {
+		return initExp == addresses[0];
+	}));
+
+	auto pattern = irp::compoundStmt(*(addrPattern | any));
+
+	// match the pattern -- this should assert
+	assert_decl(ASSERT_DEATH(pattern.matchPointer(addresses[0].getRootNode()), "features an address condition but is applied during pointer visiting"));
+
+	// match the pattern to an address
+	auto resA = pattern.matchAddress(NodeAddress(addresses[0].getRootNode()));
+	ASSERT_TRUE(resA);
+	EXPECT_EQ("Match({x=[null,null,0-2-0,null,null]})", toString(*resA));
 }
 
 } // end namespace pattern
