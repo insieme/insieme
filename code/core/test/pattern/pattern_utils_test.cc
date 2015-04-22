@@ -162,7 +162,7 @@ TEST(PatternUtils, performance) {
 	StatementList l(100, node);
 	auto compound = builder.compoundStmt(l);
 
-	auto pattern = aT(!irp::forStmt() & irp::declarationStmt());
+	auto pattern = aT((!irp::forStmt()) & irp::declarationStmt());
 	
 	unsigned matches = 0;
 	auto result = irp::replaceAll(pattern, compound, [&](AddressMatch m) {
