@@ -86,6 +86,10 @@ namespace parser3{
 
         EXPECT_TRUE(test_expression(nm, "1"));
         EXPECT_TRUE(test_expression(nm, "1u"));
+        EXPECT_TRUE(test_expression(nm, "1l"));
+        EXPECT_TRUE(test_expression(nm, "1ul"));
+        EXPECT_TRUE(test_expression(nm, "1ll"));
+        EXPECT_TRUE(test_expression(nm, "1ull"));
 
         EXPECT_TRUE(test_expression(nm, "1.0f"));
         EXPECT_TRUE(test_expression(nm, "1.0"));
