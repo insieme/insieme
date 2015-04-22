@@ -99,7 +99,7 @@ TEST(WhileToFor, MultipleAss) {
 	EXPECT_PRED2(containsSubString, str, "{ref<int<4>> v1 = 0; ref<int<4>> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_lt(ref_deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>> v2) {return int_ne(ref_deref(v2), 0);}}(v2)})) {ref<int<4>> v5 = v1; ref_assign(v1, int_add(int_add(1, ref_deref(v1)), 1)); ref_assign(v2, int_sub(ref_deref(v2), 2)); ref_assign(v1, int_sub(ref_deref(v1), 1));}; return 0;}");
 }
 
-TEST(WhileToFor, DISABLED_ConfusedMultipleAss) {
+TEST(WhileToFor, ConfusedMultipleAss) {
 	NodeManager man;
 	IRBuilder builder(man);
 
@@ -156,7 +156,7 @@ TEST(WhileToFor, Nested) {
 	EXPECT_PRED2(containsSubString, str, "{{}; for(int<4> v6 = 0 .. 10 : 2) {{}; for(int<4> v5 = 8 .. 5 : -1) {{};}; {};}; {}; for(int<4> v4 = 2 .. 4 : -2) {{};}; return 0;}");
 }
 
-TEST(WhileToFor, DISABLED_NestedDeps) {
+TEST(WhileToFor, NestedDeps) {
 	NodeManager man;
 	IRBuilder builder(man);
 
@@ -184,7 +184,7 @@ TEST(WhileToFor, DISABLED_NestedDeps) {
 	extension.IRVisit(program);
 }
 	
-	TEST(WhileToFor, DISABLED_NonConvertible) {
+	TEST(WhileToFor, NonConvertible) {
 		NodeManager man;
 		IRBuilder builder(man);
 
