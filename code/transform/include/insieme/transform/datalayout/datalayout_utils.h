@@ -109,6 +109,19 @@ core::pattern::TreePattern optionalDeref(const core::pattern::TreePattern& mayTo
  * compare if two variables are the same, which is defines as being declared at the same address or being a a literal with the same string value
  */
 bool compareVariables(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
+
+/*
+ * performs a switchRoot(newRoot) on all key elements of the map
+ */
+template<typename First, typename Second, typename Compare>
+void mapKeySwitchRoot(std::map<core::Address<First>, Second, Compare>& map, const core::NodeAddress& newRoot) {
+	std::map<core::Address<First>, Second, Compare> tmp = map;
+	map.clear();
+
+	for(std::pair<core::Address<First>, Second> m : tmp)
+		map[m.first.switchRoot(newRoot)] = m.second;
+}
+
 } // datalayout
 } // transform
 } // insieme

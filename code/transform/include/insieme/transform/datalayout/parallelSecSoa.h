@@ -48,9 +48,9 @@ class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
 
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) {return oldType;}
 
-	virtual core::ExpressionPtr updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
-			core::StringValuePtr fieldName = core::StringValuePtr());
-
+//	virtual core::ExpressionPtr updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
+//			core::StringValuePtr fieldName = core::StringValuePtr());
+//
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVars, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems);
@@ -74,8 +74,10 @@ class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType) {return core::StatementList();}
 
-	virtual void replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements) {}
+	virtual const ExprAddressMap replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements) {
+		return ExprAddressMap();
+	}
 
 public:
 	ParSecSoa(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,

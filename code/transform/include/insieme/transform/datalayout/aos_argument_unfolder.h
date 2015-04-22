@@ -36,51 +36,45 @@
 
 #pragma once
 
-#include "insieme/transform/datalayout/aos_to_taos.h"
-#include "insieme/transform/datalayout/aos_to_soa.h"
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/address_mapper.h"
+
+#include "insieme/transform/datalayout/datalayout_transform.h"
+#include "insieme/transform/datalayout/datalayout_utils.h"
 
 namespace insieme {
-
-namespace analysis {
-typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScopeMap;
-}
-
 namespace transform {
 namespace datalayout {
 
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
-
-template<class Baseclass>
-class ParSecTransform : public Baseclass {
-protected:
-	ExprAddressMap varReplacements;
+class AosArgumentUnfolder : public core::transform::AddressMapping {
+	core::NodeManager& mgr;
+	ExprAddressMap& varsToReplace;
 	ExprAddressMap& varsToPropagate;
-	std::map<core::NodeAddress, core::NodePtr>& replacements;
-	const core::StructTypePtr& newStructType;
 	const core::StructTypePtr& oldStructType;
-	std::vector<core::LambdaExprAddress> globalLambdas;
+	const core::StructTypePtr& newStructType;
+	core::pattern::TreePattern typePattern;
+	core::pattern::TreePattern variablePattern;
+	core::pattern::TreePattern namedVariablePattern;
+	core::pattern::TreePattern varWithOptionalDeref;
+	core::pattern::TreePattern tupleMemberAccess;
 
-	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
-
-	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
-			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems);
+	core::ExpressionList updateArguments(const core::ExpressionAddress& oldArg);
+	bool updateArgumentAndParam(const core::ExpressionAddress& oldArg, const core::VariableAddress& oldParam,
+			core::ExpressionList& newArg, core::VariableList& newParam, core::TypeList& paramTys);
+	const core::CallExprPtr updateArgumentsAndParams(core::CallExprAddress oldCall, const core::CallExprPtr& newCall);
 
 public:
-	ParSecTransform(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
-			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);
-//	virtual ~ParSecAtt() {}
+	AosArgumentUnfolder(core::NodeManager& mgr, ExprAddressMap& varReplacements, ExprAddressMap& varsToPropagate,
+			const core::StructTypePtr& oldStructType, const core::StructTypePtr& newStructType);
 
-	virtual void transform();
+	virtual const core::NodePtr mapAddress(const core::NodePtr& ptr, core::NodeAddress& prevAddr);
 
-	const ExprAddressMap getKernelVarReplacements() { return varReplacements; }
+	const core::NodeAddress mapPtr(core::NodePtr& ptr);
+
 };
 
-template class ParSecTransform<DatalayoutTransformer>;
-template class ParSecTransform<AosToTaos>;
-template class ParSecTransform<AosToSoa>;
-} // datalayout
-} // transform
-} // insieme
-
+}
+}
+}
