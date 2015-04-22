@@ -85,8 +85,8 @@ namespace analysis {
 
 		// test a function
 		manager.setNextFreshID(5);
-		NodePtr node = builder.parse("{ int<4> a = 0; let f = (int<4> a, int<4> b)->int<4> { return a; } in f(a,a); }");
-		EXPECT_EQ("AP({int<4> v6 = 0; rec v0.{v0=fun(int<4> v8, int<4> v9) {return v8;}}(v6, v6);})", toString(node));
+		NodePtr node = builder.parseStmt("{decl int<4> a = 0; let f = lambda (int<4> a, int<4> b)->int<4> { return a; }; f(a,a); }");
+		EXPECT_EQ("AP({int<4> v6 = 0; rec v0.{v0=fun(int<4> v10, int<4> v11) {return v10;}}(v6, v6);})", toString(node));
 		EXPECT_EQ("AP({int<4> v0 = 0; rec v0.{v0=fun(int<4> v1, int<4> v2) {return v1;}}(v0, v0);})", toString(normalize(node)));
 
 
@@ -96,7 +96,7 @@ namespace analysis {
 		map["z"] = z;
 
 		ExpressionPtr expr = builder.parseExpr(
-				"let f = ()->unit { z; } in f", map
+				"let f = lambda ()->unit { z; }; f", map
 		).as<ExpressionPtr>();
 
 		ASSERT_TRUE(expr);
@@ -107,17 +107,17 @@ namespace analysis {
 		// test a sibling-compound
 		EXPECT_EQ(
 				"{int<4> v0 = 1; {int<4> v1 = 2;}; {int<4> v2 = 3;};}",
-				toString(*normalize(builder.parse("{ int<4> a = 1; { int<4> b = 2; } { int<4> c = 3; } }")))
+				toString(*normalize(builder.parseStmt("{decl int<4> a = 1; { decl int<4> b = 2; } { decl int<4> c = 3; } }")))
 		);
 
 		EXPECT_EQ(
 				"{int<4> v0 = 1; {v0; int<4> v1 = 2;}; {int<4> v2 = 3; v0;};}",
-				toString(*normalize(builder.parse("{ int<4> a = 1; { a; int<4> b = 2; } { int<4> c = 3; a; } }")))
+				toString(*normalize(builder.parseStmt("{decl int<4> a = 1; { a; decl int<4> b = 2; } { decl int<4> c = 3; a; } }")))
 		);
 
 		EXPECT_EQ(
 				"{int<4> v0 = 1; int<4> v1 = 2;}",
-				toString(*normalize(builder.parse("{ int<4> a = 1; int<4> b = 2; }")))
+				toString(*normalize(builder.parseStmt("{decl int<4> a = 1; decl int<4> b = 2; }")))
 		);
 	}
 
@@ -127,11 +127,11 @@ namespace analysis {
 		IRBuilder builder(manager);
 
 		auto code = builder.parseExpr(
-				"let f = (int<4> x)->int<4> {"
-				"	return (int<4> y)->int<4> {"
+				"let f = lambda (int<4> x)->int<4> {"
+				"	return lambda (int<4> y)->int<4> {"
 				"		return f(y);"
 				"	}(x);"
-				"} in f(3)"
+				"}; f(3)"
 		);
 
 		EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return rec v2.{v2=fun(int<4> v3) {return v0(v3);}}(v1);}}(3)", toString(*normalize(code)));
@@ -198,9 +198,9 @@ namespace analysis {
 
 		auto code =
 				"{"
-				"	int<4> x = 123;"
-				"	ref<int<4>> y = 12;"
-				"	ref<int<4>> sum = var(0);"
+				"	decl int<4> x = 123;"
+				"	decl ref<int<4>> y = 12;"
+				"	decl ref<int<4>> sum = var(0);"
 				"	for(int<4> i = x-12+y+e .. x+12+y : x) {"
 				"		for(int<4> j = x-12+y+e .. x+12+y : x) {"
 				"			sum = sum + i + j;"

@@ -40,15 +40,8 @@
 GROUP(CloogMath, CloogFloor, CloogCeil, CloogMod)
 
 LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
-LITERAL(CloogFloor, "cloog.floor", "( int<4>, int<4> ) -> int<4>" )
-LITERAL(CloogCeil,  "cloog.ceil",  "( int<4>, int<4> ) -> int<4>" )
-LITERAL(CloogMod, 	"cloog.mod",   "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogFloor, "cloog_floor", "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogCeil,  "cloog_ceil",  "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogMod, 	"cloog_mod",   "( int<4>, int<4> ) -> int<4>" )
 
 LITERAL(Exit, "exit", "(int<4>)->unit" )
-
-// Semantic Grouping --------------------------------------------------------------------------------
-
-GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, RefCompOp, TypeCompOp, GenCompOp)
-
-GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator,
-	VectorOp, ArrayOp, CompOp, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)

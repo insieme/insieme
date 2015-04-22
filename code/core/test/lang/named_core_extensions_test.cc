@@ -72,9 +72,9 @@ namespace lang {
 
 		LANG_EXT_LITERAL_WITH_NAME(NamedLiteral, "NamedLiteral", "named_lit", "(NamedType)->unit")
 
-		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "let foo = FooType in (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED_WITH_NAME(NamedDerivedUnknown, "NamedDerivedUnknown", "let foo = FooType; lambda (foo x)->foo { return x; }")
 
-		LANG_EXT_DERIVED(NamedDerived, "let foo = NamedType in (foo x)->foo { return x; }")
+		LANG_EXT_DERIVED(NamedDerived, "let foo = NamedType; lambda (foo x)->foo { return x; }")
 	};
 
 	TEST(NamedCoreExtensionTest, NamedLookup) {

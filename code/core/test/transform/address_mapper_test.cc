@@ -53,7 +53,7 @@ TEST(AddressMapper, Simplest) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 			"5 + $4$;"
 	);
 
@@ -74,12 +74,12 @@ TEST(AddressMapper, Simple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 		{		
 			let int = int<4>;
-			ref<int> x = var(2);
-			ref<int> a = var($2$+$2$);
-			ref<int> b = var(a + 6);
+			decl ref<int> x = var(2);
+			decl ref<int> a = var($2$+$2$);
+			decl ref<int> b = var(a + 6);
 		}
 	)raw");
 
@@ -105,11 +105,11 @@ TEST(AddressMapper, Nested) {
 	IRBuilder builder(mgr);
 	auto& basic = builder.getLangBasic();
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
 		let int = int<4>;
-		$$(int a, int b) -> int {
-			ref<int> ret = $a * b + a$;
+		$$lambda (int a, int b) -> int {
+			decl ref<int> ret = $a * b + a$;
 			return *ret;
 		}$(4,2)$;
 	}
@@ -142,7 +142,7 @@ TEST(AddressMapper, Nested) {
 
 	auto result = builder.normalize(mapper.mapFromRoot(addresses[0].getRootNode()));
 	EXPECT_EQ(result->toString(),
-		R"raw({rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {ref<int<4>> v4 = int.sub(int.add(int.mul(v1, v2), v1), v3); return ref.deref(v4);}}(4, 2, 31337);})raw");
+		R"raw({rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {ref<int<4>> v4 = int_sub(int_add(int_mul(v1, v2), v1), v3); return ref_deref(v4);}}(4, 2, 31337);})raw");
 }
 
 } // end namespace transform

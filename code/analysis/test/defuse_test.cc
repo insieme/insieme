@@ -175,7 +175,7 @@ TEST(DefUseCollect, ArrayAssignment) {
 	// test case 
 	auto compStmt = builder.parseStmt(
 		"{ "
-		"	a[c[b]] = d; "
+		"	a[c[b]] = *d; "
 		"}", symbols
 	);
 	// std::cout << *compStmt << std::endl;
@@ -208,7 +208,7 @@ TEST(DefUseCollect, ArrayAssignment2) {
 	// test case 
 	auto compStmt = builder.parseStmt(
 		"{ "
-		"	a[c[b]] = d; "
+		"	a[c[b]] = *d; "
 		"} ", symbols
 	);
 	// std::cout << *compStmt << std::endl;

@@ -164,6 +164,9 @@ else()
     pkg_check_modules(Hwloc ${_hwloc_OPTS} hwloc)
   endif()
 
+  message(STATUS "hwloc libs ${Hwloc_LIBRARIES}")
+  message(STATUS "hwloc incs ${Hwloc_INCLUDE_DIR}")
+
   if(Hwloc_FOUND)
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(Hwloc DEFAULT_MSG Hwloc_LIBRARIES)

@@ -60,7 +60,7 @@ namespace features {
 		// load some code sample ...
 		auto forStmt = builder.parseStmt(
 			"for(uint<4> i = 10u .. 50u : 1u) {"
-			"	v[i] = w[i];"
+			"	v[i] = *(w[i]);"
 			"	for(uint<4> j = 5u .. 25u : 1u) {"
 			"		if ( (j < 10u ) ) {"
 			"			v[i+j]; v[i+j];"

@@ -390,7 +390,7 @@ TEST(TypeTest, RecTypeTest) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto type = builder.parseType("let f = struct { ref<f> next; } in f").as<RecTypePtr>();
+	auto type = builder.parseType("let f = struct { ref<f> next; }; f").as<RecTypePtr>();
 	EXPECT_TRUE(type);
 
 	// get pointer to definition

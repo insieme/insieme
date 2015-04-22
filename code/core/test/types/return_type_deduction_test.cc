@@ -291,21 +291,21 @@ namespace types {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto op1 = builder.parseExpr(
-			"(vector<'elem1,#l> v1, vector<'elem2,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
-			"	ref<vector<'res,#l>> res = var(vector<'res,#l>);"
-			"	return *res;"
-			"}(v1, v2, lit(\"x\":('elem1,'elem2)->'res))"
-		);
+		auto op1 = builder.parseExpr(R"(
+			lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2) => lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {
+				decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));
+				return *res;
+			}(v1, v2, lit("x":('elem1,'elem2)->'res))
+		)");
 
 		EXPECT_EQ("((vector<'elem1,#l>,vector<'elem2,#l>)=>vector<'res,#l>)", toString(*op1->getType()));
 
-		auto op2 = builder.parseExpr(
-			"(vector<int<#a>,#l> v1, vector<int<#a>,#l> v2) => (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {"
-			"	ref<vector<'res,#l>> res = var(vector<'res,#l>);"
-			"	return *res;"
-			"}(v1, v2, int.add)"
-		);
+		auto op2 = builder.parseExpr(R"(
+			lambda (vector<int<#a>,#l> v1, vector<int<#a>,#l> v2) => lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res op) -> vector<'res,#l> {
+				decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));
+				return *res;
+			}(v1, v2, int_add)
+		)");
 
 		EXPECT_EQ("((vector<int<#a>,#l>,vector<int<#a>,#l>)=>vector<int<#a>,#l>)", toString(*op2->getType()));
 

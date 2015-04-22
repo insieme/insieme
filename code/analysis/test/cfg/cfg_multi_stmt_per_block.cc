@@ -121,11 +121,11 @@ TEST(CFGBuilder, IfThen) {
 
     auto code = builder.parseStmt(
 		"{"
-		"	ref<int<4>> a = 0;"
+		"	decl ref<int<4>> a = 0;"
 		"	if ( true ) { "
 		"		a = 0; "
 		"	}"
-		"	int<4> c = 1;"
+		"	decl int<4> c = 1;"
 		"}"
     );
 
@@ -166,13 +166,13 @@ TEST(CFGBuilder, IfThenElse) {
 
     auto code = builder.parseStmt(
 		"{"
-		"	ref<int<4>> a = 0;"
+		"	decl ref<int<4>> a = 0;"
 		"	if ( true ) { "
 		"		a = 0; "
 		"	} else {"
 		"		a = 1; "
 		"	}"
-		"	intt<4> c = 1;"
+		"	decl int<4> c = 1;"
 		"}"
     );
 
@@ -219,12 +219,12 @@ TEST(CFGBuilder, IfThenCmp) {
 
     auto code = builder.parseStmt(
 		"{"
-		"	ref<int<4>> a = 0;"
+		"	decl ref<int<4>> a = 0;"
 		"	if ( true ) { "
 		"		a = 0; "
 		"		a = 1; "
 		"	}"
-		"	int<4> c = 1;"
+		"	decl int<4> c = 1;"
 		"}"
     );
 
@@ -576,7 +576,7 @@ TEST(CFGBuilder, CallExpr) {
 	symbols["c"] = builder.variable(builder.parseType("int<4>"));
 	symbols["d"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses("$a=$b+$c+d$$;$", symbols);
+    auto addresses = builder.parseAddressesStatement("$a=$b+$c+d$$;$", symbols);
 
 	EXPECT_EQ(3u, addresses.size());
 	CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(addresses[0].getAddressedNode());

@@ -54,21 +54,21 @@ namespace region {
 
 		// load some code sample ...
 		auto res = core::analysis::normalize(builder.parseProgram(
-				"let fun000 = ()->unit {"
+				"let fun000 = lambda ()->unit {"
 					"	for(int<4> i = 0..50) {"
 					"	}"
-					"ref<int<4>> v1 = var(3);"
+					"decl ref<int<4>> v1 = var(3);"
 				"};"
 
 				"int<4> main() {"
-					"ref<int<4>> v1 = var(0);"
-					"ref<int<4>> v5 = var(0);"
+					"decl ref<int<4>> v1 = var(0);"
+					"decl ref<int<4>> v5 = var(0);"
 					"for(int<4> k = 0..10) {"
 					"	for(int<4> i = 0..20) {"
 					"	}"
 					"}"
 					"{"
-						"parallel(job([1-1], fun000()));"
+						"parallel(job([1:1], fun000()));"
 					"};"
 					"return 0;"
 				"}"));

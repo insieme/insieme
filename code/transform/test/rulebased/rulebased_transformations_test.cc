@@ -249,8 +249,8 @@ namespace rulebased {
 
 		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*2)");
 		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*3)");
-		EXPECT_PRED2(containsSubString, res, "v2 = v0 .. select((v0+(10*2)), 50, int.lt) : 2");
-		EXPECT_PRED2(containsSubString, res, "v3 = v1 .. select((v1+(15*3)), 80, int.lt) : 3");
+		EXPECT_PRED2(containsSubString, res, "v2 = v0 .. select((v0+(10*2)), 50, int_lt) : 2");
+		EXPECT_PRED2(containsSubString, res, "v3 = v1 .. select((v1+(15*3)), 80, int_lt) : 3");
 		EXPECT_PRED2(containsSubString, res, "v2+v3");
 
 		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
@@ -264,7 +264,7 @@ namespace rulebased {
 
 		auto forStmt = builder.normalize(builder.parseStmt(
 			"for(int<4> i = 0 .. 50 : 2) {"
-			"	auto x = i;"
+			"	decl auto x = i;"
 			"	for(int<4> j = 10 .. 80 : 3) {"
 			"		i + j + x;"
 			"	}"
@@ -288,8 +288,8 @@ namespace rulebased {
 
 		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*2)");
 		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*3)");
-		EXPECT_PRED2(containsSubString, res, "v2 = v0 .. select((v0+(10*2)), 50, int.lt) : 2");
-		EXPECT_PRED2(containsSubString, res, "v4 = v1 .. select((v1+(15*3)), 80, int.lt) : 3");
+		EXPECT_PRED2(containsSubString, res, "v2 = v0 .. select((v0+(10*2)), 50, int_lt) : 2");
+		EXPECT_PRED2(containsSubString, res, "v4 = v1 .. select((v1+(15*3)), 80, int_lt) : 3");
 		EXPECT_PRED2(containsSubString, res, "decl int<4> v3 = v2;");
 		EXPECT_PRED2(containsSubString, res, "v2+v4");
 
@@ -324,9 +324,9 @@ namespace rulebased {
 		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*2)");
 		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*3)");
 		EXPECT_PRED2(containsSubString, res, "v2 = 5 .. 20 : (12*4)");
-		EXPECT_PRED2(containsSubString, res, "v3 = v0 .. select((v0+(10*2)), 50, int.lt) : 2");
-		EXPECT_PRED2(containsSubString, res, "v4 = v1 .. select((v1+(15*3)), 80, int.lt) : 3");
-		EXPECT_PRED2(containsSubString, res, "v5 = v2 .. select((v2+(12*4)), 20, int.lt) : 4");
+		EXPECT_PRED2(containsSubString, res, "v3 = v0 .. select((v0+(10*2)), 50, int_lt) : 2");
+		EXPECT_PRED2(containsSubString, res, "v4 = v1 .. select((v1+(15*3)), 80, int_lt) : 3");
+		EXPECT_PRED2(containsSubString, res, "v5 = v2 .. select((v2+(12*4)), 20, int_lt) : 4");
 		EXPECT_PRED2(containsSubString, res, "((v3+v4)+v5)");
 
 		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
@@ -340,9 +340,9 @@ namespace rulebased {
 
 		auto forStmt = builder.normalize(builder.parseStmt(
 			"for(int<4> i = 0 .. 50 : 2) {"
-			"	auto x = i;"
+			"	decl auto x = i;"
 			"	for(int<4> j = 10 .. 80 : 3) {"
-			"		auto y = j;"
+			"		decl auto y = j;"
 			"		i;"
 			"		for(int<4> k = 5 .. 20 : 4) {"
 			"			i+j+k+x+y;"
@@ -371,9 +371,9 @@ namespace rulebased {
 		EXPECT_PRED2(containsSubString, res, "v0 = 0 .. 50 : (10*2)");
 		EXPECT_PRED2(containsSubString, res, "v1 = 10 .. 80 : (15*3)");
 		EXPECT_PRED2(containsSubString, res, "v2 = 5 .. 20 : (12*4)");
-		EXPECT_PRED2(containsSubString, res, "v3 = v0 .. select((v0+(10*2)), 50, int.lt) : 2");
-		EXPECT_PRED2(containsSubString, res, "v5 = v1 .. select((v1+(15*3)), 80, int.lt) : 3");
-		EXPECT_PRED2(containsSubString, res, "v7 = v2 .. select((v2+(12*4)), 20, int.lt) : 4");
+		EXPECT_PRED2(containsSubString, res, "v3 = v0 .. select((v0+(10*2)), 50, int_lt) : 2");
+		EXPECT_PRED2(containsSubString, res, "v5 = v1 .. select((v1+(15*3)), 80, int_lt) : 3");
+		EXPECT_PRED2(containsSubString, res, "v7 = v2 .. select((v2+(12*4)), 20, int_lt) : 4");
 		EXPECT_PRED2(containsSubString, res, "decl int<4> v4 = v3;");
 		EXPECT_PRED2(containsSubString, res, "decl int<4> v6 = v5;");
 		EXPECT_PRED2(containsSubString, res, "((v3+v5)+v7)");

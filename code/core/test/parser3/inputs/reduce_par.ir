@@ -1,0 +1,9 @@
+
+
+let red_par = lambda (threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b {
+	return redistribute(g, v, lambda (ref<array<'a,1>> data, uint<8> size, uint<8> _)=> array_reduce(data, size, op, init) );
+};
+
+unit main() {
+    
+}
