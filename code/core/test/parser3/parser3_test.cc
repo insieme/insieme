@@ -42,18 +42,15 @@ namespace parser3{
         EXPECT_TRUE(test_type(nm, "( int<4> , ref<int<4>>) => int<4>"));
         EXPECT_TRUE(test_type(nm, "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem"));
 
-        EXPECT_TRUE(test_type(nm, R"1N5P1RE(
-                    let class = struct name { int<4> a; int<5> b};
-                    method class::()->int<4>
-                )1N5P1RE"));
-        EXPECT_TRUE(test_type(nm, R"1N5P1RE(
-                    let class = struct name { int<4> a; int<5> b};
-                    ~class::()
-                )1N5P1RE"));
-        EXPECT_TRUE(test_type(nm, R"1N5P1RE(
-                    let class = struct name { int<4> a; int<5> b};
-                    ctor class::()
-                )1N5P1RE"));
+        EXPECT_TRUE(test_type(nm, 
+                    "let class = struct name { int<4> a; int<5> b};"
+                    "method class::()->int<4> "));
+        EXPECT_TRUE(test_type(nm, 
+                    "let class = struct name { int<4> a; int<5> b};"
+                    "~class::()" ));
+        EXPECT_TRUE(test_type(nm, 
+                    "let class = struct name { int<4> a; int<5> b};"
+                    "ctor class::()"));
 
         EXPECT_TRUE(test_type(nm, "struct C { int<4> field; }" ));
         EXPECT_TRUE(test_type(nm, "(ref<array<ref<array<struct{int<4> int; real<4> float },1>>,1>>,"
@@ -123,34 +120,30 @@ namespace parser3{
 
         EXPECT_TRUE(test_expression(nm, "let f = lambda ()->unit {  5;  lambda ()->unit { f(); } (); }; f"));
 
-        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-    	lambda (int<4> v, int<4> exp) -> int<4> { 
-    		let one = lambda(int<4> _)=>4; 
-    		let two = lambda(int<4> x)=>x+exp; 
-            return one(two(exp));
-    	}  
-            )1N5P1RE"));
-        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-    	lambda (int<4> v, int<4> exp) -> int<4> { 
-    		let one = lambda(int<4> _)-> int<4> { return 4;  };
-    		let two = lambda(int<4> x)-> int<4> { return x+5; };
-            return one(two(exp));
-    	}  
-            )1N5P1RE"));
+        EXPECT_TRUE(test_expression(nm, 
+    	"lambda (int<4> v, int<4> exp) -> int<4> { "
+    	"	let one = lambda(int<4> _)=>4; "
+    	"	let two = lambda(int<4> x)=>x+exp; "
+        "    return one(two(exp));"
+    	"}  "));
+        EXPECT_TRUE(test_expression(nm, 
+    	"lambda (int<4> v, int<4> exp) -> int<4> { "
+    	"	let one = lambda(int<4> _)-> int<4> { return 4;  };"
+    	"	let two = lambda(int<4> x)-> int<4> { return x+5; };"
+        "    return one(two(exp));"
+    	"}  "));
             
-        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-            let class = struct name { int<4> a; int<5> b};
-            lambda ctor class::() { }
-        )1N5P1RE"));
+        EXPECT_TRUE(test_expression(nm, 
+        "    let class = struct name { int<4> a; int<5> b};"
+        "    lambda ctor class::() { }"));
 
-        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-            let class = struct name { int<4> a; int<5> b};
-            lambda class::()->int<4> { return 1; }
-        )1N5P1RE"));
-        EXPECT_TRUE(test_expression(nm, R"1N5P1RE(
-            let class = struct name { int<4> a; int<5> b};
-            lambda  ~class::() { }
-        )1N5P1RE"));
+        EXPECT_TRUE(test_expression(nm, 
+        "    let class = struct name { int<4> a; int<5> b};"
+        "    lambda class::()->int<4> { return 1; }"));
+
+        EXPECT_TRUE(test_expression(nm, 
+        "    let class = struct name { int<4> a; int<5> b};"
+        "    lambda  ~class::() { }"));
     }
 
     bool test_statement(NodeManager& nm, const std::string& x){
@@ -223,33 +216,34 @@ namespace parser3{
         EXPECT_TRUE(test_statement(nm, "{ }"));
 
 
-        EXPECT_TRUE(test_statement(nm, R"1N5P1RE(
-        {
-            let type = struct a { int<4> a; int<8> b; };
-            decl type varable;
-            decl ref<type> var2;
-            decl auto var3 = undefined(type);
-        }
-        )1N5P1RE"));
-        EXPECT_TRUE(test_statement(nm, R"1N5P1RE(
-        {
-            let int = int<4>;    
-            let A = struct { int a; };  
-            let B = struct : A { int b; };  
-            decl ref<B> b;  
-            decl auto x = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );
-        }
-        )1N5P1RE"));
+        EXPECT_TRUE(test_statement(nm, 
+        "{"
+        "    let type = struct a { int<4> a; int<8> b; };"
+        "    decl type varable;"
+        "    decl ref<type> var2;"
+        "    decl auto var3 = undefined(type);"
+        "}"
+        ));
 
-        EXPECT_TRUE(test_statement(nm, R"1N5P1RE(
-        {
-            let class = struct name { int<2> a};
-            let collection = vector<class, 10>;
-            decl ref<collection> x;
-            decl int<2> y;
-            x[5].a = y;
-        }
-        )1N5P1RE"));
+        EXPECT_TRUE(test_statement(nm, 
+        "{"
+        "    let int = int<4>;    "
+        "    let A = struct { int a; };  "
+        "    let B = struct : A { int b; };  "
+        "    decl ref<B> b;  "
+        "    decl auto x = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );"
+        "}"
+        ));
+
+        EXPECT_TRUE(test_statement(nm, 
+        "{"
+        "    let class = struct name { int<2> a};"
+        "    let collection = vector<class, 10>;"
+        "    decl ref<collection> x;"
+        "    decl int<2> y;"
+        "    x[5].a = y;"
+        "}"
+        ));
     }
 
     bool test_program(NodeManager& nm, const std::string& x){
@@ -280,21 +274,20 @@ namespace parser3{
         EXPECT_TRUE(test_program(mgr, "let a , b = a<b>, b<a>; int<4> main () { decl a x = undefined(a); decl b y = undefined(b); return 1; }"));
         EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
 
-        EXPECT_TRUE(test_program(mgr, R"1N5P1RE(
+        EXPECT_TRUE(test_program(mgr, 
 
-            let class = struct name { int<4> a; int<5> b};
-            let f,g = lambda class :: ()->unit{
-                    g(this);
-                },
-                lambda class ::()->unit{
-                    f(this);
-                }; 
-            unit main() {  
-                decl ref<class> x;
-                f(x);
-                g(x);
-            }
-        )1N5P1RE" ));
+            "let class = struct name { int<4> a; int<5> b};"
+            "let f,g = lambda class :: ()->unit{"
+            "        g(this);"
+            "    },"
+            "    lambda class ::()->unit{"
+            "        f(this);"
+            "    }; "
+            "unit main() {  "
+            "    decl ref<class> x;"
+            "    f(x);"
+            "    g(x);"
+            "}" ));
     }
     
     TEST(IR_Parser3, Program) {
@@ -302,56 +295,45 @@ namespace parser3{
         EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { 1+1; }"));
         EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (int a, int b) { 1+1; }"));
         EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { f(1); }"));
-        EXPECT_TRUE(test_program(nm, R"1N5P1RE( 
-
-                let int = int<4> ; 
-
-                let h = lambda ((int)->int f)->int { return f(5); } ; 
-
-                let f,g = 
-                    lambda (int a)->int {
-                        h(f);
-                        f(4);
-                        g(f(4));
-                        h(g);
-                    },
-                    lambda (int a)->int {
-                        h(f);
-                        f(g(4));
-                        g(4);
-                        h(g);
-                    };
-
-                unit main() { f(1); }
-
-        )1N5P1RE"));
+        EXPECT_TRUE(test_program(nm, 
+                "let int = int<4> ; "
+                "let h = lambda ((int)->int f)->int { return f(5); } ; "
+                "let f,g = "
+                "    lambda (int a)->int {"
+                "        h(f);"
+                "        f(4);"
+                "        g(f(4));"
+                "        h(g);"
+                "    },"
+                "    lambda (int a)->int {"
+                "        h(f);"
+                "        f(g(4));"
+                "        g(4);"
+                "        h(g);"
+                "    };"
+                "unit main() { f(1); }"
+        ));
 
          EXPECT_TRUE(test_program(nm,
-                R"(
-                let int = int<4>;
-                let uint = uint<4>;
-
-                let differentbla = lambda ('b x) -> unit {
-                    decl auto m = x;
-                    decl auto l = m;
-                };
-
-                let bla = lambda ('a f) -> unit {
-                    let anotherbla = lambda ('a x) -> unit {
-                        decl auto m = x;
-                    };
-                    anotherbla(f);
-                    differentbla(f);
-                    parallel(job { decl auto l = f; });
-                };
-
-                int main() {
-                    // some bla
-                    decl int x = 10;
-                    bla(x);
-                    return 0;
-                }
-                )"
+                "let int = int<4>;"
+                "let uint = uint<4>;"
+                "let differentbla = lambda ('b x) -> unit {"
+                "    decl auto m = x;"
+                "    decl auto l = m;"
+                "};"
+                "let bla = lambda ('a f) -> unit {"
+                "    let anotherbla = lambda ('a x) -> unit {"
+                "        decl auto m = x;"
+                "    };"
+                "    anotherbla(f);"
+                "    differentbla(f);"
+                "    parallel(job { decl auto l = f; });"
+                "};"
+                "int main() {"
+                "    decl int x = 10;"
+                "    bla(x);"
+                "    return 0;"
+                "}"
         ));
     }
 
@@ -366,9 +348,7 @@ namespace parser3{
 //            let a = lambda()->unit {};  let b = ()->int{ return 0; };  a
 //        )"));
 //
-        EXPECT_FALSE (test_expression(nm, R"(
-            let a = int<4>;  let a = float<4>;  1 
-        )"));
+        EXPECT_FALSE (test_expression(nm, " let a = int<4>;  let a = float<4>;  1 "));
     }
 
 } // parser3

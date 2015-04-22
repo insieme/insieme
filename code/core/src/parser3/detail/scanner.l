@@ -18,7 +18,10 @@
 //# undef yywrap
 //# define yywrap() 1
 
-// The location of the current token.
+
+#ifdef __clang__
+# pragma clang diagnostic ignored "-Wdeprecated-register"
+#endif
 %}
 
 
@@ -232,4 +235,3 @@ int Trick_Lexer::yylex(){
         abort();
     return 0;
 }
-

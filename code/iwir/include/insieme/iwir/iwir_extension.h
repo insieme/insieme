@@ -111,26 +111,26 @@ public:
 
 	LANG_EXT_DERIVED(RefLinkLoopElement,
 			"lambda (ref<collection<'elemTy>> from, int<4> it, ref<'elemTy> to)->unit {"
-			"	let at = lit(\"ref_collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
+			"	let at = expr lit(\"ref_collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
 			"	to = *( at(from, it));"
 			"}");
 
 	LANG_EXT_DERIVED(LinkLoopElement,
 			"lambda (collection<'elemTy> from, int<4> it, ref<'elemTy> to)->unit {"
-			"	let at = lit(\"collection_at\":(collection<'elemTy>, int<4>) -> 'elemTy);"
+			"	let at = expr lit(\"collection_at\":(collection<'elemTy>, int<4>) -> 'elemTy);"
 			"	to = at(from, it);"
 			"}");
 
 
 	LANG_EXT_DERIVED(RefLinkUnion, 
 			"lambda (ref<'elemTy> from, ref<collection<'elemTy>> to)->unit {"
-			"	let append = lit(\"ref.collection_append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
+			"	let append = expr lit(\"ref.collection_append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
 			"	to = * append(to, *from);"
 			"}");
 
 	LANG_EXT_DERIVED(LinkUnion, 
 			"lambda ('elemTy from, ref<collection<'elemTy>> to)->unit {"
-			"	let append = lit(\"ref.collection_append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
+			"	let append = expr lit(\"ref.collection_append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
 			"	to = *(append(to, from));"
 			"}");
 
@@ -147,13 +147,13 @@ public:
 
 	LANG_EXT_DERIVED(RefLinkParallelOutput,
 			"lambda (ref<'elemTy> from, ref<collection<'elemTy>> to, int<4> it)->unit {"
-			"	let at = lit(\"ref.collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
+			"	let at = expr lit(\"ref.collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
 			"	at(to, it) = *from;"
 			"}");
 
 	LANG_EXT_DERIVED(LinkParallelOutput,
 			"lambda ('elemTy from, ref<collection<'elemTy>> to, int<4> it)->unit {"
-			"	let at = lit(\"ref.collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
+			"	let at = expr lit(\"ref.collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
 			"	at(to, it) = from;"
 			"}");
 

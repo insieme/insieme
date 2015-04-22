@@ -199,8 +199,8 @@ CONVERTER(BlockScope) {
 	//			links-out-task -- read output port and write to channel
 	//			}
 	//
-	//	fillChannels -- (var, channel) -> unit { channel.send(var)}
-	//	readChannels	(var, channel) -> unit { var = channel.recv()}
+	//	fillChannels -- (var, channel) -> unit { channel_send(var)}
+	//	readChannels	(var, channel) -> unit { var = channel_recv()}
 	//}
 	//links-out
 
@@ -244,22 +244,22 @@ CONVERTER(BlockScope) {
 
 					//declare channel of size one and type "chanType"
 					symbols["chanType"] = varType;
-					core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("auto chan = channel.create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
+					core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("decl auto chan = channel_create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
 					declareChannels.push_back(chanDecl);
 					core::VariablePtr chan = chanDecl->getVariable();
 
 					portToChannel[ip] = chan;
-					symbols["chan"] = chan;
-					symbols["var"] = var;
+					symbols["chanVar"] = chan;
+					symbols["port"] = var;
 
 					//release channel -- when everythings done in BlockScope
-					releaseChannels.push_back(irBuilder.parseStmt("channel.release(chan);", symbols));
+					releaseChannels.push_back(irBuilder.parseStmt("channel_release(chanVar);", symbols));
 
-					//fill channel links in with : var = channel.recv();
-					chanLinkIn.push_back(irBuilder.parseStmt("var = *channel.recv(chan);", symbols));
+					//fill channel links in with : var = channel_recv();
+					chanLinkIn.push_back(irBuilder.parseStmt("port = *channel_recv(chanVar);", symbols));
 
-					//fill channel links out with : channel.send(var );
-					chanLinkOut.push_back(irBuilder.parseStmt("channel.send(chan, var);", symbols));
+					//fill channel links out with : channel_send(var );
+					chanLinkOut.push_back(irBuilder.parseStmt("channel_send(chanVar, port);", symbols));
 				}
 			);
 			
@@ -278,22 +278,22 @@ CONVERTER(BlockScope) {
 
 					//declare channel of size one and type "chanType"
 					symbols["chanType"] = varType;
-					core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("auto chan = channel.create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
+					core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("decl auto chan = channel_create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
 					declareChannels.push_back(chanDecl);
 					core::VariablePtr chan = chanDecl->getVariable();
 					
 					portToChannel[op] = chan;
-					symbols["var"] = var;
-					symbols["chan"] = chan;
+					symbols["port"] = var;
+					symbols["chanVar"] = chan;
 
 					//release channel -- when everythings done in BlockScope
-					releaseChannels.push_back(irBuilder.parseStmt("channel.release(chan);", symbols));
+					releaseChannels.push_back(irBuilder.parseStmt("channel_release(chanVar);", symbols));
 
-					//fill channel links in with : var = channel.recv();
-					chanLinkIn.push_back(irBuilder.parseStmt("var = *channel.recv(chan);", symbols));
+					//fill channel links in with : var = channel_recv();
+					chanLinkIn.push_back(irBuilder.parseStmt("port = *channel_recv(chanVar);", symbols));
 
-					//fill channel links out with : channel.send(var );
-					chanLinkOut.push_back(irBuilder.parseStmt("channel.send(chan, var);", symbols));
+					//fill channel links out with : channel_send(var );
+					chanLinkOut.push_back(irBuilder.parseStmt("channel_send(chanVar, port);", symbols));
 
 				}				
 			);
@@ -329,19 +329,19 @@ CONVERTER(BlockScope) {
 
 			//declare channel of size one and type "chanType"
 			symbols["chanType"] = varType;
-			core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("auto chan = channel.create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
+			core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("decl auto chan = channel_create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
 			declareChannels.push_back(chanDecl);
 			core::VariablePtr chan = chanDecl->getVariable();
 			
 			portToChannel[ip] = chan;
-			symbols["var"] = var;
-			symbols["chan"] = chan;
+			symbols["port"] = var;
+			symbols["chanVar"] = chan;
 			
 			//release channel -- when everythings done in BlockScope
-			releaseChannels.push_back(irBuilder.parseStmt("channel.release(chan);", symbols));
+			releaseChannels.push_back(irBuilder.parseStmt("channel_release(chanVar);", symbols));
 
-			//fill channel links out with : channel.send(var );
-			fillChannels.push_back(irBuilder.parseStmt("channel.send(chan, var);", symbols));
+			//fill channel links out with : channel_send(var );
+			fillChannels.push_back(irBuilder.parseStmt("channel_send(chanVar, port);", symbols));
 		}
 	);
 
@@ -358,19 +358,19 @@ CONVERTER(BlockScope) {
 			
 			//declare channel of size one and type "chanType"
 			symbols["chanType"] = varType;
-			core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("auto chan = channel.create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
+			core::DeclarationStmtPtr chanDecl = irBuilder.parseStmt("decl auto chan = channel_create(type(chanType), param(1));", symbols).as<core::DeclarationStmtPtr>();
 			declareChannels.push_back(chanDecl);
 			core::VariablePtr chan = chanDecl->getVariable();
 
 			portToChannel[op] = chan;
-			symbols["var"] = var;
-			symbols["chan"] = chan;
+			symbols["port"] = var;
+			symbols["chanVar"] = chan;
 
 			//release channel -- when everythings done in BlockScope
-			releaseChannels.push_back(irBuilder.parseStmt("channel.release(chan);", symbols));
+			releaseChannels.push_back(irBuilder.parseStmt("channel_release(chanVar);", symbols));
 
-			//read channel links-out with : var = channel.recv();
-			readChannels.push_back(irBuilder.parseStmt("var = *channel.recv(chan);", symbols));
+			//read channel links-out with : var = channel_recv();
+			readChannels.push_back(irBuilder.parseStmt("port = *channel_recv(chanVar);", symbols));
 		}
 	);
 
@@ -396,23 +396,23 @@ CONVERTER(BlockScope) {
 		//declare channel - queue size == #targets
 		auto queueSize = cf.second.size();
 		cfSymbols["queueSize"] = irBuilder.getIntParamLiteral(queueSize);
-		core::DeclarationStmtPtr cfChanDecl = irBuilder.parseStmt("auto chan = channel.create(type(unit), queueSize);", cfSymbols).as<core::DeclarationStmtPtr>();
+		core::DeclarationStmtPtr cfChanDecl = irBuilder.parseStmt("decl auto chan = channel_create(type(unit), queueSize);", cfSymbols).as<core::DeclarationStmtPtr>();
 		declareChannels.push_back(cfChanDecl);
 
 		cfSymbols["cfChan"] = cfChanDecl->getVariable();
 		//release channel -- when everythings done in BlockScope
-		releaseChannels.push_back(irBuilder.parseStmt("channel.release(cfChan);", cfSymbols));
+		releaseChannels.push_back(irBuilder.parseStmt("channel_release(cfChan);", cfSymbols));
 	
 		//get "from" task body
 		auto fromBody = taskJob[from];
 	
 		for(Task* to : cf.second) {
 			// for every dependent task send a token
-			fromBody.insert(fromBody.end(), irBuilder.parseStmt("channel.send(cfChan,unit);", cfSymbols));
+			fromBody.insert(fromBody.end(), irBuilder.parseStmt("channel_send(cfChan,unit);", cfSymbols));
 	
 			// dependent tasks need to read channel
 			auto toBody = taskJob[to];
-			toBody.insert(toBody.begin(), irBuilder.parseStmt("channel.recv(cfChan);", cfSymbols));
+			toBody.insert(toBody.begin(), irBuilder.parseStmt("channel_recv(cfChan);", cfSymbols));
 
 			//update the "to" task body
 			taskJob[to] = toBody;
@@ -455,7 +455,7 @@ CONVERTER(BlockScope) {
 		assert_true(fromChan);
 		
 		muxSymbols["from"] = fromChan;
-		core::DeclarationStmtPtr tempDecl = irBuilder.parseStmt("auto temp = channel.recv(from);", muxSymbols).as<core::DeclarationStmtPtr>();
+		core::DeclarationStmtPtr tempDecl = irBuilder.parseStmt("decl auto temp = channel_recv(from);", muxSymbols).as<core::DeclarationStmtPtr>();
 		muxBody.push_back(tempDecl);
 		muxSymbols["temp"] = tempDecl->getVariable();
 
@@ -465,7 +465,7 @@ CONVERTER(BlockScope) {
 			assert_true(toChan);
 			
 			muxSymbols["to"] = toChan;
-			core::StatementPtr sendStmt = irBuilder.parseStmt("channel.send(to, temp);", muxSymbols);
+			core::StatementPtr sendStmt = irBuilder.parseStmt("channel_send(to, temp);", muxSymbols);
 			muxBody.push_back(sendStmt);
 		}
 	

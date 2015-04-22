@@ -77,25 +77,23 @@ namespace lang {
 		 * A construct supporting the construction and initialization of an array
 		 * of objects.
 		 */
-		LANG_EXT_DERIVED(ArrayCtor, R"1N5P1RE(
-				let int = uint<8>;
-
-				lambda (('a)->ref<'a> allocator, ctor 'b::() c, int size)->ref<array<'b,1>> { 
+		LANG_EXT_DERIVED(ArrayCtor, 
+				"let int = uint<8>;"
+				"lambda (('a)->ref<'a> allocator, ctor 'b::() c, int size)->ref<array<'b,1>> { "
 					// define the type to be allocated 
- 					let wrapper = struct { int size; array<'b,1> data; }; 
-					
+ 				"	let wrapper = struct { int size; array<'b,1> data; }; "
+			
 					// allocate the memory 
-					decl ref<wrapper> res = allocator( struct wrapper { size, array_create_1D(lit('b), size) }); 
-					
+				"	decl ref<wrapper> res = allocator( struct wrapper { size, array_create_1D(lit('b), size) }); "
+
 					// init elements 
-					for(int i=0u .. size) {
-						c(res.data[i]);
-					}
-					
+				"	for(int i=0u .. size) {"
+				"		c(res.data[i]);"
+				"	}"
+
 					// return array reference 
-					return res.data;
-				}
-                )1N5P1RE"
+				"	return res.data;"
+				"}"
 		);
 
 		/**

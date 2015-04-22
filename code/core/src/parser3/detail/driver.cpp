@@ -838,11 +838,14 @@ namespace {
         auto buffer = split_string(str);
         int line = 1;
 
-        int lineb = l.begin.line;
+      //  int lineb = l.begin.line;
         int linee = l.end.line;
 
-        for (; line< lineb; ++line); 
-        for (; line< linee; ++line); std::cout << buffer[line-1] << std::endl;
+        // wanna print the previous code? use something like this
+        //for (; line< lineb; ++line); 
+        
+        line = linee;
+        std::cout << buffer[line-1] << std::endl;
 
         int colb = l.begin.column;
         int cole = l.end.column;
@@ -885,8 +888,8 @@ namespace {
             assert_true(lineb <= (int)buffer.size())  << "line beg " << lineb << " : buffer size " << buffer.size() << " \n" << buffer;
             assert_true(linee <= (int)buffer.size()) << "line end " << linee << " : buffer size " << buffer.size() << " \n" << buffer;
 
-            for (; line< lineb; ++line); 
-            for (; line< linee; ++line); out << buffer[line-1] << std::endl;
+            line = linee;
+            out << buffer[line-1] << std::endl;
 
             int colb = err.l.begin.column;
             int cole = err.l.end.column;

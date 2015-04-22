@@ -524,15 +524,14 @@ DERIVED(ArrayViewPostInc, 		"array_view_post_inc",			"lambda (ref<ref<array<'ele
 DERIVED(ArrayViewPreDec, 		"array_view_pre_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,-1); return *a; }")
 DERIVED(ArrayViewPostDec, 		"array_view_post_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { decl auto res = *a; a = array_view(*a,-1); return res; }")
 
-DERIVED(ArrayReduce, "array_reduce", R"1N5P1RE(
-		lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {
-			decl ref<'b> res = var(init);
-			for(uint<8> i = 0ul .. size) {
-				res = op(*res, *(data[i]));
-			}
-			return *res;
-		}
-)1N5P1RE")
+DERIVED(ArrayReduce, "array_reduce", 
+	"	lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
+	"		decl ref<'b> res = var(init);"
+	"		for(uint<8> i = 0ul .. size) {"
+	"			res = op(*res, *(data[i]));"
+	"		}"
+	"		return *res;"
+	"	}")
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
