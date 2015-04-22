@@ -8,7 +8,7 @@
 
 VERSION=3.0.4
 PACKAGE=bison-$VERSION
-FILE=$PACKAGE$SUBVERSION.tar.bz2
+FILE=bison-$VERSION.tar.gz
 
 if [ -d $PREFIX/bison-$VERSION ]; then
   echo "bison version $VERSION already installed"
@@ -23,13 +23,13 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-tar -xf $FILE
+tar xf $FILE
 cd $PACKAGE
 
 echo "#### Building BISON library ####"
 CFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/bison-$VERSION 
 make -j $SLOTS
-make check
+#make check
 
 # Check for failure
 RET=$?
