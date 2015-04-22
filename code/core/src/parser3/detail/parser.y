@@ -208,6 +208,8 @@
 %token <std::string> UINT "uint"
 %token <std::string> LONG "long"
 %token <std::string> ULONG "ulong"
+%token <std::string> LONGLONG "longlong"
+%token <std::string> ULONGLONG "ulonglong"
 %token <std::string> FLOAT "float"
 %token <std::string> DOUBLE "double"
 %token <std::string> PARAMVAR "paramvar"
@@ -681,6 +683,8 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "uint"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getUInt4(), $1); }
            | "long"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getInt8(), $1); }
            | "ulong"      { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getUInt8(), $1); }
+           | "longlong"   { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getInt16(), $1); }
+           | "ulonglong"  { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getUInt16(), $1); }
            | "float"      { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getReal4(), $1); }
            | "double"     { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getReal8(), $1); }
            | "stringlit"  { RULE $$ = driver.builder.stringLit($1); }

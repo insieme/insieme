@@ -41,6 +41,8 @@ float   [0-9]+"."[0-9]+f
 double  [0-9]+"."[0-9]+
 ulong   [0-9]+ul
 long    [0-9]+l
+longlong [0-9]+ll
+ulonglong [0-9]+ull
 uint    [0-9]+u
 int     [0-9]+
 blank   [ \t]
@@ -191,6 +193,12 @@ paramvar #[a-zA-Z]
 }
 {ulong}      {
   return inspire_parser::make_ULONG(yytext, loc);
+}
+{longlong}      {
+  return inspire_parser::make_LONGLONG(yytext, loc);
+}
+{ulonglong}      {
+  return inspire_parser::make_ULONGLONG(yytext, loc);
 }
 {float}      {
   return inspire_parser::make_FLOAT(yytext, loc);
