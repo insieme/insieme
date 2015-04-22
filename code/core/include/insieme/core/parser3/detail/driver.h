@@ -109,54 +109,162 @@ public:
     StatementPtr parseStmt ();
     ExpressionPtr parseExpression ();
 
-    // tools
+    // ~~~~~~~~~~~~~~~~~~~~~~~~  tools  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /**
+     * finds an expression symbol previously defined in the scoope
+     */
     ExpressionPtr findSymbol(const location& l, const std::string& name);
+    /**
+     * finds a type symbol previously defined in the scoope
+     */
     TypePtr findType(const location& l, const std::string& name);
 
+    /**
+     *  handles apropiate type for expression to be used in an operation
+     */
     ExpressionPtr getOperand(ExpressionPtr expr);
+
+    /**
+     * generates a binary operation given by op between left and right expressions
+     */
     ExpressionPtr genBinaryExpression(const location& l, const std::string& op, ExpressionPtr left, ExpressionPtr right);
+
+    /**
+     * generate a field access in tagtype (struct/union)
+     */
     ExpressionPtr genFieldAccess(const location& l, const ExpressionPtr&, const std::string& fieldname);
+
+    /**
+     * generates a tuple access based on index
+     */
     ExpressionPtr genTupleAccess(const location& l, const ExpressionPtr& expr, const std::string& member);
 
+    /**
+     * generates a generic type
+     * @param l: the location where this generic type was found
+     * @param name: the name of type
+     * @param parents: list of parent types if any
+     * @param params: list of type paramenters
+     * @param IntParamList: list of int type paramenters
+     */
     TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params, const IntParamList& iparamlist);
+
+    /**
+     *  generates a function type
+     */
     TypePtr genFuncType(const location& l, const TypeList& params, const TypePtr& retType, const FunctionKind& fk = FK_PLAIN);
 
+    /**
+     * generates a lambda expression
+     */
     ExpressionPtr genLambda(const location& l, const VariableList& params, const TypePtr& retType, const StatementPtr& body, const FunctionKind& = FK_PLAIN);
+
+    /**
+     * genereates a closure
+     */
     ExpressionPtr genClosure(const location& l, const VariableList& params, StatementPtr body);
+
+    /**
+     * generates a call expression
+     */
     ExpressionPtr genCall(const location& l, const ExpressionPtr& func, ExpressionList params);
-    void add_this (const location& l, const TypePtr& classType);
+
+    /**
+     * constructs a struct/union expression
+     */
+    ExpressionPtr genTagExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
+
+    /**
+     * generate a type parameter variable
+     */
+    VariableIntTypeParamPtr gen_type_param_var(const location& l, const std::string& name);
+
+    /**
+     * finds in scoope a previously defined type paramenter var
+     */
+    VariableIntTypeParamPtr find_type_param_var(const location& l, const std::string& name);
 
     /* ~~~~~~~~~~~~~~~~~~~~~~~ let bindings management ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+    /**
+     * stores in the current state a name for a let binding being defined
+     */
     void add_let_name(const location& l, const std::string& name); 
+
+    /**
+     * stores in the current state the type and code (text) for a lambda being defined
+     */
     void add_let_lambda(const location& l, const location& bodyb, const location& bodye, 
                         const TypePtr& retType, const VariableList& params = VariableList(), const FunctionKind& fk = FK_PLAIN);
+    /**
+     * stores in the current state the type for a let type being defined
+     */
     void add_let_type(const location& l, const TypePtr& type);
+
+    /**
+     * stores in the current state the expression for a let expression being defined
+     */
     void add_let_expression(const location& l, const ExpressionPtr& expr); 
 
+    /**
+     * stores in the current scope the "this" variable with the given type
+     */
+    void add_this (const location& l, const TypePtr& classType);
+
+    /**
+     * finish the let statement, matches names and definitions of types/lambdas/expresions
+     */
     void close_let_statement(const location& l); 
 
-    ExpressionPtr genTagExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
-
-    VariableIntTypeParamPtr gen_type_param_var(const location& l, const std::string& name);
-    VariableIntTypeParamPtr find_type_param_var(const location& l, const std::string& name);
-
+    /**
+     * add a symbol into the scope
+     */
     void add_symb(const location& l, const std::string& name, NodePtr ptr);
+
+    /**
+     * add a symbol into the scope (no location, used when setting up the inspire_parser)
+     */
     void add_symb(const std::string& name, NodePtr ptr);
 
+    /**
+     *  Open a frame in the scope manager
+     */
     void open_scope(const location& l, const std::string& );
+
+    /**
+     *  Close a frame in the scope manager
+     */
     void close_scope(const location& l, const std::string&);
 
+    /**
+     * Utility to mark addresses when parsing addresses (expression overload)
+     */
     ExpressionPtr mark_address(const location& l, const ExpressionPtr& expr);
+
+    /**
+     * Utility to mark addresses when parsing addresses (stmt overload)
+     */
     StatementPtr  mark_address(const location& l, const StatementPtr& stmt);
 
-    // syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
+    /**
+     * queries whenever the core generation is inhibited
+     *  syntatic parsing, no build (this can be used to jump over large ranges of code to do subscooping
+     */
     bool inhibit_building()const;
+
+    /**
+     *  enambes code generation inhibition
+     */
     void set_inhibit(bool flag =true);
 
+    /**
+     *  support for using keyword (allows to include extensions)
+     */
     void using_scope_handle (const location& l, const std::vector<std::string>& extension_names);
 
-    // debug
+    /**
+     *  debug: prints location in parsed text
+     */
     void print_location(const location& l)const;
 
     // Error handling.
