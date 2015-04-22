@@ -339,13 +339,13 @@ namespace constraint {
 			};
 			virtual bool check(const Assignment& ass) const { return true; }
 
-			virtual std::ostream& writeDotEdge(std::ostream& out) const { return out << in << "->" << out << "\n"; }
-			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const { return writeDotEdge(out); }
+			virtual std::ostream& writeDotEdge(std::ostream& o) const { return o << in << "->" << out << "\n"; }
+			virtual std::ostream& writeDotEdge(std::ostream& o, const Assignment& ass) const { return writeDotEdge(o); }
 
 			virtual bool hasAssignmentDependentDependencies() const { return false; }
 			virtual const std::vector<Variable>& getUsedInputs(const Assignment& ass) const { return getInputs(); }
 
-			virtual std::ostream& printTo(std::ostream& out) const { return out << this->out << " += " << in; }
+			virtual std::ostream& printTo(std::ostream& o) const { return o << this->out << " += " << in; }
 
 		};
 
