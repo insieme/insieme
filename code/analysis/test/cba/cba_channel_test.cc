@@ -57,15 +57,15 @@ namespace cba {
 		IRBuilder builder(mgr);
 
 		map<string,NodePtr> symbols;
-		symbols["e"] = builder.parse("lit(\"e\":channel<int<4>,1>)");
+		symbols["e"] = builder.parseExpr("lit(\"e\":channel<int<4>,1>)");
 
 		auto in = builder.parseStmt(
 				"{"
 				"	let channel = channel<int<4>,1>;"
 				"	"
-				"	auto c = channel.create(type(int<4>), param(1));"
-				"	auto c2 = c;"
-				"	ref<channel> rc = var(c);"
+				"	decl auto c = channel_create(type(int<4>), param(1));"
+				"	decl auto c2 = c;"
+				"	decl ref<channel> rc = var(c);"
 				"	"
 				"	c;"
 				"	c2;"

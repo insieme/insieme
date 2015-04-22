@@ -163,14 +163,14 @@ TEST(IRPattern, literal) {
 
 	ExpressionPtr exp1 = pe("4.2 + 3.1");
 	ExpressionPtr exp2 = pe("4 - 2");
-	ExpressionPtr exp3 = pe("(4.2 + 3.1) * (real<8>)(4 - 2)");
+	ExpressionPtr exp3 = pe("(4.2 + 3.1) * CAST(real<8>)(4 - 2)");
 	
 	TreePattern patternA = irp::callExpr(manager.getLangBasic().getRealAdd(), *any);
 	EXPECT_PRED2(isMatch, patternA, exp1);
 	EXPECT_PRED2(noMatch, patternA, exp2);
 	EXPECT_PRED2(noMatch, patternA, exp3);
 	
-	TreePattern patternB = node(any << irp::literal("int.sub") << *any);
+	TreePattern patternB = node(any << irp::literal("int_sub") << *any);
 	EXPECT_PRED2(noMatch, patternB, exp1);
 	EXPECT_PRED2(isMatch, patternB, exp2);
 	EXPECT_PRED2(noMatch, patternB, exp3);
@@ -193,7 +193,7 @@ TEST(IRPattern, variable) {
 TEST(IRPattern, lambdaExpr) {
 	NodeManager manager;
 
-	ExpressionPtr exp1 = IRBuilder(manager).parseExpr("(int<4> i, int<8> v) -> int<4> { return i; }");
+	ExpressionPtr exp1 = IRBuilder(manager).parseExpr("lambda (int<4> i, int<8> v) -> int<4> { return i; }");
 
 	TreePattern pattern1 = irp::lambdaExpr(any, irp::lambdaDefinition(*any));
 	EXPECT_PRED2(isMatch, pattern1, exp1);
@@ -202,7 +202,7 @@ TEST(IRPattern, lambdaExpr) {
 TEST(IRPattern, lambda) {
 	NodeManager manager;
 
-	NodePtr node = IRBuilder(manager).parseExpr("(int<8> i, int<8> v) -> int<8> return i;").
+	NodePtr node = IRBuilder(manager).parseExpr("lambda (int<8> i, int<8> v) -> int<8> { return i; }").
 				   as<core::LambdaExprPtr>()->getLambda();
 
 	TreePattern pattern1 = irp::lambda(any, irp::variable(var("x"), any) << irp::variable(var("x"), any), any);
@@ -222,7 +222,7 @@ TEST(IRPattern, declarationStmt) {
 	NodeManager manager;
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 
-	StatementPtr stmt1 = IRBuilder(manager).parseStmt("int<4> i = 3;");
+	StatementPtr stmt1 = IRBuilder(manager).parseStmt("decl int<4> i = 3;");
 
 	TreePattern pattern1 = irp::declarationStmt(any, any);
 	TreePattern pattern2 = irp::declarationStmt(irp::variable(at("int<4>"), any), at("3"));
@@ -273,7 +273,7 @@ TEST(IRPattern, forStmt) {
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 	auto ps = [&manager](const string& str) { return IRBuilder(manager).parseStmt(str); };
 
-	StatementPtr stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}");
+	StatementPtr stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { decl int<4> i = 3;}");
 	StatementPtr stmt2 = ps("for(int<4> i = 0 .. 10 : 2) { return 0; }");
 	StatementPtr stmt3 = ps("for(int<4> i = 0 .. 5) { 7; 6; continue; 8; }");
 	StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ return 0; } }");
@@ -294,7 +294,7 @@ TEST(IRPattern, Addresses) {
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 	auto ps = [&manager](const string& str) { return StatementAddress(IRBuilder(manager).parseStmt(str)); };
 
-	StatementAddress stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}");
+	StatementAddress stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { decl int<4> i = 3;}");
 	StatementAddress stmt2 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ 7; return 0; } }");
 
 	TreePattern pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("y"), at("3")));
@@ -414,7 +414,7 @@ TEST(TargetFilter, InnerMostForLoop) {
 		"			for(uint<4> k = 2u .. 100u ) { "
 		"				v[i+j]; "
 		"			} "
-		"           ref<uint<4>> a = var(3u); "
+		"           decl ref<uint<4>> a = var(3u); "
 		"			a = i; "
 		"		} "
 		"	} "
@@ -486,7 +486,7 @@ TEST(TargetFilter, InnerMostForLoop2) {
 		"			for(uint<4> k = 2u .. 100u) { "
 		"				v[i+j]; "
 		"			}; "
-		"           ref<uint<4>> a = var(3u); "
+		"           decl ref<uint<4>> a = var(3u); "
 		"			a = i; "
 		"		}"
 		"	}"
@@ -563,7 +563,7 @@ TEST(TargetFilter, AllForLoops) {
 		"			for(uint<4> k = 2u .. 100u) { "
 		"				v[i+j]; "
 		"			}; "
-		"           ref<uint<4>> a = var(3u); "
+		"           decl ref<uint<4>> a = var(3u); "
 		"			a = i; "
 		"		}"
 		"	}"
@@ -604,10 +604,10 @@ TEST(PatternTests, AllVarDecls) {
 	core::NodePtr node = builder.normalize(builder.parseStmt(
 			R"(
 				{
-					int<4> a = 1;
-					int<4> b = 2;
+					decl int<4> a = 1;
+					decl int<4> b = 2;
 					a;
-					int<4> c = a + b;
+					decl int<4> c = a + b;
 				}
 			)"
 	));
@@ -635,13 +635,13 @@ TEST(PatternTests, VarUsage) {
 	core::NodePtr code = builder.normalize(builder.parseStmt(
 			R"(
 				{
-					int<4> a = 1;
-					int<4> b = 2;
+					decl int<4> a = 1;
+					decl int<4> b = 2;
 					//a;
-					int<4> c = a + b;
+					decl int<4> c = a + b;
 
-					int<4> d = 3;
-					int<4> e = d + a;
+					decl int<4> d = 3;
+					decl int<4> e = d + a;
 				}
 			)"
 	));
@@ -650,7 +650,7 @@ TEST(PatternTests, VarUsage) {
 
 	auto x = var("x");
 	auto decl = irp::declarationStmt(x, any);
-	auto use = !irp::declarationStmt(any, any) & step(x);
+	auto use = (!irp::declarationStmt(any, any)) & step(x);
 
 //	auto pattern = aT(decl) & !aT(use);
 	auto used = aT(decl) & aT(var("y", use));
@@ -665,7 +665,7 @@ TEST(PatternTests, VarUsage) {
 	ASSERT_TRUE(res1);
 //	std::cout << "Match: " << *res1 << "\n";
 	EXPECT_EQ("AP(v0)", toString(res1->getVarBinding("x")));
-//	EXPECT_EQ("AP(int.add(v0, v1))", toString(res1->getVarBinding("y")));
+//	EXPECT_EQ("AP(int_add(v0, v1))", toString(res1->getVarBinding("y")));
 
 	auto res2 = unused.matchPointer(code);
 	ASSERT_TRUE(res2);
@@ -675,7 +675,7 @@ TEST(PatternTests, VarUsage) {
 	ASSERT_TRUE(res3);
 //	std::cout << "Match: " << *res3 << "\n";
 	EXPECT_EQ("AP(v0)", toString(res3->getVarBinding("x").getValue()));
-	EXPECT_EQ("[AP(int.add(v0, v1)),AP(int.add(v3, v0))]", toString(res3->getVarBinding("y").getList()));
+	EXPECT_EQ("[AP(int_add(v0, v1)),AP(int_add(v3, v0))]", toString(res3->getVarBinding("y").getList()));
 
 //	std::cout << "x=" << res->getVarBinding("x") << "\n";
 //	std::cout << "y=" << res->getVarBinding("y") << "\n";
@@ -686,7 +686,7 @@ TEST(PatternTests, PFor) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}").as<ForStmtPtr>();
+	ForStmtPtr forStmt = IRBuilder(manager).parseStmt("for(int<4> i = 30 .. 5 : -5) { decl int<4> i = 3;}").as<ForStmtPtr>();
 	CallExprPtr pforStmt = builder.pfor(forStmt);
 
 	TreePattern pattern = irp::pfor();
@@ -702,11 +702,11 @@ TEST(PatternTests, LambdaPattern) {
 	core::NodePtr node = builder.normalize(builder.parseStmt(
 		R"(
 			{
-				int<4> foo = 17;
-				int<4> a = 1;
-				int<4> b = 2;
+				decl int<4> foo = 17;
+				decl int<4> a = 1;
+				decl int<4> b = 2;
 				a;
-				int<4> c = 5;
+				decl int<4> c = 5;
 			}
 		)"
 	));
@@ -735,14 +735,14 @@ TEST(PatternTests, LambdaAddressPattern) {
 	core::NodeManager manager;
 	IRBuilder builder(manager);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 		R"(
 			{
-				int<4> foo = 17;
-				int<4> a = 1;
-				int<4> b = $2$;
+				decl int<4> foo = 17;
+				decl int<4> a = 1;
+				decl int<4> b = $2$;
 				a;
-				int<4> c = 5;
+				decl int<4> c = 5;
 			}
 		)"
 	);

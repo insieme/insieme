@@ -58,21 +58,21 @@ namespace backend {
 		core::IRBuilder builder(manager);
 
 		// create a code fragment including some member functions
-		core::ProgramPtr program = builder.parseProgram(
-				"let int = int<4>;"
-				"let Math = struct {};"
-				""
-				"let id = Math::(int a)->int { return a; };"
-				""
-				"let sum = Math::(int a, int b)->int { return a + b; };"
-				""
-				"int main() {"
-				"	ref<Math> m;"
-				"	"
-				"	print(\"%d\\n\", m.id(12));"
-				"	print(\"%d\\n\", m.sum(12,14));"
-				"}"
-		);
+		core::ProgramPtr program = builder.parseProgram(R"(
+				let int = int<4>;
+				let Math = struct {};
+				
+				let id = lambda Math::(int a)->int { return a; };
+				
+				let sum = lambda Math::(int a, int b)->int { return a + b; };
+				
+				int main() {
+					decl ref<Math> m;
+					
+					print("%d\n", m->id(12));
+					print("%d\n", m->sum(12,14));
+				}
+		)");
 
 		ASSERT_TRUE(program);
 		//std::cout << "Program: " << *program << std::endl;
@@ -104,44 +104,44 @@ namespace backend {
 					int value;
 				};
 
-				let reset = Counter::()->unit {
-					this->value = 0;
+				let reset = lambda Counter::()->unit {
+					this.value = 0;
 				};
 
-				let inc = Counter::()->int {
-					this->value = this->value + 1;
-					return *this->value;
+				let inc = lambda Counter::()->int {
+					this.value = this.value + 1;
+					return *(this.value);
 				};
 
-				let dec = Counter::()->int {
-					this->value = this->value - 1;
-					return *this->value;
+				let dec = lambda Counter::()->int {
+					this.value = this.value - 1;
+					return *(this.value);
 				};
 
-				let get = Counter::()->int {
-					return *this->value;
+				let get = lambda Counter::()->int {
+					return *(this.value);
 				};
 
-				let set = Counter::(int x)->unit {
-					this->value = x;
+				let set = lambda Counter::(int x)->unit {
+					this.value = x;
 				};
 
-				let p = Counter::()->unit {
+				let p = lambda Counter::()->unit {
 					print("%d\n", this->get());
 				};
 
 				int main() {
-					ref<Counter> c;
-					c.reset();
-					c.p();
-					c.inc();
-					c.p();
-					c.inc();
-					c.p();
-					c.dec();
-					c.p();
-					c.set(14);
-					c.p();
+					decl ref<Counter> c;
+					c->reset();
+					c->p();
+					c->inc();
+					c->p();
+					c->inc();
+					c->p();
+					c->dec();
+					c->p();
+					c->set(14);
+					c->p();
 				}
 				)"
 		);
@@ -187,24 +187,24 @@ namespace backend {
 				int main() {
 
 					// -------- handle an instance of A --------
-					ref<A> a;
+					decl ref<A> a;
 					a.x = 1;
 
 
 					// -------- handle an instance of B --------
-					ref<B> b;
+					decl ref<B> b;
 
 					// direct access
 					b.as(A).x = 1;
 					b.y = 2;
 
 					// indirect access of A's x
-					auto bA = b.as(A);
+					decl auto bA = b.as(A);
 					bA.x = 3;
 
 
 					// -------- handle an instance of C --------
-					ref<C> c;
+					decl ref<C> c;
 
 					// access B's A's x
 					c.as(B).as(A).x = 1;
@@ -239,14 +239,14 @@ namespace backend {
 		core::FrontendIRBuilder builder(mgr);
 
 		// create a class type
-		auto counterType = builder.parseType("let Counter = struct { int<4> value; } in Counter");
+		auto counterType = builder.parseType("let Counter = struct { int<4> value; }; Counter");
 		ASSERT_TRUE(counterType);
 
 		// create symbol map for remaining task
 		std::map<string, core::NodePtr> symbols;
 		symbols["Counter"] = counterType;
 
-		auto parse = [&](const string& code) { return builder.parseExpr(code, symbols).as<core::LambdaExprPtr>(); };
+		auto parseExpr = [&](const string& code) { return builder.parseExpr(code, symbols).as<core::LambdaExprPtr>(); };
 		auto parseType = [&](const string& code) { return builder.parseType(code, symbols).as<core::FunctionTypePtr>(); };
 
 		// add member functions to meta info
@@ -256,33 +256,33 @@ namespace backend {
 		// ------- Constructor ----------
 
 		// default
-		info.addConstructor(parse("Counter::() { }"));
+		info.addConstructor(parseExpr("lambda ctor Counter::() { }"));
 
 		// with value
-		info.addConstructor(parse("Counter::(int<4> x) { this->value = x; }"));
+		info.addConstructor(parseExpr("lambda ctor Counter::(int<4> x) { this.value = x; }"));
 
 		// copy constructor
-		info.addConstructor(parse("Counter::(ref<Counter> c) { this->value = *c->value; }"));
+		info.addConstructor(parseExpr("lambda ctor Counter::(ref<Counter> c) { this.value = *(c.value); }"));
 
 		// ------- member functions ----------
 
 		// a non-virtual, const function
-		info.addMemberFunction("get", parse("Counter::()->int<4> { return *this->value; }"), false, true);
+		info.addMemberFunction("get", parseExpr("lambda Counter::()->int<4> { return *this.value; }"), false, true);
 
 		// a non-virtual, non-const function
-		info.addMemberFunction("set", parse("Counter::(int<4> x)->unit { this->value = x; }"), false, false);
+		info.addMemberFunction("set", parseExpr("lambda Counter::(int<4> x)->unit { this.value = x; }"), false, false);
 
 		// a virtual, const function
-		info.addMemberFunction("print", parse(R"(Counter::()->unit { print("%d\n", *this->value); })"), true, true);
+		info.addMemberFunction("print", parseExpr(R"(lambda Counter::()->unit { print("%d\n", *this.value); })"), true, true);
 
 		// a virtual, non-const function
-		info.addMemberFunction("clear", parse("Counter::()->unit { }"), true, false);
+		info.addMemberFunction("clear", parseExpr("lambda Counter::()->unit { }"), true, false);
 
 		// a pure virtual, non-const function
-		info.addMemberFunction("dummy1", builder.getPureVirtual(parseType("Counter::()->int<4>")), true, false);
+		info.addMemberFunction("dummy1", builder.getPureVirtual(parseType("method Counter::()->int<4>")), true, false);
 
 		// a pure virtual, const function
-		info.addMemberFunction("dummy2", builder.getPureVirtual(parseType("Counter::()->int<4>")), true, true);
+		info.addMemberFunction("dummy2", builder.getPureVirtual(parseType("method Counter::()->int<4>")), true, true);
 
 		//std::cout << info << "\n";
 
@@ -294,7 +294,7 @@ namespace backend {
 
 		// ------------ create code using the counter type --------
 
-		auto prog = builder.parseProgram("int<4> main() { ref<ref<Counter>> c; return *(*c->value); }", symbols);
+		auto prog = builder.parseProgram("int<4> main() { decl ref<ref<Counter>> c; return (*c).value; }", symbols);
 
 		// generate code
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
@@ -324,7 +324,7 @@ namespace backend {
 
 		// -------------------------------------------- add destructor -----------------------------------------
 
-		info.setDestructor(parse("~Counter::() {}"));
+		info.setDestructor(parseExpr("lambda ~Counter::() {}"));
 		core::setMetaInfo(counterType, info);
 		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
 
@@ -367,36 +367,36 @@ namespace backend {
 		std::map<string, core::NodePtr> symbols;
 
 		// create a class A with a virtual function
-		core::TypePtr classA = builder.parseType("let A = struct { } in A");
+		core::TypePtr classA = builder.parseType("let A = struct { }; A");
 		symbols["A"] = classA;
 
-		auto funType = builder.parseType("A::(int<4>)->int<4>", symbols).as<core::FunctionTypePtr>();
+		auto funType = builder.parseType("method A::(int<4>)->int<4>", symbols).as<core::FunctionTypePtr>();
 
 		core::ClassMetaInfo infoA;
 		infoA.addMemberFunction("f", builder.getPureVirtual(funType), true);
 		core::setMetaInfo(classA, infoA);
 
 		// create a class B
-		core::TypePtr classB = builder.parseType("let B = struct : A { } in B", symbols);
+		core::TypePtr classB = builder.parseType("let B = struct : A { }; B", symbols);
 		symbols["B"] = classB;
 
 		core::ClassMetaInfo infoB;
-		infoB.addMemberFunction("f", builder.parseExpr("B::(int<4> x)->int<4> { return x + 1; }", symbols).as<core::LambdaExprPtr>(), true);
+		infoB.addMemberFunction("f", builder.parseExpr("lambda B::(int<4> x)->int<4> { return x + 1; }", symbols).as<core::LambdaExprPtr>(), true);
 		core::setMetaInfo(classB, infoB);
 
-		auto res = builder.parseProgram(
-				"let f = lit(\"f\":A::(int<4>)->int<4>);"
-				""
-				"let ctorB1 = B::() { };"
-				"let ctorB2 = B::(int<4> x) { };"
-				""
-				"int<4> main() {"
-				"	ref<A> x = ctorB1(new(B));"
-				"	ref<A> y = ctorB2(new(B), 5);"
-				"	x->f(3);"
-				"	delete(x);"
-				"	return 0;"
-				"}", symbols);
+		auto res = builder.parseProgram(R"(
+				let f = expr lit("f" : method A::(int<4>)->int<4>);
+				
+				let ctorB1 = lambda ctor B::() { };
+				let ctorB2 = lambda ctor B::(int<4> x) { };
+				
+				int<4> main() {
+					decl ref<A> x = ctorB1(new(undefined(B)));
+					decl ref<A> y = ctorB2(new(undefined(B)), 5);
+					x->f(3);
+					delete(x);
+					return 0;
+				})", symbols);
 
 		ASSERT_TRUE(res);
 
@@ -429,21 +429,21 @@ namespace backend {
 
 					let A = struct { int x; };
 
-					let ctorA1 = A::() { this->x = 0; };
-					let ctorA2 = A::(int x) { this->x = x; };
+					let ctorA1 = lambda ctor A::() { this.x = 0; };
+					let ctorA2 = lambda ctor A::(int x) { this.x = x; };
 
 					int main() {
 						// on stack
-						ref<A> a1 = ctorA1(var(A));
-						ref<A> a2 = ctorA2(var(A), 1);
+						decl ref<A> a1 = ctorA1(var(undefined(A)));
+						decl ref<A> a2 = ctorA2(var(undefined(A)), 1);
 
 						// on heap
-						ref<A> a3 = ctorA1(new(A));
-						ref<A> a4 = ctorA2(new(A), 1);
+						decl ref<A> a3 = ctorA1(new(undefined(A)));
+						decl ref<A> a4 = ctorA2(new(undefined(A)), 1);
 
 						// in place
-						ref<A> a5; ctorA1(a5);
-						ref<A> a6; ctorA2(a6, 1);
+						decl ref<A> a5; ctorA1(a5);
+						decl ref<A> a6; ctorA2(a6, 1);
 
 						return 0;
 					}
@@ -483,20 +483,20 @@ namespace backend {
 
 					let A = struct { int x; };
 
-					let ctorA = A::(int<4> x) {
-						this->x = x;
+					let ctorA = lambda ctor A::(int<4> x) {
+						this.x = x;
 						print("Creating: %d\n", x);
 					};
 
-					let dtorA = ~A::() {
-						print("Clearing: %d\n", *this->x);
-						this->x = 0;
+					let dtorA = lambda ~A::() {
+						print("Clearing: %d\n", *(this.x));
+						this.x = 0;
 					};
 
 					int main() {
 
 						// create an un-initialized memory location
-						ref<A> a = ctorA(new(A), 3);
+						decl ref<A> a = ctorA(new(undefined(A)), 3);
 
 						// init using in-place constructor
 						ctorA(a, 2);
@@ -540,21 +540,21 @@ namespace backend {
 
 					let A = struct { int x; };
 
-					let ctorA = A::() {
-						this->x = 4;
+					let ctorA = lambda ctor A::() {
+						this.x = 4;
 					};
 
 					int main() {
 
 						// create an array of objects of type A on the stack
-						ref<array<A,1>> a = createArray(ref.var, ctorA, 5u);
+						decl ref<array<A,1>> a = createArray(ref_var, ctorA, 5u);
 
 						// create an array of objects of type A on the heap
-						ref<array<A,1>> b = createArray(ref.new, ctorA, 5u);
+						decl ref<array<A,1>> b = createArray(ref_new, ctorA, 5u);
 
 						// update an element
-						a[3]->x = 12;
-						b[3]->x = 12;
+						a[3].x = 12;
+						b[3].x = 12;
 
 						return 0;
 					}
@@ -602,31 +602,31 @@ namespace backend {
 
 					let A = struct { int x; };
 
-					let ctorA = A::() {
-						this->x = 4;
+					let ctorA = lambda ctor A::() {
+						this.x = 4;
 					};
 
 					int main() {
 
-						let size = lit("not important" : intTypeParam<5>);
+						let size = expr lit("not important" : intTypeParam<5>);
 
 						// create an array of objects of type A on the stack
-						ref<array<A,1>> a = createVector(ref.var, ctorA, size);
+						decl ref<array<A,1>> a = createVector(ref_var, ctorA, size);
 
 						// create an array of objects of type A on the heap
-						ref<array<A,1>> b = createVector(ref.new, ctorA, size);
+						decl ref<array<A,1>> b = createVector(ref_new, ctorA, size);
 
 //						// create an array of objects of type A on the stack
-//						ref<vector<A,5>> c = createVector(ref.var, ctorA, size);
+//						decl ref<vector<A,5>> c = createVector(ref_var, ctorA, size);
 //
 //						// create an array of objects of type A on the heap
-//						ref<vector<A,5>> d = createVector(ref.new, ctorA, size);
+//						decl ref<vector<A,5>> d = createVector(ref_new, ctorA, size);
 
 						// update an element
-						a[3]->x = 12;
-						b[3]->x = 12;
-//						c[3]->x = 12;
-//						d[3]->x = 12;
+						a[3].x = 12;
+						b[3].x = 12;
+//						c[3].x = 12;
+//						d[3].x = 12;
 
 						return 0;
 					}
@@ -678,20 +678,20 @@ namespace backend {
 					let B = struct { };
 					let A = struct : B { int x; int y; int z; };
 
-					let ctorA = A::(int y) {
-						this->y = y;
+					let ctorA = lambda ctor A::(int y) {
+						this.y = y;
 						for ( int i = 0 .. 10 ) {
-							this->y = 1;
-							this->z = 3;
+							this.y = 1;
+							this.z = 3;
 						}
-						this->x = 4;
-						this->z = 2;
+						this.x = 4;
+						this.z = 2;
 					};
 
 					int main() {
 
 						// call constructor
-						ref<A> a = ctorA(ref.var(undefined(lit(A))), 10);
+						decl ref<A> a = ctorA(var(undefined(A)), 10);
 
 						return 0;
 					}
@@ -735,20 +735,20 @@ namespace backend {
 					let A = struct { int x; };
 					let B = struct : A { int y; };
 
-					let ctorA = A::(int x) {
-						this->x = x;
+					let ctorA = lambda ctor A::(int x) {
+						this.x = x;
 					};
 
 
-					let ctorB = B::(int x, int y) {
+					let ctorB = lambda ctor B::(int x, int y) {
 						ctorA(this, x);
-						this->y = y;
+						this.y = y;
 					};
 
 					int main() {
 
 						// call constructor
-						ref<B> b = ctorB(ref.var(undefined(lit(B))), 1, 2);
+						decl ref<B> b = ctorB(var(undefined(B)), 1, 2);
 
 						return 0;
 					}
@@ -789,21 +789,21 @@ namespace backend {
 					let A = struct { int x; int y; };
 					let B = struct : A { int z; };
 
-					let ctorA = A::(int x, int y) {
-						this->x = x;
-						this->y = y;
+					let ctorA = lambda ctor A::(int x, int y) {
+						this.x = x;
+						this.y = y;
 					};
 
 
-					let ctorB = B::(int x, int y, int z) {
+					let ctorB = lambda ctor B::(int x, int y, int z) {
 						ctorA(this, x, y + z);
-						this->z = z;
+						this.z = z;
 					};
 
 					int main() {
 
 						// call constructor
-						ref<B> b = ctorB(ref.var(undefined(lit(B))), 1, 2, 3);
+						decl ref<B> b = ctorB(var(undefined(B)), 1, 2, 3);
 
 						return 0;
 					}
@@ -843,15 +843,15 @@ namespace backend {
 
 					let A = struct { int x; int y; };
 
-					let ctorA = A::(int x, int y) {
-						this->x = x;
-						this->y = this->x + y;
+					let ctorA = lambda ctor A::(int x, int y) {
+						this.x = x;
+						this.y = this.x + y;
 					};
 
 					int main() {
 
 						// call constructor
-						ref<A> b = ctorA(ref.var(undefined(lit(A))), 1, 2);
+						decl ref<A> b = ctorA(var(undefined(A)), 1, 2);
 
 						return 0;
 					}
@@ -899,11 +899,11 @@ namespace backend {
 							print("Catched integer %d\n", x);
 						} catch (short y) {
 							print("Catched short %d\n", y);
-						} catch (ref<short> y) {
-							print("Catched short %d\n", *y);
+						} catch (ref<short> z) {
+							print("Catched short %d\n", *z);
 						} catch (any a) {
 							print("Catched something!\n");
-						}
+						 }
 
 						return 0;
 					}
@@ -921,9 +921,9 @@ namespace backend {
 		// check generated code
 		auto code = toString(*targetCode);
 		EXPECT_PRED2(containsSubString, code, "throw 4;");
-		EXPECT_PRED2(containsSubString, code, "} catch(int32_t var_1) {");
-		EXPECT_PRED2(containsSubString, code, "} catch(int16_t var_2) {");
-		EXPECT_PRED2(containsSubString, code, "} catch(int16_t* var_3) {");
+		EXPECT_PRED2(containsSubString, code, "} catch(int32_t x) {");
+		EXPECT_PRED2(containsSubString, code, "} catch(int16_t y) {");
+		EXPECT_PRED2(containsSubString, code, "} catch(int16_t* z) {");
 		EXPECT_PRED2(containsSubString, code, "} catch(...) {");
 
 		// check whether code is compiling
@@ -948,7 +948,7 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
+					let a = expr lit("a":ref<struct __static_var { bool initialized; int value; }>);
 
 					int main() {
 
@@ -992,12 +992,12 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
+					let a = expr lit("a":ref<struct __static_var { bool initialized; int value; }>);
 
 					int main() {
 
-						init(a, ()=> 1);
-						init(a, ()=> 2);
+						init(a, lambda ()=> 1);
+						init(a, lambda ()=> 2);
 
 						return 0;
 					}
@@ -1037,11 +1037,11 @@ namespace backend {
 		auto res = builder.normalize(builder.parseProgram(
 				R"(
 					let int = int<4>;
-					let a = lit("a":ref<struct __static_var { bool initialized; int value; }>);
+					let a = expr lit("a":ref<struct __static_var { bool initialized; int value; }>);
 
 					int main() {
 
-						init(a, ()=> 2);
+						init(a, lambda ()=> 2);
 
 						return 0;
 					}
@@ -1082,12 +1082,12 @@ namespace backend {
 				R"(
 					let int = int<4>;
 					let A = struct A {};
-					let a = lit("a":ref<struct __static_var { bool initialized; A value; }>);
-					let ctorA = A::() { };
+					let a = expr lit("a":ref<struct __static_var { bool initialized; A value; }>);
+					let ctorA = lambda ctor A::() { };
 
 					int main() {
 
-						init(a, ()=> *ctorA(var(undefined(lit(A)))));
+						init(a, lambda ()=> *(ctorA(var(undefined(A)))));
 
 						return 0;
 					}

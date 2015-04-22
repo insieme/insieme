@@ -56,8 +56,8 @@ namespace transform {
 
 		auto code = builder.parse(
 			"{"
-			"	ref<int<4>> a = 10; "
-			"	int<4> b = a+2; "
+			"	decl ref<int<4>> a = 10; "
+			"	decl int<4> b = a+2; "
 			"	a = b+a;"
 			"	*a;"
 			"}"
@@ -68,8 +68,8 @@ namespace transform {
 		EXPECT_EQ(
 			"{"
 				"ref<int<4>> v1 = 10; "
-				"int<4> v2 = int.add(10, 2); "
-				"ref.assign(v1, 22); "
+				"int<4> v2 = int_add(10, 2); "
+				"ref_assign(v1, 22); "
 				"22;"
 			"}", toString(*ret));
 
@@ -92,10 +92,10 @@ namespace transform {
 
 		auto code = builder.parse(
 			"{"
-			"	ref<int<4>> a = 10; "
-			"	ref<int<4>> c = 20; "
+			"	decl ref<int<4>> a = 10; "
+			"	decl ref<int<4>> c = 20; "
 			"	if (a < c) { "
-			"		int<4> b = a+2; "
+			"		decl int<4> b = a+2; "
 			"		a = b+a;"
 			"	}"
 			"	c = *a;"
@@ -109,12 +109,12 @@ namespace transform {
 			"{"
 				"ref<int<4>> v1 = 10; "
 				"ref<int<4>> v2 = 20; "
-				"if(int.lt(10, 20)) {"
-					"int<4> v3 = int.add(10, 2); "
-					"ref.assign(v1, 22);"
+				"if(int_lt(10, 20)) {"
+					"int<4> v3 = int_add(10, 2); "
+					"ref_assign(v1, 22);"
 				"} else {}; "
-				"ref.assign(v2, ref.deref(v1)); "
-				"ref.deref(v2);"
+				"ref_assign(v2, ref_deref(v1)); "
+				"ref_deref(v2);"
 			"}", toString(*ret));
 
 		ret = doConstProp(mgr,insieme::core::transform::simplify(mgr, ret));
@@ -125,9 +125,9 @@ namespace transform {
 				"ref<int<4>> v2 = 20; "
 				"{"
 					"int<4> v3 = 12; "
-					"ref.assign(v1, 22);"
+					"ref_assign(v1, 22);"
 				"}; "
-				"ref.assign(v2, 22); "
+				"ref_assign(v2, 22); "
 				"22;"
 			"}", toString(*ret));
 
@@ -168,10 +168,10 @@ namespace transform {
 //
 //		EXPECT_EQ(
 //			"{"
-//				"ref.assign(vector.ref.elem(v1, 2u), 10); "
-//				"ref.assign(vector.ref.elem(v1, 3u), 3); "
-//				"ref.assign(vector.ref.elem(v1, 1u), 13); "
-//				"ref.assign(vector.ref.elem(v1, 2u), 13); "
+//				"ref_assign(vector.ref_elem(v1, 2u), 10); "
+//				"ref_assign(vector.ref_elem(v1, 3u), 3); "
+//				"ref_assign(vector.ref_elem(v1, 1u), 13); "
+//				"ref_assign(vector.ref_elem(v1, 2u), 13); "
 //				"int<4> v2 = 13; "
 //				"13;"
 //			"}", toString(*ret));

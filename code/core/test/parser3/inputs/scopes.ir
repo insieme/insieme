@@ -1,0 +1,36 @@
+
+let int = int<4>;
+
+int main (){
+
+    decl ref<int> a = var(0);
+    a + 1;
+    { 
+        decl ref<int> a = var(1);
+        a + 1;
+        {
+            a + 1;
+            decl ref<int> a = var(2);
+            a + 1;
+        }
+    a + 1;
+    }
+
+    decl auto f = lambda (int a) -> int<4> { return a; };
+
+    f(*a);
+    f(a + 1);
+    { 
+        decl ref<int> a = var(1);
+        f(a + 1);
+        {
+            f(a + 1);
+            decl ref<int> a = var(2);
+            f(a + 1);
+        }
+        f(a + 1);
+    }
+
+
+
+}

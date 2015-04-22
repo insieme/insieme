@@ -396,18 +396,18 @@ TEST(NodeReplacer, ReplaceAllMapScope) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{
-		let test_array = (vector<'res,#l> a) -> unit {
-			vector<'res, #l> res;
+		let test_array = lambda (vector<'res,#l> a) -> unit {
+			decl vector<'res, #l> res;
 		};
-		let test_outer = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit ${
+		let test_outer = lambda (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit ${
 			test_array(a);
-			matrix<'res, #x, #y> res2;
+			decl matrix<'res, #x, #y> res2;
 		}$;
 
-		vector<int<4>, 8> a;
-		matrix<int<4>, 16, 32> b;
+		decl vector<int<4>, 8> a;
+		decl matrix<int<4>, 16, 32> b;
 		test_outer(a, b);
 	}
 	)raw");

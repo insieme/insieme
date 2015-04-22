@@ -61,7 +61,7 @@ TEST(ScopRegion, CompoundStmt) {
 
     auto compStmt = builder.parseStmt(
 		"{ "
-		"	int<4> b = 20; "
+		"	decl int<4> b = 20; "
 		"	v[a+b]; "
 		"}", symbols
 	);
@@ -177,7 +177,7 @@ TEST(ScopRegion, ForStmt) {
 		"for(int<4> i = 10 .. 50 : 1) { "
 		"	v[i*b]; "
 		"	if (i > 25) { "
-		"		h = v[n+i-1]; "
+		"		h = *(v[n+i-1]); "
 		"	}"
 		"}", symbols)).as<ForStmtPtr>();
 
@@ -282,7 +282,7 @@ TEST(ScopRegion, ForStmt4) {
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),2);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
-		"for( int<4> i = cloog.floor(5, 2) .. 20 : 5) { "
+		"for( int<4> i = cloog_floor(5, 2) .. 20 : 5) { "
 		"	v[i+b]; "
 		"}", symbols)).as<ForStmtPtr>();
 
@@ -330,7 +330,7 @@ TEST(ScopRegion, ForStmt5) {
 	symbols["lb"] = builder.variable(builder.parseType("int<4>"),4);
 
     auto forStmt = analysis::normalize(builder.parseStmt(
-		"for(int<4> i = cloog.ceil(lb, 3) .. ub : 5) { "
+		"for(int<4> i = cloog_ceil(lb, 3) .. ub : 5) { "
 		"	v[i+b]; "
 		"}", symbols)).as<ForStmtPtr>();
 
@@ -371,11 +371,11 @@ TEST(ScopRegion, SwitchStmt) {
 			int<4>:b; \
 			switch(i) { \
 				case 0: \
-					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-b))); } \
+					{ (op<array.ref_elem.1D>(ref<array<int<4>,1>>:v, (i-b))); } \
 				case 1: \
-					{ (int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1)))); }\
+					{ (int<4>:h = (op<array.ref_elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1)))); }\
 				default: \
-					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+b))); } \
+					{ (op<array.ref_elem.1D>(ref<array<int<4>,1>>:v, (i+b))); } \
 				}; \
 			}")
 		);
@@ -413,7 +413,7 @@ TEST(ScopRegion, WhileStmt) {
 
     auto forStmt = analysis::normalize(builder.parseStmt(
 		"for( int<4> i = 10 .. 20 : 1) { "
-		"	N = v[i-b]; "
+		"	N = *(v[i-b]); "
 		"}", symbols)).as<ForStmtPtr>();
 
 	VariablePtr cond = IRBuilder(mgr).variable( mgr.getLangBasic().getBool() );
@@ -439,7 +439,7 @@ TEST(ScopRegion, NotAScopForStmt) {
     auto compStmt = analysis::normalize(builder.parseStmt(
 		"{ "
 		"	for(int<4> i = 10 .. N : 1) { "
-		"		N = v[i*b]; "
+		"		N = *(v[i*b]); "
 		"	} "
 		"} ", symbols)).as<CompoundStmtPtr>();
 
@@ -476,7 +476,7 @@ TEST(ScopRegion, ForStmtToIR) {
 	NodePtr res = scop->toIR(mgr);
 	res = analysis::normalize(res);
 	EXPECT_EQ("for(int<4> v0 = 10 .. 50 : 1) {"
-				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v0, v2)));"
 			  "}", 
 			  toString(*res)
 			 );
@@ -511,9 +511,9 @@ TEST(ScopRegion, ForStmtToIR2) {
 	res = analysis::normalize(res);
 	EXPECT_EQ(
 		"{"
-			"ref.assign(v3, 0); "
+			"ref_assign(v3, 0); "
 			"for(int<4> v0 = 10 .. 50 : 1) {"
-				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v0, v2)));"
+				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v0, v2)));"
 			"};"
 		"}", toString(*res));
 
@@ -533,7 +533,7 @@ TEST(ScopRegion, IfStmtSelect) {
     auto code = analysis::normalize(builder.parseStmt(
 		"{"
     	"	y = 0;"
-		"	if( select(a,b, int.lt) == 5 ) { "
+		"	if( select(a,b, int_lt) == 5 ) { "
 		"		v[a+b]; "
 		"	}"
     	"}", symbols));
@@ -549,7 +549,7 @@ TEST(ScopRegion, IfStmtSelect) {
 	NodeManager mgr1;
 	NodePtr res = scop->toIR(mgr1);
 	EXPECT_EQ(
-		"{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.eq(v1, 5);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}",
+		"{ref_assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int_ge(v1, 6);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v2, v3)));} else {}; if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int_eq(v1, 5);}}(v3)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v2, v3)));} else {};}",
 		toString(*analysis::normalize(res)));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
@@ -575,7 +575,7 @@ TEST(ScopRegion, IfStmtPiecewise) {
     auto code = analysis::normalize(builder.parseStmt(
     	"{"
     	"	y = 0;"
-		"	if( cloog.floor(a,3) == 3 ) { "
+		"	if( cloog_floor(a,3) == 3 ) { "
 		"		v[a+b]; "
 		"	}"
     	"}", symbols));
@@ -589,7 +589,7 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	NodeManager mgr1;
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
-	EXPECT_EQ("{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}",
+	EXPECT_EQ("{ref_assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int_le(v1, 11);}}(v2)})) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v2, v3)));} else {};}",
 			toString(*analysis::normalize(res)));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
@@ -613,7 +613,7 @@ TEST(ScopRegion, ForStmtToIR3) {
 
     auto code = analysis::normalize(builder.parseStmt(
 		"{"
-		"	for( int<4> i = 1 .. cloog.floor(a,3) : 1) { "
+		"	for( int<4> i = 1 .. cloog_floor(a,3) : 1) { "
 		"		v[i+b]; "
 		"	}"
     	"}", symbols));
@@ -628,7 +628,7 @@ TEST(ScopRegion, ForStmtToIR3) {
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
 
-	EXPECT_EQ("if(int.ge(v2, 6)) {for(int<4> v0 = 1 .. int.add(cloog.floor(int.sub(v2, 3), 3), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v0, v3)));};} else {}",
+	EXPECT_EQ("if(int_ge(v2, 6)) {for(int<4> v0 = 1 .. int_add(cloog_floor(int_sub(v2, 3), 3), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v0, v3)));};} else {}",
 			toString(*analysis::normalize(res)));
 	
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
@@ -652,7 +652,7 @@ TEST(ScopRegion, ForStmtSelectLB) {
 
     auto code = analysis::normalize(builder.parseStmt(
 		"{"
-		"	for( int<4> i = select(a,b, int.lt) .. select(a,b, int.gt) : 1) { "
+		"	for( int<4> i = select(a,b, int_lt) .. select(a,b, int_gt) : 1) { "
 		"		v[i+b]; "
 		"	}"
     	"}", symbols));
@@ -668,11 +668,11 @@ TEST(ScopRegion, ForStmtSelectLB) {
 	//NodePtr res = scop->toIR(mgr1);
 
 	//EXPECT_EQ("{"
-	//			"for(int<4> v1 = v3 .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {"
-	//				"array.ref.elem.1D(v4, int.add(v1, v3));"
+	//			"for(int<4> v1 = v3 .. int_add(int_add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {"
+	//				"array.ref_elem.1D(v4, int_add(v1, v3));"
 	//			"}; "
-	//			"for(int<4> v4 = v2 .. int.add(int.add(cast<int<4>>(v3), cast<int<4>>(-1)), 1) : 1) {"
-	//				"array.ref.elem.1D(v4, int.add(v4, v3));"
+	//			"for(int<4> v4 = v2 .. int_add(int_add(cast<int<4>>(v3), cast<int<4>>(-1)), 1) : 1) {"
+	//				"array.ref_elem.1D(v4, int_add(v4, v3));"
 	//			"};"
 	//		   "}", toString(*res));
 	
@@ -697,7 +697,7 @@ TEST(ScopRegion, Mod) {
 
     auto code = analysis::normalize(builder.parseStmt(
     	"{"
-		"	for(int<4> i = int.mod(a,3) ..  10 : 1) { "
+		"	for(int<4> i = int_mod(a,3) ..  10 : 1) { "
 		"		v[i+b]; "
 		"	} "
     	"}", symbols));
@@ -716,11 +716,11 @@ TEST(ScopRegion, Mod) {
 
 	// //LOG(ERROR) << printer::PrettyPrinter(res);
 
-	// EXPECT_EQ("for(int<4> v1 = int.add(cast<int<4>>(int.mul(cast<int<4>>(3), "
-	// 								"cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), "
+	// EXPECT_EQ("for(int<4> v1 = int_add(cast<int<4>>(int_mul(cast<int<4>>(3), "
+	// 								"cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v2))), "
 	// 									"cast<int<4>>(2)), 3)))), cast<int<4>>(v2)) "
-	// 							".. int.add(9, 1) : 1) {"
-	// 			"array.ref.elem.1D(v3, int.add(v1, v4));"
+	// 							".. int_add(9, 1) : 1) {"
+	// 			"array.ref_elem.1D(v3, int_add(v1, v4));"
 	// 		  "}", toString(*res));
 	// 
 	// auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
@@ -747,7 +747,7 @@ TEST(ScopRegion, ForStmtSelectLBTile) {
 
     auto code = analysis::normalize(builder.parseStmt(
     	"{"
-		"	for(int<4> i = select(a,b,int.lt) .. 100 : 5) { "
+		"	for(int<4> i = select(a,b,int_lt) .. 100 : 5) { "
 		"		v[i+b]; "
 		"	}"
     	"}", symbols));
@@ -762,7 +762,7 @@ TEST(ScopRegion, ForStmtSelectLBTile) {
 // 	// convert back into IR
 // 	NodePtr res = scop->toIR(mgr1);
 
-	//EXPECT_EQ("{if(int.le(v3, v2)) {for(int<4> v1 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-5), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v3))), cast<int<4>>(v2)), 5)))), cast<int<4>>(v2)) .. int.add(99, 1) : 5) {array.ref.elem.1D(v4, int.add(v1, v3));};} else {}; if(int.ge(v3, int.add(cast<int<4>>(v2), cast<int<4>>(1)))) {for(int<4> v4 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-5), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(v3), cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2)))), 5)))), cast<int<4>>(v3)) .. int.add(99, 1) : 5) {array.ref.elem.1D(v4, int.add(v4, v3));};} else {};}", toString(*res));
+	//EXPECT_EQ("{if(int_le(v3, v2)) {for(int<4> v1 = int_add(cast<int<4>>(int_mul(cast<int<4>>(-5), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v3))), cast<int<4>>(v2)), 5)))), cast<int<4>>(v2)) .. int_add(99, 1) : 5) {array.ref_elem.1D(v4, int_add(v1, v3));};} else {}; if(int_ge(v3, int_add(cast<int<4>>(v2), cast<int<4>>(1)))) {for(int<4> v4 = int_add(cast<int<4>>(int_mul(cast<int<4>>(-5), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(v3), cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v2)))), 5)))), cast<int<4>>(v3)) .. int_add(99, 1) : 5) {array.ref_elem.1D(v4, int_add(v4, v3));};} else {};}", toString(*res));
 	
 	//auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	//EXPECT_TRUE(scop2);
@@ -786,7 +786,7 @@ TEST(ScopRegion, ForStmtToIR4) {
     auto code = analysis::normalize(builder.parseStmt(
 	   "{"
 		"	for(int<4> i = 10 .. 50 : 1) { "
-	    "   	ref<int<4>> u = y;"
+	    "   	decl ref<int<4>> u = y;"
 		"		v[i+b]; "
 		"	}"
     	"}", symbols));
@@ -801,8 +801,7 @@ TEST(ScopRegion, ForStmtToIR4) {
 	NodePtr res = scop->toIR(mgr);
 	// normalize varnames
 	res = analysis::normalize(res);
-	EXPECT_EQ("{ref<int<4>> v0 = v4; for(int<4> v2 = 10 .. 50 : 1) {ref.assign(v0, ref.deref(v4)); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v1, cast<uint<8>>(int.add(v2, v3)));};}", toString(*res));
-
+	EXPECT_EQ("{ref<int<4>> v0 = v4; for(int<4> v2 = 10 .. 50 : 1) {ref_assign(v0, ref_deref(v4)); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, cast<uint<8>>(int_add(v2, v3)));};}", toString(*res));
 }
 
 
