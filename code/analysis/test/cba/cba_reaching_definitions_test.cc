@@ -67,7 +67,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
@@ -107,7 +107,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				"	if ( c == 0 ) {"
 				" 		a = 1;"
 				"	} else {"

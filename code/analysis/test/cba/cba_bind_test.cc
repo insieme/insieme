@@ -86,8 +86,8 @@ namespace cba {
 
 			auto in = builder.parseStmt(
 					"{"
-					"	auto f = (int<4> a, int<4> b)->int<4> { return a + b; };"
-					"	auto b = (int<4> c)=> f(2,c);"
+					"	decl auto f = lambda (int<4> a, int<4> b)->int<4> { return a + b; };"
+					"	decl auto b = lambda (int<4> c)=> f(2,c);"
 					"	b(4);"
 					"	b(3);"
 					"}"

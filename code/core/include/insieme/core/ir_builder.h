@@ -117,6 +117,10 @@ namespace core {
 		/**
 		 * Parses any kind of IR fragment encoded within the given code. The given symbol table
 		 * allows additional pre-defined let-definitions to be considered.
+         *
+         * NOTE:  this is a bad choice, try to use the other functions.
+         *      THIS FUNCTION PROVIDES NO FEEDBACK
+         *      THIS FUNCTION IS SLOW
 		 *
 		 * @param code the code to be parsed and returned as a node
 		 * @param symbols a set of pre-defined symbols to be used within the code
@@ -144,11 +148,17 @@ namespace core {
 		ProgramPtr parseProgram(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
 		/**
-		 * Allows lists of addresses to be parsed. This parser supports the same grammar + allows constructs to be enclosed
+		 * Allows lists of addresses to be parsed in a Statement. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
 		 */
-		vector<NodeAddress> parseAddresses(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+		vector<NodeAddress> parseAddressesStatement(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+		/**
+		 * Allows lists of addresses to be parsed in an IR program. This parser supports the same grammar + allows constructs to be enclosed
+		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
+		 * ordered according to the order of node-addresses (lexicographical).
+		 */
+		vector<NodeAddress> parseAddressesProgram(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
 
 		// --- Imported Standard Factory Methods from Node Types ---

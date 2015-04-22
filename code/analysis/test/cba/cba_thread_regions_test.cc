@@ -58,11 +58,12 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
 		).as<CompoundStmtPtr>();
+        dumpColor(in);
 
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
@@ -84,11 +85,12 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				"}"
 		).as<CompoundStmtPtr>();
+        dumpColor(in);
 
 		CompoundStmtAddress code(in);
 
@@ -117,13 +119,14 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				" 	spawn a = 3;"
 				"	a = 4;"
 				"}"
 		).as<CompoundStmtPtr>();
+        dumpColor(in);
 
 		CompoundStmtAddress code(in);
 
@@ -156,14 +159,14 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
-				"	auto c = channel.create(lit(int<4>),param(1));"
+				"	decl auto a = var(0);"
+				"	decl auto c = channel_create(lit(int<4>),param(1));"
 				" 	spawn {"
 				"		a = 1;"
-				"		channel.send(c,1);"
+				"		channel_send(c,1);"
 				"	};"
 				" 	spawn {"
-				"		channel.recv(c);"
+				"		channel_recv(c);"
 				"		a = 2;"
 				"	};"
 				"	a = 3;"

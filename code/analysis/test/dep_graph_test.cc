@@ -55,7 +55,7 @@ namespace dep {
 
 		auto node = builder.parseStmt(
 			"{"
-			"	ref<int<4>> sum = 0;"
+			"	decl ref<int<4>> sum = 0;"
 			"	for(uint<4> i = 10 .. 50 : 1) {"
 			"		sum = sum+1;"
 			"	}; "
@@ -104,7 +104,7 @@ namespace dep {
 
 		auto node = builder.parseStmt(
 			"for(int<4> i = 10 .. 50 : 1) {"
-			"	ref<int<4>> sum = 0;"
+			"	decl ref<int<4>> sum = 0;"
 			"	for(int<4> k = 2 .. 100 : 1) {"
 			"		sum = sum+1;"
 			"	}"
@@ -151,10 +151,10 @@ namespace dep {
 
 		NodePtr node = builder.parseStmt(
 			"for(uint<4> i = 10 .. 50 : 1) {"
-			"	ref<int<4>> a = 0;"
+			"	decl ref<int<4>> a = 0;"
 			"	for(uint<4> k = 2 .. 100 : 1) {"
 			"		a = a+1;"
-			"		ref<int<4>> b = 0;"
+			"		decl ref<int<4>> b = 0;"
 			"		for(uint<4> j = 2 .. 100 : 1) {"
 			"			a = a+1;"
 			"			b = b+1;"
@@ -237,16 +237,17 @@ namespace dep {
 		symbols["B"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,50>,50>>"));
 		symbols["C"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,50>,50>>"));
 
-		auto node = builder.parseStmt(
-			"for(uint<4> i = 0 .. 50 : 1) {"
-			"	for(uint<4> j = 0 .. 50 : 1) {"
-			"		ref<int<4>> sum = 0;"
-			"		for(uint<4> k = 0 .. 50 : 1) {"
-			"			sum = sum + A[i][k] * B[k][j]; "
-			"		}"
-			"		C[i][j] = sum;"
-			"	}"
-			"}", symbols);
+		auto node = builder.parseStmt(R"(
+			for(uint<4> i = 0 .. 50 : 1) {
+				for(uint<4> j = 0 .. 50 : 1) {
+					decl ref<uint<4>> sum = 0;
+					for(uint<4> k = 0 .. 50 : 1) {
+						sum = sum + A[i][k] * B[k][j]; 
+					}
+					C[i][j] = *sum;
+				}
+			}
+        )", symbols);
 
 		EXPECT_TRUE(node);
 

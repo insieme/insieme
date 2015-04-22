@@ -144,7 +144,7 @@ bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& 
 
 	if (const CallExprPtr call = uncasted.isa<CallExprPtr>()) {
 		// check if there is a multiplication
-		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
+		if(call->getFunctionExpr()->toString().find("_mul") != string::npos && call->getArguments().size() == 2) {
 			IRBuilder builder(arg->getNodeManager());
 			// recursively look into arguments of multiplication
 			if(extractSizeFromSizeof(call->getArgument(0), size, type, true)) {

@@ -58,8 +58,8 @@ namespace annotations {
 
 
 		auto fun = builder.parseExpr(
-				"let int = int<4> in "
-				"(int a, int b)->int { return a*b; }"
+				"let int = int<4>;"
+				"lambda (int a, int b)->int { return a*b; }"
 		);
 
 		// build annotation

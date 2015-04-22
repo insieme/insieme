@@ -136,13 +136,13 @@ TEST(ReachingDefinition, ScalarNoControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
-		"	$ref<int<4>> a = 0;$ "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
+		"	$decl ref<int<4>> a = 0;$ "
 		"	$a$ = i+b; "
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
     EXPECT_EQ(4u, addresses.size()); 
@@ -168,15 +168,15 @@ TEST(ReachingDefinition, ScalarWithControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
-		"	$ref<int<4>> a = 0;$ "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
+		"	$decl ref<int<4>> a = 0;$ "
 		"	if ( a <= 0 ) { "
 		"		$a$ = i+b; "
 		"	}"
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
     EXPECT_EQ(4u, addresses.size());
@@ -211,17 +211,17 @@ TEST(ReachingDefinition, ScalarWithControl2) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
-		"	ref<int<4>> a = 0; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
+		"	decl ref<int<4>> a = 0; "
 		"	if ( a <= 0 ) { "
 		"		$a$ = i+b; "
 		"	} else {"
 		"		$a$ = 3; "	
 		"	}"
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
     EXPECT_EQ(4u, addresses.size());
@@ -256,17 +256,17 @@ TEST(ReachingDefinition, ScalarWithControl3) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
-		"	ref<int<4>> a = 0; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
+		"	decl ref<int<4>> a = 0; "
 		"	$a$ = 2; "
 		"	while ( a <= 0 ) { "
 		"		a = i+b; "
 		"		$a$ = 3; "	
 		"	}"
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
     EXPECT_EQ(4u, addresses.size());
@@ -301,16 +301,16 @@ TEST(ReachingDefinition, ScalarWithLoop) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	ref<int<4>> b = var(3); "
-		"	$ref<int<4>> a = var(0);$ "
+		"	decl int<4> i = 2; "
+		"	decl ref<int<4>> b = var(3); "
+		"	$decl ref<int<4>> a = var(0);$ "
 		"	while ( a <= 0 ) { "
 		"		b = *$a$;   "
 		"		$a$ = i+b; "
 		"	}"
-		"	int<4> c = *$a$;"
+		"	decl int<4> c = *$a$;"
 		"}$"
     );
     EXPECT_EQ(5u, addresses.size());
@@ -351,12 +351,12 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; int<4> b; }>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
 		"	$s.a$ = i+b;  "
-		"	int<4> c = *$s.a$; "
+		"	decl int<4> c = *$s.a$; "
 		"}$", symbols
     );
 	EXPECT_EQ(3u, addresses.size());
@@ -381,7 +381,7 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 //	NodeManager mgr;
 //	IRBuilder builder(mgr);
 //
-//    auto addresses = builder.parseAddresses(
+//    auto addresses = builder.parseAddressesStatement(
 //		"${"
 //		"	int<4> i = 2; "
 //		"	int<4> b = 3; "
@@ -412,7 +412,7 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 //	NodeManager mgr;
 //	IRBuilder builder(mgr);
 //
-//    auto addresses = builder.parseAddresses(
+//    auto addresses = builder.parseAddressesStatement(
 //		"${"
 //		"	ref<struct{ int<4> a; int<4> b; }> s; "
 //		"	int<4> i = 2; "
@@ -459,15 +459,15 @@ TEST(ReachingDefinitions, StructMemberNested) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; struct{ int<4> b; } b; }>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
 		"	$s.b.b$ = 3; "
 		"	if ( s.a <= 0 ) { "
 		"		$s.a$ = i+b; "
 		"	}"
-		"	int<4> c = *$s.b.b$;"
+		"	decl int<4> c = *$s.b.b$;"
 		"}$", symbols
     );
     EXPECT_EQ(4u, addresses.size());
@@ -503,16 +503,16 @@ TEST(ReachingDefinitions, StructMemberNested2) {
 			"ref<struct{ int<4> a; struct{ int<4> a; struct { int<4> b; } b; } b; }>"
 		));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
 		"	$s.b.b$ = *s.b.b; "
 		"	s.a = 5; "
 		"	if ( s.a <= 0 ) { "
 		"		$s.b.b.b$ = i+b; "
 		"	}"
-		"	int<4> c = *$s.b.b.b$;"
+		"	decl int<4> c = *$s.b.b.b$;"
 		"}$", symbols
     );
     EXPECT_EQ(4u, addresses.size());
@@ -551,7 +551,7 @@ TEST(ReachingDefinitions, StructMemberNested2) {
 //	NodeManager mgr;
 //	IRBuilder builder(mgr);
 //
-//    auto addresses = builder.parseAddresses(
+//    auto addresses = builder.parseAddressesStatement(
 //		"${"
 //		"	ref<vector<int<4>, 10>> v; "
 //		"	int<4> i = 2; "
@@ -588,15 +588,15 @@ TEST(ReachingDefinitions, VectorsWithControl) {
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
 		"	$v[2u].a$ = i+b; "
 		"	while (i<b) { "
 		"		$v[2u].a$ = i+b; "
 		"	}"
-		"	int<4> c = *$v[2u].a$;"
+		"	decl int<4> c = *$v[2u].a$;"
 		"}$", symbols
     );
 	EXPECT_EQ(4u, addresses.size());
@@ -635,16 +635,16 @@ TEST(ReachingDefinitions, VectorsWithControl2) {
 			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
 		);
 
-    auto addresses = builder.parseAddresses(
-		"${"
-		"	int<2> i = 2; "
-		"	int<2> b = 3; "
-		"	$v[2u].a$ = i+b; "
-		"	while (i<b) { "
-		"		$v[2u].b$ = i+b; "
-		"	}"
-		"	int<4> c = *$v[2u].a$;"
-		"}$", symbols
+    auto addresses = builder.parseAddressesStatement(R"(
+		${
+			decl int<2> i = 2; 
+			decl int<2> b = 3; 
+			$v[2u].a$ = int_precision(i+b, param(4)); 
+			while (i<b) { 
+				$v[2u].b$ = i+b; 
+			}
+			decl int<4> c = *$v[2u].a$;
+		}$)", symbols
     );
 	EXPECT_EQ(4u, addresses.size());
 
@@ -674,15 +674,15 @@ TEST(ReachingDefinitions, VectorsWithControl3) {
 			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
 		);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${"
-		"	int<4> i = 2; "
-		"	int<4> b = 3; "
+		"	decl int<4> i = 2; "
+		"	decl int<4> b = 3; "
 		"	$v[2u].a$ = i+b; "
 		"	while (i<b) { "
 		"		$v[3u].a$ = i+b; "
 		"	}"
-		"	int<4> c = *$v[2u].a$;"
+		"	decl int<4> c = *$v[2u].a$;"
 		"}$", symbols
     );
 	EXPECT_EQ(4u, addresses.size());
@@ -713,7 +713,7 @@ TEST(ReachingDefinitions, VectorsWithControl3) {
 //		builder.parseType("ref<vector<uint<4>,10>>")
 //	);
 //
-//	auto addresses = builder.parseAddresses(
+//	auto addresses = builder.parseAddressesStatement(
 //	"${"
 //	"	uint<4> a = 2u; "
 //	"	uint<4> b = 3u; "
@@ -771,15 +771,15 @@ TEST(ReachingDefinitions, Vectors2DWithControl5) {
 		builder.parseType("ref<vector<vector<uint<4>,10>,10>>")
 	);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
-	"	uint<4> a = 2u; "
-	"	uint<4> b = 3u; "
+	"	decl uint<4> a = 2u; "
+	"	decl uint<4> b = 3u; "
 	"	$v[1u][2u]$ = a+b; "
 	"	for (uint<4> i=0u..10u : 2u) { "
 	"		$v[1u][i]$ = a+b; "
 	"	}"
-	"	uint<4> c = *$v[1u][2u]$;"
+	"	decl uint<4> c = *$v[1u][2u]$;"
 	"}$", symbols
 	);
 	EXPECT_EQ(4u, addresses.size());
@@ -817,11 +817,11 @@ TEST(ReachingDefinitions, Vectors2DWithControl6) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
-	"	ref<vector<uint<4>,10>> v; "
-	"	uint<4> a = 2u; "
-	"	uint<4> b = 3u; "
+	"	decl ref<vector<uint<4>,10>> v; "
+	"	decl uint<4> a = 2u; "
+	"	decl uint<4> b = 3u; "
 	" 	{ "
 	"		$v[2]$ = 3u; "
 	"		for (int<4> i=0..10) { "
@@ -871,7 +871,7 @@ TEST(ReachingDefinitions, Vectors2DWithControl6) {
 //		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
 //	);
 //
-//	auto addresses = builder.parseAddresses(
+//	auto addresses = builder.parseAddressesStatement(
 //	"${"
 //	"	uint<4> a = 2u; "
 //	"	uint<4> b = 3u; "
@@ -920,16 +920,16 @@ TEST(ReachingDefinitions, Vectors2DWithControl7) {
 		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
 	);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
-	"	uint<4> a = 2u; "
-	"	uint<4> b = 3u; "
+	"	decl uint<4> a = 2u; "
+	"	decl uint<4> b = 3u; "
 	"	$v[1u][2u][2u]$ = a+b; "
 	"	for (uint<4> i=0u..10u : 2u) { "
 	"		$v[0u][i][2u]$ = a+b; "
 	"	}"
 	"	v[1u][1u][2u] = a+b; "
-	"	uint<4> c = *$v[1u][2u][2u]$;"
+	"	decl uint<4> c = *$v[1u][2u][2u]$;"
 	"}$", symbols
 	);
 	EXPECT_EQ(4u, addresses.size());
@@ -966,16 +966,16 @@ TEST(ReachingDefinitions, Vectors2DWithControl8) {
 		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
 	);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 	"${"
-	"	uint<4> a = 2u; "
-	"	uint<4> b = 3u; "
+	"	decl uint<4> a = 2u; "
+	"	decl uint<4> b = 3u; "
 	"	v[1u][1u][2u] = a+b; "
 	"	for (uint<4> i=0u..10u : 2u) { "
 	"		v[1u][i][2u] = a+b; "
 	"	}"
 	"	$v[1u][1u][2u]$ = a+b; "
-	"	uint<4> c = *$v[1u][1u][2u]$;"
+	"	decl uint<4> c = *$v[1u][1u][2u]$;"
 	"}$", symbols
 	);
 	EXPECT_EQ(3u, addresses.size());

@@ -205,7 +205,7 @@ TEST(AffineFunction, Creation) {
 
 	// convertion to IR 
 	ExpressionPtr expr = toIR(mgr, af);
-	EXPECT_EQ("int.add(int.add(v2, int.mul(2, v3)), 10)", toString(*insieme::core::analysis::normalize(expr)));
+	EXPECT_EQ("int_add(int_add(v2, int_mul(2, v3)), 10)", toString(*insieme::core::analysis::normalize(expr)));
 }
 
 TEST(AffineFunction, CreationFromExpr) {
@@ -258,7 +258,7 @@ TEST(AffineFunction, ToExpr) {
 
 	ExpressionPtr expr = toIR(mgr, af);
 
-	EXPECT_EQ("int.add(v1, v3)", toString(*insieme::core::analysis::normalize(expr)));
+	EXPECT_EQ("int_add(v1, v3)", toString(*insieme::core::analysis::normalize(expr)));
 
 	AffineFunction af2(iterVec, expr);
 	EXPECT_EQ(*expr, *toIR(mgr,af2));
@@ -406,20 +406,16 @@ TEST(Constraint, Combiner) {
 
 	AffineFunction af(iterVec, {0,1,2,10}); //FIXE LE
 	AffineConstraint c1(af, ConstraintType::EQ);
-	EXPECT_EQ("int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)", toString(*insieme::core::analysis::normalize(toIR(mgr,c1))));
+	EXPECT_EQ("int_le(int_add(int_add(v2, int_mul(2, v3)), 10), 0)", toString(*insieme::core::analysis::normalize(toIR(mgr,c1))));
 
 	AffineFunction af2(iterVec, {2,3,0,10});
 	AffineConstraint c2(af2, ConstraintType::LT);
-	EXPECT_EQ( "int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)", toString(*insieme::core::analysis::normalize(toIR(mgr,c2))) );
+	EXPECT_EQ( "int_le(int_add(int_add(int_mul(2, v1), int_mul(3, v2)), 10), 0)", toString(*insieme::core::analysis::normalize(toIR(mgr,c2))) );
 
 	AffineConstraintPtr&& ptr = c1 or not_(c2);
 
 	ExpressionPtr expr = toIR(mgr, ptr);
-	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return true;} else {}; return v2();}}"
-			  "(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), "
-			  "bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {"
-			  	"return bool.not(int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0));"
-			  "}}(v1, v2)})", toString(*insieme::core::analysis::normalize(expr)));
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return true;} else {}; return v2();}}(int_le(int_add(int_add(v2, int_mul(2, v3)), 10), 0), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return bool_not(int_le(int_add(int_add(int_mul(2, v1), int_mul(3, v2)), 10), 0));}}(v1, v2)})" ,toString(*insieme::core::analysis::normalize(expr)));
 	
 }
 
@@ -545,7 +541,7 @@ TEST(IterationDomain, FromVariable) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<iint<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	v[$i+b$]; "
 		"}$", symbols
@@ -572,7 +568,7 @@ TEST(IterationDomain, FromVariable2) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	if ( $i$<20 ) "
 		"		v[$i+b$]; "
@@ -611,7 +607,7 @@ TEST(IterationDomain, NotAScop) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. a*b : 1) { "
 		"	v[$i+b$]; "
 		"}$", symbols
@@ -635,7 +631,7 @@ TEST(IterationDomain, FromVariable3) {
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$for(int<4> i = 10 .. 50 : 1) { "
 		"	if ( $i$<b ) "
 		"		v[$i+b$]; "
@@ -669,7 +665,7 @@ TEST(IterationDomain, FromVariable4) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( a > 20 ) { "
 		"	for(int<4> i = b .. a : 1) { "
 		"		if ( b < $i$ ) "
@@ -714,7 +710,7 @@ TEST(IterationDomain, FromVariableStrided) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( a > 20 ) { "
 		"	for(int<4> i = b .. a : 2) { "
 		"		if ( b<$i$ ) "
@@ -763,7 +759,7 @@ TEST(IterationDomain, FromVariable5) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( 1==1 ) { "
 		"	for(int<4> i = a .. a+10 : 2) { "
 		"		if ( i==a+2 ) "
@@ -799,7 +795,7 @@ TEST(IterationDomain, FromVariable6) {
 	symbols["a"] = builder.variable(builder.parseType("int<4>"),2);
 	symbols["b"] = builder.variable(builder.parseType("int<4>"),3);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"$if ( a>4 ) { "
 		"	for(int<4> i = a .. a+10 : 2) { "
 		"		if ( i==a+1 ) "
@@ -923,7 +919,7 @@ TEST(Transformations, Interchange) {
 	
 	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 1) {"
 				 "for(int<4> v1 = 0 .. 101 : 1) {"
-				 	"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v4, v0), v1)));"
+				 	"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v0), v1)));"
 				  "};"
 			   "}", toString(*insieme::core::analysis::normalize(ir)));
 
@@ -935,7 +931,7 @@ TEST(Transformations, Interchange) {
 	ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 1) {"
 					"for(int<4> v1 = 0 .. 101 : 1) {"
-						"ref.assign(v3, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v4, v1), v0)));"
+						"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v1), v0)));"
 					"};"
 				"}", toString(*insieme::core::analysis::normalize(ir)));
 }
@@ -983,9 +979,10 @@ TEST(Transformations, Tiling) {
 	scop.push_back(s);
 
 	NodePtr ir = scop.toIR(mgr);
+
 	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 1) {"
 					"for(int<4> v1 = 0 .. 101 : 1) {"
-						"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v0), v1)));"
+						"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v0), v1)));"
 					"};"
 				"}", toString(*insieme::core::analysis::normalize(ir)));
 
@@ -1028,9 +1025,9 @@ TEST(Transformations, Tiling) {
 
 	ir = scop.toIR(mgr);
 	EXPECT_EQ( "for(int<4> v0 = 0 .. 101 : 25) {"
-					"for(int<4> v1 = v0 .. int.add(select(int.add(v0, 25), 100, int.lt), 1) : 1) {"
+					"for(int<4> v1 = v0 .. int_add(select(int_add(v0, 25), 100, int_lt), 1) : 1) {"
 						"for(int<4> v2 = 0 .. 101 : 1) {"
-							"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v1), v2)));"
+							"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v1), v2)));"
 						"};"
 					"};"
 				"}", toString(*insieme::core::analysis::normalize(ir)));
@@ -1131,10 +1128,10 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v0 = 0 .. 91 : 1) {"
-					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v0), 0)));"
+					"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v0), 0)));"
 			   "}; "
 			   "for(int<4> v1 = 0 .. 101 : 1) {"
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v1), 0))));"
+					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v1), 0))));"
 				"};"
 			  "}", toString(*insieme::core::analysis::normalize(ir)));
 
@@ -1173,11 +1170,11 @@ TEST(Transformations, Fusion) {
 
 	EXPECT_EQ("{"
 				"for(int<4> v0 = 0 .. 91 : 1) {"
-					"ref.assign(v4, ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v5, v0), 0))); "
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v0), 0))));"
+					"ref_assign(v4, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v5, v0), 0))); "
+					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v0), 0))));"
 				"}; "
 				"for(int<4> v1 = 91 .. 101 : 1) {"
-					"ref.assign(v4, uint.add(ref.deref(v4), ref.deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref.narrow(v1, dp.element(dp.root, v2), type<'elem>);}}(v8, v1), 0))));"
+					"ref_assign(v4, uint_add(ref_deref(v4), ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v8, v1), 0))));"
 				"};"
 			  "}", toString(*insieme::core::analysis::normalize(ir)));
 }

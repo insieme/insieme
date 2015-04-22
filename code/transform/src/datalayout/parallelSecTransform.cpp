@@ -124,6 +124,9 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprAddress job = expr.isa<JobExprAddress>()) {
+
+            assert_true(job->getDefaultExpr().isa<BindExprAddress>()) << "expected bind expression inside of job";
+
 			CallExprAddress parallelCall = job->getDefaultExpr().isa<BindExprAddress>()->getCall();
 
 			if(!parallelCall)
