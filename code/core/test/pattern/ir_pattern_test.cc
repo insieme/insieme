@@ -702,11 +702,11 @@ TEST(PatternTests, LambdaPattern) {
 	core::NodePtr node = builder.normalize(builder.parseStmt(
 		R"(
 			{
-				int<4> foo = 17;
-				int<4> a = 1;
-				int<4> b = 2;
+				decl int<4> foo = 17;
+				decl int<4> a = 1;
+				decl int<4> b = 2;
 				a;
-				int<4> c = 5;
+				decl int<4> c = 5;
 			}
 		)"
 	));
@@ -735,14 +735,14 @@ TEST(PatternTests, LambdaAddressPattern) {
 	core::NodeManager manager;
 	IRBuilder builder(manager);
 
-	auto addresses = builder.parseAddresses(
+	auto addresses = builder.parseAddressesStatement(
 		R"(
 			{
-				int<4> foo = 17;
-				int<4> a = 1;
-				int<4> b = $2$;
+				decl int<4> foo = 17;
+				decl int<4> a = 1;
+				decl int<4> b = $2$;
 				a;
-				int<4> c = 5;
+				decl int<4> c = 5;
 			}
 		)"
 	);
