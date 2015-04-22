@@ -1028,8 +1028,12 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 //	std::cout << "to replace: " << vr.first << " " << *vr.first << std::endl;
 //}
 	NodeAddress srcAddr = NodeAddress(src);
-
+	ExprAddressMap tmp;
 	for(std::pair<ExpressionAddress, StatementPtr> vr : varsToReplace) {
+		tmp[vr.first] = vr.second;
+	}
+
+	for(std::pair<ExpressionAddress, StatementPtr> vr : tmp) {
 		// update current address
 		ExpressionAddress oldVar = vr.first.switchRoot(srcAddr);
 		StatementPtr newVar = vr.second;
@@ -1062,7 +1066,10 @@ NodeAddress VariableAdder::addVariablesToLambdas(NodePtr& src) {
 			srcAddr = NodeAddress(src);
 
 			// update replacement with new root
-			mapKeySwitchRoot(varsToReplace, srcAddr);
+			varsToReplace.clear();
+			for(std::pair<ExpressionAddress, StatementPtr> vr : tmp) {
+				varsToReplace[vr.first.switchRoot(srcAddr)] = vr.second;
+			}
 		}
 
 	}
