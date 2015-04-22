@@ -432,7 +432,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 		ExpressionPtr func = callExpr->getFunctionExpr();
 		bool isBuiltIn = addr->getNodeManager().getLangBasic().isBuiltIn(func);
 
-		if(!isBuiltIn && !callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
+		if((!isBuiltIn) && callExpr->getFunctionExpr()->getNodeType() != NT_LambdaExpr) {
 			return ret;
 		}
 

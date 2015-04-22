@@ -338,17 +338,17 @@ namespace pattern {
 
 	inline TreePattern all(const TreePattern& a) {
 		// collect all occurs of pattern a
-		return rT((a & node(*recurse)) | (!a & node(*recurse)));
+		return rT((a & node(*recurse)) | ((!a) & node(*recurse)));
 	}
 
 	inline TreePattern outermost(const TreePattern& a) {
 		// it is the outer most or not, then the next is nested
-		return rT(a | (!a & node(*recurse)));
+		return rT(a | ((!a) & node(*recurse)));
 	}
 
 	inline TreePattern innermost(const TreePattern& a) {
 		// select all that do not contain another a
-		return rT((!step(aT(a)) & a) | node(*recurse));
+		return rT(((!step(aT(a))) & a) | node(*recurse));
 	}
 
 } // end namespace pattern
