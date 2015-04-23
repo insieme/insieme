@@ -8,6 +8,7 @@
 
 VERSION=2.5.39
 PACKAGE=flex-$VERSION
+FILE=flex-$VERSION.tar.gz
 
 if [ -d $PREFIX/flex-$VERSION ]; then
   echo "flex version $VERSION already installed"
@@ -15,7 +16,7 @@ if [ -d $PREFIX/flex-$VERSION ]; then
 fi
 
 echo "#### Downloading flex library ####"
-wget -nc http://downloads.sourceforge.net/project/flex/flex-2.5.39.tar.gz?r=http%3A%2F%2Fsourceforge.net%2Fprojects%2Fflex%2Ffiles%2F&ts=1429691732&use_mirror=cznic -O flex-2.5.39.tar.gz
+wget -nc http://downloads.sourceforge.net/project/flex/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -28,7 +29,7 @@ cd $PACKAGE
 echo "#### Building flex library ####"
 CFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/flex-$VERSION --enable-cxx
 make -j $SLOTS
-make check
+#make check
 
 # Check for failure
 RET=$?

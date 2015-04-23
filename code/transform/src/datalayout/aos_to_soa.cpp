@@ -138,9 +138,10 @@ void AosToSoa::transform() {
 
 		updateCopyDeclarations(varReplacements, newStructType, oldStructType, tta, replacements);
 
-		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
+		const ExprAddressMap kernelVarReplacements =
+				replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
 
-		doReplacements(replacements, aosToSoaAllocTypeUpdate);
+		doReplacements(kernelVarReplacements, replacements, aosToSoaAllocTypeUpdate);
 
 //		replacements.clear();
 //		tta = NodeAddress(toTransform);
@@ -329,11 +330,12 @@ StatementList AosToSoa::generateDel(const StatementAddress& stmt, const Expressi
 
 }
 
-void AosToSoa::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+const ExprAddressMap AosToSoa::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
 			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
-	ParSecSoa psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
-//	psa.transform();
+	ParSecSoa pss(toTransform, varReplacements, replacements, newStructType, oldStructType);
+	pss.transform();
+	return pss.getKernelVarReplacements();
 }
 } // datalayout
 } // transform

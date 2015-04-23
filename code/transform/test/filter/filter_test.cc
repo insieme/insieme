@@ -131,15 +131,15 @@ namespace filter {
 		EXPECT_EQ(toVector(for3), filter(node));
 
 		// also using the conjunction
-		filter = allMatches(irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | (!irp::forStmt() & p::step(p::recurse)) )));
+		filter = allMatches(irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | ((!irp::forStmt()) & p::step(p::recurse)) )));
 		EXPECT_EQ(toVector(for3), filter(node));
 
 		// search for 3 innermost loops
 		filter = allMatches(irp::forStmt(
 				p::rT(
-						irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | (!irp::forStmt() & p::step(p::recurse))))
+						irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | ((!irp::forStmt()) & p::step(p::recurse))))
 						|
-						(!irp::forStmt() & p::step(p::recurse))
+						((!irp::forStmt()) & p::step(p::recurse))
 				)
 		));
 		EXPECT_EQ(toVector(for2), filter(node));

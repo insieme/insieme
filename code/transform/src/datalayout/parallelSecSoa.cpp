@@ -42,6 +42,7 @@
 
 #include "insieme/transform/datalayout/parallelSecSoa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
+#include "insieme/transform/datalayout/aos_argument_unfolder.h"
 
 
 namespace insieme {
@@ -51,59 +52,55 @@ namespace datalayout {
 using namespace core;
 namespace pirp = pattern::irp;
 
-ExpressionPtr ParSecSoa::updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
-		core::StringValuePtr fieldName) {
-	// check for marshalled variables in init expression
-	std::pair<ExpressionAddress, std::map<StringValuePtr, VariablePtr>> varInInit;
-	visitBreadthFirstInterruptible(init, [&](const ExpressionAddress& currVar) {
-		auto check = fieldReplacements.find(getDeclaration(currVar));
-		if(check != fieldReplacements.end()) {
-			varInInit = *check;
-			return true;
-		}
-		return false;
-	});
-
-	if(varInInit.first) { // variable to be replaced found
-		// replace accesses to old variable with accesses to new (non-struct) variable
-		ExpressionMap localReplacement;
-		IRBuilder builder(mgr);
-		localReplacement[varInInit.first] = varInInit.second[fieldName];
-
-		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init.getAddressedNode(), localReplacement, true);
-
-		return newInit;
-	}
-
-	// backup, works for e.g. memory allocation
-	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
-}
+//ExpressionPtr ParSecSoa::updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
+//		core::StringValuePtr fieldName) {
+//	// check for marshalled variables in init expression
+//	std::pair<ExpressionAddress, std::map<StringValuePtr, VariablePtr>> varInInit;
+//	visitBreadthFirstInterruptible(init, [&](const ExpressionAddress& currVar) {
+//		auto check = fieldReplacements.find(getDeclaration(currVar));
+//		if(check != fieldReplacements.end()) {
+//			varInInit = *check;
+//			return true;
+//		}
+//		return false;
+//	});
+//
+//	if(varInInit.first) { // variable to be replaced found
+//		// replace accesses to old variable with accesses to new (non-struct) variable
+//		ExpressionMap localReplacement;
+//		IRBuilder builder(mgr);
+//		localReplacement[varInInit.first] = varInInit.second[fieldName];
+//
+//		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init.getAddressedNode(), localReplacement, true);
+//
+//		return newInit;
+//	}
+//
+//	// backup, works for e.g. memory allocation
+//	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
+//}
 
 StatementList ParSecSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVars,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
-std::cout << "here: " << decl << std::endl;
 	IRBuilder builder(mgr);
 
 	// replace declaration with compound statement containing the declaration of the new soa variables
 	StatementList allDecls;
 
-	//			if(memAlloc.match(decl->getInitialization())) { // if memory is allocated, allocate memory of new newVar
-//		allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), builder.undefinedVar(newVar->getType())));
+	// split up initialization expressions
+	for(std::pair<StringValuePtr, VariablePtr> member : fieldReplacements[decl->getVariable()]) {
 
-		// split up initialization expressions
-		for(std::pair<StringValuePtr, VariablePtr> member : fieldReplacements[decl->getVariable()]) {
-
-			NodeMap inInitReplacementsInCaseOfNovarInInit;
-			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(member.second->getType(), member.first);
+		NodeMap inInitReplacementsInCaseOfNovarInInit;
+		inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(member.second->getType(), member.first);
 //
 //			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
 //					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 
-			VariablePtr newVar = member.second.as<VariablePtr>();
-std::cout << "\nCalling\n\n";
-			allDecls.push_back(builder.declarationStmt(newVar, //builder.undefinedVar(newVar->getType())));
-					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, member.first)));
-		}
+		VariablePtr newVar = member.second.as<VariablePtr>();
+std::cout << "\nCalling " << *decl->getInitialization() << " " << getDeclaration(decl->getInitialization()) << std::endl;
+		allDecls.push_back(builder.declarationStmt(newVar, //builder.undefinedVar(newVar->getType())));
+				updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, member.first)));
+	}
 dumpPretty(builder.compoundStmt(allDecls));
 	return allDecls;
 }
@@ -120,7 +117,6 @@ void ParSecSoa::transform() {
 	VariableMap<std::map<LiteralPtr, ExpressionPtr>> map;
 
 	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		ExprAddressMap varReplacements;
 		ExpressionMap nElems;
 
 		std::vector<NamedTypePtr> newStructElemsTypes;
@@ -151,10 +147,19 @@ std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << s
 //					builder.variable(newType).as<ExpressionPtr>();
 		}
 
-		ArgumentReplacer ar(mgr, varReplacements, varsToPropagate, newStructType);
+		AosArgumentUnfolder ar(mgr, varReplacements, varsToPropagate, oldStructType, newStructType);
 
-		tta = ar.addVariablesToLambdas(toTransform);
+//		tta = ar.addVariablesToLambdas(toTransform);
+		tta = ar.mapPtr(toTransform);
 
+		// the argument replacer changed the transform -> all previously stored addresses are invalid. Trying to update them.
+		mapKeySwitchRoot(varReplacements, tta);
+		mapKeySwitchRoot(fieldReplacements, tta);
+
+//for(std::pair<ExpressionAddress, StatementPtr> fr : varReplacements) {
+//	std::cout << "there: " << *fr.first << " " << *fr.second << std::endl;
+//}
+//assert_fail();
 
 		// replacing the declarations of the old variables with new ones
 		addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
@@ -208,7 +213,7 @@ ExpressionList ArgumentReplacer::updateArguments(const ExpressionAddress& oldArg
 	if(match) {
 		ExpressionAddress oldVarRoot = getDeclaration(match.get()["variable"].getValue().as<ExpressionAddress>());
 		std::cout << "oldDecl: " << oldVarRoot << " " << *oldVarRoot << std::endl;
-
+assert_fail();
 		auto varCheck = varsToPropagate.find(oldVarRoot);
 		if(varCheck != varsToPropagate.end()) {
 			IRBuilder builder(mgr);
@@ -241,8 +246,6 @@ core::NodePtr ArgumentReplacer::generateNewCall(const CallExprAddress& oldCall, 
 
 	ExpressionAddress oldArg = oldCall->getArgument(argIdx);
 
-std::cout << "trying: \n";
-dumpPretty(oldCall);
 	// update to new variable which will be added to argument list;
 	ExpressionList newArgs = updateArguments(oldArg);
 
@@ -280,9 +283,6 @@ dumpPretty(oldCall);
 	//migrate possible annotations
 	core::transform::utils::migrateAnnotations(lambdaExpr.getAddressedNode(), newLambdaExpr);
 	core::transform::utils::migrateAnnotations(oldCall.getAddressedNode(), newCall);
-
-std::cout << "\nsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss\n";
-dumpPretty(newCall);
 
 	return newCall;
 }
