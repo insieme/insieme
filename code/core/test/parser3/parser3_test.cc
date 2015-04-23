@@ -279,7 +279,6 @@ namespace parser3{
         EXPECT_TRUE(test_program(mgr, "let f,g = lambda()->unit{g();},lambda()->unit{f();}; unit main() { f(); }"));
 
         EXPECT_TRUE(test_program(mgr, 
-
             "let class = struct name { int<4> a; int<5> b};"
             "let f,g = lambda class :: ()->unit{"
             "        g(this);"

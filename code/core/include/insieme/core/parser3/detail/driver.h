@@ -270,8 +270,8 @@ public:
     // Error handling.
     void error (const location& l, const std::string& m)const;
     void error (const std::string& m)const;
-    bool where_errors()const ;
-    void print_errors(std::ostream& out = std::cout)const;
+    bool where_errors()const;
+    void print_errors(std::ostream& out = std::cout, bool color=true)const;
 };
 
 class AddressMark {};
