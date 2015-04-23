@@ -552,9 +552,13 @@ namespace {
 
         auto start = 0U;
         auto end = s.find(delim);
+
         if (end == std::string::npos) {
-            res.push_back(s);
+			auto tmp = s;
+            std::replace( tmp.begin(), tmp.end(), '\t', ' ');
+            res.push_back(tmp);
         }
+
         while (end != std::string::npos)
         {
             auto tmp = s.substr(start, end - start);
@@ -563,6 +567,12 @@ namespace {
             start = end + delim.length();
             end = s.find(delim, start);
         }
+
+		// copy last line
+        auto tmp = s.substr(start, s.size()-1);
+		std::replace( tmp.begin(), tmp.end(), '\t', ' ');
+		res.push_back(tmp);
+
         assert(res.size() > 0);
         return res;
     }
@@ -871,7 +881,7 @@ namespace {
     }
 
     
-    void inspire_driver::print_errors(std::ostream& out)const {
+    void inspire_driver::print_errors(std::ostream& out, bool color)const {
 
         auto buffer = split_string(str);
         int line = 1;
@@ -879,8 +889,20 @@ namespace {
 
             int lineb = err.l.begin.line;
             int linee = err.l.end.line;
+            int colb = err.l.begin.column;
+            int cole = err.l.end.column;
 
-            out << RED << "ERROR: "  << RESET << err.l << " " << err.msg << std::endl;
+            if (color) out << RED ;
+			out << "ERROR: "; 
+			if (color) out << RESET; 
+			out << err.l << " " << err.msg << std::endl;
+
+	//		std::cout << "=====" << std::endl;
+	//		std::cout << "beg " << lineb << ":" << colb << std::endl;
+	//		std::cout << "end " << linee << ":" << cole << std::endl;
+
+	//		std::cout << "buff " << str << std::endl;
+	//		std::cout << "buff " << buffer << std::endl;
 
             assert_true(lineb > 0);
             assert_true(linee > 0);
@@ -891,15 +913,13 @@ namespace {
             line = linee;
             out << buffer[line-1] << std::endl;
 
-            int colb = err.l.begin.column;
-            int cole = err.l.end.column;
 
             for (int i =0; i < colb-1; ++i) out << " ";
-            out << GREEN << "^";
+            if (color) out << GREEN;
+			out << "^";
             for (int i =0; i < cole - colb -1; ++i) out << "~";
-            out << RESET << std::endl;
-
-
+            if (color) out << RESET;
+			out << std::endl;
         }
     }
 
