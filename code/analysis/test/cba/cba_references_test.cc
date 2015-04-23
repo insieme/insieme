@@ -58,11 +58,11 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	ref<int<4>> x = var(12);"			// create a reference
+				"	decl ref<int<4>> x = var(12);"			// create a reference
 				"	"
 				"	x;"
-				"	scalar.to.array(x);"
-				"	scalar.to.array(x)[0];"
+				"	scalar_to_array(x);"
+				"	scalar_to_array(x)[0];"
 				"}"
 		).as<CompoundStmtPtr>();
 

@@ -1461,8 +1461,6 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 	if(!res) {
 		// trigger the actual conversion
 		res = convertType(decl->getTypeForDecl()->getCanonicalTypeInternal ());
-
-
 	}
 
     // frequently structs and their type definitions have the same name

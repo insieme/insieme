@@ -1029,7 +1029,7 @@ namespace pattern {
 
 		auto forStmt = node('f', anyList);
 
-		auto p = rT(var("l", node('f', !forStmt | recurse)));
+		auto p = rT(var("l", node('f', (!forStmt) | recurse)));
 
 		// ---------- test pattern ------------
 
@@ -1064,7 +1064,7 @@ namespace pattern {
 
 		// create pattern
 		auto x = var("x");
-		auto use = !node('d',anyList) & step(x);
+		auto use = (!node('d',anyList)) & step(x);
 		auto p = aT(node('d', x)) & aT(var("y",use));
 
 

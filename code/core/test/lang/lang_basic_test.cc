@@ -105,7 +105,7 @@ TEST(LangBasic, Derived) {
 	NodeManager nm;
 
 	// get a derived literal
-	EXPECT_EQ("rec v0.{v0=fun(ref<ref<array<'elem,1>>> v1) {ref<array<'elem,1>> v2 = ref.deref(v1); ref.assign(v1, array.view(ref.deref(v1), 1)); return v2;}}",
+	EXPECT_EQ("rec v0.{v0=fun(ref<ref<array<'elem,1>>> v1) {ref<array<'elem,1>> v2 = ref_deref(v1); ref_assign(v1, array_view(ref_deref(v1), 1)); return v2;}}",
 			toString(*nm.getLangBasic().getArrayViewPostInc()));
 
 }
@@ -118,21 +118,34 @@ TEST(LangBasic, DerivedMembership) {
 	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeRefElem()));
 }
 
-TEST(LangBasic, DefinitionTest) {
-
-	NodeManager nm;
-	const BasicGenerator& gen = nm.getLangBasic();
 
 	// test all type and literal definitions
 #define CHECK(id) \
-	std::cout << "Checking " #id "\n"; \
 	EXPECT_TRUE(gen.get##id ()); \
 	EXPECT_TRUE(gen.is##id(gen.get##id())); \
 	EXPECT_TRUE(checks::check(gen.get##id()).empty()) << checks::check(gen.get##id());
 
-#define TYPE(_id, _spec) CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id()));
-#define LITERAL(_id, _name, _spec) CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id()));
-#define DERIVED(_id, _name, _code) CHECK(_id); EXPECT_TRUE(isDerived(gen.get##_id()));
+
+#define TYPE(_id, _spec) \
+    TEST(LangBasic_types, _id) { \
+	    NodeManager nm; \
+	    const BasicGenerator& gen = nm.getLangBasic(); \
+        CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id())); \
+    }
+
+#define LITERAL(_id, _name, _spec) \
+    TEST(LangBasic_literals, _id) { \
+	    NodeManager nm; \
+	    const BasicGenerator& gen = nm.getLangBasic(); \
+        CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id())); \
+    }
+
+#define DERIVED(_id, _name, _spec) \
+    TEST(LangBasic_derived, _id) { \
+	    NodeManager nm; \
+	    const BasicGenerator& gen = nm.getLangBasic(); \
+        CHECK(_id); EXPECT_TRUE(isDerived(gen.get##_id())); \
+    }
 
 #include "insieme/core/lang/inspire_api/lang.def"
 
@@ -141,4 +154,4 @@ TEST(LangBasic, DefinitionTest) {
 #undef TYPE
 #undef CHECK
 
-}
+

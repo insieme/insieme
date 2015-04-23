@@ -40,10 +40,8 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/parser2/ir_parser.h"
-#include "insieme/core/parser2/grammar.h"
-#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
@@ -343,7 +341,7 @@ TEST(ParentCheck, Basic) {
 	auto ok1 = builder.parent(builder.genericType("A"));
 	auto ok2 = builder.parent(builder.structType());
 	auto ok3 = builder.parent(builder.typeVariable("a"));
-	auto ok4 = builder.parent(builder.parseType("let a,b = struct { ref<b> x; }, struct { ref<a> x; } in a"));
+	auto ok4 = builder.parent(builder.parseType("let a,b = struct { ref<b> x; }, struct { ref<a> x; } ; a"));
 
 	auto err1 = builder.parent(builder.parseType("union { int<4> x; }"));
 	auto err2 = builder.parent(builder.parseType("(A,B)->R"));
@@ -669,7 +667,7 @@ TEST(DeclarationStmtTypeCheck, RecursiveTypes) {
 	IRBuilder builder(manager);
 
 	// OK ... create a function literal
-	RecTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } in t").as<RecTypePtr>();
+	RecTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } ; t").as<RecTypePtr>();
 	TypePtr typeB = typeA->unroll();
 
 	// all of the following should be supported
@@ -957,8 +955,8 @@ TEST(LambdaExprType, Basic) {
 	auto& basic = manager.getLangBasic();
 
 	// build a lambda expression which is fine
-	LambdaExprPtr lambda = builder.parse(
-			"let int = int<4> in (int a)->int { return a; }"
+	LambdaExprPtr lambda = builder.parseExpr(
+			"let int = int<4> ; lambda(int a)->int { return a; }"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(lambda);
@@ -1165,29 +1163,29 @@ TEST(NarrowExpression, Basic) {
 	IRBuilder builder(manager);
 	CheckPtr typeCheck = getFullCheck();
 
-	NodePtr res = analysis::normalize(builder.parse(
+	NodePtr res = analysis::normalize(builder.parseStmt(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
-		" ref<two> obj; "
-		" ref<int<4>> inside = ref.narrow( obj, dp.member(dp.root, lit(\"b\")), lit(int<4>));"
-		" ref<int<4>> morein = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<4>));"
+		" decl ref<two> obj; "
+		" decl ref<int<4>> inside = ref_narrow( obj, dp_member(dp_root, lit(\"b\")), lit(int<4>));"
+		" decl ref<int<4>> morein = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"a\")),lit(\"a\")), lit(int<4>));"
 		"}"
 	));
 	ASSERT_TRUE (res);
 	auto errors = check(res, typeCheck);
 	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
-	EXPECT_EQ("{decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 =  var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>));decl ref<int<4>> v1 = ref.narrow(v0, dp.root.b, type<int<4>>);decl ref<int<4>> v2 = ref.narrow(v0, dp.root.a.a, type<int<4>>);}",
+	EXPECT_EQ("{decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 =  var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>));decl ref<int<4>> v1 = ref_narrow(v0, dp_root.b, type<int<4>>);decl ref<int<4>> v2 = ref_narrow(v0, dp_root.a.a, type<int<4>>);}",
 			  toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
-	res = builder.parse(
+	res = builder.parseStmt(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
-		" ref<two> obj; "
-		" ref<int<4>> x = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"b\")),lit(\"a\")), lit(int<4>));"
-		" ref<int<4>> y = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"b\")), lit(int<4>));"
-		" ref<int<8>> z = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<8>));"  // this test is no longer wrong since generic types can be narrowed
+		" decl ref<two> obj; "
+		" decl ref<int<4>> x = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"b\")),lit(\"a\")), lit(int<4>));"
+		" decl ref<int<4>> y = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"a\")),lit(\"b\")), lit(int<4>));"
+		" decl ref<int<8>> z = ref_narrow( obj, dp_member(dp_member(dp_root, lit(\"a\")),lit(\"a\")), lit(int<8>));"  // this test is no longer wrong since generic types can be narrowed
 		"}"
 	);
 	ASSERT_TRUE (res);
@@ -1200,14 +1198,14 @@ TEST(NarrowExpression, Parents) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	NodePtr ok = builder.parse(
+	NodePtr ok = builder.parseStmt(
 		"{"
 		"	let int = int<4>;"
 		"	let A = struct { int a; };"
 		"	let B = struct : A { int b; };"
-		"	ref<B> b;"
-		"	auto ref2A = ref.narrow( b, dp.parent( dp.root, lit(A) ), lit(A) );"
-		"	auto ref2a = ref.narrow( b, dp.member( dp.parent( dp.root, lit(A) ), lit(\"a\")), lit(int) );"
+		"	decl ref<B> b;"
+		"	decl auto ref2A = ref_narrow( b, dp_parent( dp_root, lit(A) ), lit(A) );"
+		"	decl auto ref2a = ref_narrow( b, dp_member( dp_parent( dp_root, lit(A) ), lit(\"a\")), lit(int) );"
 		"}"
 	);
 
@@ -1215,13 +1213,13 @@ TEST(NarrowExpression, Parents) {
 
 	EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
 
-	NodePtr err = builder.parse(
+	NodePtr err = builder.parseStmt(
 		"{"
 		"	let int = int<4>;"
 		"	let A = struct { int a; };"
 		"	let B = struct : A { int b; };"
-		"	ref<B> b; "
-		"	auto x = ref.narrow( b, dp.parent( dp.root, lit(B) ), lit(B) );"
+		"	decl ref<B> b; "
+		"	decl auto x = ref_narrow( b, dp_parent( dp_root, lit(B) ), lit(B) );"
 		"}"
 	);
 	ASSERT_TRUE(err);
@@ -1238,43 +1236,43 @@ TEST(ExpandExpression, Basic) {
 	IRBuilder builder(manager);
 	CheckPtr typeCheck = getFullCheck();
 
-	NodePtr res = core::parser::parse(manager,
+	NodePtr res = builder.parseStmt(
 		"{"
 		" let int   = int<4>;"
 		" let inner = struct{ int a;};"
 		" let outer = struct{ inner a; int b;};"
 		""
-		" ref<inner>  obj;"
+		" decl ref<inner>  obj;"
 		" obj.a = -15;"
-		" ref<int> x = obj.a;"
-		" ref<inner> exp = ref.expand(x, dp.member(dp.root, lit(\"a\")), lit(inner));"
+		" decl ref<int> x = obj.a;"
+		" decl ref<inner> exp = ref_expand(x, dp_member(dp_root, lit(\"a\")), lit(inner));"
 		""
-		" ref<outer> obj2; "
-		" ref<inner> y = obj2.a;"
-		" ref<int>   z = y.a;"
-		" ref<outer> exp2 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"a\")), lit(\"a\")), lit(outer));"
+		" decl ref<outer> obj2; "
+		" decl ref<inner> y = obj2.a;"
+		" decl ref<int>   z = y.a;"
+		" decl ref<outer> exp2 = ref_expand (z, dp_member (dp_member (dp_root, lit(\"a\")), lit(\"a\")), lit(outer));"
 		"}"
 		);
 	ASSERT_TRUE (res);
 	auto errors = check(res, typeCheck);
 	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
 
-	res = core::parser::parse(manager,
-		"{"
+	res = builder.parseStmt(
+        "{"
 		" let int   = int<4>;"
 		" let inner = struct{ int a;};"
 		" let outer = struct{ inner a; int b;};"
 		""
-		" ref<inner>  obj;"
+		" decl ref<inner>  obj;"
 		" obj.a = -15;"
-		" ref<int> x = obj.a;"
-		" ref<inner> exp = ref.expand(x, dp.member(dp.root, lit(\"r\")), lit(inner));"
+		" decl ref<int> x = obj.a;"
+		" decl ref<inner> exp = ref_expand(x, dp_member(dp_root, lit(\"r\")), lit(inner));"
 		""
-		" ref<outer> obj2; "
-		" ref<inner> y = obj2.a;"
-		" ref<int>   z = y.a;"
-		" ref<outer> exp2 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"b\")), lit(\"a\")), lit(outer));"
-		" ref<int>   exp3 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"a\")), lit(\"a\")), lit(int));"
+		" decl ref<outer> obj2; "
+		" decl ref<inner> y = obj2.a;"
+		" decl ref<int>   z = y.a;"
+		" decl ref<outer> exp2 = ref_expand (z, dp_member (dp_member (dp_root, lit(\"b\")), lit(\"a\")), lit(outer));"
+		" decl ref<int>   exp3 = ref_expand (z, dp_member (dp_member (dp_root, lit(\"a\")), lit(\"a\")), lit(int));"
 		"}"
 		);
 	ASSERT_TRUE (res);
@@ -1287,26 +1285,26 @@ TEST(ExpandExpression, Parents) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	NodePtr ok = builder.parse(
+	NodePtr ok = builder.parseStmt(
 		"{"
 		"	let int = int<4>;"
 		"	let A = struct { int a; };"
 		"	let B = struct : A { int b; };"
-		"	ref<A> a;"
-		"	auto ref2B = ref.expand( a, dp.parent( dp.root, lit(A) ), lit(B) );"
+		"	decl ref<A> a;"
+		"	decl auto ref2B = ref_expand( a, dp_parent( dp_root, lit(A) ), lit(B) );"
 		"}"
 	);
 
 	ASSERT_TRUE(ok);
 	EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
 
-	NodePtr err = builder.parse(
+	NodePtr err = builder.parseStmt(
 		"{"
 		"	let int = int<4>;"
 		"	let A = struct { int a; };"
 		"	let B = struct { int b; };"
-		"	ref<A> a;"
-		"	auto ref2B = ref.expand( a, dp.parent( dp.root, lit(A) ), lit(B) );"
+		"	decl ref<A> a;"
+		"	decl auto ref2B = ref_expand( a, dp_parent( dp_root, lit(A) ), lit(B) );"
 		"}"
 	);
 	ASSERT_TRUE(err);
@@ -1390,14 +1388,14 @@ TEST(ClassMetaInfo, InfoObjectType) {
 	IRBuilder builder(manager);
 
 	// create types to be tested
-	auto ok = builder.genericType("A");
+	auto ok = builder.genericType("t1");
 	auto err = ok;
 
 	ClassMetaInfo infoA;
-	infoA.addConstructor(builder.parse("A::() {}").as<LambdaExprPtr>());
+	infoA.addConstructor(builder.parseExpr("let A = t1; lambda ctor A::() {}").as<LambdaExprPtr>());
 
 	ClassMetaInfo infoB;
-	infoB.addConstructor(builder.parse("B::() {}").as<LambdaExprPtr>());
+	infoB.addConstructor(builder.parseExpr("let B = t2; lambda ctor B::() {}").as<LambdaExprPtr>());
 
 
 	// check the correct version (no information)
@@ -1405,7 +1403,7 @@ TEST(ClassMetaInfo, InfoObjectType) {
 
 	// use correct extra information
 	ok->attachValue(infoA);
-	EXPECT_TRUE(check(ok).empty());
+	EXPECT_TRUE(check(ok).empty()) << check(ok);
 
 	// use invalid extra information
 	err->attachValue(infoB);

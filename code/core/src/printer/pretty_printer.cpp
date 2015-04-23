@@ -57,7 +57,7 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp>
 
-#include "insieme/core/parser2/detail/lexer.h"
+#include "insieme/core/printer/lexer.h"
 
 namespace insieme {
 namespace core {
@@ -1326,8 +1326,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 	}
 
 
-	// add syntax highlighting to output code by using the lexer from the parser
-	using namespace insieme::core::parser::detail;
+	using namespace insieme::core::printer::detail;
 	auto tokens = lex(buffer.str(), false);
 
 	// print tokens one-by-one

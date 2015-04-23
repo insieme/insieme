@@ -8,9 +8,14 @@ include(../environment.cmake)
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
+# find modules
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake" ${CMAKE_MODULE_PATH})
+
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_core_incs 	include/*.h include/*.def include/*.inc )
+file(GLOB_RECURSE insieme_core_yy 	    src/*.y src/*.yy )
+file(GLOB_RECURSE insieme_core_ll 	    src/*.l src/*.ll )
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
@@ -22,13 +27,85 @@ execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby build
 if (NOT ${builderbuilderSuccess} EQUAL 0)
 	message(FATAL_ERROR "Ruby builder builder script failed to execute!")
 endif()
-         
+
+# =============================================  bison builds the parser  =====================================
+
+if(NOT MSVC) 
+	set(BISON_ROOT ${third_part_libs_home}/bison-latest)
+	FIND_PACKAGE(BISON 3.0 REQUIRED)
+
+	#FIND_PROGRAM(BISON_EXECUTABLE bison HINTS ${third_part_libs_home}/bison-latest/bin)
+	IF(BISON_EXECUTABLE-NOTFOUND)
+	    message(FATAL_ERROR "bisson not found")
+
+	ELSE()
+	    message(STATUS "bison found @ ${BISON_EXECUTABLE}")
+
+	    set(BISON_INPUT ${insieme_core_yy})
+	    set(BISON_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bison-flex/)
+	    file(MAKE_DIRECTORY ${BISON_OUTPUT_PATH})
+	    set(BISON_O_FILE inspire_parser.cpp)
+	    set(BISON_OUTPUT ${BISON_OUTPUT_PATH}/${BISON_O_FILE})
+
+	    ADD_CUSTOM_COMMAND(
+	      SOURCE ${BISON_INPUT}
+	      COMMAND ${BISON_EXECUTABLE}
+	      ARGS -d
+		    --report=all
+		   -o ${BISON_O_FILE}
+		   --graph 
+		  ${BISON_INPUT} 
+	      COMMENT "Generating inspire parser"
+	      DEPENDS ${BISON_INPUT}
+	      WORKING_DIRECTORY ${BISON_OUTPUT_PATH}
+	      OUTPUT ${BISON_OUTPUT}
+	)
+	ENDIF()
+
+# =============================================  flex builds the scanner  =====================================
+
+	set(FLEX_ROOT ${third_part_libs_home}/flex-latest)
+	FIND_PACKAGE(FLEX 2.5 REQUIRED)
+
+	IF(FLEX_EXECUTABLE-NOTFOUND)
+	    message(FATAL_ERROR "flex not found")
+	ELSE()
+	    message(STATUS "flex found @ ${FLEX_EXECUTABLE}")
+
+	    set(FLEX_INPUT ${insieme_core_ll})
+	    set(FLEX_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bison-flex/)
+	    set(FLEX_OUTPUT ${FLEX_OUTPUT_PATH}/inspire_scanner.cpp)
+
+	    ADD_CUSTOM_COMMAND(
+	      SOURCE ${FLEX_INPUT}
+	      COMMAND ${FLEX_EXECUTABLE}
+	      ARGS -o ${FLEX_OUTPUT}
+		  ${FLEX_INPUT} 
+	      COMMENT "Generating inspire scanner"
+	      DEPENDS ${FLEX_INPUT}
+	      WORKING_DIRECTORY ${FLEX_OUTPUT_PATH}
+	      OUTPUT ${FLEX_OUTPUT}
+	)
+	ENDIF()
+
+	# make the build aware of generated headers
+	include_directories( ${FLEX_OUTPUT_PATH} )
+	include_directories( ${BISON_OUTPUT_PATH} )
+
+	# flex needs a header in installation
+	include_directories( ${FLEX_INCLUDE_DIRS} )
+endif()
+
+# =============================================  build insieme core .so  =====================================
+
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
 target_link_libraries(insieme_core gomp)
 
 # add dependencies
 # add_dependencies(insieme_core insieme_utils)
+
+# =============================================  TESTING  =====================================
 
 target_link_libraries( insieme_core ${cudd_LIB}) 
 include_directories( test/include/ )

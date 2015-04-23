@@ -28,6 +28,8 @@ CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
 SHARK 	:= ${PREFIX}/shark-$(shell ${AWK_CMD} shark_install.sh | cut -d= -f2 )
 KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
 XERCES 	:= ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
+BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
+FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
 PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
@@ -196,6 +198,20 @@ ${XERCES}: xerces_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh xerces_install.sh
 	@echo "@@@@ Done! @@@@"
 
+## BISON
+${BISON}: bison_install.sh ${GCC}
+	@echo "#### INSTALL BISON ${BISON} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh bison_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## FLEX
+${FLEX}: flex_install.sh ${GCC}
+	@echo "#### INSTALL FLEX ${FLEX} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh flex_install.sh
+	@echo "@@@@ Done! @@@@"
+
+
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
-		 ${PYTHON} ${RUBY} ${PAPI} ${CCACHE} ${NINJA} ${XERCES}
+		 ${PYTHON} ${RUBY} ${PAPI} ${CCACHE} ${NINJA} ${XERCES} \
+		 ${BISON} ${FLEX}

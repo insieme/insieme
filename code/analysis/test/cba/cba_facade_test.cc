@@ -53,8 +53,8 @@ namespace analysis {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	ref<int<4>> a = var(12);"
-				"	ref<int<4>> b = var(14);"
+				"	decl ref<int<4>> a = var(12);"
+				"	decl ref<int<4>> b = var(14);"
 				"	"
 				"	if (a+b > 20) {"
 				"		a = 10;"

@@ -64,29 +64,29 @@ namespace cba {
 		symbols["n"] = builder.parseExpr("lit(\"n\":int<4>)");
 		symbols["m"] = builder.parseExpr("lit(\"m\":int<4>)");
 
-		auto code = builder.parseStmt(
-				"{"
-				"	true;"
-				"	false;"
-				"	"
-				"	true || false;"
-				"	true && false;"
-				"	"
-				"	c;"
-				"	true && c;"
-				"	false && c;"
-				"	"
-				"	ref<bool> a = var(c);"
-				"	*a;"
-				"	a = true;"
-				"	*a;"
-				"	a = false;"
-				"	*a;"
-				"	"
-				"	12 < 14;"
-				"	7 + n < 12 + n;"
-				"	7 + n < 12 + m;"
-				"}",
+		auto code = builder.parseStmt(R"(
+				{
+					true;
+					false;
+					
+					true || false;
+					true && false;
+					
+					c;
+					true && c;
+					false && c;
+					
+					decl ref<bool> a = var(c);
+					*a;
+					a = true;
+					*a;
+					a = false;
+					*a;
+					
+					12 < 14;
+					7 + n < 12 + n;
+					7 + n < 12 + m;
+				})",
 				symbols
 		).as<CompoundStmtPtr>();
 
@@ -198,10 +198,10 @@ namespace cba {
 				"	let int = int<4>;"
 				"	let point = struct { int a; int b; };"
 				"	"
-				"	ref<int> a = var(10);"
-				"	ref<int> b = var(11);"
-				"	ref<int> c = a;"
-				"	ref<ref<int>> d = var(b);"
+				"	decl ref<int> a = var(10);"
+				"	decl ref<int> b = var(11);"
+				"	decl ref<int> c = a;"
+				"	decl ref<ref<int>> d = var(b);"
 				"	"
 				"	a;"
 				"	b;"
@@ -284,7 +284,7 @@ namespace cba {
 				"	let point = struct { int x; int y; };"
 				"	let cycle = struct { point c; int r; };"
 				"	"
-				"	ref<cycle> o = var((cycle) { (point) { 1, 2 }, 3 });"
+				"	decl ref<cycle> o = var(struct cycle { struct point { 1, 2 }, 3 });"
 				"	"
 				"	*o;"
 				"	*o.c;"
@@ -328,7 +328,7 @@ namespace cba {
 				"	let point = struct { int x; int y; };"
 				"	let cycle = struct { point c; int r; };"
 				"	"
-				"	ref<cycle> o = var((cycle) { (point) { 1, 2 }, 3 });"
+				"	decl ref<cycle> o = var(struct cycle { struct point { 1, 2 }, 3 });"
 				"	"
 				"	o;"
 				"	o.c;"
@@ -375,14 +375,14 @@ namespace cba {
 
 		StatementPtr code = builder.parseStmt(
 				"{"
-				"	type<real<4>> real4Ty;"
-				"	let cB = lit(\"createBuffer\":(int<4>)->ref<ref<array<real<4>,1>>>);"
-				"	let rB = lit(\"releaseBuffer\":(ref<ref<array<real<4>,1>>>)->unit);"
+				"	decl type<real<4>> real4Ty;"
+				"	let cB = expr lit(\"createBuffer\":(int<4>)->ref<ref<array<real<4>,1>>>);"
+				"	let rB = expr lit(\"releaseBuffer\":(ref<ref<array<real<4>,1>>>)->unit);"
 				"	"
-				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( real4Ty, 100u ) ));"
-				"	ref<ref<array<real<4>,1>>> b = cB(1);"
-				"	ref<ref<array<real<4>,1>>> c = cB(1);"
-				"	ref<ref<array<real<4>,1>>> d = cB(2);"
+				"	decl ref<ref<array<real<4>,1>>> a = var(new( array_create_1D( real4Ty, 100u ) ));"
+				"	decl ref<ref<array<real<4>,1>>> b = cB(1);"
+				"	decl ref<ref<array<real<4>,1>>> c = cB(1);"
+				"	decl ref<ref<array<real<4>,1>>> d = cB(2);"
 				"	"
 				"	delete(a);"
 				"	rB(b);"
@@ -432,53 +432,53 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		StatementPtr code = builder.parseStmt(
-				"{"
-				"	let tuple = (ref<array<ref<array<real<4>,1>>,1>>);"
-				"	let meta = (ref<array<ref<array<real<4>,1>>,1>> c)->unit {"
-				"		*c[0];"
-				"	};"
-				""
-				"	let meta2 = (ref<array<real<4>,1>> e)->unit {"
-				"		e;"
-				"	};"
-				"	"
-				"	let access = (ref<array<ref<array<real<4>,1>>,1>> b, vector<uint<4>, 3> vec)->unit {"
-				"		*b[0];"
-				"		parallel(job meta(b); );"
-				"		vector.pointwise(uint.div)(vec, vec);"
-				"		vector.reduction(vec, 1u, uint.mul);"
-				"	};"
-				"	"
-				"	let access2 = (ref<array<real<4>,1>> d, vector<uint<4>, 3> vec)->unit {"
-				"		d;"
-				"		meta2(d);"
-				"		vector.reduction(vec, 1u, uint.mul);"
-				"	};"
-				"	"
-				"	let accessTuple = (tuple t2, vector<uint<4>, 3> vec)->unit {"
-				"		access(tuple.member.access(t2, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)), vec);"
-				"	};"
-				""
-				"	let accessTuple2 = (tuple t3, vector<uint<4>, 3> vec)->unit {"
-				"		access2(*tuple.member.access(t3, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0], vec);"
-				"	};"
-				""
-				"	ref<ref<array<real<4>,1>>> a = var(new( array.create.1D( lit(real<4>), 100u ) ));"
-				"	ref<vector<uint<4>, 3>> vec;"
-				""
-				"	vec[0] = 0u;"
-				"	vec[1] = 1u;"
-				"	vec[2] = 2u;"
-				""
-				"	ref<ref<tuple>> t = var(new(tuple));"
-				"	tuple.ref.elem(*t, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar.to.array(a);"
-				"	"
-				"	accessTuple(**t, *vec);"
-				"	accessTuple2(**t, *vec);"
-				"	delete(*a);"
-				"}"
-		).as<CompoundStmtPtr>();
+		StatementPtr code = builder.parseStmt(R"(
+				{
+					let tuple = (ref<array<ref<array<real<4>,1>>,1>>);
+					let meta = lambda (ref<array<ref<array<real<4>,1>>,1>> c)->unit {
+						*c[0];
+					};
+				
+					let meta2 = lambda (ref<array<real<4>,1>> e)->unit {
+						e;
+					};
+					
+					let access = lambda (ref<array<ref<array<real<4>,1>>,1>> b, vector<uint<4>, 3> vec)->unit {
+						*b[0];
+						parallel(job { meta(b); } );
+						vector_pointwise(uint_div)(vec, vec);
+						vector_reduction(vec, 1u, uint_mul);
+					};
+					
+					let access2 = lambda (ref<array<real<4>,1>> d, vector<uint<4>, 3> vec)->unit {
+						d;
+						meta2(d);
+						vector_reduction(vec, 1u, uint_mul);
+					};
+					
+					let accessTuple = lambda (tuple t2, vector<uint<4>, 3> vec)->unit {
+						access(tuple_member_access(t2, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)), vec);
+					};
+				
+					let accessTuple2 = lambda (tuple t3, vector<uint<4>, 3> vec)->unit {
+						access2(*tuple_member_access(t3, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0], vec);
+					};
+				
+					decl ref<ref<array<real<4>,1>>> a = var(new( array_create_1D( lit(real<4>), 100u ) ));
+					decl ref<vector<uint<4>, 3>> vec;
+				
+					vec[0] = 0u;
+					vec[1] = 1u;
+					vec[2] = 2u;
+				
+					decl ref<ref<tuple>> t = var(new(undefined(tuple)));
+					tuple_ref_elem(*t, 0u, lit(ref<array<ref<array<real<4>,1>>,1>>)) = scalar_to_array(a);
+					
+					accessTuple(**t, *vec);
+					accessTuple2(**t, *vec);
+					delete(*a);
+				}
+		)").as<CompoundStmtPtr>();
 
 		auto semCheck = core::checks::check(code);
 		EXPECT_TRUE (semCheck.empty()) << semCheck;
@@ -532,40 +532,40 @@ namespace cba {
 		map<string,NodePtr> symbols;
 		symbols["cond"] = builder.variable(mgr.getLangBasic().getBool());
 
-		auto code = builder.parseStmt(
-				"{"
-				"	"					// PART I
-				"	let f = (ref<X> a, X b)->X { return *a; };"
-				"	let g = lit(\"g\":(X)->X);"
-				"	"
-				"	ref<X> a = var(lit(\"0\":X));"
-				"	ref<X> b = var(lit(\"1\":X));"
-				"	ref<X> c = var(f(a, *b));"
-				"	"
-				"	ref<X> d = var(*a);"
-				"	if (cond) d = *b;"
-				"	"
-				"	*a;"
-				"	*b;"
-				"	*c;"
-				"	*d;"
-				"	"
-				"	"
-				"	b = *a;"				// PART II
-				"	"
-				"	*a;"
-				"	*b;"
-				"	g(*a);"
-				"	g(*a);"
-				"	"
-				"	"						// PART III
-				"	for(int<4> i = 0 .. 10 : 1) {"
-				"		a = g(*a);"
-				"	}"
-				"	"
-				"	*a;"
-				"	*b;"
-				"}",
+		auto code = builder.parseStmt(R"(
+				{
+										// PART I
+					let f = lambda (ref<X> a, X b)->X { return *a; };
+					let g = expr lit("g":(X)->X);
+					
+					decl ref<X> a = var(lit("0":X));
+					decl ref<X> b = var(lit("1":X));
+					decl ref<X> c = var(f(a, *b));
+					
+					decl ref<X> d = var(*a);
+					if (cond) d = *b;
+					
+					*a;
+					*b;
+					*c;
+					*d;
+					
+					
+					b = *a;				// PART II
+					
+					*a;
+					*b;
+					g(*a);
+					g(*a);
+					
+											// PART III
+					for(int<4> i = 0 .. 10 : 1) {
+						a = g(*a);
+					}
+					
+					*a;
+					*b;
+				} )",
 				symbols
 		).as<CompoundStmtPtr>();
 

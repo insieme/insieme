@@ -40,7 +40,6 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/type_utils.h"
-#include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/encoder/lists.h"
 
@@ -80,7 +79,7 @@ namespace analysis {
 		auto recType = builder.parseType("let type0 = struct { ref<array<type0,1>> s; } in type0");
 		symbols["recTy"] = recType;	
 
-		auto init = builder.parseExpr("ref.reinterpret(ref.null, lit(type<array<recTy,1>>))",symbols);
+		auto init = builder.parseExpr("ref_reinterpret(ref_null, lit(type<array<recTy,1>>))",symbols);
 		//std::cout << init << std::endl;
 
 		auto structExpr = builder.structExpr(toVector(builder.namedValue("s",init)));

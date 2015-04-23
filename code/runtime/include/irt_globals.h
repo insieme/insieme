@@ -47,23 +47,6 @@
 #include <hwloc.h>
 #endif
 
-extern irt_tls_key irt_g_error_key;
-extern irt_mutex_obj irt_g_error_mutex;
-
-extern irt_tls_key irt_g_worker_key;
-extern uint32 irt_g_worker_count;
-extern volatile uint32 irt_g_degree_of_parallelism;
-extern irt_mutex_obj irt_g_degree_of_parallelism_mutex;
-extern uint32 irt_g_active_worker_count;
-extern irt_mutex_obj irt_g_active_worker_mutex;
-struct _irt_worker;
-extern struct _irt_worker **irt_g_workers;
-
-extern bool irt_g_rt_is_initialized;
-extern irt_runtime_behaviour_flags irt_g_runtime_behaviour;
-
-#ifdef IRT_USE_HWLOC
-extern hwloc_topology_t irt_g_hwloc_topology;
-#endif // IRT_USE_HWLOC
+#include "irt_globals.inc"
 
 #endif // ifndef __GUARD_GLOBALS_H

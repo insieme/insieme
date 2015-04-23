@@ -94,7 +94,7 @@ namespace irg {
 	}
 
 	inline TreeGenerator atom(core::NodeManager& manager, const string& code) {
-		return atom( core::IRBuilder(manager).parse(code) );
+		return atom( core::IRBuilder(manager).parseExpr(code) );
 	}
 
 	inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty, const ListGenerator& intParams = empty) {

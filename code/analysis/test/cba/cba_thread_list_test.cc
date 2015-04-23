@@ -75,7 +75,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
@@ -101,7 +101,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				"}"
@@ -129,7 +129,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				" 	spawn a = 3;"
@@ -159,7 +159,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn {"
 				"		spawn {"
 				"			spawn a = 1;"
@@ -191,7 +191,7 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				" 	merge(parallel(job {"
-				"		int<4> a = 1;"
+				"		decl int<4> a = 1;"
 				"	}));"
 				"}"
 		).as<CompoundStmtPtr>();
@@ -222,7 +222,7 @@ namespace cba {
 				"{"
 				"	merge(parallel(job {"
 				" 		merge(parallel(job {"
-				"			int<4> a = 1;"
+				"			decl int<4> a = 1;"
 				"		}));"
 				"	}));"
 				"}"

@@ -58,7 +58,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
@@ -92,12 +92,12 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
-				"	sync;"
+				"	syncAll;"
 				"	spawn a = 2;"
 				"	spawn a = 3;"
-				"	sync;"
+				"	syncAll;"
 				"}"
 		).as<CompoundStmtPtr>();
 
