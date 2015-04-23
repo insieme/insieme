@@ -27,7 +27,7 @@ tar -xf $FILE
 cd $PACKAGE
 
 echo "#### Building flex library ####"
-CFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/flex-$VERSION --enable-cxx
+CFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/flex-$VERSION 
 make -j $SLOTS
 #make check
 
