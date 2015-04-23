@@ -73,12 +73,12 @@ namespace {
 
     void save_symbol_table(inspire_driver& driver, const std::map<string, NodePtr>& definitions){
         for (const auto& def : definitions) {
-            if (!def.second) {
-                std::cerr << "WARNING!!!!!! you try to append symbol to the parser " << def.first << " with a nullptr value" << std::endl;
-            }
-            else{
-                driver.add_symb(def.first, def.second);
-            }
+
+			// the use of the line: symbols["name"] = builder.parseX("....", symbols);
+			// will append a symbols with a null ptr inside. this is not good
+            if (def.second) {
+				driver.add_symb(def.first, def.second);
+			}
         }
     }
 }
@@ -93,7 +93,7 @@ namespace {
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions){
         inspire_driver driver(code, manager);
-        for (const auto& def : definitions) driver.add_symb(def.first, def.second);
+        save_symbol_table(driver, definitions);
         auto x = driver.parseExpression();
         if(!x) checkErrors(driver, onFailThrow);
         return x;
