@@ -241,7 +241,6 @@
 %type <NamedTypeList> member_list tag_def union_type 
 
 %type <std::string> namespaced_type
-%type <std::vector<DeclarationStmtPtr>> job_decl_list
 
 %type <std::vector<std::string>> string_list
 
@@ -721,15 +720,10 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                     $$ = driver.builder.callExpr(driver.builder.getLangBasic().getUnit(), driver.builder.getLangBasic().getMergeAll()); 
                 }
             /* job expressions */
-           | "job" "(" "[" expression ":" expression "]" "[" job_decl_list "]" "," expression ")"  { RULE
-                    INSPIRE_TYPE(@12, $12, CallExprPtr, "expresion in job must be a call expression");
-                    auto bind = driver.builder.bindExpr(VariableList(), $12.as<CallExprPtr>());
-                    $$ = driver.builder.jobExpr(driver.builder.getThreadNumRange($4, $6), $9, bind);
-             }
            | "job" "(" "[" expression ":" expression "]" "," expression ")" { RULE
                     INSPIRE_TYPE(@9, $9, CallExprPtr, "expresion in job must be a call expression");
                     auto bind = driver.builder.bindExpr(VariableList(), $9.as<CallExprPtr>());
-                    $$ = driver.builder.jobExpr(driver.builder.getThreadNumRange($4, $6), std::vector<DeclarationStmtPtr>(), bind);
+                    $$ = driver.builder.jobExpr($4, $6, bind);
              }
            | "task" "{" statement "}" { RULE 
                     $$ = driver.builder.jobExpr($3, 1);
@@ -739,18 +733,6 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
                     $$ = driver.builder.jobExpr($3, -1);
              }
            ;
-
-job_decl_list : type "identifier" "=" expression { RULE 
-                    DeclarationStmtPtr decl = driver.builder.declarationStmt($1, $4);
-                    annotations::attachName(decl->getVariable(), $2);
-                    $$.push_back(decl);
-                }
-              | type "identifier" "=" expression "," job_decl_list { RULE 
-                    DeclarationStmtPtr decl = driver.builder.declarationStmt($1, $4);
-                    annotations::attachName(decl->getVariable(), $2);
-                    $6.insert($6.begin(), decl);
-                }
-
 
 lambda_expression_aux : 
                             /* closures */

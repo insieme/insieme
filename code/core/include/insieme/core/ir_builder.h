@@ -350,7 +350,8 @@ namespace core {
 		}
 
 		// Create a job expression
-		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const ExpressionPtr& defaultExpr) const;
+		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const;
+		JobExprPtr jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const;
 		JobExprPtr jobExpr(const StatementPtr& stmt, int numThreads = -1) const;
 
 		// Create a marker expression

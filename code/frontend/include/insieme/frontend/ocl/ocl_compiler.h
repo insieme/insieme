@@ -77,7 +77,7 @@ namespace {
 
 
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
-#define SHARE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
+#define DECLARE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
                           vec.push_back(builder.declarationStmt((var), initVal)); \
                           (var) = initVal; /* update inVec with new variables */ }
 
