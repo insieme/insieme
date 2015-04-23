@@ -383,7 +383,6 @@ namespace pattern {
 				virtual std::ostream& printTo(std::ostream& out) const {
 					return out << *element;
 				}
-
 			};
 
 			// A sequence node pattern representing the composition of two node patterns
@@ -402,7 +401,6 @@ namespace pattern {
 				virtual std::ostream& printTo(std::ostream& out) const {
 					return out << *left << "," << *right;
 				}
-
 			};
 
 			// A node pattern alternative
@@ -422,7 +420,6 @@ namespace pattern {
 				virtual std::ostream& printTo(std::ostream& out) const {
 					return out << *alternative1 << "|" << *alternative2;
 				}
-
 			};
 
 			// Realizes the star operator for node patterns
@@ -447,7 +444,6 @@ namespace pattern {
 					}
 					return out << "[" << *pattern << "]*{" << minRep << "}";
 				}
-
 			};
 
 			// A simple variable
@@ -472,7 +468,6 @@ namespace pattern {
 					}
 					return out;
 				}
-
 			};
 
 		} // end namespace list

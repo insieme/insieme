@@ -394,27 +394,25 @@ TEST(TypeConversion, CombinedTypes) {
 	CHECK_POINTER	(ASTctx.getRecordType(classDecl).withConst(),"src<array<BaseClass,1>>",
 															     "src<array<struct BaseClass <fieldA:uint<2>>,1>>");
 	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:src<BaseClass>>",
-															     "struct<_const_cpp_ref:src<struct BaseClass <fieldA:uint<2>>>>");
+		"struct<_const_cpp_ref:src<struct BaseClass <fieldA:uint<2>>>>");
 
 	////////////////////////////////////////////////////////
 	//Now that we have a class type, lets make functions
-    #if ((__GNUC__ >= 3) && (__GNUC_MINOR__ >= 7))
-    #else
 	{
-        clang::QualType resultType = clang::BuiltinType(clang::BuiltinType::Long).getCanonicalTypeInternal();
+		clang::BuiltinType longT(clang::BuiltinType::Long);
+		clang::QualType resultType(&longT, 0);
 		std::vector<clang::QualType> args;
-		args.push_back( resultType);
-		args.push_back( ASTctx.getLValueReferenceType(resultType));
-		args.push_back( ASTctx.getPointerType(resultType));
-		auto funcTy = ASTctx.getFunctionType (resultType, args, clang::FunctionProtoType::ExtProtoInfo() );
-		CHECK_TYPE		(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
-								 "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
-		CHECK_POINTER	(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
-								 "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
-		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>" ,
-								 "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>");
+		args.push_back(resultType);
+		args.push_back(ASTctx.getLValueReferenceType(resultType));
+		args.push_back(ASTctx.getPointerType(resultType));
+		auto funcTy = ASTctx.getFunctionType(resultType, args, clang::FunctionProtoType::ExtProtoInfo());
+		CHECK_TYPE(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
+			"((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
+		CHECK_POINTER(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
+			"((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
+		CHECK_REFERENCE(funcTy, "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>" ,
+			"struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>");
 	}
-    #endif
 	/////////////////////////////////////////////////////////
 	// function with objects
 	{

@@ -14,6 +14,7 @@ optparse = OptionParser.new do |opts|
 
 	options[:workers] = 4
 	opts.on('-w', '--workers N', 'Number of parallel workers N' ) do |n|
+		n = 1 if n == 0
 		options[:workers] = n
 	end
 
