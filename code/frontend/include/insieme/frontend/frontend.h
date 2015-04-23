@@ -520,7 +520,6 @@ namespace frontend {
 		template <class T>
 		void registerFrontendExtension() {
 			//we want to keep the newly registered frontend
-			auto dummyFlagHandler = [&](const ConversionJob& job) { return true; };
 			auto extensionPtr = std::make_shared<T>();
 			boost::program_options::options_description extOptions;
 			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
