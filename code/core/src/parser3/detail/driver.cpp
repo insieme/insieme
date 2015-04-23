@@ -8,6 +8,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/annotations/naming.h"
+#include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/parser3/detail/scanner.h"
 
@@ -434,9 +435,18 @@ namespace detail{
             return nullptr;
         }
 
+		TypeList argumentTypes;
+		::transform(args, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+		TypePtr retType = types::deduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes, false);
+
+		if(!retType) {
+			error(l, "could not deduce return type for call expression");
+			return nullptr;
+		}
+
         ExpressionPtr res;
         try{
-            res = builder.callExpr(func, args);
+            res = builder.callExpr(retType,func, args);
         }catch(...){
             error(l, "malformed call expression");
             return nullptr;
