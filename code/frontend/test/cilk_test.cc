@@ -68,7 +68,7 @@ TEST(Cilk, Pragmas) {
 
     std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
     cmd::Options options = cmd::Options::parse(args);
-	options.job.frontendExtensionInit(options.job);
+	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", options.job);
 
 	const auto& pl = tu.getPragmaList();

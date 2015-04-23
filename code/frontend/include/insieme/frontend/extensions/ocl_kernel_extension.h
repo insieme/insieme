@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -46,15 +46,19 @@ namespace extensions {
 // extension for OpenCl kernel files
 
 class OclKernelExtension : public FrontendExtension {
+private:
+    bool flagActivated;
+
 public:
 	OclKernelExtension() : FrontendExtension(), flagActivated(false) {
 		injectedHeaders.push_back("./ocl_device.h");
+		macros["INSIEME"] = "";
+		//CAREFUL OCLKERNEL EXTENSION NEEDS INSIEME PRAGMA EXTENSION FOR KERNELFILE PRAGMA
 	}
 
-    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+    virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
 
-private:
-    bool flagActivated;
+    virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
 
 	core::ExpressionPtr 				 Visit(const clang::Expr* expr, conversion::Converter& convFact);
 

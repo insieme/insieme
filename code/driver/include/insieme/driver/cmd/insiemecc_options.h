@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -140,8 +140,8 @@ namespace cmd {
 		/**
 		 * A constructor for this class.
 		 */
-		Options(const insieme::frontend::ConversionJob& job)
-			: valid(true), gracefulExit(false), settings(Settings{}), job(job) {}
+		Options()
+			: valid(true), gracefulExit(false), settings(Settings{}), job() {}
 
 	};
 

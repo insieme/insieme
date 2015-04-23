@@ -68,7 +68,7 @@ namespace cmd {
 
 	namespace detail {
 
-		OptionParser::OptionParser(const std::vector<std::string>& argv) : argv(argv), res(frontend::ConversionJob("in.c"))  {
+		OptionParser::OptionParser(const std::vector<std::string>& argv) : argv(argv), res()  {
 
 			// define options
 			desc.add_options()
@@ -82,7 +82,7 @@ namespace cmd {
 			;
 
 			//get information how the plugins are activated
-            res.job.registerExtensionFlags(*this);
+            res.job.registerExtensionFlags(desc);
 		}
 
 
@@ -116,16 +116,18 @@ namespace cmd {
 
 			// parse parameters
 			bpo::variables_map map;
-			bpo::store(bpo::basic_command_line_parser<char>(argv)
+
+			bpo::parsed_options parsed = bpo::basic_command_line_parser<char>(argv)
 				.options(desc)
 				.style((bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise) ^ bpo::command_line_style::allow_guessing)
 				.positional(pos)
 				.allow_unregistered()
-				.run(), map);
+				.run();
 
-
+			bpo::store(parsed, map);
 			bpo::notify(map);
 
+			vector<string> unknown_flags = bpo::collect_unrecognized(parsed.options, bpo::exclude_positional);
 
 			// -- processing -----------------------------------------
 
@@ -169,6 +171,9 @@ namespace cmd {
 				res.gracefulExit = true;
 				return res;
 			}
+
+			// unparsed flags - might be used by extensions
+			res.job.setUnparsedOptions(unknown_flags);
 
 			// input files
 			if(!res.settings.inFiles.empty()) {

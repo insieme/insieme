@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -41,6 +41,8 @@
 #include "insieme/core/pattern/pattern.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 
+#include "insieme/utils/config.h"
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
@@ -49,11 +51,16 @@ namespace extensions {
 
 class OclHostExtension : public FrontendExtension {
     bool flagActivated;
-	std::vector<boost::filesystem::path> includeDirs;
+	std::vector<boost::filesystem::path> oclJobIncludeDirs;
 public:
-	OclHostExtension() : flagActivated(false) {};
-    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
-private:
+	OclHostExtension() : flagActivated(false) {
+		//ocl host extension needs additional include path
+		this->FrontendExtension::includeDirs.push_back(CLANG_SRC_DIR);
+		this->FrontendExtension::includeDirs.push_back(CLANG_SRC_DIR "inputs");
+		macros["INSIEME"] = "";
+	};
+    virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+
     virtual core::ProgramPtr IRVisit(core::ProgramPtr& prog);
 };
 
@@ -61,12 +68,18 @@ private:
 
 class IclHostExtension : public FrontendExtension {
     bool flagActivated;
-	std::vector<boost::filesystem::path> includeDirs;
+	std::vector<boost::filesystem::path> iclJobIncludeDirs;
 	core::pattern::TreePattern iclRunKernel;
 public:
-	IclHostExtension() : flagActivated(false) {};
-    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
-private:
+	IclHostExtension() : flagActivated(false) {
+		//icl host extension needs additional include path
+		this->FrontendExtension::includeDirs.push_back(CLANG_SRC_DIR "../../../test/ocl/common/");  // lib_icl
+		this->FrontendExtension::includeDirs.push_back(CLANG_SRC_DIR);
+		this->FrontendExtension::includeDirs.push_back(CLANG_SRC_DIR "inputs");
+		macros["INSIEME"] = "";
+	};
+    virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+
     virtual insieme::core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
                                                    insieme::frontend::conversion::Converter& convFact);
 

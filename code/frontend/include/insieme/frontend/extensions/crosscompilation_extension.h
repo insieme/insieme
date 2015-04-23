@@ -52,7 +52,7 @@ public:
                 #include "insieme/frontend/extensions/crosscompilation_macros.inl"
         }
 
-        FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) {
             //create lambda
             auto lambda = [&](const ConversionJob& job) {
                 //if we have no cross compilation header directories return false

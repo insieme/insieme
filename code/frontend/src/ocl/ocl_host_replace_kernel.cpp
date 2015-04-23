@@ -53,10 +53,10 @@
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
+#include "insieme/frontend/extensions/insieme_pragma_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/logging.h"
 
@@ -189,16 +189,15 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	//create call to convert the kernel file
-	std::vector<std::string> argv {"kernelcompiler", "-fopenclkernel", path};
-    for(auto incl : includeDirs) {
-        std::string newIncl = "-I"+incl.string();
-        argv.push_back(newIncl);
-    }
-	driver::cmd::Options opt = driver::cmd::Options::parse(argv);
-	opt.job.setDefinition("INSIEME", "");
+	frontend::ConversionJob job(path, includeDirs);
+	job.setUnparsedOptions( vector<string>( {"--fopenclkernel"} ) );
+	//CAREFUL OCLKERNEL EXTENSION NEEDS INSIEME PRAGMA EXTENSION FOR KERNELFILE PRAGMA
+	job.registerFrontendExtension<frontend::extensions::InsiemePragmaExtension>();
+	job.registerFrontendExtension<frontend::extensions::OclKernelExtension>();
+	job.registerFrontendExtension<frontend::extensions::FrontendCleanupExtension>();
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));
-	return opt.job.execute(builder.getNodeManager(), false);
+	return job.execute(builder.getNodeManager(), false);
 }
 
 /* Assumptions:

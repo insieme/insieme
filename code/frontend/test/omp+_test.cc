@@ -87,12 +87,14 @@ TEST(OMPx, SimpleRegion) {
 	// C source code compilation
     std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
     std::string include = "-I" CLANG_SRC_DIR "inputs";
-    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
+    std::cout << options.job.getExtensions().size() << std::endl;
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
+	std::cout << options.job.getExtensions().size() << std::endl;
 	ASSERT_TRUE(prog);
 
 	LambdaExprPtr progEntry = getEntryPoint(prog, "simpleRegion");
@@ -149,14 +151,14 @@ TEST(OMPx, Objective) {
 	// C source code compilation
     std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
     std::string include = "-I" CLANG_SRC_DIR "inputs";
-    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
-
+    std::cout << options.job.getExtensions().size() << std::endl;
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
-
+	std::cout << options.job.getExtensions().size() << std::endl;
 	LambdaExprPtr progEntry = getEntryPoint(prog, "objective");
 	ASSERT_TRUE(progEntry);
 
@@ -216,7 +218,7 @@ TEST(OMPx, Target) {
 	// C source code compilation
     std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
     std::string include = "-I" CLANG_SRC_DIR "inputs";
-    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
@@ -239,7 +241,7 @@ TEST(OMPx, Param) {
 	// C source code compilation
     std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
     std::string include = "-I" CLANG_SRC_DIR "inputs";
-    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
@@ -311,7 +313,7 @@ TEST(OMPx, FirstLocal) {
 	// C source code compilation
     std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
     std::string include = "-I" CLANG_SRC_DIR "inputs";
-    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp" };
+    std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
