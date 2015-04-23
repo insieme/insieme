@@ -37,6 +37,7 @@
 #include "insieme/frontend/extensions/test_pragma_extension.h"
 
 #include "insieme/annotations/data_annotations.h"
+#include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/transform.h"
 
@@ -55,6 +56,7 @@ namespace extensions {
 
 using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::pragma::tok;
+using namespace insieme::annotations;
 
 #define ARG_LABEL "arg"
 
@@ -62,7 +64,10 @@ TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::v
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 			PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
 				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
-				expected = object.getString(ARG_LABEL);
+				ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
+				ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
+				res.getSingleStmt().addAnnotation(annot);
+
 			return res;
 		})
 	));
