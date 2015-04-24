@@ -819,13 +819,14 @@ namespace integration {
 			if (::contains(res, step)) return;
 			auto props = test.getProperties();
 
-			// check that all dependencies are present
-			for(const auto& cur : step.getDependencies()) {
-				if(isExcluded(props["excludeSteps"],step)) {
-					LOG(WARNING) << test.getName() << " has step with a dependency on an excluded step (" << step.getName() << ") -- fix test config!" << std::endl;
-				}
-				scheduleStep(getStepByName(cur,numThreads,scheduling), res, test);
+			if(isExcluded(props["excludeSteps"], step)) {
+				LOG(WARNING) << test.getName() << " has a step with a dependency on an excluded step (" << step.getName() << ") -- please fix the test config!" << std::endl;
 			}
+			
+			// check that all dependencies are present
+			for(const auto& cur : step.getDependencies())
+				scheduleStep(getStepByName(cur, numThreads, scheduling), res, test);
+			
 			// append step to schedule
 			res.push_back(step);
 		}
