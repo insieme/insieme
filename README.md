@@ -30,7 +30,7 @@ Name 		| Version | Purpose |
 [Kompex](http://sqlitewrapper.kompex-online.com/)             	    | >= 1.7.9 | DBMS |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
 [Bison](https://www.gnu.org/software/bison/)                                | >= 3.0   | inspire lang parser |
-[flex](http://flex.sourceforge.net/)                                | >= 2.5   | inspire lang scanner |
+[Flex](http://flex.sourceforge.net/)                                | >= 2.5   | inspire lang scanner |
 
 ### List of Optional Libraries and Software
 Name 		| Version | Purpose |
