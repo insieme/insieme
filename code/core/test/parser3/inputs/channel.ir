@@ -1,0 +1,25 @@
+
+let int = int<4>;
+let channel = channel<int,1>;
+
+unit main() {
+	
+	// check creation
+	decl auto c = channel_create(type(int),param(1));
+	
+	// check assignment
+	decl channel c2 = c;
+	
+	// try sending stuff
+	channel_send(c, 12);
+	
+	// try receiving stuff
+	decl auto v = channel_recv(c);
+	
+	// check probe
+	if (channel_probe(c)) {};
+	
+	// and release
+	channel_release(c);
+		
+}

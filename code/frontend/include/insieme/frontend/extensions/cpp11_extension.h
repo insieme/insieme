@@ -154,7 +154,7 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 
 public:
 
-    virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+    virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
 
 };
 

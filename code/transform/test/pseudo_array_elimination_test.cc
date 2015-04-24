@@ -56,8 +56,8 @@ TEST(PseudoArrayElimination, Basic) {
 	IRBuilder builder(manager);
 
 	StatementPtr stmt = builder.parseStmt( 
-		"() -> unit { "
-		"	array<int<4>,1> arr = array.create.1D( lit(int<4>), 1u ); "
+		"lambda () -> unit { "
+		"	decl array<int<4>,1> arr = array_create_1D( lit(int<4>), 1u ); "
 		"};");
 	
 	LOG(INFO) << printer::PrettyPrinter(stmt);

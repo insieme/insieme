@@ -1,0 +1,29 @@
+
+let int = int<4>;
+
+let sum = lambda (int h, int j)->int { return h + j; };
+
+unit main() {
+	
+	// let's define some function sum
+	let sum = lambda (int a, int b)->int { return a + b; };
+	
+	// define a variable
+	decl ref<int> a  = var(0);
+	
+	decl auto acc = lambda (int v)=> {a = a + v; };
+	
+	let doSomething = lambda ((int)=>unit fun)->unit {
+		fun(4);
+	};
+
+	print("a = %d\n", *a);
+	acc(3);
+	print("a = %d\n", *a);
+	acc(2);
+	print("a = %d\n", *a);
+
+	doSomething(acc);
+	print("a = %d\n", *a);
+	
+}

@@ -170,24 +170,9 @@ namespace {
 			VariableSet currentScope = declaredVariables;
 
 			visit(cur->getThreadNumRange());
-			// check scope of all local declarations
-			VariableSet localVars;
-			std::size_t numDecls = cur->getLocalDecls().size();
-			for (std::size_t i=0; i<numDecls; i++) {
-				const DeclarationStmtAddress decl = cur->getLocalDecls()->getElement(i);
-
-				// check variables within local variable initialization
-				visit(decl->getInitialization());
-
-				// ... and collect local variables
-				localVars.insert(decl->getVariable());
-			}
-
-			// add local variables to set of declared variables ..
-			declaredVariables.insert(localVars.begin(), localVars.end());
 
 			// .. and check the body
-			visit(cur->getDefaultExpr());
+			visit(cur->getBody());
 
 			// restore context scope
 			declaredVariables = currentScope;

@@ -63,8 +63,8 @@ namespace tu {
 		unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { real<8> y; ref<A> a; }"));
 
 		// check adding functions
-		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
-		unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { int<4> x; return; }").as<core::LambdaExprPtr>());
+		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+		unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { decl int<4> x; return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
@@ -86,7 +86,7 @@ namespace tu {
 		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
 
 		// check adding functions
-		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
+		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
@@ -118,7 +118,7 @@ namespace tu {
 		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
 
 		// check adding functions
-		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
+		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
 		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
@@ -158,12 +158,12 @@ namespace tu {
 		// attach meta info to the definition
 		core::ClassMetaInfo infoA;
 		infoA.addConstructor(builderA.parseExpr(
-				"let A = struct { int<4> a; } in "
-				"A::() {}"
+				"let A = struct { int<4> a; }; "
+				"lambda ctor A::() {}"
 		).as<core::LambdaExprPtr>());
 		infoA.addConstructor(builderA.parseExpr(
-				"let A = struct { int<4> a; } in "
-				"A::(int<4> a) {}"
+				"let A = struct { int<4> a; }; "
+				"lambda ctor A::(int<4> a) {}"
 		).as<core::LambdaExprPtr>());
 		
 		// add classinfo for type 
@@ -189,12 +189,12 @@ namespace tu {
 		// attach meta info to the definition
 		core::ClassMetaInfo infoB;
 		infoB.addConstructor(builderB.parseExpr(
-				"let A = struct { int<4> a; } in "
-				"A::() {}"
+				"let A = struct { int<4> a; }; "
+				"lambda ctor A::() {}"
 		).as<core::LambdaExprPtr>());
 		infoB.addConstructor(builderB.parseExpr(
-				"let A = struct { int<4> a; } in "
-				"A::(int<4> a, int<4> b) {}"
+				"let A = struct { int<4> a; }; "
+				"lambda ctor A::(int<4> a, int<4> b) {}"
 		).as<core::LambdaExprPtr>());
 
 		// add classinfo for type 
@@ -248,12 +248,12 @@ namespace tu {
 			// attach meta info to the definition
 			core::ClassMetaInfo infoA;
 			infoA.addConstructor(builderA.parseExpr(
-					"let A = struct { int<4> a; } in "
-					"A::() {}"
+					"let A = struct { int<4> a; }; "
+					"lambda ctor A::() {}"
 			).as<core::LambdaExprPtr>());
 			infoA.addConstructor(builderA.parseExpr(
-					"let A = struct { int<4> a; } in "
-					"A::(int<4> a) {}"
+					"let A = struct { int<4> a; }; "
+					"lambda ctor A::(int<4> a) {}"
 			).as<core::LambdaExprPtr>());
 			unitA.addMetaInfo(defA, infoA);
 
@@ -286,12 +286,12 @@ namespace tu {
 			// attach meta info to the definition
 			core::ClassMetaInfo infoB;
 			infoB.addConstructor(builderB.parseExpr(
-					"let A = struct { int<4> a; } in "
-					"A::() {}"
+					"let A = struct { int<4> a; }; "
+					"lambda ctor A::() {}"
 			).as<core::LambdaExprPtr>());
 			infoB.addConstructor(builderB.parseExpr(
-					"let A = struct { int<4> a; } in "
-					"A::(int<4> a, int<4> b) {}"
+					"let A = struct { int<4> a; }; "
+					"lambda ctor A::(int<4> a, int<4> b) {}"
 			).as<core::LambdaExprPtr>());
 			unitB.addMetaInfo(defB, infoB);
 
@@ -339,7 +339,9 @@ namespace tu {
 			auto type   = builderB.parseType("struct A { int<4> x; }");
 			unitB.addType(symbol, type);
 
-			auto member = builderB.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
+			auto member = builderB.parseExpr(
+                            "let class = struct A { int<4> x; };"
+                            "lambda class :: ()->unit { return; }").as<core::LambdaExprPtr>();
 
 			core::ClassMetaInfo classInfo;
 			classInfo.addMemberFunction("method", member, false, false);
@@ -379,7 +381,8 @@ namespace tu {
 			auto symbol = builderC.parseType("A").as<core::GenericTypePtr>();
 			auto type   = builderC.parseType("struct A { int<4> x; }");
 
-			auto member = builderC.parseExpr("struct A { int<4> x; } :: ()->unit { return; }").as<core::LambdaExprPtr>();
+			auto member = builderC.parseExpr("let T = struct A { int<4> x; }; "
+                                             "lambda T :: ()->unit { return; }").as<core::LambdaExprPtr>();
 			core::ClassMetaInfo classInfo;
 			classInfo.addMemberFunction("method2", member, false, false);
 			unitC.addMetaInfo(type, classInfo);

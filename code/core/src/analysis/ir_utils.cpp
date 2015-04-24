@@ -1130,7 +1130,7 @@ bool isZero(const core::ExpressionPtr& value) {
 
 	}
 
-	// ... or the ref.null literal
+	// ... or the ref_null literal
 	if (basic.isRefNull(value)) {
 		return true;
 	}
@@ -1141,7 +1141,7 @@ bool isZero(const core::ExpressionPtr& value) {
 	}
 
 	// TODO: remove this when frontend is fixed!!
-	// => compensate for silly stuff like var(*getNull()) or NULL aka ref.deref(ref.null)
+	// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
 	if (core::analysis::isCallOf(value, basic.getRefVar()) || core::analysis::isCallOf(value, basic.getRefDeref())) {
 		return isZero(core::analysis::getArgument(value, 0));
 	}

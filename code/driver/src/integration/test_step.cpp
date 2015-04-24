@@ -877,7 +877,6 @@ namespace integration {
     int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
 							const string& environmentParam, const string& outFilePath,
 							const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
-
         /*
          * Setup arguments
          */
@@ -889,18 +888,18 @@ namespace integration {
 
 		bool insideQuote = false;
 
-		for(unsigned i = 0; i < argumentsVecTemp.size(); ++i) {
-			if(argumentsVecTemp[i].empty())
+		for(const auto& e : argumentsVecTemp) {
+			if(e.empty())
 				continue;
-			string temp = boost::replace_all_copy(argumentsVecTemp[i], "\"", "");
+			string temp = boost::replace_all_copy(e, "\"", "");
 			if(insideQuote)
 				argumentsVec.back().append(" " + temp);
 			else
 				argumentsVec.push_back(temp);
 			size_t pos = string::npos;
-			if((pos = argumentsVecTemp[i].find_first_of("\"\'")) != string::npos) {
+			if((pos = e.find_first_of("\"\'")) != string::npos) {
 				// in case a single word was quoted
-				if(argumentsVecTemp[i].find_first_of("\"\'", pos + 1) != string::npos)
+				if(e.find_first_of("\"\'", pos + 1) != string::npos)
 					continue;
 				else
 					insideQuote = !insideQuote;
@@ -911,11 +910,11 @@ namespace integration {
 		vector<char*> argumentsForExec;
 		// argv[0] needs to be the executable itself
 		argumentsForExec.push_back(const_cast<char*>(executableParam.c_str()));
-		for(auto s : argumentsVec)
+		for(const auto& s : argumentsVec)
 			if(!s.empty())
 				argumentsForExec.push_back(const_cast<char*>(s.c_str()));
-		// terminate with nullptr
-		argumentsForExec.push_back(nullptr);
+		// terminate
+		argumentsForExec.push_back('\0');
 
 		/*
 		 * Setup environment
@@ -967,7 +966,7 @@ namespace integration {
 			environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
 		}
 		// terminate
-		environmentForExec.push_back(nullptr);
+		environmentForExec.push_back('\0');
 
 		/*
 		 * Fork, setup timeout, stdout and sterr redirection, execute and wait

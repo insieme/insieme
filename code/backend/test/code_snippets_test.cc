@@ -64,8 +64,8 @@ TEST(FunctionCall, templates) {
 
     core::ProgramPtr program = builder.parseProgram(
     	"int<4> main() {"
-    	"	(type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
-    	"		return ref.new(array.create.1D(dtype, size));"
+    	"	lambda (type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
+    	"		return ref_new(array_create_1D(dtype, size));"
     	"	} (lit(real<4>), 7u);"
     	"	return 0;"
     	"}"
@@ -105,8 +105,8 @@ TEST(FunctionCall, VectorReduction) {
 
     core::ProgramPtr program = builder.parseProgram(
     		"unit main() {"
-    		"	()->int<4> {"
-    		"		return vector.reduction(v, 0, int.add);"
+    		"	lambda ()->int<4> {"
+    		"		return vector_reduction(v, 0, int_add);"
     		"	}();"
     		"}",
     		symbols
@@ -148,7 +148,7 @@ TEST(FunctionCall, Pointwise) {
 
     core::ProgramPtr program = builder.parseProgram(
     		"unit main() {"
-    		"	vector.pointwise(int.add)(v1,v2);"
+    		"	vector_pointwise(int_add)(v1,v2);"
     		"}",
     		symbols
     );
@@ -177,7 +177,7 @@ TEST(FunctionCall, TypeLiterals) {
 
     core::ProgramPtr program = builder.parseProgram(
     		"int<4> main() {"
-    		"	(type<'a> dtype)->int<4> {"
+    		"	lambda (type<'a> dtype)->int<4> {"
     		"	} (lit(real<4>));"
     		"	return 0;"
     		"}"
@@ -208,14 +208,14 @@ TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
 
     // create a function accepting a type literal
 
-    core::ProgramPtr program = builder.parseProgram(
-    		"int<4> main() {"
-    		"	(ref<array<'a,1>> data)->uint<8> {"
-    		"		return sizeof(lit('a));"
-    		"	} (ref.reinterpret(ref.null,lit(array<real<4>,1>)));"
-    		"	return 0;"
-    		"}"
-    );
+    core::ProgramPtr program = builder.parseProgram(R"(
+    		int<4> main() {
+    			lambda (ref<array<'a,1>> data)->uint<8> {
+    				return sizeof(lit('a));
+    			} (ref_reinterpret(ref_null,lit(array<real<4>,1>)));
+    			return 0;
+    		}
+    )");
     ASSERT_TRUE(program);
 
     std::cout << "Program: " << *program << std::endl;
@@ -316,23 +316,23 @@ TEST(Parallel, Whatever) {
                 let int = int<4>;
                 let uint = uint<4>;
 
-                let differentbla = ('b x) -> unit {
-                    auto m = x;
-                    auto l = m;
+                let differentbla = lambda ('b x) -> unit {
+                    decl auto m = x;
+                    decl auto l = m;
                 };
 
-                let bla = ('a f) -> unit {
-                    let anotherbla = ('a x) -> unit {
-                        auto m = x;
+                let bla = lambda ('a f) -> unit {
+                    let anotherbla = lambda ('a x) -> unit {
+                        decl auto m = x;
                     };
                     anotherbla(f);
                     differentbla(f);
-                    parallel(job { auto l = f; });
+                    parallel(job { decl auto l = f; });
                 };
 
                 int main() {
                     // some bla
-                    int x = 10;
+                    decl int x = 10;
                     bla(x);
                     return 0;
                 }
@@ -359,11 +359,11 @@ TEST(Arrays, Allocation) {
 
 			int main() {
 				// determine array size
-				uint size = 10u;
+				decl uint size = 10u;
 
 				// create two arrays on the stack and the heap
-				ref<array<int,1>> a = var(array.create.1D(lit(int), size));
-				ref<array<int,1>> b = new(array.create.1D(lit(int), size));
+				decl ref<array<int,1>> a = var(array_create_1D(lit(int), size));
+				decl ref<array<int,1>> b = new(array_create_1D(lit(int), size));
 
 				// use the two arrays
 				a[2] = 123;
@@ -402,9 +402,9 @@ TEST(PrimitiveType, LongLong) {
 
 			int<4> main() {
 				// just create a long-long variable
-				int<16> a = 10l;
+				decl int<16> a = 10l;
 				// just create a long-long variable
-				uint<16> b = 10ul;
+				decl uint<16> b = 10ul;
 			}
 			)"
 	);
@@ -437,9 +437,9 @@ TEST(References, RefAny) {
 	core::ProgramPtr program = builder.parseProgram(
 			R"(
 			int<4> main() {
-				ref<any> x;
-				ref<ref<any>> y = var(x);
-				ref<ref<any>> z = new(x);
+				decl ref<any> x;
+				decl ref<ref<any>> y = var(x);
+				decl ref<ref<any>> z = new(x);
 
 				lit("w":ref<ref<any>>);
 			}
@@ -473,24 +473,24 @@ TEST(FunctionCall, GenericFunctionsWithLazy) {
     core::NodeManager manager;
     core::IRBuilder builder(manager);
 
-    core::ProgramPtr program = builder.parseProgram(
-    	"int<4> main() {"
-    	"	"
-    	"	let f = (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {"
-    	"		if(c(*a)) {"
-    	"			a = v();"
-    	"		}"
-    	"	};"
-    	"	"
-    	"	ref<int<4>> a = var(1);"
-    	"	ref<real<4>> b = var(2.0f);"
-    	"	"
-    	"	f(a, (int<4> a)=> true, ()=>3);"
-		"	f(b, (real<4> b)=> true, ()=>4.0f);"
-		"	"
-    	"	return 0;"
-    	"}"
-    );
+    core::ProgramPtr program = builder.parseProgram(R"(
+    	int<4> main() {
+    		
+    		let f = lambda (ref<'a> a, ('a)=>bool c, ()=>'a v)->ref<'a> {
+    			if(c(*a)) {
+    				a = v();
+    			}
+    		};
+    		
+    		decl ref<int<4>> a = var(1);
+    		decl ref<real<4>> b = var(2.0f);
+    		
+    		f(a, lambda (int<4> a)=> true, lambda ()=>3);
+			f(b, lambda (real<4> b)=> true, lambda ()=>4.0f);
+			
+    		return 0;
+    	}
+    )");
 
     ASSERT_TRUE(program);
 
@@ -521,8 +521,8 @@ TEST(FunctionCall, PassLabmdaToBind) {
     core::ProgramPtr program = builder.parseProgram(
     	"int<4> main() {"
     	"	"
-    	"	let f = ()->int<4> { return 4; };"
-    	"	let g = (()=>'a a)->'a { return a(); };"
+    	"	let f = lambda ()->int<4> { return 4; };"
+    	"	let g = lambda (()=>'a a)->'a { return a(); };"
     	"	"
     	"	g(f);"
 		"	"
@@ -559,9 +559,9 @@ TEST(FunctionCall, DebugCodePrinting) {
     core::ProgramPtr program = builder.parseProgram(
     	"let int = int<4>;"
     	""
-    	"let f = ()->int { return 4; };"
+    	"let f = lambda ()->int { return 4; };"
     	""
-    	"let g = (int x)->int { return x + 2; };"
+    	"let g = lambda (int x)->int { return x + 2; };"
     	""
     	"int main() {"
 		"	return g(f());"

@@ -49,7 +49,7 @@ class InterceptorExtension : public insieme::frontend::extensions::FrontendExten
 
 	public:
 
-	virtual FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+	virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
 
 	InterceptorExtension() : interceptor(std::set<std::string>()) {}
 

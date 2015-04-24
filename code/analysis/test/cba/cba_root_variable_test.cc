@@ -58,46 +58,46 @@ namespace cba {
 		IRBuilder builder(mgr);
 		const lang::BasicGenerator& gen = mgr.getLangBasic();
 
-		DeclarationStmtPtr declA = builder.declarationStmt(builder.refType(gen.getInt4()), builder.refVar(builder.intLit(1)));
-		VariablePtr varA = declA->getVariable();
-		DeclarationStmtPtr declB = builder.declarationStmt(gen.getInt4(), builder.deref(varA));
-		VariablePtr varB = declB->getVariable();
-		DeclarationStmtPtr declC = builder.declarationStmt(builder.refType(gen.getInt4()), builder.refVar(builder.undefined(gen.getInt4())));
-		VariablePtr varC = declC->getVariable();
+//		DeclarationStmtPtr declA = builder.declarationStmt(builder.refType(gen.getInt4()), builder.refVar(builder.intLit(1)));
+//		VariablePtr varA = declA->getVariable();
+//		DeclarationStmtPtr declB = builder.declarationStmt(gen.getInt4(), builder.deref(varA));
+//		VariablePtr varB = declB->getVariable();
+//		DeclarationStmtPtr declC = builder.declarationStmt(builder.refType(gen.getInt4()), builder.refVar(builder.undefined(gen.getInt4())));
+//		VariablePtr varC = declC->getVariable();
 		LiteralPtr globalVar = builder.literal("global", builder.refType(gen.getInt4()));
-		DeclarationStmtPtr declD = builder.declarationStmt(builder.refType(gen.getInt4()), globalVar);
-		VariablePtr varD = declD->getVariable();
+//		DeclarationStmtPtr declD = builder.declarationStmt(builder.refType(gen.getInt4()), globalVar);
+//		VariablePtr varD = declD->getVariable();
 
 
 		std::map<string,NodePtr> symbols;
-		symbols["declA"] = declA;
-		symbols["declB"] = declB;
-		symbols["declC"] = declC;
-		symbols["declD"] = declD;
-		symbols["A"] = varA;
-		symbols["B"] = varB;
-		symbols["C"] = varC;
-		symbols["D"] = varD;
+//		symbols["declA"] = declA;
+//		symbols["declB"] = declB;
+//		symbols["declC"] = declC;
+//		symbols["declD"] = declD;
+//		symbols["A"] = varA;
+//		symbols["B"] = varB;
+//		symbols["C"] = varC;
+//		symbols["D"] = varD;
 		symbols["globalVar"] = globalVar;
 
 
-		auto in = builder.parseStmt(
-				"{"
-				"	let sA = (real<4> arg1)->ref<real<4>> { ref<real<4>> local1 = var(arg1); return local1;};"
-				"	let sB = (ref<uint<8>> arg2)->unit { ref<uint<8>> local2; local2 = ref.deref(arg2); };"
-				"	let sC = (int<4> arg3, ref<int<4>> arg4)->unit { arg4 = arg3;};"
-				"	globalVar = 7;"
-				"	"
-				"	declA;"
-				"	declB;"
-				"	declC;"
-				"	declD;"
-				"	"
-				"	sA((real<4>)(ref.deref(A)));"
-				"	sB(var(int.to.uint(ref.deref(D), param(8))));"
-				"	sC(ref.deref(A), C);"
-				"}", symbols
-		).as<CompoundStmtPtr>();
+		auto in = builder.parseStmt(R"(
+				{
+					let sA = lambda (real<4> arg1)->ref<real<4>> { decl ref<real<4>> local1 = var(arg1); return local1;};
+					let sB = lambda (ref<uint<8>> arg2)->unit { decl ref<uint<8>> local2; local2 = ref_deref(arg2); };
+					let sC = lambda (int<4> arg3, ref<int<4>> arg4)->unit { arg4 = arg3;};
+					globalVar = 7;
+					
+                    decl ref<int<4>> A = var(1);
+                    decl int<4> B = *A;
+                    decl ref<int<4>> C = var(undefined(int<4>));
+                    decl ref<int<4>> D = globalVar;
+					
+					sA(CAST(real<4>)(ref_deref(A)));
+					sB(var(int_to_uint(ref_deref(D), param(8))));
+					sC(ref_deref(A), C);
+				} 
+        )", symbols).as<CompoundStmtPtr>();
 
 		auto semantic = core::checks::check(in);
 		auto warnings = semantic.getWarnings();

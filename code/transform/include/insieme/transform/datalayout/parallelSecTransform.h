@@ -54,6 +54,7 @@ utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJo
 template<class Baseclass>
 class ParSecTransform : public Baseclass {
 protected:
+	ExprAddressMap varReplacements;
 	ExprAddressMap& varsToPropagate;
 	std::map<core::NodeAddress, core::NodePtr>& replacements;
 	const core::StructTypePtr& newStructType;
@@ -73,6 +74,7 @@ public:
 
 	virtual void transform();
 
+	const ExprAddressMap getKernelVarReplacements() { return varReplacements; }
 };
 
 template class ParSecTransform<DatalayoutTransformer>;

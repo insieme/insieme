@@ -128,7 +128,7 @@ NodeBookmark WhileToForExtension::extractStepFromAssignment(core::Address<const 
 	NodeBookmark step;
 
 	// set up the patterns and do the matching
-	auto operatorpat=pattern::single(irp::literal("int.sub")|irp::literal("int.add"));
+	auto operatorpat=pattern::single(irp::literal("int_sub")|irp::literal("int_add"));
 	auto assignpat=irp::assignment
 			(pattern::var("lhs"), pattern::node(
 				 pattern::any									// any type will do (could be integer)
@@ -158,7 +158,7 @@ NodeBookmark WhileToForExtension::extractStepFromAssignment(core::Address<const 
 	core::Address<core::Statement> stmt;
 	core::Pointer<const core::Node> op2ptr=op2.getAddressedNode();
 	if (step.ok()) {
-		// get the node manager and create int.sub, int.add literals for comparison
+		// get the node manager and create int_sub, int_add literals for comparison
 		core::NodeManager& mgr=addsub->getNodeManager();
 		auto& basic=mgr.getLangBasic();
 		intsub=core::LiteralAddress(basic.getSignedIntSub());
@@ -168,7 +168,7 @@ NodeBookmark WhileToForExtension::extractStepFromAssignment(core::Address<const 
 		core::IRBuilder builder(mgr);
 		stmt=core::Address<core::Statement>(builder.deref(lhs.as<core::ExpressionPtr>()));
 
-		// our first argument should be something like int.add(int<4> ref.deref v1)
+		// our first argument should be something like int_add(int<4> ref.deref v1)
 		if (*stmt!=*op1) step.err("step size expression is not in the format x = x +- n");
 
 		// our second argument should be a literal

@@ -95,7 +95,7 @@ using insieme::core::pattern::anyList;
 	};
 
 	/*
-	 * Builds a ref.deref call around an expression if the it is of ref-type
+	 * Builds a ref_deref call around an expression if the it is of ref-type
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
 		// core::ExpressionPtr retExpr = expr;
@@ -650,7 +650,7 @@ using insieme::core::pattern::anyList;
 																									   irp::forStmt(irp::assignment(aT(irp::arrayRefElem1D(var("leftVar"), any)), aT(irp::arrayRefElem1D(var("rightVar"), any)))) <<
 																									   *any)))), aT(var("bufVar", irp::variable(any, any))) << *any);
 
-			TreePattern delTree = irp::callExpr(irp::literal("ref.delete"), irp::callExpr(manager.getLangBasic().getRefDeref(), single(var("delVar", irp::variable(any, any)))));
+			TreePattern delTree = irp::callExpr(irp::literal("ref_delete"), irp::callExpr(manager.getLangBasic().getRefDeref(), single(var("delVar", irp::variable(any, any)))));
 
 			TreePattern tupleAssign = irp::assignment(irp::tupleRefElem(var("innerTupleVar"),var("index"),any), irp::scalarToArray(var("innerBufVar")));
 
@@ -1331,9 +1331,8 @@ using insieme::core::pattern::anyList;
 
 				auto body = builder.bindExpr(besArgs, newCall);
 				auto pfor = builder.pfor(body, builder.intLit(0), builder.deref(firstSizeVar));
-				auto parLambda = insieme::core::transform::extractLambda(manager, pfor);
-				auto range = builder.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
-				auto jobExp = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
+				BindExprPtr parLambda = insieme::core::transform::extractLambda(manager, pfor);
+				auto jobExp = builder.jobExpr(parLambda); // if no range is specified, assume 1 to infinity
 				auto parallelCall = builder.callExpr(basic.getParallel(), jobExp);
 				auto mergeCall = builder.callExpr(basic.getMerge(), parallelCall);
 

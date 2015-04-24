@@ -51,7 +51,7 @@ namespace core {
 	using std::map;
 
 	std::ostream& JobExpr::printTo(std::ostream& out) const {
-		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] (" << *getDefaultExpr() << ")";
+		out << "job (" << *getBody() << ")";
 		return out;
 	}
 

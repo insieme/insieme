@@ -52,7 +52,7 @@ namespace runtime {
 
 using namespace core;
 
-TEST(JobSupport, LocalDeclarations) {
+TEST(JobSupport, Simple) {
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -65,10 +65,8 @@ TEST(JobSupport, LocalDeclarations) {
 	// step 1: create the job
 	ExpressionPtr range = builder.getThreadNumRange(1);
 	VariablePtr localVar = builder.variable(basic.getInt4(), 1);
-	VariablePtr captured = builder.variable(basic.getInt4(), 2);
-	DeclarationStmtsPtr localDecls = builder.declarationStmts(toVector(builder.declarationStmt(localVar, builder.intLit(12))));
-	ExpressionPtr jobBody = builder.wrapLazy(builder.add(localVar, captured));
-	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, localDecls, jobBody);
+	ExpressionPtr jobBody = builder.wrapLazy(builder.add(localVar, localVar));
+	JobExprPtr job = builder.jobExpr(basic.getJob().as<GenericTypePtr>(), range, jobBody);
 
 
 	// step 2: execute job
@@ -76,7 +74,7 @@ TEST(JobSupport, LocalDeclarations) {
 
 	// step 3: create surrounding body
 	StatementPtr body = builder.compoundStmt(
-			builder.declarationStmt(captured, builder.intLit(4)),
+			builder.declarationStmt(localVar, builder.intLit(4)),
 			run
 	);
 

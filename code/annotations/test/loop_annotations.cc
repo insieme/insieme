@@ -53,7 +53,7 @@ namespace annotations {
 		NodeManager managerA;
 		IRBuilder builder(managerA);
 
-		NodePtr loop = builder.parse(
+		NodePtr loop = builder.parseStmt(
 				"for(int<4> i = 0 .. 10 : 1) { }"
 		);
 

@@ -247,8 +247,8 @@ TEST(ExpressionsTest, LambdaExpr) {
 	LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
 	EXPECT_FALSE(simple->isRecursive());
 
-	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*even));
-	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*odd));
+	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return false;} else {return bool_not(v1(v3));};}}", toString(*even));
+	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return true;} else {return bool_not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint_eq(v3, 0)) {return false;} else {return bool_not(v1(v3));};}}", toString(*odd));
 }
 
 TEST(ExpressionsTest, CallExpr) {
@@ -398,8 +398,8 @@ TEST(ExpressionsTest, MemberAccessExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, a, type<typeA>)", toString(*access));
-	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, b, type<typeB>)", toString(*access2));
+	EXPECT_EQ ("composite_member_access(struct{a=1, b=2}, a, type<typeA>)", toString(*access));
+	EXPECT_EQ ("composite_member_access(struct{a=1, b=2}, b, type<typeB>)", toString(*access2));
 }
 
 TEST(ExpressionsTest, TupleProjectionExpr) {
@@ -428,8 +428,8 @@ TEST(ExpressionsTest, TupleProjectionExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("tuple.member.access(tuple(1,2), 0, type<typeA>)", toString(*access));
-	EXPECT_EQ ("tuple.member.access(tuple(1,2), 1, type<typeB>)", toString(*access2));
+	EXPECT_EQ ("tuple_member_access(tuple(1,2), 0, type<typeA>)", toString(*access));
+	EXPECT_EQ ("tuple_member_access(tuple(1,2), 1, type<typeB>)", toString(*access2));
 }
 
 
@@ -465,26 +465,17 @@ TEST(ExpressionsTest, JobExpr) {
 	TypePtr intType = manager.getLangBasic().getUIntGen();
 	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.getLangBasic().getUnit());
 
-	VariablePtr p1 = Variable::get(manager, intType, 10);
-	VariablePtr p2 = Variable::get(manager, intType, 20);
-	vector<VariablePtr> params = toVector(p1,p2);
-
 	ExpressionPtr body = Variable::get(manager, funType);
 
-	vector<DeclarationStmtPtr> localDeclarations;
-	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "1")));
-	localDeclarations.push_back(DeclarationStmt::get(manager, Variable::get(manager, intType), Literal::get(manager, intType, "2")));
-
 	ExpressionPtr range = builder.getThreadNumRange(1,40);
-	JobExprPtr job = builder.jobExpr(range, localDeclarations, body);
+	JobExprPtr job = builder.jobExpr(range, body);
 
 	// check hash codes, children and cloning
 	TypePtr type = manager.getLangBasic().getJob();
 	vector<NodePtr> childList;
 	childList.push_back(job->getType());
 	childList.push_back(range);
-	childList.push_back(job->getLocalDecls());
-	childList.push_back(job->getDefaultExpr());
+	childList.push_back(job->getBody());
 
 	basicExprTests(job, type, childList);
 }
@@ -496,7 +487,7 @@ TEST(ExpressionsTest, LambdaPeeling) {
 
 	// check ordinary lambda
 	lambda = builder.parseExpr(
-		"let f = ()->unit { 5; } in f"
+		"let f = lambda ()->unit { 5; } ; f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -507,7 +498,7 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	// check recursive lambda
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
-		"let f = ()->unit { 5; f(); } in f"
+		"let f = lambda ()->unit { 5; f(); }; f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -520,9 +511,9 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
 		"let f,g = "
-		"	()->unit { 1; g(); }, "
-		"	()->unit { 2; f(); } "
-		"in f"
+		"	lambda ()->unit { 1; g(); }, "
+		"	lambda ()->unit { 2; f(); };"
+		" f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -534,10 +525,10 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	// check nested recursive lambda
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
-		"let f = ()->unit { "
+		"let f = lambda ()->unit { "
 		"	5; "
-		"	()->unit { f(); } (); "
-		"} in f"
+		"	lambda ()->unit { f(); } (); "
+		"}; f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -550,15 +541,15 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	manager.setNextFreshID(0);
 	lambda = builder.parseExpr(
 		"let f,g = "
-		"	()->unit { "
+		"	lambda ()->unit { "
 		"		1; "
-		"		()->unit { g(); } (); "
+		"		lambda ()->unit { g(); } (); "
 		"	}, "
-		"	()->unit { "
+		"	lambda ()->unit { "
 		"		2; "
-		"		()->unit { f(); } (); "
-		"	} "
-		"in f"
+		"		lambda ()->unit { f(); } (); "
+		"	}; "
+		"f"
 	).as<LambdaExprPtr>();
 	ASSERT_TRUE(lambda);
 
@@ -578,11 +569,11 @@ TEST(ExpressionsTest, LambdaPeelingEvenOdd) {
 	 */
 
 	LambdaExprPtr even = builder.parseExpr(
-			"let int = int<4> in "
+			"let int = int<4> ; "
 			"let even,odd = "
-			"	(int x)->bool { return (x==0)?true:(odd(x-1)); },"
-			"	(int x)->bool { return (x==0)?false:(even(x-1)); }"
-			"in even"
+			"	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
+			"	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
+			"even"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(even);
@@ -637,11 +628,11 @@ TEST(ExpressionsTest, LambdaUnrollingEvenOdd) {
 	 */
 
 	LambdaExprPtr even = builder.parseExpr(
-			"let int = int<4> in "
+			"let int = int<4> ; "
 			"let even,odd = "
-			"	(int x)->bool { return (x==0)?true:(odd(x-1)); },"
-			"	(int x)->bool { return (x==0)?false:(even(x-1)); }"
-			"in even"
+			"	lambda (int x)->bool { return (x==0)?true:(odd(x-1)); },"
+			"	lambda (int x)->bool { return (x==0)?false:(even(x-1)); };"
+			"even"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(even);
@@ -656,8 +647,8 @@ TEST(ExpressionsTest, LambdaUnrollingEvenOdd) {
 //std::cout << "Unroll 2:\n" << core::printer::PrettyPrinter(even->unroll(2)) << "\n\n";
 //std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v3==0)?true:(v3-1==0)?false:v1(v3-1-1);");
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v7==0)?false:(v7-1==0)?true:v2(v7-1-1);");
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v5==0)?true:(v5-1==0)?false:v3(v5-1-1);");
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v9==0)?false:(v9-1==0)?true:v4(v9-1-1);");
 
 	res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;
@@ -698,7 +689,7 @@ TEST(ExpressionsTest, LambdaUnrollingNonRecursive) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr simple = builder.parseExpr(
-			"(int<4> x)->bool { return (x==0); }"
+			"lambda (int<4> x)->bool { return (x==0); }"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(simple);
@@ -720,9 +711,9 @@ TEST(ExpressionsTest, LambdaUnrollingExponential) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr fun = builder.parseExpr(
-			"let int = int<4> in "
-			"let fun = (int x)->int { fun(x-2) + fun(x-1); }"
-			"in fun"
+			"let int = int<4> ; "
+			"let fun = lambda (int x)->int { fun(x-2) + fun(x-1); };"
+			"fun"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(fun);
@@ -748,9 +739,9 @@ TEST(ExpressionsTest, LambdaIsRecursiveTest) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr fun = builder.parseExpr(
-			"let f = (int<4> x)->int<4> {"
+			"let f = lambda (int<4> x)->int<4> {"
 			"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
-			"} in f"
+			"};  f"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(fun);
@@ -771,9 +762,9 @@ TEST(ExpressionTest, UnrollCompactFib) {
 	IRBuilder builder(manager);
 
 	LambdaExprPtr fun = builder.parseExpr(
-			"let f = (int<4> x)->int<4> {"
+			"let f = lambda (int<4> x)->int<4> {"
 			"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
-			"} in f"
+			"}; f"
 	).as<LambdaExprPtr>();
 
 	ASSERT_TRUE(fun);

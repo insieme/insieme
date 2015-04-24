@@ -111,10 +111,11 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 //						varsToPropagate[pair.second] = newParam;
 //std::cout << ": \nAdding: " << pair.second << " " << *pair.second << " - " << structs.size() << std::endl;
 //std::cout << ": from: " << getDeclaration(call->getArgument(0)) << " " << *oldRootVar << " - " << structs.size() << std::endl;
-//NodeManager& m = call->getNodeManager();
-//ExpressionAddress localTuple = getDeclaration(call->getArgument(0));
-//varsToPropagate[localTuple] = builder.variable(
-//		core::transform::replaceAllGen(m, localTuple->getType().getAddressedNode(), builder.refType(builder.arrayType(oldStructType)), newStructType));
+						NodeManager& m = call->getNodeManager();
+						ExpressionAddress localTuple = getDeclaration(call->getArgument(0));
+						varReplacements[localTuple] = builder.variable(
+							core::transform::replaceAllGen(m, localTuple->getType().getAddressedNode(),
+							builder.refType(builder.arrayType(oldStructType)), newStructType));
 //replacements[localTuple] = varsToPropagate[localTuple];
 //						structs[getDeclaration(call->getArgument(0))] = pair.first->getType().as<RefTypePtr>();
 					}
@@ -124,7 +125,7 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 
 		// propagating variables to be replaced through job expressions
 		if(JobExprAddress job = expr.isa<JobExprAddress>()) {
-			CallExprAddress parallelCall = job->getDefaultExpr().isa<BindExprAddress>()->getCall();
+			CallExprAddress parallelCall = job->getBody().isa<BindExprAddress>()->getCall();
 
 			if(!parallelCall)
 				return;
@@ -198,9 +199,7 @@ void ParSecTransform<Baseclass>::transform() {
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(m.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-
 	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		ExprAddressMap varReplacements;
 		ExpressionMap nElems;
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
