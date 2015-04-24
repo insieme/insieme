@@ -48,10 +48,14 @@ namespace insieme {
 namespace transform {
 namespace datalayout {
 
+//TODO this mapper doesn't change anything, it just collects stuff
+// -> change it to a visitor
+
 class AosArgumentUnfolder : public core::transform::AddressMapping {
 	core::NodeManager& mgr;
 	ExprAddressMap& varsToReplace;
 	ExprAddressMap& varsToPropagate;
+	std::map<core::NodeAddress, core::NodePtr>& replacements;
 	const core::StructTypePtr& oldStructType;
 	const core::StructTypePtr& newStructType;
 	core::pattern::TreePattern typePattern;
@@ -67,6 +71,7 @@ class AosArgumentUnfolder : public core::transform::AddressMapping {
 
 public:
 	AosArgumentUnfolder(core::NodeManager& mgr, ExprAddressMap& varReplacements, ExprAddressMap& varsToPropagate,
+			std::map<core::NodeAddress, core::NodePtr>& replacements,
 			const core::StructTypePtr& oldStructType, const core::StructTypePtr& newStructType);
 
 	virtual const core::NodePtr mapAddress(const core::NodePtr& ptr, core::NodeAddress& prevAddr);
