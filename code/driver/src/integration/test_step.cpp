@@ -198,7 +198,7 @@ namespace integration {
 						metricResults["walltime"]=0;
 						metricResults["cputime"]=0;
 						metricResults["mem"]=0;
-						return TestResult(name, 0, true, metricResults, "", "", "");
+						return TestResult::stepOmitted(name);
 					}
 
 					// get execution directory
@@ -1074,7 +1074,7 @@ namespace integration {
 
 		// if it is a mock-run do nothing
 		if (setup.mockRun) {
-			return TestResult(stepName, 0, true, metricResults, "", "", 
+			return TestResult(TestResult::ResultType::SUCCESS, stepName, 0, metricResults, "", "", 
 				(execDir.empty() ? "" : "cd " + execDir + " && ") + env.str() + cmd + outfile);
 		}
 
@@ -1186,10 +1186,11 @@ namespace integration {
 
 		// check whether execution has been aborted by the user
 		if (actualReturnCode == SIGINT || actualReturnCode == SIGQUIT) {
-			return TestResult::userAborted(stepName,metricResults, output, stdErr, cmd);
+			return TestResult::userAborted(stepName);
 		}
 		// produce regular result
-		return TestResult(stepName,actualReturnCode,retVal==0,metricResults,output,stdErr,cmd,producedFiles,setup.numThreads,setup.sched);
+		return TestResult(retVal == 0 ? TestResult::ResultType::SUCCESS : TestResult::ResultType::FAILURE, stepName, 
+			actualReturnCode, metricResults, output, stdErr, cmd, producedFiles, setup.numThreads, setup.sched);
 	}
 
 
