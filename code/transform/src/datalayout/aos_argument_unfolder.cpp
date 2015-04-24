@@ -136,25 +136,24 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 		ExpressionAddress tupleVar = match.get()["variable"].getValue().as<ExpressionAddress>();
 		ExpressionAddress oldVar = getDeclaration(tupleVar);
 
-//		ExpressionAddress oldVarRoot = getRootVariable(tupleVar.getParentAddress(), tupleVar).as<ExpressionAddress>();
-//		std::cout << "oldRoot: " << oldVarRoot << " " << *oldVarRoot << std::endl;
+		ExpressionAddress oldVarRoot = getRootVariable(tupleVar.getParentAddress(), tupleVar).as<ExpressionAddress>();
 
-		auto paramToReplace = varsToReplace.find(oldParam);
+		// check for replacements of the old argument
 		auto argToReplace = varsToReplace.find(oldVar);
-
-		// check for replacements of the old argument and parameter
-		bool paramFound = paramToReplace != varsToReplace.end();
 		bool argFound = argToReplace != varsToReplace.end();
 
-		if(paramFound && argFound) {
+		if(argFound) {
 			IRBuilder builder(mgr);
 			ExpressionPtr newVar = argToReplace->second.as<ExpressionPtr>();
 
 			pattern::TreePattern structType = pattern::aT(pattern::atom(oldStructType));
+			ExpressionPtr tupleIndex = match.get()["tupleIndex"].getValue().as<LiteralPtr>();
+			ExpressionPtr arrayIndex = match.get()["arrayIndex"].getValue().as<ExpressionPtr>();
 
-			if(structType.match(oldArg->getType())) {
-				ExpressionPtr tupleIndex = match.get()["tupleIndex"].getValue().as<LiteralPtr>();
-				ExpressionPtr arrayIndex = match.get()["arrayIndex"].getValue().as<ExpressionPtr>();
+			// check for replacements of the old parameter
+			auto paramToReplace = varsToReplace.find(oldParam);
+			bool paramFound = paramToReplace != varsToReplace.end();
+			if(structType.match(oldArg->getType()) && paramFound) {
 				for(NamedTypePtr newType : newStructType) {
 					ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
 					newArg.push_back(builder.deref(builder.accessMember(builder.arrayRefElem(accessTuple, arrayIndex), newType->getName())));
@@ -164,8 +163,13 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 					newParam.push_back(p);
 					paramTys.push_back(p->getType());
 				}
-				return true;
+			} else {
+				ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
+				newArg.push_back(builder.deref(builder.arrayRefElem(accessTuple, arrayIndex)));
+				newParam.push_back(oldParam);
+				paramTys.push_back(oldParam->getType());
 			}
+			return true;
 		}
 	}
 
@@ -215,6 +219,7 @@ const CallExprPtr AosArgumentUnfolder::updateArgumentsAndParams(CallExprAddress 
 	IRBuilder builder(mgr);
 	FunctionTypePtr newFunTy = builder.functionType(paramTys, newCall->getType());
 	LambdaExprPtr newLambda = builder.lambdaExpr(newFunTy, newCall->getFunctionExpr().as<LambdaExprPtr>()->getBody(), newParams);
+
 //	std::cout << "type " << *newCall->getType() << std::endl;
 //		std::cout << "lambda " << *newLambda << std::endl;
 //	std::cout << "params " << newParams << std::endl;
@@ -225,8 +230,10 @@ const CallExprPtr AosArgumentUnfolder::updateArgumentsAndParams(CallExprAddress 
 }
 
 AosArgumentUnfolder::AosArgumentUnfolder(NodeManager& mgr, ExprAddressMap& varReplacements, ExprAddressMap& varsToPropagate,
+		std::map<NodeAddress, NodePtr>& replacements,
 		const StructTypePtr& oldStructType, const StructTypePtr& newStructType)
-	: mgr(mgr), varsToReplace(varReplacements), varsToPropagate(varsToPropagate), oldStructType(oldStructType), newStructType(newStructType),
+	: mgr(mgr), varsToReplace(varReplacements), varsToPropagate(varsToPropagate), replacements(replacements),
+	  oldStructType(oldStructType), newStructType(newStructType),
 	  typePattern(pattern::aT(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))),
 	  variablePattern(pirp::variable(typePattern) // local variable
 			| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
@@ -245,9 +252,15 @@ const NodePtr AosArgumentUnfolder::mapAddress(const NodePtr& ptr, NodeAddress& p
 
 		if(lambdaExpr && !mgr.getLangBasic().isBuiltIn(lambdaExpr)) {
 			const CallExprPtr newCall = ptr->substitute(ptr->getNodeManager(), *this, prevAddr).as<CallExprPtr>();
-			return updateArgumentsAndParams(oldCall, newCall);
-		}
+			const CallExprPtr updated = updateArgumentsAndParams(oldCall, newCall);
 
+			if(newCall != updated) {
+				replacements[prevAddr] = updated;
+//				return updated;
+			}
+
+			return ptr;
+		}
 	}
 
 	return ptr->substitute(ptr->getNodeManager(), *this, prevAddr);

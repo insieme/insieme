@@ -56,6 +56,59 @@ using namespace core;
 namespace pirp = pattern::irp;
 namespace ia = insieme::analysis;
 
+namespace {
+class StuffReplacer : public core::transform::AddressMapping {
+	const ExprAddressMap& kernelVarReplacements;
+	const std::map<core::NodeAddress, core::NodePtr>& replacements;
+
+public:
+	StuffReplacer(const ExprAddressMap& kernelVarReplacements, const std::map<core::NodeAddress, core::NodePtr>& replacements) :
+		kernelVarReplacements(kernelVarReplacements), replacements(replacements) {}
+
+	virtual const core::NodePtr mapAddress(const core::NodePtr& ptr, core::NodeAddress& prevAddr) {
+		if(CallExprAddress oldCall = prevAddr.isa<CallExprAddress>()) {
+			NodeManager& mgr = ptr->getNodeManager();
+
+			auto replaceMe = replacements.find(prevAddr);
+			if(replaceMe != replacements.end()) {
+
+				if(CallExprPtr callFromReplacements = replaceMe->second.isa<CallExprPtr>()) {
+					LambdaExprPtr lambdaExprFromReplacements = callFromReplacements->getFunctionExpr().isa<LambdaExprPtr>();
+					LambdaExprAddress lambdaExpr = oldCall->getFunctionExpr().isa<LambdaExprAddress>();
+
+					if(lambdaExpr && !mgr.getLangBasic().isBuiltIn(lambdaExpr)) {
+						NodeAddress buf = lambdaExpr->getBody().as<NodeAddress>();
+
+						CompoundStmtPtr body = lambdaExprFromReplacements->getBody().as<NodePtr>()->substitute(mgr, *this, buf).as<CompoundStmtPtr>();
+
+						IRBuilder builder(mgr);
+						LambdaExprPtr newLambdaExpr = builder.lambdaExpr(lambdaExprFromReplacements->getType().as<FunctionTypePtr>(),
+								lambdaExprFromReplacements->getParameterList(), body);
+
+						return builder.callExpr(callFromReplacements->getType(), newLambdaExpr, callFromReplacements->getArguments());
+					}
+				}
+
+			}
+		}
+
+		if(ExpressionAddress expr = prevAddr.isa<ExpressionAddress>()) {
+			auto replaceMe = kernelVarReplacements.find(getDeclaration(expr));
+			if(replaceMe != kernelVarReplacements.end())
+				if(replaceMe->second.isa<ExpressionPtr>()) // do not replace Statements with Expressions
+					return replaceMe->second;
+		}
+
+		auto replaceMe = replacements.find(prevAddr);
+		if(replaceMe != replacements.end()) {
+			return replaceMe->second;//->substitute(ptr->getNodeManager(), *this, prevAddr);
+		}
+
+		return ptr->substitute(ptr->getNodeManager(), *this, prevAddr);
+	}
+};
+}
+
 const string RemoveMeAnnotation::NAME = "RemoveMeAnnotation";
 const utils::StringKey<RemoveMeAnnotation> RemoveMeAnnotation::KEY("RemoveMe");
 
@@ -870,7 +923,7 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 //			dumpPretty(core::transform::replaceNode(mgr, withNewRoot, replacement.second));
 
 			if(*replacement.first.getRootAddress() != *toTransform) {
-				dumpPretty(replacement.first);
+//				dumpPretty(replacement.first);
 				assert_fail() << "Replacement target has a wrong root";
 			}
 		}
@@ -886,6 +939,10 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 //});
 
 	// perform all the replacements. Also replace all variables inside kernels
+	StuffReplacer sr(kernelVarReplacements, replacements);
+
+
+
 	auto mapper = core::transform::makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) -> NodePtr {
 		auto replaceMe = replacements.find(prevAddress);
 		if(replaceMe != replacements.end())
@@ -901,7 +958,7 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 		return builtPtr;
 	});
 
-	toTransform = mapper.mapFromRoot(toTransform);
+	toTransform = sr.mapFromRoot(toTransform);
 
 	ExpressionMap structures;
 //	if(!structures.empty())

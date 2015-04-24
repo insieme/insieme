@@ -42,7 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
-#include "insieme/transform/datalayout/parallelSecTransform.h"
+#include "insieme/transform/datalayout/parallel_sec_transform.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/utils/annotation.h"

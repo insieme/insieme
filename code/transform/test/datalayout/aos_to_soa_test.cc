@@ -501,9 +501,10 @@ TEST(DataLayout, Tuple) {
 		
 			let actualWork = lambda (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, 
 					                 vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {
-//				decl ref<array<twoElem,1>> d = a;
-//				decl ref<array<twoElem,1>> e;
-//				e = a;
+				decl ref<array<twoElem,1>> d = a;
+
+//				decl ref<array<twoElem,1>> e; 	not supported
+//				e = *a;							asshole
 			};
 		
 			let local = lambda (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, 

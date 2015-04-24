@@ -39,7 +39,7 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 
-#include "insieme/transform/datalayout/parallelSecTransform.h"
+#include "insieme/transform/datalayout/parallel_sec_transform.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 

@@ -40,7 +40,7 @@
 #include "insieme/core/types/subtyping.h"
 
 #include "insieme/transform/datalayout/aos_to_soa.h"
-#include "insieme/transform/datalayout/parallelSecSoa.h"
+#include "insieme/transform/datalayout/parallel_sec_soa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 namespace insieme {

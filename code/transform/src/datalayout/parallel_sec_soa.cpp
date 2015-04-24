@@ -40,7 +40,7 @@
 #include "insieme/core/pattern/pattern_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
-#include "insieme/transform/datalayout/parallelSecSoa.h"
+#include "insieme/transform/datalayout/parallel_sec_soa.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 #include "insieme/transform/datalayout/aos_argument_unfolder.h"
 
@@ -52,33 +52,33 @@ namespace datalayout {
 using namespace core;
 namespace pirp = pattern::irp;
 
-//ExpressionPtr ParSecSoa::updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
-//		core::StringValuePtr fieldName) {
-//	// check for marshalled variables in init expression
-//	std::pair<ExpressionAddress, std::map<StringValuePtr, VariablePtr>> varInInit;
-//	visitBreadthFirstInterruptible(init, [&](const ExpressionAddress& currVar) {
-//		auto check = fieldReplacements.find(getDeclaration(currVar));
-//		if(check != fieldReplacements.end()) {
-//			varInInit = *check;
-//			return true;
-//		}
-//		return false;
-//	});
-//
-//	if(varInInit.first) { // variable to be replaced found
-//		// replace accesses to old variable with accesses to new (non-struct) variable
-//		ExpressionMap localReplacement;
-//		IRBuilder builder(mgr);
-//		localReplacement[varInInit.first] = varInInit.second[fieldName];
-//
-//		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init.getAddressedNode(), localReplacement, true);
-//
-//		return newInit;
-//	}
-//
-//	// backup, works for e.g. memory allocation
-//	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
-//}
+ExpressionPtr ParSecSoa::updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
+		core::StringValuePtr fieldName) {
+	// check for marshalled variables in init expression
+	std::pair<ExpressionAddress, std::map<StringValuePtr, VariablePtr>> varInInit;
+	visitBreadthFirstInterruptible(init, [&](const ExpressionAddress& currVar) {
+		auto check = fieldReplacements.find(getDeclaration(currVar));
+		if(check != fieldReplacements.end()) {
+			varInInit = *check;
+			return true;
+		}
+		return false;
+	});
+
+	if(varInInit.first) { // variable to be replaced found
+		// replace accesses to old variable with accesses to new (non-struct) variable
+		ExpressionMap localReplacement;
+		IRBuilder builder(mgr);
+		localReplacement[varInInit.first] = varInInit.second[fieldName];
+
+		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init.getAddressedNode(), localReplacement, true);
+
+		return newInit;
+	}
+
+	// backup, works for e.g. memory allocation
+	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
+}
 
 StatementList ParSecSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVars,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
@@ -97,11 +97,11 @@ StatementList ParSecSoa::generateNewDecl(const ExprAddressMap& varReplacements, 
 //					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 
 		VariablePtr newVar = member.second.as<VariablePtr>();
-std::cout << "\nCalling " << *decl->getInitialization() << " " << getDeclaration(decl->getInitialization()) << std::endl;
+
 		allDecls.push_back(builder.declarationStmt(newVar, //builder.undefinedVar(newVar->getType())));
 				updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, member.first)));
 	}
-dumpPretty(builder.compoundStmt(allDecls));
+
 	return allDecls;
 }
 
@@ -147,7 +147,7 @@ std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << s
 //					builder.variable(newType).as<ExpressionPtr>();
 		}
 
-		AosArgumentUnfolder ar(mgr, varReplacements, varsToPropagate, oldStructType, newStructType);
+		AosArgumentUnfolder ar(mgr, varReplacements, varsToPropagate, replacements, oldStructType, newStructType);
 
 //		tta = ar.addVariablesToLambdas(toTransform);
 		tta = ar.mapPtr(toTransform);
