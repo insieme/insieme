@@ -80,7 +80,7 @@ namespace metrics{
 				sqlFile.close();
 			}
 			else
-				LOG(ERROR)<<"Unable to open file metrics.sql for writing writing!"<<std::endl;					
+				LOG(ERROR)<<"Unable to open file metrics.sql for writing!"<<std::endl;
 		}
 	};
 

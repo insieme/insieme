@@ -1,5 +1,5 @@
 use_omp=1
 use_omp[insiemecc_run_c_compile]=0
 #use_omp[insiemecc_seq_c_convert]=0
-excludeSteps="insiemecc_c++_sema","insiemecc_run_c++_convert","insiemecc_run_c++_compile","insiemecc_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","insiemecc_run_c++_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check"
+excludeSteps="insiemecc_c++_sema","insiemecc_run_c++_convert","insiemecc_run_c++_compile","insiemecc_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","insiemecc_run_c++_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check", "insiemecc_ocl_c_convert", "insiemecc_ocl_c_compile", "insiemecc_ocl_c_execute","insiemecc_ocl_c_check"
 

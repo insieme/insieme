@@ -47,6 +47,8 @@ compiler[insiemecc_seq_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_seq_c_compile]=gcc
 compiler[insiemecc_seq_c++_compile]=g++
+compiler[insiemecc_ocl_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_ocl_c_compile]=gcc
 
 # frontend code interception configuration seed
 intercepted_name_spaces=

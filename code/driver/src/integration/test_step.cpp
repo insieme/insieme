@@ -69,7 +69,7 @@ namespace integration {
 			typedef std::set<std::string> Dependencies;
 
 			enum Backend {
-				Sequential, Runtime
+				Sequential, Runtime, Opencl
 			};
 
 			enum Language {
@@ -88,6 +88,7 @@ namespace integration {
 				switch(be) {
 				case Sequential:   	return "seq";
 				case Runtime: 		return "run";
+				case Opencl: 		return "ocl";
 				}
 				return "xxx";
 			}
@@ -112,12 +113,12 @@ namespace integration {
 
 					// add external lib dirs
 					for(const auto& cur : test.getLibDirs()) {
-						cmd <<" -L"<<cur.string();
+						cmd <<" -L" << cur.string();
 					}
 
 					// add external libs
 					for(const auto& cur : test.getLibNames()) {
-						cmd <<" -l"<<cur;
+						cmd <<" -l" << cur;
 					}
 
 					// disable multithreading
@@ -131,14 +132,14 @@ namespace integration {
 					std::vector<string> flags=test.getCompilerArguments(name);
 					// get all flags defined by properties
 					for (string s: flags){
-						cmd <<" "<<s;
+						cmd << " " << s;
 					}
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<" -D"<<def.first<<"="<<def.second;
+						cmd << " -D" << def.first << "=" << def.second;
 					});
-					cmd<<" ";
+					cmd << " ";
 
 					string executionDirectory=test.getDirectory().string();
 					if(!set.executionDir.empty())
@@ -184,6 +185,42 @@ namespace integration {
 				}, deps,RUN);
 			}
 
+			TestStep createBashCommandStep(const string& name, const Dependencies& deps = Dependencies()) {
+				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
+					std::stringstream cmd;
+					TestSetup set=setup;
+					auto props = test.getPropertiesFor(name);
+					string executionDirectory;
+
+					if (props[name].empty()) {
+						map<string,float> metricResults;
+						//insert dummy vals
+						metricResults["walltime"]=0;
+						metricResults["cputime"]=0;
+						metricResults["mem"]=0;
+						return TestResult(name, 0, true, metricResults, "", "", "");
+					}
+
+					// get execution directory
+					executionDirectory=test.getDirectory().string();
+					if(!set.executionDir.empty())
+						executionDirectory = set.executionDir;
+
+					// start with executable
+					cmd << props[name];
+
+					// set output files
+					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
+					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
+
+					// set number of threads
+					set.numThreads=0;
+
+					// run it
+					return runner.runCommand(name, set, props, cmd.str(), "", executionDirectory);
+				}, deps);
+			}
+
 			TestStep createInsiemeccSemaStep(const string& name, Language l, const Dependencies& deps = Dependencies()) {
 				return TestStep(name, [=](const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner)->TestResult {
 					auto props = test.getPropertiesFor(name);
@@ -222,12 +259,12 @@ namespace integration {
 					std::vector<string> flags=test.getCompilerArguments(name);
 					// get all flags defined by properties
 					for (string s: flags){
-						cmd <<" "<<s;
+						cmd << " " <<s;
 					}
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<" -D"<<def.first<<"="<<def.second;
+						cmd << " -D" << def.first << "=" << def.second;
 					});
 
 					//append intercept patterns
@@ -285,7 +322,7 @@ namespace integration {
 					std::vector<string> flags=test.getCompilerArguments(name);
 					// get all flags defined by properties
 					for (string s: flags){
-						cmd <<" "<<s;
+						cmd << " " << s;
 					}
 
 					// disable multithreading
@@ -293,7 +330,7 @@ namespace integration {
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<" -D"<<def.first<<"="<<def.second;
+						cmd << " -D" << def.first << "=" << def.second;
 					});
 
 					//append intercept patterns
@@ -304,7 +341,7 @@ namespace integration {
 					for(const auto& cur : test.getInterceptedHeaderFileDirectories()) {
 						cmd << " --intercept-include " << cur.string();
 					}
-					cmd<<" ";
+					cmd << " ";
 
 	
 					// set stdOut file and stdErr file
@@ -340,7 +377,7 @@ namespace integration {
 					}
 
 					// add runtime include directories
-					if (backend == Runtime) {			// TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
+					if (backend != Sequential) {			// TODO: make this non-hardcoded -- it is ugly, but I don't have the time ...
 						cmd << " -I "<< SRC_ROOT_DIR << "runtime/include";
 						cmd << " -I "<< SRC_ROOT_DIR << "common/include";
 					}
@@ -352,12 +389,12 @@ namespace integration {
 
 					// add external lib dirs
 					for(const auto& cur : test.getLibDirs()) {
-						cmd <<" -L"<<cur.string();
+						cmd << " -L" <<cur.string();
 					}
 
 					// add external libs
 					for(const auto& cur : test.getLibNames()) {
-						cmd <<" -l"<<cur;
+						cmd << " -l" <<cur;
 					}
 
 					// disable multithreading
@@ -369,14 +406,14 @@ namespace integration {
 					std::vector<string> flags=test.getCompilerArguments(name);
 					// get all flags defined by properties
 					for (string s: flags){
-						cmd <<" "<<s;
+						cmd << " " <<s;
 					};
 
 					//get definitions
 					for_each(test.getDefinitions(name), [&](const std::pair<string,string>& def) {
-						cmd<<" -D"<<def.first<<"="<<def.second;
+						cmd << " -D" << def.first << "=" <<def.second;
 					});
-					cmd<<" ";
+					cmd << " ";
 
 					// set output file, stdOut file and stdErr file
 					set.outputFile=executionDirectory+"/"+test.getBaseName()+".insieme."+be;
@@ -457,7 +494,7 @@ namespace integration {
 						executionDirectory=set.executionDir;
 	
 					// start with executable
-					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref"+langstr+"execute.out";
+					cmd << " " << executionDirectory << "/" << test.getBaseName() << ".ref" + langstr + "execute.out";
 
 					// pipe result to output file
 					if(numThreads)
@@ -465,11 +502,10 @@ namespace integration {
 					else
 						cmd << " " << executionDirectory << "/" << test.getBaseName() << ".insiemecc_"+be+langstr+"execute.out";
 
-
 					// add awk pattern
 					// TODO: generally remove outer quotation marks in properties if present - I don't have the time now but it needs to be done at some point
 					string outputAwk = props["outputAwk"]; //.substr(props["outputAwk"].find("\"")+1, props["outputAwk"].rfind("\"")-1);
-					cmd << " "<< outputAwk;
+					cmd << " " << outputAwk;
 
 					set.stdOutFile=executionDirectory+"/"+test.getBaseName()+"."+name+".out";
 					set.stdErrFile=executionDirectory+"/"+test.getBaseName()+"."+name+".err.out";
@@ -556,12 +592,14 @@ namespace integration {
 
 			add(createInsiemeccConversionStep("insiemecc_seq_c_convert", Sequential, C));
 			add(createInsiemeccConversionStep("insiemecc_run_c_convert", Runtime, C));
+			add(createInsiemeccConversionStep("insiemecc_ocl_c_convert", Opencl, C));
 
 			add(createInsiemeccConversionStep("insiemecc_seq_c++_convert", Sequential, CPP));
 			add(createInsiemeccConversionStep("insiemecc_run_c++_convert", Runtime, CPP));
 
 			add(createInsiemeccCompilationStep("insiemecc_seq_c_compile", Sequential, C, { "insiemecc_seq_c_convert" }));
 			add(createInsiemeccCompilationStep("insiemecc_run_c_compile", Runtime, C, { "insiemecc_run_c_convert" }));
+			add(createInsiemeccCompilationStep("insiemecc_ocl_c_compile", Opencl, C, { "insiemecc_ocl_c_convert" }));
 
 			add(createInsiemeccCompilationStep("insiemecc_seq_c++_compile", Sequential, CPP, { "insiemecc_seq_c++_convert" }));
 			add(createInsiemeccCompilationStep("insiemecc_run_c++_compile", Runtime, CPP, { "insiemecc_run_c++_convert" }));
@@ -573,6 +611,10 @@ namespace integration {
 			// main seq check
 			add(createInsiemeccCheckStep("insiemecc_seq_c_check", Sequential, C, { "insiemecc_seq_c_execute", "ref_c_execute" }));
 			add(createInsiemeccCheckStep("insiemecc_seq_c++_check", Sequential, CPP, { "insiemecc_seq_c++_execute", "ref_c++_execute" }));
+
+			// ocl execute & check
+			add(createInsiemeccExecuteStep("insiemecc_ocl_c_execute", Opencl, { "insiemecc_ocl_c_compile" }));
+			add(createInsiemeccCheckStep("insiemecc_ocl_c_check", Opencl, C, { "insiemecc_ocl_c_execute", "ref_c_execute" },1,STATIC));
 
 			for(int i:threadList){
 				// insiemecc_run execute
@@ -618,6 +660,11 @@ namespace integration {
 				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_guid_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_guid_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,GUIDED));
 			}
 
+			// PreCommand and PostCommand are executed before and after all the other steps
+			// see "scheduleSteps" function
+			add(createBashCommandStep("preprocessing"));
+			add(createBashCommandStep("postprocessing"));
+
 			return list;
 
 		}
@@ -645,27 +692,36 @@ namespace integration {
 
 			add(createInsiemeccConversionStep("insiemecc_seq_c_convert", Sequential, C));
 			add(createInsiemeccConversionStep("insiemecc_run_c_convert", Runtime, C));
+			add(createInsiemeccConversionStep("insiemecc_ocl_c_convert", Opencl, C));
 
 			add(createInsiemeccConversionStep("insiemecc_seq_c++_convert", Sequential, CPP));
 			add(createInsiemeccConversionStep("insiemecc_run_c++_convert", Runtime, CPP));
 
 			add(createInsiemeccCompilationStep("insiemecc_seq_c_compile", Sequential, C, { "insiemecc_seq_c_convert" }));
 			add(createInsiemeccCompilationStep("insiemecc_run_c_compile", Runtime, C, { "insiemecc_run_c_convert" }));
+			add(createInsiemeccCompilationStep("insiemecc_ocl_c_compile", Opencl, C, { "insiemecc_ocl_c_convert" }));
 
 			add(createInsiemeccCompilationStep("insiemecc_seq_c++_compile", Sequential, CPP, { "insiemecc_seq_c++_convert" }));
 			add(createInsiemeccCompilationStep("insiemecc_run_c++_compile", Runtime, CPP, { "insiemecc_run_c++_convert" }));
 
 			add(createInsiemeccExecuteStep("insiemecc_seq_c_execute", Sequential, { "insiemecc_seq_c_compile" }));
 			add(createInsiemeccExecuteStep("insiemecc_run_c_execute", Runtime, { "insiemecc_run_c_compile" }));
+			add(createInsiemeccExecuteStep("insiemecc_ocl_c_execute", Opencl, { "insiemecc_ocl_c_compile" }));
 
 			add(createInsiemeccExecuteStep("insiemecc_seq_c++_execute", Sequential, { "insiemecc_seq_c++_compile" }));
 			add(createInsiemeccExecuteStep("insiemecc_run_c++_execute", Runtime, { "insiemecc_run_c++_compile" }));
 
 			add(createInsiemeccCheckStep("insiemecc_seq_c_check", Sequential, C, { "insiemecc_seq_c_execute", "ref_c_execute" }));
 			add(createInsiemeccCheckStep("insiemecc_run_c_check", Runtime, C, { "insiemecc_run_c_execute", "ref_c_execute" }));
+			add(createInsiemeccCheckStep("insiemecc_ocl_c_check", Opencl, C, { "insiemecc_ocl_c_execute", "ref_c_execute" }));
 
 			add(createInsiemeccCheckStep("insiemecc_seq_c++_check", Sequential, CPP, { "insiemecc_seq_c++_execute", "ref_c++_execute" }));
 			add(createInsiemeccCheckStep("insiemecc_run_c++_check", Runtime, CPP, { "insiemecc_run_c++_execute", "ref_c++_execute" }));
+
+			// preprocessing and postprocessing steps are executed before and after all the other steps
+			// see "scheduleSteps" function
+			add(createBashCommandStep("preprocessing"));
+			add(createBashCommandStep("postprocessing"));
 
 			return list;
 		}
@@ -683,7 +739,6 @@ namespace integration {
 		const static std::map<std::string,TestStep> list = createFullStepList();
 		return list;
 	}
-
 
 	const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false) {
 		static const TestStep fail;
@@ -781,9 +836,21 @@ namespace integration {
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads, bool scheduling) {
 		vector<TestStep> res;
 		for(const auto& cur : steps) {
-			scheduleStep(cur, res, test,numThreads,scheduling);
+			scheduleStep(cur, res, test, numThreads, scheduling);
 		}
-		return res;
+
+		// Handling the preprocessing & postprocessing case
+		vector<TestStep> final;
+		TestStep pre, post;
+		for(const auto& cur : res) {
+			if (cur.getName() == "preprocessing")	pre = cur;
+			else if (cur.getName() == "postprocessing") post = cur;
+			else final.push_back(cur);
+		}
+
+		if(!pre.getName().empty()) final.insert(final.begin(), pre);
+		if(!post.getName().empty()) final.push_back(post);
+		return final;
 	}
 
 	string readFile(string fileName){
@@ -808,8 +875,8 @@ namespace integration {
      *  Test Runner member functions
      */
     int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
-                           const string& environmentParam, const string& outFilePath,
-                           const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
+							const string& environmentParam, const string& outFilePath,
+							const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
 
         /*
          * Setup arguments
@@ -907,7 +974,6 @@ namespace integration {
 		 */
 
 		int retVal = 0;
-
 		// create child to execute current step within CPU time limit, have parent wait for its exit/termination
 		pid_t pid = fork();
 		if(pid == -1) {
@@ -931,9 +997,10 @@ namespace integration {
 				std::cerr << "Unable to close stdout file descriptor, reason: " << strerror(errno) << "\n";
 			if(close(fdErr) == -1)
 				std::cerr << "Unable to close stderr file descriptor, reason: " << strerror(errno) << "\n";
+
 			// navigate to execution directory if one is specified
 			if(!execDir.empty()) boost::filesystem::current_path(execDir);
-			// execute
+
 			if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1)
 				std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
 		} else {
@@ -1008,7 +1075,7 @@ namespace integration {
 		// if it is a mock-run do nothing
 		if (setup.mockRun) {
 			return TestResult(stepName, 0, true, metricResults, "", "", 
-				(execDir.empty() ? "" : "cd "+ execDir + " && ") + env.str() + cmd + outfile);
+				(execDir.empty() ? "" : "cd " + execDir + " && ") + env.str() + cmd + outfile);
 		}
 
 		string perfString("");
@@ -1062,9 +1129,9 @@ namespace integration {
 				std::cerr << "Killed by signal " << actualReturnCode << "\n";
 		}
 
-	        string output=readFile(setup.stdOutFile);
+		string output=readFile(setup.stdOutFile);
 		string error=readFile(setup.stdErrFile);
-//		std::cout<<error<<std::endl;
+
 		//get time, memory and perf values and remove them from stdError
 		string stdErr;
 		boost::char_separator<char> sep("\n");
