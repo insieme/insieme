@@ -1431,7 +1431,7 @@ namespace backend {
 			nameManager.pushVarScope(true);
 
 			// resolve parameters
-			int counter = 0;
+			unsigned counter = 0;
 			vector<c_ast::VariablePtr> parameter;
 			for_each(funType->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
 
@@ -1455,7 +1455,7 @@ namespace backend {
 						paramName = "this";
 						nameManager.setName(lambda->getParameterList()[counter], paramName);
 					} else {
-                        if(!converter.getNodeManager().getLangBasic().isVarList(cur) || !counter >= lambda->getParameterList().size())
+                        if(!converter.getNodeManager().getLangBasic().isVarList(cur) || counter < lambda->getParameterList().size())
                             paramName = nameManager.getName(lambda->getParameterList()[counter]);
 					}
 				} else {

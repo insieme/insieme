@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -68,8 +68,8 @@ namespace sequential {
 
 //		std::cout << res;
 
-		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v3 = 0 .. (cloog.ceil((50-0), 1)*cloog.ceil((80-10), 1)) : 1)");
-		EXPECT_PRED2(containsSubString, res, "((((v3/cloog.ceil((80-10), 1))*1)+0)+(((v3%cloog.ceil((80-10), 1))*1)+10))");
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v3 = 0 .. (cloog_ceil((50-0), 1)*cloog_ceil((80-10), 1)) : 1)");
+		EXPECT_PRED2(containsSubString, res, "((((v3/cloog_ceil((80-10), 1))*1)+0)+(((v3%cloog_ceil((80-10), 1))*1)+10))");
 
 		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
 
@@ -97,8 +97,8 @@ namespace sequential {
 
 //		std::cout << res;
 
-		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v5 = 0 .. (cloog.ceil(((cloog.ceil((50-0), 1)*cloog.ceil((80-10), 2))-0), 1)*cloog.ceil((90-50), 3)) : 1)");
-		EXPECT_PRED2(containsSubString, res, "((((((((v5/cloog.ceil((90-50), 3))*1)+0)/cloog.ceil((80-10), 2))*1)+0)+((((((v5/cloog.ceil((90-50), 3))*1)+0)%cloog.ceil((80-10), 2))*2)+10))+(((v5%cloog.ceil((90-50), 3))*3)+50))");
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v5 = 0 .. (cloog_ceil(((cloog_ceil((50-0), 1)*cloog_ceil((80-10), 2))-0), 1)*cloog_ceil((90-50), 3)) : 1)");
+		EXPECT_PRED2(containsSubString, res, "((((((((v5/cloog_ceil((90-50), 3))*1)+0)/cloog_ceil((80-10), 2))*1)+0)+((((((v5/cloog_ceil((90-50), 3))*1)+0)%cloog_ceil((80-10), 2))*2)+10))+(((v5%cloog_ceil((90-50), 3))*3)+50))");
 
 		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
 

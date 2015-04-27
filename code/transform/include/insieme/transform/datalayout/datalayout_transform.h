@@ -142,10 +142,11 @@ protected:
 	void updateCopyDeclarations(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	virtual void replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+	virtual const ExprAddressMap replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			core::NodePtr& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::NodeAddress, core::NodePtr>& replacements) =0;
 
-	void doReplacements(const std::map<core::NodeAddress, core::NodePtr>& replacements, const core::transform::TypeHandler& typeOfMemAllocHandler);
+	void doReplacements(const ExprAddressMap& kernelVarReplacements, const std::map<core::NodeAddress, core::NodePtr>& replacements,
+			const core::transform::TypeHandler& typeOfMemAllocHandler);
 public:
 	DatalayoutTransformer(core::NodePtr& toTransform, CandidateFinder candidateFinder = findAllSuited);
 	virtual ~DatalayoutTransformer() {}
@@ -172,8 +173,6 @@ public:
 	VariableAdder(core::NodeManager& mgr, ExprAddressMap& varReplacements);
 
 	core::NodeAddress addVariablesToLambdas(core::NodePtr& src);
-
-	void visitCallExpr(const core::CallExprAddress& call);
 };
 
 class RemoveMeAnnotation : public core::NodeAnnotation {

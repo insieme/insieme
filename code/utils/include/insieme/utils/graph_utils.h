@@ -603,7 +603,7 @@ namespace graph {
 			// get components this edge is connection
 			#pragma GCC diagnostic push
 			#pragma GCC diagnostic ignored "-Wuninitialized"
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 7
+#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
 			#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 			auto src = componentMap[source(cur, graph)];

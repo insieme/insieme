@@ -58,8 +58,9 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 
 	#ninja job pools
-	if( DEFINED CBA_JOBS AND (${case_name} MATCHES "ut_analysis_cba_(.*)"))
-		set_property(TARGET ${case_name} PROPERTY JOB_POOL_COMPILE cba_jobs_compile)
+	if(${case_name} MATCHES "ut_analysis_cba_(.*)")
+		set_property(TARGET ${case_name} PROPERTY JOB_POOL_COMPILE cba_jobs)
+		set_property(TARGET ${case_name} PROPERTY JOB_POOL_LINK cba_jobs)
 	endif()
 
 	target_link_libraries(${case_name} insieme_core)

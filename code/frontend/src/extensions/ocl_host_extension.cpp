@@ -39,16 +39,15 @@
 #include "insieme/core/pattern/ir_pattern.h"
 #include "insieme/core/pattern/pattern_utils.h"
 
-#include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+
+#include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_type_fixer.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
 
 namespace fe = insieme::frontend;
 
@@ -62,15 +61,15 @@ namespace extensions {
 using namespace insieme::core;
 using namespace insieme::frontend::ocl;
 
-FrontendExtension::flagHandler OclHostExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+FrontendExtension::flagHandler OclHostExtension::registerFlag(boost::program_options::options_description& options) {
     //register omp flag
-    optParser("fopencl", "", flagActivated, "OpenCL support");
+    options.add_options()("fopencl", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "OpenCL support");
     //create lambda
     auto lambda = [&](const ConversionJob& job) {
         if(!flagActivated)
             return false;
         std::cerr << "Warning: OpenCL frontend support still experimental, consider switching to ICL frontend.\n";
-        includeDirs = job.getIncludeDirectories();
+        oclJobIncludeDirs = job.getIncludeDirectories();
         return true;
     };
     return lambda;
@@ -84,7 +83,7 @@ core::ProgramPtr OclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::BufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
-	ocl::KernelReplacer kr(root, includeDirs);
+	ocl::KernelReplacer kr(root, oclJobIncludeDirs);
 	root = kr.getTransformedProgram();
 
 	ocl::OclSimpleFunHandler osfh;
@@ -104,14 +103,14 @@ core::ProgramPtr OclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	return prog;
 }
 
-FrontendExtension::flagHandler IclHostExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+FrontendExtension::flagHandler IclHostExtension::registerFlag(boost::program_options::options_description& options) {
     //register omp flag
-    optParser("flib-icl", "", flagActivated, "ICL support");
+    options.add_options()("flib-icl", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "Lib ICL support");
     //create lambda
     auto lambda = [&](const ConversionJob& job) {
         if(!flagActivated)
             return false;
-        includeDirs = job.getIncludeDirectories();
+        iclJobIncludeDirs = job.getIncludeDirectories();
         return true;
     };
     return lambda;
@@ -157,7 +156,7 @@ core::ProgramPtr IclHostExtension::IRVisit(insieme::core::ProgramPtr& prog) {
 	ocl::IclBufferReplacer br(prog->getElement(0));
 	core::NodePtr root = br.getTransformedProgram();
 
-	ocl::IclKernelReplacer kr(root, includeDirs);
+	ocl::IclKernelReplacer kr(root, iclJobIncludeDirs);
 	root = kr.getTransformedProgram();
 
 	ocl::OclSimpleFunHandler osfh;

@@ -36,7 +36,7 @@
 
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/parser3/ir_parser.h"
 #include "insieme/core/ir_expressions.h"
 
 #include "insieme/core/ir_node.h"
@@ -69,14 +69,14 @@ namespace lang {
 			//if the parsing succeeded, then there already exists some literal or derived with that name
 			assert_fail() << "IR_NAME \"" << irName << "\" already in use";
 
-		} catch (const insieme::core::parser::IRParserException& ex) {
+		} catch (const insieme::core::parser3::IRParserException& ex) {
 			//nothing to do in here
 		}
 	}
 
 	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {
 		// build type
-		TypePtr res = parser::parse_type(manager, type, false, definitions);
+		TypePtr res = parser3::parse_type(manager, type, false, definitions);
 		assert_true(res) << "Unable to parse given type!";
 		return res;
 	}

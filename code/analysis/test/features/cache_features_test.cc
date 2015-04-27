@@ -69,20 +69,20 @@ namespace features {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,100>,100>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<int<4>,100>,100>>"));
 
 		// load some code sample ...
-		auto forStmt = builder.parseStmt(
-			"for(int<4> k = 0..10) {"
-			"	for(int<4> i = 0..20) {"
-			"		ref<int<4>> m = 0;"
-			"		v[i];"
-			"		for(int<4> j = 0..30) {"
-			"			v[i];"
-			"			v[i][j] = *m;"
-			"		}"
-			"	}"
-			"}", symbols).as<ForStmtPtr>();
+		auto forStmt = builder.parseStmt(R"(
+			for(int<4> k = 0..10) {
+				for(int<4> i = 0..20) {
+					decl ref<int<4>> m = 0;
+					v[i];
+					for(int<4> j = 0..30) {
+						v[i];
+						v[i][j] = *m;
+					}
+				}
+			})", symbols).as<ForStmtPtr>();
 		EXPECT_TRUE(forStmt);
 
 		EmptyModel model;
@@ -96,7 +96,7 @@ namespace features {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<array<uint<4>,1>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
 		auto forStmt = builder.parseStmt(
 			"for( int<4> i = 0 .. 100) {"
@@ -118,7 +118,7 @@ namespace features {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,100>,100>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<int<4>,100>,100>>"));
 
 		auto forStmt = builder.parseStmt(
 			"for(int<4> k = 0 .. 10) {"
@@ -165,7 +165,7 @@ namespace features {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,100>,100>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<int<4>,100>,100>>"));
 
 		auto forStmt = builder.parseStmt(
 			"for(int<4> k = 0 .. 10) {"

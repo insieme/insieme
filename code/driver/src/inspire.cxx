@@ -46,7 +46,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/parser3/ir_parser.h"
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -109,12 +109,12 @@
 		NodePtr res;
 		insieme::utils::Timer timer;
 		try {
-			res = core::parser::parse_program(manager, ss.str(), true);
+			res = core::parser3::parse_program(manager, ss.str(), true);
 			if (!res) {
 				std::cout << "Unknown parsing error!\n";
 				return 1;
 			}
-		} catch(const core::parser::IRParserException& pe) {
+		} catch(const core::parser3::IRParserException& pe) {
 			std::cout << "Parsing error encountered: " << pe.what() << "\n";
 			return 1;
 		}

@@ -45,7 +45,8 @@ namespace extensions {
 using namespace insieme;
 
 class VariadicArgumentsExtension : public insieme::frontend::extensions::FrontendExtension {
-
+        
+	public:
     virtual core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) ;
 
     virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,

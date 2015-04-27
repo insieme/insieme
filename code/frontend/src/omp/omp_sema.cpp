@@ -888,8 +888,7 @@ protected:
 		auto newStmtNode = implementDataClauses(stmtNode, &*reg, resultStmts);
 		auto paramNode = implementParamClause(newStmtNode, reg);
 		auto parLambda = transform::extractLambda(nodeMan, paramNode);
-		auto range = build.getThreadNumRange(1, 1);
-		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
+		auto jobExp = build.jobExpr(parLambda, 1);
 
         if(reg->hasObjective()) {
             implementObjectiveClause(jobExp, reg->getObjective());
@@ -920,7 +919,7 @@ protected:
 		parLambda = markUnordered(parLambda).as<BindExprPtr>();
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
-		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
+		auto jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
 
         if(par->hasObjective()) {
             implementObjectiveClause(jobExp, par->getObjective());
@@ -954,9 +953,9 @@ protected:
 			auto replacement = par->getApproximateReplacement();
 			auto approxLambda = core::transform::replaceAllGen(nodeMan, parLambda, target, replacement, false);
 			auto pick = build.pickVariant(ExpressionList{parLambda, approxLambda});
-			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), pick);
+			jobExp = build.jobExpr(range, pick.as<ExpressionPtr>());
 		} else {
-			jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), parLambda);
+			jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
 		}
 
         if(par->hasObjective()) {

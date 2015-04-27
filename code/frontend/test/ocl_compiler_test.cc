@@ -137,23 +137,28 @@ public:
 
     void visitJobExpr(const core::JobExprPtr& job) {
 //        std::cout << ": get a job!\n";
+    	const core::BindExprPtr bind = job->getBody().isa<core::BindExprPtr>();
+    	core::ExpressionList childs;
 
-        const core::NodeList& childs = job->getChildList();
+    	if(bind)
+    		childs = bind->getCall()->getArguments();
+    	else
+    		childs = job->getBody().as<core::CallExprPtr>()->getArguments();
         //at least the local and global range has to be captured as well as the type and the  range
         EXPECT_LE(static_cast<unsigned>(4), childs.size());
-/*
-        for(auto I = childs.begin(), E= childs.end(); I != E; ++I) {
-            std::cout << "job's child: ";
-            (*I)->printTo(std::cout);
-            std::cout << std::endl;
-        }*/
+
+//        for(auto I = childs.begin(), E= childs.end(); I != E; ++I) {
+//            std::cout << "job's child: ";
+//            dumpPretty(*I);
+//            std::cout << std::endl;
+//        }
     }
 };
 
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	Logger::get(std::cerr, ERROR, 0);
+	Logger::get(std::cerr, INFO, 0);
 
 	core::NodeManager manager;
 

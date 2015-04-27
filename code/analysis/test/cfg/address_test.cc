@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,8 +55,8 @@ TEST(CFGAddress, Simple1) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
-		"$ref<int<4>> a = 10+$20$;$"
+    auto addresses = builder.parseAddressesStatement(
+		"$decl ref<int<4>> a = 10+$20$;$"
     );
 
     EXPECT_EQ(2u, addresses.size());
@@ -80,11 +80,11 @@ TEST(CFGAddress, Simple2) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${ "
-		"	int<4> a = 10;"
-		"	int<4> b = 20;"
-		"	$ref<int<4>> c = $a+$b$$;$"
+		"	decl int<4> a = 10;"
+		"	decl int<4> b = 20;"
+		"	$decl ref<int<4>> c = $a+$b$$;$"
 		"}$ "
     );
 
@@ -126,11 +126,11 @@ TEST(CFGAddress, Simple3) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-    auto addresses = builder.parseAddresses(
+    auto addresses = builder.parseAddressesStatement(
 		"${ "
-		"	int<4> a = 10;"
-		"	int<4> b = 20;"
-		"	$ref<int<4>> c = $a+$b$+b$;$"
+		"	decl int<4> a = 10;"
+		"	decl int<4> b = 20;"
+		"	$decl ref<int<4>> c = $a+$b$+b$;$"
 		"}$ "
     );
 
@@ -157,7 +157,7 @@ TEST(CFGAddress, Simple3) {
 		EXPECT_EQ( 0u, address.getStmtIdx() );
 		EXPECT_EQ("<2:0:0-1>", toString(address));
 		EXPECT_NE( addresses[2].getAddressedNode(), address.getAddressedNode() );
-		EXPECT_EQ("int.add(v8, v2)", toString(*address.getAddressedNode()));
+		EXPECT_EQ("int_add(v8, v2)", toString(*address.getAddressedNode()));
 		EXPECT_EQ( addresses[2], address.toAbsoluteAddress(cfg->getTmpVarMap()) );
 	}
 	{ 
@@ -168,7 +168,7 @@ TEST(CFGAddress, Simple3) {
 		EXPECT_EQ( 0u, address.getStmtIdx() );
 		EXPECT_EQ("<2:0:0>", toString(address));
 		EXPECT_NE( addresses[1].getAddressedNode(), address.getAddressedNode() );
-		EXPECT_EQ("ref<int<4>> v5 = int.add(v8, v2)", toString(*address.getAddressedNode()));
+		EXPECT_EQ("ref<int<4>> v3 = int_add(v8, v2)", toString(*address.getAddressedNode()));
 		EXPECT_EQ( addresses[1], address.toAbsoluteAddress(cfg->getTmpVarMap()) );
 	}
 }

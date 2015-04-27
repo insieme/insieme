@@ -42,26 +42,18 @@
 #include <list>
 #include <memory>
 
-#include <boost/filesystem/path.hpp>
-
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
-
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 #include "insieme/utils/printable.h"
 
-namespace insieme {
+#include <boost/program_options.hpp>
+#include <boost/filesystem/path.hpp>
 
-namespace driver {
-namespace cmd {
-namespace detail {
-    class OptionParser;
-}
-}
-}
+namespace insieme {
 
 namespace frontend {
 
@@ -156,24 +148,15 @@ namespace frontend {
 		 */
 		unsigned flags;
 
-        /**
-		 * A vector of pairs. Each pair contains a frontend extension pointer and a
-		 * lambda that was retrieved from the extension. This lambda will decide
-		 * if the plugin gets registered and the plugin will be configured by the
-		 * lambda.
+	protected:
+		/**
+		 *  A list that contains all user extensions that have been registered
 		 */
-        typedef std::shared_ptr<extensions::FrontendExtension> FrontendExtensionPtr;
-        std::vector<std::pair<FrontendExtensionPtr, extensions::FrontendExtension::flagHandler>> extensions;
-
+		 std::list<extensions::FrontendExtension::FrontendExtensionPtr> extensionList;
 
 	public:
 
         /**
-         *  A list that contains all user extensions that have been registered
-         */
-         std::list<FrontendExtensionPtr> extensionList;
-
-		/**
 		 * Creates a new setup covering the given include directories.
 		 */
 		ConversionSetup(const vector<path>& includeDirs = vector<path>());
@@ -355,30 +338,12 @@ namespace frontend {
 		 */
 		bool isCxx(const path& file) const;
 
-        /**
-         *  Frontend extension initialization method
-         */
-        void frontendExtensionInit(const ConversionJob& job);
-
-        /**
-         *  Insert a new frontend extension. This DOES NOT mean that the
-         *  extension gets registered. The registerFlag method will return a
-         *  lambda that is called in frontendExtensionInit. This lambda decides
-         *  if the extension is registered. If the extension does not override the
-         *  registerFlag method it will be registered by default.
-         */
-        template <class T>
-        void registerFrontendExtension(driver::cmd::detail::OptionParser& optParser) {
-            auto extensionPtr = std::make_shared<T>();
-			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(optParser) } );
-        };
-
-        /**
-         *  Return the list of all registered frontend extensions
-         */
-        const std::list<FrontendExtensionPtr> getExtensions() const {
-            return extensionList;
-        };
+		/**
+		 *  Return the list of all registered frontend extensions
+		 */
+		const std::list<extensions::FrontendExtension::FrontendExtensionPtr>& getExtensions() const {
+			return extensionList;
+		};
 	};
 
 
@@ -394,6 +359,15 @@ namespace frontend {
 		 */
 		vector<tu::IRTranslationUnit> libs;
 
+		/**
+		 * A vector of pairs. Each pair contains a frontend extension pointer and a
+		 * lambda that was retrieved from the extension. This lambda will decide
+		 * if the plugin gets registered and the plugin will be configured by the
+		 * lambda.
+		 */
+
+		std::vector<std::pair<extensions::FrontendExtension::FrontendExtensionPtr, extensions::FrontendExtension::flagHandler>> extensions;
+		std::vector<string> unparsedOptions;
 	public:
 
 		/**
@@ -478,7 +452,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager) const;
+		core::ProgramPtr execute(core::NodeManager& manager);
 
 		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
@@ -489,7 +463,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp) const;
+		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp);
 
 		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
@@ -500,7 +474,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager, core::ProgramPtr& program, ConversionSetup& setup) const;
+		core::ProgramPtr execute(core::NodeManager& manager, core::ProgramPtr& program);
 
 		/**
 		 * Triggers the conversion of the files covered by this job into a translation unit.
@@ -509,9 +483,57 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager) const;
+		tu::IRTranslationUnit toIRTranslationUnit(core::NodeManager& manager);
 
-        void registerExtensionFlags(driver::cmd::detail::OptionParser& optParser);
+		/**
+		 *
+		 */
+		void setUnparsedOptions(const std::vector<std::string>& unparsed) {
+			this->unparsedOptions = unparsed;
+		}
+
+        void registerExtensionFlags(boost::program_options::options_description& options);
+
+        /**
+		 *  Frontend extension initialization method
+		 */
+		void frontendExtensionInit();
+
+		/**
+		 *  Insert a new frontend extension. This DOES NOT mean that the
+		 *  extension gets registered. The registerFlag method will return a
+		 *  lambda that is called in frontendExtensionInit. This lambda decides
+		 *  if the extension is registered. If the extension does not override the
+		 *  registerFlag method it will be registered by default.
+		 */
+		template <class T>
+		void registerFrontendExtension(boost::program_options::options_description& options) {
+			auto extensionPtr = std::make_shared<T>();
+			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(options) } );
+		};
+
+		/**
+		 * Insert a frontend extension without concerning about cmd-line options for drivers
+		 * We get from the extensions possible options and parse the arguments which were unknonw to the driver
+		 * Most usefull to write tests involving extensions
+		 */
+		template <class T>
+		void registerFrontendExtension() {
+			//we want to keep the newly registered frontend
+			auto extensionPtr = std::make_shared<T>();
+			boost::program_options::options_description extOptions;
+			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+
+			// some options were not parsed by the driver, parse them by the extension
+			boost::program_options::parsed_options parsed = boost::program_options::basic_command_line_parser<char>(this->unparsedOptions)
+				.options(extOptions)
+				.style((boost::program_options::command_line_style::default_style | boost::program_options::command_line_style::allow_long_disguise) ^ boost::program_options::command_line_style::allow_guessing)
+				.allow_unregistered()
+				.run();
+			boost::program_options::variables_map vm;
+			boost::program_options::store(parsed, vm);
+			boost::program_options::notify(vm);
+		};
 
 		/**
 		 *  Prints the conversion setup

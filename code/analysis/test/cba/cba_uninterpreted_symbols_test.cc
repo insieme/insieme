@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -59,12 +59,12 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let a = lit(\"a\":A);"
-				"	let b = lit(\"b\":B);"
-				"	let f = lit(\"f\":(A,B)->C);"
+				"	let a = expr lit(\"a\":A);"
+				"	let b = expr lit(\"b\":B);"
+				"	let f = expr lit(\"f\":(A,B)->C);"
 				"	"
-				"	auto x = var(a);"
-				"	auto y = var(b);"
+				"	decl auto x = var(a);"
+				"	decl auto y = var(b);"
 				"	"
 				"	*x;"
 				"	*y;"
@@ -93,12 +93,12 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	let a = lit(\"a\":A);"
-				"	let b = lit(\"b\":A);"
-				"	let f = lit(\"f\":(A,A)->C);"
+				"	let a = expr lit(\"a\":A);"
+				"	let b = expr lit(\"b\":A);"
+				"	let f = expr lit(\"f\":(A,A)->C);"
 				"	"
-				"	auto x = var(a);"
-				"	auto y = var(b);"
+				"	decl auto x = var(a);"
+				"	decl auto y = var(b);"
 				"	if (c) x = *y;"					// here we have a undefined choice
 				"	"
 				"	*x;"
@@ -136,10 +136,10 @@ namespace cba {
 
 		auto code = builder.parseStmt(
 				"{"
-				"	let x = lit(\"x\":X);"
-				"	let g = lit(\"g\":(X)->X);"
+				"	let x = expr lit(\"x\":X);"
+				"	let g = expr lit(\"g\":(X)->X);"
 				"	"
-				"	ref<X> a = var(x);"
+				"	decl ref<X> a = var(x);"
 				"	"
 				"	*a;"
 				"	"

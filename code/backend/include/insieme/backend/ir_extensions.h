@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -72,13 +72,13 @@ namespace backend {
 		/**
 		 * A special literal representing a function causing the initialization of the global variables.
 		 */
-		LANG_EXT_LITERAL(RegisterGlobal, "be.registerGlobal", "(identifier, type<'a>)->unit");
+		LANG_EXT_LITERAL(RegisterGlobal, "be_registerGlobal", "(identifier, type<'a>)->unit");
 
 		/**
 		 * An operator marking the initial initialization of global values - those will be turned into
 		 * initial values at the definition of global variables.
 		 */
-		LANG_EXT_DERIVED(InitGlobal, "(ref<'a> g, 'a v)->unit { g=v; }");
+		LANG_EXT_DERIVED(InitGlobal, "lambda (ref<'a> g, 'a v)->unit { g=v; }");
 
 	};
 

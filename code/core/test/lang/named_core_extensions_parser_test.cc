@@ -40,9 +40,10 @@
 #include "insieme/core/ir_node_types.h"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/lang/extension.h"
-#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/parser3/ir_parser.h"
 
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/test/test_utils.h"
 
 #include "insieme/utils/assert.h"
 
@@ -56,7 +57,7 @@ namespace lang {
 	TEST(NamedCoreExtensionParserTest, ParserAssertsDeathTest) {
 		NodeManager manager;
 
-		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.unknown_extension\" in complex a;"),
+		assert_decl(ASSERT_DEATH(parser3::parse_stmt(manager, "using \"ext.unknown_extension\"; decl complex a;"),
 				"Can't find extension with name \"ext.unknown_extension\". Please check the name and also register it in the constructor of ExtensionRegistry"););
 	}
 
@@ -64,8 +65,8 @@ namespace lang {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_EQ("AP(struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>))",
-		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in complex a;"))));
+		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>);})",
+		          toString(builder.normalize(parser3::parse_stmt(manager, "{ using \"ext.complex\"; decl complex a; }"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserMultipleStatements) {
@@ -73,8 +74,8 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		//the second instance of type complex shouldn't be expanded
-		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); complex v1 = undefined(type<complex>);})",
-		          toString(builder.normalize(parser::parse(manager, "{using \"ext.complex\" in complex a; complex b;}"))));
+		EXPECT_EQ("AP({{struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>);}; complex v1 = undefined(type<complex>);})",
+		          toString(builder.normalize(parser3::parse_stmt(manager, "{ {using \"ext.complex\"; decl complex a;} decl complex b;}"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundStatement) {
@@ -83,7 +84,7 @@ namespace lang {
 
 		//both instances of type complex should be expanded
 		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);})",
-		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in { complex a; complex b;}"))));
+		          toString(builder.normalize(parser3::parse_stmt(manager, "{using \"ext.complex\"; decl complex a; decl complex b;}"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatement) {
@@ -92,7 +93,7 @@ namespace lang {
 
 		//the nested instance of complex should also be expanded
 		EXPECT_EQ("AP({struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>); {struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);};})",
-		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\" in { complex a; { complex b; }}"))));
+		          toString(builder.normalize(parser3::parse_stmt(manager, "{ using \"ext.complex\"; decl complex a; { decl complex b; }}"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserCompoundNestedStatementOutside) {
@@ -101,7 +102,7 @@ namespace lang {
 
 		//only the nested instance of complex should be expanded
 		EXPECT_EQ("AP({{struct<_real:'a,_img:'a> v0 = undefined(type<struct<_real:'a,_img:'a>>);}; complex v1 = undefined(type<complex>);})",
-		          toString(builder.normalize(parser::parse(manager, "{ using \"ext.complex\" in { complex a; } complex b;}"))));
+		          toString(builder.normalize(parser3::parse_stmt(manager, "{ { using \"ext.complex\"; decl complex a; } decl complex b;}"))));
 	}
 
 	TEST(NamedCoreExtensionParserTest, ParserMultipleUsing) {
@@ -109,8 +110,8 @@ namespace lang {
 		IRBuilder builder(manager);
 
 		//both named extensions should be expanded
-		EXPECT_EQ("AP({bool v0 = rec v0.{v0=fun('a v1) {return int.ne(enum.to.int(v1), 0);}}; struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);})",
-		          toString(builder.normalize(parser::parse(manager, "using \"ext.complex\",\"ext.enum\" in { bool a = enum_element_as_bool; complex b; }"))));
+		EXPECT_EQ("AP({bool v0 = rec v0.{v0=fun('a v1) {return int_ne(enum_to_int(v1), 0);}}; struct<_real:'a,_img:'a> v1 = undefined(type<struct<_real:'a,_img:'a>>);})",
+		          toString(builder.normalize(parser3::parse_stmt(manager, "{ using \"ext.complex\",\"ext.enum\"; decl bool a = enum_element_as_bool; decl complex b; }"))));
 	}
 
 
@@ -135,12 +136,24 @@ namespace lang {
 		const auto& existingNames = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getNamedIrExtensions();
 
 		//As I passed the extension with the name "complex" already defined this should be expanded
-		EXPECT_EQ("AP({struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>);})", toString(builder.normalize(parser::parse(manager, "{ complex a; }", false, existingNames))));
+		EXPECT_EQ("AP({struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>);})", 
+                  toString(builder.normalize(parser3::parse_stmt(manager, "{ decl complex a; }", false, existingNames))));
 
-		//now when I load the complex extension which defines the same name again I should run into an assertion
-		assert_decl(ASSERT_DEATH(parser::parse(manager, "using \"ext.complex\" in { complex a; }", false, existingNames),
-				"The name \"complex\" introduced by extension \"ext.complex\" is already existing"););
+        // inside of a compound stmt we shadow previous declarations
+		EXPECT_TRUE(parser3::parse_stmt(manager, " { using \"ext.complex\"; decl complex a; }", false, existingNames));
+
+        EXPECT_FALSE( parser3::parse_expr(manager, " using \"ext.complex\";  1 ", false, existingNames));
 	}
+
+	TEST(ConstTypeExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const NamedCoreExtensionParserTestExtension& ext = nm.getLangExtension<NamedCoreExtensionParserTestExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
+
+
 
 } // end namespace lang
 } // end namespace core

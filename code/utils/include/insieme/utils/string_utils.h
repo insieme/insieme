@@ -132,6 +132,24 @@ inline bool containsSubString(const string& str, const string& substr) {
 	return str.find(substr) != string::npos;
 }
 
+/**
+ * Converts a string from camelcase to underscore style to. Mainly used to convert names in INSIEME programming style to IR style
+ *
+ * @param input the input string to be converted to underscore
+ */
+inline string camelcaseToUnderscore(const string input) {
+	std::string output;
+
+	for(char s : input) {
+		if(std::isupper(s)) {
+			if(!output.empty()) output.push_back('_');
+			output.push_back(tolower(s));
+		} else
+			output.push_back(s);
+	}
+
+	return output;
+}
 
 
 /**
@@ -361,7 +379,6 @@ struct Indent {
 	}
 
 };
-
 
 namespace std {
 

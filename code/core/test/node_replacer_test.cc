@@ -83,6 +83,55 @@ TEST(NodeReplacer, Basic) {
 }
 
 
+TEST(NodeReplacer, SkipperTest) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// OK ... create a simple AST construct
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
+	TypePtr typeC = builder.genericType("C", toVector(typeA, typeB, typeA));
+	TypePtr typeD = builder.genericType("D");
+
+	EXPECT_EQ("C<A,B,A>", toString(*typeC));
+
+	NodePtr mod;
+
+	mod = transform::replaceAll(manager, typeC, typeA, typeD, true, [&](const NodePtr& node){
+                                if(node==typeA)
+                                    return true;
+                                return false;
+                             });
+	EXPECT_EQ("C<A,B,A>", toString(*mod));
+
+	mod = transform::replaceAll(manager, typeC, typeA, typeD, true, [&](const NodePtr& node){
+                                if(node==typeB)
+                                    return true;
+                                return false;
+                             });
+	EXPECT_EQ("C<D,B,D>", toString(*mod));
+
+	NodeMap nodemap;
+	nodemap[typeA] = typeB;
+	nodemap[typeB] = typeC;
+	mod = transform::replaceAll(manager, typeC, nodemap, true, [&](const NodePtr& node){
+                                if(node==typeA || node==typeB)
+                                    return true;
+                                return false;
+                             });
+	EXPECT_EQ("C<A,B,A>", toString(*mod));
+
+	mod = transform::replaceAll(manager, typeC, typeB, typeD, true, [&](const NodePtr& node){
+                                if(node==typeA)
+                                    return true;
+                                return false;
+                             });
+
+	EXPECT_EQ("C<A,D,A>", toString(*mod));
+
+}
+
+
 TEST(NodeReplacer, AnnotationPreservation) {
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -245,7 +294,7 @@ TEST(NodeReplacer, ReplaceVariable) {
 	stmt2 = transform::replaceAll(manager, stmt2, builder.refVar(zero), builder.refVar(builder.literal(boolType, "false")));
 
 	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt2)));
-	
+
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool> v2 =  var(false)");
@@ -347,18 +396,18 @@ TEST(NodeReplacer, ReplaceAllMapScope) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{
-		let test_array = (vector<'res,#l> a) -> unit {
-			vector<'res, #l> res;
+		let test_array = lambda (vector<'res,#l> a) -> unit {
+			decl vector<'res, #l> res;
 		};
-		let test_outer = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit ${
+		let test_outer = lambda (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit ${
 			test_array(a);
-			matrix<'res, #x, #y> res2;
+			decl matrix<'res, #x, #y> res2;
 		}$;
 
-		vector<int<4>, 8> a;
-		matrix<int<4>, 16, 32> b;
+		decl vector<int<4>, 8> a;
+		decl matrix<int<4>, 16, 32> b;
 		test_outer(a, b);
 	}
 	)raw");

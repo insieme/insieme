@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -57,9 +57,9 @@ namespace cba_based {
 		auto code = builder.parseStmt(
 			"{"
 			"	let int = int<4>;"
-			"	ref<int> a = var(3);"
-			"	ref<int> b = var(9 + (a * 5));"
-			"	ref<int> c;"
+			"	decl ref<int> a = var(3);"
+			"	decl ref<int> b = var(9 + (a * 5));"
+			"	decl ref<int> c;"
 			"	"
 			"	c = b * 4;"
 			"	if (c > 10) {"

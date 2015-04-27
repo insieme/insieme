@@ -46,17 +46,11 @@
 #include "insieme/frontend/clang_forward.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
 
+#include <boost/optional.hpp>
+#include <boost/program_options.hpp>
+#include <boost/filesystem/path.hpp>
 
 namespace insieme {
-
-namespace driver {
-namespace cmd {
-namespace detail {
-    class OptionParser;
-}
-}
-}
-
 namespace frontend {
 
 namespace stmtutils {
@@ -77,6 +71,7 @@ namespace conversion {
 }
 
 class ConversionJob;
+class ConversionSetup;
 
 namespace extensions {
 
@@ -118,16 +113,21 @@ namespace extensions {
      *  to support user provided pragma handling.
      */
 	class FrontendExtension {
+
     protected:
         typedef std::map<std::string,std::string> macroMap;
-        typedef std::vector<std::string> headerVec;
+        typedef std::vector<std::string> headerVec;						//header files
+        typedef std::vector<boost::filesystem::path> includeDirVec;		//include dirs
         typedef std::vector<std::shared_ptr<PragmaHandler>> pragmaHandlerVec;
         pragmaHandlerVec pragmaHandlers;
         macroMap macros;
-        headerVec injectedHeaders;
-        headerVec kidnappedHeaders;
+        headerVec injectedHeaders;		//header files
+        includeDirVec kidnappedHeaders;	//include dirs with headers to kidnap some default implementation
+        includeDirVec includeDirs;		//include dirs
+
 
 	public:
+    	typedef std::shared_ptr<extensions::FrontendExtension> FrontendExtensionPtr;
         typedef std::function<bool(const ConversionJob&)> flagHandler;
 
         virtual ~FrontendExtension(){}
@@ -139,7 +139,17 @@ namespace extensions {
          *  @param optParser Reference to the OptionParser
          *  @return lambda that is called after the insiemecc call was parsed
          */
-         virtual flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+         virtual flagHandler registerFlag(boost::program_options::options_description& options);
+
+        /**
+         * Check if the setup the current ConversionJob is correct regarding userprovided flags and
+         * options, position of the extension in  comparions to other extensions, or if certain
+         * extensions we depend on are enabled.
+         * If the prerequisites are not met, give an expressive error message.
+         * @return boost::optional is true if prerequisites are missing with an error message,
+         * false if no prerequisite are missing
+         * */
+        virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
 
         /*****************PRE CLANG STAGE*****************/
         /**
@@ -158,7 +168,13 @@ namespace extensions {
          *  Returns the list with headers that should be kidnapped
          *  @return kidnapped header list
          */
-        const headerVec& getKidnappedHeaderList() const;
+        const includeDirVec& getKidnappedHeaderList() const;
+
+        /**
+		 *  Returns the list with additional include directories needed by the extension
+		 *  @return additional include directories
+		 */
+		const includeDirVec& getIncludeDirList() const;
 
 
         /*****************CLANG STAGE*****************/
@@ -201,7 +217,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return NodePtr that can either be an expression or a type
          */
-        insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
+        virtual insieme::core::NodePtr Visit(const clang::Decl* decl, insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**
          *  User provided clang type decl visitor. Will be called before clang type decl
@@ -279,7 +295,7 @@ namespace extensions {
          *  @param convFact insieme conversion factory
          *  @return modified version of IR input
          */
-        insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir,
+        virtual insieme::core::NodePtr PostVisit(const clang::Decl* decl, insieme::core::NodePtr ir,
                                          insieme::frontend::conversion::Converter& convFact, bool symbolic=false);
 
         /**

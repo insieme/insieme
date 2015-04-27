@@ -54,19 +54,19 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto code = builder.parse(
-			"{"
-			"	ref<int<4>> a = 10; "
-			"	ref<int<4>> c = 20; "
-			"	if (a < c) { "
-			"		int<4> b = a+2; "
-			"		a = b+3; "
-			"		a = b+3;"
-			"	}"
-			"	c = *a;"
-			"	c; "
-			"}"
-		);
+		auto code = builder.parseStmt(R"(
+			{
+				decl ref<int<4>> a = 10; 
+				decl ref<int<4>> c = 20; 
+				if (a < c) { 
+					decl int<4> b = a+2; 
+					a = b+3; 
+					a = b+3;
+				}
+				c = *a;
+				c; 
+			}
+		)");
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
@@ -74,12 +74,12 @@ namespace transform {
 			"{"
 				"ref<int<4>> v1 = 10; "
 				"ref<int<4>> v2 = 20; "
-				"if(int.lt(ref.deref(v1), ref.deref(v2))) {"
-					"int<4> v3 = int.add(ref.deref(v1), 2); "
+				"if(int_lt(ref_deref(v1), ref_deref(v2))) {"
+					"int<4> v3 = int_add(ref_deref(v1), 2); "
 					"{}; "
-					"ref.assign(v1, int.add(v3, 3));"
+					"ref_assign(v1, int_add(v3, 3));"
 				"} else {}; "
-				"ref.assign(v2, ref.deref(v1)); "
+				"ref_assign(v2, ref_deref(v1)); "
 				"v2;"
 			"}"
 			, toString(*ret));
@@ -91,11 +91,11 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto code = builder.parse(
+		auto code = builder.parseStmt(
 			"{"
-			"	ref<int<4>> a = 10; "
-			"	ref<int<4>> b = 10; "
-			"	ref<int<4>> c = 20; "
+			"	decl ref<int<4>> a = 10; "
+			"	decl ref<int<4>> b = 10; "
+			"	decl ref<int<4>> c = 20; "
 			"	a = *c;"
 			"	c = *b;"
 			"	b = *a;"
@@ -114,15 +114,15 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto code = builder.parse(
+		auto code = builder.parseStmt(
 			"{"
-			"	ref<int<4>> a = 10; "
-			"	ref<int<4>> i=0; "
+			"	decl ref<int<4>> a = 10; "
+			"	decl ref<int<4>> i=0; "
 			"	while( i < 2 ) { "
 			"		a = *i; "
 			"		i = i+1; "
 			"	} "
-			"	ref<int<4>> c = 20; "
+			"	decl ref<int<4>> c = 20; "
 			"	a = *c;"
 			"	a; "
 			"}"
@@ -139,13 +139,13 @@ namespace transform {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto code = builder.parse(
+		auto code = builder.parseStmt(
 			"{"
-			"	ref<int<4>> a = 10; "
+			"	decl ref<int<4>> a = 10; "
 			"	for(int<4> i=0 .. 10 : 2) {"
 			"		a = i; "
 			"	} "
-			"	ref<int<4>> c = 20; "
+			"	decl ref<int<4>> c = 20; "
 			"	a = *c;"
 			"	a; "
 			"}"
@@ -168,10 +168,10 @@ namespace transform {
 			builder.parseType("ref<struct{ int<4> a; }>")
 		);
 
-		auto code = builder.parse(
+		auto code = builder.parseStmt(
 			"{"
-			"	ref<int<4>> a = 10; "
-			"	ref<int<4>> c = 20; "
+			"	decl ref<int<4>> a = 10; "
+			"	decl ref<int<4>> c = 20; "
 			"	s.a = a+c; "
 			"	c = *a;"
 			"	s.a = *c; "
@@ -209,11 +209,11 @@ namespace transform {
 //		
 //		EXPECT_EQ(
 //			"{"
-//				"ref<vector<int<4>,10>> v1 = ref.var(undefined(vector<int<4>,10>)); "
+//				"ref<vector<int<4>,10>> v1 = ref_var(undefined(vector<int<4>,10>)); "
 //				"for(uint<4> v2 = 0u .. 10u : 2u) {"
 //					"{};"
 //				"}; "
-//				"ref<int<4>> v3 = vector.ref.elem(v1, 1u); "
+//				"ref<int<4>> v3 = vector.ref_elem(v1, 1u); "
 //				"v3;"
 //			"}"
 //			, toString(*ret));
@@ -242,11 +242,11 @@ namespace transform {
 //		
 //		EXPECT_EQ(
 //			"{"
-//				"ref<vector<int<4>,10>> v1 = ref.var(undefined(vector<int<4>,10>)); "
+//				"ref<vector<int<4>,10>> v1 = ref_var(undefined(vector<int<4>,10>)); "
 //				"for(uint<4> v2 = 0u .. 10u : 3u) {"
 //					"{};"
 //				"}; "
-//				"ref<int<4>> v3 = vector.ref.elem(v1, 1u); "
+//				"ref<int<4>> v3 = vector.ref_elem(v1, 1u); "
 //				"v3;"
 //			"}"
 //			, toString(*ret));

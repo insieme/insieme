@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -57,15 +57,15 @@ namespace cba {
 		IRBuilder builder(mgr);
 
 		map<string,NodePtr> symbols;
-		symbols["e"] = builder.parse("lit(\"e\":channel<int<4>,1>)");
+		symbols["e"] = builder.parseExpr("lit(\"e\":channel<int<4>,1>)");
 
 		auto in = builder.parseStmt(
 				"{"
 				"	let channel = channel<int<4>,1>;"
 				"	"
-				"	auto c = channel.create(type(int<4>), param(1));"
-				"	auto c2 = c;"
-				"	ref<channel> rc = var(c);"
+				"	decl auto c = channel_create(type(int<4>), param(1));"
+				"	decl auto c2 = c;"
+				"	decl ref<channel> rc = var(c);"
 				"	"
 				"	c;"
 				"	c2;"

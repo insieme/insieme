@@ -1,0 +1,46 @@
+
+let int = int<4>;
+
+let Counter = struct {
+	int value;
+};
+
+let reset = lambda ctor Counter::(){
+	this.value = 0;
+};
+
+let inc = lambda Counter::()->int {
+	this.value = this.value + 1;
+	return *this.value;
+};
+
+let dec = lambda Counter::()->int {
+	this.value = this.value - 1;
+	return *this.value;
+};
+
+let get = lambda Counter::()->int {
+	return *this.value;
+};
+
+let set = lambda Counter::(int x)->unit { 
+	this.value = x;
+};
+
+let p = lambda Counter::()->unit {
+	print("%d\n", this->get());
+};
+
+int main() {
+	decl ref<Counter> c;
+	c->reset();
+	c->p();
+	c->inc();
+	c->p();
+	c->inc();
+	c->p();
+	c->dec();
+	c->p();
+	c->set(14);
+	c->p();
+}

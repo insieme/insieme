@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2014 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -196,7 +196,7 @@ namespace cba {
 					if (bodies.find(job) != bodies.end()) continue;
 
 					// register body reference
-					auto curBodySet = cba.getVar(C, job.getCreationPoint()->getDefaultExpr(), job.getContext());
+					auto curBodySet = cba.getVar(C, job.getCreationPoint()->getBody(), job.getContext());
 					bodies[job] = curBodySet;
 					inputs.push_back(curBodySet);
 					changed = true;

@@ -34,7 +34,11 @@
  * regarding third party software licenses.
  */
 
-__attribute__ ((noinline,optimize(0)))
+#if __GNUC_PREREQ(4,8)
+__attribute__ ((noinline,noclone,optimize(0),aligned(16)))
+#else
+__attribute__ ((noinline,noclone,optimize(0)))
+#endif
 void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) { 
 
     __asm (

@@ -140,8 +140,8 @@ namespace cmd {
 		/**
 		 * A constructor for this class.
 		 */
-		Options(const insieme::frontend::ConversionJob& job)
-			: valid(true), gracefulExit(false), settings(Settings{}), job(job) {}
+		Options()
+			: valid(true), gracefulExit(false), settings(Settings{}), job() {}
 
 	};
 

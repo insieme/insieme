@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -59,15 +59,15 @@ namespace transform {
 		StatementPtr code = analysis::normalize(builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> a = var(2);"
-				"	atomic.fetch.and.add(a, 10);"
+				"	decl ref<int> a = var(2);"
+				"	atomic_fetch_and_add(a, 10);"
 				"}"
 		).as<StatementPtr>());
 
 		ASSERT_TRUE(code);
 
 		EXPECT_EQ(
-				"{decl ref<int<4>> v0 =  var(2);atomic.fetch.and.add(v0, 10);}",
+				"{decl ref<int<4>> v0 =  var(2);atomic_fetch_and_add(v0, 10);}",
 				toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE))
 			);
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
@@ -76,7 +76,7 @@ namespace transform {
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
 //		std::cout << core::printer::PrettyPrinter(res) << "\n";
 		EXPECT_EQ(
-				"{decl ref<int<4>> v0 =  var(2);fun(ref<'a> v1, 'a v2) -> 'a {return fun(ref<'a> v1, 'a v2) -> 'a {decl 'a v3 = v1;v1 := gen.add(v1, v2);return v3;}(v1, v2);}(v0, 10);}",
+				"{decl ref<int<4>> v0 =  var(2);fun(ref<'a> v1, 'a v2) -> 'a {return fun(ref<'a> v1, 'a v2) -> 'a {decl 'a v3 = v1;v1 := gen_add(v1, v2);return v3;}(v1, v2);}(v0, 10);}",
 				toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE))
 		);
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());

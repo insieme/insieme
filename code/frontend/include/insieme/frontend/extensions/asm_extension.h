@@ -47,6 +47,8 @@ namespace extensions {
 using namespace insieme;
 
 class ASMExtension : public insieme::frontend::extensions::FrontendExtension {
+
+	public:
     virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
 };
 

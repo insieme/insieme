@@ -54,7 +54,7 @@ namespace region {
 			}
 
 			core::JobExprAddress job = cur->getArgument(0).as<core::JobExprAddress>();
-			core::ExpressionAddress addr = job->getDefaultExpr();
+			core::ExpressionAddress addr = job->getBody();
 
 			if(addr->getNodeType() == core::NT_BindExpr) {
 				addr = addr.as<core::BindExprAddress>()->getCall()->getFunctionExpr();

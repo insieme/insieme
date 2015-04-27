@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,6 +41,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/test/test_utils.h"
 
 namespace insieme {
 namespace core {
@@ -78,6 +79,16 @@ namespace lang {
 		// just check whether the code is not exhibiting errors
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
 	}
+
+
+	TEST(StaticVarExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
+
 
 } // end namespace lang
 } // end namespace core

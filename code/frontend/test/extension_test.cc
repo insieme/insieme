@@ -376,7 +376,7 @@ TEST(TypeConversion, C99_BuiltinTypes) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c99" };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -423,7 +423,7 @@ TEST(TypeConversion, CPP03_BuiltinTypes) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -473,7 +473,7 @@ TEST(TypeConversion, CPP11_BuiltinTypes) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++11" };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -510,7 +510,7 @@ TEST(TypeConversion, ComplexType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -578,7 +578,7 @@ TEST(TypeConversion, ArrayType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -613,7 +613,7 @@ TEST(TypeConversion, FunctionType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -650,7 +650,7 @@ TEST(TypeConversion, SIMDVectorType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -683,7 +683,7 @@ TEST(TypeConversion, PointerType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -714,7 +714,7 @@ TEST(TypeConversion, StructType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -746,7 +746,7 @@ TEST(TypeConversion, StructType) {
 
 TEST(TypeConversion, RecStructType) {
 	fe::Source src(
-		R"delim(
+		R"1N5P1RE(
 
 		struct X;
 		struct Y;
@@ -765,16 +765,15 @@ TEST(TypeConversion, RecStructType) {
 
 		int main() {
 			{
-				#pragma unittest symbolic "decl ref<X> v0 =  var(struct{py:=ref.reinterpret(ref.null, type<array<Y,1>>)})"
-				#pragma unittest resolved "decl ref<rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}> v0 =  var(struct{py:=ref.reinterpret(ref.null, type<array<rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>},1>>)})"
+				#pragma unittest symbolic "decl ref<X> v0 =  var(struct{py:=ref_reinterpret(ref_null, type<array<Y,1>>)})"
+				#pragma unittest resolved "decl ref<rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}> v0 =  var(struct{py:=ref_reinterpret(ref_null, type<array<rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>},1>>)})"
 				struct X x = {0};
 			}
 			{
 				struct Y y = {0};
 			}
 		}
-
-		)delim"
+		)1N5P1RE"
 	);
 
 	NodeManager mgr;
@@ -782,7 +781,7 @@ TEST(TypeConversion, RecStructType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion
@@ -833,7 +832,7 @@ TEST(TypeConversion, EnumType) {
 	const boost::filesystem::path& fileName = src;
     std::vector<std::string> argv = { "compiler",  fileName.string() };
     cmd::detail::OptionParser optionParser = cmd::Options::parse(argv);
-	optionParser.res.job.registerFrontendExtension<UnitTestExtension>(optionParser);
+	optionParser.res.job.registerFrontendExtension<UnitTestExtension>();
     cmd::Options options = optionParser;
 
 	//start conversion

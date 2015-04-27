@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -68,10 +68,10 @@ namespace lang {
 		 * A function ..
 		 */
 		LANG_EXT_DERIVED(CreateStatic,
-				"let type = struct __static_var { bool initialized; 'a value; }  in "
+				"let type = struct __static_var { bool initialized; 'a value; }; "
 				""
-				"(ref<type> res)->unit { "
-				"	res->initialized = false;"
+				"lambda (ref<type> res)->unit { "
+				"	res.initialized = false;"
 				"}"
 		);
 
@@ -79,13 +79,13 @@ namespace lang {
 		 * An alternative version for a variable being initialized by a constant value.
 		 */
 		LANG_EXT_DERIVED(InitStaticConst,
-				"let type = struct __static_var { bool initialized; 'a value; }  in "
+				"let type = struct __static_var { bool initialized; 'a value; }; "
 				""
-				"(ref<type> var, 'a value)->ref<'a> { "
-				"	if (*var->initialized) return var->value;"
-				"	var->initialized = true;"
-				"	var->value = value;"
-				"	return var->value;"
+				"lambda (ref<type> v, 'a value)->ref<'a> { "
+				"	if (*(v.initialized)) return v.value;"
+				"	v.initialized = true;"
+				"	v.value = value;"
+				"	return v.value;"
 				"}"
 		);
 
@@ -93,13 +93,13 @@ namespace lang {
 		 * A function ..
 		 */
 		LANG_EXT_DERIVED(InitStaticLazy,
-				"let type = struct __static_var { bool initialized; 'a value; }  in "
+				"let type = struct __static_var { bool initialized; 'a value; }; "
 				""
-				"(ref<type> var, ()=>'a value)->ref<'a> { "
-				"	if (*var->initialized) return var->value;"
-				"	var->initialized = true;"
-				"	var->value = value();"
-				"	return var->value;"
+				"lambda (ref<type> v, ()=>'a value)->ref<'a> { "
+				"	if (*(v.initialized)) return v.value;"
+				"	v.initialized = true;"
+				"	v.value = value();"
+				"	return v.value;"
 				"}"
 		);
 

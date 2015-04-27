@@ -39,12 +39,9 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/utils/config.h"
 
-#include "insieme/driver/cmd/insiemecc_options.h"
-
 namespace insieme {
 namespace frontend {
 namespace extensions {
-
 
 using namespace insieme;
 
@@ -56,9 +53,9 @@ public:
 			    macros["_GEM"] = "";
         }
 
-        FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+        virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) {
             //register omp flag
-            optParser("gem-cross-compile", "", flagActivated, "set cross compilation for the GEMSCLAIM");
+            options.add_options()("gem-cross-compile", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "set cross compilation for the GEMSCLAIM");
             //create lambda
             auto lambda = [&](const ConversionJob& job) {
                 return flagActivated;

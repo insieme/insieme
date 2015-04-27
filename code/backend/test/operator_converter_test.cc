@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,67 +53,67 @@ namespace backend {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		ProgramPtr prog = builder.parse(
-			""
-			"let int = int<4>;"
-			""
-			"let pair = struct {"
-			"	int first;"
-			"	int second;"
-			"};"
-			""
-			"let obj = struct {"
-			"	int a;"
-			"	vector<int,4> b;"
-			"	pair c;"
-			"};"
-			""
-			"unit main() {"
-			""
-			"	ref<obj> o;"
-			""
-			"	// check element o.a\n"
-			"	o.a = 0;"
-			"	print(\"o.a = %d\\n\", *o.a);"
-			""
-			"	// updated member a directly\n"
-			"	ref<int> x = ref.narrow(o, dp.member(dp.root, lit(\"a\")), lit(int));"
-			"	x = 12;"
-			"	print(\"Equal: %d\\n\", ref.eq(o.a, x));"
-			"	print(\"x = %d \t o.a = %d\\n\", *x, *o.a);"
-			""
-			""
-			"	// udpate element of b directly\n"
-			"	o.b[2u] = 0;"
-			"	print(\"o.b[2] = %d\\n\", *o.b[2u]);"
-			""
-			"	ref<int> y = ref.narrow(o, dp.element(dp.member(dp.root, lit(\"b\")), 2u), lit(int));"
-			"	y = 12;"
-			"	print(\"Equal: %d\\n\", ref.eq(o.b[2u], y));"
-			"	print(\"y = %d \t o.b[2] = %d\\n\", *y, *o.b[2u]);"
-			""
-			""
-			"	// expand a definition\n"
-			"	ref<vector<int,4>> v = ref.expand(y, dp.element(dp.root, 2u), lit(vector<int,4>));"
-			"	v[1u] = 10;"
-			"	v[2u] = 14;"
-			""
-			"	print(\"Equal: %d\\n\", o.b == v);"
-			"	print(\"v[1] = %d \t v[2] = %d \t o.v[1] = %d \t o.v[2] = %d \t y = %d\\n\","
-			"			*v[1u], *v[2u], *o.b[1u], *o.b[2u], *y);"
-			""
-			""
-			"	// handle nested element\n"
-			"	ref<int> first = ref.narrow(o, dp.member(dp.member(dp.root, lit(\"c\")), lit(\"first\")), lit(int));"
-			""
-			"	// check reference equality\n"
-			"	print(\"Equal: %d\\n\", ref.eq(o.c.first, first));"
-			""
-			"	// and the reverse\n"
-			"	ref<obj> full = ref.expand(first, dp.member(dp.member(dp.root, lit(\"c\")), lit(\"first\")), lit(obj));"
-			"	print(\"Equal: %d\\n\", ref.eq(o,full));"
-			"}"
-		).as<core::ProgramPtr>();
+		ProgramPtr prog = builder.parseProgram(R"(
+			
+			let int = int<4>;
+			
+			let pair = struct {
+				int first;
+				int second;
+			};
+			
+			let obj = struct {
+				int a;
+				vector<int,4> b;
+				pair c;
+			};
+			
+			unit main() {
+			
+				decl ref<obj> o;
+			
+				// check element o.a
+				o.a = 0;
+				print("o.a = %d\n", *o.a);
+			
+				// updated member a directly
+				decl ref<int> x = ref_narrow(o, dp_member(dp_root, lit("a")), lit(int));
+				x = 12;
+				print("Equal: %d\n", ref_eq(o.a, x));
+				print("x = %d \t o.a = %d\n", *x, *o.a);
+			
+		
+				// udpate element of b directly
+				o.b[2u] = 0;
+				print("o.b[2] = %d\n", *o.b[2u]);
+			
+				decl ref<int> y = ref_narrow(o, dp_element(dp_member(dp_root, lit("b")), 2u), lit(int));
+				y = 12;
+				print("Equal: %d\n", ref_eq(o.b[2u], y));
+				print("y = %d \t o.b[2] = %d\n", *y, *o.b[2u]);
+		
+			
+				// expand a definition
+				decl ref<vector<int,4>> v = ref_expand(y, dp_element(dp_root, 2u), lit(vector<int,4>));
+				v[1u] = 10;
+				v[2u] = 14;
+			
+				print("Equal: %d\n", o.b == v);
+				print("v[1] = %d \t v[2] = %d \t o.v[1] = %d \t o.v[2] = %d \t y = %d\n",
+						*v[1u], *v[2u], *o.b[1u], *o.b[2u], *y);
+			
+			
+				// handle nested element
+				decl ref<int> first = ref_narrow(o, dp_member(dp_member(dp_root, lit("c")), lit("first")), lit(int));
+			
+				// check reference equality
+				print("Equal: %d\n", ref_eq(o.c.first, first));
+			
+				// and the reverse
+				decl ref<obj> full = ref_expand(first, dp_member(dp_member(dp_root, lit("c")), lit("first")), lit(obj));
+				print("Equal: %d\n", ref_eq(o,full));
+			}
+		)").as<core::ProgramPtr>();
 
 		// check whether parsing was successful
 		ASSERT_TRUE(prog);

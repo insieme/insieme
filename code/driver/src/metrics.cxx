@@ -35,12 +35,12 @@
  */
 
 /**
- * Within this file a small, simple example of a compiler driver utilizing
- * the insieme compiler infrastructure is presented.
- *
- * This file is intended to provides a template for implementing new compiler
- * applications utilizing the Insieme compiler and runtime infrastructure.
- */
+* Within this file a small, simple example of a compiler driver utilizing
+* the insieme compiler infrastructure is presented.
+*
+* This file is intended to provides a template for implementing new compiler
+* applications utilizing the Insieme compiler and runtime infrastructure.
+*/
 
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
 	// load list of test step
 	auto steps = tf::getTestSteps(options);
-	
+
 	//define some conflicting steps, so either c or c++ is executed (not both of them)
 	conflictingSteps["insiemecc_c++_sema"]="insiemecc_c_sema";
 	conflictingSteps["insiemecc_run_c++_check"]="insiemecc_run_c_check";
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 	}
 
 	//check if backup file exists, read results
-        std::ifstream ifs("back.bin");
+	std::ifstream ifs("back.bin");
 	if(ifs.good()){
 		LOG(INFO)<<"Trying recovery from crashed run!";
 		boost::archive::binary_iarchive ia(ifs);
@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
 		ia >> opt;
 		//check if backup is compatible with current run
 		if(opt==options)
-		        ia >> allResults;
+			ia >> allResults;
 		else
 			LOG(WARNING)<<"Backup not compatible, rerun required!";
 	}
@@ -193,11 +193,11 @@ int main(int argc, char** argv) {
 	bool panic = false;
 	int act=0;
 
-    itc::TestRunner& runner = itc::TestRunner::getInstance();
+	itc::TestRunner& runner = itc::TestRunner::getInstance();
 	for(auto it = cases.begin(); it < cases.end(); it++) {
 		const auto& cur = *it;
 
-		
+
 
 		bool execute=true;
 		//check if already executed (results in backup file)
@@ -213,33 +213,33 @@ int main(int argc, char** argv) {
 		// run steps
 		vector<pair<TestStep, TestResult>> results;
 		bool success = true;
-        	string name=cur.getName();
+		string name=cur.getName();
 
-	        if(execute) {
-	            map<TestStep,vector<TestResult>> curRes;
-	            for(int rep=0;rep<options.num_repetitions;rep++){
-	                for(const auto& step : list) {
-	                    auto res = step.run(setup, cur, runner);
-	                    curRes[step].push_back(res);
-	                    if (!res || res.hasBeenAborted()) {
-	                        success = false;
-	                        break;
-	                    }
-	                    if(!success)
-	                   	 break;
-	            	}	
+		if(execute) {
+			map<TestStep,vector<TestResult>> curRes;
+			for(int rep=0;rep<options.num_repetitions;rep++){
+				for(const auto& step : list) {
+					auto res = step.run(setup, cur, runner);
+					curRes[step].push_back(res);
+					if(!res.wasSuccessful() || res.wasAborted()) {
+						success = false;
+						break;
+					}
+					if(!success)
+						break;
+				}	
 			}
-	                for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
-	                    TestResult res=steps->second.front();
-	                    if(options.use_median){
-	                        res=TestResult::returnMedian(steps->second);
-	                    }
-	                    else
-	                        res=TestResult::returnAVG(steps->second);
-	                        results.push_back(std::make_pair(steps->first,res));
-	                    }
-	                }
-	        
+			for(auto steps = curRes.begin(); steps != curRes.end(); steps++){
+				TestResult res=steps->second.front();
+				if(options.use_median){
+					res=TestResult::returnMedian(steps->second);
+				}
+				else
+					res=TestResult::returnAVG(steps->second);
+				results.push_back(std::make_pair(steps->first,res));
+			}
+		}
+
 		// get cached results
 		else{
 			results=allResults[cur];
@@ -267,13 +267,13 @@ int main(int argc, char** argv) {
 
 				if(curRes.second.deviationAvailable() && options.num_repetitions>1)
 					line << "# " << curRes.first.getName() <<
-						format(colOffset.c_str(),format("[%.3f secs (+/- %.3f), %.3f MB (+/- %.3f)]",curRes.second.getRuntime(), curRes.second.getRuntimeDev(),
-						curRes.second.getMemory()/1024/1024,curRes.second.getMemoryDev()/1024/1024)) << colorize.reset() << "\n";
+					format(colOffset.c_str(),format("[%.3f secs (+/- %.3f), %.3f MB (+/- %.3f)]",curRes.second.getRuntime(), curRes.second.getRuntimeDev(),
+					curRes.second.getMemory()/1024/1024,curRes.second.getMemoryDev()/1024/1024)) << colorize.reset() << "\n";
 				else
 					line << "# " << curRes.first.getName() <<
-						format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
+					format(colOffset.c_str(),format("[%.3f secs, %.3f MB]",curRes.second.getRuntime(), curRes.second.getMemory()/1024/1024)) << colorize.reset() << "\n";
 
-				if(curRes.second.wasSuccessfull()){
+				if(curRes.second.wasSuccessful()){
 					std::cout << line.str();
 				} else {
 					std::cout << colorize.red() <<line.str();
@@ -282,13 +282,13 @@ int main(int argc, char** argv) {
 					std::cout << curRes.second.getFullOutput();
 				}
 
-				success = success && curRes.second.wasSuccessfull();
+				success = success && curRes.second.wasSuccessful();
 			}
 			if(!options.no_clean && execute) {
 				curRes.second.clean();
 			}
 
-			if (execute && curRes.second.hasBeenAborted()) {
+			if (execute && curRes.second.wasAborted()) {
 				panic = true;
 			}
 		}
@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
 	std::cout << "# PASSED:         " << colorize.green() << format("%60d", ok.size()) << colorize.reset() << " #\n";
 	std::cout << "# FAILED:         " << colorize.red() << format("%60d", failed.size()) << colorize.reset() << " #\n";
 	for(const auto& cur : failed) {
-	std::cout << "#" << colorize.red() << format("   - %-63s          ", cur.getName()) << colorize.reset() << "#\n";
+		std::cout << "#" << colorize.red() << format("   - %-63s          ", cur.getName()) << colorize.reset() << "#\n";
 	}
 	std::cout << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#\n";
 
@@ -369,24 +369,24 @@ namespace {
 		// define options
 		bpo::options_description desc("Supported Parameters");
 		desc.add_options()
-				("help,h", 				"produce help message")
-				("panic,p", 			"panic on first sign of trouble and stop execution")
-				("mock,m", 				"make it a mock run just printing commands not really executing those")
-				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shall be repeated")
-				("use-median",				"use median instead of avg if multiple runs are required")
-				("no-perf",				"disable perf metrics")
-				("scheduling,S",			"enable runs on all scheduling variants (static,dynamic,guided)")
-				("no-overwrite",			"do not overwrite existing output data")
-				("threads,t",				bpo::value<int>()->default_value(omp_get_max_threads()),"number of threads for statistic calculation")
-				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
-				("load-miss",			bpo::value<string>(),"the perf code for the llc load misses")
-				("store-miss",			bpo::value<string>(),"the perf code for the llc store misses")
-				("flops",			bpo::value<string>(),"the perf code for the number of floating point operations")
-				("perf-metric,P",		bpo::value<vector<string>>(),"a perf code to be measured")
-				("output,o",			bpo::value<vector<string>>(),"output formats, currently supported: SQL,CSV")
-				("force,f",			"force to execute all tests (even those uncommented with #)")
-		;
+			("help,h", 				"produce help message")
+			("panic,p", 			"panic on first sign of trouble and stop execution")
+			("mock,m", 				"make it a mock run just printing commands not really executing those")
+			("step,s", 				bpo::value<string>(), 					"the test step to be applied")
+			("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shall be repeated")
+			("use-median",				"use median instead of avg if multiple runs are required")
+			("no-perf",				"disable perf metrics")
+			("scheduling,S",			"enable runs on all scheduling variants (static,dynamic,guided)")
+			("no-overwrite",			"do not overwrite existing output data")
+			("threads,t",				bpo::value<int>()->default_value(omp_get_max_threads()),"number of threads for statistic calculation")
+			("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
+			("load-miss",			bpo::value<string>(),"the perf code for the llc load misses")
+			("store-miss",			bpo::value<string>(),"the perf code for the llc store misses")
+			("flops",			bpo::value<string>(),"the perf code for the number of floating point operations")
+			("perf-metric,P",		bpo::value<vector<string>>(),"a perf code to be measured")
+			("output,o",			bpo::value<vector<string>>(),"output formats, currently supported: SQL,CSV")
+			("force,f",			"force to execute all tests (even those uncommented with #)")
+			;
 
 		// define positional options (all options not being named)
 		bpo::positional_options_description pos;

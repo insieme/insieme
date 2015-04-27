@@ -49,9 +49,11 @@ namespace extensions {
  * instead of trying to fix this everywhere, is much more convenient to clean up afterwards, reduces complexity of code
  */
 class FrontendCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-		insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
-        insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-        stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
+	public:
+        virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
+		virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& prog);
+        virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+        virtual stmtutils::StmtWrapper PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact);
 };
 
 } // extensions

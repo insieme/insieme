@@ -69,8 +69,8 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(10);"		// def1
-				"	ref<int> y = var(10);"		// def2
+				"	decl ref<int> x = var(10);"		// def1
+				"	decl ref<int> y = var(10);"		// def2
 				"	c;"							// RD(x) = { def1 }, RD(y) = { def2 }, KD(x) = {}, KD(y) = {}
 				"	x = 12;"					// def3
 				"	c;"							// RD(x) = { def3 }, RD(y) = { def2 }, KD(x) = { def1 }, KD(y) = {}
@@ -172,11 +172,11 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(10);"		// def1
+				"	decl ref<int> x = var(10);"		// def1
 				"	*x;"		// def1 should reach this point
 				"	x = 12;"	// def2
 				"	*x;"		// def2 should reach this point
-				"	auto g = spawn x = 14;"		// def3
+				"	decl auto g = spawn x = 14;"		// def3
 				"	*x;"		// def2 should reach this point
 				"	sync g;"
 				"	*x;"		// def2 and def3 should reach this point
@@ -214,10 +214,10 @@ namespace cba {
 
 		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 							toString(analysis.getValuesOf(code[6], RDin, ctxt, loc)));
 		EXPECT_EQ("{(0-2,[[0,0],[<0,[0,0],0>,<0,[0,0],0>]])}", 							toString(analysis.getValuesOf(code[6], RDtmp, ctxt, loc)));
-		EXPECT_EQ("{(0-4-1-2-3-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[6], RDout, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-2-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[6], RDout, ctxt, loc)));
 
-		EXPECT_EQ("{(0-4-1-2-3-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDin, ctxt, loc)));
-		EXPECT_EQ("{(0-4-1-2-3-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDout, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-2-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDin, ctxt, loc)));
+		EXPECT_EQ("{(0-4-1-2-2-2-1-2-0-1-2-0,[[0,0],[<1,[0,0],0>,<0,[0,0],0>]])}", 	toString(analysis.getValuesOf(code[7], RDout, ctxt, loc)));
 
 
 		// -- killed definitions --
@@ -251,9 +251,9 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	*x;"		// should be 12
-				"	auto g = spawn x = 14;"
+				"	decl auto g = spawn x = 14;"
 				"	*x;"		// should still be 12
 				"	sync g;"
 				"	*x;"		// should be 14
@@ -283,10 +283,10 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	x = 1;"
-				"	auto t1 = spawn *x;"
-				"	auto t2 = spawn *x;"
+				"	decl auto t1 = spawn *x;"
+				"	decl auto t2 = spawn *x;"
 				"	sync t1;"
 				"	sync t2;"
 				"	*x;"		// should be 1
@@ -314,10 +314,10 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	x = 1;"
-				"	auto t1 = spawn x = 2;"
-				"	auto t2 = spawn *x;"
+				"	decl auto t1 = spawn x = 2;"
+				"	decl auto t2 = spawn *x;"
 				"	sync t1;"
 				"	sync t2;"
 				"	*x;"		// should be 2
@@ -345,10 +345,10 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	x = 1;"
-				"	auto t1 = spawn x = 2;"
-				"	auto t2 = spawn x = 3;"
+				"	decl auto t1 = spawn x = 2;"
+				"	decl auto t2 = spawn x = 3;"
 				"	sync t1;"
 				"	sync t2;"
 				"	*x;"		// should be 2 or 3
@@ -377,17 +377,17 @@ namespace cba {
 				"{"
 				"	let int = int<4>;"
 				"	"
-				"	ref<int> x = var(0);"
-				"	ref<int> y = var(0);"
-				"	ref<int> z = var(0);"
+				"	decl ref<int> x = var(0);"
+				"	decl ref<int> y = var(0);"
+				"	decl ref<int> z = var(0);"
 				"	x = 1;"
 				"	y = 1;"
 				"	z = 1;"
-				"	auto t1 = spawn {"
+				"	decl auto t1 = spawn {"
 				"		y = 2;"
 				"		z = 2;"
 				"	};"
-				"	auto t2 = spawn {"
+				"	decl auto t2 = spawn {"
 				"		z = 3;"
 				"	};"
 				"	sync t1;"
@@ -419,25 +419,25 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto in = builder.parseStmt(
-				"{"
-				"	let int = int<4>;"
-				"	let point = struct { int x; int y; };"
-				"	"
-				"	ref<point> x = var((point){0,0});"
-				"	"
-				"	auto t1 = spawn {"
-				"		*x;"
-				"	};"
-				"	auto t2 = spawn {"
-				"		*x;"
-				"	};"
-				"	sync t1;"
-				"	sync t2;"
-				"	"
-				"	*x;"		// should be (0,0)
-				"}"
-		).as<CompoundStmtPtr>();
+		auto in = builder.parseStmt(R"(
+				{
+					let int = int<4>;
+					let point = struct { int x; int y; };
+					
+					decl ref<point> x = var(struct point{0,0});
+					
+					decl auto t1 = spawn {
+						*x;
+					};
+					decl auto t2 = spawn {
+						*x;
+					};
+					sync t1;
+					sync t2;
+					
+					*x;		// should be (0,0)
+				}
+		)").as<CompoundStmtPtr>();
 
 		ASSERT_TRUE(in);
 		CompoundStmtAddress code(in);
@@ -461,7 +461,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(5);"
+				"	decl auto a = var(5);"
 				"	merge(spawn { "
 				"		if(a<2 || a>4) {"
 				"			a = 3;"

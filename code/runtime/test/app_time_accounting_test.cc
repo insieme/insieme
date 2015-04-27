@@ -34,7 +34,11 @@
  * regarding third party software licenses.
  */
 
+#define _GLIBCXX_USE_NANOSLEEP
+
 #include <gtest/gtest.h>
+#include <future>
+#include <chrono>
 
 #define IRT_ENABLE_APP_TIME_ACCOUNTING
 
@@ -42,7 +46,7 @@
 #define IRT_LIBRARY_NO_MAIN_FUN
 #include "irt_library.hxx"
 
-#define N 5000
+#define N 9000
 
 TEST(AppTimeAccounting, Simple) {
 	irt::init(4);
@@ -75,4 +79,37 @@ TEST(AppTimeAccounting, Simple) {
 	// check that wi time is not larger than total process time
 	EXPECT_LE(wi_t, rs_t);
 	irt::shutdown();
+}
+
+TEST(AppTimeAccounting, AppProgress) {
+	bool run = true;
+	uint64 lastProgress = 0;
+	auto extThread = std::async(std::launch::async, [&]() {
+		while(run) {
+			uint64 curProgress = irt_app_progress_get();
+			EXPECT_LE(lastProgress, curProgress);
+			std::cout << "app progress: " << curProgress << "\n";
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+	});
+
+	irt::init(4);
+	irt::run([]() {
+		irt::merge(irt::parallel([] {
+			double x = 0.0, last_app_t = 0.0;
+			for(int i=0; i<N; i++) {
+				for(int j=0; j<N; j++) {
+					x += 0.1;
+				}
+				irt::barrier();
+			}
+			irt::master([x] {
+				std::cout << "x: " << x << "\n";
+			});
+		}));
+	});
+	irt::shutdown();
+
+	run = false;
+	extThread.wait();
 }

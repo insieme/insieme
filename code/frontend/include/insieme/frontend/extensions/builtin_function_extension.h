@@ -49,7 +49,8 @@ using namespace insieme;
 
 class BuiltinFunctionExtension : public insieme::frontend::extensions::FrontendExtension {
 
-    insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+	public:
+    virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
         //check if it is a decl ref expr
         if( const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
             //check if it we can get the function decl out of the decl ref

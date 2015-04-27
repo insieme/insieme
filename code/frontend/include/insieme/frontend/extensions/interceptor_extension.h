@@ -47,6 +47,14 @@ namespace extensions {
 
 class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
 
+	public:
+
+	virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+
+	InterceptorExtension() : interceptor(std::set<std::string>()) {}
+
+	virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
+
 	// Extension Hooks
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
 
@@ -60,19 +68,13 @@ class InterceptorExtension : public insieme::frontend::extensions::FrontendExten
 
     virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact);
 
-	private:
+private:
 
 	insieme::frontend::utils::Interceptor interceptor;
 
 	const insieme::frontend::utils::Interceptor& getInterceptor() const { return interceptor; }
 
 	void setInterceptor(const std::set<std::string>& patterns) { interceptor = insieme::frontend::utils::Interceptor(patterns); }
-
-	public:
-
-    FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
-
-	InterceptorExtension() : interceptor(std::set<std::string>()) {}
 
 };
 

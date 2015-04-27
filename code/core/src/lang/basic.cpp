@@ -341,8 +341,8 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
             core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
             vecElemTy);
 
-        core::ExpressionPtr&& pointwise = op != 10 ? (*this).getBuiltIn(string("vector.pointwise")) :
-        		(*this).getBuiltIn(string("vector.pointwise.unary")); // 10 = ~, the only unary OPERATION in lang def which is allowed for vectors
+        core::ExpressionPtr&& pointwise = op != 10 ? (*this).getBuiltIn(string("vector_pointwise")) :
+        		(*this).getBuiltIn(string("vector_pointwise_unary")); // 10 = ~, the only unary OPERATION in lang def which is allowed for vectors
 
 //        assert_fail();
 	    return pimpl->build.callExpr(pointwise, (*this).getOperator(vecElemTy, op));

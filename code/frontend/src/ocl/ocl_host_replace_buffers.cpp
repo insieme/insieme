@@ -112,29 +112,29 @@ ExpressionPtr getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet, IRBuilder 
 
 	if (copyHostPtr)
 		return builder.parseExpr(
-		"("
-		"	type<'a> 				elemType, "
-		"	uint<8> 				size, "
-		"	ref<any> 				hostPtr, "
-		"	ref<array<int<4>,1> > 	errorcode_ret"
-		") -> ref<array<'a, 1> >  { "
-		"		ref<array<'a,1>> devicePtr = new( array.create.1D( elemType, size ) ); "
-		"		ref<array<'a,1>> 		hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
-		"		for(uint<8> i = 0u .. size) { "
-		"			devicePtr[i] = *hp[i]; "
-		"		} "
+		"lambda ("
+		"       	type<'a> 				elemType, "
+		"       	uint<8> 				size, "
+		"       	ref<any> 				hostPtr, "
+		"       	ref<array<int<4>,1> > 	errorcode_ret"
+		"       ) -> ref<array<'a, 1> >  { "
+		"	decl ref<array<'a,1>> devicePtr = new( array_create_1D( elemType, size ) ); "
+		"	decl ref<array<'a,1>> 		hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); "
+		"	for(uint<8> i = 0u .. size) { "
+		"		devicePtr[i] = *(hp[i]); "
+		"	} "
 		+ returnErrorcode +
 		"		return devicePtr; "
 	 	"}");
 
 	return builder.parseExpr(
-		"( "
-		"	type<'a>				elemType, "
-		"	uint<8> 				size, "
-		"	ref<array<int<4>, 1> >  errorcode_ret"
-		") -> ref<array<'a, 1> > { "
+		"lambda ( "
+		"   	type<'a>				elemType, "
+		"   	uint<8> 				size, "
+		"   	ref<array<int<4>, 1> >  errorcode_ret"
+		"   ) -> ref<array<'a, 1> > { "
 		+ returnErrorcode +
-		"	return new( array.create.1D( elemType, size )); "
+		"	return new( array_create_1D( elemType, size )); "
        	"}");
 }
 
@@ -165,9 +165,15 @@ core::NodePtr BufferReplacer::getTransformedProgram() {
 	NodeManager& mgr = prog->getNodeManager();
 	IRBuilder builder(mgr);
 
-	TreePattern clCreateBuffer = pattern::var("createBuffer", irp::callExpr(pattern::any, irp::literal("clCreateBuffer"),
-			pattern::any << pattern::var("flags", pattern::any) << pattern::var("size", pattern::any) <<
-			pattern::var("host_ptr", pattern::any) << pattern::var("err", pattern::any) ));
+	TreePattern clCreateBuffer = pattern::var("createBuffer", 
+                                              irp::callExpr(pattern::any, 
+                                                            irp::literal("clCreateBuffer"),
+			                                                pattern::any << 
+                                                            pattern::var("flags", pattern::any) << 
+                                                            pattern::var("size", pattern::any) <<
+			                                                pattern::var("host_ptr", pattern::any) << 
+                                                            pattern::var("err", pattern::any) 
+                                               ));
 	collectInformation(clCreateBuffer);
 
 	TypePtr clMemTy = builder.genericType("_cl_mem");
@@ -183,6 +189,7 @@ core::NodePtr BufferReplacer::getTransformedProgram() {
 
 void BufferReplacer::collectInformation(TreePattern& clCreateBuffer) {
 	NodeManager& mgr = prog->getNodeManager();
+
 	NodeAddress pA(prog);
 	IRBuilder builder(mgr);
 
@@ -195,6 +202,7 @@ void BufferReplacer::collectInformation(TreePattern& clCreateBuffer) {
 	TreePattern bufferPattern = bufferDecl | bufferAssign;
 
 	irp::matchAllPairs(bufferPattern, pA, [&](const NodeAddress& matchAddress, const AddressMatch& createBuffer) {
+
 		NodePtr flagArg = createBuffer["flags"].getValue();
 
 		std::set<enum CreateBufferFlags> flags = getFlags<enum CreateBufferFlags>(flagArg);

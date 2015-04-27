@@ -49,8 +49,9 @@ namespace extensions {
  */
 class CppRefsCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
     public:
-    FrontendExtension::flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
-	insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
+    FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+
+	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 
 

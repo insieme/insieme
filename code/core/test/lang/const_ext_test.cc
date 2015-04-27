@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,15 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <gtest/gtest.h>
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/test/test_utils.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/const_extension.h"
@@ -64,6 +65,13 @@ namespace lang {
 		EXPECT_EQ(type, ext.getWrappedConstType(wrapped));
 	}
 
+	TEST(ConstTypeExtensionTest, Semantic) {
+		NodeManager nm;
+
+		const ConstExtension& ext = nm.getLangExtension<ConstExtension>();
+
+		semanticCheckSecond(ext.getNamedIrExtensions());
+	}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

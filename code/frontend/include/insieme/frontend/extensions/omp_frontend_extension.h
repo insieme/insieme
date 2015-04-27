@@ -47,7 +47,7 @@ class OmpFrontendExtension : public FrontendExtension {
     bool flagActivated;
 public:
     OmpFrontendExtension();
-    virtual flagHandler registerFlag(insieme::driver::cmd::detail::OptionParser& optParser);
+    virtual flagHandler registerFlag(boost::program_options::options_description& options);
 	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 

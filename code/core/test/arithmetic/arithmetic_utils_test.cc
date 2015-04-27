@@ -135,14 +135,14 @@ TEST(ArithmeticTest, toIR) {
 
 	Formula f = varA + varB;
 	EXPECT_EQ("v1+v2", toString(f));
-	EXPECT_EQ("int.add(v1, v2)", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_add(v1, v2)", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
 	f = 2*varA + varB;
 	EXPECT_EQ("2*v1+v2", toString(f));
-	EXPECT_EQ("int.add(int.mul(2, v1), v2)", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_add(int_mul(2, v1), v2)", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
@@ -150,7 +150,7 @@ TEST(ArithmeticTest, toIR) {
 	// test varA^2
 	f = 2*varA*varA + varB*varA;
 	EXPECT_EQ("2*v1^2+v1*v2", toString(f));
-	EXPECT_EQ("int.add(int.mul(2, int.mul(v1, v1)), int.mul(v1, v2))", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_add(int_mul(2, int_mul(v1, v1)), int_mul(v1, v2))", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
@@ -158,19 +158,19 @@ TEST(ArithmeticTest, toIR) {
 	Product one;
 	f = one / varA;
 	EXPECT_EQ("v1^-1", toString(f));
-	EXPECT_EQ("int.div(1, v1)", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_div(1, v1)", toString(*toIR(manager, f)));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 	EXPECT_THROW(toFormula(toIR(manager, f)), NotAFormulaException);		// not convertible since integer division not supported
 
 	f = one / (varA*varA*varA);
 	EXPECT_EQ("v1^-3", toString(f));
-	EXPECT_EQ("int.div(1, int.mul(int.mul(v1, v1), v1))", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_div(1, int_mul(int_mul(v1, v1), v1))", toString(*toIR(manager, f)));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 	EXPECT_THROW(toFormula(toIR(manager, f)), NotAFormulaException);		// not convertible since integer division not supported
 
 	f = varA + varA*varA - varB*varB - one/(varA*varB) + varB - varC;
 	EXPECT_EQ("v1^2+v1-v1^-1*v2^-1-v2^2+v2-v3", toString(f));
-	EXPECT_EQ("int.sub(int.add(int.sub(int.sub(int.add(int.mul(v1, v1), v1), int.mul(int.div(1, v1), int.div(1, v2))), int.mul(v2, v2)), v2), v3)", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_sub(int_add(int_sub(int_sub(int_add(int_mul(v1, v1), v1), int_mul(int_div(1, v1), int_div(1, v2))), int_mul(v2, v2)), v2), v3)", toString(*toIR(manager, f)));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 	EXPECT_THROW(toFormula(toIR(manager, f)), NotAFormulaException);		// not convertible since integer division not supported
 }
@@ -210,7 +210,7 @@ TEST(ArithmeticTest, nonVariableValues) {
 
 	f= toFormula(tmp);
 	EXPECT_EQ("v1+v3.a", toString(f));
-	EXPECT_EQ("int.add(v1, composite.member.access(v3, a, type<int<4>>))", toString(*toIR(manager, f)));
+	EXPECT_EQ("int_add(v1, composite_member_access(v3, a, type<int<4>>))", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
@@ -225,17 +225,17 @@ TEST (ArithmeticTest, fromIRExpr) {
 	std::map<std::string, NodePtr> symbols;
 	symbols["v1"] = builder.variable(builder.parseType("int<4>"));
 
-	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
+	// from expr: int_add(int_add(int__ul(int_mul(0, 4), 4), int_mul(0, 4)), v112)
 	auto expr = builder.parseExpr("0 * 4 * 4 + (0 * 4) + v1", symbols);
 
-	EXPECT_EQ("int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v1)", toString(*expr));
+	EXPECT_EQ("int_add(int_add(int_mul(int_mul(0, 4), 4), int_mul(0, 4)), v1)", toString(*expr));
 
 	auto f = toFormula(expr);
 	EXPECT_EQ("v1", toString(f));
 
 	// add some devision
 	expr = builder.parseExpr("(1 * 4)/2");
-	EXPECT_EQ("int.div(int.mul(1, 4), 2)", toString(*expr));
+	EXPECT_EQ("int_div(int_mul(1, 4), 2)", toString(*expr));
 
 	f = toFormula(expr);
 	EXPECT_EQ("2", toString(f));
@@ -246,7 +246,7 @@ TEST (ArithmeticTest, fromIRExpr) {
 	// some more complex stuff
 	mgr.setNextFreshID(2);
 	expr = builder.parseExpr("((15/2) * x) / ((20/6) * x)", symbols);
-	EXPECT_EQ("int.div(int.mul(int.div(15, 2), v6), int.mul(int.div(20, 6), v6))", toString(*expr));
+	EXPECT_EQ("int_div(int_mul(int_div(15, 2), v6), int_mul(int_div(20, 6), v6))", toString(*expr));
 
 	f = toFormula(expr);
 	EXPECT_EQ("2", toString(f));
@@ -254,13 +254,13 @@ TEST (ArithmeticTest, fromIRExpr) {
 
 	// test support of division by 1
 	expr = builder.parseExpr("((12 * x) / 1)", symbols);
-	EXPECT_EQ("int.div(int.mul(12, v6), 1)", toString(*expr));
+	EXPECT_EQ("int_div(int_mul(12, v6), 1)", toString(*expr));
 	f = toFormula(expr);
 	EXPECT_EQ("12*v6", toString(f));
 
 	// test support for division by -1
 	expr = builder.parseExpr("((4 * x) / -1)", symbols);
-	EXPECT_EQ("int.div(int.mul(4, v6), -1)", toString(*expr));
+	EXPECT_EQ("int_div(int_mul(4, v6), -1)", toString(*expr));
 	f = toFormula(expr);
 	EXPECT_EQ("-4*v6", toString(f));
 }
@@ -282,7 +282,7 @@ TEST(ConstraintTest, fromAndToIR) {
 	Constraint c = f > one && f < two;
 	EXPECT_EQ("(!(v0-1 <= 0) and !(-v0+2 <= 0))", toString(c));
 
-	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(bool.not(int.le(int.sub(v0, 1), 0)), bind(){rec v0.{v0=fun(int<4> v1) {return bool.not(int.le(int.add(int.mul(-1, v1), 2), 0));}}(v0)})",
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(bool_not(int_le(int_sub(v0, 1), 0)), bind(){rec v0.{v0=fun(int<4> v1) {return bool_not(int_le(int_add(int_mul(-1, v1), 2), 0));}}(v0)})",
 			toString(*builder.normalize(toIR(mgr, c))));
 	EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
 
@@ -482,7 +482,7 @@ TEST(ArithmeticTest, PiecewiseValueReplacement) {
 
 TEST(ArithmeticTest, CastBug_001) {
 	// The IR expression
-	// 		int.sub(v3, cast<uint<4>>(10))
+	// 		int_sub(v3, cast<uint<4>>(10))
 	// cannot be converted into a formula.
 	//
 	// Reason:
@@ -499,7 +499,7 @@ TEST(ArithmeticTest, CastBug_001) {
 //	ExpressionPtr expr = builder.callExpr(basic.getInt4(), basic.getSignedIntSub(), v1, ten);
 	ExpressionPtr expr = builder.sub(v1, ten);
 
-	EXPECT_EQ("int.sub(v1, cast<uint<4>>(10))", toString(*expr));
+	EXPECT_EQ("int_sub(v1, cast<uint<4>>(10))", toString(*expr));
 
 	// convert to formula
 	Formula f = toFormula(expr);
@@ -524,7 +524,7 @@ TEST(ArithmeticTest, PiecewiseToIRAndBack) {
 
 	pw += Piecewise( v1 + v2 <= 0, 3+4-v1 );
 	EXPECT_EQ("-v1+7 -> if (v1+v2 <= 0); 0 -> if (!(v1+v2 <= 0))", toString(pw));
-	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>'b) v2, (()=>'b) v3) {if(v1) {return v2();} else {return v3();};}}(int.le(int.add(v1, v2), 0), bind(){rec v0.{v0=fun(int<4> v1) {return int.add(int.mul(-1, v1), 7);}}(v1)}, rec v0.{v0=fun() {return 0;}})", toString(*builder.normalize(toIR(mgr, pw))));
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>'b) v2, (()=>'b) v3) {if(v1) {return v2();} else {return v3();};}}(int_le(int_add(v1, v2), 0), bind(){rec v0.{v0=fun(int<4> v1) {return int_add(int_mul(-1, v1), 7);}}(v1)}, rec v0.{v0=fun() {return 0;}})", toString(*builder.normalize(toIR(mgr, pw))));
 	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
 
 	pw += Piecewise( v2 <= 0, v2);
@@ -535,7 +535,7 @@ TEST(ArithmeticTest, PiecewiseToIRAndBack) {
 
 TEST(ArithmeticTest, SelectToFormula) {
 
-	// something like select(1,2,int.lt) should be convertible to a formula
+	// something like select(1,2,int_lt) should be convertible to a formula
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -554,7 +554,7 @@ TEST(ArithmeticTest, SelectToFormula) {
 
 TEST(ArithmeticTest, NestedSelectToPiecewise) {
 
-	// something like select(select(1,2,int.lt),select(2,1,int.lt),int.lt) should be convertible to a piecewise
+	// something like select(select(1,2,int_lt),select(2,1,int_lt),int_lt) should be convertible to a piecewise
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);

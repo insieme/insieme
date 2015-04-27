@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,19 +61,19 @@ namespace backend {
 
 
 		// create a code fragment including some member functions
-		auto fragments = builder.parseAddresses(
+		auto fragments = builder.parseAddressesProgram(
 				"let int = int<4>;"
 				""
 				"let intRef = struct { ref<int> _cpp_ref };"
 				""
-				"let f = (intRef x)->unit { };"
-				"let g = (ref<int> x)->unit { };"
+				"let f = lambda (intRef x)->unit { };"
+				"let g = lambda (ref<int> x)->unit { };"
 				""
 				"int main() {"
 				"	"
-				"	ref<int> a = var(12);"
-				"	intRef b = ir2cpp(a);"
-				"	ref<int> c = cpp2ir($b$);"
+				"	decl ref<int> a = var(12);"
+				"	decl intRef b = ir2cpp(a);"
+				"	decl ref<int> c = cpp2ir($b$);"
 				"	"
 				"	f(ir2cpp(a));"
 				"	f(b);"
@@ -133,19 +133,19 @@ namespace backend {
 
 
 		// create a code fragment including some member functions
-		auto fragments = builder.parseAddresses(
+		auto fragments = builder.parseAddressesProgram(
 				"let int = int<4>;"
 				""
 				"let intRef = struct { src<int> _const_cpp_ref };"
 				""
-				"let f = (intRef x)->unit { };"
-				"let g = (ref<int> x)->unit { };"
+				"let f = lambda (intRef x)->unit { };"
+				"let g = lambda (ref<int> x)->unit { };"
 				""
 				"int main() {"
 				"	"
-				"	ref<int> a = var(12);"
-				"	intRef b = ir2cpp(a);"
-				"	src<int> c = cpp2ir($b$);"
+				"	decl ref<int> a = var(12);"
+				"	decl intRef b = ir2cpp(a);"
+				"	decl src<int> c = cpp2ir($b$);"
 				"	"
 				"	f(ir2cpp(a));"
 				"	f(b);"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -58,7 +58,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	a = 1;"
 				"	a = 2;"
 				"}"
@@ -87,7 +87,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				"}"
@@ -115,7 +115,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	spawn a = 1;"
 				"	a = 2;"
 				" 	spawn a = 3;"
@@ -153,13 +153,13 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
-				"	auto c = channel.create(lit(int<4>),param(2));"
+				"	decl auto a = var(0);"
+				"	decl auto c = channel_create(lit(int<4>),param(2));"
 				" 	spawn a = 1;"
 				"	a = 2;"
-				" 	channel.send(c,1);"
+				" 	channel_send(c,1);"
 				"	a = 3;"
-				"	channel.recv(c);"
+				"	channel_recv(c);"
 				"	a = 4;"
 				"}"
 		).as<CompoundStmtPtr>();
@@ -203,7 +203,7 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-				"	auto a = var(0);"
+				"	decl auto a = var(0);"
 				" 	merge(spawn a = 1);"
 				"}"
 		).as<CompoundStmtPtr>();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -58,11 +58,11 @@ namespace printer {
 		VariablePtr b = builder.variable(intType, 2);
 		ExpressionPtr t = builder.add(a, b);
 
-		EXPECT_EQ("int.add(v1, v2)", toString(*t));
+		EXPECT_EQ("int_add(v1, v2)", toString(*t));
 		EXPECT_EQ("v1 + v2", toLuaScript(t));
 
 		t = builder.mul(t,builder.sub(t,a));
-		EXPECT_EQ("int.mul(int.add(v1, v2), int.sub(int.add(v1, v2), v1))", toString(*t));
+		EXPECT_EQ("int_mul(int_add(v1, v2), int_sub(int_add(v1, v2), v1))", toString(*t));
 		EXPECT_EQ("(v1 + v2) * ((v1 + v2) - v1)", toLuaScript(t));
 
 		// test whether script is syntactically correct
@@ -76,24 +76,24 @@ namespace printer {
 		IRBuilder builder(mgr);
 
 		std::map<std::string, core::NodePtr> symbols;
-		symbols["v"] = builder.variable(builder.parseType("ref<vector<uint<4>,10>>"));
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
 		symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
 
-		auto forStmt = analysis::normalize(builder.parseStmt(
-			"for(int<4> k = 0 .. 10) {"
-			"	for(int<4> i = 0 .. 20) {"
-			"		ref<int<4>> m = var(10);"
-			"		for(int<4> j = 0 .. 30) {"
-			"			v[i] = m;"
-			"           x = x + 1;"
-			"		}"
-			"	}"
-			"}", symbols).as<ForStmtPtr>());
+		auto forStmt = analysis::normalize(builder.parseStmt(R"(
+			for(int<4> k = 0 .. 10) {
+				for(int<4> i = 0 .. 20) {
+					decl ref<int<4>> m = var(10);
+					for(int<4> j = 0 .. 30) {
+						v[i] = *m;
+			           x = x + 1;
+					}
+				}
+			})", symbols).as<ForStmtPtr>());
 
 
 		string script = toLuaScript(forStmt);
 		EXPECT_PRED2(containsSubString, script, "(10 - 1)");
-		EXPECT_PRED2(containsSubString, script, "v1[v3] = v4");
+		EXPECT_PRED2(containsSubString, script, "v1[v3] = (v4)");
 		EXPECT_PRED2(containsSubString, script, "v2 = (v2) + 1");
 
 		// test whether script is syntactically correct

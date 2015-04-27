@@ -64,7 +64,10 @@
 
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/static_vars.h"
+
+#include "insieme/core/parser3/ir_parser.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -110,7 +113,8 @@ namespace {
 	    utils::set::PointerSet<VariablePtr> usedVars;
 	};
 
-	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
+	std::vector<VariablePtr> getReachingVariables(const core::NodePtr& root) {
+        assert_true(root) << " no root node";
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
@@ -139,33 +143,34 @@ ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 	return Program::get(manager, entryPoints);
 }
 
-
 // ---------------------------- Parser Integration -----------------------------------
 
 NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse(manager, code, true, symbols);
+	return parser3::parse_any(manager, code, true, symbols);
 }
 
 TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_type(manager, code, true, symbols);
+	return parser3::parse_type(manager, code, true, symbols);
 }
 
 ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_expr(manager, code, true, symbols);
+	return parser3::parse_expr(manager, code, true, symbols);
 }
 
 StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_stmt(manager, code, true, symbols);
+	return parser3::parse_stmt(manager, code, true, symbols);
 }
 
 ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_program(manager, code, true, symbols);
+	return parser3::parse_program(manager, code, true, symbols);
 }
 
-vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
-	return parser::parse_addresses(manager, code, true, symbols);
+vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser3::parse_addresses_statement(manager, code, true, symbols);
 }
-
+vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser3::parse_addresses_program(manager, code, true, symbols);
+}
 
 // ---------------------------- Standard Nodes -----------------------------------
 
@@ -194,7 +199,6 @@ IntValuePtr IRBuilder::intValue(int value) const {
 UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 	return UIntValue::get(manager, value);
 }
-
 
 // ---------------------------- Convenience -------------------------------------
 
@@ -967,9 +971,15 @@ BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& c
 	return bindExpr(type, parameters(params), call);
 }
 
-JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const ExpressionPtr& defaultExpr) const {
+JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const ExpressionPtr& body) const {
 	GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
-	return jobExpr(type, threadNumRange, declarationStmts(localDecls), defaultExpr);
+	return jobExpr(type, threadNumRange, body);
+}
+
+JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& rangeLowerBound, const ExpressionPtr& rangeUpperBound, const ExpressionPtr& body) const {
+	GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+	const ExpressionPtr threadNumRange  = getThreadNumRange(rangeLowerBound, rangeUpperBound);
+	return jobExpr(type, threadNumRange, body);
 }
 
 namespace {
@@ -991,8 +1001,7 @@ JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
 	ExpressionPtr jobBody =
 			(isJobBody(stmt))?stmt.as<ExpressionPtr>():transform::extractLambda(manager, stmt);
 
-	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads),
-			vector<DeclarationStmtPtr>(), jobBody);
+	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads), jobBody);
 }
 
 MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
@@ -1092,7 +1101,7 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
-	std::vector<VariablePtr>&& args = getRechingVariables(body);
+	std::vector<VariablePtr>&& args = getReachingVariables(body);
 
     core::TypeList argsType;
     VariableList params;

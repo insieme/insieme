@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -63,34 +63,34 @@ namespace lang {
 		//supported operators according to: http://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
 	
 		// binary operators (+, -, *, /, %, &, |, ^)
-		LANG_EXT_LITERAL(SIMDAdd, "simd.add",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDSub, "simd.sub",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDMul, "simd.mul",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDDiv, "simd.div",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDMod, "simd.mod",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDAnd, "simd.and",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDOr, "simd.or",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDXor, "simd.xor",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDLShift, "simd.lshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDRShift, "simd.rshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDAdd, "simd_add",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDSub, "simd_sub",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDMul, "simd_mul",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDDiv, "simd_div",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDMod, "simd_mod",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDAnd, "simd_and",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDOr, "simd_or",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDXor, "simd_xor",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDLShift, "simd_lshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDRShift, "simd_rshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
 
 		// comparison operators are supported from gcc 4.7
 		// GCC 4.6.3 does NOT support them
 		//comparison operators: ==, !=, <, <=, >, >=. 
-		LANG_EXT_LITERAL(SIMDEq, "simd.eq",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDNe, "simd.ne",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDLt, "simd.lt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDLe, "simd.le",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDGt, "simd.gt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDGe, "simd.ge",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDEq, "simd_eq",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDNe, "simd_ne",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDLt, "simd_lt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDLe, "simd_le",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDGt, "simd_gt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDGe, "simd_ge",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
 
 		//unary operators ~, -
-		LANG_EXT_LITERAL(SIMDNot, "simd.not",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDMinus, "simd.minus",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDNot, "simd_not",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
+		LANG_EXT_LITERAL(SIMDMinus, "simd_minus",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
 		
 		//LANG_EXT_LITERAL(SIMDInitUniform,    	"simd.init.uniform",    	"('elem, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
-		LANG_EXT_LITERAL(SIMDInitUndefined,  	"simd.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
-		LANG_EXT_LITERAL(SIMDInitPartial, 		"simd.init.partial",		"(list<'elem>, intTypeParam<#n>) -> simd<vector<'elem,#n>>")
+		LANG_EXT_LITERAL(SIMDInitUndefined,  	"simd_init_undefined",  	"(type<'elem>, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
+		LANG_EXT_LITERAL(SIMDInitPartial, 		"simd_init_partial",		"(list<'elem>, intTypeParam<#n>) -> simd<vector<'elem,#n>>")
 
 		/*
 

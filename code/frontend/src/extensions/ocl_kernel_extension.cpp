@@ -48,12 +48,12 @@
 #include "insieme/frontend/clang.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/extensions/insieme_pragma_extension.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/utils/error_report.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
 
 namespace fe = insieme::frontend;
 
@@ -435,14 +435,36 @@ insieme::core::ProgramPtr OclKernelExtension::IRVisit(insieme::core::ProgramPtr&
 }
 
 
-FrontendExtension::flagHandler OclKernelExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+FrontendExtension::flagHandler OclKernelExtension::registerFlag(boost::program_options::options_description& options) {
     //register omp flag
-    optParser("fopenclkernel", "", flagActivated, "OpenCL Kernel support");
+    options.add_options()("fopenclkernel", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "OpenCL Kernel support");
     //create lambda
     auto lambda = [&](const ConversionJob& job) {
         return flagActivated;
     };
     return lambda;
+}
+
+boost::optional<std::string> OclKernelExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+	bool missingIPE = true;
+	bool missingFEC = true;
+	for(auto extPtr : setup.getExtensions()) {
+		if(dynamic_cast<insieme::frontend::extensions::InsiemePragmaExtension*>(extPtr.get())) {
+			missingIPE = false;
+		}
+		if(dynamic_cast<insieme::frontend::extensions::FrontendCleanupExtension*>(extPtr.get())) {
+			missingFEC = false;
+		}
+	}
+
+	if(missingFEC || missingIPE) {
+		std::string warning("OclKernelExtension needs:");
+		warning.append(missingIPE ? " InsiemePragmaExtension" : "");
+		warning.append(missingFEC ? " FrontendCleanupExtension" : "");
+		return boost::optional<std::string>(warning);
+	}
+
+	return boost::optional<std::string>();
 }
 
 

@@ -280,3 +280,19 @@ if (NOT MEMORY_CHECK_SETUP)
 	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif (NOT MEMORY_CHECK_SETUP)
 
+# query the number of cores to control parallelism
+include(ProcessorCount)
+ProcessorCount(NB_PROCESSORS)
+
+if(MSVC)
+	set(NB_PROCESSORS "1")
+endif()
+
+#ninja job pools setting
+if( NOT DEFINED(CBA_JOBS) OR (CBA_JOBS) )
+	set(CBA_JOBS "1" CACHE STRING "number of parallel cba unit test jobs")
+endif()
+math(EXPR ALL_JOBS "${NB_PROCESSORS} + 2")
+set_property(GLOBAL PROPERTY JOB_POOLS cba_jobs=${CBA_JOBS} all_jobs=${ALL_JOBS} )
+set(CMAKE_JOB_POOL_COMPILE all_jobs)
+set(CMAKE_JOB_POOL_LINK all_jobs)

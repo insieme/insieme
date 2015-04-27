@@ -320,7 +320,7 @@ stmtutils::StmtWrapper Cpp11Extension::VisitCXXForRangeStmt(const clang::CXXForR
 	return res;
 }
 
-FrontendExtension::flagHandler Cpp11Extension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+FrontendExtension::flagHandler Cpp11Extension::registerFlag(boost::program_options::options_description& options) {
     //create lambda
     auto lambda = [&](const ConversionJob& job) {
         return (job.getStandard() == ConversionSetup::Standard::Cxx11);

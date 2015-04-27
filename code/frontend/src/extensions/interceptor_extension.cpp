@@ -38,9 +38,21 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
+#include <boost/program_options.hpp>
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
+
+	boost::optional<std::string> InterceptorExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+		//interceptor needs to be the first extension in the extension list
+		if(setup.getExtensions().begin()->get() != this) {
+			return boost::optional<std::string>("InterceptorExtension should be the first Extension");
+		}
+		
+		//prerequisites are met - no prerequisite is missing
+		return boost::optional<std::string>();
+	}
 
 	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 
@@ -273,7 +285,7 @@ namespace extensions {
         return irExpr;
     }
 
-    FrontendExtension::flagHandler InterceptorExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+   FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
         //create lambda
         auto lambda = [&](const ConversionJob& job) {
             //check if the default activated plugins have been deactivated manually

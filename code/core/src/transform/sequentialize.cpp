@@ -244,7 +244,7 @@ namespace transform {
 				}
 
 
-				ExpressionPtr branch = job->getDefaultExpr();
+				ExpressionPtr branch = job->getBody();
 
 				// convert selected branch into a lazy expression
 				//  - handle getThreadNum / getThreadGroupSize
@@ -254,13 +254,7 @@ namespace transform {
 				// reduce level in get-thread-group-size by 1, replace expressions representing 0
 				branch = lowerThreadIDs(branch);
 
-				// NOTE: this assumes that every local variable is only bound once
-				VarExprMap map;
-				for_each(job->getLocalDecls().getElements(), [&](const DeclarationStmtPtr& decl) {
-					map[decl->getVariable()] = decl->getInitialization();
-				});
-
-				return replaceVarsGen(manager, branch, map);
+				return branch;
 			}
 
 			StatementPtr visitStatement(const StatementPtr& curStmt) {

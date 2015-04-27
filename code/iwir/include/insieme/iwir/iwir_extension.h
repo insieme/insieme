@@ -56,20 +56,20 @@ class IWIRExtension : public core::lang::Extension {
 
 public:
 
-	LANG_EXT_LITERAL(StringToInt, "string.to.int", "(ref<array<char,1>> ,intTypeParam<#b>) -> int<#b>");
-	LANG_EXT_LITERAL(StringToDouble, "string.to.double", "(ref<array<char,1>> ,intTypeParam<#b>) -> real<#b>");
-	LANG_EXT_LITERAL(StringToBool, "string.to.bool", "(ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringToInt, "string_to_int", "(ref<array<char,1>> ,intTypeParam<#b>) -> int<#b>");
+	LANG_EXT_LITERAL(StringToDouble, "string_to_double", "(ref<array<char,1>> ,intTypeParam<#b>) -> real<#b>");
+	LANG_EXT_LITERAL(StringToBool, "string_to_bool", "(ref<array<char,1>>) -> bool");
 
-	LANG_EXT_LITERAL(StringLt, "string.lt", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
-	LANG_EXT_LITERAL(StringLe, "string.le", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
-	LANG_EXT_LITERAL(StringGt, "string.gt", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
-	LANG_EXT_LITERAL(StringGe, "string.ge", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
-	LANG_EXT_LITERAL(StringEq, "string.eq", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
-	LANG_EXT_LITERAL(StringNe, "string.ne", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringLt, "string_lt", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringLe, "string_le", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringGt, "string_gt", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringGe, "string_ge", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringEq, "string_eq", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
+	LANG_EXT_LITERAL(StringNe, "string_ne", "(ref<array<char,1>>, ref<array<char,1>>) -> bool");
 
 	//file<string> to differentiate string and a filepath-string
 	LANG_EXT_TYPE(File, "file<ref<array<char,1>>>");
-	LANG_EXT_LITERAL(FilePath, "file.path", "(file<ref<array<char,1>>>) -> ref<array<char,1>>");
+	LANG_EXT_LITERAL(FilePath, "file_path", "(file<ref<array<char,1>>>) -> ref<array<char,1>>");
 
 	bool isFileType(const core::TypePtr type) const {
 		assert_true(type);
@@ -81,9 +81,9 @@ public:
 				gt->getIntTypeParameter().empty()
 			   ); 
 	}
-	LANG_EXT_LITERAL(BoolToString, "bool.to.string", "(bool) -> ref<array<char,1>>");
-	LANG_EXT_LITERAL(IntToString, "int.to.string", "(int<4>) -> ref<array<char,1>>");
-	LANG_EXT_LITERAL(DoubleToString, "double.to.string", "(real<8>) -> ref<array<char,1>>");
+	LANG_EXT_LITERAL(BoolToString, "bool_to_string", "(bool) -> ref<array<char,1>>");
+	LANG_EXT_LITERAL(IntToString, "int_to_string", "(int<4>) -> ref<array<char,1>>");
+	LANG_EXT_LITERAL(DoubleToString, "double_to_string", "(real<8>) -> ref<array<char,1>>");
 };
 
 class CollectionTypeExtension : public core::lang::Extension {
@@ -100,60 +100,60 @@ class CollectionTypeExtension : public core::lang::Extension {
 		: core::lang::Extension(manager) {}
 
 public:
-	LANG_EXT_TYPE(Collection, "collection<'elemTy>");
-	LANG_EXT_LITERAL(CollectionSize,	"collection.size", "(collection<'elemTy>) -> int<4>");
-	LANG_EXT_LITERAL(ShortestCollection,	"shortest.collection", "(list<ref<collection<'elemTy>>>) -> int<4>");
-	//LANG_EXT_LITERAL(ShortestCollection,	"shortest.collection", "(vector<collection<'elemTy>, #l>) -> int<4>");
-	LANG_EXT_LITERAL(RefCollectionSize, "ref.collection.size", "(ref<collection<'elemTy>>) -> int<4>");
-	LANG_EXT_LITERAL(RefCollectionAppend, "ref.collection.append", "(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>");
-	LANG_EXT_LITERAL(CollectionAt,		"collection.at", "(collection<'elemTy>, int<4>) -> 'elemTy");
-	LANG_EXT_LITERAL(RefCollectionAt,	"ref.collection.at", "(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>");
+	LANG_EXT_TYPE   (Collection,            "collection<'elemTy>");
+	LANG_EXT_LITERAL(CollectionSize,	    "collection_size", "(collection<'elemTy>) -> int<4>");
+	LANG_EXT_LITERAL(ShortestCollection,	"shortest_collection", "(list<ref<collection<'elemTy>>>) -> int<4>");
+	//LANG_EXT_LITERAL(ShortestCollection,	"shortest_collection", "(vector<collection<'elemTy>, #l>) -> int<4>");
+	LANG_EXT_LITERAL(RefCollectionSize,     "ref_collection_size", "(ref<collection<'elemTy>>) -> int<4>");
+	LANG_EXT_LITERAL(RefCollectionAppend,   "ref_collection_append", "(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>");
+	LANG_EXT_LITERAL(CollectionAt,		    "collection_at", "(collection<'elemTy>, int<4>) -> 'elemTy");
+	LANG_EXT_LITERAL(RefCollectionAt,	    "ref_collection_at", "(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>");
 
 	LANG_EXT_DERIVED(RefLinkLoopElement,
-			"(ref<collection<'elemTy>> from, int<4> it, ref<'elemTy> to)->unit {"
-			"	let at = lit(\"ref.collection.at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
-			"	to = * at(from, it);"
+			"lambda (ref<collection<'elemTy>> from, int<4> it, ref<'elemTy> to)->unit {"
+			"	let at = expr lit(\"ref_collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
+			"	to = *( at(from, it));"
 			"}");
 
 	LANG_EXT_DERIVED(LinkLoopElement,
-			"(collection<'elemTy> from, int<4> it, ref<'elemTy> to)->unit {"
-			"	let at = lit(\"collection.at\":(collection<'elemTy>, int<4>) -> 'elemTy);"
+			"lambda (collection<'elemTy> from, int<4> it, ref<'elemTy> to)->unit {"
+			"	let at = expr lit(\"collection_at\":(collection<'elemTy>, int<4>) -> 'elemTy);"
 			"	to = at(from, it);"
 			"}");
 
 
 	LANG_EXT_DERIVED(RefLinkUnion, 
-			"(ref<'elemTy> from, ref<collection<'elemTy>> to)->unit {"
-			"	let append = lit(\"ref.collection.append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
+			"lambda (ref<'elemTy> from, ref<collection<'elemTy>> to)->unit {"
+			"	let append = expr lit(\"ref.collection_append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
 			"	to = * append(to, *from);"
 			"}");
 
 	LANG_EXT_DERIVED(LinkUnion, 
-			"('elemTy from, ref<collection<'elemTy>> to)->unit {"
-			"	let append = lit(\"ref.collection.append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
-			"	to = * append(to, from);"
+			"lambda ('elemTy from, ref<collection<'elemTy>> to)->unit {"
+			"	let append = expr lit(\"ref.collection_append\":(ref<collection<'elemTy>>, 'elemTy) -> ref<collection<'elemTy>>);"
+			"	to = *(append(to, from));"
 			"}");
 
 
 	LANG_EXT_DERIVED(RefLinkBasic, 
-			"(ref<'a> from, ref<'a> to)->unit {"
+			"lambda (ref<'a> from, ref<'a> to)->unit {"
 			"	to = *from;"
 			"}");
 
 	LANG_EXT_DERIVED(LinkBasic, 
-			"('a from, ref<'a> to)->unit {"
+			"lambda ('a from, ref<'a> to)->unit {"
 			"	to = from;"
 			"}");
 
 	LANG_EXT_DERIVED(RefLinkParallelOutput,
-			"(ref<'elemTy> from, ref<collection<'elemTy>> to, int<4> it)->unit {"
-			"	let at = lit(\"ref.collection.at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
+			"lambda (ref<'elemTy> from, ref<collection<'elemTy>> to, int<4> it)->unit {"
+			"	let at = expr lit(\"ref.collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
 			"	at(to, it) = *from;"
 			"}");
 
 	LANG_EXT_DERIVED(LinkParallelOutput,
-			"('elemTy from, ref<collection<'elemTy>> to, int<4> it)->unit {"
-			"	let at = lit(\"ref.collection.at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
+			"lambda ('elemTy from, ref<collection<'elemTy>> to, int<4> it)->unit {"
+			"	let at = expr lit(\"ref.collection_at\":(ref<collection<'elemTy>>, int<4>) -> ref<'elemTy>);"
 			"	at(to, it) = from;"
 			"}");
 

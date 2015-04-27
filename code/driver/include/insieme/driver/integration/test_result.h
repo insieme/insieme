@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,10 +50,14 @@ namespace integration {
 	enum SchedulingPolicy{SCHED_UNDEFINED,STATIC,DYNAMIC,GUIDED};
 
 	class TestResult {
+	public:
+		enum class ResultType { SUCCESS, FAILURE, ABORT, OMITTED };
+
+	private:
+		ResultType resType;
 
 		string stepName;
 		int retVal;
-		bool success;
 		map<string,float> metricResults;
 		map<string,float> metricDeviation;
 
@@ -64,57 +68,63 @@ namespace integration {
 		int numThreads;
 		SchedulingPolicy sched;
 	
-		bool userabort;
-
-	private:
 		friend class boost::serialization::access;		
 		template<class Archive>
-		void serialize(Archive & ar, const unsigned int version)
-		{
-		        ar & success;
-		        ar & metricResults;
-		        ar & metricDeviation;
+		void serialize(Archive & ar, const unsigned int version) {
+			ar & resType;
+			ar & metricResults;
+			ar & metricDeviation;
 			ar & output;
 			ar & errorOut;
 			ar & cmd;
 			ar & producedFiles;
 			ar & numThreads;
 			ar & sched;
-			ar & userabort;
 		}
 
 	protected:
 		map<string,string> staticResults;
 
 	public:
+		TestResult(const ResultType& resType = ResultType::SUCCESS, string stepName="", int retVal = 0, 
+				map<string,float> metricResults = map<string,float>(), const string& output="", 
+				const string& errorOut = "", const string& cmd = "",
+				std::vector<std::string> producedFiles = std::vector<std::string>(), 
+				const int& numThreads = 0, SchedulingPolicy sched = SCHED_UNDEFINED)
+			: resType(resType), stepName(stepName), retVal(retVal), metricResults(metricResults), 
+			  metricDeviation(map<string,float>()), output(output), errorOut(errorOut), cmd(cmd),
+			  producedFiles(producedFiles), numThreads(numThreads), sched(sched) { }
 
-		TestResult(string stepName="", int retVal = 0, bool success = true, map<string,float> metricResults=map<string,float>(), string output="", string errorOut="", string cmd="",
-		std::vector<std::string> producedFiles=std::vector<std::string>(),int numThreads=0,SchedulingPolicy sched=SCHED_UNDEFINED)
-			: stepName(stepName),retVal(retVal),success(success),metricResults(metricResults),metricDeviation(map<string,float>()),output(output),errorOut(errorOut),cmd(cmd),
-				producedFiles(producedFiles),numThreads(numThreads),sched(sched),userabort(false){}
-
-		static TestResult userAborted(string stepName, map<string,float> metricResults, string output="", string errorOut="", string cmd="") {
-			TestResult res(stepName, -1, false, metricResults, output, errorOut, cmd);
-			res.userabort = true;
+		static TestResult userAborted(const string& stepName) {
+			TestResult res(ResultType::ABORT, stepName, -1);
 			return res;
 		}
 
-		bool wasSuccessfull() const {
-			return success;
+		static TestResult stepOmitted(const string& stepName) {
+			TestResult res(ResultType::OMITTED, stepName, -1);
+			return res;
+		}
+
+		bool wasSuccessful() const {
+			return resType == ResultType::SUCCESS;
+		}
+
+		bool wasOmitted() const {
+			return resType == ResultType::OMITTED;
+		}
+
+		bool wasAborted() const {
+			return resType == ResultType::ABORT;
 		}
 
 		// deletes all produced files
-		void clean() const{
+		void clean() const {
 			for(const auto& cur : producedFiles) {
 				remove(cur.c_str());
 			}
 		}
 
-		operator bool() const {
-			return success;
-		}
-
-		static TestResult returnAVG(vector<TestResult> t){
+		static TestResult returnAVG(vector<TestResult> t) {
 			TestResult ret;
 			TestResult front=t.front();
 			map<string,float> frontResults=front.getMetrics();
@@ -130,8 +140,9 @@ namespace integration {
 					map<string,float> testResults=result->getMetrics();
 					
 					//check if results are comparable
-					if(frontResults.size()!=testResults.size() || front.getNumThreads() != result->getNumThreads() || front.getScheduling()!=result->getScheduling() 
-						|| !front || !(*result)){
+					if(frontResults.size()!=testResults.size() || front.getNumThreads() != result->getNumThreads()
+						|| front.getScheduling()!=result->getScheduling() || !front.wasSuccessful()
+						|| !result->wasSuccessful()) {
 						LOG(WARNING) << "Test results of a metric not comparable, no median calculated!";
 						return front;
 					}
@@ -157,7 +168,7 @@ namespace integration {
 		}
 
 
-		static TestResult returnMedian(vector<TestResult> t){
+		static TestResult returnMedian(vector<TestResult> t) {
 			TestResult ret;
 			TestResult front=t.front();
 			map<string,float> frontResults=front.getMetrics();
@@ -171,8 +182,9 @@ namespace integration {
 					map<string,float> testResults=result->getMetrics();
 					
 					//check if results are comparable
-					if(frontResults.size()!=testResults.size() || front.getNumThreads() != result->getNumThreads() || front.getScheduling()!=result->getScheduling() 
-						|| !front || !(*result)){
+					if(frontResults.size()!=testResults.size() || front.getNumThreads() != result->getNumThreads() 
+						|| front.getScheduling()!=result->getScheduling() || !front.wasSuccessful()
+						|| !result->wasSuccessful()) {
 						LOG(WARNING) << "Test results of a metric not comparable, no median calculated!";
 						return front;
 					}
@@ -182,79 +194,72 @@ namespace integration {
 				//calc median and insert into ret
 				std::sort(metricResults.begin(),metricResults.end());
 				int size=metricResults.size();
-				if(size%2!=0)
-					ret.insertMetric(metr->first,metricResults[size/2]);	
-				else
-					ret.insertMetric(metr->first,(metricResults[(size+1)/2]+metricResults[(size-1)/2])/2);	
-
+				if(size%2!=0) ret.insertMetric(metr->first,metricResults[size/2]);	
+				else ret.insertMetric(metr->first,(metricResults[(size+1)/2]+metricResults[(size-1)/2])/2);	
 			}
 
 			ret.producedFiles=front.producedFiles;
 			return ret;
 		}
 
-		string getCmd() const{
+		string getCmd() const {
 			return cmd;
 		}
 
-		string getStepName() const{
+		string getStepName() const {
 			return stepName;
 		}
 
-		int getRetVal() const{
+		int getRetVal() const {
 			return retVal;
 		}
 
-		int getNumThreads() const{
+		int getNumThreads() const {
 			return numThreads;
 		}
 
-		string getFullOutput() const{
+		string getFullOutput() const {
 			return output+errorOut;
 		}
 
-		map<string,float> getMetrics() const{
+		map<string,float> getMetrics() const {
 			return metricResults;
 		}
-
-		bool hasBeenAborted() const {
-			return userabort;
-		}
-
-		float getRuntime() const{
+		
+		float getRuntime() const {
 			return metricResults.find("walltime")->second;
 		}
 
-		float getMemory() const{
+		float getMemory() const {
 			return metricResults.find("mem")->second;
 		}
 
-		float getRuntimeDev() const{
+		float getRuntimeDev() const {
 			return metricDeviation.find("walltime")->second;
 		}
 
-		float getMemoryDev() const{
+		float getMemoryDev() const {
 			return metricDeviation.find("mem")->second;
 		}
 
-		void insertMetric(string name,float val){
+		void insertMetric(string name,float val) {
 			metricResults[name]=val;
 		}
 
-		void insertMetric(string name,float val, float dev){
+		void insertMetric(string name,float val, float dev) {
 			metricResults[name]=val;
 			metricDeviation[name]=dev;
 		}
 
-		SchedulingPolicy getScheduling() const{
+		SchedulingPolicy getScheduling() const {
 			return sched;
 		}
 
-		bool deviationAvailable() const{
+		bool deviationAvailable() const {
 			return metricResults.size()==metricDeviation.size();
 		}
 
-		string getSchedulingString() const{
+		string getSchedulingString() const {
 			if(sched==STATIC)
 				return "static";
 			if(sched==DYNAMIC)
@@ -266,9 +271,11 @@ namespace integration {
 	
 	};
 
-	class StaticResult : public TestResult{
-		public:
-		StaticResult(map<string,string> results){staticResults=results;};
+	class StaticResult : public TestResult {
+	public:
+		StaticResult(map<string,string> results) {
+			staticResults = results;
+		};
 
 		map<string,string> getStaticMetrics(){
 			return staticResults;

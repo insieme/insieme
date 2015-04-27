@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -313,7 +313,8 @@ TEST_F(MlTest, CreateDb) {
 			std::stringstream linestream(line);
 			// read the four features
 			for(size_t fid = 0; fid < nFeatures; ++fid) {
-			    EXPECT_TRUE(linestream >> buf);
+			    linestream >> buf;
+			    EXPECT_FALSE(linestream.fail());
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
 			}
 
@@ -322,16 +323,18 @@ TEST_F(MlTest, CreateDb) {
 			measurement->BindInt(2, mid);
 
 			// use first measurement column as dynamic feature
-		    EXPECT_TRUE(linestream >> buf);
-		    setup->BindInt(1, mid);
-		    setup->BindInt(2, 1);
-		    setup->BindInt(3, insieme::utils::numeric_cast<double>(buf));
-		    setup->Execute();
-		    setup->Reset();
+			linestream >> buf;
+			EXPECT_FALSE(linestream.fail());
+			setup->BindInt(1, mid);
+			setup->BindInt(2, 1);
+			setup->BindInt(3, insieme::utils::numeric_cast<double>(buf));
+			setup->Execute();
+			setup->Reset();
 
 			// read the three measurements and prepare to write into database
 			for(size_t i = 0; i < nMeasurements; ++i) {
-			    EXPECT_TRUE(linestream >> buf);
+			    linestream >> buf;
+			    EXPECT_FALSE(linestream.fail());
 			    m[i] = insieme::utils::numeric_cast<double>(buf);
 			    measurement->BindDouble(i+3, m[i]);
 			}

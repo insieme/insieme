@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -75,6 +75,12 @@ TEST(StringUtilsTest, split) {
 	EXPECT_EQ(toVector<string>(), split(""));
 }
 
+TEST(StringUtilsTest, camelcaseToUnderscore) {
+	EXPECT_EQ("hello", camelcaseToUnderscore("Hello"));
+	EXPECT_EQ("camelcase_to_underscore", camelcaseToUnderscore("camelcaseToUnderscore"));
+	EXPECT_EQ("camelcase_to_underscore", camelcaseToUnderscore("CamelcaseToUnderscore"));
+	EXPECT_EQ("camelcase_to_underscore", camelcaseToUnderscore("camelcase_to_underscore"));
+}
 
 TEST(EscapeTest, escape) {
 

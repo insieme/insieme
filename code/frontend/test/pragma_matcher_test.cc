@@ -93,7 +93,7 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions) {
 	NodeManager manager;
     std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/pragmas.c" };
     cmd::Options options = cmd::Options::parse(args);
-	options.job.frontendExtensionInit(options.job);
+	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragmas.c", options.job);
 
 	const PragmaList& pl = tu.getPragmaList();
@@ -277,7 +277,7 @@ TEST(PragmaMatcherTest, DISABLED_PragmaPositions2) {
 	NodeManager manager;
     std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/pragma2.c" };
     cmd::Options options = cmd::Options::parse(args);
-	options.job.frontendExtensionInit(options.job);
+	options.job.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/pragma2.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
@@ -354,7 +354,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	NodeManager manager;
     std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/omp_parallel.c", "-fopenmp" };
     cmd::Options options = cmd::Options::parse(args);
-	options.job.frontendExtensionInit(options.job);
+	options.job.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_parallel.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
@@ -489,7 +489,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	NodeManager manager;
     std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/omp_for.c", "-fopenmp" };
     cmd::Options options = cmd::Options::parse(args);
-	options.job.frontendExtensionInit(options.job);
+	options.job.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/omp_for.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();
@@ -631,7 +631,7 @@ TEST(PragmaMatcherTest, DISABLED_RecursiveFunctions) {
 	NodeManager manager;
     std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/rec.c"};
     cmd::Options options = cmd::Options::parse(args);
-	options.job.frontendExtensionInit(options.job);
+	options.job.frontendExtensionInit();
 
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/rec.c", options.job);
 	const PragmaList& pl = tu.getPragmaList();

@@ -319,6 +319,7 @@ namespace integration {
 			std::map<string,string> gccFlags;
 			gccFlags["use_libmath"]="-lm";
 			gccFlags["use_libpthread"]="-lpthread";
+			gccFlags["use_opencl"]="-lOpenCL";
 			gccFlags["use_omp"]="-fopenmp";
 			gccFlags["standardFlags"]="-fshow-column -Wall -lrt -pipe";
 			gccFlags["use_o3"]="-O3";
@@ -331,6 +332,7 @@ namespace integration {
 			std::map<string,string> insiemeccFlags;
 			insiemeccFlags["use_libmath"]="";
 			insiemeccFlags["use_libpthread"]="";
+			insiemeccFlags["use_opencl"]="--flib-icl -lOpenCL";
 			insiemeccFlags["use_omp"]="-fopenmp";
 			insiemeccFlags["standardFlags"]="--log-level=INFO";
 			insiemeccFlags["use_o3"]="-O3";
