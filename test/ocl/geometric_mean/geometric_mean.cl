@@ -5,9 +5,10 @@
 #pragma insieme mark
 __kernel void geo_mean(
 	__global float16* buffer,
-  __const int chunkSize, 
-  __const int length, 
-  __global float* result) 
+	__global float* result,
+	__const int chunkSize, 
+ 	__const int length
+ ) 
 { 
 	int gid = get_global_id(0);
 	
