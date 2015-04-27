@@ -136,10 +136,10 @@ TEST(DataLayout, AosToSoa) {
 //
 //	return;
 
+//	dumpPretty(code);
+
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
-
-//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -279,7 +279,7 @@ TEST(DataLayout, AosToSoa2) {
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -554,7 +554,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
