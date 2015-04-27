@@ -12,6 +12,9 @@ set(XERCES_VERSION 3.1.1)
 #PAPI - used by: driver, runtime
 set(PAPI_VERSION 5.4.0)
 
+#HWLOC - used by: runtime
+set(HWLOC_VERSION 1.7)
+
 #ISL - used by: analysis
 set(ISL_VERSION 0.10)
 
@@ -44,6 +47,13 @@ set(GTEST_VERSION 1.7.0)
 
 #BOOST - used everywhere except for runtime...
 set(BOOST_VERSION 1.50.0)
+
+#BISON - used in core
+set(BISON_VERSION 3.0.4)
+
+#FLEX - used in core
+set(FLEX_VERSION 2.5.39)
+
 
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries

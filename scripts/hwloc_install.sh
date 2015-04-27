@@ -1,7 +1,7 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=1.5
+VERSION=1.7
 CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
@@ -19,6 +19,7 @@ rm -Rf $PREFIX/ccache-$VERSION
 echo "#### Downloading HWLOC ####"
 wget -nc http://www.open-mpi.org/software/hwloc/v$VERSION/downloads/hwloc-$VERSION.tar.gz
 
+RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
 fi

@@ -31,10 +31,7 @@ endif()
 # =============================================  bison builds the parser  =====================================
 
 if(NOT MSVC) 
-	set(BISON_ROOT ${third_part_libs_home}/bison-latest)
-	FIND_PACKAGE(BISON 3.0 REQUIRED)
-
-	#FIND_PROGRAM(BISON_EXECUTABLE bison HINTS ${third_part_libs_home}/bison-latest/bin)
+	insieme_find_package(NAME BISON)
 	IF(BISON_EXECUTABLE-NOTFOUND)
 	    message(FATAL_ERROR "bisson not found")
 
@@ -64,8 +61,7 @@ if(NOT MSVC)
 
 # =============================================  flex builds the scanner  =====================================
 
-	set(FLEX_ROOT ${third_part_libs_home}/flex-latest)
-	FIND_PACKAGE(FLEX 2.5 REQUIRED)
+	insieme_find_package(NAME FLEX)
 
 	IF(FLEX_EXECUTABLE-NOTFOUND)
 	    message(FATAL_ERROR "flex not found")
@@ -108,6 +104,7 @@ target_link_libraries(insieme_core gomp)
 target_link_libraries(insieme_core insieme_utils)
 
 # lookup CUDD library
+insieme_find_package(NAME CUDD)
 target_link_libraries(insieme_core ${CUDD_LIBRARIES}) 
 target_include_directories(insieme_core PUBLIC ${CUDD_INCLUDE_DIRS} )
 

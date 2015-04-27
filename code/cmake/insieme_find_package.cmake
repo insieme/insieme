@@ -7,7 +7,7 @@ include(CMakeParseArguments)
 #	1 setting ${lib_name_uc}_ROOT (as environment var, or cmake option) to custom libray directory
 #	2 having them installed in ${THIRD_PARTY_LIBS_HOME} aka. "~/libs"
 #	3 force to install (custom, not system) library ${lib_NAME} to ${THIRD_PARTY_LIBS_HOME} (with ${lib_NAME}_FORCE_INSTALL)
-#	4 use the system one (found by cmakes find_package) if this fails we install our custom one at ${THIRD_PARTY_LIBS_HOME}
+#	4 use the system one (found by cmakes find_package) 
 #
 #	User can specify certain version of a given library "lib" with "LIB_VERSION" otherwise the
 #	version provided in default_library_configuration.cmake is taken
@@ -46,7 +46,7 @@ macro(insieme_find_package)
 	endif()
 
 	#we test if we find the requested library (at the suggested lib_ROOT) if we do not find it we install it our own
-	find_package(${lib_NAME} ${${lib_name_uc}_VERSION} EXACT COMPONENTS ${lib_COMPONENTS})
+	find_package(${lib_NAME} ${${lib_name_uc}_VERSION} COMPONENTS ${lib_COMPONENTS})
    
 	#we didn't find library at any of the given options:
 	#	${lib_NAME}_ROOT

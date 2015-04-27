@@ -112,7 +112,7 @@ endif()
 
 # find HWloc package
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
-find_package(Hwloc)
+insieme_find_package(NAME Hwloc)
 if (Hwloc_FOUND)
 	add_definitions(-DIRT_USE_HWLOC)
 	# I tried to do this as it is supposed to be done, but CMake sucks
