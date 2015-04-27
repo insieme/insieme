@@ -15,10 +15,11 @@ if [ -d $PREFIX/hwloc-$VERSION ]; then
   exit 0
 fi
 
-rm -Rf $PREFIX/ccache-$VERSION
+rm -Rf $PREFIX/hwloc-$VERSION
 echo "#### Downloading HWLOC ####"
 wget -nc http://www.open-mpi.org/software/hwloc/v$VERSION/downloads/hwloc-$VERSION.tar.gz
 
+RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
 fi
@@ -28,7 +29,7 @@ cd hwloc-$VERSION
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
-echo "#### Building CCache ####"
+echo "#### Building Hwloc ####"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/hwloc-$VERSION
 make -j $SLOTS
 
@@ -38,7 +39,7 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-echo "#### Installing CCache ####"
+echo "#### Installing Hwloc ####"
 make install 
 
 rm $PREFIX/hwloc-latest
