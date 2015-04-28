@@ -95,6 +95,13 @@ endif()
 
 # find HWloc package
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
+
+#TODO Q'N'D fix -- we only check third_part_libs_home/hwloc-latest nothing else - fix to give more
+#flexibility
+if( EXISTS ${third_part_libs_home}/hwloc-latest AND IS_DIRECTORY ${third_part_libs_home}/hwloc-latest)
+	set(HWLOC_ROOT ${third_part_libs_home}/hwloc-latest)
+endif()
+
 find_package(Hwloc)
 if (Hwloc_FOUND)
 	add_definitions(-DIRT_USE_HWLOC)

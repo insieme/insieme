@@ -541,19 +541,18 @@ namespace {
 				// ------------------ Update variable names within kernel core -------------------
 
 				// exchange variables within core
-                // Map first: internal_variable - second: external_variable in the kernel
+				// Map first: internal_variable - second: external_variable in the kernel
 				VariableMap&& map = mapBodyVars(kernel);
-                //std::cout << "MAP " << map << std::endl;
+				//std::cout << "MAP " << map << std::endl;
 
-                // collect map mapping external variables to their address spaces (local, global ...)
+				// collect map mapping external variables to their address spaces (local, global ...)
 				AddressSpaceMap varMap = getAddressSpaces(core.as<core::LambdaExprPtr>(), map);
-                //std::cout << "VARMAP " << varMap << std::endl;
+				//std::cout << "VARMAP " << varMap << std::endl;
 
 				// Separate variable map into local variable declarations and parameters
 				VariableMap localVars;
 				core::NodeMap  parameters;
 				core::NodeMap  arguments;
-
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
                         			core::VariablePtr var = cur.second.as<core::VariablePtr>();
@@ -562,7 +561,7 @@ namespace {
 						}
 						auto pos = varMap.find(var);
 						if (pos != varMap.end()) {
-                            // create a new variable with the right address space
+							// create a new variable with the right address space
 							var = builder.variable(extensions.getType(pos->second, var->getType()), cur.first.as<core::VariablePtr>()->getId());
 							// add the unwrap in front of the variable to maintain the correct semantic
 							parameters.insert(std::make_pair(cur.first, extensions.unWrapExpr(var)));
@@ -572,13 +571,13 @@ namespace {
 							arguments.insert(std::make_pair(cur.first, var));
 						}
 					} else {
-                        // we are in the case of local variables, for example:
+						// we are in the case of local variables, for example:
 						// cur.first  => v86
 						// cur.second => ref.var(undefined(vector<int<4>,258>
 
-                        // build a local variable
+						// build a local variable
 						core::VariablePtr var = builder.variable(extensions.getType(AddressSpace::LOCAL, cur.first->getType()), cur.first->getId());
-                        // create a wrapper expression to use in the declaration later..
+						// create a wrapper expression to use in the declaration later..
 						core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
 						localVars.insert(std::make_pair(var, value));
 
@@ -605,8 +604,11 @@ namespace {
 
 				//lets build a new function type and replace it
 				core::TypeList typeList;
-				for(auto param : core.as<core::LambdaExprPtr>()->getParameterList()) {
-					typeList.push_back(param->getType());
+				core::VariableList varList;
+				auto paramList = core.as<core::LambdaExprPtr>()->getParameterList();
+				for(auto it = paramList->begin(); it != paramList->end()-2; ++it) {
+					typeList.push_back(it->getType());
+					varList.push_back((*it).as<core::VariablePtr>());
 				}
 				auto oldFunType = core.as<core::LambdaExprPtr>()->getFunctionType();
 				auto newFunType = builder.functionType(typeList, builder.getLangBasic().getUnit());
@@ -658,6 +660,9 @@ namespace {
 						static_pointer_cast<const core::CompoundStmt>(kernel->getBody())->getStatements()[0])->getVariable();
 				BuildInReplacer replacer(manager, globalSizeVar, localSizeVar, numGroupVar);
 				core = static_pointer_cast<const core::Statement>(core->substitute(manager, replacer));
+				//update the core. remove two params at the end
+				core::ParametersPtr newParams = builder.parameters(varList);
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, paramList, newParams, false));
 
 				// ------------------------- Replace IR convert version to convert builtin --------------
 				//   decl ref<vector<uint<1>,4>> v34 = ( var(fun(vector<real<4>,4> v46, type<uint<1>> v47){
@@ -682,13 +687,14 @@ namespace {
 				});
 				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, nodeMap, false));
 
-                //LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
-                //std::cout << "Core After: " << core::printer::PrettyPrinter(core) << std::endl;
+				//LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
+				//std::cout << "Core After: " << core::printer::PrettyPrinter(core) << std::endl;
 
 				// ------------------ Create resulting lambda expression -------------------
 
 				// build parameter list
-				vector<core::VariablePtr> params = vector<core::VariablePtr>(kernel->getParameterList().begin(), kernel->getParameterList().end()-2);
+				vector<core::VariablePtr> params = vector<core::VariablePtr>(core.as<core::LambdaExprPtr>()->getParameterList().begin(), 
+						core.as<core::LambdaExprPtr>()->getParameterList().end());
 
 				for_each(params, [&](core::VariablePtr& cur) {
 					core::VariablePtr res = builder.variable(extensions.getType(varMap[cur], cur->getType()), cur->getId());
@@ -701,14 +707,13 @@ namespace {
 				vector<core::TypePtr> paramTypes = ::transform(params, [](const core::VariablePtr& cur) { return cur->getType(); });
 
 				core::FunctionTypePtr kernelType = builder.functionType(paramTypes, basic.getUnit());
-				core::LambdaExprPtr newKernel = builder.lambdaExpr(kernelType, params, core);
+				core::LambdaExprPtr newKernel = builder.lambdaExpr(kernelType, params, core.as<core::LambdaExprPtr>()->getBody());
 
 
 				if (core::annotations::hasAttachedName(kernel->getLambda())) {
 					auto name = core::annotations::getAttachedName(kernel->getLambda());
 		                    	core::annotations::attachName(newKernel->getLambda(),name);
                 		}
-
 				res = builder.callExpr(kernelType, extensions.kernelWrapper, toVector<core::ExpressionPtr>(newKernel));
 
 				// dump the kernel if outFilePath is set

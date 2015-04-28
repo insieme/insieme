@@ -649,8 +649,8 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 //		pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)))), var("index", pattern::any)), pattern::var("member", pattern::any)));
 
 		pattern::TreePattern assignArrayAccess = declOrAssignment(pattern::var("target", pattern::any), pattern::var("arrayAccess", structArrayElementAccess));
-		pattern::TreePattern structAccess = pattern::var("call", optionalDeref(pirp::refDeref(pirp::arrayRefElem1D(pirp::refDeref(pattern::var("structAccess",
-				pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))))), var("index", pattern::any)))));
+		pattern::TreePattern structAccess = pattern::var("call", pirp::refDeref(pirp::arrayRefElem1D(optionalDeref(pattern::var("structAccess",
+				pattern::aT(pattern::var("oldVar", pattern::atom(oldVar))))), var("index", pattern::any))));
 		pattern::TreePattern assignStructAccess = declOrAssignment(pattern::var("target",
 				pirp::variable(pattern::aT(pirp::refType(pirp::structType(*pattern::any))))), structAccess);
 

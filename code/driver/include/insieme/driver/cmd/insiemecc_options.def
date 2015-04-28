@@ -64,7 +64,8 @@ FLAG("fnodefaultextensions", 	noDefaultExtensions,	    "Disables all frontend ex
 
 PARAMETER("backend",				backend,					std::string,						"runtime", 							"backend selection")
 PARAMETER("outfile,o", 				outFile, 					frontend::path, 					"a.out", 							"output file")
-PARAMETER("std", 					standard,					std::string, 						"auto", 							"language standard")
+PARAMETER("std",				standard,					std::vector<std::string>,		std::vector<std::string>({"auto"}),	"language standard")
+PARAMETER("x",					language,					std::string,				"undefined",				"language setting")
 
 OPTION("cross-compile-dir", 	crossCompileDir, 			std::string, 						std::string(),						"set system header directory for cross compilation.")
 OPTION("definitions,D", 		definitions,				std::vector<std::string>, 			std::vector<std::string>(), 		"definition(s)")
