@@ -76,24 +76,8 @@
 void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation* impl, irt_lw_data_item *startup_params);
 
 // globals
-irt_tls_key irt_g_error_key;
-irt_mutex_obj irt_g_error_mutex;
-irt_mutex_obj irt_g_exit_handler_mutex;
-irt_tls_key irt_g_worker_key;
-uint32 irt_g_worker_count;
-volatile uint32 irt_g_degree_of_parallelism;
-irt_mutex_obj irt_g_degree_of_parallelism_mutex;
-uint32 irt_g_active_worker_count;
-irt_mutex_obj irt_g_active_worker_mutex;
-struct _irt_worker **irt_g_workers;
-bool irt_g_rt_is_initialized;
-irt_runtime_behaviour_flags irt_g_runtime_behaviour;
-#ifndef IRT_MIN_MODE
-mqd_t irt_g_message_queue;
-#endif
-#ifdef IRT_USE_HWLOC
-hwloc_topology_t irt_g_hwloc_topology;
-#endif // IRT_USE_HWLOC
+#define __EXTERN
+#include "irt_globals.inc"
 
 IRT_CREATE_LOCKED_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS)
 IRT_CREATE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS)

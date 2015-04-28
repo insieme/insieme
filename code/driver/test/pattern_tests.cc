@@ -170,7 +170,7 @@ using namespace driver::integration;
 
 		// create pattern
 		auto x = var("x");
-		auto use = !irp::declarationStmt() & step(x);
+		auto use = (!irp::declarationStmt()) & step(x);
 		auto pattern = aT(irp::declarationStmt(x)) & aT(use) & all(var("y", use));
 
 
@@ -197,8 +197,8 @@ using namespace driver::integration;
 
 		// create pattern
 		auto x = var("x");
-		auto use = !irp::declarationStmt() & step(x);
-		auto pattern = aT(irp::declarationStmt(x)) & !aT(!irp::declarationStmt(x) & step(x));
+		auto use = (!irp::declarationStmt()) & step(x);
+		auto pattern = aT(irp::declarationStmt(x)) & !aT((!irp::declarationStmt(x)) & step(x));
 
 
 		// load input code

@@ -55,38 +55,35 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 
 	DeclarationStmtPtr a = builder.declarationStmt(builder.variable(gen.getInt4()));
 
-//	std::map<string,core::NodePtr> symbols;
-//	symbols["a"] = a;
-//	StatementPtr body = builder.parseStmt(
-//			"{"
-//			"a = 7;"
-//			"}"
-//	);
-
-	StatementPtr stmt = builder.parseStmt(
-		"{"
-		"	let fun = (int<4> arg)->int<4> { return arg + 1; };"
-		"	let lfun = lit(\"lfun\":(ref<int<4>>)->int<4>);"
-		"	let rfun = (ref<int<4>> arg)->int<4> { return *arg;};"
-		""
-		"	ref<int<4>> a;"
-		"	ref<int<4>> b;"
-		"	ref<int<4>> c;"
-		"	ref<int<4>> d;"
-		"	ref<int<4>> e;"
-		"	ref<int<4>> f;"
-		"	ref<int<4>> g;"
-		"	{"
-		"		a = 7;"
-		"		fun(*b);"
-		"		rfun(c);"
-		"		fun(fun(*d));"
-		"		fun(rfun(e));"
-		"		lfun(f);"
-		"		rfun(var(lfun(g)));"
-		"	}"
-		"}"
+	StatementPtr stmt = builder.parseStmt( R"(
+		{
+			let fun = lambda (int<4> arg)->int<4> { return arg + 1; };
+			let lfun = expr lit("lfun":(ref<int<4>>)->int<4>);
+			let rfun = lambda (ref<int<4>> arg)->int<4> { return *arg;};
+		
+			decl ref<int<4>> a;
+			decl ref<int<4>> b;
+			decl ref<int<4>> c;
+			decl ref<int<4>> d;
+			decl ref<int<4>> e;
+			decl ref<int<4>> f;
+			decl ref<int<4>> g;
+			{
+				a = 7;
+				fun(*b);
+				rfun(c);
+				fun(fun(*d));
+				fun(rfun(e));
+				lfun(f);
+				rfun(var(lfun(g)));
+			}
+		}
+        )"
 	);
+
+//	std::cout << " ***************************** " << std::endl;
+//	dumpPretty(stmt);
+//	std::cout << " ***************************** " << std::endl;
 
 	StatementPtr body;
 	visitDepthFirstPrunable(stmt, [&](const CompoundStmtPtr& cs) {
@@ -97,9 +94,7 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 		return false;
 	});
 
-//	std::cout << " ***************************** " << std::endl;
-//	dumpPretty(body);
-//	std::cout << " ***************************** " << std::endl;
+    EXPECT_TRUE(body);
 
 	NodePtr call = builder.createCallExprFromBody(body, gen.getUnit());
 	NodePtr embeddedCall = transform::replaceAll(mgr, stmt, body, call);
@@ -144,8 +139,8 @@ TEST(BuilderTest, CreateCallExprFromBody1) {
 	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.getZero(builder.refType(gen.getInt4())) );
 	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.getZero(builder.refType(gen.getInt4())) );
 
-	core::StatementPtr assignStmt1 = builder.parseStmt("var1 = var3;", symbols);
-	core::StatementPtr assignStmt2 = builder.parseStmt("var4 = var2;", symbols);
+	core::StatementPtr assignStmt1 = builder.parseStmt("var1 = *var3;", symbols);
+	core::StatementPtr assignStmt2 = builder.parseStmt("var4 = *var2;", symbols);
 
 	//body with 2 decl stmts and usage of 4 variables
 	core::StatementList bodyStmts;

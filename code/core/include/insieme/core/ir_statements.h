@@ -404,45 +404,6 @@ namespace core {
 
 
 
-	// ------------------------------------- Declaration Statement List -----------------------------------
-
-	/**
-	 * The accessor associated to a list of declaration statements.
-	 */
-	IR_LIST_NODE_ACCESSOR(DeclarationStmts, Support, Declarations, DeclarationStmt)
-	};
-
-	/**
-	 * A node type representing a list of declaration statements.
-	 */
-	IR_NODE(DeclarationStmts, Support)
-	protected:
-
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
-		}
-
-	public:
-
-		/**
-		 * This static factory method allows to construct a node representing a list
-		 * of declaration statements.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param decls the list of declarations to be included
-		 * @return the requested instance managed by the given manager
-		 */
-		static DeclarationStmtsPtr get(NodeManager& manager, const vector<DeclarationStmtPtr>& decls) {
-			return manager.get(DeclarationStmts(convertList(decls)));
-		}
-	};
-
-
-
-
 	// ---------------------------------------- Compound Statement ------------------------------
 
 	/**

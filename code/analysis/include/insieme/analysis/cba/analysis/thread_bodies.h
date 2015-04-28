@@ -196,7 +196,7 @@ namespace cba {
 					if (bodies.find(job) != bodies.end()) continue;
 
 					// register body reference
-					auto curBodySet = cba.getVar(C, job.getCreationPoint()->getDefaultExpr(), job.getContext());
+					auto curBodySet = cba.getVar(C, job.getCreationPoint()->getBody(), job.getContext());
 					bodies[job] = curBodySet;
 					inputs.push_back(curBodySet);
 					changed = true;

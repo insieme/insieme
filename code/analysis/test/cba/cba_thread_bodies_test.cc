@@ -60,11 +60,9 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
-				"	spawn {"
-				"		x = 15;"
-				"	};"
+				"	spawn x = 15;"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -77,7 +75,7 @@ namespace cba {
 
 		auto res = analysis.getValuesOf(code[1], T);
 		ASSERT_EQ(1u, res.size());
-		EXPECT_EQ("{body@0-1-2-3-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]}", toString(res));
+		EXPECT_EQ("{body@0-1-2-2-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]}", toString(res));
 		EXPECT_TRUE(res.begin()->getBody().isa<CallExprPtr>());
 	}
 
@@ -90,11 +88,11 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
 				"	parallel(job {"
 				"		x = 15;"
-				"	});"
+				"	} );"
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -112,8 +110,8 @@ namespace cba {
 		EXPECT_EQ(2u, res.size());
 		auto resStr = toString(res);
 
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-3-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-3-2::[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-2-2::[[0,0],[<1,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-2-2-2::[[0,0],[<1,[0,0],1>,<0,[0,0],0>]]");
 
 //		createDotDump(analysis);
 	}
@@ -129,12 +127,12 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
-				"	auto j1 = task { x = 1; };"
-				"	auto j2 = task { x = 2; };"
+				"	decl auto j1 = task { x = 1; };"
+				"	decl auto j2 = task { x = 2; };"
 				"	"
-				"	auto t = parallel((c)?j1:j2);"
+				"	decl auto t = parallel((c)?j1:j2);"
 				"	sync t;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
@@ -153,8 +151,8 @@ namespace cba {
 		EXPECT_EQ(2u, res.size());
 		auto resStr = toString(res);
 
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
-		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 
 
 		auto res2 = analysis.getValuesOf(code[4], T);
@@ -177,13 +175,13 @@ namespace cba {
 		auto in = builder.parseStmt(
 				"{"
 				"	let int = int<4>;"
-				"	ref<int> x = var(12);"
+				"	decl ref<int> x = var(12);"
 				"	"
-				"	auto j1 = task { x = 1; };"
-				"	auto j2 = task { x = 2; };"
+				"	decl auto j1 = task { x = 1; };"
+				"	decl auto j2 = task { x = 2; };"
 				"	"
 				"	parallel((c)?j1:j2);"
-				"	sync;"
+				"	syncAll;"
 				"}", symbols
 		).as<CompoundStmtPtr>();
 
@@ -202,8 +200,8 @@ namespace cba {
 		EXPECT_EQ(2u, res.begin()->size());
 		auto resStr = toString(res);
 
-		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
-		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-3-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-1-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
+		EXPECT_PRED2(containsSubString, resStr, "body@0-2-1-2-2::[[0,0],[<3,[0,0],0>,<0,[0,0],0>]]");
 
 //		createDotDump(analysis);
 	}

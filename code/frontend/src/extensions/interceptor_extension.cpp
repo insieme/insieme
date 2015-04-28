@@ -38,6 +38,8 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/frontend/utils/name_manager.h"
 
+#include <boost/program_options.hpp>
+
 namespace insieme {
 namespace frontend {
 namespace extensions {
@@ -283,7 +285,7 @@ namespace extensions {
         return irExpr;
     }
 
-    FrontendExtension::flagHandler InterceptorExtension::registerFlag(insieme::driver::cmd::detail::OptionParser& optParser) {
+   FrontendExtension::flagHandler InterceptorExtension::registerFlag(boost::program_options::options_description& options) {
         //create lambda
         auto lambda = [&](const ConversionJob& job) {
             //check if the default activated plugins have been deactivated manually

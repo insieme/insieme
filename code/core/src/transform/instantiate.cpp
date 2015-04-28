@@ -42,6 +42,7 @@
 #include "insieme/core/transform/address_mapper.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 namespace insieme {
 namespace core {
@@ -49,34 +50,32 @@ namespace transform {
 
 
 namespace {
-	template<class VarTypePtr, class ConcreteTypePtr, class VarTypeAddress>
 	class TypeInstantiator : public SimpleNodeMapping {
+	public:
+		enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
+
 	private:
-	    std::function<bool(const NodePtr& node)> skip;
+		InstantiationOption opt;
+		std::function<bool(const NodePtr& node)> skip;
 
-		template<class T>
-		static bool containsType(const TypePtr& t) {
-			return visitDepthFirstOnceInterruptible(t, [](const T& i) {
-				return true;
-			}, true, true);
-		}
-
-		template<class T>
-		static vector<vector<VarTypeAddress>> collectTypeParamList(const T& parameterTypes) {
-			vector<vector<VarTypeAddress>> ret;
-			for(const auto& param : parameterTypes) {
-				auto cur = vector<VarTypeAddress>();
-				visitDepthFirst(NodeAddress(param), [&](const VarTypeAddress& i) {
-					cur.push_back(i);
-				}, true, true);
-				ret.push_back(cur);
-			}
-			return ret;
+		LambdaExprPtr generateSubstituteLambda(NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
+			// using the derived mapping, we generate a new lambda expression with instantiated type params
+			// tricky: we apply the same mapping recursively on the *new* body
+			auto builder = IRBuilder(nodeMan);
+			auto funType = funExp->getFunctionType();
+			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, true, skip)->substitute(nodeMan, *this);
+			auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, true, skip);
+			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
+				return core::transform::replaceAllGen(nodeMan, t, nodeMap, true, skip);
+			});
+			auto newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
+			utils::migrateAnnotations(funExp, newLambda);
+			return newLambda;
 		}
 
 	public:
-	    TypeInstantiator(std::function<bool(const NodePtr& node)>
-                skip = [](const NodePtr& node){ return false; } ) : skip(skip) { }
+		TypeInstantiator(InstantiationOption opt, std::function<bool(const NodePtr& node)>
+			skip = [](const NodePtr& node){ return false; } ) : opt(opt), skip(skip) { }
 
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) override {
 			auto& nodeMan = ptr->getNodeManager();
@@ -85,48 +84,38 @@ namespace {
 			// but a variable type param in the lambda which is called
 			if(ptr.isa<CallExprPtr>()) {
 				auto call = ptr.as<CallExprPtr>();
+				auto fun = call->getFunctionExpr();
 				auto args = call->getArguments();
-				if(std::any_of(args.cbegin(), args.cend(), [&](const ExpressionPtr& expr) {
-					return containsType<ConcreteTypePtr>(expr->getType());
-				})) {
-					auto fun = call->getFunctionExpr();
-					//This is the place where the skipper acts.
-					//If we find a node that should not be touched
-					//we just return the unmodified node.
-                    if(skip(fun)) return ptr;
-					if(fun.isa<LambdaExprPtr>()) {
-						auto funExp = fun.as<LambdaExprPtr>();
-						auto funType = funExp->getFunctionType();
-						if(containsType<VarTypePtr>(funType)) {
-							auto variableTypeAddrList = collectTypeParamList(funType->getParameterTypeList());
 
-							// we have gathered the addresses of variable type pointers within each parameter
-							// now we try to derive a mapping for each of them to a concrete instantiation from the call site
-							NodeMap nodeMap;
-							for(unsigned paramIndex = 0; paramIndex < variableTypeAddrList.size(); ++paramIndex) {
-								auto paramAddr = variableTypeAddrList[paramIndex];
-								auto argTypePtr = call->getArgument(paramIndex)->getType();
-								for(auto&& addr : paramAddr) {
-									auto mappedAddr = addr.switchRootAndType(argTypePtr);
-									nodeMap.insert(std::make_pair(addr.getAddressedNode(), mappedAddr.getAddressedNode()));
-								}
-							}
-							//std::cout << "THE MAP: " << nodeMap << std::endl;
+				// if we find a node that should not be touched we just return the unmodified node
+				if(skip(fun)) return ptr;
 
-							// using the derived mapping, we generate a new lambda expression with instantiated type params
-							// tricky: we apply the same mapping recursively on the *new* body
-							auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, true, skip)->substitute(nodeMan, *this);
-							auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, true, skip);
-							auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
-								return core::transform::replaceAllGen(nodeMan, t, nodeMap, true, skip);
-							});
-							auto newLambdaExp = builder.lambdaExpr(newFunType, newParamList, newBody);
+				if(fun.isa<LambdaExprPtr>()) {
+					// possibly do early check here and skip deriving of var instantiation
+					auto funExp = fun.as<LambdaExprPtr>();
+					auto funType = funExp->getFunctionType();
 
-							auto newCall = builder.callExpr(newLambdaExp, call->getArguments());
-							utils::migrateAnnotations(call, newCall);
-							return newCall;
+					core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(nodeMan, call);
+					NodeMap nodeMap;
+					if(opt == InstantiationOption::TYPE_VARIABLES || opt == InstantiationOption::BOTH) nodeMap.insertAll(map->getMapping());
+					if(opt == InstantiationOption::INT_TYPE_PARAMS || opt == InstantiationOption::BOTH) nodeMap.insertAll(map->getIntTypeParamMapping());
+					if(nodeMap.empty()) return ptr->substitute(nodeMan, *this);
+
+					auto newLambdaExp = generateSubstituteLambda(nodeMan, funExp, nodeMap);
+
+					// handle higher order functions by performing replacements in arguments which are lambda expressions
+					ExpressionList newArgs;
+					std::transform(args.cbegin(), args.cend(), std::back_inserter(newArgs), [&](const ExpressionPtr& t) -> ExpressionPtr {
+						if(t.isa<LambdaExprPtr>()) {
+							auto le = t.as<LambdaExprPtr>();
+							return generateSubstituteLambda(nodeMan, le, nodeMap);
 						}
-					}
+						return t;
+					});
+
+					auto newCall = builder.callExpr(newLambdaExp, newArgs);
+					utils::migrateAnnotations(call, newCall);
+					return newCall;
 				}
 			}
 			return ptr->substitute(nodeMan, *this);
@@ -135,17 +124,18 @@ namespace {
 }
 
 NodePtr instantiateIntTypeParams(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
-	TypeInstantiator<VariableIntTypeParamPtr, ConcreteIntTypeParamPtr, VariableIntTypeParamAddress> inst(skip);
+	TypeInstantiator inst(TypeInstantiator::InstantiationOption::INT_TYPE_PARAMS, skip);
 	return inst.map(root);
 }
 
 NodePtr instantiateTypeVariables(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
-	TypeInstantiator<TypeVariablePtr, TypePtr, TypeVariableAddress> inst(skip);
+	TypeInstantiator inst(TypeInstantiator::InstantiationOption::TYPE_VARIABLES, skip);
 	return inst.map(root);
 }
 
 NodePtr instantiateTypes(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
-	return instantiateTypeVariables(instantiateIntTypeParams(root, skip), skip);
+	TypeInstantiator inst(TypeInstantiator::InstantiationOption::BOTH, skip);
+	return inst.map(root);
 }
 
 } // end namespace transform

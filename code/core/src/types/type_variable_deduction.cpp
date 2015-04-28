@@ -540,7 +540,6 @@ namespace types {
 
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
-
 		const bool debug = false;
 
 		// check length of parameter and arguments
@@ -591,7 +590,7 @@ namespace types {
 			cur = argumentMapping.applyForward(internalManager, cur);
 
 			// second: apply variable renaming
-			TypeMapping mapping = renamer.mapVariables(internalManager, cur);
+			TypeMapping mapping = renamer.mapVariables(internalManager, cur, parameterMapping);
 			if (!mapping.empty()) argumentRenaming.push_back(mapping);
 			cur = mapping.applyForward(internalManager, cur);
 		}
@@ -644,6 +643,7 @@ namespace types {
 
 			// also apply argument renaming backwards ..
 			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+				var = it2->applyBackward(manager, var).as<TypeVariablePtr>();
 				substitute = it2->applyBackward(manager, substitute);
 			}
 
@@ -655,6 +655,7 @@ namespace types {
 
 			// also apply argument renaming backwards ..
 			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+				var = it2->applyBackward(manager, var).as<VariableIntTypeParamPtr>();
 				substitute = it2->applyBackward(manager, substitute);
 			}
 

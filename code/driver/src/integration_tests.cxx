@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -301,7 +301,7 @@ int main(int argc, char** argv) {
 			for(const auto& step : list) {
 				auto res = step.run(setup, cur, runner);
 				results.push_back(std::make_pair(step.getName(), res));
-				if (!res || res.hasBeenAborted()) {
+				if(!res.wasOmitted() && !res.wasSuccessful()) {
 					failedSteps[cur] = res;
 					success = false;
 					break;
@@ -319,6 +319,9 @@ int main(int argc, char** argv) {
 				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
 				for(const auto& curRes : results) {
+					// skip omitted steps
+					if(curRes.second.wasOmitted()) continue;
+
 					if(options.mockrun){
 						std::cout << colorize.blue() << curRes.first<< std::endl;
 						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
@@ -335,7 +338,7 @@ int main(int argc, char** argv) {
 						line << "# " << curRes.first << boost::format(colOffset) % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory()/1024/1024))
 								<< " #" << colorize.reset() << "\n";
 
-						if(curRes.second.wasSuccessfull()){
+						if(curRes.second.wasSuccessful()){
 							std::cout << line.str();
 						} else {
 							std::cout << colorize.red() << line.str();
@@ -344,13 +347,13 @@ int main(int argc, char** argv) {
 							std::cout << curRes.second.getFullOutput();
 						}
 
-						success = success && curRes.second.wasSuccessfull();
+						success = success && curRes.second.wasSuccessful();
 					}
 					if(!options.no_clean) {
 						curRes.second.clean();
 					}
 
-					if (curRes.second.hasBeenAborted()) {
+					if (curRes.second.wasAborted()) {
 						panic = true;
 					}
 				}

@@ -153,7 +153,7 @@ namespace pattern {
 	    IRBuilder builder(mgr);
 
 	    core::NodePtr code = builder.normalize(builder.parseExpr("1+2"));
-	    ASSERT_EQ("int.add(1, 2)", toString(*code));
+	    ASSERT_EQ("int_add(1, 2)", toString(*code));
 
 	    // create a set of tree variables
 	    Variable typeF = "typeF";
@@ -161,8 +161,8 @@ namespace pattern {
 	    Variable arg1 = "arg1";
 	    Variable arg2 = "arg2";
 
-	    auto pattern   = irp::callExpr(typeR, irp::literal(typeF,"int.add"), arg1 << arg2);
-	    auto generator = irg::callExpr(typeR, irg::literal(typeF,"int.sub"), arg1 << arg2);
+	    auto pattern   = irp::callExpr(typeR, irp::literal(typeF,"int_add"), arg1 << arg2);
+	    auto generator = irg::callExpr(typeR, irg::literal(typeF,"int_sub"), arg1 << arg2);
 
 	    // check that the pattern is right
 	    ASSERT_TRUE(pattern.matchPointer(code));
@@ -171,7 +171,7 @@ namespace pattern {
 	    Rule rule(pattern, generator);
 	    auto out = rule(code);
 	    ASSERT_TRUE(out);
-	    EXPECT_EQ("int.sub(1, 2)", toString(*out));
+	    EXPECT_EQ("int_sub(1, 2)", toString(*out));
 	}
 
 
@@ -207,12 +207,12 @@ namespace pattern {
 
 		auto c2 = builder.parseStmt(
 				"{"
-				"	int<4> a = 12;"
-				"	int<4> b = 14;"
+				"	decl int<4> a = 12;"
+				"	decl int<4> b = 14;"
 				"	1+2;"
 				"	1*2+3;"
 				"	12 * (2*3+1) + (a*b+3);"
-				"	int<4> c = a * b + 123;"
+				"	decl int<4> c = a * b + 123;"
 				"}"
 		);
 
@@ -221,7 +221,7 @@ namespace pattern {
 		Rule r2(p2,g2);
 		NodePtr res = r2.fixpoint(c2);
 
-		EXPECT_EQ("{int<4> v1 = 12; int<4> v2 = 14; int.add(1, 2); mad(1, 2, 3); mad(12, mad(2, 3, 1), mad(v1, v2, 3)); int<4> v3 = mad(v1, v2, 123);}", toString(*res));
+		EXPECT_EQ("{int<4> v1 = 12; int<4> v2 = 14; int_add(1, 2); mad(1, 2, 3); mad(12, mad(2, 3, 1), mad(v1, v2, 3)); int<4> v3 = mad(v1, v2, 123);}", toString(*res));
 
 
 	}
@@ -277,8 +277,8 @@ namespace pattern {
 		auto b = builder.deref(builder.refVar(a));
 		auto c = builder.deref(builder.refNew(a));
 
-		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc.stack); ref.assign(v2, v1); return v2;}}(1))", toString(*b));
-		EXPECT_EQ("ref.deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref.alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc.heap); ref.assign(v2, v1); return v2;}}(1))", toString(*c));
+		EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc_stack); ref_assign(v2, v1); return v2;}}(1))", toString(*b));
+		EXPECT_EQ("ref_deref(rec v0.{v0=fun('a v1) {ref<'a> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc_heap); ref_assign(v2, v1); return v2;}}(1))", toString(*c));
 		EXPECT_EQ("1", toString(*r.fixpoint(b)));
 		EXPECT_EQ("1", toString(*r.fixpoint(c)));
 		EXPECT_EQ("1", toString(*r.fixpointNested(b)));

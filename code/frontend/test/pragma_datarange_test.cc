@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -72,7 +72,7 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
     std::string fileName = CLANG_SRC_DIR "/inputs/insieme_datarange.c";
     std::vector<std::string> argv = { "compiler",  fileName };
     cmd::Options options = cmd::Options::parse(argv);
-    options.job.frontendExtensionInit(options.job);
+    options.job.frontendExtensionInit();
     TranslationUnit tu(manager, fileName, options.job);
 
 	EXPECT_NE(tu.pragmas_begin(), tu.pragmas_end());

@@ -42,7 +42,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/transform/datalayout/aos_to_taos.h"
-#include "insieme/transform/datalayout/parallelSecTransform.h"
+#include "insieme/transform/datalayout/parallel_sec_transform.h"
 #include "insieme/transform/datalayout/datalayout_utils.h"
 
 #include "insieme/utils/annotation.h"
@@ -150,9 +150,10 @@ void AosToTaos::transform() {
 //	std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
 //}
 //assert_fail();
-		replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
+		const ExprAddressMap kernelVarReplacements =
+				replaceStructsInJobs(varReplacements, newStructType, oldStructType, toTransform, allocPattern, replacements);
 
-		doReplacements(replacements, aosToTaosAllocTypeUpdate);
+		doReplacements(kernelVarReplacements, replacements, aosToTaosAllocTypeUpdate);
 
 		NodeMap tilesize;
 		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);
@@ -332,7 +333,7 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 	return builder.structExpr(values);
 }
 
-void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+const ExprAddressMap AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
 			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
 //	ExpressionSet varsToPropagate;
@@ -344,6 +345,7 @@ void AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const Stru
 
 	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
 	psa.transform();
+	return psa.getKernelVarReplacements();
 #if 0
 	ExpressionMap jobReplacements;
 	IRBuilder builder(mgr);

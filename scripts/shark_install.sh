@@ -27,6 +27,8 @@ cd Shark
 # patch shark
 patch -p0 < ../patches/svm.cpp.patch
 patch -p0 < ../patches/svm.h.patch
+patch -p0 < ../patches/fileutil.patch
+patch -p0 < ../patches/randomvector.patch
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 

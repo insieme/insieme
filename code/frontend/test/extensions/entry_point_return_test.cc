@@ -38,7 +38,6 @@
 
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
-#include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/frontend/frontend.h"

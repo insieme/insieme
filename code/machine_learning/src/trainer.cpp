@@ -143,7 +143,7 @@ double Trainer::getMaximum(const std::string& param) {
 	{
 		std::stringstream err;
 		err << "\nUnable to read maximum value of column " << param ;
-		LOG(ERROR) << err << std::endl;
+		LOG(ERROR) << err.str() << std::endl;
 		exception.Show();
 		throw ml::MachineLearningException(err.str());
 	}
@@ -169,7 +169,7 @@ double Trainer::getMinimum(const std::string& param) {
 	{
 		std::stringstream err;
 		err << "\nUnable to read maximum value of column " << param ;
-		LOG(ERROR) << err << std::endl;
+		LOG(ERROR) << err.str() << std::endl;
 		exception.Show();
 		throw ml::MachineLearningException(err.str());
 	}

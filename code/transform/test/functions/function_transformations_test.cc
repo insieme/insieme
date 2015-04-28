@@ -82,11 +82,11 @@ namespace functions {
 
 		// create a recursive function
 		auto lambda = builder.parseExpr(
-				"let f = (int<4> x)->int<4> {"
+				"let f = lambda (int<4> x)->int<4> {"
 				"	if (x==0) return 0;"
 				"	if (x==1) return 1;"
 				"	return f(x-1) + f(x-2);"
-				"} in f"
+				"}; f"
 		).as<core::LambdaExprPtr>();
 
 		ASSERT_TRUE(lambda);
@@ -112,9 +112,9 @@ namespace functions {
 
 			// create a recursive function
 			auto lambda = builder.parseExpr(
-					"let f = (int<4> x)->int<4> {"
+					"let f = lambda(int<4> x)->int<4> {"
 					"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
-					"} in f"
+					"}; f"
 			).as<core::LambdaExprPtr>();
 
 			ASSERT_TRUE(lambda);

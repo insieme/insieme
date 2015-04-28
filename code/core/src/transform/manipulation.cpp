@@ -1450,7 +1450,7 @@ ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	NodeManager& mgr = job.getNodeManager();
 
 	// also, there must not be a re-distribute call => can not be supported
-	if (analysis::contains(job->getDefaultExpr(), mgr.getLangBasic().getRedistribute())) return fail;
+	if (analysis::contains(job->getBody(), mgr.getLangBasic().getRedistribute())) return fail;
 
 	/**
 	 * Converts a job of the format
@@ -1471,9 +1471,7 @@ ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	// prepare utilities
 	IRBuilder builder(mgr);
 
-	// start list of statements by declarations A
 	StatementList stmts;
-	::copy(job.getLocalDecls(), std::back_inserter(stmts));
 
 	// create pfor-call
 	{
@@ -1495,7 +1493,7 @@ ExpressionPtr tryToPFor(const JobExprPtr& job) {
 		stmts.push_back(limitDecl);
 
 		// get job body
-		ExpressionPtr jobBody = job->getDefaultExpr();
+		ExpressionPtr jobBody = job->getBody();
 
 		// create and add pfor call
 		stmts.push_back(builder.pfor(jobToPforBody(jobBody, end), start, end, step));

@@ -53,10 +53,10 @@
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/extensions/ocl_kernel_extension.h"
+#include "insieme/frontend/extensions/insieme_pragma_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
-
-#include "insieme/driver/cmd/insiemecc_options.h"
 
 #include "insieme/utils/logging.h"
 
@@ -189,16 +189,15 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	//create call to convert the kernel file
-	std::vector<std::string> argv {"kernelcompiler", "-fopenclkernel", path};
-    for(auto incl : includeDirs) {
-        std::string newIncl = "-I"+incl.string();
-        argv.push_back(newIncl);
-    }
-	driver::cmd::Options opt = driver::cmd::Options::parse(argv);
-	opt.job.setDefinition("INSIEME", "");
+	frontend::ConversionJob job(path, includeDirs);
+	job.setUnparsedOptions( vector<string>( {"--fopenclkernel"} ) );
+	//CAREFUL OCLKERNEL EXTENSION NEEDS INSIEME PRAGMA EXTENSION FOR KERNELFILE PRAGMA
+	job.registerFrontendExtension<frontend::extensions::InsiemePragmaExtension>();
+	job.registerFrontendExtension<frontend::extensions::OclKernelExtension>();
+	job.registerFrontendExtension<frontend::extensions::FrontendCleanupExtension>();
 
 //	kernelJob.setFiles(toVector<frontend::path>(path));
-	return opt.job.execute(builder.getNodeManager(), false);
+	return job.execute(builder.getNodeManager(), false);
 }
 
 /* Assumptions:
@@ -310,16 +309,11 @@ ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr
 	ExpressionPtr argument;
 	// check for local memory arguments
 	if(*memberTy == *gen.getUInt8()) {
-		VariablePtr localMemArg = builder.variable(argTy);
-		TypePtr elemTy = argTy.as<RefTypePtr>()->getElementType().as<ArrayTypePtr>()->getElementType();
-		ExpressionPtr lmSize = builder.div(tupleMemberAccess, builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(elemTy)));
-		DeclarationStmtPtr localMemDecl = builder.declarationStmt(localMemArg, builder.refVar(builder.callExpr(gen.getArrayCreate1D(),
-				builder.getTypeLiteral(elemTy), lmSize)));
-		body.push_back(localMemDecl);
-
-		argument = localMemArg;
+		argument = tupleMemberAccess;
 	} else {
+
 		argument = builder.callExpr(gen.getArrayRefElem1D(), tupleMemberAccess, builder.castExpr(gen.getUInt8(), builder.intLit(0)));
+
 
 		TypePtr refArtTy = builder.refType(argTy);
 		if(argument->getType() != refArtTy) {// e.g. argument of kernel is an ocl vector type
@@ -328,7 +322,6 @@ ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr
 		}
 		argument = utils::tryDeref(argument);
 	}
-
 	return argument;
 }
 
@@ -372,7 +365,6 @@ for_each(kernelFunctions, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr>
 	TypeList kernelType = kernelTypes[k];
 
 	/* body of a newly created function which replaces clNDRangeKernel. It contains
-	 *  Declarations of the local memory arguments
 	 *  the kernel call
 	 *  return 0;
 	 */
@@ -386,7 +378,6 @@ for_each(kernelFunctions, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr>
 		TypePtr memberTy = kernelType.at(i);
 		ExpressionPtr tupleMemberAccess = builder.callExpr(memberTy, gen.getTupleMemberAccess(), utils::removeDoubleRef(innerKernel),
 				builder.literal(gen.getUInt8(), toString(i)), builder.getTypeLiteral(memberTy));
-
 		ExpressionPtr argument = handleArgument(argTy, memberTy, tupleMemberAccess, body);
 
 		innerArgs.push_back(argument);
@@ -709,7 +700,7 @@ void KernelReplacer::inlineKernelCode() {
 
 		replacements[ndrangeKernel["enrk"].getValue()] = newKernelCall;
 
-//	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(kernelCall);
+//	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(newKernelCall);
 	});
 
 	prog = transform::replaceAll(mgr, prog, replacements, false);

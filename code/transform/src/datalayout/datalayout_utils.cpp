@@ -133,7 +133,7 @@ bool sameAsDecl(const ExpressionAddress var, const ExpressionAddress decl) {
 	return false;
 }
 
-core::ExpressionAddress getDeclaration(const ExpressionAddress& var) {
+ExpressionAddress getDeclaration(const ExpressionAddress& var) {
 	if(!var)
 		return ExpressionAddress();
 
@@ -148,6 +148,10 @@ core::ExpressionAddress getDeclaration(const ExpressionAddress& var) {
 		return ExpressionAddress();
 
 	return insieme::analysis::cba::getDefinitionPoint(va);
+}
+
+bool equalVariablesAsInC(const ExpressionAddress& a, const ExpressionAddress& b) {
+	return getDeclaration(a) == getDeclaration(b);
 }
 
 NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
@@ -471,7 +475,7 @@ bool containsType(const TypePtr& contains, const TypePtr type) {
 }
 
 pattern::TreePattern optionalDeref(const pattern::TreePattern& mayToBeDerefed) {
-	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
+	return pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed) | mayToBeDerefed;
 }
 
 bool compareVariables(const ExpressionAddress& a, const ExpressionAddress& b) {
@@ -487,7 +491,6 @@ bool compareVariables(const ExpressionAddress& a, const ExpressionAddress& b) {
 
 	return a == getDeclaration(b);
 }
-
 
 } // datalayout
 } // transform

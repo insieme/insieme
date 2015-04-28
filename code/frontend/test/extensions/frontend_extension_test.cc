@@ -185,9 +185,9 @@ public:
         return tu;
 	}
 
-	virtual frontend::extensions::FrontendExtension::flagHandler registerFlag(driver::cmd::detail::OptionParser& optParser) {
-        optParser("fstate1", "", fstate1, "Set state of Extension to 1");
-        optParser("fstate2", "", fstate2, "Set state of Extension to 2");
+    virtual frontend::extensions::FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options) {
+        options.add_options()("fstate1", boost::program_options::value<bool>(&fstate1)->implicit_value(true), "Set state of Extension to 1");
+        options.add_options()("fstate2", boost::program_options::value<bool>(&fstate2)->implicit_value(true), "Set state of Extension to 2");
         auto lambda = [&](const frontend::ConversionJob& job) {
             if(fstate1)
                 setState(1);
@@ -212,13 +212,15 @@ using namespace insieme::driver;
 TEST(ClangStage, Initialization) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
-	options.job.frontendExtensionInit(options.job);
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/main.c", "--fnodefaultextensions" };
+
+    cmd::Options options = cmd::Options::parse(args);
+    //explicitly add extension without flag! - needs frontendExtensionInit call
+    options.job.registerFrontendExtension<ClangTestExtension>();
 
 	// register the frontend extension
+	EXPECT_EQ(0, options.job.getExtensions().size());
+	options.job.frontendExtensionInit();
 	EXPECT_EQ(1, options.job.getExtensions().size());
 }
 
@@ -229,10 +231,11 @@ TEST(ClangStage, Initialization) {
 TEST(ClangStage, Conversion) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<ClangTestExtension>();
+
 
 	EXPECT_FALSE(typeVisited);
 	EXPECT_FALSE(stmtVisited);
@@ -256,10 +259,11 @@ TEST(ClangStage, Conversion) {
 TEST(PreClangStage, Macros) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<ClangTestExtension>();
+	options.job.frontendExtensionInit();
 
     //execute job
     auto program = options.job.execute(mgr);
@@ -277,10 +281,11 @@ TEST(PreClangStage, Macros) {
 TEST(PreClangStage, HeaderInjection) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<ClangTestExtension>();
+    options.job.frontendExtensionInit();
 
     //execute job
     auto program = options.job.execute(mgr);
@@ -300,10 +305,11 @@ TEST(PreClangStage, HeaderInjection) {
 TEST(PreClangStage, HeaderKidnapping) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "-fstate1" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "-fstate1" , "--fnodefaultextensions"};
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<ClangTestExtension>();
+    options.job.frontendExtensionInit();
 
     //execute job
     auto program = options.job.execute(mgr);
@@ -322,10 +328,12 @@ TEST(PreClangStage, HeaderKidnapping) {
 TEST(PostClangStage, IRVisit) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c" , "--fnodefaultextensions"};
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<ClangTestExtension>();
+	options.job.frontendExtensionInit();
+
 
     //execute job
     progVisited = false;
@@ -346,10 +354,11 @@ TEST(PostClangStage, IRVisit) {
 TEST(PragmaHandlerTest, PragmaTest) {
     //initialization
     insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "-fstate2" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<ClangTestExtension>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "-fstate2" , "--fnodefaultextensions" };
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<ClangTestExtension>();
+    options.job.frontendExtensionInit();
 
     //execute job
     //checks also if handling for stmts that are
@@ -414,16 +423,21 @@ struct DeclVistors : public insieme::frontend::extensions::FrontendExtension {
         return nullptr;
     }
 
+    virtual flagHandler registerFlag(boost::program_options::options_description& option) {
+    	return [&](const ConversionJob& job) { return true; };
+    }
+
 };
 
 
 TEST(DeclsStage, MatchVisits) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/decls.cpp" };
-    cmd::detail::OptionParser optionParser = cmd::Options::parse(args);
-    optionParser.res.job.registerFrontendExtension<DeclVistors>(optionParser);
-    cmd::Options options = optionParser;
+    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/decls.cpp", "--fnodefaultextensions" };
+
+    cmd::Options options = cmd::Options::parse(args);
+    options.job.registerFrontendExtension<DeclVistors>();
+    options.job.frontendExtensionInit();
 
 	varsPre  = varsPost = 0;
 	funcsPre = funsPost = 0;

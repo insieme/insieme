@@ -33,12 +33,19 @@ macro ( add_unit_test case_name )
 			)
 		endif(NOT MSVC)
 	else(USE_VALGRIND)
-		# use half the NB_PROCESSORS count to parallelize tests
-		if(NOT NB_PROCESSORS)
-			# default = 8 if system query failed
-			set(NB_PROCESSORS 8)
-		endif(NOT NB_PROCESSORS)
-		math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 4")
+		# if the user did not define the number of parallel driver integration test runs
+		if(NOT DRIVER_INTEGRATION_JOBS)
+			# use half the NB_PROCESSORS count to parallelize tests
+			if(NOT NB_PROCESSORS)
+				# default = 8 if system query failed
+				set(NB_PROCESSORS 8)
+			endif()
+			math(EXPR NB_PROCESSOR_PART "${NB_PROCESSORS} / 4")
+
+			# otherwise use the number he defined
+		else()
+			set(NB_PROCESSOR_PART ${DRIVER_INTEGRATION_JOBS})
+		endif()
 		
 		# add normal test
 		# parallelize integration tests

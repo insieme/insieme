@@ -1,0 +1,17 @@
+
+unit main() {
+	
+	decl auto a = (1, 2, "hello");
+	
+	a.0;
+	a.1;
+	a.2;
+
+	decl auto r = new(a);
+	
+	r.0;
+	r.1;
+	r.2;
+	
+	r.0 = 3;	
+}

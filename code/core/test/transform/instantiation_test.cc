@@ -51,13 +51,13 @@ TEST(IntTypeParamInstantiation, Simple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = (vector<'res,#l> a) -> unit {
-			$vector<'res, #l> res;$
+		let test = lambda (vector<'res,#l> a) -> unit {
+			$decl vector<'res, #l> res;$
 		};
 
-		vector<int<4>, 8> a;
+		decl vector<int<4>, 8> a;
 		test(a);
 	}
 	)raw");
@@ -67,21 +67,21 @@ TEST(IntTypeParamInstantiation, Simple) {
 	auto result = instantiateIntTypeParams(addresses[0].getRootNode());
 	
 	auto newAddr = addresses[0].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<'res, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<'res, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 }
 
 TEST(IntTypeParamInstantiation, Return) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = $(vector<'res,#l> a) -> vector<'res,#l> {
+		let test = lambda (vector<'res,#l> a) -> vector<'res,#l> {
 			return a;
-		}$;
+		};
 
-		vector<int<4>, 8> a;
-		test(a);
+		decl vector<int<4>, 8> a;
+		$test$ (a);
 	}
 	)raw");
 
@@ -98,15 +98,15 @@ TEST(IntTypeParamInstantiation, Multiple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
-			$vector<'res, #l> res;$
-			$matrix<'res, #x, #y> res2;$
+		let test = lambda (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
+			$decl vector<'res, #l> res;$
+			$decl matrix<'res, #x, #y> res2;$
 		};
 
-		vector<int<4>, 8> a;
-		matrix<int<4>, 16, 32> b;
+		decl vector<int<4>, 8> a;
+		decl matrix<int<4>, 16, 32> b;
 		test(a, b);
 	}
 	)raw");
@@ -117,26 +117,26 @@ TEST(IntTypeParamInstantiation, Multiple) {
 
 	auto newAddrVec = addresses[0].switchRoot(result);
 	auto newAddrMat = addresses[1].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
-	EXPECT_EQ(builder.normalize(builder.parseStmt("matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
 }
 
 TEST(IntTypeParamInstantiation, Nested) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test_array = (vector<'res,#l> a) -> unit {
-			$vector<'res, #l> res;$
+		let test_array = lambda (vector<'res,#l> a) -> unit {
+			$decl vector<'res, #l> res;$
 		};
-		let test_outer = (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
+		let test_outer = lambda (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
 			test_array(a);
-			$matrix<'res, #x, #y> res2;$
+			$decl matrix<'res, #x, #y> res2;$
 		};
 
-		vector<int<4>, 8> a;
-		matrix<int<4>, 16, 32> b;
+		decl vector<int<4>, 8> a;
+		decl matrix<int<4>, 16, 32> b;
 		test_outer(a, b);
 	}
 	)raw");
@@ -147,25 +147,25 @@ TEST(IntTypeParamInstantiation, Nested) {
 
 	auto newAddrVec = addresses[0].switchRoot(result);
 	auto newAddrMat = addresses[1].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
-	EXPECT_EQ(builder.normalize(builder.parseStmt("matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
 }
 
 TEST(TypeVariableInstantiation, Simple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{
-		let test = ('a f) -> unit {
-			auto y = f;
-			let x = ('a a)->unit {
-				auto z = a; 
+		let test = lambda ('a f) -> unit {
+			decl auto y = f;
+			let x = lambda ('a a)->unit {
+				decl auto z = a; 
 				$z$; 
 			};
 			x(f);
 		};
-		int<4> x = 1;
+		decl int<4> x = 1;
 		test(x);
 	}
 	)raw");
@@ -182,17 +182,17 @@ TEST(TypeVariableInstantiation, ExpressionArgument) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{
-		let test = ('a f) -> unit {
-			auto y = f;
-			let x = ('a a)->unit {
-				auto z = a; 
+		let test = lambda ('a f) -> unit {
+			decl auto y = f;
+			let x = lambda ('a a)->unit {
+				decl auto z = a; 
 				$z$; 
 			};
 			x(f);
 		};
-		int<4> x = 1;
+		decl int<4> x = 1;
 		test(x*5);
 	}
 	)raw");
@@ -209,13 +209,13 @@ TEST(TypeInstantiation, Simple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = (vector<'res,#l> a) -> unit {
-			$vector<'res, #l> res;$
+		let test = lambda (vector<'res,#l> a) -> unit {
+			$decl vector<'res, #l> res;$
 		};
 
-		vector<int<4>, 8> a;
+		decl vector<int<4>, 8> a;
 		test(a);
 	}
 	)raw");
@@ -225,7 +225,7 @@ TEST(TypeInstantiation, Simple) {
 	auto result = instantiateTypes(addresses[0].getRootNode());
 	
 	auto newAddr = addresses[0].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 }
 
 
@@ -233,16 +233,16 @@ TEST(TypeInstantiation, NameAnnotations) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = (vector<'res,#l> a) -> unit {
-			$vector<'res, #l> res;$
-			int<4> x = 0;
+		let test = lambda (vector<'res,#l> a) -> unit {
+			$decl vector<'res, #l> res;$
+			decl int<4> x = 0;
 			$x$;
 			$res$;
 		};
 
-		vector<int<4>, 8> a;
+		decl vector<int<4>, 8> a;
 		test(a);
 	}
 	)raw");
@@ -254,7 +254,7 @@ TEST(TypeInstantiation, NameAnnotations) {
 	auto newAddr = addresses[0].switchRoot(result);
 	auto newAnnAddr = addresses[1].switchRoot(result);
 	auto newAnnAddr2 = addresses[2].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 	EXPECT_TRUE(annotations::hasAttachedName(addresses[1].getAddressedNode()));
 	EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr.getAddressedNode()));
 	EXPECT_TRUE(annotations::hasAttachedName(newAnnAddr2.getAddressedNode()));
@@ -266,13 +266,13 @@ TEST(TypeInstantiation, TypeAnnotations) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
-		let test = (vector<'res,#l> a) -> unit {
-			$vector<'res, #l> res;$
+		let test = lambda (vector<'res,#l> a) -> unit {
+			$decl vector<'res, #l> res;$
 		};
 
-		vector<int<4>, 8> a;
+		decl vector<int<4>, 8> a;
 		test(a);
 	}
 	)raw");
@@ -295,13 +295,13 @@ TEST(TypeInstantiation, AnnotationsOnCallExp) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	auto addresses = builder.parseAddresses(R"raw(
+	auto addresses = builder.parseAddressesStatement(R"raw(
 	{
-		let test = (vector<'res,#l> a) -> unit {
-			vector<'res, #l> res;
+		let test = lambda (vector<'res,#l> a) -> unit {
+			decl vector<'res, #l> res;
 		};
 
-		vector<int<4>, 8> a;
+		decl vector<int<4>, 8> a;
 		$test(a)$;
 	}
 	)raw");
@@ -318,6 +318,91 @@ TEST(TypeInstantiation, AnnotationsOnCallExp) {
 	EXPECT_TRUE(annotations::hasAttachedLocation(newAddr.getAddressedNode()));
 	EXPECT_EQ(annotations::getLocation(addresses[0].getAddressedNode()), annotations::getLocation(newAddr.getAddressedNode()));
 }
+
+TEST(TypeInstantiation, HigherOrderFunction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddressesStatement(R"raw(
+	{
+		let foo = lambda ('a v) -> 'a {
+			return $v$;
+		};
+		
+		let test = lambda (vector<'res,#l> v, ('res) -> 'res f) -> unit {
+			f(v[0]);
+		};
+		
+		decl vector<int<4>, 8> a;
+		test(a, foo);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 1);
+
+	auto result = instantiateTypes(addresses[0].getRootNode());
+
+	auto newAddr = addresses[0].switchRoot(result);
+	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>().getType());
+}
+
+/*
+TEST(InRecFunc, Simple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddressesStatement(R"raw(
+	{
+	    let x, test = lambda ('a a)->unit {
+			decl auto z = a; 
+			$z$; 
+		},
+		lambda ('a f) -> unit {
+			decl auto y = f;
+			x(f);
+		};
+		decl int<4> v = 1;
+		test(v);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 1);
+
+    dumpColor(addresses[0].getRootNode());
+
+	auto result = instantiateTypeVariables(addresses[0].getRootNode());
+		
+	auto newAddr = addresses[0].switchRoot(result);
+	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
+}
+
+TEST(InRecFunc, ExpressionArgument) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddressesStatement(R"raw(
+	{
+        let x, test= lambda ('a a)->unit {
+            decl auto z = a; 
+            $z$; 
+        },
+		lambda ('a f) -> unit {
+			decl auto y = f;
+			x(f);
+		};
+		decl int<4> v = 1;
+		test(v*5);
+	}
+	)raw");
+
+	EXPECT_EQ(addresses.size(), 1);
+
+	auto result = instantiateTypeVariables(addresses[0].getRootNode());
+
+	auto newAddr = addresses[0].switchRoot(result);
+	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
+}
+*/
 
 } // end namespace transform
 } // end namespace core

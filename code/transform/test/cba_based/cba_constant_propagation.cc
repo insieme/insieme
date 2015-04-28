@@ -57,9 +57,9 @@ namespace cba_based {
 		auto code = builder.parseStmt(
 			"{"
 			"	let int = int<4>;"
-			"	ref<int> a = var(3);"
-			"	ref<int> b = var(9 + (a * 5));"
-			"	ref<int> c;"
+			"	decl ref<int> a = var(3);"
+			"	decl ref<int> b = var(9 + (a * 5));"
+			"	decl ref<int> c;"
 			"	"
 			"	c = b * 4;"
 			"	if (c > 10) {"
