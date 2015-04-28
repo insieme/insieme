@@ -74,8 +74,8 @@ static inline void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* 
 static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
 static inline void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
 
-static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag);
-static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag);
+//static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag);
+//static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag);
 
 static const char* _irt_cl_get_device_type_string(cl_device_type type);
 static char* _irt_cl_get_name(cl_device_id* device);
@@ -107,10 +107,12 @@ static cl_ulong _irt_cl_get_max_constant_buffer_size(cl_device_id* device);
 static cl_device_local_mem_type _irt_cl_get_local_mem_type(cl_device_id* device);
 static cl_ulong _irt_cl_get_local_mem_size(cl_device_id* device);
 
+#ifdef IRT_OCL_INSTR
 static void _irt_cl_print_events_info();
+#endif
 
-static char* _irt_load_program_source (const char* filename, size_t* filesize);
-static void _irt_save_program_binary (cl_program program, const char* binary_filename);
+//static char* _irt_load_program_source (const char* filename, size_t* filesize);
+//static void _irt_save_program_binary (cl_program program, const char* binary_filename);
 static const char* _irt_error_string (cl_int err_code);
 
 void irt_ocl_print_events(){
@@ -445,6 +447,8 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* device,  irt_ocl_mem_flag 
 	buffer->device = device;
 	return buffer;
 #endif
+	IRT_ASSERT(false, IRT_ERR_OCL, "OPENCL LOCAL_MODE or REMOTE_MODE needs to be defined");
+	return NULL;
 }
 
 inline void irt_ocl_release_buffer(irt_ocl_buffer* buffer) {
@@ -1084,11 +1088,11 @@ static void _irt_cl_print_events_info() {
 * =====================================================================================
 */
 
-static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag) {
+/*static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag) {
 	return _irt_cl_profile_events(event, event_start, event, event_end, time_flag);
-}
+}*/
 
-static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag) {
+/*static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag) {
 	cl_ulong event_one_start, event_two_end;
 	cl_int err_code;
 	err_code = clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
@@ -1108,9 +1112,9 @@ static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event
 			break;
 	}
 	return time;
-}
+}*/
 
-static char* _irt_load_program_source (const char* filename, size_t* filesize) { // remember to free the returned source
+/*static char* _irt_load_program_source (const char* filename, size_t* filesize) { // remember to free the returned source
 	IRT_ASSERT(filename != NULL && filesize != NULL, IRT_ERR_OCL, "Error input parameters");
 	FILE* fp = fopen(filename, "rb");
 	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening kernel file");
@@ -1125,9 +1129,9 @@ static char* _irt_load_program_source (const char* filename, size_t* filesize) {
 	*filesize = size; // this is the size useful for create program from binary
 	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
 	return source;
-}
+}*/
 
-static void _irt_save_program_binary (cl_program program, const char* binary_filename) {
+/*static void _irt_save_program_binary (cl_program program, const char* binary_filename) {
 	IRT_ASSERT(binary_filename != NULL && program != NULL, IRT_ERR_OCL, "Error input parameters");
 	size_t size_ret;
 	cl_int err_code;
@@ -1148,7 +1152,7 @@ static void _irt_save_program_binary (cl_program program, const char* binary_fil
 	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening binary file");
 	IRT_ASSERT(fwrite (binary, 1, *binary_size, fp) ==  (size_t) *binary_size, IRT_ERR_OCL, "Error writing file");
 	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
-}
+}*/
 
 static const char* _irt_error_string (cl_int errcode) {
 	switch (errcode) {
