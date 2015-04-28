@@ -249,7 +249,7 @@ let fun000 = fun(ref<array<type000,1>> v1, ref<array<type001,1>> v164) -> unit {
 /*
     BUG: this test is deactivated since the new parser broke it, 
         the analysis is not longer valid.
-
+*/
 TEST(DataLayout, Tuple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -303,7 +303,7 @@ TEST(DataLayout, Tuple) {
 //							[ref<array<ref<array<twoElem,1>>,1>> a1 = a, ref<array<real<4>,1>> b1 = b]
 						    , local(b, a, c, local_size, global_size)
 					));
-					a[0];
+					*a[0];
 				};
 			
 				let kernelFct = lambda (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {
@@ -351,10 +351,10 @@ TEST(DataLayout, Tuple) {
 	auto x = checks::check(code);
 	EXPECT_EQ(0u, x.getErrors().size()) << x.getErrors();
 
-    std::cout << "==================================" << std::endl;
-
 	datalayout::AosToTaos att(code);
 	att.transform();
+
+//	dumpColor(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -363,10 +363,6 @@ TEST(DataLayout, Tuple) {
 		LOG(INFO) << cur << std::endl;
 	});
 
-    std::cout << "==================================" << std::endl;
-    dumpColor(code);
-    std::cout << "==================================" << std::endl;
-
 	auto y = checks::check(code);
 	EXPECT_EQ(0u, y.getErrors().size()) << y.getErrors();
 
@@ -374,7 +370,7 @@ TEST(DataLayout, Tuple) {
 	EXPECT_EQ(6, countMarshalledAccesses(code));
 	EXPECT_EQ(0, countMarshalledAssigns(code));
 }
-*/
+
 
 /*
 let type000 = struct<

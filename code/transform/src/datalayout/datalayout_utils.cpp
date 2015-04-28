@@ -475,7 +475,7 @@ bool containsType(const TypePtr& contains, const TypePtr type) {
 }
 
 pattern::TreePattern optionalDeref(const pattern::TreePattern& mayToBeDerefed) {
-	return mayToBeDerefed | pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed);
+	return pirp::refDeref(mayToBeDerefed) | pirp::scalarToArray(mayToBeDerefed) | mayToBeDerefed;
 }
 
 bool compareVariables(const ExpressionAddress& a, const ExpressionAddress& b) {

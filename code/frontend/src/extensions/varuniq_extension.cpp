@@ -45,7 +45,7 @@
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag) {
+VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), seen(0), total(0) {
 	visit(frag);
 }
 
@@ -71,26 +71,35 @@ void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, uns
 		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
 }
 
+/// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
 void VarUniqExtension::visitNode(const NodeAddress &node) {
-	//std::cout << "visiting node" << std::endl;
+	total++;
 	for (auto child: node->getChildList()) visit(child);
 }
 
-void VarUniqExtension::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	VariableAddress var=node.getAddressOfChild(0).as<VariableAddress>();
+void VarUniqExtension::visitVariable(const VariableAddress &var) {
+	total++; // seen++;
 
 	// get variable number and increase counter for given variable
-	unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
-	ctr[varid]++;
-	std::cout << "def of v" << varid << " at pos " << getVarDefinition(var) << std::endl;
+	VariableAddress def=getVarDefinition(var);
+	vuid[def]++;
+	if (def==var) {
+		seen++;
+		unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+	}
 
 	// visit children
-	for (auto child: node->getChildList()) visit(child);
+	for (auto child: var->getChildList()) visit(child);
 }
 
+/// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR() {
-	for (auto dups: ctr)
-		std::cout << "v" << dups.first << " found " << dups.second << "×" << std::endl;
+	// print some status information for debugging
+	for (auto dups: vuid)
+		std::cout << "var " << dups.first << " found " << dups.second << "×" << std::endl;
+	std::cout << "Found " << seen << " variables in " << total << " nodes." << std::endl;
+
+	// return the newly generated code
 	return frag;
 }
 

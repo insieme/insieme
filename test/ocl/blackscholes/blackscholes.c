@@ -224,7 +224,7 @@ int main(int argc, const char* argv[]) {
 		printf("Max error check: FAIL\n");
 		exit (EXIT_FAILURE);
 	} else {
-		printf("Max error check: OK\n");
+		printf("Result check: OK\n");
 	}
 #endif
 

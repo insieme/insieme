@@ -205,7 +205,7 @@ namespace cmd {
 			std::vector<frontend::path> ldpath;
 			ldpath.push_back(boost::filesystem::current_path().string());
 			if(!res.settings.libraryPaths.empty()) {
-                ldpath = res.settings.libraryPaths;
+				ldpath = res.settings.libraryPaths;
 			}
 
 			if(auto ldPath = getenv("LD_LIBRARY_PATH")) {
@@ -239,34 +239,60 @@ namespace cmd {
 			}
 
 			// insert
-			if(res.settings.standard == "auto") {
+			const std::string std = res.settings.standard.back();
+			if(res.settings.standard.size()>1) {
+				std::cerr << "Warning: Multiple standards set. Only considering last one: " << std  << "\n";
+			}
+			if(std == "auto") {
 				res.job.setStandard(frontend::ConversionSetup::Auto);
-			} else if(res.settings.standard == "c99") {
+			} else if(std == "c99") {
 				res.job.setStandard(frontend::ConversionSetup::C99);
-			} else if(res.settings.standard == "c++98") {
+			} else if(std == "c++98") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx98);
-			} else if(res.settings.standard == "c++03") {
+			} else if(std == "c++03") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx03);
-			} else if(res.settings.standard == "c++0x") {
+			} else if(std == "c++0x") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
 				assert_true(res.job.isCxx());
-			} else if(res.settings.standard == "c++11") {
+			} else if(std == "c++11") {
 				res.job.setStandard(frontend::ConversionSetup::Cxx11);
 				assert_true(res.job.isCxx());
 			} else {
-				std::cerr << "Error: Unsupported standard: " << res.settings.standard << " - supported: auto, c99, c++98, c++03, c++11\n";
+				std::cerr << "Error: Unsupported standard: " << std << " - supported: auto, c99, c++98, c++03, c++11\n";
 				res.valid = false;
 				return res;
 			}
 
-            // interceptions
+			if(res.settings.language != "undefined") {
+				if(res.settings.language == "c++") {
+					if(!res.job.isCxx()) {
+						//language should be c++ but we don't 
+						//know what standard so lets takes c++03.
+						res.job.setStandard(frontend::ConversionSetup::Cxx03);
+						std::cerr << "Warning: Conflicting language setting and standard flag. Set standard to c++03\n";
+					}
+				} else if(res.settings.language == "c") { 
+					if(res.job.isCxx()) {
+						//language should be c++ but we don't 
+						//know what standard so lets takes C99.
+						res.job.setStandard(frontend::ConversionSetup::C99);
+						std::cerr << "Warning: Conflicting language setting and standard flag. Set standard to c99\n";
+					}
+				} else {
+					std::cerr << "Error: Unsupported language setting: " << res.settings.language << " - supported: c, c++\n";
+					res.valid = false;
+					return res;
+				}
+			}
+
+			// interceptions
 			res.job.addInterceptedNameSpacePatterns(res.settings.intercept);
 
-            if(!res.settings.interceptIncludes.empty()) {
+			if(!res.settings.interceptIncludes.empty()) {
 				res.job.setInterceptedHeaderDirs(res.settings.interceptIncludes);
-            }
+			}
 
-            //f flags
+			//f flags
 			for(auto optFlag : res.settings.optimizationFlags) {
 				std::string&& s = "-f" + optFlag;
 				res.job.addFFlag(s);

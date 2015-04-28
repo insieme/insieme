@@ -49,15 +49,17 @@ namespace extensions {
 
 class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
         insieme::frontend::extensions::FrontendExtension {
-	insieme::core::NodeAddress frag;
-	std::map<int, int> ctr;
+	insieme::core::NodeAddress frag;                                   /// < code fragment passed to this compiler pass
+	std::map<insieme::core::VariableAddress, unsigned int> vuid;       /// < variable unique ID
+	std::map<unsigned int, insieme::core::VariableAddress> idstaken;   /// < IDs and their definition
+	unsigned int seen, total; /// < variables, total nodes processed
 
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
 
 	void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
 	void visitNode(const insieme::core::NodeAddress &node);
-	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
+	void visitVariable(const insieme::core::VariableAddress &node);
 
 	insieme::core::NodeAddress IR();
 	insieme::core::VariableAddress getVarDefinition(const insieme::core::VariableAddress& var);

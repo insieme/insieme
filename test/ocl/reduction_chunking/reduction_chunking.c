@@ -73,9 +73,9 @@ int main(int argc, const char* argv[])
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 4,
 				(size_t)0, (void *)buf_input,
+				(size_t)0, (void *)buf_output,
 				sizeof(cl_int), (void *)&chunkSize,
-				sizeof(cl_int), (void *)&size,
-				(size_t)0, (void *)buf_output
+				sizeof(cl_int), (void *)&size
 			);
 
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
