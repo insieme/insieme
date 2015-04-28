@@ -1,3 +1,3 @@
 includes="${gmp_include_dir}","${mpfr_include_dir}"
 libNames=mpfr
-libPaths="${mpfr_libraries_dir}/lib"
+libPaths="${mpfr_libraries_dir}"
