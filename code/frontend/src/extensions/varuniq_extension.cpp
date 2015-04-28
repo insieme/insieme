@@ -82,10 +82,11 @@ void VarUniqExtension::visitVariable(const VariableAddress &var) {
 
 	// get variable number and increase counter for given variable
 	VariableAddress def=getVarDefinition(var);
+	std::cout << "visit here done" << std::endl;
 	vuid[def]++;
 	if (def==var) {
 		seen++;
-		unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+		//unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
 	}
 
 	// visit children
@@ -105,7 +106,8 @@ NodeAddress VarUniqExtension::IR() {
 
 /// Find the address where the given variable has been defined.
 VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
-	VariablePtr varptr = var.getAddressedNode();
+	// first, save the pointer of the given variable so that we have something to compare with
+	VariablePtr varptr=var.getAddressedNode();
 	NodeAddress cur=var;
 
 	while (!cur.isRoot()) {
@@ -123,8 +125,21 @@ VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
 					if (n.as<VariablePtr>()==varptr) return n;
 			}
 			break; }
-		case NT_Parameters:
-			return var.as<VariableAddress>();   // FIXME: this variable is a parameter; trace var to outer scope
+		case NT_Parameters: {   // FIXME: this variable is a parameter; trace var to outer scope
+			std::cout << "visit here 0" << std::endl;
+			printNode(var);
+			printNode(var.getAddressOfChild(0));
+			std::cout << "visit here 1" << std::endl;
+			ParametersAddress par=var.as<ParametersAddress>();
+			printNode(par, "par");
+			for (VariableAddress n: par->getParameters()) {
+				std::cout << "visit here 2" << std::endl;
+				printNode(n, "n");
+				if (n.as<VariablePtr>()==varptr) {
+					return n;
+				}
+			}
+			break; }
 		case NT_Lambda: {
 			for (auto n: var.as<LambdaAddress>()->getParameters())
 				if (n.as<VariablePtr>()==varptr) return n;
@@ -146,6 +161,6 @@ VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
 		cur=var;
 	}
 
-	// return the variable address itself, as it was never bound
+	// we have reached the root, and never found a binding for the variable; return the variable address itself
 	return var;
 }
