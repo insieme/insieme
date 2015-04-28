@@ -112,7 +112,7 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
-	// crashes here: VarUniqExtension vu((NodeAddress(fragment)));
+	//VarUniqExtension vu((NodeAddress(fragment)));
 	/* auto result=vu.IR();
 	std::cout << printer::PrettyPrinter(fragment) << std::endl
 	          << printer::PrettyPrinter(result.getAddressedNode()) << std::endl; */
