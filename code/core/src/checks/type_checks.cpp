@@ -337,7 +337,7 @@ OptionalMessageList ClassInfoCheck::visitType(const TypeAddress& address) {
 	if (should && should != type) {
 		add(res, Message(address,
 				EC_TYPE_MISMATCHING_OBJECT_TYPE,
-				format("Class-Meta-Info attached to mismatching type - is: %s - should: %s",
+				format("Class-Meta-Info attached to mismatching type - is: %s - should be: %s",
 						toString(*type), toString(*should)),
 				Message::ERROR
 		));
@@ -371,9 +371,9 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (numArguments != numParameter) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
-						format("Wrong number of arguments - expected: %d\n", numParameter) +
+						format("Wrong number of arguments \nexpected: %d\n", numParameter) +
 						format("actual: %d\n ", numArguments) +
-						format("- function type: \n%s", toString(*functionType).c_str()),
+						format("function type: \n\t%s", toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}
@@ -386,9 +386,9 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 		TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
-						format("Invalid argument type(s) - expected: \n%s\n",	toString(*parameterTuple).c_str()) +
-						format("actual: \n%s\n", toString(*argumentTuple).c_str()) +
-						format("- function type: \n%s", toString(*functionType).c_str()),
+						format("Invalid argument type(s) \nexpected: \n\t%s\n",	toString(*parameterTuple).c_str()) +
+						format("actual: \n\t%s\n", toString(*argumentTuple).c_str()) +
+						format("function type: \n\t%s", toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}
@@ -400,7 +400,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (!core::types::isSubTypeOf(retType, resType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
-						format("Invalid result type of call expression - expected: %s, actual: %s - function type: %s",
+						format("Invalid result type of call expression \nexpected: \n\t%s \nactual: \n\t%s \nfunction type: \n\t%s",
 								toString(*retType).c_str(),
 								toString(*resType).c_str(),
                                 toString(*functionType).c_str()),
@@ -511,7 +511,7 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 		if (!core::types::isSubTypeOf(actualType, returnType)) {
 			add(res, Message(cur,
 				EC_TYPE_INVALID_RETURN_VALUE_TYPE,
-				format("Invalid type of return value - expected: \n%s, actual: \n%s",
+				format("Invalid type of return value \nexpected: \n\t%s\n actual: \n\t%s",
 						toString(*returnType),
 						toString(*actualType)),
 				Message::ERROR));

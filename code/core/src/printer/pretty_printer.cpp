@@ -74,7 +74,7 @@ namespace detail {
 			virtual bool covers(const NodePtr&) const {
 				return false;
 			}
-			virtual std::ostream& print(std::ostream& out,const NodePtr&, const std::function<void(const NodePtr&)>&) const {
+			virtual std::ostream& print(std::ostream& out,const NodePtr&, const std::function<void(const NodePtr&)>&)const {
 				assert_fail() << "Should not be reached!";
 				return out;
 			}
@@ -319,6 +319,12 @@ namespace {
 
 			singleLineTypes = true;
 			visit(node);
+
+		}
+
+		~InspirePrinter(){
+			// once the printer is done, the plugin might want to do something
+			printer.plugin.afterAllDone(out);
 		}
 
 		/**
@@ -669,6 +675,12 @@ namespace {
 		});
 
 		PRINT(LambdaExpr, {
+
+				if (!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(node)) {
+					out << lang::getConstructName(node);
+					return;
+				} 
+
 				bool noExpandLambdas = printer.hasOption(PrettyPrinter::NO_EXPAND_LAMBDAS);
 				if(noExpandLambdas) {
 					out << "fun{...}";
@@ -938,6 +950,9 @@ namespace {
 			out.flush();
 			// print a new line
 			out << std::endl;
+
+			printer.plugin.afterNewLine(out);
+
 			for (unsigned i=0; i<indent; i++) {
 				out << printer.tabSep;
 			}

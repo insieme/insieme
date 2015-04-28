@@ -197,7 +197,18 @@ namespace detail{
                 b = builder.castExpr(builder.getLangBasic().getUInt8(), b);
             }
 			if (left->getType()->getNodeType() == NT_RefType) {
+				auto inType = left->getType().as<RefTypePtr>()->getElementType();
+				if (!inType.isa<ArrayTypePtr>() && !inType.isa<VectorTypePtr>()){
+					error(l, "expression is neither a vector nor array to subscript");
+					return nullptr;
+				}
+
 			    return builder.arrayRefElem(left, b);
+			}
+			auto inType = left->getType();
+			if (!inType.isa<ArrayTypePtr>() && !inType.isa<VectorTypePtr>()){
+				error(l, "expression is neither a vector nor array to subscript");
+				return nullptr;
 			}
 			return builder.arraySubscript(left, b);		// works for arrays and vectors
         }
@@ -437,10 +448,13 @@ namespace detail{
 
 		TypeList argumentTypes;
 		::transform(args, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-		TypePtr retType = types::deduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes, false);
 
-		if(!retType) {
-			error(l, "could not deduce return type for call expression");
+		TypePtr retType;
+		try{
+			retType = types::tryDeduceReturnType(ftype.as<FunctionTypePtr>(), argumentTypes);
+		} catch(types::ReturnTypeDeductionException e){
+			error(l, format("Error in call expression:\n%s",
+							e.what()));
 			return nullptr;
 		}
 
