@@ -73,7 +73,10 @@ Careful the find_package mechanisms is case-sensitive!
 1 set a cmake or environment variable ${lib_name_upper_case}_ROOT where the 3rdparty library
 	${lib_name} is expected  
 
-2 have them installed in THIRD_PARTY_LIBS_HOME
+2 have them installed in THIRD_PARTY_LIBS_HOME, in a directory called ${lib_name}-${lib_VERSION}
+where the ${lib_version} is as specified in the defualt_library_configuration.cmake, or
+as fallback use a link ${lib_name}-latest to point to the "latest" version of said library - this
+gives a WARNING!.
 
 3 if they are not found at neither cmake tries to find a system installed one
 

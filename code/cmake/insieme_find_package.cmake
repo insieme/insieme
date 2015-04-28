@@ -42,6 +42,10 @@ macro(insieme_find_package)
 		#check if path exists: ${THIRD_PARTY_LIBS_HOME}/${lib_NAME}-${${lib_name_uc}_VERSION}
 		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}")
 			set(${lib_name_uc}_ROOT "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}" CACHE PATH "${lib_name_lc} installation directory")
+		elseif(EXISTS "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-latest" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-latest")
+			#if this failed check if path exists: ${THIRD_PARTY_LIBS_HOME}/${lib_NAME}-latest
+			message(WARNING "${lib_NAME} was not found in ${lib_name_lc}-${${lib_name_uc}_VERSION} but ${lib_name_lc}-latest was found\nEither update default_library_configuration.cmake or install the correct library version (${lib_name_lc}-${${lib_name_uc}_VERSION}) !")
+			set(${lib_name_uc}_ROOT "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-latest" CACHE PATH "${lib_name_lc} installation directory")
 		endif()
 	endif()
 
