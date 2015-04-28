@@ -369,7 +369,7 @@ std::ostream& MessageList::printTo(std::ostream& out) const {
 	if (empty()) return out << "[]";
 	return out << "[\n\t" << join("\n\t",getAll()) << "\n]"
 		// add some advertishements to improve tool usage
-				"\n problems to read this error? use the error_printer in \"insime/core/printer/error_printer.h\"";
+				"\n problems to read this error? use dumpErrors in \"insime/core/printer/error_printer.h\"";
 }
 
 
