@@ -7,7 +7,7 @@
 set(LLVM_VERSION 3.4)
 
 #XERCES  - used by: xml
-set(XERCES_VERSION 3.1.1)
+set(XERCES_VERSION 3.1.2)
 
 #PAPI - used by: driver, runtime
 set(PAPI_VERSION 5.4.0)
