@@ -1,8 +1,8 @@
 # setup environment variables
 . ./environment.setup
 
-VER=3.0
-VERSION=3.0.2
+VER=3.2
+VERSION=3.2.1
 
 ########################################################################
 ##							CMake	
