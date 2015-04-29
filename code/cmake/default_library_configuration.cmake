@@ -54,13 +54,15 @@ set(BISON_VERSION 3.0.4)
 #FLEX - used in core
 set(FLEX_VERSION 2.5.39)
 
+#HWLOC - used everywhere except for runtime...
+set(HWLOC_VERSION 1.10.1)
 
 #TODO: currently this happens everytime we include this cmake some where...
 #if the user provides a env{lib_version} for one of the libraries
 # we overwrite the default
 list(APPEND LIB_VERSIONS LLVM_VERSION XERCES_VERSION PAPI_VERSION ISL_VERSION CLOOG_VERSION
 	BARVINOK_VERSION MPFR_VERSION GMP_VERSION CUDD_VERSION LUAJIT_VERSION SHARK_VERSION
-	KOMPEX_VERSION GTEST_VERSION BOOST_VERSION)
+	KOMPEX_VERSION GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION)
 
 foreach(lib ${LIB_VERSIONS})
 	#get ${lib_NAME}_VERSION from library_default_version_file

@@ -214,4 +214,4 @@ ${FLEX}: flex_install.sh ${GCC}
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
 		 ${PYTHON} ${RUBY} ${PAPI} ${CCACHE} ${NINJA} ${XERCES} \
-		 ${BISON} ${FLEX}
+		 ${BISON} ${FLEX} ${HWLOC}

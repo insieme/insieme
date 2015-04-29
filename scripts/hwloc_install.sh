@@ -1,7 +1,8 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=1.7
+VER=1.10
+VERSION=1.10.1
 CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
@@ -17,8 +18,9 @@ fi
 
 rm -Rf $PREFIX/hwloc-$VERSION
 echo "#### Downloading HWLOC ####"
-wget -nc http://www.open-mpi.org/software/hwloc/v$VERSION/downloads/hwloc-$VERSION.tar.gz
+wget -nc http://www.open-mpi.org/software/hwloc/v$VER/downloads/hwloc-$VERSION.tar.gz
 
+# Check for failure
 RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
@@ -30,7 +32,7 @@ cd hwloc-$VERSION
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building Hwloc ####"
-CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/hwloc-$VERSION
+CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/hwloc-$VERSION --disable-libxml2
 make -j $SLOTS
 
 # Check for failure

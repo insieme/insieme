@@ -127,7 +127,9 @@ endif()
 function(link_hwloc target)
 	if (Hwloc_FOUND)
 		# I tried to do this as it is supposed to be done, but CMake sucks
-		target_link_libraries(${target} ${Hwloc_INCLUDE_DIRS}/../lib/lib${Hwloc_LIBRARIES}.so)
+		#target_link_libraries(${target} ${Hwloc_LIBRARIES})
+		target_link_libraries(${target} ${Hwloc_LDFLAGS})
+		#target_link_libraries(${target} ${Hwloc_INCLUDE_DIRS}/../lib/lib${Hwloc_LIBRARIES}.so)
 	endif()
 endfunction(link_hwloc)
 
