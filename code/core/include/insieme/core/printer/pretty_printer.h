@@ -60,7 +60,21 @@ struct PrinterPlugin {
 	/**
 	 * A function triggered to print the given node to the given stream.
 	 */
-	virtual std::ostream& print(std::ostream&,const NodePtr&,const std::function<void(const NodePtr&)>&) const=0;
+	virtual std::ostream& print(std::ostream&,const NodePtr&,const std::function<void(const NodePtr&)>&) const = 0;
+
+	/**
+	 * handler to perform actions after new line characters
+	 */
+	virtual std::ostream& afterNewLine(std::ostream& out) const{
+		return out;
+	}
+
+	/**
+	 * handler to perform actions when the printer ends
+	 */
+	virtual std::ostream& afterAllDone(std::ostream& out) const{
+		return out;
+	}
 };
 
 namespace detail {
