@@ -37,7 +37,7 @@ macro(insieme_find_package)
         endif()
     endif()
 
-    if( NOT DEFINED ${${lib_name_uc}_ROOT})
+    if( NOT DEFINED ${lib_name_uc}_ROOT)
         #user did NOT specify a custom ${lib_NAME}_ROOT via a ENV variable of a CMAKE variable
 		#check if path exists: ${THIRD_PARTY_LIBS_HOME}/${lib_NAME}-${${lib_name_uc}_VERSION}
 		if(EXISTS "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}" AND IS_DIRECTORY "${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}")
