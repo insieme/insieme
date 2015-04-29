@@ -3,11 +3,6 @@
 #
 project(insieme_transform CXX)
 
-#include(../environment.cmake)
-
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
-
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_transform_incs 	include/*.h include/*.def include/*.inc )

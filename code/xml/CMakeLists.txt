@@ -3,10 +3,7 @@
 #
 project(insieme_xml CXX)
 
-#include(../environment.cmake)
-
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_xml_srcs 	src/*.cpp )

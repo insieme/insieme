@@ -64,11 +64,11 @@ list(APPEND LIB_VERSIONS LLVM_VERSION XERCES_VERSION PAPI_VERSION ISL_VERSION CL
 	BARVINOK_VERSION MPFR_VERSION GMP_VERSION CUDD_VERSION LUAJIT_VERSION SHARK_VERSION
 	KOMPEX_VERSION GTEST_VERSION BOOST_VERSION BISON_VERSION FLEX_VERSION HWLOC_VERSION)
 
-foreach(lib ${LIB_VERSIONS})
+foreach(libversion ${LIB_VERSIONS})
 	#get ${lib_NAME}_VERSION from library_default_version_file
-	if( DEFINED ENV{${lib}} )
+	if( DEFINED ENV{${libversion}} )
 		# overwrite if user specifies otherwise 
-		set(${lib} $ENV{${lib}})
-		message(STATUS "Overwriting default lib version: ${lib} = ${${lib}}")
+		set(${libversion} $ENV{${libversion}})
+		message(STATUS "Overwriting default lib version: ${libversion} = ${${libversion}}")
 	endif()
 endforeach()

@@ -14,64 +14,53 @@ macro ( add_unit_test case_name ut_prefix )
 	# lookup pthread library
 	find_package(Threads REQUIRED)
 
-	if(${CMAKE_VERSION} VERSION_GREATER 3.1)
-		#With CMAKE 3.2 external projets support byproducts -> this is needed to support ninja as
-		#generator
-		if(NOT TARGET googletest) 
-			include(ExternalProject)
-			set(GTEST_PREFIX ${CMAKE_BINARY_DIR}/ep-gtest-${GTEST_VERSION})
-			#set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
-			#ugly but necessary, in future versions one can use ${BINARY_DIR} in BUILD_BYPRODUCTS
-			set(gtest_lib
-				${GTEST_PREFIX}/src/googletest-build/libgtest.a)
-			set(gtest_main_lib
-				${GTEST_PREFIX}/src/googletest-build/libgtest_main.a)
+	#With CMAKE 3.2 external projets support byproducts -> this is needed to support ninja as
+	#generator
+	if(NOT TARGET googletest) 
+		include(ExternalProject)
+		set(GTEST_PREFIX ${CMAKE_BINARY_DIR}/ep-gtest-${GTEST_VERSION})
+		#set(GTEST_PREFIX ${THIRD_PARTY_LIBS_HOME}/ep-gtest-${GTEST_VERSION}/)
+		#ugly but necessary, in future versions one can use ${BINARY_DIR} in BUILD_BYPRODUCTS
+		set(gtest_lib
+			${GTEST_PREFIX}/src/googletest-build/libgtest.a)
+		set(gtest_main_lib
+			${GTEST_PREFIX}/src/googletest-build/libgtest_main.a)
 
-			ExternalProject_Add(googletest
-				URL http://googletest.googlecode.com/files/gtest-${GTEST_VERSION}.zip
-				PREFIX ${GTEST_PREFIX} 
-				INSTALL_COMMAND "" #make gtest gtest_main
-				CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-				BUILD_BYPRODUCTS
-					${gtest_lib}
-					${gtest_main_lib}
-			)
-		
-			ExternalProject_Get_Property(googletest source_dir binary_dir)
-			set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-			set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
+		ExternalProject_Add(googletest
+			URL http://googletest.googlecode.com/files/gtest-${GTEST_VERSION}.zip
+			PREFIX ${GTEST_PREFIX} 
+			INSTALL_COMMAND "" #make gtest gtest_main
+			CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+			BUILD_BYPRODUCTS
+				${gtest_lib}
+				${gtest_main_lib}
+		)
+	
+		ExternalProject_Get_Property(googletest source_dir binary_dir)
+		set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
 
-			set(GTEST_LIBRARY gtest)
-			set(GTEST_MAIN_LIBRARY gtest_main)
-			add_library(${GTEST_LIBRARY} STATIC IMPORTED)
-			add_library(${GTEST_MAIN_LIBRARY} STATIC IMPORTED)
-			set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION ${GTEST_LIBRARY_PATH})
-			set_property(TARGET ${GTEST_MAIN_LIBRARY} PROPERTY IMPORTED_LOCATION ${GTEST_MAIN_LIBRARY_PATH})
-			add_dependencies(${GTEST_LIBRARY} googletest) 
-			add_dependencies(${GTEST_MAIN_LIBRARY} googletest) 
-		else()
-			ExternalProject_Get_Property(googletest source_dir binary_dir)
-			set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
-			set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
-			#set(GTEST_LIBRARY gtest)
-			#set(GTEST_MAIN_LIBRARY gtest_main)
-		endif()
-
-		add_dependencies(${case_name} googletest)
-		target_include_directories(${case_name} SYSTEM PRIVATE ${source_dir}/include)
-		# add dependency to google test libraries
-		target_link_libraries(${case_name} ${GTEST_LIBRARY_PATH})
-		target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARY_PATH})
+		set(GTEST_LIBRARY gtest)
+		set(GTEST_MAIN_LIBRARY gtest_main)
+		add_library(${GTEST_LIBRARY} STATIC IMPORTED)
+		add_library(${GTEST_MAIN_LIBRARY} STATIC IMPORTED)
+		set_property(TARGET ${GTEST_LIBRARY} PROPERTY IMPORTED_LOCATION ${GTEST_LIBRARY_PATH})
+		set_property(TARGET ${GTEST_MAIN_LIBRARY} PROPERTY IMPORTED_LOCATION ${GTEST_MAIN_LIBRARY_PATH})
+		add_dependencies(${GTEST_LIBRARY} googletest) 
+		add_dependencies(${GTEST_MAIN_LIBRARY} googletest) 
 	else()
-		#BELOW 3.2 we need to preinstall GTest
-		# lookup Google Test libraries 
-		# NOT RECOMENDED by gtest to use a GTest library with possibly differing compile
-		# flags
-		insieme_find_package(NAME GTest)
-		# add dependency to google test libraries
-		target_link_libraries(${case_name} ${GTEST_LIBRARIES})
-		target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARIES})
+		ExternalProject_Get_Property(googletest source_dir binary_dir)
+		set(GTEST_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+		set(GTEST_MAIN_LIBRARY_PATH ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main.a)
+		#set(GTEST_LIBRARY gtest)
+		#set(GTEST_MAIN_LIBRARY gtest_main)
 	endif()
+
+	add_dependencies(${case_name} googletest)
+	target_include_directories(${case_name} SYSTEM PRIVATE ${source_dir}/include)
+	# add dependency to google test libraries
+	target_link_libraries(${case_name} ${GTEST_LIBRARY_PATH})
+	target_link_libraries(${case_name} ${GTEST_MAIN_LIBRARY_PATH})
 
 	# add dependency to pthread (TODO check gtest if depends on pthread?)
 	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})

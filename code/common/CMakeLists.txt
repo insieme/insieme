@@ -1,7 +1,5 @@
 project(insieme_common CXX)
 
-cmake_minimum_required(VERSION 2.8)
-
 #todo get rid of this... "only" used to get the path to the common_include_dir right
 #include(../environment.cmake)
 

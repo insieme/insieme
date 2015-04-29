@@ -3,11 +3,6 @@
 #
 project(insieme_analysis CXX)
 
-#include(../environment.cmake)
-
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
-
 #ninja job pools setting
 # used to limit maximum of parallel CBA jobs as they need a lot of memory
 if( DEFINED CBA_JOBS)

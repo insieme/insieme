@@ -3,11 +3,6 @@
 #
 project(insieme_core CXX)
 
-#include(../environment.cmake)
-
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
-
 # find modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake" ${CMAKE_MODULE_PATH})
 

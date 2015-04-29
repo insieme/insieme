@@ -5,9 +5,6 @@ project(insieme_driver CXX)
 
 include(../environment_common.cmake)
 
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
-
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_driver_incs 	include/*.h )

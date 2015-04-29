@@ -1,9 +1,7 @@
 #Build the IWIR frontend
 project(insieme_iwir CXX) 
 
-#include(../environment.cmake)
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 
 file(GLOB_RECURSE insieme_iwir_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_iwir_incs 	include/*.h )

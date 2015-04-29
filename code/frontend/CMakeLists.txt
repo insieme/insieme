@@ -3,8 +3,6 @@
 #
 project(insieme_frontend CXX)
 
-cmake_minimum_required(VERSION 2.8)
-
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
 file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc )

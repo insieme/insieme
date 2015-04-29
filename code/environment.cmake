@@ -40,18 +40,13 @@ include(add_unit_test)
 
 #if CBA_JOBS option was given, we query the number of cores, if no -j was specified this is the
 #uperlimit for parallel compile jobs
-#several difficulties with job-pools below cmake 3.2
-if( DEFINED CBA_JOBS AND (${CMAKE_VERSION} VERSION_GREATER 3.1))
+if(DEFINED CBA_JOBS)
 	include(ProcessorCount)
 	ProcessorCount(jobs)
 	set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${jobs} link_job_pool=${jobs})
 	get_property(job_pools GLOBAL PROPERTY JOB_POOLS)
 	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
 	set(CMAKE_JOB_POOL_LINK link_job_pool)
-else()
-	# we do not support cbajobs - in analysis we check for this variable
-	# so we remove it. 
-	unset(CBA_JOBS CACHE)
 endif()
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )

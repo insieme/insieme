@@ -2,9 +2,6 @@
 # Builds the insieme backend
 #
 project(insieme_backend CXX)
-cmake_minimum_required(VERSION 2.8)
-
-#include(../environment.cmake)
 
 # Create a variable called insieme_backend_srcs containing all .cpp files:
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)

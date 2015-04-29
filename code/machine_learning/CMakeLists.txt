@@ -3,11 +3,6 @@
 #
 project(insieme_machine_learning CXX)
 
-#include(../environment.cmake)
-
-# States that CMake required version must be >= 2.8
-cmake_minimum_required(VERSION 2.8)
-
 # collect source files
 file(GLOB_RECURSE insieme_machine_learning_srcs 	src/*.cpp)
 file(GLOB_RECURSE insieme_machine_learning_incs	include/*.h)
