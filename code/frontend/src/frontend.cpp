@@ -41,7 +41,6 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 

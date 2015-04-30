@@ -1,0 +1,29 @@
+<IWIR version="1.1" wfname="parallelForEach" xmlns="http://shiwa-workflow.eu/IWIR">
+  <parallelForEach name="parallelForEachTask">
+    <inputPorts>
+      <inputPort name="in1" type="integer"/>
+      <loopElements>
+        <loopElement name="le1" type="collection/integer"/>
+      </loopElements>
+    </inputPorts>
+    <body>
+      <task name="atomic1" tasktype="atomicType">
+        <inputPorts>
+          <inputPort name="in1" type="integer"/>
+          <inputPort name="in2" type="integer"/>
+        </inputPorts>
+        <outputPorts>
+          <outputPort name="out1" type="integer"/>
+        </outputPorts>
+      </task>
+    </body>
+    <outputPorts>
+      <outputPort name="out1" type="collection/integer"/>
+    </outputPorts>
+    <links>
+      <link from="parallelForEachTask/in1" to="atomic1/in1"/>
+      <link from="parallelForEachTask/le1" to="atomic1/in2"/>
+      <link from="atomic1/out1" to="parallelForEachTask/out1"/>
+    </links>
+  </parallelForEach>
+</IWIR>

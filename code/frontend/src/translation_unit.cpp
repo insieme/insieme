@@ -48,7 +48,6 @@
 #include "insieme/frontend/pragma/handler.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"

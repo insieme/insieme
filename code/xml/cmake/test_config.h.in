@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,39 +29,11 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
+#define XML_TEST_DIR std::string("${CMAKE_CURRENT_SOURCE_DIR}/test/")
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/frontend/frontend.h"
-
-namespace insieme {
-namespace frontend {
-namespace ocl {
-
-
-/*
- * provides interface to the OpenCL host compiler
- */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::IRBuilder builder;
-
-	ConversionJob job;
-
-public:
-	HostCompiler(core::ProgramPtr& program, const ConversionJob& job) :
-		mProgram(program), builder(program->getNodeManager()), job(job) {
-	}
-
-	core::ProgramPtr compile();
-};
-
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
