@@ -1,10 +1,7 @@
 #
 # Builds the insieme core library
-#
 project(insieme_core CXX)
-
-# find modules
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake" ${CMAKE_MODULE_PATH})
+message(STATUS "========== configure core =============")
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp src/*.def src/*.inc )

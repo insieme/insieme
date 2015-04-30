@@ -1,5 +1,6 @@
 #Build the IWIR frontend
 project(insieme_iwir CXX) 
+message(STATUS "========== configure iwir =============")
 
 cmake_minimum_required(VERSION 3.2)
 

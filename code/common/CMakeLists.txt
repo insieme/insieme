@@ -1,7 +1,5 @@
 project(insieme_common CXX)
-
-#todo get rid of this... "only" used to get the path to the common_include_dir right
-#include(../environment.cmake)
+message(STATUS "========== configure common =============")
 
 #file(GLOB_RECURSE insieme_common_incs include/*.h )
 

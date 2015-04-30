@@ -2,7 +2,7 @@
 # Builds the various insieme driver
 #
 project(insieme_driver CXX)
-
+message(STATUS "========== configure driver =============")
 include(../environment_common.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:

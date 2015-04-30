@@ -2,6 +2,7 @@
 # Builds the insieme machine_learning library
 #
 project(insieme_machine_learning CXX)
+message(STATUS "========== configure machine_learning =============")
 
 # collect source files
 file(GLOB_RECURSE insieme_machine_learning_srcs 	src/*.cpp)
