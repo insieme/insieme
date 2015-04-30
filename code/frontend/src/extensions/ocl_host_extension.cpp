@@ -46,7 +46,7 @@
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_type_fixer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
+#include "insieme/frontend/ocl/ocl_host_utils1.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
 
 namespace fe = insieme::frontend;
