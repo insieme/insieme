@@ -1,14 +1,16 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=3.1.1
+VERSION=3.1.2
 
 ########################################################################
 ##		xerces
 ########################################################################
+
+
 rm -Rf $PREFIX/xerces-$VERSION
 echo "#### Downloading Xerces library ####"
-wget http://archive.apache.org/dist/xerces/c/3/sources/xerces-c-$VERSION.tar.gz
+wget http://www.eu.apache.org/dist//xerces/c/3/sources/xerces-c-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

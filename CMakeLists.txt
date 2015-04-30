@@ -1,22 +1,15 @@
 project(insieme NONE)
+cmake_minimum_required(VERSION 3.2)
 
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
-
-# enable ctest support for testing
+# enable ctest support for testing - generate a CTest file in the ${build_dir}
 enable_testing()
 
-find_package(Git)
-if(GIT_FOUND)
-	# deduce the code version using git describe
-	get_filename_component( cur_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
-	set ( insieme_version "`(cd ${cur_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
-else()
-	set ( insieme_version "unknown" )
-endif()
-
-if ((NOT DEFINED DOCS) OR (DOCS))
+option(DOCS "Build Insieme documentation" OFF)
+if(DOCS)
 	add_subdirectory(docs)
 endif()
+
 add_subdirectory(code)
+
+#integration tests
 add_subdirectory(test)
