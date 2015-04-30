@@ -51,7 +51,6 @@
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/utils/config.h"
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
