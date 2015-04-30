@@ -82,7 +82,6 @@ void VarUniqExtension::visitVariable(const VariableAddress &var) {
 
 	// get variable number and increase counter for given variable
 	VariableAddress def=getVarDefinition(var);
-	std::cout << "visit here done" << std::endl;
 	vuid[def]++;
 	if (def==var) {
 		seen++;
@@ -120,25 +119,16 @@ VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
 			break; }
 		case NT_CompoundStmt: {
 			auto compound=var.as<CompoundStmtAddress>();
-			for (int i=cur.getIndex(); i>=0; i--) {
-					auto n=compound[i].isa<DeclarationStmtAddress>()->getVariable();
+			for (int i=cur.getIndex(); i>=0; i--)
+				if (DeclarationStmtAddress decl=compound[i].isa<DeclarationStmtAddress>()) {
+					auto n=decl->getVariable();
 					if (n.as<VariablePtr>()==varptr) return n;
-			}
+				}
 			break; }
 		case NT_Parameters: {   // FIXME: this variable is a parameter; trace var to outer scope
-			std::cout << "visit here 0" << std::endl;
-			printNode(var);
-			printNode(var.getAddressOfChild(0));
-			std::cout << "visit here 1" << std::endl;
 			ParametersAddress par=var.as<ParametersAddress>();
-			printNode(par, "par");
-			for (VariableAddress n: par->getParameters()) {
-				std::cout << "visit here 2" << std::endl;
-				printNode(n, "n");
-				if (n.as<VariablePtr>()==varptr) {
-					return n;
-				}
-			}
+			for (VariableAddress n: par->getParameters())
+				if (n.as<VariablePtr>()==varptr) return n;
 			break; }
 		case NT_Lambda: {
 			for (auto n: var.as<LambdaAddress>()->getParameters())
