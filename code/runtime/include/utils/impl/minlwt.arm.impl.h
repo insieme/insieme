@@ -41,27 +41,26 @@ __attribute__ ((noinline,noclone,optimize(0)))
 #endif
 void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) { 
 
-    __asm (
-        "push {r4-r7, lr};"     // save LR, R7, R4-R6
-        "add r7, sp, #12;"      // adjust R7 to point to saved R7 (frame pointer)
-        "push {r8, r9, r10, r11};"  // save remaining GPRs (R8, R9, R10, R11)
-        
-        /* swap stacks */
-        
-        "str r13, [r3];"
-        "ldr r13, [r2];"
-        
-        /* call function if func != NULL */
-        
-        /* "cbz r1, endlab;" */ // cbz is not always supported
-        "cmp r1, #0;"
-        "beq endlab;"
-        "bl _irt_wi_trampoline;" /* r0 still has wi, r1 still has func, so just call */
-        
-        /* restore registers for other coroutine */
-        "endlab:"
-        "pop {r8, r9, r10, r11};"   // restore R8-R11
-        "pop {r4-r7, lr};"      // restore R4-R6, saved R7, return to saved LR
-    );
+	__asm (
+		"push {r4-r11, lr};"     // save LR, R4-R11
+		"vstmdb sp!, {d8-d15};"  // save vector regs
+
+		/* swap stacks */
+		"str r13, [r3];"
+		"ldr r13, [r2];"
+
+		/* call function if func != NULL */
+		"cmp r1, #0;"
+		"beq endlab;"
+	);
+
+	_irt_wi_trampoline(wi, func);
+
+	__asm (
+		/* restore registers for other coroutine */
+		"endlab:"
+		"vldmia sp!, {d8-d15};"  // restore vector regs
+		"pop {r4-r11, lr};"      // restore R4-R11, return to saved LR
+	);
 }
 
