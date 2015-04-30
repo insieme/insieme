@@ -47,7 +47,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
+#include "insieme/frontend/ocl/ocl_host_handler.h"
 
 #include "insieme/utils/logging.h"
 
