@@ -45,7 +45,7 @@
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), seen(0), total(0) {
+VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), defct(0), usect(0) {
 	visit(frag);
 }
 
@@ -73,19 +73,21 @@ void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, uns
 
 /// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
 void VarUniqExtension::visitNode(const NodeAddress &node) {
-	total++;
 	for (auto child: node->getChildList()) visit(child);
 }
 
 void VarUniqExtension::visitVariable(const VariableAddress &var) {
-	total++; // seen++;
-
 	// get variable number and increase counter for given variable
 	VariableAddress def=getVarDefinition(var);
-	vuid[def]++;
 	if (def==var) {
-		seen++;
-		//unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+		defct++;
+		vuid[def]=0;
+		unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+		/* FIXME: if empty */ idstaken[varid]=def;
+	} else {
+		usect++;
+		vuid[def]++;
+		//std::cout << var << " (" << *var << ") defined at " << def << " (" << *def << ")" << std::endl;
 	}
 
 	// visit children
@@ -97,7 +99,7 @@ NodeAddress VarUniqExtension::IR() {
 	// print some status information for debugging
 	for (auto dups: vuid)
 		std::cout << "var " << dups.first << " found " << dups.second << "×" << std::endl;
-	std::cout << "Found " << seen << " variables in " << total << " nodes." << std::endl;
+	std::cout << "Found " << defct << " variable defs, " << usect << " uses." << std::endl;
 
 	// return the newly generated code
 	return frag;

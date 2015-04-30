@@ -52,7 +52,7 @@ class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Add
 	insieme::core::NodeAddress frag;                                   /// < code fragment passed to this compiler pass
 	std::map<insieme::core::VariableAddress, unsigned int> vuid;       /// < variable unique ID
 	std::map<unsigned int, insieme::core::VariableAddress> idstaken;   /// < IDs and their definition
-	unsigned int seen, total; /// < variables, total nodes processed
+	unsigned int defct, usect; /// < variable definition, use counters
 
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);

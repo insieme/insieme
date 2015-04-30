@@ -113,8 +113,8 @@ TEST(VarUniq, Simple) {
 	ASSERT_TRUE(fragment);
 
 	VarUniqExtension vu((NodeAddress(fragment)));
-	/* auto result=vu.IR();
-	std::cout << printer::PrettyPrinter(fragment) << std::endl
+	auto result=vu.IR();
+	/*std::cout << printer::PrettyPrinter(fragment) << std::endl
 	          << printer::PrettyPrinter(result.getAddressedNode()) << std::endl; */
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
