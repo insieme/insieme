@@ -36,8 +36,6 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-
 
 namespace insieme {
 namespace frontend {

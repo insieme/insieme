@@ -48,6 +48,9 @@ namespace frontend {
 namespace ocl {
 namespace utils {
 
+
+#define BASIC builder.getLangBasic()
+
 /*
  * Returns either the expression itself or the first argument if expression was a call to function
  */
