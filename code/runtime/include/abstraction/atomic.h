@@ -144,6 +144,28 @@
 
 #elif !defined(_MSC_VER)
 
+	//we need to define helper functions which are typed here, because the new
+	//compare and swap builtins in GCC which also accept a parameter for the
+	//memory model have to be used differently
+	#define _IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(__type) \
+		static inline bool _irt_atomic_bool_compare_and_swap_impl_##__type(__type* __location, __type __oldval, __type __newval) { \
+			/* We need to create a temporary here since the builtin needs a pointer */ \
+			__type _irt_atomic_temp = __oldval; \
+			return __atomic_compare_exchange_n(__location, &_irt_atomic_temp, __newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+		} \
+		static inline __type _irt_atomic_val_compare_and_swap_impl_##__type(__type* __location, __type __oldval, __type __newval) { \
+			/* We need to create a temporary here since the builtin needs a pointer */ \
+			__type _irt_atomic_temp = __oldval; \
+			__atomic_compare_exchange_n(__location, &_irt_atomic_temp, __newval, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST); \
+			return _irt_atomic_temp; \
+		}
+
+	_IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(bool)
+	_IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uint32)
+	_IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uint64)
+	_IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(intptr_t)
+	_IRT_DEFINE_ATOMIC_COMPARE_AND_SWAP(uintptr_t)
+
 	// direct mapping to compiler primitives/instrinsics
 
 	#define irt_atomic_fetch_and_add(__location, __value, __type) __atomic_fetch_add(__location, __value, __ATOMIC_SEQ_CST)
@@ -161,11 +183,8 @@
 	 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
 	 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
 	 */
-	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, __type) __sync_bool_compare_and_swap(__location, __oldval, __newval)
-	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, __type)  __sync_val_compare_and_swap(__location, __oldval, __newval)
-
-	//#define irt_atomic_lock_test_and_set(__location,  __value) __sync_lock_test_and_set(__location, __value)
-	//#define irt_atomic_lock_release(__location)                __sync_lock_release(__location)
+	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, __type) _irt_atomic_bool_compare_and_swap_impl_##__type((__type*) __location, __oldval, __newval)
+	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, __type)  _irt_atomic_val_compare_and_swap_impl_##__type ((__type*) __location, __oldval, __newval)
 
 	// convenience
 	// explicitly cast return value to void to supress warnings
