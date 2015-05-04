@@ -146,14 +146,14 @@
 
 	// direct mapping to compiler primitives/instrinsics
 
-	#define irt_atomic_fetch_and_add(__location, __value, __type)  __sync_fetch_and_add(__location, __value)
-	#define irt_atomic_fetch_and_sub(__location, __value, __type)  __sync_fetch_and_sub(__location, __value)
+	#define irt_atomic_fetch_and_add(__location, __value, __type) __atomic_fetch_add(__location, __value, __ATOMIC_SEQ_CST)
+	#define irt_atomic_fetch_and_sub(__location, __value, __type) __atomic_fetch_sub(__location, __value, __ATOMIC_SEQ_CST)
 
-	#define irt_atomic_add_and_fetch(__location, __value, __type)  __sync_add_and_fetch(__location, __value)
-	#define irt_atomic_sub_and_fetch(__location, __value, __type)  __sync_sub_and_fetch(__location, __value)
-	#define irt_atomic_or_and_fetch(__location, __value, __type)   __sync_or_and_fetch(__location, __value)
-	#define irt_atomic_and_and_fetch(__location, __value, __type)  __sync_and_and_fetch(__location, __value)
-	#define irt_atomic_xor_and_fetch(__location, __value, __type)  __sync_xor_and_fetch(__location, __value)
+	#define irt_atomic_add_and_fetch(__location, __value, __type) __atomic_add_fetch(__location, __value, __ATOMIC_SEQ_CST)
+	#define irt_atomic_sub_and_fetch(__location, __value, __type) __atomic_sub_fetch(__location, __value, __ATOMIC_SEQ_CST)
+	#define irt_atomic_or_and_fetch (__location, __value, __type) __atomic_or_fetch (__location, __value, __ATOMIC_SEQ_CST)
+	#define irt_atomic_and_and_fetch(__location, __value, __type) __atomic_and_fetch(__location, __value, __ATOMIC_SEQ_CST)
+	#define irt_atomic_xor_and_fetch(__location, __value, __type) __atomic_xor_fetch(__location, __value, __ATOMIC_SEQ_CST)
 
 	/**
 	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
