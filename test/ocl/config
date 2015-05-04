@@ -1,0 +1,15 @@
+use_opencl=1
+includes="../common/" "../../../code/frontend/test/inputs"
+
+preprocessing=bash -c "gcc -std=c99 -Wall -fPIC -c ../common/*.c -I../../../code/frontend/test/inputs -lOpenCL -lrt -O3 -D_GNU_SOURCE=1 && gcc -shared -Wl,-soname,libicl.so.1 -o libicl.so.1.0 *.o && ln -sf libicl.so.1.0 libicl.so && ln -sf libicl.so.1.0 libicl.so.1 && rm ./*.o"
+libPaths="./"
+libNames="icl","m"
+postprocessing=
+executionFlags=-check
+use_c[insiemecc_ocl_c_compile]=1
+
+definitions[insiemecc_ocl_c_compile]="_GNU_SOURCE","USE_OPENCL=ON","LOCAL_MODE"
+outputAwk="/Result check: OK/"
+excludeSteps="insiemecc_c++_sema","insiemecc_run_c++_convert","insiemecc_run_c++_compile","insiemecc_run_c++_execute","ref_c++_compile","ref_c++_execute","ref_c++_check","insiemecc_run_c++_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check", "insiemecc_run_c_convert", "insiemecc_run_c_compile", "insiemecc_run_c_execute", "insiemecc_run_c_check", "insiemecc_seq_c_convert", "insiemecc_seq_c_compile", "insiemecc_seq_c_execute", "insiemecc_seq_c_check"
+
+
