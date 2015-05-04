@@ -2,6 +2,7 @@
 # Builds the insieme xml library
 #
 project(insieme_xml CXX)
+message(STATUS "========== configure xml =============")
 
 cmake_minimum_required(VERSION 3.2)
 

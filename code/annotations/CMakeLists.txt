@@ -2,6 +2,7 @@
 # Builds the insieme annotations library
 #
 project(insieme_annotations CXX)
+message(STATUS "========== configure annotations =============")
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_annotations_srcs 	src/*.cpp )

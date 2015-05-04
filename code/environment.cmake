@@ -254,13 +254,25 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 find_package(Git)
 if(GIT_FOUND)
 	# deduce the code version using git describe
-	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
+	#set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
+
+	set (git_cmd "${GIT_EXECUTABLE}")
+	set (git_arg "describe;--dirty")
+
+	execute_process(COMMAND ${git_cmd} ${git_arg}
+							  WORKING_DIRECTORY ${insieme_code_dir}
+							  RESULT_VARIABLE git_result
+							  OUTPUT_VARIABLE insieme_version)
+
+	# git returns space and newline, remove them to keep commands clean
+	string(REPLACE "\n" " " insieme_version ${insieme_version})
+	string(REPLACE " " "" insieme_version ${insieme_version})
 else()
 	set ( insieme_version "unknown" )
 endif()
 
-
 # add insieme version definition (add_definitions escapes back-quotes)
+#
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
@@ -275,7 +287,7 @@ if (NOT MEMORY_CHECK_SETUP)
 	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
 endif (NOT MEMORY_CHECK_SETUP)
 
-# query the number of cores to control parallelism
+# --------------------------------------------------------- Limit number of processors used in some generators
 include(ProcessorCount)
 ProcessorCount(NB_PROCESSORS)
 

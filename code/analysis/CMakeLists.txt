@@ -2,6 +2,7 @@
 # Builds the insieme analysis library
 #
 project(insieme_analysis CXX)
+message(STATUS "========== configure analysis =============")
 
 #ninja job pools setting
 # used to limit maximum of parallel CBA jobs as they need a lot of memory

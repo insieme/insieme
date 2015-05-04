@@ -2,6 +2,7 @@
 # Builds the insieme util library
 #
 project(insieme_utils CXX)
+message(STATUS "========== configure utils =============")
 
 # configure config files
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/config.h)
