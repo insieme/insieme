@@ -177,6 +177,9 @@
 	#define irt_atomic_and_and_fetch(__location, __value, __type) __atomic_and_fetch(__location, __value, __ATOMIC_SEQ_CST)
 	#define irt_atomic_xor_and_fetch(__location, __value, __type) __atomic_xor_fetch(__location, __value, __ATOMIC_SEQ_CST)
 
+	#define irt_atomic_load(__location) __atomic_load_n(__location, __ATOMIC_SEQ_CST)
+	#define irt_atomic_store(__location, val) __atomic_store_n(__location, val, __ATOMIC_SEQ_CST)
+
 	/**
 	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
 	 *
