@@ -192,14 +192,8 @@ namespace integration {
 					auto props = test.getPropertiesFor(name);
 					string executionDirectory;
 
-					if (props[name].empty()) {
-						map<string,float> metricResults;
-						//insert dummy vals
-						metricResults["walltime"]=0;
-						metricResults["cputime"]=0;
-						metricResults["mem"]=0;
+					if (props[name].empty())
 						return TestResult::stepOmitted(name);
-					}
 
 					// get execution directory
 					executionDirectory=test.getDirectory().string();
@@ -772,40 +766,41 @@ namespace integration {
 		return false;
 	}
 
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test) {
-		auto props = test.getProperties();
-		vector<TestStep> stepsToExecute;
-
-		for(const TestStep step:steps)
-			if(!isExcluded(props["excludeSteps"],step))
-				stepsToExecute.push_back(step);
-
-		return stepsToExecute;
-	}
-
 	//filter steps based on some conflicting steps
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,map<string,string> conflicting) {
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string, string>& conflicting) {
 		auto props = test.getProperties();
 		vector<TestStep> stepsToExecute;
 
-		for(const TestStep step:steps){
-			string conflictingStep="";
-			for (auto  confl=conflicting.begin();confl!=conflicting.end();confl++)
-				if(step.getName().find(confl->first)!=std::string::npos){
-					conflictingStep=confl->second;
-					break;
-				}
-				
-			bool conflicts=false;
-			if(!conflictingStep.empty())
-				for (const TestStep stepConfl:stepsToExecute)
-					if(stepConfl.getName().find(conflictingStep)!=std::string::npos){
-						conflicts=true;
+		for(const TestStep step:steps) {
+			bool conflicts = false;
+			string conflictingStep = "";
+
+			if (!conflicting.empty()) {
+				for (auto confl = conflicting.begin(); confl != conflicting.end(); confl++) {
+					if(step.getName().find(confl->first) != std::string::npos){
+						conflictingStep = confl->second;
 						break;
 					}
+				}
+
+				if(!conflictingStep.empty()) {
+					for (const TestStep stepConfl:stepsToExecute) {
+						if(stepConfl.getName().find(conflictingStep) != std::string::npos){
+							conflicts = true;
+							break;
+						}
+					}
+				}
+			}
 			
-			if(!isExcluded(props["excludeSteps"],step) && ! conflicts)
+			if(!isExcluded(props["excludeSteps"],step) && !conflicts)
 				stepsToExecute.push_back(step);
+
+			#ifndef USE_OPENCL
+			for (TestStep& step : stepsToExecute)
+				if (step.getName().find("_ocl_") != std::string::npos)
+					return vector<TestStep>();
+			#endif
 		}
 		return stepsToExecute;
 	}

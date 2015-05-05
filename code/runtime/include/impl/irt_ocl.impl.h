@@ -51,6 +51,7 @@
 #include "irt_ocl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
+#include "abstraction/unused.h"
 
 #ifdef REMOTE_MODE
 #include <mpi.h>
@@ -77,7 +78,7 @@ static inline void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type 
 //static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag);
 //static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag);
 
-static const char* _irt_cl_get_device_type_string(cl_device_type type);
+static const char* _irt_cl_get_device_type_string(cl_device_type type) __irt_unused;
 static char* _irt_cl_get_name(cl_device_id* device);
 static cl_device_type _irt_cl_get_type(cl_device_id* device);
 static char* _irt_cl_get_vendor(cl_device_id* device);
@@ -113,7 +114,7 @@ static void _irt_cl_print_events_info();
 
 //static char* _irt_load_program_source (const char* filename, size_t* filesize);
 //static void _irt_save_program_binary (cl_program program, const char* binary_filename);
-static const char* _irt_error_string (cl_int err_code);
+static const char* _irt_error_string (cl_int err_code) __irt_unused;
 
 void irt_ocl_print_events(){
 #ifdef IRT_OCL_INSTR
@@ -660,7 +661,7 @@ void irt_ocl_print_device_short_info(irt_ocl_device* device) {
 	uint32_t node = device->node_id;
 #ifdef LOCAL_MODE
 	if (node == 0) {
-		irt_ocl_local_device* ldev = &local_devices[device->device_id];
+		irt_ocl_local_device* ldev __irt_unused = &local_devices[device->device_id];
 		IRT_INFO("%s: %s | %s | %s\n", _irt_cl_get_device_type_string(ldev->type), ldev->name, ldev->vendor, ldev->version);
 		return;
 	}
@@ -1266,7 +1267,6 @@ static const char* _irt_error_string (cl_int errcode) {
  *  OpenCL Internal Device Info Functions
  * =====================================================================================
  */
-
 static const char* _irt_cl_get_device_type_string(cl_device_type type) {
 		switch(type){
 				case CL_DEVICE_TYPE_CPU: return "CPU"; break;

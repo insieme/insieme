@@ -61,8 +61,7 @@ namespace integration {
 	const std::map<std::string,TestStep>& getFullStepList();
 
 	// filters out test steps that are not suitable for the given tests
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,map<string,string> conflicting);
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string,string>& conflicting = map<string,string>());
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
