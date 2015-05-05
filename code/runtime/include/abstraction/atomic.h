@@ -53,6 +53,9 @@
 	#define irt_atomic_and_and_fetch(__location, __value, __type)  __sync_and_and_fetch_##__type##(__location, __value)
 	#define irt_atomic_xor_and_fetch(__location, __value, __type)  __sync_xor_and_fetch_##__type##(__location, __value)
 
+	#define irt_atomic_load(__location) *__location
+	#define irt_atomic_store(__location, val) *__location = val
+
 	/**
 	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
 	 *
@@ -202,6 +205,9 @@
 	#define irt_atomic_or_and_fetch(__location, __value, __type)		(_InterlockedOr(__location, __value))
 	#define irt_atomic_and_and_fetch(__location, __value, __type)		(_InterlockedAnd(__location, __value))
 	#define irt_atomic_xor_and_fetch(__location, __value, __type)		(_InterlockedXor(__location, __value))
+
+	#define irt_atomic_load(__location) *__location
+	#define irt_atomic_store(__location, val) *__location = val
 
 
 	// Windows 7 and up -> InterlockedExchangeAdd and others are overloaded (such that there is a function with matching types)
