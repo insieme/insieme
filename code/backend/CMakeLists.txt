@@ -6,7 +6,7 @@ message(STATUS "========== configure backend =============")
 
 # Create a variable called insieme_backend_srcs containing all .cpp files:
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)
-file(GLOB_RECURSE insieme_backend_incs 	include/*.h include/*.def include/*.inc)
+insieme_glob_headers(insieme_backend_incs include)
 
 # Build the core library
 add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_backend_incs} )

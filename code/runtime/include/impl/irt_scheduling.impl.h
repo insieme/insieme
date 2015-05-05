@@ -86,7 +86,7 @@ void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops) {
 bool _irt_scheduling_sleep_if_dop_inactive(irt_worker* self) {
 	if(self->id.thread >= irt_g_degree_of_parallelism) {
 		irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
-		if(self->state == IRT_WORKER_STATE_STOP) {
+		if(irt_atomic_load(&self->state) == IRT_WORKER_STATE_STOP) {
 			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 			return true;
 		}
@@ -105,13 +105,13 @@ bool _irt_scheduling_sleep_if_dop_inactive(irt_worker* self) {
 }
 
 void irt_scheduling_loop(irt_worker* self) {
-	while(self->state != IRT_WORKER_STATE_STOP) {
+	while(irt_atomic_load(&self->state) != IRT_WORKER_STATE_STOP) {
 #ifdef IRT_WORKER_SLEEPING
 #endif // IRT_WORKER_SLEEPING
 		// while there is something to do, continue scheduling
 		while(irt_scheduling_iteration(self)) {
 			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.thread==0?"":"\t\t\t\t\t\t", self->id.thread);
-			self->cur_wi->state = IRT_WI_STATE_SUSPENDED;
+			irt_atomic_store(&self->cur_wi->state, IRT_WI_STATE_SUSPENDED);
 			self->cur_wi = NULL;
 			if(self->finalize_wi != NULL) {
 				irt_wi_finalize(self, self->finalize_wi);

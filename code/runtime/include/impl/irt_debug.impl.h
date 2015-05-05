@@ -36,6 +36,7 @@
 
 #include "declarations.h"
 
+#include "abstraction/atomic.h"
 #include "meta_information/meta_infos.h"
 
 // IRT context information printing
@@ -105,7 +106,7 @@ const char* irt_dbg_get_worker_state_string(irt_worker_state state) {
 
 void irt_dbg_print_worker_state(int32 wid) {
 #if IRT_SCHED_POLICY != IRT_SCHED_POLICY_STEALING_CIRCULAR
-	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_g_workers[wid]->state), 
+	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_atomic_load(&irt_g_workers[wid]->state)),
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_UBER
 		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue)
 #else
@@ -113,7 +114,7 @@ void irt_dbg_print_worker_state(int32 wid) {
 #endif
 		);
 #else
-	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_g_workers[wid]->state), 
+	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_atomic_load(&irt_g_workers[wid]->state)),
 		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue));
 #endif
 	irt_dbg_print_worker_events(wid, 1);
