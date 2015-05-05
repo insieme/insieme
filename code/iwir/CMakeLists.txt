@@ -4,7 +4,7 @@ message(STATUS "========== configure iwir =============")
 cmake_minimum_required(VERSION 3.2)
 
 file(GLOB_RECURSE insieme_iwir_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_iwir_incs 	include/*.h )
+insieme_glob_headers(insieme_iwir_incs include)
 
 list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/iwir/cmake")
 

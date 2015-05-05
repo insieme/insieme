@@ -5,10 +5,11 @@ message(STATUS "========== configure core =============")
 cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp src/*.def src/*.inc )
-file(GLOB_RECURSE insieme_core_incs 	include/*.h include/*.def include/*.inc )
-file(GLOB_RECURSE insieme_core_yy 	    src/*.y src/*.yy )
-file(GLOB_RECURSE insieme_core_ll 	    src/*.l src/*.ll )
+file(GLOB_RECURSE insieme_core_srcs src/*.cpp src/*.def src/*.inc )
+insieme_glob_headers(insieme_core_incs 	include)
+
+file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
+file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
 # automatically run the script for generating IRBuilder interface
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
@@ -83,11 +84,11 @@ endif()
 # =============================================  build insieme core .so  =====================================
 
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
+target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
 target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
-target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 target_link_libraries(insieme_core gomp)
 
 # add dependencies

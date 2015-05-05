@@ -8,11 +8,10 @@ include(../environment_common.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
-file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
+insieme_glob_headers(insieme_driver_incs include)
 
 # Build the driver library
-add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
+add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs})
 target_include_directories(insieme_driver PUBLIC ${insieme_driver_include_dir} )
 
 # lookup Boost library

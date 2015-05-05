@@ -56,7 +56,6 @@ if(MSVC)
        LLVMJIT LLVMTarget LLVMAsmParser LLVMArchive LLVMSupport LLVMSelectionDAG LLVMMC 
        LLVMMCDisassembler LLVMMCParser
     )
-	message(FATAL_ERROR "i don't now if there is something special about CLANG and MSVC...")
 else(MSVC)
 	#find include path with the used headers
 	find_path(LLVM_INCLUDE_DIRS 
@@ -124,7 +123,6 @@ set(CLANG_LIB_LIST
 )
 
 if(MSVC)
-	message(FATAL_ERROR "i don't now if there is something special about CLANG and MSVC...")
 else(MSVC)
 
 	#find include path for clang headers - look for some headers used by insieme

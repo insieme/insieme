@@ -10,7 +10,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_CURRENT_SOU
 
 # collect source files 
 file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_utils_incs	include/*.h )
+insieme_glob_headers(insieme_utils_incs include)
 
 # add include directory
 #include_directories(include)

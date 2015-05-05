@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_xml_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_xml_incs 	include/*.h )
+insieme_glob_headers(insieme_xml_incs include)
 
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/xsd_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/xsd_config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/xml/test_config.h)

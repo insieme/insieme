@@ -13,7 +13,7 @@ endif()
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_analysis_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_analysis_incs 	include/*.h )
+insieme_glob_headers(insieme_analysis_incs 	include )
 
 # Build the analysis library
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} )
