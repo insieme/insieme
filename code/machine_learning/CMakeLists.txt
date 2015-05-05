@@ -6,7 +6,7 @@ message(STATUS "========== configure machine_learning =============")
 
 # collect source files
 file(GLOB_RECURSE insieme_machine_learning_srcs 	src/*.cpp)
-file(GLOB_RECURSE insieme_machine_learning_incs	include/*.h)
+insieme_glob_headers(insieme_machine_learning_incs include)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inputs.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/machine_learning/inputs.h)
 

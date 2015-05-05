@@ -36,6 +36,7 @@ list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/cmake/")
 #find them in CMAKE_MODULE_PATH
 include(default_library_configuration)
 include(insieme_find_package)
+include(insieme_glob_headers)
 include(add_unit_test)
 
 #if CBA_JOBS option was given, we query the number of cores, if no -j was specified this is the
