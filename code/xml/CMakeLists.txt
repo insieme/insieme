@@ -3,7 +3,6 @@
 #
 project(insieme_xml CXX)
 message(STATUS "========== configure xml =============")
-
 cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:

@@ -3,6 +3,7 @@
 #
 project(insieme_utils CXX)
 message(STATUS "========== configure utils =============")
+cmake_minimum_required(VERSION 3.2)
 
 # configure config files
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/config.h)

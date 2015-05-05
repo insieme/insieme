@@ -3,6 +3,7 @@
 #
 project(insieme_driver CXX)
 message(STATUS "========== configure driver =============")
+cmake_minimum_required(VERSION 3.2)
 include(../environment_common.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
@@ -63,7 +64,7 @@ endforeach(exec_file)
 add_dependencies(integration_tests insiemecc)
 
 # add unit test cases
-set ( ut_prefix  ut_driver )
+set(ut_prefix  ut_driver )
 file(GLOB_RECURSE test_cases test/*.cc)
 
 insieme_find_package(NAME PAPI)

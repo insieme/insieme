@@ -16,16 +16,18 @@ include(CMakeParseArguments)
 macro(insieme_find_package)
 	set(options SUPERBUILD)		#if we use this from the superbuild script, disables the fatal_error in
 								#case a library is not found -> needed to install it
-	set(singleValueArgs NAME) 
-	set(multipleValueArgs COMPONENTS) 
+	set(singleValueArgs NAME)	#name of the library to be found ->
+								#carefull _MUST_ match the name used in the FindXXX.cmake module 
+								#if LibName then the find module has to be FindLibName.cmake
 
+	set(multipleValueArgs COMPONENTS)	#to lookup for components of a
+										#library, most likely to be used with boost
+
+	#stores the given args in variables called lib_NAME, lib_COMPONENTS or lib_SUPERBUILD
 	cmake_parse_arguments(lib "${options}" "${singleValueArgs}" "${multipleValueArgs}" ${ARGN})
 
-	#finds the defualt_library_configuratio in the CMAKE Modules path -- needs to be set in before
+	#finds the default_library_configuration.cmake in the CMAKE Modules path -- needs to be set in before
 
-	#example: Boost offers components as libraries
-	#set(lib_COMPONENTS "${ARGN}")
-   
 	string(TOLOWER ${lib_NAME} lib_name_lc) #lower case
 	string(TOUPPER ${lib_NAME} lib_name_uc) #upper case
     

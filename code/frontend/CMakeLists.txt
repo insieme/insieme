@@ -4,6 +4,7 @@
 project(insieme_frontend CXX)
 
 message(STATUS "========== configure frontend =============")
+cmake_minimum_required(VERSION 3.2)
 
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
@@ -13,10 +14,7 @@ file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
 
-#TODO figure out how to get include-dirs from clang/llvm libs
-target_include_directories(insieme_frontend PUBLIC ${LLVM_ROOT}/include)
-
-#FIXME frontend/instrumentation_region has dependency to backend/runtime/runtime_extension.h
+#FIXME frontend/instrumentation_region has dependency to backend/runtime/runtime_extensions.h
 #target_include_directories(insieme_frontend PUBLIC ${insieme_backend_include_dir})
 target_link_libraries(insieme_frontend insieme_backend)
 
