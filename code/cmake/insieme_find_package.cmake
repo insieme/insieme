@@ -58,7 +58,11 @@ macro(insieme_find_package)
 	#	system
 	# this means we install it at ${THIRD_PARTY_LIBS_HOME}/${lib_NAME}
 	if( NOT (${lib_NAME}_FOUND OR ${lib_name_uc}_FOUND) AND (NOT lib_SUPERBUILD))
-		message(FATAL_ERROR "\n\n${lib_NAME} (Version ${${lib_name_uc}_VERSION}) not found \n Either provide :\n - an environment variable ${lib_name_uc}_ROOT pointing to the directory of the library\n - an -D${lib_name_uc}_ROOT argument to cmake call pointing to the directory of the library\n - install it at ${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}\n ")
-			
+		if (NOT MSVC)
+			message(FATAL_ERROR "\n\n${lib_NAME} (Version ${${lib_name_uc}_VERSION}) not found \n Either provide :\n - an environment variable ${lib_name_uc}_ROOT pointing to the directory of the library\n - an -D${lib_name_uc}_ROOT argument to cmake call pointing to the directory of the library\n - install it at ${THIRD_PARTY_LIBS_HOME}/${lib_name_lc}-${${lib_name_uc}_VERSION}\n ")
+		else()
+			set(${lib_NAME}_LIBRARIES "${lib_NAME}_lib_placeholder")
+			set(${lib_NAME}_INCLUDE_DIRS "${lib_NAME}_include_placeholder")
+		endif()
 	endif()
 endmacro()

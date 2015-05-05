@@ -4,10 +4,11 @@ project(insieme_core CXX)
 message(STATUS "========== configure core =============")
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_core_srcs 	src/*.cpp src/*.def src/*.inc )
-file(GLOB_RECURSE insieme_core_incs 	include/*.h include/*.def include/*.inc )
-file(GLOB_RECURSE insieme_core_yy 	    src/*.y src/*.yy )
-file(GLOB_RECURSE insieme_core_ll 	    src/*.l src/*.ll )
+file(GLOB_RECURSE insieme_core_srcs src/*.cpp src/*.def src/*.inc )
+insieme_glob_headers(insieme_core_incs 	include)
+
+file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
+file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
 
 # list all include paths
 #include_directories( ${insieme_core_include_dir} )
@@ -87,7 +88,7 @@ endif()
 # =============================================  build insieme core .so  =====================================
 
 # Build the core library
-add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
+add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
 target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
 #target_include_directories(insieme_core PUBLIC ${insieme_utils_include_dir} )
 target_link_libraries(insieme_core gomp)

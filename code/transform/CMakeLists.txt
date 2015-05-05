@@ -6,7 +6,7 @@ message(STATUS "========== configure transform =============")
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
-file(GLOB_RECURSE insieme_transform_incs 	include/*.h include/*.def include/*.inc )
+insieme_glob_headers(insieme_transform_incs include)
 
 # Build the transform library
 add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs} )

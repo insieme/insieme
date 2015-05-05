@@ -7,7 +7,7 @@ message(STATUS "========== configure frontend =============")
 
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
-file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc )
+insieme_glob_headers(insieme_frontend_incs include)
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )

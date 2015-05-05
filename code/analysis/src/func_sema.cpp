@@ -400,7 +400,7 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	assert_eq(args.size(), core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
 	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects) ); \
 	}
-	#include "function_db.def"
+	#include "insieme/analysis/function_db.def"
 	#undef FUNC
 
 	// mark as being resolved
