@@ -1,2 +1,2 @@
-excludeSteps=$excludeSteps,"insiemecc_seq_c_convert","insiemecc_seq_c_compile","insiemecc_seq_c_execute","insiemecc_seq_c_check","insiemecc_seq_c++_convert","insiemecc_seq_c++_compile","insiemecc_seq_c++_execute","insiemecc_seq_c++_check", "insiemecc_ocl_c_convert", "insiemecc_ocl_c_compile" "insiemecc_ocl_c_execute","insiemecc_ocl_c_check"
+excludeSteps="*seq*", "*ocl*"
 
