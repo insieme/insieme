@@ -340,9 +340,9 @@ const core::ProgramPtr SCoPTransformation(const core::ProgramPtr& program, const
 		scoplist.clear(); // we do not use the scoplist right now, but we may want to refer to it later
 		return insieme::transform::polyhedral::SCoPPar(program).apply();
 	} else {
-		auto scoplist=insieme::transform::polyhedral::novel::SCoPVisitor(ProgramAddress(program)).scoplist;
+		auto pm=insieme::transform::polyhedral::novel::Polyhedral(ProgramAddress(program));
 		// do some transformation here
-		return scoplist.IR().getAddressedNode();
+		return pm.IR().getAddressedNode();
 	}
 }
 

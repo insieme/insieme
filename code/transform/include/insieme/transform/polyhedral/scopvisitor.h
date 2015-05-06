@@ -58,9 +58,10 @@ class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address>
 
 public:
 
-	/// The public variable scoplist holds the result from visiting all nodes in a program. It should be
-	/// used/passed/copied, then the SCoPVisitor can be destructed.
-	insieme::transform::polyhedral::novel::SCoPList scoplist;
+	/// The public variable scoplist holds the list of outermost SCoPs for a given program. After walking all
+	/// the nodes is finished, the scoplist should be moved to the Polyhedral class which represents the whole
+	/// program using the polyhedral model.
+	std::vector<insieme::transform::polyhedral::novel::NestedSCoP> scoplist;
 
 	// helper routines for general use in other methods (except for constructor; do not keep track of state)
 	SCoPVisitor(const insieme::core::ProgramAddress &node);

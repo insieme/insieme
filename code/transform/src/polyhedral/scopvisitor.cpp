@@ -53,8 +53,7 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// The constructor initializes class variables and triggers the visit of all nodes in the program.
-SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()),
-	scoplist(node) {
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()) {
 	visit(node);
 }
 

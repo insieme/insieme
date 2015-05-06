@@ -50,12 +50,14 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// Visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
-SCoPList::SCoPList(const insieme::core::ProgramAddress &program): program(program) {
-	std::cout << "Hello from SCoPList Constructor Nouvelle!" << std::endl;
+Polyhedral::Polyhedral(const insieme::core::ProgramAddress &program): program(program) {
+	std::cout << "Hello from Polyhedral Constructor Nouvelle!" << std::endl;
+	SCoPVisitor sv(program);
+	scoplist=sv.scoplist;
 }
 
 /// Return the IR of the corresponding polyhedra, if defined; otherwise, return the original program
-const ProgramAddress SCoPList::IR() {
+const ProgramAddress Polyhedral::IR() {
 	// generate code only when all SCoPs are valid; otherwise use original program, since we could not optimize
 	// possibly, we could also optimize based on the valid SCoPs, ignoring the other ones (check semantics!)
 	bool affine=true;
