@@ -3,6 +3,7 @@
 #
 project(insieme_transform CXX)
 message(STATUS "========== configure transform =============")
+cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )

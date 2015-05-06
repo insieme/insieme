@@ -131,7 +131,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		wi->parameters = NULL;
 	}
 	wi->range = *range;
-	wi->state = IRT_WI_STATE_NEW;
+	irt_atomic_store(&wi->state, IRT_WI_STATE_NEW);
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
@@ -319,7 +319,7 @@ void irt_wi_end(irt_work_item* wi) {
 	}
 
 	// update state, trigger completion event
-	wi->state = IRT_WI_STATE_DONE;
+	irt_atomic_store(&wi->state, IRT_WI_STATE_DONE);
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 
 	// remove from groups

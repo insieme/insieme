@@ -755,12 +755,16 @@ namespace integration {
 		return fail;
 	}
 
-	bool isExcluded(string excludes,TestStep step){
+	bool isExcluded(string excludes, TestStep step){
  		boost::char_separator<char> sep(",\"");
-		boost::tokenizer<boost::char_separator<char>> tokens(excludes,sep);
+		boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
 
-		BOOST_FOREACH(std::string it,tokens){
-			if(step.getName().find(it) != std::string::npos)
+		for (const string& it : tokens) {
+			assert_true(it.find("\\E"));
+			string tmp("\\Q" + it + "\\E");
+			boost::replace_all(tmp, "*", "\\E.*\\Q");
+			boost::regex reg(tmp, boost::regex::perl);
+			if (boost::regex_match(step.getName(), reg))
 				return true;
 		}
 		return false;

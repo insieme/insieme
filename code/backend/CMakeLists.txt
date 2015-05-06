@@ -3,6 +3,7 @@
 #
 project(insieme_backend CXX)
 message(STATUS "========== configure backend =============")
+cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_backend_srcs containing all .cpp files:
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp src/*.def src/*.inc)
@@ -24,7 +25,7 @@ target_link_libraries(insieme_backend insieme_transform)
 target_link_libraries(insieme_backend insieme_analysis)
 
 #target for backend unit_tests
-set (ut_prefix  ut_be )
+set(ut_prefix  ut_be )
 
 #custom target for the all BE unit tests
 add_custom_target(${ut_prefix})

@@ -1,3 +1,3 @@
 files="interceptor.cpp"
 includes="./"
-excludeSteps="insiemecc_c_sema","insiemecc_run_c_convert","insiemecc_run_c_compile","insiemecc_run_c_execute","ref_c_compile","ref_c_execute","ref_c_check","insiemecc_run_c_check","insiemecc_seq_c_convert","insiemecc_seq_c_compile","insiemecc_seq_c_execute","insiemecc_seq_c_check","insiemecc_ocl_c_convert", "insiemecc_ocl_c_compile" "insiemecc_ocl_c_execute","insiemecc_ocl_c_check"
+excludeSteps="*_c_*"

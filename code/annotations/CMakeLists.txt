@@ -3,6 +3,7 @@
 #
 project(insieme_annotations CXX)
 message(STATUS "========== configure annotations =============")
+cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_annotations_srcs 	src/*.cpp )
@@ -14,10 +15,6 @@ target_include_directories(insieme_annotations PUBLIC ${insieme_annotations_incl
 target_link_libraries(insieme_annotations insieme_core)
 target_link_libraries(insieme_annotations insieme_utils)
 
-#TODO how to handle insieme_common??
-#target_link_libraries(insieme_annotations insieme_common)
-#include_directories( ${insieme_common_include_dir} )
-#target_include_directories(insieme_annotations PUBLIC ${insieme_common_include_dir})
 #insieme_common is a header-only target
 target_link_libraries(insieme_annotations insieme_common)
 

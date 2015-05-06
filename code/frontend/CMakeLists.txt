@@ -4,6 +4,7 @@
 project(insieme_frontend CXX)
 
 message(STATUS "========== configure frontend =============")
+cmake_minimum_required(VERSION 3.2)
 
 # collect source files
 file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
@@ -12,9 +13,6 @@ insieme_glob_headers(insieme_frontend_incs include)
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_dir})
-
-#TODO figure out how to get include-dirs from clang/llvm libs
-target_include_directories(insieme_frontend PUBLIC ${LLVM_ROOT}/include)
 
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 

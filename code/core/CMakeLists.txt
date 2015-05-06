@@ -2,6 +2,7 @@
 # Builds the insieme core library
 project(insieme_core CXX)
 message(STATUS "========== configure core =============")
+cmake_minimum_required(VERSION 3.2)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_core_srcs src/*.cpp src/*.def src/*.inc )
@@ -9,10 +10,6 @@ insieme_glob_headers(insieme_core_incs 	include)
 
 file(GLOB_RECURSE insieme_core_yy src/*.y src/*.yy )
 file(GLOB_RECURSE insieme_core_ll src/*.l src/*.ll )
-
-# list all include paths
-#include_directories( ${insieme_core_include_dir} )
-#include_directories( ${insieme_utils_include_dir} )
 
 # automatically run the script for generating IRBuilder interface
 execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
@@ -22,11 +19,10 @@ if (NOT ${builderbuilderSuccess} EQUAL 0)
 endif()
 
 # =============================================  bison builds the parser  =====================================
-
 if(NOT MSVC) 
 	insieme_find_package(NAME BISON)
 	IF(BISON_EXECUTABLE-NOTFOUND)
-	    message(FATAL_ERROR "bisson not found")
+	    message(FATAL_ERROR "bison not found")
 
 	ELSE()
 	    message(STATUS "bison found @ ${BISON_EXECUTABLE}")
@@ -78,11 +74,11 @@ if(NOT MSVC)
 	ENDIF()
 
 	# make the build aware of generated headers
-	include_directories( ${FLEX_OUTPUT_PATH} )
-	include_directories( ${BISON_OUTPUT_PATH} )
+	#include_directories( ${FLEX_OUTPUT_PATH} )
+	#include_directories( ${BISON_OUTPUT_PATH} )
 
 	# flex needs a header in installation
-	include_directories( ${FLEX_INCLUDE_DIRS} )
+	#include_directories( ${FLEX_INCLUDE_DIRS} )
 endif()
 
 # =============================================  build insieme core .so  =====================================
@@ -90,7 +86,9 @@ endif()
 # Build the core library
 add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${FLEX_OUTPUT} ${BISON_OUTPUT})
 target_include_directories(insieme_core PUBLIC ${insieme_core_include_dir} )
-#target_include_directories(insieme_core PUBLIC ${insieme_utils_include_dir} )
+target_include_directories(insieme_core PRIVATE ${FLEX_OUTPUT_PATH})
+target_include_directories(insieme_core PRIVATE ${BISON_OUTPUT_PATH})
+target_include_directories(insieme_core PRIVATE ${FLEX_INCLUDE_DIRS})
 target_link_libraries(insieme_core gomp)
 
 # add dependencies
@@ -119,11 +117,18 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${CUDD_LIBRARIES})
 	target_include_directories(${case_name} PUBLIC test/include/)
 	
+	#the parser unit-tests need the bison/flex include directories
+	if(case_file MATCHES ".*parser.*")
+		target_include_directories(${case_name} PRIVATE ${FLEX_OUTPUT_PATH})
+		target_include_directories(${case_name} PRIVATE ${BISON_OUTPUT_PATH})
+		target_include_directories(${case_name} PRIVATE ${FLEX_INCLUDE_DIRS})
+	endif()
+	
 	# exclude lua tests from valgrind since it fails for versions newer than 3.7.0
 	set(VFLAG ${TRUE})
 	if(case_file MATCHES ".*lua.*")
 		set(VFLAG FALSE)
-	endif(case_file MATCHES ".*lua.*")
+	endif()
 	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
 endforeach(case_file)
 

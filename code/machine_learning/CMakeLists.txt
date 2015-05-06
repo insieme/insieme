@@ -3,6 +3,7 @@
 #
 project(insieme_machine_learning CXX)
 message(STATUS "========== configure machine_learning =============")
+cmake_minimum_required(VERSION 3.2)
 
 # collect source files
 file(GLOB_RECURSE insieme_machine_learning_srcs 	src/*.cpp)
