@@ -118,7 +118,7 @@ bool irt_scheduling_worker_sleep(irt_worker *self) {
 	}
 	IRT_DEBUG("Worker %d sleeping. Waker: %d\n", id, waker->id.thread);
 	waker->sched_data.wake_target = self;
-	self->state = IRT_WORKER_STATE_SLEEPING;
+	irt_atomic_store(&self->state, IRT_WORKER_STATE_SLEEPING);
 	return true;
 }
 
@@ -145,7 +145,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 	for(int i=0; i<IRT_SCHED_UBER_STEAL_ATTEMPTS; ++i) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
 		irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
-		if(wo->state == IRT_WORKER_STATE_SLEEPING) {
+		if(irt_atomic_load(&wo->state) == IRT_WORKER_STATE_SLEEPING) {
 			if(irt_cwb_size(&wo->sched_data.queue) > 0) irt_signal_worker(wo);
 			continue;
 		} 
