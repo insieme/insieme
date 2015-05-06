@@ -38,7 +38,7 @@
 
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/core/lang/instrumentation_extension.h"
 
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
@@ -55,22 +55,23 @@ class InstrumentationRegionExtension : public FrontendExtension {
 public:
 	InstrumentationRegionExtension() : FrontendExtension() {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>("instrumentation", "region", 
-			pragma::kwd("id") >> tok::l_paren >> tok::expr["id"] >> tok::r_paren >> tok::eod,
+				pragma::kwd("id") >> tok::l_paren >> tok::expr["id"] >> tok::r_paren >> tok::eod,
 			[](MatchObject match, stmtutils::StmtWrapper node) {
 				try {
 					// Get id number
 					core::ExpressionPtr	idClause = match.getSingleExpr("id");
 					auto idFormula = core::arithmetic::toFormula(idClause);
-					if(!idFormula.isConstant() || !idFormula.isInteger()) throw core::arithmetic::NotAFormulaException(idClause);
+					if(!idFormula.isConstant() || !idFormula.isInteger()) {
+						throw core::arithmetic::NotAFormulaException(idClause);
+					}
 					auto id = idFormula.getIntegerValue();
 
 					// Build instrumentation calls 
 					auto& manager = node[0]->getNodeManager();
-					auto& basic = manager.getLangBasic();
-					auto& ext = manager.getLangExtension<insieme::backend::runtime::Extensions>();
+					auto& instExt = manager.getLangExtension<insieme::core::lang::InstrumentationExtension>();
 					core::IRBuilder builder(manager);
-					auto startCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionStart, builder.uintLit(id));
-					auto endCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionEnd, builder.uintLit(id));
+					auto startCall = builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(id));
+					auto endCall = builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(id));
 
 					// Attach instrumentation calls
 					node.insert(node.begin(), startCall);

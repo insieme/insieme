@@ -52,6 +52,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/lang/instrumentation_extension.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
@@ -818,7 +819,7 @@ namespace measure {
 			// obtain references to primitives
 			const auto& basic = manager.getLangBasic();
 			const auto& unit = basic.getUnit();
-			auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
+			auto& instExt = manager.getLangExtension<insieme::core::lang::InstrumentationExtension>();
 
 			// convert region id to IR id
 			auto regionID = build.uintLit(id);
@@ -839,8 +840,8 @@ namespace measure {
 //			}
 
 			// build instrumented code section using begin/end markers
-			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
-			auto region_inst_end_call = build.callExpr(unit, rtExt.instrumentationRegionEnd, regionID);
+			auto region_inst_start_call = build.callExpr(unit, instExt.getInstrumentationRegionStart(), regionID);
+			auto region_inst_end_call = build.callExpr(unit, instExt.getInstrumentationRegionEnd(), regionID);
 
 			// instrument exit points
 			core::StatementPtr instrumented = stmt;

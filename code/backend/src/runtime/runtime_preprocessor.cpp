@@ -48,6 +48,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/lang/instrumentation_extension.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
@@ -107,12 +108,13 @@ namespace runtime {
 			// produce replacement
 			core::TypePtr unit = basic.getUnit();
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
+			const auto& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 
             if(instrumentBody) {
                 core::StatementList stmts;
-                stmts.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(0)));
+                stmts.push_back(builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(0)));
                 stmts.push_back(call);
-                stmts.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(0)));
+                stmts.push_back(builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(0)));
                 auto instrumentedBody = builder.compoundStmt(stmts);
 			    WorkItemVariant variant(builder.lambdaExpr(unit, instrumentedBody, toVector(workItem)));
 			    return WorkItemImpl(toVector(variant));
@@ -308,13 +310,13 @@ namespace runtime {
 
         core::StatementPtr wrapWithInstrumentationRegion(core::NodeManager& manager, const core::ExpressionPtr& expr, const core::StatementPtr& stmt) {
             if(expr->hasAttachedValue<annotations::ompp_objective_info>()) {
-			    core::IRBuilder builder(manager);
-			    const Extensions& extensions = manager.getLangExtension<Extensions>();
+				core::IRBuilder builder(manager);
+				const auto& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 		        core::StatementList stmtList;
                 unsigned region_id = expr->getAttachedValue<annotations::ompp_objective_info>().region_id;
-                stmtList.push_back(builder.callExpr(extensions.instrumentationRegionStart, builder.uintLit(region_id)));
+                stmtList.push_back(builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(region_id)));
                 stmtList.push_back(stmt);
-                stmtList.push_back(builder.callExpr(extensions.instrumentationRegionEnd, builder.uintLit(region_id)));
+                stmtList.push_back(builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(region_id)));
                 return builder.compoundStmt(stmtList);
             }
             else
@@ -943,13 +945,14 @@ namespace runtime {
 		// get language extension
 		auto& mgr = converter.getNodeManager();
 		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::Extensions>();
+		const auto& instExt = mgr.getLangExtension<core::lang::InstrumentationExtension>();
 
 		// get max region id
 		unsigned max = 0;
 		core::visitDepthFirstOnce(node, [&](const core::CallExprPtr& call) {
 
 			// check whether this call is specifying some region ID
-			if (!(core::analysis::isCallOf(call, rtExt.instrumentationRegionStart) || core::analysis::isCallOf(call, rtExt.regionAttribute))) {
+			if (!(core::analysis::isCallOf(call, instExt.getInstrumentationRegionStart()) || core::analysis::isCallOf(call, rtExt.regionAttribute))) {
 				return;
 			}
 
@@ -981,7 +984,7 @@ namespace runtime {
 
 		// build init call
 		core::IRBuilder builder(mgr);
-		auto initStmt = builder.callExpr(mgr.getLangBasic().getUnit(), rtExt.instrumentationInitRegions, builder.uintLit(max + 1));
+		auto initStmt = builder.callExpr(mgr.getLangBasic().getUnit(), instExt.getInstrumentationInitRegions(), builder.uintLit(max + 1));
 
 		// insert into body
 		return core::transform::insert(mgr, body, initStmt, 0);

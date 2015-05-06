@@ -16,10 +16,6 @@ target_include_directories(insieme_frontend PUBLIC ${insieme_frontend_include_di
 #TODO figure out how to get include-dirs from clang/llvm libs
 target_include_directories(insieme_frontend PUBLIC ${LLVM_ROOT}/include)
 
-#FIXME frontend/instrumentation_region has dependency to backend/runtime/runtime_extension.h
-#target_include_directories(insieme_frontend PUBLIC ${insieme_backend_include_dir})
-target_link_libraries(insieme_frontend insieme_backend)
-
 # lookup Boost library
 insieme_find_package(NAME Boost COMPONENTS serialization filesystem system program_options) #TODO NOT NEEDED? program_options system filesystem regex serialization 
 target_include_directories(insieme_frontend SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
@@ -39,6 +35,7 @@ target_include_directories(insieme_frontend PUBLIC ${CLANG_INCLUDE_DIRS})
 target_link_libraries(insieme_frontend insieme_core)
 target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_analysis)
+target_link_libraries(insieme_frontend insieme_transform)
 target_link_libraries(insieme_frontend insieme_annotations)
 
 # add custom target for ut_fe test suite
@@ -59,9 +56,9 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_driver)
-    target_link_libraries(${case_name} insieme_backend)
-    target_link_libraries(${case_name} insieme_analysis)
-    target_link_libraries(${case_name} insieme_transform)
+	target_link_libraries(${case_name} insieme_backend)
+	target_link_libraries(${case_name} insieme_analysis)
+	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} ${CLANG_LIBRARIES})
 	target_link_libraries(${case_name} ${LLVM_LIBRARIES})
