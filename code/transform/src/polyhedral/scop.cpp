@@ -46,21 +46,26 @@
 using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
-// constructor
-SCoP::SCoP(unsigned int valid) {
-	if (valid<2) obeysDeps=boost::optional<int>(valid); // valid=2 (default) means that we don't know yet
+/// isAffine returns true if the SCoP has affine lower and upper bound, affine stride and all of its subSCoPs are
+/// affine as well.
+bool NestedSCoP::isAffine() {
+	static boost::optional<bool> retval;
+	if (!retval && lb && ub && stride) {
+		bool subsaffine=true;
+		for (auto scop: subscops) subsaffine&=scop.isAffine();
+		retval=boost::optional<bool>(isAffine(*lb) &&
+		                             isAffine(*ub) &&
+		                             isAffine(*stride) &&
+		                             subsaffine);
+	}
+	return retval && *retval; // if in doubt, we say that this SCoP is not affine
 }
 
-/// valid returns true if the SCoP does obey all dependences; false otherwise. The validity does not change (as
-/// a new SCoP will be created resulting from a transformation), hence its value should be memoized.
-int SCoP::valid() {
-	// check whether we already have determined the validity of this SCoP; it may be invalid after a
-	// dependence-ignoring transformation
-	// all SCoPs are valid right now, as they are derived from the original program text
-	// once they have been transformed, we need to add code here to check the dependences
-	if (!obeysDeps) {
-		obeysDeps=boost::optional<unsigned int>(1);
-	}
+/// The NestedSCoP constructor initializes the parent of the nested SCoP.
+NestedSCoP::NestedSCoP(NestedSCoP *parentscop): parentscop(parentscop) {
+}
 
-	return *obeysDeps;
+/// isAffine will return true in case the expression given with addr is a linear expression.
+bool NestedSCoP::isAffine(insieme::core::NodeAddress addr) {
+	return true;
 }

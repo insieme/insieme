@@ -58,11 +58,11 @@ SCoPList::SCoPList(const insieme::core::ProgramAddress &program): program(progra
 const ProgramAddress SCoPList::IR() {
 	// generate code only when all SCoPs are valid; otherwise use original program, since we could not optimize
 	// possibly, we could also optimize based on the valid SCoPs, ignoring the other ones (check semantics!)
-	int scopsvalid=1;
-	for (auto it=begin(); it!=end(); it++) scopsvalid&=it->valid();
+	bool affine=true;
+	for (auto scop: scoplist) affine&=scop.isAffine();
 
 	// now, if all SCoPs are valid, generate code
-	if (scopsvalid)
+	if (affine)
 		return program; // currently a noop
 	else
 		return program;

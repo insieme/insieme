@@ -38,16 +38,32 @@
 #define NEWSCOP_H
 
 #include "boost/optional.hpp"
+#include "insieme/core/ir_address.h" // for the typedef insieme::core::NodeAddress
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
 class SCoP {
-	boost::optional<unsigned int> obeysDeps;
+public:
+	void iterationDomain() {}
+};
+
+class NestedSCoP {
+	NestedSCoP *parentscop;
+	std::vector<NestedSCoP> subscops;
 
 public:
-	SCoP(unsigned int valid=2);
-	int valid();
+	NestedSCoP(NestedSCoP *parentscop=0);
+	bool isAffine();
+
+private:
+	// These vars should not be used outside this class, ever. Instead, give them to a private
+	// function generateIterationDomain which then generates the publicly available iteration domain.
+	// also possible: boost::variant<empty, loop, conditional>   http://stackoverflow.com/a/19579377
+	boost::optional<insieme::core::NodeAddress> lb, ub, stride; ///< for conditionals: lb=0, ub=condition, stride=1
+
+	bool isAffine(insieme::core::NodeAddress addr);
 };
 
 }}}}
