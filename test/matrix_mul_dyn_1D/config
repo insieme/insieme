@@ -1,1 +1,1 @@
-excludeSteps="*c++*", "*ocl*" 
+excludeSteps="*_c++_*", "*_ocl_*" 

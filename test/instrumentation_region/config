@@ -1,4 +1,4 @@
 use_libmath=1
 executionFlags=100
-excludeSteps="*c++*", "*ocl*", "*seq*"
+excludeSteps="*_c++_*", "*_ocl_*", "*_seq_*"
 definitions[insiemecc_run_c_compile]=${definitions[insiemecc_run_c_compile]},"IRT_ENABLE_REGION_INSTRUMENTATION"

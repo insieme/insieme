@@ -1,2 +1,2 @@
-excludeSteps="*seq*", "*ocl*"
+excludeSteps="*_seq_*", "*_ocl_*"
 
