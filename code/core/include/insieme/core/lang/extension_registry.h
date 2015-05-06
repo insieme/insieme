@@ -47,6 +47,7 @@
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
+#include "insieme/core/lang/instrumentation_extension.h"
 
 #include "insieme/utils/assert.h"
 
@@ -80,6 +81,7 @@ namespace lang {
 			extensionFactories.insert(getExtensionFactory<SIMDVectorExtension>("ext.simd"));
 			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
 			extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
+			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
 		}
 
 		//prevent copies
