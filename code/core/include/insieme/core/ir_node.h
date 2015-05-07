@@ -1290,3 +1290,4 @@ IRDump dumpColor(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpOneLine(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpPretty(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 IRDump dumpDetail(const insieme::core::NodePtr&, std::ostream& out = std::cout);
+IRDump dumpDetailColored(const insieme::core::NodePtr& node, std::ostream& out = std::cout);

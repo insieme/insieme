@@ -242,7 +242,7 @@ IRDump dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
 	}, out);
 }
 
-IRDump dumpColor (const insieme::core::NodePtr& node, std::ostream& out) {
+IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out) {
 	return IRDump([node](std::ostream& out)->std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node);
 		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
@@ -271,6 +271,14 @@ IRDump dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
 IRDump dumpDetail(const insieme::core::NodePtr& node, std::ostream& out) {
 	return IRDump([node](std::ostream& out)->std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node, insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL);
+		return out << print << std::endl;
+	}, out);
+}
+
+IRDump dumpDetailColored(const insieme::core::NodePtr& node, std::ostream& out) {
+	return IRDump([node](std::ostream& out)->std::ostream& {
+		insieme::core::printer::PrettyPrinter print(node, insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL);
+		print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
 		return out << print << std::endl;
 	}, out);
 }
