@@ -78,6 +78,21 @@ if(NOT PAPI_FOUND)
 	list(REMOVE_ITEM test_cases ${measure_test_cases})
 endif()
 
+if(USE_OPENCL)
+	find_library(OPENCL_LIBS NAMES OpenCL PATHS $ENV{OPENCL_ROOT}/lib/x86_64)
+	if (${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
+		set(USE_OPENCL OFF)
+		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")
+	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
+		add_definitions(-DUSE_OPENCL)
+		message(STATUS "Enabling OpenCL tests")
+		# list all include paths
+		include_directories(include/ $ENV{OPENCL_ROOT}/include/)
+	endif(${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
+else (USE_OPENCL)
+	message(STATUS "Disabling OpenCL tests")
+endif(USE_OPENCL)
+
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
