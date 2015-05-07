@@ -1,2 +1,2 @@
-excludeSteps="*c++*", "*ocl"
+excludeSteps="*c++*", "*ocl*"
 use_libmath=1
