@@ -773,8 +773,8 @@ namespace runtime {
 				const auto& arguments = call->getArguments();
 
 				// extract code variants
-				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>>(
-						call->getFunctionExpr().as<core::CallExprPtr>()->getArgument(0));
+				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>,core::encoder::DirectExprListConverter>(
+					call->getFunctionExpr().as<core::CallExprPtr>()->getArgument(0));
 
 				int i = 0;
 				vector<core::SwitchCasePtr> cases;
@@ -806,7 +806,6 @@ namespace runtime {
 			}
 
 			core::StatementPtr convertVariantToCall(const core::CallExprPtr& call) {
-
 				// --- build work item parameters (arguments to variant) ---
 
 				// collect values to be passed
@@ -829,9 +828,10 @@ namespace runtime {
 
 				// extract variants
 				core::CallExprPtr variantCall = static_pointer_cast<core::CallExprPtr>(call->getFunctionExpr());
-
+				
 				// extract variants
-				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>>(variantCall->getArgument(0));
+				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>,
+					core::encoder::DirectExprListConverter>(variantCall->getArgument(0));
 
 				// create the code for each executable variant
 				auto unit = basic.getUnit();
@@ -864,10 +864,9 @@ namespace runtime {
 								toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, builder.getTypeLiteral(argType))));
 					}
 
-
 					// add call to variant implementation
 					body.push_back(builder.callExpr(basic.getUnit(), variantImpl, newArgs));
-					
+										
 					// create the resulting lambda expression / work item variant
 					variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem))));
 				});
@@ -876,9 +875,7 @@ namespace runtime {
 				WorkItemImpl impl(variants);
 				core::ExpressionPtr wi = coder::toIR(manager, impl);
 
-
 				// --- Encode variant call as work item call ---
-
 
 				// create job parameters
 				core::IRBuilder builder(call->getNodeManager());
@@ -893,9 +890,8 @@ namespace runtime {
 			}
 
 			core::StatementPtr convertVariant(const core::CallExprPtr& call) {
-
 				auto pickCall = call->getFunctionExpr();
-
+				
 				// check whether this is indeed a call to pick variants
 				assert_true(core::analysis::isCallOf(pickCall, basic.getPick())) << "Invalid Variant call!";
 
@@ -911,7 +907,8 @@ namespace runtime {
 					}
 				}
 				// default to switch
-				return convertVariantToCall(call);
+				auto ret = convertVariantToCall(call);
+				return ret;
 			}
 		};
 

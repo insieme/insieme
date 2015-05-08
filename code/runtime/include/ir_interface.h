@@ -116,4 +116,10 @@ static inline void ir_inst_region_end(irt_inst_region_id id) {
 	irt_inst_region_end(id);
 }
 
+/** Picks a value in the range [begin, end[
+ */
+static inline uint32 irt_variant_pick(uint32 begin, uint32 end) {
+	return begin;
+} 
+
 #endif // ifndef __GUARD_IR_INTERFACE_H
