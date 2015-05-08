@@ -2,4 +2,4 @@ files="../bots_common.c","../bots_main.c"
 includes="../","./"
 outputAwk="/^Verification/{ print $3 }"
 use_libmath=1
-excludeSteps="*_c++_*", "*_ocl_*"
+excludeSteps="*c++*", "*ocl*"

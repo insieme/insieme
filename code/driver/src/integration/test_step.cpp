@@ -760,7 +760,7 @@ namespace integration {
 		boost::tokenizer<boost::char_separator<char>> tokens(excludes, sep);
 
 		for (const string& it : tokens) {
-			assert_true(it.find("\\E") == string::npos);
+			assert_true(it.find("\\E"));
 			string tmp("\\Q" + it + "\\E");
 			boost::replace_all(tmp, "*", "\\E.*\\Q");
 			boost::regex reg(tmp, boost::regex::perl);

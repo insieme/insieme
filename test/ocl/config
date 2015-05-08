@@ -10,6 +10,6 @@ use_c[insiemecc_ocl_c_compile]=1
 
 definitions[insiemecc_ocl_c_compile]="_GNU_SOURCE","USE_OPENCL=ON","LOCAL_MODE"
 outputAwk="/Result check: OK/"
-excludeSteps="*_c++_*", "*_run_*", "*_seq_*"
+excludeSteps="*c++*", "*run*", "*seq*"
 
 

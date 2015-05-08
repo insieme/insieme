@@ -1,2 +1,2 @@
-excludeSteps="*_c++_*", "*_ocl_*", "*_seq_*"
+excludeSteps=${excludeSteps}, "*seq*"
 

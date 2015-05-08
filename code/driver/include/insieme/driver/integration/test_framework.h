@@ -127,14 +127,13 @@ namespace testFramework{
 	vector<TestStep> getTestSteps(const Options& options);
 
 	struct Colorize{
-		enum Color { RED, YELLOW, GREEN, BLUE, BLACK, BOLD, RESET};
+		enum Color { RED, GREEN, BLUE, BLACK, BOLD, RESET};
 		bool color;
 		Colorize(bool color) : color(color) {}
 		string getColor(Color c) const {
 			if(color) {
 				switch(c) {
 					case RED: return "\033[31m";
-					case YELLOW: return "\033[33m";
 					case GREEN: return "\033[32m";
 					case BLUE: return "\033[34m";
 					case BLACK: return "\033[30m";
@@ -147,7 +146,6 @@ namespace testFramework{
 		}
 
 		string red() const {return getColor(RED); }
-		string yellow() const {return getColor(YELLOW); }
 		string green() const {return getColor(GREEN); }
 		string blue() const {return getColor(BLUE); }
 		string black() const {return getColor(BLACK); }
