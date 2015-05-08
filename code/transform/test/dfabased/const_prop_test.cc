@@ -75,12 +75,12 @@ namespace transform {
 
 		ret = removeDeadVariables(mgr, ret);
 
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl int<4> v2 = undefined(type<int<4>>);{ };22;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));decl int<4> v2 = undefined(type<int<4>>);{ };22;}",
 				toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl int<4> v2 = undefined(type<int<4>>);22;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));decl int<4> v2 = undefined(type<int<4>>);22;}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
@@ -133,12 +133,12 @@ namespace transform {
 
 		ret = removeDeadVariables(mgr, ret);
 
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 =  var(undefined(type<int<4>>));{decl int<4> v3 = undefined(type<int<4>>);{ };};{ };22;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));decl ref<int<4>> v2 = ( var(undefined(type<int<4>>)));{decl int<4> v3 = undefined(type<int<4>>);{ };};{ };22;}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 =  var(undefined(type<int<4>>));{decl int<4> v3 = undefined(type<int<4>>);};22;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));decl ref<int<4>> v2 = ( var(undefined(type<int<4>>)));{decl int<4> v3 = undefined(type<int<4>>);};22;}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 

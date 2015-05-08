@@ -765,8 +765,8 @@ TEST(TypeConversion, RecStructType) {
 
 		int main() {
 			{
-				#pragma unittest symbolic "decl ref<X> v0 =  var(struct{py:=ref_reinterpret(ref_null, type<array<Y,1>>)})"
-				#pragma unittest resolved "decl ref<rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}> v0 =  var(struct{py:=ref_reinterpret(ref_null, type<array<rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>},1>>)})"
+				#pragma unittest symbolic "decl ref<X> v0 = ( var(struct{py:=ref_reinterpret(ref_null, type<array<Y,1>>)}))"
+				#pragma unittest resolved "decl ref<rec 'X{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>}> v0 = ( var(struct{py:=ref_reinterpret(ref_null, type<array<rec 'Y{'X=struct X <py:ref<array<'Y,1>>>, 'Y=struct Y <px:ref<array<'X,1>>>},1>>)}))"
 				struct X x = {0};
 			}
 			{

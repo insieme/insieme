@@ -50,7 +50,7 @@ TEST(PrettyPrinter, Basic) {
 
 	// check setup
 	EXPECT_EQ(static_cast<unsigned>(0), PrettyPrinter::OPTIONS_DEFAULT);
-	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY ),
+	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY ),
 			PrettyPrinter::OPTIONS_DETAIL);
 	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE),
 			PrettyPrinter::OPTIONS_SINGLE_LINE);
@@ -60,19 +60,19 @@ TEST(PrettyPrinter, Basic) {
 	PrettyPrinter printerA(ptr, PrettyPrinter::OPTIONS_DEFAULT);
 	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_DEREFS));
 	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_BRACKETS));
+	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::SKIP_BRACKETS));
 	EXPECT_FALSE(printerA.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	PrettyPrinter printerB(ptr, PrettyPrinter::OPTIONS_DETAIL);
 	EXPECT_TRUE(printerB.hasOption(PrettyPrinter::PRINT_DEREFS));
 	EXPECT_TRUE(printerB.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_TRUE(printerB.hasOption(PrettyPrinter::PRINT_BRACKETS));
+	EXPECT_FALSE(printerB.hasOption(PrettyPrinter::SKIP_BRACKETS));
 	EXPECT_FALSE(printerB.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	PrettyPrinter printerC(ptr, PrettyPrinter::OPTIONS_SINGLE_LINE);
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_CASTS));
-	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_BRACKETS));
+	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::SKIP_BRACKETS));
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_SINGLE_LINE));
 
 	printerC.setOption(PrettyPrinter::PRINT_DEREFS, false);
@@ -176,7 +176,7 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	ExpressionPtr expr = builder.intLit(1);
 	expr = analysis::addAttribute(expr, a1);
 
-	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
+	EXPECT_EQ("(1)", toString(PrettyPrinter(expr)));
 	EXPECT_EQ("attr(1, ([unordered]))", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }
 
@@ -194,6 +194,26 @@ TEST(PrettyPrinter, StructSuperTypes) {
 	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.namedType("c", builder.genericType("C"))));
 	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\nlet type001 = struct : type000 <\n\tb:B\n>;\n\nlet type002 = struct : virtual type001 <\n\tc:C\n>;\n\ntype002", toString(PrettyPrinter(classC)));
 
+}
+
+TEST(PrettyPrinter, Parentheses) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	ExpressionPtr A = builder.intLit(1);
+	ExpressionPtr B = builder.intLit(2);
+	ExpressionPtr C = builder.intLit(3);
+	ExpressionPtr D = builder.intLit(4);
+	ExpressionPtr E = builder.intLit(5);
+
+	ExpressionPtr funA = builder.add(A, B);
+	ExpressionPtr funB = builder.mul(funA, C);
+	ExpressionPtr funC = builder.sub(D, E);
+	ExpressionPtr funD = builder.div(funB, funC);
+
+	EXPECT_EQ("(((1+2)*3)/(4-5))", toString(PrettyPrinter(funD)));
+	EXPECT_EQ("1+2*3/4-5", toString(PrettyPrinter(funD, PrettyPrinter::SKIP_BRACKETS)));
 }
 
 TEST(PrettyPrinter, FunctionTypes) {
@@ -320,52 +340,52 @@ TEST(PrettyPrinter, JustOutermostScope) {
     EXPECT_TRUE(stmt);
 
 	std::string res = 
-    "let fun000 = fun(int<4> v5) -> int<4> {\n"
-    "    return v5+1;\n"
-    "};\n"
-    "\n"
-    "let fun001 = fun(ref<int<4>> v8) -> int<4> {\n"
-    "    return v8;\n"
-    "};\n"
-    "\n"
-    "{\n"
-    "    decl ref<int<4>> v9 =  var(undefined(type<int<4>>));\n"
-    "    decl ref<int<4>> v13 =  var(undefined(type<int<4>>));\n"
-    "    decl ref<int<4>> v14 =  var(undefined(type<int<4>>));\n"
-    "    decl ref<int<4>> v15 =  var(undefined(type<int<4>>));\n"
-    "    decl ref<int<4>> v16 =  var(undefined(type<int<4>>));\n"
-    "    decl ref<int<4>> v17 =  var(undefined(type<int<4>>));\n"
-    "    decl ref<int<4>> v18 =  var(undefined(type<int<4>>));\n"
-    "    {\n"
-    "        v9 := 7;\n"
-    "        fun000(v13);\n"
-    "        fun001(v14);\n"
-    "        fun000(fun000(v15));\n"
-    "        fun000(fun001(v16));\n"
-    "        lfun(v17);\n"
-    "        fun001( var(lfun(v18)));\n"
-    "    };\n"
-    "}";
+		"let fun000 = fun(int<4> v5) -> int<4> {\n"
+		"    return (v5+1);\n"
+		"};\n"
+		"\n"
+		"let fun001 = fun(ref<int<4>> v8) -> int<4> {\n"
+		"    return (v8);\n"
+		"};\n"
+		"\n"
+		"{\n"
+		"    decl ref<int<4>> v9 = ( var(undefined(type<int<4>>)));\n"
+		"    decl ref<int<4>> v13 = ( var(undefined(type<int<4>>)));\n"
+		"    decl ref<int<4>> v14 = ( var(undefined(type<int<4>>)));\n"
+		"    decl ref<int<4>> v15 = ( var(undefined(type<int<4>>)));\n"
+		"    decl ref<int<4>> v16 = ( var(undefined(type<int<4>>)));\n"
+		"    decl ref<int<4>> v17 = ( var(undefined(type<int<4>>)));\n"
+		"    decl ref<int<4>> v18 = ( var(undefined(type<int<4>>)));\n"
+		"    {\n"
+		"        (v9 := 7);\n"
+		"        fun000((v13));\n"
+		"        fun001(v14);\n"
+		"        fun000(fun000((v15)));\n"
+		"        fun000(fun001(v16));\n"
+		"        lfun(v17);\n"
+		"        fun001(( var(lfun(v18))));\n"
+		"    };\n"
+		"}";
 
 	EXPECT_EQ(res,toString(PrettyPrinter(stmt)));
-	std::string res2 = "{\n"
-                       "    decl ref<int<4>> v9 =  var(undefined(type<int<4>>));\n"
-                       "    decl ref<int<4>> v13 =  var(undefined(type<int<4>>));\n"
-                       "    decl ref<int<4>> v14 =  var(undefined(type<int<4>>));\n"
-                       "    decl ref<int<4>> v15 =  var(undefined(type<int<4>>));\n"
-                       "    decl ref<int<4>> v16 =  var(undefined(type<int<4>>));\n"
-                       "    decl ref<int<4>> v17 =  var(undefined(type<int<4>>));\n"
-                       "    decl ref<int<4>> v18 =  var(undefined(type<int<4>>));\n"
-                       "    {\n"
-                       "        v9 := 7;\n"
-                       "        fun000(v13);\n"
-                       "        fun001(v14);\n"
-                       "        fun000(fun000(v15));\n"
-                       "        fun000(fun001(v16));\n"
-                       "        lfun(v17);\n"
-                       "        fun001( var(lfun(v18)));\n"
-                       "    };\n"
-                       "}";
+	std::string res2 =  "{\n"
+						"    decl ref<int<4>> v9 = ( var(undefined(type<int<4>>)));\n"
+						"    decl ref<int<4>> v13 = ( var(undefined(type<int<4>>)));\n"
+						"    decl ref<int<4>> v14 = ( var(undefined(type<int<4>>)));\n"
+						"    decl ref<int<4>> v15 = ( var(undefined(type<int<4>>)));\n"
+						"    decl ref<int<4>> v16 = ( var(undefined(type<int<4>>)));\n"
+						"    decl ref<int<4>> v17 = ( var(undefined(type<int<4>>)));\n"
+						"    decl ref<int<4>> v18 = ( var(undefined(type<int<4>>)));\n"
+						"    {\n"
+						"        (v9 := 7);\n"
+						"        fun000((v13));\n"
+						"        fun001(v14);\n"
+						"        fun000(fun000((v15)));\n"
+						"        fun000(fun001(v16));\n"
+						"        lfun(v17);\n"
+						"        fun001(( var(lfun(v18))));\n"
+						"    };\n"
+						"}";
 
 	EXPECT_EQ(res2,toString(PrettyPrinter(stmt, PrettyPrinter::JUST_OUTERMOST_SCOPE)));
 

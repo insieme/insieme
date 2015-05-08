@@ -105,7 +105,7 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 =  var(undefined(type<int<4>>));decl ref<int<4>> v3 = 20;v1 := v3;{ };{ };v1;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));decl ref<int<4>> v2 = ( var(undefined(type<int<4>>)));decl ref<int<4>> v3 = 20;(v1 := (v3));{ };{ };v1;}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
@@ -130,7 +130,7 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 = 0;while(v2<2) {{ };v2 := v2+1;};decl ref<int<4>> v3 = 20;v1 := v3;v1;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));decl ref<int<4>> v2 = 0;while(((v2)<2)) {{ };(v2 := ((v2)+1));};decl ref<int<4>> v3 = 20;(v1 := (v3));v1;}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
@@ -153,7 +153,7 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));for(decl int<4> v2 = 0 .. 10 : 2) {{ };};decl ref<int<4>> v3 = 20;v1 := v3;v1;}",
+		EXPECT_EQ("{decl ref<int<4>> v1 = ( var(undefined(type<int<4>>)));for(decl int<4> v2 = 0 .. 10 : 2) {{ };};decl ref<int<4>> v3 = 20;(v1 := (v3));v1;}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
@@ -181,7 +181,7 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ("{decl ref<int<4>> v2 = 10;decl ref<int<4>> v3 =  var(undefined(type<int<4>>));{ };v3 := v2;v1->a := v3;v1->a;}",
+		EXPECT_EQ("{decl ref<int<4>> v2 = 10;decl ref<int<4>> v3 = ( var(undefined(type<int<4>>)));{ };(v3 := (v2));((v1->a) := (v3));(v1->a);}",
 			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 	}
