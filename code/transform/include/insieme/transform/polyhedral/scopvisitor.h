@@ -39,6 +39,7 @@
 
 #include <boost/optional.hpp>
 #include <stack>
+#include <vector>
 
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/ir_address.h"
@@ -54,7 +55,6 @@ namespace insieme { namespace transform { namespace polyhedral { namespace novel
 class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address> {
 
 	std::stack<std::vector<insieme::core::VariableAddress> > varstack;
-	std::stack<SCoP> scopstack;
 
 public:
 

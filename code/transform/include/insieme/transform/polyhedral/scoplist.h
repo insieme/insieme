@@ -43,14 +43,14 @@
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
-class Polyhedral {
+class ProgramSCoP: public NestedSCoP {
 	const insieme::core::ProgramAddress program;
-	std::vector<NestedSCoP> scoplist;
 
 public:
-	Polyhedral(const insieme::core::ProgramAddress &program);
+	ProgramSCoP(const insieme::core::ProgramAddress &program);
 
 	const insieme::core::ProgramAddress IR();
+	void debug();
 };
 
 }}}}

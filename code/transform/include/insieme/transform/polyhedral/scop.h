@@ -50,18 +50,24 @@ public:
 };
 
 class NestedSCoP {
-	NestedSCoP *parentscop;
+public:
+	unsigned int nestlvl;
+
+	NestedSCoP() {}   /// empty constructor in case we are not interested in representing a For loop
+	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress lb, insieme::core::NodeAddress ub,
+	           insieme::core::NodeAddress stride);
+	bool isAffine();
+	void debug(int lvl);
+
+protected:
+	friend class SCoPVisitor;
 	std::vector<NestedSCoP> subscops;
 
-public:
-	NestedSCoP(NestedSCoP *parentscop=0);
-	bool isAffine();
-
-private:
-	// These vars should not be used outside this class, ever. Instead, give them to a private
-	// function generateIterationDomain which then generates the publicly available iteration domain.
+	// These vars should be used inside a public method "iterationDomain()" which generates the publicly available
+	// iteration domain.
+	// use in SCoPs originating from a conditional: lb=0, ub=condition, stride=1
 	// also possible: boost::variant<empty, loop, conditional>   http://stackoverflow.com/a/19579377
-	boost::optional<insieme::core::NodeAddress> lb, ub, stride; ///< for conditionals: lb=0, ub=condition, stride=1
+	boost::optional<insieme::core::NodeAddress> lb, ub, stride;
 
 	bool isAffine(insieme::core::NodeAddress addr);
 };

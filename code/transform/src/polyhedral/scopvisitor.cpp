@@ -34,12 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include <cstdlib>
 #include <boost/optional.hpp>
+#include <cstdlib>
 #include <iostream>
-#include <isl/aff.h>
-#include <isl/ctx.h>
-#include <isl/printer.h>
 #include <memory>
 #include <vector>
 
@@ -140,22 +137,30 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 /// ForStmt  {  DeclarationStmt  {
 ///             Variable  Literal|CallExpr  }  Literal|CallExpr  Literal|CallExpr  CompoundStmt  }
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
-	printNode(stmt, "for nesting lvl " + std::to_string(scopstack.size()), 0, 3);
-
 	// when we encounter a for loop, first increase the loop nesting level, and then copy the currently available
 	// variables, since variable modifications in the for loop cannot be seen outside the for loop
 	varstack.push(varstack.top());
 
-	// then, create a SCoP based upon the values encountered in the loop, and store the SCoP in the scopstack
-	auto    decl=stmt.getAddressOfChild(0);
-	VariableAddress iter=decl.getAddressOfChild(0).as<VariableAddress>();
-	MaybeAffine
-	        lb  =parseAffine(decl.getAddressOfChild(1).as<ExpressionAddress>()),
-	        ub  =parseAffine(stmt.getAddressOfChild(1).as<ExpressionAddress>()),
-	        step=parseAffine(stmt.getAddressOfChild(2).as<ExpressionAddress>());
-	auto scop=scopFromFor(lb, iter, ub, step);
-	if (scop) scopstack.push(*scop);
-	else std::cout << "Loop parameters are not affine" << std::endl;
+	// then, create a SCoP based upon the values encountered in the loop
+	NodeAddress
+	        decl=stmt.getAddressOfChild(0);
+	VariableAddress
+	        iter=decl.getAddressOfChild(0).as<VariableAddress>();
+	NodeAddress
+	        lb  =decl.getAddressOfChild(1).as<ExpressionAddress>(),
+	        ub  =stmt.getAddressOfChild(1).as<ExpressionAddress>(),
+	        step=stmt.getAddressOfChild(2).as<ExpressionAddress>();
+
+	// create new SCoP and link to current SCoP; move one level down
+	NestedSCoP scop(0, lb, ub, step);
+	scop=scop; // FIXME just to ignore the compiler warning
+	/* NestedSCoP *parentscop=curscop; FIXME enter a new scop
+	curscop=&scop;
+
+	// push new SCoP to the vector of current SCoPs
+	if (parentscop) parentscop->subscops.push_back(scop);
+	else scoplist.push_back(scop); // parentscop==0 means that our new SCoP is a top-level SCoP, so register in scoplist
+	printNode(stmt, "for nesting lvl " + std::to_string(curscop->nestingLevel()), 0, 3); */
 
 	// visit declaration to add variable to the list of known variables
 	std::cout << "Visiting declaration... " << std::endl; visit(decl); std::cout << "... done!" << std::endl;
@@ -163,9 +168,9 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	std::vector<VariableAddress> used=readVars(stmt);
 	std::cout << "vars read\t[ ";  for (auto v: used)           std::cout << *v << " "; std::cout << "]" << std::endl;
 
-	// process all the children, and — when done — remove the scope modifications and lessen the nesting level again
+	// process all the children, and — when done with the child scope — move to the parent scop again
 	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
-	if (scop) scopstack.pop();
+	// curscop=parentscop; FIXME leave the newly created scop
 	varstack.pop();
 }
 
@@ -203,7 +208,6 @@ std::vector<VariableAddress> SCoPVisitor::readVars(const NodeAddress &node) {
 	return vars;
 }
 
-
 /// Generate a SCoP from the given for specification in Insieme IR style: lb ≤ iterator < up : step
 boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress iterator, MaybeAffine ub, MaybeAffine step) {
 	boost::optional<SCoP> maybe;
@@ -211,25 +215,6 @@ boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress i
 		std::cout << "lb: " << *lb << "; ub: " << *ub << "; incr: " << *step << std::endl;
 		maybe=SCoP();
 	}
-
-	// we could use:
-	// isl_basic_set_from_constraint_matrices
-	// isl_basic_set_(in)equalities_matrix
-
-	isl_ctx *ctx=isl_ctx_alloc();
-	isl_printer *printer=isl_printer_to_str(ctx);
-	isl_aff *aff=isl_aff_read_from_str(ctx, "{ [x, y] -> [(3*x - 4*y - 7)] }");
-
-	printer=isl_printer_print_aff(printer, aff);
-	char *out=isl_printer_get_str(printer);
-	if (out) {
-		//std::cout << "From ISL we got: " << out << std::endl;
-		free(out);
-	}
-
-	isl_printer_free(printer);
-	isl_aff_free(aff);
-	isl_ctx_free(ctx);
 
 	return maybe;
 }
