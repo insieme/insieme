@@ -389,6 +389,10 @@ namespace irp {
 		return callExpr(any, a, b);
 	}
 
+	inline TreePattern pick(const ListPattern& args = anyList) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getPick(); }), args);
+	}
+
 } // end namespace irp
 } // end namespace pattern
 } // end namespace core
