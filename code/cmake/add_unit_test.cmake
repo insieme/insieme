@@ -34,6 +34,7 @@ macro ( add_unit_test case_name ut_prefix )
 			BUILD_BYPRODUCTS
 				${gtest_lib}
 				${gtest_main_lib}
+			DOWNLOAD_NO_PROGRESS 1
 		)
 	
 		ExternalProject_Get_Property(googletest source_dir binary_dir)
