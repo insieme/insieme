@@ -114,7 +114,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })])", toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
+	EXPECT_EQ("WorkItemImpl(([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })]))", toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 	// test decoding
 	WorkItemImpl decoded = enc::toValue<WorkItemImpl>(encoded);

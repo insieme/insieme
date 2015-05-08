@@ -90,7 +90,7 @@ namespace frontend {
 //		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v38 {");		// odd header
 
 		// check global variable setup
-		EXPECT_PRED2(containsSubString, res, "counter := 10;");
+		EXPECT_PRED2(containsSubString, res, "(counter := 10);");
 		// split up this assertions because the local static
 		// variables have some random suffix
 		EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp1132_21, 3.0);");
@@ -208,15 +208,15 @@ namespace frontend {
 		ASSERT_TRUE(irtu[oddLit]);
 
 		// check their definition
-		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?1:odd(v1-1u);}", print(irtu[evenLit]));
-		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?0:even(v1-1u);}", print(irtu[oddLit]));
+		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (((v1==0u))?1:odd((v1-1u)));}", print(irtu[evenLit]));
+		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (((v1==0u))?0:even((v1-1u)));}", print(irtu[oddLit]));
 
 		// check resolved version
 		auto even = irtu.resolve(evenLit);
-		EXPECT_EQ("recFun v0 {v1 = fun(uint<4> v2) -> int<4> {return (v2==0u)?0:v0(v2-1u);};v0 = fun(uint<4> v5) -> int<4> {return (v5==0u)?1:v1(v5-1u);};}", print(even));
+		EXPECT_EQ("recFun v0 {v1 = fun(uint<4> v2) -> int<4> {return (((v2==0u))?0:v0((v2-1u)));};v0 = fun(uint<4> v5) -> int<4> {return (((v5==0u))?1:v1((v5-1u)));};}", print(even));
 
 		auto odd = irtu.resolve(oddLit);
-		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?0:v4(v1-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?1:v0(v5-1u);};}", print(odd));
+		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (((v1==0u))?0:v4((v1-1u)));};v4 = fun(uint<4> v5) -> int<4> {return (((v5==0u))?1:v0((v5-1u)));};}", print(odd));
 
 		auto program = tu::toProgram(manager, irtu);
 //		dump(program);
