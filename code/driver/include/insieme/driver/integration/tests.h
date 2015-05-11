@@ -389,11 +389,6 @@ namespace integration {
 	const vector<IntegrationTestCase>& getAllCases(bool forceCommented=false);
 
 	/**
-	 * Obtains a list of all test cases within a directory.
-	 */
-	const vector<IntegrationTestCase> getAllCasesAt(const string& path);
-
-	/**
 	 * Obtains the test case matching the given name.
 	 *
 	 * @param name the name of the test case looking for

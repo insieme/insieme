@@ -1,4 +1,4 @@
 files="src/bzip2smp.c","src/note.c","src/detectht.c","src/bzlib.c","src/compress.c","src/dummy_decompress.c","src/crctable.c","src/blocksort.c","src/huffman.c","src/randtable.c"
 use_libmath=1
 executionFlags=-p8 -i ${PATH}/../../../gemsclaim/wow_320.pnm
-excludeSteps=${excludeSteps}, "*seq*"
+excludeSteps="*_c++_*", "*_ocl_*", "*_seq_*"
