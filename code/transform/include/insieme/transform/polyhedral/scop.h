@@ -57,7 +57,7 @@ public:
 	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress lb, insieme::core::NodeAddress ub,
 	           insieme::core::NodeAddress stride);
 	bool isAffine();
-	void debug(int lvl);
+	void debug();
 
 protected:
 	friend class SCoPVisitor;

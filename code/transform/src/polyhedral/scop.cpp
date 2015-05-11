@@ -100,10 +100,14 @@ bool NestedSCoP::isAffine(insieme::core::NodeAddress addr) {
 }
 
 /// Recursively print current internal status of polyhedral representation to stdout.
-void NestedSCoP::debug(int lvl) {
+void NestedSCoP::debug() {
 	// print the current scop
-	std::cout << std::string(lvl, '\t') << "for " << *lb << ".." << *ub << ":" << *stride << std::endl;
+	if (lb && ub && stride)
+		std::cout << std::string(nestlvl, '\t') << "for " << **lb << " .. " << **ub << " : " << **stride
+		          << " |" << subscops.size() << "|" << std::endl;
+	else
+		std::cout << std::string(nestlvl, '\t') << "for |" << subscops.size() << "|" << std::endl;
 
 	// print all sub-scops
-	for (auto scop: subscops) scop.debug(lvl+1);
+	for (auto scop: subscops) scop.debug();
 }

@@ -55,14 +55,16 @@ namespace insieme { namespace transform { namespace polyhedral { namespace novel
 class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address> {
 
 	std::stack<std::vector<insieme::core::VariableAddress> > varstack;
+	unsigned int nestlvl;
+
+protected:
+	/// The variable scoplist holds the list of outermost SCoPs for a given program. After walking all
+	/// the nodes is finished, the scoplist should be moved to the ProgramSCoP class which represents the whole
+	/// program using the polyhedral model.
+	std::vector<NestedSCoP> scoplist;
+	friend class ProgramSCoP;
 
 public:
-
-	/// The public variable scoplist holds the list of outermost SCoPs for a given program. After walking all
-	/// the nodes is finished, the scoplist should be moved to the Polyhedral class which represents the whole
-	/// program using the polyhedral model.
-	std::vector<insieme::transform::polyhedral::novel::NestedSCoP> scoplist;
-
 	// helper routines for general use in other methods (except for constructor; do not keep track of state)
 	SCoPVisitor(const insieme::core::ProgramAddress &node);
 	void printNode           (const insieme::core::NodeAddress            &node,
@@ -74,13 +76,11 @@ public:
 	// visitors which will build up the SCoP stack (and keep track of other state)
 	void visitLambdaExpr     (const insieme::core::LambdaExprAddress      &expr);
 	void visitForStmt        (const insieme::core::ForStmtAddress         &stmt);
+	void visitIfStmt         (const insieme::core::IfStmtAddress          &stmt);
 	void visitParameters     (const insieme::core::ParametersAddress      &node);
 	void visitDeclarationStmt(const insieme::core::DeclarationStmtAddress &node);
-	void visitCompoundStmt   (const insieme::core::CompoundStmtAddress    &stmt);
 
 	std::vector<insieme::core::VariableAddress> readVars(const insieme::core::NodeAddress &node);
-	typedef boost::optional<insieme::core::arithmetic::Formula> MaybeAffine;
-	boost::optional<SCoP> scopFromFor(MaybeAffine lb, insieme::core::VariableAddress iterator, MaybeAffine ub, MaybeAffine step);
 };
 
 }}}}

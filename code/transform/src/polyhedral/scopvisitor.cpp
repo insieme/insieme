@@ -50,7 +50,7 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// The constructor initializes class variables and triggers the visit of all nodes in the program.
-SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()) {
+SCoPVisitor::SCoPVisitor(const ProgramAddress &node): varstack(std::stack<std::vector<VariableAddress> >()), nestlvl(0){
 	visit(node);
 }
 
@@ -137,11 +137,11 @@ void SCoPVisitor::visitLambdaExpr(const LambdaExprAddress &expr) {
 /// ForStmt  {  DeclarationStmt  {
 ///             Variable  Literal|CallExpr  }  Literal|CallExpr  Literal|CallExpr  CompoundStmt  }
 void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
-	// when we encounter a for loop, first increase the loop nesting level, and then copy the currently available
-	// variables, since variable modifications in the for loop cannot be seen outside the for loop
+	// when we encounter a for loop, preserve the currently available variables, since variable modifications
+	// in the for loop cannot be seen outside the For-loop
 	varstack.push(varstack.top());
 
-	// then, create a SCoP based upon the values encountered in the loop
+	// declare a couple of variables to ease the creation of the SCoP
 	NodeAddress
 	        decl=stmt.getAddressOfChild(0);
 	VariableAddress
@@ -151,27 +151,57 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	        ub  =stmt.getAddressOfChild(1).as<ExpressionAddress>(),
 	        step=stmt.getAddressOfChild(2).as<ExpressionAddress>();
 
-	// create new SCoP and link to current SCoP; move one level down
-	NestedSCoP scop(0, lb, ub, step);
-	scop=scop; // FIXME just to ignore the compiler warning
-	/* NestedSCoP *parentscop=curscop; FIXME enter a new scop
-	curscop=&scop;
+	// before starting to create the SCoP, update the variables; specifically, visit the declaration branch of the for
+	visit(decl);
+	//std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
 
-	// push new SCoP to the vector of current SCoPs
-	if (parentscop) parentscop->subscops.push_back(scop);
-	else scoplist.push_back(scop); // parentscop==0 means that our new SCoP is a top-level SCoP, so register in scoplist
-	printNode(stmt, "for nesting lvl " + std::to_string(curscop->nestingLevel()), 0, 3); */
+	// We will be creating a new SCoP right now, as we have entered a SCoP-generating For-loop. Hence,
+	// store away the current SCoP list, then create a new, empty one. After the children return, restore the old list.
+	std::vector<NestedSCoP> parentscoplist=scoplist;   ///< this is the SCoP list where we need to register our findings
+	scoplist.clear();
+	NestedSCoP scop(nestlvl++, lb, ub, step); // post-increment, as the outermost (non-SCoP) level ProgramSCoP is (-1)
 
-	// visit declaration to add variable to the list of known variables
-	std::cout << "Visiting declaration... " << std::endl; visit(decl); std::cout << "... done!" << std::endl;
-	std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
-	std::vector<VariableAddress> used=readVars(stmt);
-	std::cout << "vars read\t[ ";  for (auto v: used)           std::cout << *v << " "; std::cout << "]" << std::endl;
-
-	// process all the children, and — when done with the child scope — move to the parent scop again
+	// process all the children, and — when done with the child scope — restore the parent SCoP list to var scoplist
 	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
-	// curscop=parentscop; FIXME leave the newly created scop
+	scop.subscops=scoplist;     // the newly created SCoP will contain everything we have encountered in the children
+	scoplist=parentscoplist;    // we continue with the SCoP we are in
+	scoplist.push_back(scop);   // and register our new SCoP in its parent scoplist
+
+	// finally, remove the changes to the variable stack, and decrease the nesting level
 	varstack.pop();
+	--nestlvl;
+}
+
+/// Visit an If statement; an If statement is similar to a For loop as it spans a new iteration domain as well.
+void SCoPVisitor::visitIfStmt(const IfStmtAddress &stmt) {
+	// when we encounter an if conditional, preserve the currently available variables, since variable modifications
+	// inside the conditional cannot be seen outside of it
+	varstack.push(varstack.top());
+
+	// declare a couple of variables to ease the creation of the SCoP
+	ExpressionAddress
+	        ifcond=stmt.getAddressOfChild(0).as<ExpressionAddress>();
+	NodeAddress
+	        thenbr=stmt.getAddressOfChild(1),
+	        elsebr=stmt.getAddressOfChild(2);
+	ifcond=ifcond; thenbr=thenbr; elsebr=elsebr; // make compiler ignore warnings about unused vars
+
+	// We will be creating a new SCoP right now, as we have entered a SCoP-generating if conditional. Hence,
+	// store away the current SCoP list, then create a new, empty one. After the children return, restore the old list.
+	std::vector<NestedSCoP> parentscoplist=scoplist;   ///< this is the SCoP list where we need to register our findings
+	scoplist.clear();
+	NestedSCoP scop;
+	scop.nestlvl=nestlvl++; // post-increment, as the outermost (non-SCoP) level ProgramSCoP is (-1)
+
+	// process all the children, and — when done with the child scope — restore the parent SCoP list to var scoplist
+	visitChildren(stmt);
+	scop.subscops=scoplist;     // the newly created SCoP will contain everything we have encountered in the children
+	scoplist=parentscoplist;    // we continue with the SCoP we are in
+	scoplist.push_back(scop);   // and register our new SCoP in its parent scoplist
+
+	// finally, remove the changes to the variable stack, and decrease the nesting level
+	varstack.pop();
+	--nestlvl;
 }
 
 /// Visit lambda parameters so that we can add them to the list of available variables/SCoP parameters.
@@ -183,18 +213,9 @@ void SCoPVisitor::visitParameters(const ParametersAddress &node) {
 
 /// Visit all the declaration statements so that we can collect variable assignments.
 void SCoPVisitor::visitDeclarationStmt(const DeclarationStmtAddress &node) {
-	std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
+	//std::cout << "DeclarationStmt: " << *(node.getAddressOfChild(0)) << std::endl;
 	varstack.top().push_back(node.getAddressOfChild(0).as<VariableAddress>());
 	visitChildren(node);
-}
-
-/// Visit a compound statement; a compound statement is interesting due to the fact that it may declare local
-/// variables which will not be known outside of the scope of the compound stmt itself.
-void SCoPVisitor::visitCompoundStmt(const CompoundStmtAddress &stmt) {
-	NodeAddress parent=stmt.getParentAddress(1);
-	std::cout << "compound stmt called from " << parent.getNodeType() << std::endl;
-	if (parent.getNodeType() == NT_IfStmt) printNode(parent);
-	visitChildren(stmt);
 }
 
 /// Determine which variables are being read in a given block specified by node and return these.
@@ -206,15 +227,4 @@ std::vector<VariableAddress> SCoPVisitor::readVars(const NodeAddress &node) {
 		vars.push_back(v);
 	});
 	return vars;
-}
-
-/// Generate a SCoP from the given for specification in Insieme IR style: lb ≤ iterator < up : step
-boost::optional<SCoP> SCoPVisitor::scopFromFor(MaybeAffine lb, VariableAddress iterator, MaybeAffine ub, MaybeAffine step) {
-	boost::optional<SCoP> maybe;
-	if (lb && ub && step) {
-		std::cout << "lb: " << *lb << "; ub: " << *ub << "; incr: " << *step << std::endl;
-		maybe=SCoP();
-	}
-
-	return maybe;
 }

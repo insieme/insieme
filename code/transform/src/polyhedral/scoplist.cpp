@@ -72,6 +72,5 @@ const ProgramAddress ProgramSCoP::IR() {
 
 /// Recursively print current internal status of polyhedral representation to stdout.
 void ProgramSCoP::debug() {
-	std::cout << "Visiting so many SCoPs: " << subscops.size() << std::endl;
-	for (auto scop: subscops) scop.debug(0);
+	for (auto scop: subscops) scop.debug();
 }
