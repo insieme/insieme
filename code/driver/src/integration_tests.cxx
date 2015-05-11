@@ -116,7 +116,7 @@ namespace{
 
 			std::cout << " ------------- Steps -----------------\n";
 			for(auto entry: insieme::driver::integration::getFullStepList()) {
-				std::cout << "\t" << std::setw(20) << entry.first;
+				std::cout << "\t" << std::left <<  std::setw(30) << entry.first;
 				auto deps = entry.second.getDependencies();
 				if(!deps.empty()) {
 					std::cout << " <- [ ";
