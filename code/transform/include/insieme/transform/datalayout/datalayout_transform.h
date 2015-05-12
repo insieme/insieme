@@ -86,12 +86,14 @@ protected:
 	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::RefTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;
 
+	virtual core::ExpressionPtr updateAccess(const core::ExpressionPtr& oldAccess, const std::pair<core::ExpressionAddress, core::StatementPtr>& varInInit,
+			const core::StringValuePtr& fieldName);
 	virtual core::ExpressionPtr updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
 			core::StringValuePtr fieldName = core::StringValuePtr());
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr()) =0;
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) { return core::StatementList(); }
 	void addNewDecls(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
 			core::NodePtr>& replacements);
@@ -101,12 +103,12 @@ protected:
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
 			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr()) =0;
-	void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) { return core::StatementList(); }
+	virtual void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::ExpressionPtr determineNumberOfElements(const core::ExpressionPtr& newVar,const core::ExpressionMap&  nElems);
+	core::ExpressionPtr determineNumberOfElements(const core::StatementPtr& newVar,const core::ExpressionMap&  nElems);
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) =0;
@@ -125,12 +127,12 @@ protected:
 	void updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionAddress& oldVar, const core::StatementPtr& newVar, const core::StringValuePtr& member,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess) =0;
 	void replaceAccesses(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
 			std::map<core::NodeAddress,	core::NodePtr>& replacements);
-	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::StatementPtr& newVar,
 			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) =0;
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
 

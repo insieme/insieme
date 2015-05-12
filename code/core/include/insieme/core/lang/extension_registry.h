@@ -39,7 +39,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/asm_extension.h"
 #include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -48,6 +47,7 @@
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
 #include "insieme/core/lang/instrumentation_extension.h"
+#include "insieme/core/lang/asm_extension.h"
 
 #include "insieme/utils/assert.h"
 
@@ -121,6 +121,7 @@ namespace lang {
 			assert_true(result != extensionFactories.end()) << "Can't find extension with name \"" << extensionName << "\". Please check the name and also register it in the constructor of ExtensionRegistry";
 			return result->second;
 		}
+
 		/**
 		 * Returns all extension factories
 		 *
@@ -129,6 +130,27 @@ namespace lang {
 		const std::map<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactories() const {
 			return extensionFactories;
 		}
+
+		/**
+		 * Checks if a the given node is
+		 * an element of a core language extension
+		 *
+		 * @param node the node pointer to look up
+		 * @return true if defined in a core lang extension, false otherwise
+		 */
+		bool isDefinedInExtension(const NodePtr& node) const {
+                    for (auto factory : getExtensionFactories()) {
+                        //create an instance of the extension
+                        auto& extension = factory.second(node->getNodeManager());
+                        auto& listOfElements = extension.getNamedIrExtensions();
+                        for(auto& element : listOfElements) {
+                            if(element.second == node) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
 	};
 
 

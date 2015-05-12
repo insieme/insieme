@@ -306,10 +306,21 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 //	std::cout << "from " << addr << "  " << *addr << std::endl;
 }
 
+ExpressionPtr DatalayoutTransformer::updateAccess(const ExpressionPtr& oldAccess, const std::pair<ExpressionAddress, StatementPtr>& varInInit,
+		const StringValuePtr& fieldName) {
+	// replace accesses to old variable with accesses to field in new variable
+	IRBuilder builder(mgr);
+	ExpressionMap localReplacement;
+	localReplacement[varInInit.first] = fieldName ?
+			builder.accessMember(varInInit.second.as<ExpressionPtr>(), fieldName) : varInInit.second.as<ExpressionPtr>();
+
+	return core::transform::fixTypesGen(mgr, oldAccess, localReplacement, true);
+}
+
 ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplacements, ExpressionAddress init, NodeMap& backupReplacements,
 		StringValuePtr fieldName) {
 	// check for marshalled variables in init expression
-	std::pair<ExpressionPtr, StatementPtr> varInInit;
+	std::pair<ExpressionAddress, StatementPtr> varInInit;
 	visitBreadthFirstInterruptible(init, [&](const ExpressionAddress& currVar) {
 		auto check = varReplacements.find(getDeclaration(currVar));
 		if(check != varReplacements.end()) {
@@ -320,15 +331,8 @@ ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplace
 	});
 
 	if(varInInit.first) { // variable to be replaced found
-		// replace accesses to old variable with accesses to field in new variable
-		ExpressionMap localReplacement;
-		IRBuilder builder(mgr);
-		localReplacement[varInInit.first] = fieldName ?
-				builder.accessMember(varInInit.second.as<ExpressionPtr>(), fieldName) : varInInit.second.as<ExpressionPtr>();
 
-		ExpressionPtr newInit = core::transform::fixTypesGen(mgr, init.getAddressedNode(), localReplacement, true);
-
-		return newInit;
+		return updateAccess(init.getAddressedNode(), varInInit, fieldName);
 	}
 
 	// backup, works for e.g. memory allocation
@@ -425,6 +429,7 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
 		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
+
 		visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
 
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
@@ -447,13 +452,12 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 			}
 		});
 	}
-
 }
 
-ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const ExpressionPtr& newVar,const ExpressionMap&  nElems) {
+ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const StatementPtr& newVar,const ExpressionMap&  nElems) {
 	ExpressionPtr numElements;
 
-	auto checkIfThereIsTheNumberOfElementsGatheredFromMemoryAllocationForThisVariable = nElems.find(newVar);
+	auto checkIfThereIsTheNumberOfElementsGatheredFromMemoryAllocationForThisVariable = nElems.find(newVar.isa<ExpressionPtr>());
 
 	if(checkIfThereIsTheNumberOfElementsGatheredFromMemoryAllocationForThisVariable != nElems.end())
 		numElements = checkIfThereIsTheNumberOfElementsGatheredFromMemoryAllocationForThisVariable->second;
@@ -637,7 +641,7 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 
 	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
+		const StatementPtr& newVar = vr.second;
 
 //std::cout << "Replacing accesses to " << oldVar << "  " << *oldVar << std::endl;
 
@@ -965,6 +969,21 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 //		toTransform = core::transform::replaceVarsRecursive(mgr, toTransform, structures, false);
 	do {
 		toTransform = core::transform::fixTypes(mgr, toTransform, structures, false, typeOfMemAllocHandler);
+
+	SimpleNodeMapping* bf;
+	auto bindFixer = makeLambdaMapper([&](unsigned index, const NodePtr& node)->NodePtr {
+		const BindExprPtr bind = node.isa<BindExprPtr>();
+		if(bind){
+			BindExprPtr newBind = builder.bindExpr(bind->getParameters(), bind->getCall()->substitute(mgr, *bf));
+
+			return newBind;
+		}
+
+		return node->substitute(mgr, *bf);
+	});
+
+	bf = &bindFixer;
+	toTransform = bf->map(toTransform);
 		structures.clear();
 		visitDepthFirst(toTransform, [&](const StatementPtr& stmt) {
 			if(DeclarationStmtPtr decl = stmt.isa<DeclarationStmtPtr>()) {

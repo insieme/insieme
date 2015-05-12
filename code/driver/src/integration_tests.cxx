@@ -116,7 +116,7 @@ namespace{
 
 			std::cout << " ------------- Steps -----------------\n";
 			for(auto entry: insieme::driver::integration::getFullStepList()) {
-				std::cout << "\t" << std::setw(20) << entry.first;
+				std::cout << "\t" << std::left <<  std::setw(30) << entry.first;
 				auto deps = entry.second.getDependencies();
 				if(!deps.empty()) {
 					std::cout << " <- [ ";
@@ -159,9 +159,10 @@ namespace{
 	}
 }
 
-void printSummary(const std::vector<TestCase>& ok, const std::vector<TestCase>& failed,
-                  const int& screenWidth, const std::map<TestCase, TestResult>& failedSteps,
-                  const tf::Colorize& colorize, const int& totalTests) {
+void printSummary(const int totalTests, const int okCount, const int omittedCount,
+                  const std::map<TestCase, TestResult>& failedSteps,
+                  const int screenWidth,
+                  const tf::Colorize& colorize) {
 	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
 	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
 
@@ -169,13 +170,17 @@ void printSummary(const std::vector<TestCase>& ok, const std::vector<TestCase>& 
 	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
-	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % ok.size() << colorize.reset() << " #\n";
-	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failed.size() << colorize.reset() << " #\n";
-	for(auto cur : failed) {
-        std::map<TestCase, TestResult>::const_iterator failedStep = failedSteps.find(cur);
-		string failedStepInfo((*failedStep).second.getStepName() + ": exit code " + to_string((*failedStep).second.getRetVal()));
-		string footerFailedListFormat("%" + to_string(screenWidth-10-cur.getName().length()) + "s");
-		std::cout << "#" << colorize.red() << "   - " << cur.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
+	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % okCount << colorize.reset() << " #\n";
+	if (omittedCount != 0) {
+		std::cout << "# " << colorize.yellow() << "OMITTED:" << boost::format(footerSummaryFormat) % omittedCount << colorize.reset() << " #\n";
+	}
+	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failedSteps.size() << colorize.reset() << " #\n";
+	for(const auto& cur : failedSteps) {
+		TestCase testCase = cur.first;
+		TestResult testResult = cur.second;
+		string failedStepInfo(testResult.getStepName() + ": exit code " + to_string(testResult.getRetVal()));
+		string footerFailedListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
+		std::cout << "#" << colorize.red() << "   - " << testCase.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
 	}
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 }
@@ -264,6 +269,7 @@ int main(int argc, char** argv) {
 	// run test cases in parallel
 	vector<TestCase> ok;
 	vector<TestCase> failed;
+	int omittedTestsCount = 0;
 	map<TestCase,TestResult> failedSteps;
 	omp_set_num_threads(options.num_threads);
 
@@ -271,16 +277,16 @@ int main(int argc, char** argv) {
 	int act = 0;
 
 	for(int i=0; i<options.num_repetitions; i++) {
-        //get instance of the test runner
-        itc::TestRunner& runner = itc::TestRunner::getInstance();
-        //set lambda to print some execution summary at the end
-        runner.attachExecuteOnKill([&](){
-            printSummary(ok,failed,screenWidth,failedSteps,colorize,totalTests);
-        });
-        //set lambda to set panic mode before killing all the processes
-        runner.attachExecuteBeforeKill([&](){
-            panic = true;
-        });
+		//get instance of the test runner
+		itc::TestRunner& runner = itc::TestRunner::getInstance();
+		//set lambda to print some execution summary at the end
+		runner.attachExecuteOnKill([&](){
+			printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize);
+		});
+		//set lambda to set panic mode before killing all the processes
+		runner.attachExecuteBeforeKill([&](){
+			panic = true;
+		});
 
 
 		#pragma omp parallel for schedule(dynamic)
@@ -291,6 +297,11 @@ int main(int argc, char** argv) {
 
 			// filter applicable steps based on test case
 			vector<TestStep> list = itc::filterSteps(steps, cur);
+
+			//if this test doesn't schedule any steps we count it as omitted
+			if (list.empty()) {
+				omittedTestsCount++;
+			}
 
 			// schedule resulting steps
 			list = itc::scheduleSteps(list,cur);
@@ -398,8 +409,8 @@ int main(int argc, char** argv) {
 
 	} // end repetition loop
 
-    if(!panic)
-        printSummary(ok,failed,screenWidth,failedSteps,colorize,totalTests);
+	if(!panic)
+		printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize);
 
 	// done
 	return (failed.empty())?0:1;

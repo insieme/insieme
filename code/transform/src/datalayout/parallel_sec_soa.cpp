@@ -105,11 +105,56 @@ StatementList ParSecSoa::generateNewDecl(const ExprAddressMap& varReplacements, 
 	return allDecls;
 }
 
+void ParSecSoa::replaceAssignments(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
+		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+	IRBuilder builder(mgr);
+
+	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
+		const ExpressionAddress& oldVar = vr.first;
+		const CompoundStmtPtr& newVars = vr.second.isa<CompoundStmtPtr>();
+
+		if(newVars) visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
+
+			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+
+				if(oldVar == getDeclaration(call[0])) {
+					// check if the assignment does an allocation and try to extract the number of elements in that case
+					pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
+
+					StatementList allAssigns = generateNewAssigns(varReplacements, call, newVars, newStructType, oldStructType);
+
+					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
+std::cout << "new assigns: \n";
+dumpPretty(cmpAssigns);
+assert_fail();
+					cmpAssigns.addAnnotation<RemoveMeAnnotation>();
+					addToReplacements(replacements, call, cmpAssigns);
+				}
+			}
+		});
+	}
+}
+
+core::ExpressionPtr ParSecSoa::generateNewAccesses(const ExpressionAddress& oldVar, const StatementPtr& newVar, const StringValuePtr& member,
+		const ExpressionPtr& index, const ExpressionPtr& structAccess) {
+	IRBuilder builder(mgr);
+
+	CompoundStmtPtr c = (varReplacements[oldVar]).as<CompoundStmtPtr>();
+	std::cout << c[0].as<ExpressionPtr>()->getType() << " " << c[0] << std::endl;
+
+	// replace struct access with access to new variable, representing one field only
+	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, structAccess,
+			oldVar, fieldReplacements[oldVar][member], false).as<ExpressionPtr>();
+	ExpressionPtr replacement = refAccess(newStructAccess, index, StringValuePtr());
+
+	return replacement;
+}
 
 void ParSecSoa::transform() {
 	NodeManager& m = mgr;
 	IRBuilder builder(m);
 	NodeAddress tta(toTransform);
+
 	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(tta);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(m.getLangBasic().getArrayCreate1D(),
@@ -126,12 +171,12 @@ void ParSecSoa::transform() {
 		}
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
-std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
+//std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
 			TypePtr newType;
 			StatementList newVars;
 			std::map<StringValuePtr, VariablePtr> fieldMap;
 			for(NamedTypePtr elemTy : newStructType->getElements()) {
-				newType = core::transform::replaceAll(m, oldVar->getType(), oldStructType, elemTy->getType()).as<TypePtr>();
+				newType = core::transform::replaceAll(m, oldVar->getType(), builder.refType(builder.arrayType(oldStructType)), elemTy->getType()).as<TypePtr>();
 				fieldMap[elemTy->getName()] = builder.variable(newType);
 				newVars.push_back(fieldMap[elemTy->getName()]);
 //std::cout << "NT: " << newType << " " << newVars.back() << " var " << *oldVar->getType() << " " << *oldVar << std::endl;
@@ -147,6 +192,12 @@ std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << s
 //					builder.variable(newType).as<ExpressionPtr>();
 		}
 
+//for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
+//	std::cout << *vr.first << " -> " << *vr.second << std::endl;
+//	if(CompoundStmtPtr c = vr.second.isa<CompoundStmtPtr>())
+//		for(StatementPtr s : c)
+//			std::cout << s.as<ExpressionPtr>()->getType() << " " << *s << std::endl;
+//}
 		AosArgumentUnfolder ar(mgr, varReplacements, varsToPropagate, replacements, oldStructType, newStructType);
 
 //		tta = ar.addVariablesToLambdas(toTransform);
@@ -169,7 +220,10 @@ std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << s
 //		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
 		// assignments to the entire struct should be ported to the new struct members
-//TODO	replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
+//		replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
+//std::cout << "\n\n-----------------------------------------------------------------------------\n\n";
+		//replace array accesses
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
 		std::map<core::NodeAddress, core::NodePtr> copy;
 		for(std::pair<core::NodeAddress, core::NodePtr> r : replacements) {

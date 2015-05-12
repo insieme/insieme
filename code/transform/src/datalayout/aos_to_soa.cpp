@@ -278,22 +278,22 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionAddress& oldVar, co
 //	return core::transform::replaceAllGen(mgr, oldTupleVarType, oldTupleType, builder.tupleType(newTupleTypeElements));
 //}
 
-ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
+ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionAddress& oldVar, const StatementPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
 		const ExpressionPtr& structAccess) {
 	IRBuilder builder(mgr);
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, structAccess,
-			oldVar, newVar, false).as<ExpressionPtr>();
+			oldVar, newVar.as<ExpressionPtr>(), false).as<ExpressionPtr>();
 	ExpressionPtr replacement = refAccess(newStructAccess, index, member);
 
 	return replacement;
 }
 
-ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StructTypePtr& newStructType,
+ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, const StatementPtr& newVar, const StructTypePtr& newStructType,
 		const ExpressionPtr& index, const ExpressionPtr& oldStructAccess) {
 	IRBuilder builder(mgr);
 
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, oldStructAccess,
-			oldVar, newVar, false).as<ExpressionPtr>();
+			oldVar, newVar.as<ExpressionPtr>(), false).as<ExpressionPtr>();
 
 	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 	for(NamedTypePtr memberType : newStructType->getElements()) {

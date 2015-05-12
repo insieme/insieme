@@ -145,9 +145,9 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 //std::cout << "Found in VARreplacements: " << newArg << " -> " << structs.size() << std::endl;
 //				}
 
-				auto newArgIter1 = structs.find(newArg);
-				if(newArgIter1 != structs.end()) {
-					structs[pair.second] = newArgIter1->second.as<RefTypePtr>();
+				auto newArgIter = structs.find(newArg);
+				if(newArgIter != structs.end()) {
+					structs[pair.second] = newArgIter->second.as<RefTypePtr>();
 //std::cout << "adding in jobREPLACEMENTS: " << pair.second << " -> " << *pair.second << std::endl;
 				}
 			});
@@ -160,20 +160,23 @@ ExprAddressRefTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAddre
 template<class Baseclass>
 StatementList ParSecTransform<Baseclass>::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
-	IRBuilder builder(Baseclass::mgr);
+	StatementList allDecls = Baseclass::generateNewDecl(varReplacements, decl, newVar, newStructType, oldStructType, nElems);
 
-	// replace declaration with compound statement containing only the declaration of the new variable and its initialization
-	StatementList allDecls;
+	// drop first declaration of the old variable
+	StatementList usedDecls;
+	usedDecls.insert(usedDecls.begin(), ++allDecls.begin(), allDecls.end());
+	return usedDecls;
+}
 
-	NodeMap inInitReplacementsInCaseOfNovarInInit;
-	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
-	// divide initialization size by tilesize
-	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+template<class Baseclass>
+StatementList ParSecTransform<Baseclass>::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
+		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+	StatementList allAssigns = Baseclass::generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType, nElems);
 
-	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), Baseclass::updateInit(varReplacements, decl->getInitialization(),
-		inInitReplacementsInCaseOfNovarInInit)));
-
-	return allDecls;
+	// drop first declaration of the old variable
+	StatementList usedAssigns;
+	usedAssigns.insert(usedAssigns.begin(), ++allAssigns.begin(), allAssigns.end());
+	return usedAssigns;
 }
 
 template<class Baseclass>
@@ -216,6 +219,7 @@ void ParSecTransform<Baseclass>::transform() {
 					builder.variable(newType).as<ExpressionPtr>();
 		}
 
+
 		// replacing the declarations of the old variables with new ones
 		Baseclass::addNewDecls(varReplacements, newStructType, oldStructType, tta, allocPattern, nElems, replacements);
 
@@ -224,7 +228,7 @@ void ParSecTransform<Baseclass>::transform() {
 		Baseclass::replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
 
 		// assignments to the entire struct should be ported to the new struct members
-//TODO	replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
+		Baseclass::replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
 
 //		for(std::pair<core::NodeAddress, core::NodePtr> r : replacements) {
 //			std::cout << "\nfrom ";
