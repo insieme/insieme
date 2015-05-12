@@ -50,7 +50,7 @@ using namespace insieme::core;
 using namespace insieme::transform::polyhedral::novel;
 
 /// Visit all the nodes of a program and find SCoPs, returning a (possibly empty) list of SCoPs
-ProgramSCoP::ProgramSCoP(const insieme::core::ProgramAddress &program): program(program) {
+ProgramSCoP::ProgramSCoP(const insieme::core::ProgramAddress &program): NestedSCoP(0), program(program) {
 	std::cout << "Hello from ProgramSCoP Constructor Nouvelle!" << std::endl;
 	SCoPVisitor sv(program);
 	subscops=sv.scoplist;

@@ -55,6 +55,7 @@ namespace insieme { namespace transform { namespace polyhedral { namespace novel
 class SCoPVisitor: public insieme::core::IRVisitor<void, insieme::core::Address> {
 
 	std::stack<std::vector<insieme::core::VariableAddress> > varstack;
+	std::vector<insieme::core::VariableAddress> itervec;
 	unsigned int nestlvl;
 
 protected:

@@ -98,14 +98,6 @@ void SCoPVisitor::visitChildren(const NodeAddress &node) {
 boost::optional<arithmetic::Formula> SCoPVisitor::parseAffine(const ExpressionAddress &addr) {
 	boost::optional<arithmetic::Formula> maybe;
 
-	// extract the variables and literals from our (presumed) affine expression and store them internally for
-	// later processing with ISL
-	switch (addr.getNodeType()) {
-	case NT_Literal:  /* printNode(addr); */ break;
-	case NT_CallExpr: /* printNode(addr); */ break;
-	default: /* do nothing */;
-	}
-
 	// use the Insieme-provided means to convert the expression node to a linear formula
 	try {
 		auto formula=arithmetic::toFormula(addr.getAddressedNode());
@@ -151,7 +143,8 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	        ub  =stmt.getAddressOfChild(1).as<ExpressionAddress>(),
 	        step=stmt.getAddressOfChild(2).as<ExpressionAddress>();
 
-	// before starting to create the SCoP, update the variables; specifically, visit the declaration branch of the for
+	// before starting to create the SCoP, update the variables; specifically, care for the iteration vector and params
+	itervec.push_back(iter);
 	visit(decl);
 	//std::cout << "vars known\t[ "; for (auto v: varstack.top()) std::cout << *v << " "; std::cout << "]" << std::endl;
 
@@ -159,7 +152,7 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	// store away the current SCoP list, then create a new, empty one. After the children return, restore the old list.
 	std::vector<NestedSCoP> parentscoplist=scoplist;   ///< this is the SCoP list where we need to register our findings
 	scoplist.clear();
-	NestedSCoP scop(nestlvl++, lb, ub, step); // post-increment, as the outermost (non-SCoP) level ProgramSCoP is (-1)
+	NestedSCoP scop(nestlvl++, itervec, lb, ub, step); // post-increment: the outermost level is the ProgramSCoP at (-1)
 
 	// process all the children, and — when done with the child scope — restore the parent SCoP list to var scoplist
 	for (auto i: {1, 2, 3}) visit(stmt.getAddressOfChild(i));
@@ -168,6 +161,7 @@ void SCoPVisitor::visitForStmt(const ForStmtAddress &stmt) {
 	scoplist.push_back(scop);   // and register our new SCoP in its parent scoplist
 
 	// finally, remove the changes to the variable stack, and decrease the nesting level
+	itervec.pop_back();
 	varstack.pop();
 	--nestlvl;
 }
@@ -181,10 +175,6 @@ void SCoPVisitor::visitIfStmt(const IfStmtAddress &stmt) {
 	// declare a couple of variables to ease the creation of the SCoP
 	ExpressionAddress
 	        ifcond=stmt.getAddressOfChild(0).as<ExpressionAddress>();
-	NodeAddress
-	        thenbr=stmt.getAddressOfChild(1),
-	        elsebr=stmt.getAddressOfChild(2);
-	ifcond=ifcond; thenbr=thenbr; elsebr=elsebr; // make compiler ignore warnings about unused vars
 
 	// We will be creating a new SCoP right now, as we have entered a SCoP-generating if conditional. Hence,
 	// store away the current SCoP list, then create a new, empty one. After the children return, restore the old list.

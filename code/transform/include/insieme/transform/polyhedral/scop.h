@@ -52,10 +52,11 @@ public:
 class NestedSCoP {
 public:
 	unsigned int nestlvl;
+	std::vector<insieme::core::VariableAddress> itervec;
 
-	NestedSCoP() {}   /// empty constructor in case we are not interested in representing a For loop
-	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress lb, insieme::core::NodeAddress ub,
-	           insieme::core::NodeAddress stride);
+	NestedSCoP(unsigned int nestlvl);
+	NestedSCoP(unsigned int nestlvl, std::vector<insieme::core::VariableAddress> itervec,
+	           insieme::core::NodeAddress lb, insieme::core::NodeAddress ub, insieme::core::NodeAddress stride);
 	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress ifcond);
 	bool isAffine();
 	void debug();
@@ -71,6 +72,11 @@ protected:
 	boost::optional<insieme::core::NodeAddress> lb, ub, stride, ifcond;
 
 	bool isAffine(insieme::core::NodeAddress addr);
+	std::string indentBy(std::string ident, std::string val);
+
+private:
+	std::string debugFor();
+	std::string debugIf();
 };
 
 }}}}
