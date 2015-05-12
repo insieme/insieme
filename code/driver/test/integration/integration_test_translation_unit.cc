@@ -75,18 +75,26 @@ namespace insieme {
 
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
+                auto keys = testCase.getProperties().getKeys();
+                if(std::find(keys.begin(), keys.end(), "preprocessing") != keys.end()) {
+                    SCOPED_TRACE("WARNING: This test was skipped because there is a preprocessing step required: " + testCase.getName());
+                    LOG(INFO) << "WARNING: This test was skipped because there is a preprocessing step required: " + testCase.getName();
+                    //omit test
+                    return;
+                }
 
-        std::string filename;
-        {
-            core::NodeManager tmpManager;
-            //load program and create IR TU
-            frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
-            char tmpname[] = "tmp.XXXXXX";
-            mkstemp(tmpname);
-            filename = tmpname;
-            insieme::driver::saveLib(code, filename);
-            EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
-        }
+
+                std::string filename;
+                {
+                    core::NodeManager tmpManager;
+                    //load program and create IR TU
+                    frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
+                    char tmpname[] = "tmp.XXXXXX";
+                    mkstemp(tmpname);
+                    filename = tmpname;
+                    insieme::driver::saveLib(code, filename);
+                    EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
+                }
 
 		// load TU using the frontend (and all its potential extensions)
 		insieme::frontend::ConversionJob job;

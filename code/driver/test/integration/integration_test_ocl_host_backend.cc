@@ -69,14 +69,14 @@ namespace insieme {
 		// obtain test case
 		driver::integration::IntegrationTestCase testCase = GetParam();
 
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
-
 		// skip OpenCL tests
 		if (!testCase.isEnableOpenCL()) {
 			LOG(INFO) << "Skipping non-OpenCL tests ...";
 			return;
 		}
+
+		SCOPED_TRACE("Testing Case: " + testCase.getName());
+		LOG(INFO) << "Testing Case: " + testCase.getName();
 	
 		// load the code using the frontend
 		core::ProgramPtr code = testCase.load(manager);
@@ -87,12 +87,15 @@ namespace insieme {
 
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
-
-		// add OCL specific compiler flags
-		compiler.addFlag("-lOpenCL");
+                // add OCL specific compiler flags
+		compiler.addFlag("-I"+testCase.getDirectory().string()+"../common");
+		// this is a little bit ugly, but we need to add the lib icl sources to compile the target code
+		compiler.addFlag(testCase.getDirectory().string()+"/../common/lib_icl.c");
+		compiler.addFlag(testCase.getDirectory().string()+"/../common/lib_icl_ext.c");
+		compiler.addFlag(testCase.getDirectory().string()+"/../common/lib_icl_bmp.c");
 		compiler.addFlag("-I$OPENCL_ROOT/include");
 		compiler.addFlag("-L$OPENCL_ROOT/lib/x86_64");
-		compiler.addFlag("-DUSE_OPENCL=ON");
+		compiler.addFlag("-lOpenCL");
 		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
 
 		// add extra compiler flags

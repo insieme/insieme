@@ -42,6 +42,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/dump/binary_dump.h"
 
+#include "insieme/backend/addons/enum_type.h"
 #include "insieme/backend/preprocessor.h"
 #include "insieme/backend/postprocessor.h"
 #include "insieme/backend/converter.h"
@@ -73,11 +74,15 @@ namespace ocl_kernel {
 	}
 
 	OCLKernelBackendPtr OCLKernelBackend::getDefault() {
-		return std::make_shared<OCLKernelBackend>();
+		auto res = std::make_shared<OCLKernelBackend>();
+		res->addAddOn<addons::EnumTypes>();
+		return res;
 	}
 
 	OCLKernelBackendPtr OCLKernelBackend::getDefault(const std::string& kernelDumpPath) {
-		return std::make_shared<OCLKernelBackend>(kernelDumpPath);
+		auto res = std::make_shared<OCLKernelBackend>(kernelDumpPath);
+		res->addAddOn<addons::EnumTypes>();
+		return res;
 	}
 
 	Converter OCLKernelBackend::buildConverter(core::NodeManager& manager) const {
@@ -102,8 +107,8 @@ namespace ocl_kernel {
 
 		// update function manager
 		FunctionManager& functionManager = converter.getFunctionManager();
-		addOpenCLKernelSpecificOps(manager, functionManager.getOperatorConverterTable());
-		extendFunctionIncludeTable(functionManager.getFunctionIncludeTable());
+                addOpenCLKernelSpecificOps(manager, functionManager.getOperatorConverterTable());
+                extendFunctionIncludeTable(functionManager.getFunctionIncludeTable());
 
 		// done
 		return converter;

@@ -50,6 +50,7 @@
 #include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/core/lang/extension_registry.h"
 
 namespace {
 
@@ -743,7 +744,8 @@ private:
 		});
 
 		// fix call to known built-in functions
-		if (manager.getLangBasic().isBuiltIn(call->getFunctionExpr())) {
+		if (manager.getLangBasic().isBuiltIn(call->getFunctionExpr()) || 
+                    lang::ExtensionRegistry::getInstance().isDefinedInExtension(call->getFunctionExpr())) {
 			return handleCallToBuiltIn(call, newArgs);
 		}
 
@@ -780,7 +782,8 @@ private:
 		auto fun = call->getFunctionExpr();
 
 		// should only be called for built-in functions
-		assert_true(manager.getLangBasic().isBuiltIn(fun));
+		assert_true(lang::ExtensionRegistry::getInstance().isDefinedInExtension(fun) || 
+                        manager.getLangBasic().isBuiltIn(fun));
 
 		// use type inference for the return type
 		if(manager.getLangBasic().isCompositeRefElem(fun)) {

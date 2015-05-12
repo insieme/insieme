@@ -213,7 +213,7 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 	for(TypePtr typeTofix : types)
 		updateTemps(typeTofix, varReplacements);
 
-	prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, varReplacements, false);
+        prog = core::transform::fixTypesGen(prog->getNodeManager(), prog, varReplacements, false);
 
 	removeClVars();
 

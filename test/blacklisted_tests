@@ -6,6 +6,5 @@ gemsclaim # disabled here because the test takes quite long
 indirection_test
 mpi
 mqap
-ocl
 vectors
 vivid
