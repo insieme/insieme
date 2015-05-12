@@ -190,8 +190,7 @@ void SCoPVisitor::visitIfStmt(const IfStmtAddress &stmt) {
 	// store away the current SCoP list, then create a new, empty one. After the children return, restore the old list.
 	std::vector<NestedSCoP> parentscoplist=scoplist;   ///< this is the SCoP list where we need to register our findings
 	scoplist.clear();
-	NestedSCoP scop;
-	scop.nestlvl=nestlvl++; // post-increment, as the outermost (non-SCoP) level ProgramSCoP is (-1)
+	NestedSCoP scop(nestlvl++, ifcond);   // post-increment, as the outermost (non-SCoP) level ProgramSCoP is (-1)
 
 	// process all the children, and — when done with the child scope — restore the parent SCoP list to var scoplist
 	visitChildren(stmt);

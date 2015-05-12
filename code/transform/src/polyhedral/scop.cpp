@@ -74,6 +74,11 @@ NestedSCoP::NestedSCoP(unsigned int nestlvl, NodeAddress lb, NodeAddress ub, Nod
     stride(boost::optional<NodeAddress>(stride)) {
 }
 
+/// This NestedSCoP constructor takes the condition of an if statement.
+NestedSCoP::NestedSCoP(unsigned int nestlvl, NodeAddress ifcond):
+    nestlvl(nestlvl), ifcond(boost::optional<NodeAddress>(ifcond)) {
+}
+
 /// isAffine will return true in case the expression given with addr is a linear expression.
 bool NestedSCoP::isAffine(insieme::core::NodeAddress addr) {
 	// we could use:
@@ -103,10 +108,11 @@ bool NestedSCoP::isAffine(insieme::core::NodeAddress addr) {
 void NestedSCoP::debug() {
 	// print the current scop
 	if (lb && ub && stride)
-		std::cout << std::string(nestlvl, '\t') << "for " << **lb << " .. " << **ub << " : " << **stride
-		          << " |" << subscops.size() << "|" << std::endl;
+		std::cout << std::string(nestlvl, '\t') << "for " << **lb << " .. " << **ub << " : " << **stride << std::endl;
+	else if (ifcond)
+		std::cout << std::string(nestlvl, '\t') << "if " << **ifcond << std::endl;
 	else
-		std::cout << std::string(nestlvl, '\t') << "for |" << subscops.size() << "|" << std::endl;
+		std::cout << std::string(nestlvl, '\t') << "for/if" << std::endl;
 
 	// print all sub-scops
 	for (auto scop: subscops) scop.debug();

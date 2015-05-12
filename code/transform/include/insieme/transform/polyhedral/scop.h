@@ -56,6 +56,7 @@ public:
 	NestedSCoP() {}   /// empty constructor in case we are not interested in representing a For loop
 	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress lb, insieme::core::NodeAddress ub,
 	           insieme::core::NodeAddress stride);
+	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress ifcond);
 	bool isAffine();
 	void debug();
 
@@ -67,7 +68,7 @@ protected:
 	// iteration domain.
 	// use in SCoPs originating from a conditional: lb=0, ub=condition, stride=1
 	// also possible: boost::variant<empty, loop, conditional>   http://stackoverflow.com/a/19579377
-	boost::optional<insieme::core::NodeAddress> lb, ub, stride;
+	boost::optional<insieme::core::NodeAddress> lb, ub, stride, ifcond;
 
 	bool isAffine(insieme::core::NodeAddress addr);
 };
