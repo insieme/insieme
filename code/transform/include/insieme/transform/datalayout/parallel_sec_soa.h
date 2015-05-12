@@ -55,9 +55,13 @@ class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
 			const core::StatementPtr& newVars, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems);
 
-	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr()) {return core::StatementList();}
+	core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
+			const core::CompoundStmtPtr& newVars, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType)
+				{ return core::StatementList(); }
+
+	virtual void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) {return core::StatementPtr();}
@@ -65,11 +69,11 @@ class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
 	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) {return core::StatementPtr();}
 
-	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
-			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess) {return oldVar;}
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionAddress& oldVar, const core::StatementPtr& newVar, const core::StringValuePtr& member,
+			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess);
 
-	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
-			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) {return oldVar;}
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::StatementPtr& newVar,
+			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) { assert_fail(); return oldVar;}
 
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType) {return core::StatementList();}
