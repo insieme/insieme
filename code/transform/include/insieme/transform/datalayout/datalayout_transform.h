@@ -95,32 +95,32 @@ protected:
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems = core::ExpressionPtr()) { return core::StatementList(); }
 	void addNewDecls(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
-			core::NodePtr>& replacements);
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::StatementPtr, core::ExpressionPtr>& nElems,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void addNewParams(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform, std::map<core::NodeAddress,
 			core::NodePtr>& replacements);
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr()) { return core::StatementList(); }
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) {assert_fail(); return core::StatementList(); }
 	virtual void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::StatementPtr, core::ExpressionPtr>& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::ExpressionPtr determineNumberOfElements(const core::StatementPtr& newVar,const core::ExpressionMap&  nElems);
+	core::ExpressionPtr determineNumberOfElements(const core::StatementPtr& newVar,const std::map<core::StatementPtr, core::ExpressionPtr>& nElems);
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) =0;
 	std::vector<core::StatementAddress> addMarshalling(const ExprAddressMap& varReplacements,
-			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, core::ExpressionMap& nElems,
+			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, std::map<core::StatementPtr, core::ExpressionPtr>& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) =0;
 	std::vector<core::StatementAddress> addUnmarshalling(const ExprAddressMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
-			core::ExpressionMap& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
+			std::map<core::StatementPtr, core::ExpressionPtr>& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	virtual core::TypePtr generateNewTupleType(const core::TypePtr& oldTupleVarType, const core::StructTypePtr& newStructType,
 			const core::TypePtr& oldStructType);

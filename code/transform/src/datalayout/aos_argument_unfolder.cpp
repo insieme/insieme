@@ -78,8 +78,8 @@ assert_fail();
 			ExpressionAddress oldVar = varCheck->first;
 			ExpressionPtr newVar = varCheck->second.as<ExpressionPtr>();
 
-std::cout << "oldVar: " << oldVar << " " << *oldVar << std::endl;
-std::cout << "newVar: " << newVar->getType() << " " << *newVar << std::endl;
+//std::cout << "oldVar: " << oldVar << " " << *oldVar << std::endl;
+//std::cout << "newVar: " << newVar->getType() << " " << *newVar << std::endl;
 			ExpressionPtr tupleIndex = match.get()["tupleIndex"].getValue().as<LiteralPtr>();
 			ExpressionPtr arrayIndex = match.get()["arrayIndex"].getValue().as<ExpressionPtr>();
 			for(NamedTypePtr newType : newStructType) {

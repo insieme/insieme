@@ -56,12 +56,8 @@ class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
 			const core::ExpressionPtr& nElems);
 
 	core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
-			const core::CompoundStmtPtr& newVars, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType)
-				{ return core::StatementList(); }
-
-	virtual void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
-			std::map<core::NodeAddress, core::NodePtr>& replacements);
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr());
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) {return core::StatementPtr();}
@@ -91,19 +87,6 @@ public:
 
 	virtual void transform();
 
-};
-
-class ArgumentReplacer : public VariableAdder {
-	const ExprAddressMap& varsToPropagate;
-	const core::StructTypePtr& newStructType;
-	core::pattern::TreePattern tupleMemberAccess;
-
-	virtual core::NodePtr generateNewCall(const core::CallExprAddress& oldCall, const core::StatementPtr& newVar,
-			const int argIdx);
-
-	core::ExpressionList updateArguments(const core::ExpressionAddress& oldArg);
-public:
-	ArgumentReplacer(core::NodeManager& mgr, ExprAddressMap& varReplacements, const ExprAddressMap& varsToPropagate, const core::StructTypePtr& newStructType);
 };
 
 } // datalayout

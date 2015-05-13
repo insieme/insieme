@@ -395,21 +395,21 @@ std::vector<std::pair<ExprAddressSet, RefTypePtr>> DatalayoutTransformer::mergeL
 }
 
 void DatalayoutTransformer::addNewDecls(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
-		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, std::map<StatementPtr, ExpressionPtr>& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	visitDepthFirst(toTransform, [&](const DeclarationStmtAddress& decl) {
 		const VariableAddress& oldVar = decl->getVariable();
 
 		auto newVarIter = varReplacements.find(oldVar);
 
 		if(newVarIter != varReplacements.end()) {
-			const StatementPtr& newVar = newVarIter->second;
+			StatementPtr newVar = newVarIter->second;
 
 			// check if the declaration does an allocation and try to extract the number of elements in that case
 			pattern::MatchOpt match = allocPattern.matchPointer(decl->getInitialization());
 			ExpressionPtr nElem;
 			if(match) {
 				nElem = match.get()["nElems"].getValue().as<ExpressionPtr>();
-				nElems[newVar.as<VariablePtr>()] = nElem;
+				nElems[newVar] = nElem;
 			}
 
 			IRBuilder builder(mgr);
@@ -423,12 +423,13 @@ void DatalayoutTransformer::addNewDecls(const ExprAddressMap& varReplacements, c
 }
 
 void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
-		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, std::map<StatementPtr, ExpressionPtr>& nElems,
+		std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 
 	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
 		const ExpressionAddress& oldVar = vr.first;
-		const ExpressionPtr& newVar = vr.second.as<ExpressionPtr>();
+		const StatementPtr& newVar = vr.second;
 
 		visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
 
@@ -454,7 +455,7 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 	}
 }
 
-ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const StatementPtr& newVar,const ExpressionMap&  nElems) {
+ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const StatementPtr& newVar,const std::map<StatementPtr, ExpressionPtr>&  nElems) {
 	ExpressionPtr numElements;
 
 	auto checkIfThereIsTheNumberOfElementsGatheredFromMemoryAllocationForThisVariable = nElems.find(newVar.isa<ExpressionPtr>());
@@ -471,7 +472,7 @@ ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const StatementPt
 }
 
 std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, std::map<StatementPtr, ExpressionPtr>& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 	std::vector<StatementAddress> marshalled;
 
@@ -553,7 +554,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 }
 
 std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType,
-		const NodeAddress& toTransform, const std::vector<StatementAddress>& beginV, ExpressionMap& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+		const NodeAddress& toTransform, const std::vector<StatementAddress>& beginV, std::map<StatementPtr, ExpressionPtr>& nElems, std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 	std::vector<StatementAddress> unmarshallingPoints;
 	StatementAddress begin = beginV.empty() ? StatementAddress() : beginV.front();

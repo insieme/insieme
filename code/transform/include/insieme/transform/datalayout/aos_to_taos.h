@@ -62,8 +62,8 @@ protected:
 			const core::ExpressionPtr& nElems);
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems);
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr());
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
