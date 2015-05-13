@@ -970,20 +970,6 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 	do {
 		toTransform = core::transform::fixTypes(mgr, toTransform, structures, false, typeOfMemAllocHandler);
 
-	SimpleNodeMapping* bf;
-	auto bindFixer = makeLambdaMapper([&](unsigned index, const NodePtr& node)->NodePtr {
-		const BindExprPtr bind = node.isa<BindExprPtr>();
-		if(bind){
-			BindExprPtr newBind = builder.bindExpr(bind->getParameters(), bind->getCall()->substitute(mgr, *bf));
-
-			return newBind;
-		}
-
-		return node->substitute(mgr, *bf);
-	});
-
-	bf = &bindFixer;
-	toTransform = bf->map(toTransform);
 		structures.clear();
 		visitDepthFirst(toTransform, [&](const StatementPtr& stmt) {
 			if(DeclarationStmtPtr decl = stmt.isa<DeclarationStmtPtr>()) {
@@ -998,7 +984,6 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 
 				}
 			}
-
 		});
 	}while(!structures.empty());
 

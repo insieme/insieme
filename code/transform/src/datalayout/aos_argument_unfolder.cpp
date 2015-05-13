@@ -218,7 +218,7 @@ const CallExprPtr AosArgumentUnfolder::updateArgumentsAndParams(CallExprAddress 
 
 	IRBuilder builder(mgr);
 	FunctionTypePtr newFunTy = builder.functionType(paramTys, newCall->getType());
-	LambdaExprPtr newLambda = builder.lambdaExpr(newFunTy, newCall->getFunctionExpr().as<LambdaExprPtr>()->getBody(), newParams);
+	LambdaExprPtr newLambda = builder.lambdaExpr(newFunTy, newParams, newCall->getFunctionExpr().as<LambdaExprPtr>()->getBody());
 
 //	std::cout << "type " << *newCall->getType() << std::endl;
 //		std::cout << "lambda " << *newLambda << std::endl;
