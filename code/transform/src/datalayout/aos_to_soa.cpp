@@ -80,7 +80,7 @@ void AosToSoa::transform() {
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
-		ExpressionMap nElems;
+		std::map<StatementPtr, ExpressionPtr> nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
@@ -208,7 +208,7 @@ StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, c
 
 
 StatementList AosToSoa::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+		const StatementPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
@@ -218,7 +218,7 @@ StatementList AosToSoa::generateNewAssigns(const ExprAddressMap& varReplacements
 		NodeMap inInitReplacementsInCaseOfNovarInInit;
 		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
 
-		allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
+		allAssigns.push_back(builder.assign(builder.refMember(newVar.as<ExpressionPtr>(), memberType->getName()),
 				updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 	}
 

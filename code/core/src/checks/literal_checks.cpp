@@ -38,6 +38,7 @@
 
 #include <boost/regex.hpp>
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_builder.h"
 
 namespace insieme {
@@ -91,6 +92,14 @@ namespace checks {
 					format("Invalid format for %s literal: %s\n\t%s", toString(*type), value, reason),
 					Message::ERROR));
 		};
+
+		// check type literals
+		if (analysis::isTypeLiteralType(type)) {
+			// make sure they still contain the value "type_literal" we used during construction
+			if (lit->getValue()->getValue() != "type_literal") {
+				addError("Invalid TypeLiteral value");
+			}
+		}
 
 		// check booleans
 		if (basic.isBool(type)) {

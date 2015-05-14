@@ -170,7 +170,7 @@ StatementList ParSecTransform<Baseclass>::generateNewDecl(const ExprAddressMap& 
 
 template<class Baseclass>
 StatementList ParSecTransform<Baseclass>::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+		const StatementPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	StatementList allAssigns = Baseclass::generateNewAssigns(varReplacements, call, newVar, newStructType, oldStructType, nElems);
 
 	// drop first declaration of the old variable
@@ -203,7 +203,7 @@ void ParSecTransform<Baseclass>::transform() {
 			pattern::any << var("nElems", pattern::any))));
 
 	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		ExpressionMap nElems;
+		std::map<StatementPtr, ExpressionPtr> nElems;
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 			TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), oldStructType,
