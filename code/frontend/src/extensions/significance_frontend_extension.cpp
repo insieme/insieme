@@ -1,0 +1,135 @@
+/**
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * regarding third party software licenses.
+ */
+
+#include "insieme/frontend/extensions/significance_frontend_extension.h"
+
+#include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/frontend/pragma/matcher.h"
+#include "insieme/utils/assert.h"
+#include "insieme/annotations/meta_info/meta_infos.h"
+
+using namespace insieme::frontend::pragma;
+using namespace insieme::frontend;
+
+namespace bpo = boost::program_options;
+
+namespace insieme {
+namespace frontend {
+namespace extensions {
+
+namespace {
+	pragma::node* stripEod(pragma::node* eodDelimited) {
+		pragma::concat* eodConcat = dynamic_cast<pragma::concat*>(eodDelimited);
+		assert_true(eodConcat != nullptr) << "Tried to strip an eod from a token sequence which is not a concat.";
+		auto seceod = dynamic_cast<decltype(tok::eod)*>(eodConcat->second);
+		assert_true(seceod != nullptr) << "Tried to strip an eod from a token sequence not ending on eod.";
+		return eodConcat->first;
+	}	
+}
+
+SignificanceFrontendExtension::SignificanceFrontendExtension() : OmpFrontendExtension() {
+
+	// now, we adjust the pragma handling for omp task introduced by the base OMP extension
+	
+	// remove the old handler
+	std::shared_ptr<PragmaHandler> originalTaskHandler;
+	for(auto it = pragmaHandlers.begin(); it!= pragmaHandlers.end(); ++it) {
+		if((*it)->getKeyword() == "task") {
+			originalTaskHandler = *it;
+			pragmaHandlers.erase(it);
+			break;
+		}
+	}
+
+	// extend syntax for task by new clauses
+	auto extendedTokenSequence = *stripEod(originalTaskHandler->getToken()) >> *( !tok::comma >> 
+		( (kwd("label") >> tok::l_paren >> tok::identifier["task_label"] >> tok::r_paren)
+		//| 
+		//|
+		) ) >> tok::eod;
+
+	// add a new handler which uses the old
+	pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
+		PragmaHandler("omp", "task", extendedTokenSequence,
+		[originalTaskHandler](MatchObject object, stmtutils::StmtWrapper node) {
+			// perform basic omp task generation
+			auto newNodes = originalTaskHandler->getFunction()(object, node);
+			// attach labels
+			insieme::annotations::significance_info sigMetainfo;
+			sigMetainfo.label = object.getString("task_label");
+			newNodes[0].as<core::MarkerStmtPtr>().getSubStatement(). attachValue(sigMetainfo);
+			dumpColor(newNodes[0]);
+			dumpText(newNodes[0]);
+			return newNodes;
+		})
+	));
+
+}
+
+insieme::frontend::tu::IRTranslationUnit SignificanceFrontendExtension::IRVisit(tu::IRTranslationUnit& tu) {
+	
+	OmpFrontendExtension::IRVisit(tu);
+
+	return tu;
+}
+
+FrontendExtension::flagHandler SignificanceFrontendExtension::registerFlag(bpo::options_description& options) {
+    // register significance flag
+    options.add_options()("ftask-significance", bpo::bool_switch(&flagActivated), "Task significance support");
+    auto fHandler = [&](const ConversionJob& job) {
+        return flagActivated;
+    };
+    return fHandler;
+}
+
+boost::optional<std::string> SignificanceFrontendExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
+	bool hasOMP = setup.hasExtension<OmpFrontendExtension>();
+	if(hasOMP) {
+		return boost::optional<std::string>(
+			"The task significance extension supersedes the OMP extension.\n" 
+			"You cannot use them at the same time. (set --fopenmp=0)");
+	}
+	return boost::optional<std::string>();
+}
+
+}   //end namespace extensions
+}   //end namespace frontend
+}   //end namespace insieme
