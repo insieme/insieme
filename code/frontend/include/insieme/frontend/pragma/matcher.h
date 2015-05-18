@@ -58,10 +58,10 @@
 
 // forward declarations
 namespace clang {
-class Preprocessor;
-class Stmt;
-class ASTContext;
-class SourceLocation;
+	class Preprocessor;
+	class Stmt;
+	class ASTContext;
+	class SourceLocation;
 }
 
 namespace insieme {
@@ -147,8 +147,8 @@ public:
 
 	ValueUnion(ValueUnion& other, bool transferOwnership=false, bool isExpr=false) :
 		llvm::PointerUnion<clang::Stmt*, std::string*>(other), ptrOwner(true), isExp(isExpr), clangCtx(other.clangCtx) {
-		if(transferOwnership) 	other.ptrOwner = false;
-		else	ptrOwner = false;
+			if(transferOwnership) 	other.ptrOwner = false;
+			else	ptrOwner = false;
 	}
 
 	/**
@@ -185,73 +185,75 @@ public:
 };
 
 class MatchObject {
-    private:
-        bool called;
-        typedef std::vector<core::VariablePtr> VarList;
-        typedef std::vector<core::ExpressionPtr> ExprList;
-        typedef std::vector<std::string> StringList;
-        std::map<std::string, VarList> varList;
-        std::map<std::string, ExprList> exprList;
-        std::map<std::string, StringList> stringList;
-        core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
-        core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
-    public:
-        MatchObject() : called(false) { }
+private:
+	bool called;
+	typedef std::vector<core::VariablePtr> VarList;
+	typedef std::vector<core::ExpressionPtr> ExprList;
+	typedef std::vector<std::string> StringList;
+	std::map<std::string, VarList> varList;
+	std::map<std::string, ExprList> exprList;
+	std::map<std::string, StringList> stringList;
+	core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
+	core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
+public:
+	MatchObject() : called(false) { }
 
-        const VarList getVars(const std::string& s) const {
-        	if(varList.find(s) == varList.end())
-        		return VarList();
-            return varList.at(s);
-        }
-        const ExprList getExprs(const std::string& s) const {
-        	if(exprList.find(s) == exprList.end())
-        		return ExprList();
-            return exprList.at(s);
-        }
+	const VarList getVars(const std::string& s) const {
+		if(varList.find(s) == varList.end())
+			return VarList();
+		return varList.at(s);
+	}
+	const ExprList getExprs(const std::string& s) const {
+		if(exprList.find(s) == exprList.end())
+			return ExprList();
+		return exprList.at(s);
+	}
 
-		const core::ExpressionPtr getSingleExpr(const std::string& key) {
-			const auto fitV = getVars(key);
-			const auto fitE = getExprs(key);
+	const core::ExpressionPtr getSingleExpr(const std::string& key) {
+		const auto fitV = getVars(key);
+		const auto fitE = getExprs(key);
 
-			if(fitE.empty() && fitV.empty())
-				return core::ExpressionPtr();
-
-			// we have an expression
-			if(fitV.empty()) {
-				assert_eq(fitE.size(), 1);
-				return fitE.at(0);
-			}
-			// we have a variable
-			if(fitE.empty()) {
-				assert_eq(fitV.size(), 1);
-				return fitV.at(0);
-			}
-			assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
+		if(fitE.empty() && fitV.empty())
 			return core::ExpressionPtr();
+
+		// we have an expression
+		if(fitV.empty()) {
+			assert_eq(fitE.size(), 1);
+			return fitE.at(0);
 		}
+		// we have a variable
+		if(fitE.empty()) {
+			assert_eq(fitV.size(), 1);
+			return fitV.at(0);
+		}
+		assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
+		return core::ExpressionPtr();
+	}
 
-        const StringList getStrings(const std::string& k) const {
-        	if(stringList.find(k) == stringList.end())
-        		return StringList();
-            return stringList.at(k);
-        }
-        const std::string getString(const std::string& k) const {
-		if(stringList.find(k) == stringList.end())
+	const StringList getStrings(const std::string& k) const {
+		if(stringList.find(k) == stringList.end()) {
+			return StringList();
+		}
+		return stringList.at(k);
+	}
+	const std::string getString(const std::string& k) const {
+		if(stringList.find(k) == stringList.end()) {
 			return std::string();
-            return getStrings(k).front();
-        }
+		}
+		return getStrings(k).front();
+	}
 
-        bool stringValueExists(const std::string& k) const {
-            return (stringList.find(k) != stringList.end());
-        }
+	bool stringValueExists(const std::string& k) const {
+		return (stringList.find(k) != stringList.end());
+	}
 
-        bool empty() const {
-            return (varList.empty() && exprList.empty() && stringList.empty());
-        }
+	bool empty() const {
+		return (varList.empty() && exprList.empty() && stringList.empty());
+	}
 
-        void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
+	void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
 
-        friend std::ostream& operator<<(std::ostream& out, const MatchObject& mo);
+	friend std::ostream& operator<<(std::ostream& out, const MatchObject& mo);
 };
 
 typedef std::pair<bool, MatchMap> MatcherResult;
@@ -271,9 +273,9 @@ struct node : public insieme::utils::Printable {
 	 * parsing.
 	 */
 	virtual bool match(clang::Preprocessor& PP,
-					   MatchMap& 			mmap,
-					   ParserStack& 		errStack,
-					   size_t 				recID) const = 0;
+		MatchMap& 			mmap,
+		ParserStack& 		errStack,
+		size_t 				recID) const = 0;
 
 	virtual node* copy() const = 0;
 
@@ -447,10 +449,10 @@ struct expr_p: public MappableNode<expr_p> {
  * Utility function for adding a token with a specific key to the matcher map.
  */
 void AddToMap(clang::tok::TokenKind tok,
-			  clang::Token const& 	token,
-			  bool 					resolve,
-			  std::string const& 	map_str,
-			  MatchMap& 			mmap);
+	clang::Token const& 	token,
+	bool 					resolve,
+	std::string const& 	map_str,
+	MatchMap& 			mmap);
 
 std::string TokenToStr(clang::tok::TokenKind tok);
 std::string TokenToStr(const clang::Token& token);
@@ -469,8 +471,8 @@ struct Tok: public MappableNode<Tok<T>> {
 
 	node* copy() const {
 		return new Tok<T>(
-				MappableNode<Tok<T>>::getMapName(),
-				MappableNode<Tok<T>>::isAddToMap(), resolve
+			MappableNode<Tok<T>>::getMapName(),
+			MappableNode<Tok<T>>::isAddToMap(), resolve
 			);
 	}
 
@@ -519,13 +521,13 @@ struct var_p: public Tok<clang::tok::identifier> {
 
 // import token definitions from clang
 namespace tok {
-#define PUNCTUATOR(name, _) \
-	static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
-#define TOK(name) \
-	static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
-#include <clang/Basic/TokenKinds.def>
-#undef PUNCTUATOR
-#undef TOK
+	#define PUNCTUATOR(name, _) \
+		static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
+	#define TOK(name) \
+		static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
+	#include <clang/Basic/TokenKinds.def>
+	#undef PUNCTUATOR
+	#undef TOK
 
 	struct ExprGenerator {
 		inline expr_p operator[](const std::string name) {
