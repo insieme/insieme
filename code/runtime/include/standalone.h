@@ -179,6 +179,8 @@ void irt_exit_handler() {
 	if (irt_g_exit_handling_done)
 		return;
 
+	_irt_worker_end_all();
+
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
 	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
@@ -195,7 +197,6 @@ void irt_exit_handler() {
 	irt_ocl_release_devices();	
 #endif
 	irt_g_exit_handling_done = true;
-	_irt_worker_end_all();
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
 
@@ -279,7 +280,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	// initialize globals
 	irt_init_globals();
-	// TODO: superfluous?
+
+	// Required for multiple startup/shutdown of RT in same process
 	irt_g_exit_handling_done = false;
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
