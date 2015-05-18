@@ -963,6 +963,7 @@ protected:
         }
 
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+		insieme::annotations::migrateMetaInfos(stmtNode, parallelCall);
 		resultStmts.push_back(parallelCall);
 
 		return build.compoundStmt(resultStmts);

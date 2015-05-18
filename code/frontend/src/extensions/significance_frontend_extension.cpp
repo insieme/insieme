@@ -79,11 +79,34 @@ SignificanceFrontendExtension::SignificanceFrontendExtension() : OmpFrontendExte
 		}
 	}
 
+	auto ls = tok::l_square;
+	auto rs = tok::r_square;
+	auto lp = tok::l_paren;
+	auto rp = tok::r_paren;
+
+	auto arraySpec = [&](const string &s) { 
+		return kwd(s) >> lp >> tok::var[format("array_name_%s",s)] 
+			>> ls >> tok::expr[format("array_start_%s",s)] >> tok::colon >> tok::expr[format("array_end_%s",s)] >> rs
+			>> ls >> tok::expr[format("array_low_%s",s)] >> tok::semi >> tok::expr[format("array_high_%s",s)] >> rs
+			>> rp;
+	};
+
+	auto significantSpec = kwd("significant") >> lp >> 
+		( kwd("expr") >> lp >> tok::expr["sig_expr"] >> rp
+		| kwd("ratio") >> lp >> tok::expr["sig_ratio"] >> rp ) 
+		>> rp;
+
+	auto toleranceSpec = kwd("tasktolerance") >> lp 
+		>> !( kwd("taskcheck") >> lp >> tok::expr["taskcheck"] >> rp) >> tok::comma 
+		>> !( kwd("redo") >> lp >> tok::expr["redo"] >> rp) 
+		>> rp;
+
 	// extend syntax for task by new clauses
 	auto extendedTokenSequence = *stripEod(originalTaskHandler->getToken()) >> *( !tok::comma >> 
-		( (kwd("label") >> tok::l_paren >> tok::identifier["task_label"] >> tok::r_paren)
-		//| 
-		//|
+		( arraySpec("in") | arraySpec("out")
+		| (kwd("label") >> lp >> tok::identifier["task_label"] >> rp)
+		| significantSpec
+		| toleranceSpec
 		) ) >> tok::eod;
 
 	// add a new handler which uses the old
@@ -96,8 +119,6 @@ SignificanceFrontendExtension::SignificanceFrontendExtension() : OmpFrontendExte
 			insieme::annotations::significance_info sigMetainfo;
 			sigMetainfo.label = object.getString("task_label");
 			newNodes[0].as<core::MarkerStmtPtr>().getSubStatement(). attachValue(sigMetainfo);
-			dumpColor(newNodes[0]);
-			dumpText(newNodes[0]);
 			return newNodes;
 		})
 	));

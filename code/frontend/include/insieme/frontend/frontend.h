@@ -538,18 +538,17 @@ namespace frontend {
 			auto extensionPtr = std::make_shared<T>();
 			boost::program_options::options_description extOptions;
 
+
 			// insert the extension before "Before", unless it's not found
-			for(auto it = extensions.begin(); it < extensions.end()-1; ++it) {
-				if(it+1 != extensions.end()) {
-					auto next = (it+1)->first;
-					if(typeid(*next) == typeid(Before)) {
-						extensions.insert(it, { extensionPtr, extensionPtr->registerFlag(extOptions) } );
-						break;
-					}
-				} else {
-					extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+			bool inserted = false;
+			for(auto it = extensions.begin(); it < extensions.end(); ++it) {
+				if(typeid(*(it->first)) == typeid(Before)) {
+					extensions.insert(it, { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+					inserted = true;
+					break;
 				}
 			}
+			if(!inserted) extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
 
 			// some options were not parsed by the driver, parse them by the extension
 			boost::program_options::parsed_options parsed = boost::program_options::basic_command_line_parser<char>(this->unparsedOptions)
