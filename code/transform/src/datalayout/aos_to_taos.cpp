@@ -86,7 +86,7 @@ void AosToTaos::transform() {
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
-		ExpressionMap nElems;
+		std::map<StatementPtr, ExpressionPtr> nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
@@ -224,7 +224,7 @@ StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, 
 }
 
 StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+		const StatementPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
@@ -234,7 +234,7 @@ StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacement
 	// divide initialization size by tilesize
 	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, genericTileSizeExpr);
 
-	allAssigns.push_back(builder.assign(newVar, updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit)));
+	allAssigns.push_back(builder.assign(newVar.as<ExpressionPtr>(), updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit)));
 
 	return allAssigns;
 }
