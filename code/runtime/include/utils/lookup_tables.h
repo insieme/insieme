@@ -220,7 +220,7 @@ _IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_ex
 #define IRT_DEFINE_LOCKED_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
 _IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 1)
 
-#define IRT_DEFINE_LOCKFREE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
+#define IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
 _IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 0)
 
 /* Creates the data structures necessary for the lookup tables to store their
@@ -230,7 +230,7 @@ _IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_
 irt_##__type__* irt_g_##__type__##_table[__num_buckets__]; \
 irt_spinlock irt_g_##__type__##_table_locks[__num_buckets__];
 
-#define IRT_CREATE_LOCKFREE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
+#define IRT_CREATE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
 irt_##__type__* irt_g_##__type__##_table[__num_buckets__];
 
 #endif // ifndef __GUARD_UTILS_LOOKUP_TABLES_H
