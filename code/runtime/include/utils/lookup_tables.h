@@ -59,7 +59,7 @@ extern irt_spinlock irt_g_##__type__##_table_locks[__num_buckets__];
 //The passed __locked__ parameter will determine whether table modifications will be protected by locks.
 #define _IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
  \
-static inline void irt_##__type__##_table_init_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
+static inline void _irt_##__type__##_table_init_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
 	for(int i=0; i<__num_buckets__; ++i) { \
 		table[i] = NULL; \
 		if(__locked__) { \
@@ -69,7 +69,7 @@ static inline void irt_##__type__##_table_init_impl(irt_##__type__** table, irt_
 		} \
 	} \
 } \
-static inline void irt_##__type__##_table_clear_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
+static inline void _irt_##__type__##_table_clear_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
 	for(int i=0; i<__num_buckets__; ++i) { \
 		if(__locked__) irt_spin_lock(&table_locks[i]); \
 		irt_##__type__ *element = table[i], *temp; \
@@ -82,8 +82,8 @@ static inline void irt_##__type__##_table_clear_impl(irt_##__type__** table, irt
 		if(__locked__) irt_spin_unlock(&table_locks[i]); \
 	} \
 } \
-static inline void irt_##__type__##_table_cleanup_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
-	irt_##__type__##_table_clear_impl(table, table_locks); \
+static inline void _irt_##__type__##_table_cleanup_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
+	_irt_##__type__##_table_clear_impl(table, table_locks); \
 	if(__locked__) { \
 		for(int i=0; i<__num_buckets__; ++i) { \
 			irt_spin_destroy(&table_locks[i]); \
@@ -91,14 +91,14 @@ static inline void irt_##__type__##_table_cleanup_impl(irt_##__type__** table, i
 	} \
 } \
 \
-static inline void irt_##__type__##_table_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
+static inline void _irt_##__type__##_table_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
 	uint32 hash_val = __hashing_expression__(element->id) % __num_buckets__; \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
 	element->__next_name__ = table[hash_val]; \
 	table[hash_val] = element; \
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 } \
-static inline irt_##__type__* irt_##__type__##_table_lookup_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
+static inline irt_##__type__* _irt_##__type__##_table_lookup_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
 	if(id.cached) { return id.cached; } \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_DEBUG("Looking up %u/%u/%u, hash val %u, in table %p", id.node, id.thread, id.index, hash_val, (void*) table); \
 	irt_##__type__* element; \
@@ -112,7 +112,7 @@ static inline irt_##__type__* irt_##__type__##_table_lookup_impl(irt_##__type__*
 	id.cached = element; IRT_DEBUG("Found elem %p\n", (void*) element); \
 	return element; \
 } \
-static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
+static inline irt_##__type__* _irt_##__type__##_table_lookup_or_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
 	uint32 hash_val = __hashing_expression__(element->id) % __num_buckets__; \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
 	irt_##__type__* ret_element = table[hash_val]; \
@@ -125,7 +125,7 @@ static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert_impl(irt_#
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 	return ret_element; \
 } \
-static inline void irt_##__type__##_table_remove_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
+static inline void _irt_##__type__##_table_remove_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; \
 	irt_##__type__ *element, *previous; \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
@@ -153,7 +153,7 @@ static inline void irt_##__type__##_table_remove_impl(irt_##__type__** table, ir
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 } \
  \
-static inline void irt_##__type__##_table_print_impl(FILE* log_file, irt_##__type__** table) { \
+static inline void _irt_##__type__##_table_print_impl(FILE* log_file, irt_##__type__** table) { \
 	fprintf(log_file, "--------\n"); \
 	fprintf(log_file, "Dumping " #__type__ "_table (at time %" PRIu64 "):\n", irt_time_convert_ticks_to_ns(irt_time_ticks())); \
 	for (int i = 0; i < __num_buckets__; ++i) { \
@@ -175,28 +175,28 @@ static inline void irt_##__type__##_table_print_impl(FILE* log_file, irt_##__typ
 #define _IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
 _IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
 static inline void irt_##__type__##_table_init() { \
-	irt_##__type__##_table_init_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
+	_irt_##__type__##_table_init_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
 static inline void irt_##__type__##_table_clear() { \
-	irt_##__type__##_table_clear_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
+	_irt_##__type__##_table_clear_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
 static inline void irt_##__type__##_table_cleanup() { \
-	irt_##__type__##_table_cleanup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
+	_irt_##__type__##_table_cleanup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
 static inline void irt_##__type__##_table_insert(irt_##__type__* element) { \
-	irt_##__type__##_table_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
+	_irt_##__type__##_table_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id id) { \
-	return irt_##__type__##_table_lookup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
+	return _irt_##__type__##_table_lookup_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__type__* element) { \
-	return irt_##__type__##_table_lookup_or_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
+	return _irt_##__type__##_table_lookup_or_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
 } \
 static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
-	irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
+	_irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
 } \
 static inline void irt_dbg_print_##__type__##_table(FILE* log_file) { \
-	irt_##__type__##_table_print_impl(log_file, irt_g_##__type__##_table); \
+	_irt_##__type__##_table_print_impl(log_file, irt_g_##__type__##_table); \
 }
 
 //Defines the lookup table functions and the needed data structures.
