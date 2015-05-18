@@ -40,3 +40,12 @@
 bool notContainsSubString(const string& str, const string& substr) {
 	return !containsSubString(str, substr);
 }
+
+bool containsNTimesSubString(const string& str, const string& substr, const int n) {
+	int count = 0;
+	for (size_t offset = str.find(substr); offset != string::npos;
+		 offset = str.find(substr, offset + substr.length())) {
+			count++;
+	}
+	return (count == n);
+}
