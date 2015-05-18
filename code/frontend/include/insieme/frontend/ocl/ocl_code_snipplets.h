@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,23 +29,47 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/test/test_utils.h"
+#pragma once
 
-// a small test verifying that the given substr is contained within the given string
-bool notContainsSubString(const string& str, const string& substr) {
-	return !containsSubString(str, substr);
+#include "insieme/core/ir_builder.h"
+
+namespace insieme {
+namespace frontend {
+namespace ocl {
+
+//device
+core::ExpressionPtr getConvert(unsigned length, core::IRBuilder builder);
+
+//host
+
+/**
+ * This struct holds inspire representations of OpenCL built-in host functions
+ */
+struct Ocl2Inspire {
+private:
+
+public:
+	Ocl2Inspire() { }
+
+	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,
+			core::ExpressionPtr& size, core::TypePtr& type, bool foundMul = false);
+
+	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet, core::IRBuilder builder);
+	core::ExpressionPtr getClCopyBuffer(core::IRBuilder builder);
+	core::ExpressionPtr getClCopyBufferFallback(core::IRBuilder builder);
+	core::ExpressionPtr getClWriteBuffer(core::IRBuilder builder);
+	core::ExpressionPtr getClWriteBufferFallback(core::IRBuilder builder);
+	core::ExpressionPtr getClReadBuffer(core::IRBuilder builder);
+	core::ExpressionPtr getClReadBufferFallback(core::IRBuilder builder);
+	core::ExpressionPtr getClGetIDs(core::IRBuilder builder);
+};
+
+
 }
-
-bool containsNTimesSubString(const string& str, const string& substr, const int n) {
-	int count = 0;
-	for (size_t offset = str.find(substr); offset != string::npos;
-		 offset = str.find(substr, offset + substr.length())) {
-			count++;
-	}
-	return (count == n);
+}
 }

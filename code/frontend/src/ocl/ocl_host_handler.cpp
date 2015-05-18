@@ -37,6 +37,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_handler.h"
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -235,28 +236,7 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 		}
 	}
 }
-/*
-const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
-		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
-	core::NodeManager& mgr = devicePtr.getNodeManager();
-	core::IRBuilder builder(mgr);
 
-	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr, errcode_ret == builder.getTypeLiteral(builder.arrayType(BASIC.getInt4())));
-
-	TypePtr type;
-	ExpressionPtr size;
-	o2i.extractSizeFromSizeof(sizeArg, size, type);
-	assert_true(size && type) << "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.";
-
-	vector<ExpressionPtr> args;
-	args.push_back(builder.getTypeLiteral(type));
-	args.push_back(devicePtr);
-	args.push_back(size);
-	if(copyPtr) args.push_back(hostPtr);
-	args.push_back(errcode_ret);
-	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
-}
-*/
 const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, const ExpressionPtr& index, const ExpressionPtr& sizeArg,
 		ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems, EquivalenceMap& eqMap) {
 	core::NodeManager& mgr = kernelArg.getNodeManager();
@@ -326,13 +306,6 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		FunctionTypePtr fTy = builder.functionType(argTys, BASIC.getInt4());
 		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 		return builder.callExpr(BASIC.getInt4(), function, args);
-
-
-		// initialize local memory place with undefined
-/*		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
-				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
-				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size)));
-*/
 	}
 
 	arg = getVarOutOfCrazyInspireConstruct(arg, builder);
@@ -354,236 +327,6 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	return builder.callExpr(BASIC.getInt4(), function, kernel, tryDeref(arg, builder));
 }
 
-
-bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
-	core::NodeManager& mgr = arg.getNodeManager();
-	core::IRBuilder builder(mgr);
-
-	// get rid of casts
-	NodePtr uncasted = arg;
-	while (uncasted->getNodeType() == core::NT_CastExpr) {
-		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
-	}
-
-	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
-		// check if there is a multiplication
-		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
-			// recursively look into arguments of multiplication
-			if(extractSizeFromSizeof(call->getArgument(0), size, type, true)) {
-				if(size)
-					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
-				else
-					size = call->getArgument(1);
-				return true;
-			}
-			if(extractSizeFromSizeof(call->getArgument(1), size, type, true)){
-				if(size)
-					size = builder.callExpr(call->getType(), call->getFunctionExpr(), call->getArgument(0), size);
-				else
-					size = call->getArgument(0);
-				return true;
-			}
-		}
-		// check if we reached a sizeof call
-		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
-			// extract the type to be allocated
-			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
-			assert_true(type) << "Type could not be extracted!";
-
-			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
-				size = builder.literal(BASIC.getUInt8(), "1");
-				return true;
-			}
-
-			return true;
-		}
-	}
-	return false;
-}
-
-ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet, core::IRBuilder builder) {
-	// read/write flags ignored
-	// errcorcode always set to 0 = CL_SUCCESS for clCreatBuffer and ignored for icl_create_buffer
-
-	std::string returnErrorcode = setErrcodeRet ? "		errorcode_ret[0u] = 0; " : "";
-
-	if (copyHostPtr)
-		return builder.parseExpr( R"(
-		lambda (
-			type<'a> 				elemType, 
-			uint<8> 				flags, 
-			uint<8> 				size, 
-			ref<any> 				hostPtr, 
-			ref<array<int<4>,1> > 	errorcode_ret
-		) -> ref<array<'a, 1> >  { 
-				decl ref<array<'a,1>> devicePtr = new( array_create_1D( elemType, size ) ); 
-				decl ref<array<'a,1>> 		hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); 
-				for(uint<8> i = 0u .. size) { 
-					devicePtr[i] = *(hp[i]); 
-				} )"
-		                + returnErrorcode +
-         R"(
-				return devicePtr; 
-	 	})");
-
-	return builder.parseExpr(R"(
-		lambda ( 
-			type<'a>				elemType, 
-			uint<8> 				flags, 
-			uint<8> 				size, 
-			ref<array<int<4>, 1> >  errorcode_ret
-		) -> ref<array<'a, 1> > { )"
-		+ returnErrorcode +
-        R"(
-			return new( array_create_1D( elemType, size )); 
-       	})");
-}
-
-ExpressionPtr Ocl2Inspire::getClCopyBuffer(core::IRBuilder builder) {
-	// event stuff removed
-	// always returns 0 = CL_SUCCESS
-	return builder.parseExpr(R"(
-		lambda ( 
-			ref<array<'a, 1> > srcBuffer, 
-			 ref<array<'a, 1> > dstBuffer, 
-			 uint<8>      		srcOffset, 
-			 uint<8> 			dstOffset, 
-			 uint<8> 			cb
-		) -> int<4> {
-			decl uint<8> do = dstOffset / sizeof( lit('a)); 
-			decl uint<8> so = srcOffset / sizeof( lit('a)); 
-           for(uint<8> i = 0u .. cb) { 
-				dstBuffer[i + do] = *(srcBuffer[i + so]); 
-			}
-			return 0; 
-    	})");
-}
-
-ExpressionPtr Ocl2Inspire::getClCopyBufferFallback(core::IRBuilder builder) {
-	// event stuff removed
-	// always returns 0 = CL_SUCCESS
-	return builder.parseExpr(R"(
-		lambda (
-			ref<array<'a, 1> >	srcBuffer, 
-			ref<array<'a, 1> > 	dstBuffer, 
-			uint<8>				srcOffset, 
-			uint<8>				dstOffset, 
-			uint<8>				cb
-		) -> int<4> { 
-			decl uint<8> size = cb / sizeof( lit('a) ); 
-			decl uint<8> do = dstOffset / sizeof( lit('a)); 
-			decl uint<8> so = srcOffset / sizeof( lit('a)); 
-			for(uint<8> i = 0u .. size) { 
-				dstBuffer[i + dstOffset] = *(srcBuffer[i + dstOffset]); 
-			}
-			return 0; 
-		})");
-}
-
-ExpressionPtr Ocl2Inspire::getClWriteBuffer(core::IRBuilder builder) {
-	// blocking_write ignored
-	// event stuff removed
-	// always returns 0 = CL_SUCCESS
-	return builder.parseExpr( R"(
-		lambda (
-			ref<array<'a, 1> > 	devicePtr, 
-			uint<4>				blocking_write, 
-			uint<8>				offset, 
-			uint<8>				cb, 
-			ref<any>			hostPtr
-		) -> int<4> { 
-			decl ref<array<'a,1>> hp = ref_reinterpret(hostPtr, lit(array<'a, 1>)); 
-			decl uint<8> 	  	  o = offset / sizeof( lit('a) ); 
-			for(uint<8> i = 0u .. cb) { 
-				devicePtr[i + o] = *(hp[i]); 
-			}
-			return 0; 
-    	})");
-}
-
-ExpressionPtr Ocl2Inspire::getClWriteBufferFallback(core::IRBuilder builder) {
-	// blocking_write ignored
-	// event stuff removed
-	// always returns 0 = CL_SUCCESS
-	return builder.parseExpr( R"(
-		lambda (
-			ref<array<'a, 1>> 	devicePtr, 
-			uint<4> 			blocking_write, 
-			uint<8>				offset, 
-			uint<8>				cb, 
-			ref<any>			hostPtr
-		) -> int<4> { 
-			decl ref<array<'a,1>> hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); 
-			decl uint<8> 		  o = offset / sizeof( lit('a) ); 
-        	decl uint<8> 	   size = cb / sizeof( lit('a) ); 
-        	for(uint<8> i = 0u .. size) { 
-        		devicePtr[i + o] = *(hp[i]); 
-			}
-        	return 0; 
-    	})");
-}
-
-ExpressionPtr Ocl2Inspire::getClReadBuffer(core::IRBuilder builder) {
-	// blocking_write ignored
-	// event stuff removed
-	// always returns 0 = CL_SUCCESS
-	return builder.parseExpr(R"(
-		lambda (
-			ref<array<'a,1>> 	devicePtr, 
-			uint<4> 			blocking_read, 
-			uint<8>				offset, 
-			uint<8>				cb, 
-			ref<any> 			hostPtr
-		) -> int<4> { 
-			decl ref<array<'a,1>> hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); 
-			deck uint<8>			  o = offset / sizeof( lit('a) ); 
-			for(uint<8> i = 0u .. cb) { 
-				hp[i] = *(devicePtr[i + o]); 
-			}
-        	return 0; 
- 	   	})");
-}
-
-ExpressionPtr Ocl2Inspire::getClReadBufferFallback(core::IRBuilder builder) {
-	// blocking_write ignored
-	// event stuff removed
-	// always returns 0 = CL_SUCCESS
-	return builder.parseExpr(R"(
-		lambda (
-			ref<array<'a, 1> > 	devicePtr, 
-			uint<4> 			blocking_read, 
-			uint<8> 			offset, 
-			uint<8> 			cb, 
-			ref<any> 			hostPtr
-		) -> int<4> { 
-            decl ref<array<'a, 1> > hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); 
-			decl uint<8> 		 size = cb / sizeof( lit('a) ); 
-			decl uint<8> 			o = offset / sizeof( lit('a) ); 
-			for(uint<8> i = 0u .. size) { 
-				hp[i] = *(devicePtr[i + o]); 
-			} 
-        	return 0; 
-    	})");
-}
-
-ExpressionPtr Ocl2Inspire::getClGetIDs(core::IRBuilder builder) {
-	// does simply set the number of devices to 1 and returns 0 = CL_SUCCESS
-	// TODO add functionality
-	return builder.parseExpr( 
-		"lambda (ref<array<uint<4>,1>> num_devices) -> int<4> { "
-		"	num_devices[0u] = 1u; "
-		"	return 0; "
-		"}");
-}
-
-ExpressionPtr Ocl2Inspire::getClSetKernelArg(core::IRBuilder builder) {
-	// alsways returns 0 = CL_SUCCESS
-	return builder.parseExpr(
-		"lambda (ref<'a> argTuple, uint<8> idx, type<'b> ty, 'b src) -> int<4> { "
-        "	argTuple.idx = src; "
-		"	return 0; "
-  		"}");
-}
 
 
 
@@ -626,42 +369,7 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 	ADD_Handler(o2i, "icl_get_num_devices",
 			return builder.literal("1u", BASIC.getUInt4());
 	);
-/*
-	ADD_Handler(o2i, "clCreateBuffer",
-			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
-			// check if CL_MEM_USE_HOST_PTR is set
-			bool usePtr = flags.find(CreateBufferFlags::CL_MEM_USE_HOST_PTR) != flags.end();
-			// check if CL_MEM_COPY_HOST_PTR is set
-			bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
-
-			// extract the size form argument size, relying on it using a multiple of sizeof(type)
-			ExpressionPtr hostPtr;
-
-			hostPtr = node->getArgument(3);
-			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
-				assert_false(copyPtr) << "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer";
-				if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
-					hostPtr = builder.callExpr(BASIC.getRefVar(), c->getSubExpression());
-				}
-			}
-
-			if(usePtr) { // in this case we can just use the host_ptr instead of the cl_mem variable
-				return hostPtr;
-			}
-
-			return getCreateBuffer("clCreateBuffer", node->getArgument(1), node->getArgument(2), copyPtr, hostPtr, node->getArgument(4));
-	);
-
-	ADD_Handler(o2i, "icl_create_buffer",
-			core::NodeManager& mgr = node.getNodeManager();
-			core::IRBuilder builder(mgr);
-
-			// Flags can be ignored, INSPIRE is always blocking
-			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
-					mgr.getLangBasic().getRefNull());
-	);
-*/
 	ADD_Handler(o2i, "clEnqueueCopyBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			vector<ExpressionPtr> args;
@@ -789,91 +497,6 @@ OclSimpleFunHandler::OclSimpleFunHandler() {
 	);
 
 
-/*
-	ADD_Handler(o2i, "clSetKernelArg",
-			return collectArgument("clSetKernelArg", node->getArgument(0), node->getArgument(1), node->getArgument(2), node->getArgument(3));
-	);
-
-	ADD_Handler(o2i, "oclLoadProgSource",
-			this->findKernelsUsingPathString("oclLoadProgSource", node->getArgument(0), node);
-			// set source string to an empty char array
-			return builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
-	);
-
-	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
-	ADD_Handler(o2i, "icl_create_kernel",
-			// find kernel source code
-			this->findKernelsUsingPathString("icl_create_kernel", node->getArgument(1), node);
-			return builder.uintLit(0);
-	);
-*/
-	ADD_Handler(o2i, "clEnqueueNDRangeKernel",
-			// get argument vector
-/*			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(1), builder);
-//			tryStructExtract(k, builder);
-
-//			std::cout << "\nEqMap: " << eqMap;
-//			std::cout << "\nKernelARgs: " << kernelArgs << "\nkernel: " << k << std::endl;
-			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
-
-			std::vector<core::ExpressionPtr> args = kernelArgs[k];
-			// adding global and local size to the argument vector
-			args.push_back(node->getArgument(4) );
-			args.push_back(node->getArgument(5) );
-*/
-			return node;
-	);
-/*
-	ADD_Handler(o2i, "icl_run_kernel",
-			// construct argument vector
-			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder);
-			// get Varlist tuple
-			if(const CallExprPtr varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(7))) {
-				if(const TupleExprPtr varlist = dynamic_pointer_cast<const TupleExpr>(varlistPack->getArgument(0))) {
-					size_t argCnt = 0;
-					for(auto I = varlist->getExpressions().begin(); I != varlist->getExpressions().end(); ++I) {
-						// collect arguments
-						ExpressionPtr sizeArg = *I;
-						++I; // skip size argument
-
-						ExpressionPtr arg = *I;
-						// check for local memory argument
-						if(core::types::isNullPtrExpression(arg)) {
-							// in this case arg is a local variable which has to be declared in host code
-							// need to read size parameter
-							ExpressionPtr size;
-							TypePtr type;
-
-							o2i.extractSizeFromSizeof(sizeArg, size, type);
-							assert_true(size) << "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.";
-
-							// declare a new variable to be used as argument
-							VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
-							DeclarationStmtPtr localDecl = builder.declarationStmt(localMem, builder.callExpr(BASIC.getRefVar(),
-											builder.callExpr(BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size)));
-							// should I really have access to private members or HostMapper here or is this a compiler bug?
-							localMemDecls[k].push_back(localDecl);
-							arg = localMem;
-						}
-
-						kernelArgs[k].push_back(getVarOutOfCrazyInspireConstruct(arg, builder));
-						argCnt++;
-					}
-				}
-			}
-*//*
-			// get argument vector
-			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
-
-			std::vector<core::ExpressionPtr> args = kernelArgs[k];
-			// adding global and local size to the argument vector of original call
-			// will be added to kernelArgs in 3rd pass like when using standard ocl routines
-			args.push_back(node->getArgument(2) );
-			args.push_back(node->getArgument(3) );
-*//*
-			return node;
-	);
-*/
 	ADD_Handler(o2i, "clBuildProgram",
 			// return cl_success
 			return builder.intLit(0);

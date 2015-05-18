@@ -53,6 +53,7 @@
 
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/utils/config.h"
+#include "insieme/utils/test/test_utils.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 
@@ -89,6 +90,14 @@ TEST(ocl_hostKernel, vecadd_bare) {
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
 	LOG(INFO) << "#02 Converted IR back to OCL C, see here:" << std::endl << *converted << "#02 END" << std::endl;
+
+	// check generated code
+	auto code = toString(*converted);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_rt_create_buffer", 3);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_write_buffer", 2);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_read_buffer", 1);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_release_buffer", 3);
+
 }
 
 TEST(ocl_hostKernel, vecadd) {
@@ -120,6 +129,13 @@ TEST(ocl_hostKernel, vecadd) {
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
+
+	// check generated code
+	auto code = toString(*converted);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_rt_create_buffer", 3);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_write_buffer", 2);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_read_buffer", 1);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_release_buffer", 3);
 }
 
 TEST(ocl_hostKernel, matmul) {
@@ -152,4 +168,11 @@ TEST(ocl_hostKernel, matmul) {
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
+
+	// check generated code
+	auto code = toString(*converted);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_rt_create_buffer", 3);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_write_buffer", 2);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_read_buffer", 1);
+	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_release_buffer", 3);
 }

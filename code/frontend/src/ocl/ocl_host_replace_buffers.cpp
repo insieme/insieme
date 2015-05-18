@@ -48,6 +48,7 @@
 
 #include "insieme/frontend/ocl/ocl_host_replace_buffers.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
+#include "insieme/frontend/ocl/ocl_code_snipplets.h"
 
 using namespace insieme::core;
 using namespace insieme::core::pattern;
@@ -57,10 +58,6 @@ namespace frontend {
 namespace ocl {
 
 namespace {
-
-
-
-
 
 template<typename Enum>
 void recursiveFlagCheck(const NodePtr& flagExpr, std::set<Enum>& flags) {
@@ -103,47 +100,13 @@ std::set<Enum> getFlags(const NodePtr& flagExpr) {
 	return flags;
 }
 
-
-ExpressionPtr getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet, IRBuilder builder) {
-	// read/write flags ignored
-	// errcorcode always set to 0 = CL_SUCCESS for clCreatBuffer and ignored for icl_create_buffer
-
-	std::string returnErrorcode = setErrcodeRet ? "		errorcode_ret[0u] = 0; " : "";
-
-	if (copyHostPtr)
-		return builder.parseExpr(
-		"lambda ("
-		"       	type<'a> 				elemType, "
-		"       	uint<8> 				size, "
-		"       	ref<any> 				hostPtr, "
-		"       	ref<array<int<4>,1> > 	errorcode_ret"
-		"       ) -> ref<array<'a, 1> >  { "
-		"	decl ref<array<'a,1>> devicePtr = new( array_create_1D( elemType, size ) ); "
-		"	decl ref<array<'a,1>> 		hp = ref_reinterpret(hostPtr, lit(array<'a,1>)); "
-		"	for(uint<8> i = 0u .. size) { "
-		"		devicePtr[i] = *(hp[i]); "
-		"	} "
-		+ returnErrorcode +
-		"		return devicePtr; "
-	 	"}");
-
-	return builder.parseExpr(
-		"lambda ( "
-		"   	type<'a>				elemType, "
-		"   	uint<8> 				size, "
-		"   	ref<array<int<4>, 1> >  errorcode_ret"
-		"   ) -> ref<array<'a, 1> > { "
-		+ returnErrorcode +
-		"	return new( array_create_1D( elemType, size )); "
-       	"}");
-}
-
 ExpressionPtr getCreateBuffer(const TypePtr& type, const ExpressionPtr& size, const bool copyPtr,
 		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
 	NodeManager& mgr = size->getNodeManager();
 	IRBuilder builder(mgr);
 
-	ExpressionPtr fun = getClCreateBuffer(copyPtr, core::types::isNullPtrExpression(errcode_ret), builder);
+	Ocl2Inspire o2i;
+	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr, core::types::isNullPtrExpression(errcode_ret), builder);
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));

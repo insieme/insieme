@@ -50,3 +50,12 @@ using std::string;
  * @param substr the string searching for
  */
 bool notContainsSubString(const string& str, const string& substr);
+
+/**
+ * Tests whether the given string contains exactly N times the given sub-string.
+ *
+ * @param str the string searching in
+ * @param substr the string searching for
+ * @param n the times
+ */
+bool containsNTimesSubString(const string& str, const string& substr, const int n);
