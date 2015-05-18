@@ -60,9 +60,9 @@ static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id 
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = __short__##_id.full; \
 	reg_id.cached = NULL; \
-	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Couldn't find register to remove"); \
 	irt_worker* self = irt_worker_get_current(); \
-	irt_##__short__##_event_register_table_remove(reg_id); \
 	reg->lookup_table_next = self->__short__##_ev_register_list; \
 	self->__short__##_ev_register_list = reg; \
 } \
