@@ -37,17 +37,17 @@
 // builtin types
 void basic_type_test() {
 
-	#pragma test expected "decl ref<int<4>> v0 =  var(1)"
+	#pragma test expected "decl ref<int<4>> v0 = ( var(1))"
 	int i = 1;
 
-	#pragma test expected "decl ref<uint<4>> v0 =  var(1u)"
+	#pragma test expected "decl ref<uint<4>> v0 = ( var(1u))"
 	unsigned int ui = 1;
 
-	#pragma test expected "decl ref<real<4>> v0 =  var(1.0f)"
+	#pragma test expected "decl ref<real<4>> v0 = ( var(1.0f))"
 	float f = 1;
 
 	// NOTE; this test is run without cleanups or extensions, therefore we only see a frontend representation
-	#pragma test expected "{decl ref<real<4>> v0 =  var(undefined(type<real<4>>));decl ref<int<4>> v1 =  var(-1);FE.RefAssign(v0, int.to.real(v1, 4));gen.pre.inc(v0);FE.RefAssign(v1, real.to.int(v0, 4));}"
+	#pragma test expected "{decl ref<real<4>> v0 = ( var(undefined(type<real<4>>)));decl ref<int<4>> v1 = ( var(-1));FE_RefAssign(v0, int_to_real((v1), 4));gen_pre_inc(v0);FE_RefAssign(v1, real_to_int((v0), 4));}"
 	{
 		float x;
 		int y = -1;

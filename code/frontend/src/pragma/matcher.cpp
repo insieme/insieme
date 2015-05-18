@@ -166,7 +166,7 @@ core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Conver
 
 
 void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact) {
-    if(called) {
+    if(initialized) {
         return;
     } else {
         for(auto m : mmap) {
@@ -189,7 +189,7 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
                 stringList[m.first] = StringList(1, "");
             }
         }
-        called = true;
+        initialized = true;
     }                                                                                                                                                                                
 }
 

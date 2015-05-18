@@ -40,6 +40,8 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
+#include "insieme/annotations/expected_ir_annotation.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -59,16 +61,18 @@ using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
 using namespace insieme::frontend::extensions;
 
+namespace ia = insieme::annotations;
+
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
 	const std::string filename = CLANG_SRC_DIR "/inputs/casts.c";
 	std::vector<std::string> argv = { "compiler", filename };
     cmd::Options options = cmd::Options::parse(argv);
-    options.job.frontendExtensionInit(options.job);
+    options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
 	
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test::expected"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
 
 	const auto begin = tu.pragmas_begin(filter);
 	const auto end = tu.pragmas_end();
@@ -80,18 +84,21 @@ TEST(TypeCast, FileTest) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		Converter convFactory( mgr, tu);
+		Converter convFactory(mgr, tu);
 		convFactory.convert();
 
-		const auto tpe = options.job.getExtension<TestPragmaExtension>();
-
-		if(pragma->isStatement())
-			EXPECT_EQ(tpe->getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt(pragma->getStatement())), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
-		else {
+		if(pragma->isStatement()) {
+			NodePtr node = analysis::normalize(convFactory.convertStmt(pragma->getStatement()));
+			EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + toString(printer::PrettyPrinter(node, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"');
+		} else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
-				EXPECT_EQ(tpe->getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )->toString() + '\"' );
+				NodePtr node = convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal());
+				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
-				EXPECT_EQ(tpe->getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+				NodePtr node = convFactory.convertVarDecl(vd);
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
 			}
 		}
 	}

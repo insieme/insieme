@@ -202,7 +202,15 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	convFact.printDiagnosis(stmt->getLocStart());
 
 	// Deal with transformation pragmas
-	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
+	core::NodeList list;
+	for(const auto& e : retStmt) {
+		list.push_back(e);
+	}
+	list = pragma::attachPragma(list, stmt, convFact);
+	retStmt.clear();
+	for(const auto& e : list) {
+		retStmt.push_back(e.as<core::StatementPtr>());
+	}
 
     // call frontend extension post visitors
     for(auto extension : convFact.getConversionSetup().getExtensions()) {

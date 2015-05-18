@@ -92,7 +92,7 @@ void unary_op_test() {
 	#pragma test expected "decl ref<int<4>> v0 = ( var(0))"
 	int a = 0;
 
-	#pragma test expected "(!int.to.bool(( *v100)))"
+	#pragma test expected "(!int_to_bool(( *v100)))"
 	!a;
 
 	#pragma test expected "( *v100)"
@@ -101,28 +101,28 @@ void unary_op_test() {
 	#pragma test expected "(0-( *v100))"
 	-a;
 
-	#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(scalar.to.array(v100)))"
+	#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(scalar_to_array(v100)))"
 	int* b = &a;
 
 	#pragma test expected "( *(( *v100)&[0]))"
 	*b;
 
-	#pragma test expected "gen.post.inc(v100)"
+	#pragma test expected "gen_post_inc(v100)"
 	a++;
 
-	#pragma test expected "gen.post.dec(v100)"
+	#pragma test expected "gen_post_dec(v100)"
 	a--;
 
-	#pragma test expected "gen.pre.inc(v100)"
+	#pragma test expected "gen_pre_inc(v100)"
 	++a;
 
-	#pragma test expected "gen.pre.dec(v100)"
+	#pragma test expected "gen_pre_dec(v100)"
 	--a;
 
-	#pragma test expected "gen.lshift(( *v100), 2)"
+	#pragma test expected "gen_lshift(( *v100), 2)"
 	a << 2;
 
-	#pragma test expected "gen.lshift(int.to.uint(( *v100), 4), 2)"
+	#pragma test expected "gen_lshift(int_to_uint(( *v100), 4), 2)"
 	(unsigned int)a << 2;
 }
 
@@ -137,18 +137,18 @@ void array_test() {
 }
 
 
-struct Person { int weigth; int age; };
+struct Person { int weight; int age; };
 
 void member_access_test() {
 
 	#pragma test expected \
-	"decl ref<struct Person <weigth:int<4>,age:int<4>>> v0 = ( var(undefined(type<struct Person <weigth:int<4>,age:int<4>>>)))"
+	"decl ref<struct Person <weight:int<4>,age:int<4>>> v0 = ( var(undefined(type<struct Person <weight:int<4>,age:int<4>>>)))"
 	struct Person p;
 
-	#pragma test expected "(( *v100).weigth)"
-	p.weigth;
+	#pragma test expected "(( *v100).weight)"
+	p.weight;
 
-	#pragma test expected "decl ref<ref<array<struct Person <weigth:int<4>,age:int<4>>,1>>> v0 = ( var(scalar.to.array(v100)))"
+	#pragma test expected "decl ref<ref<array<struct Person <weight:int<4>,age:int<4>>,1>>> v0 = ( var(scalar_to_array(v100)))"
 	struct Person* ptr = &p;
 
 	#pragma test expected "(( *(( *v100)&[0])).age)"
@@ -163,7 +163,7 @@ void if_stmt_test() {
 	int cond = 0;
 
 	#pragma test expected \
-	"if(int.to.bool(( *v100))) { (v100 := (( *v100)+1));} else { (v100 := (( *v100)-1));}"
+	"if(int_to_bool(( *v100))) { (v100 := (( *v100)+1));} else { (v100 := (( *v100)-1));}"
 	if(cond) {
 		cond += 1;
 	} else {
@@ -178,7 +178,7 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test expected \
-	"((int.to.bool(( *v100)))?bind(){fun(int<4> v1) -> int<4> { return (v1+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (v1-1);}(( *v100))})"
+	"((int_to_bool(( *v100)))?bind(){fun(int<4> v1) -> int<4> { return (v1+1);}(( *v100))}:bind(){fun(int<4> v1) -> int<4> { return (v1-1);}(( *v100))})"
 	a ? a+1 : a-1;
 
 	#pragma test expected \
@@ -202,15 +202,17 @@ void for_stmt_test() {
 
 	// for loop using a variable declared outside
 	#pragma test expected \
-	"{ for(decl int<4> v0 = 0 .. 100 : 1) { (v100 := v0); (v101 := v0); }; if((((100-0)-(((100-0)/1)*1))==0)) { (v100 := 100); } else { (v100 := (100+(1-((100-0)-(((100-0)/1)*1))))); };}"
+	"{ for(decl int<4> v0 = 0 .. 100 : 1) { (v100 := v0); }; { (v101 := 100); };}" // if((((100-0)-(((100-0)/1)*1))==0)) { (v100 := 100); } else { (v100 := (100+(1-((100-0)-(((100-0)/1)*1))))); };}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test expected \
-	"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v101 := v0); (v100 := v0); }; if((((100-( *v100))-(((100-( *v100))/6)*6))==0)) { (v101 := 100); } else { (v101 := (100+(6-((100-( *v100))-(((100-( *v100))/6)*6))))); };}"
+	"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v100 := v0); }; if(((((-1*( *v100))+100)-((((-1*( *v100))+100)/6)*6))==0)) { (v101 := 100); } else { (v101 := (100+(6-(((-1*( *v100))+100)-((((-1*( *v100))+100)/6)*6))))); };}"
+	//"{ for(decl int<4> v0 = ( *v100) .. 100 : 6) { (v101 := v0); (v100 := v0); }; if((((100-( *v100))-(((100-( *v100))/6)*6))==0)) { (v101 := 100); } else { (v101 := (100+(6-((100-( *v100))-(((100-( *v100))/6)*6))))); };}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test expected \
-    "{ for(decl int<4> v0 = ( *v100) .. 100 : 1) { { }; }; if((((100-( *v100))-(((100-( *v100))/1)*1))==0)) { (v100 := 100); } else { (v100 := (100+(1-((100-( *v100))-(((100-( *v100))/1)*1))))); };}"
+	"{ for(decl int<4> v0 = ( *v100) .. 100 : 1) { { }; }; { (v100 := 100); };}"
+    //"{ for(decl int<4> v0 = ( *v100) .. 100 : 1) { { }; }; if((((100-( *v100))-(((100-( *v100))/1)*1))==0)) { (v100 := 100); } else { (v100 := (100+(1-((100-( *v100))-(((100-( *v100))/1)*1))))); };}"
 	for(; it<100; it+=1) { ; }
 
 	#pragma test expected \
@@ -220,7 +222,7 @@ void for_stmt_test() {
 	// divission is not supported as for loop increment
 	int mq, nq;
 	#pragma test expected \
-	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen.post.inc(v1); (v2 := (( *v2)/2)); return ( *v2); }(v100, v101); };}"
+	"{ (v100 := 0); while((( *v101)>1)) { { }; fun(ref<int<4>> v1, ref<int<4>> v2) -> int<4> { gen_post_inc(v1); (v2 := (( *v2)/2)); return ( *v2); }(v100, v101); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 }
 
@@ -269,7 +271,7 @@ void switch_stmt_test() {
 	}
 
 	#pragma test expected \
-	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 0: { break; gen.post.inc(v100); } default: { gen.post.inc(v100); } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 0: { break; gen_post_inc(v100); } default: { gen_post_inc(v100); } };}"
 	switch(a) {
 	case 0:
 		break;
@@ -292,7 +294,7 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test expected \
-	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 10: { break; (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen.post.inc(v100); return unit; break; } case 2: { (v100 := 1); continue; gen.post.inc(v100); return unit; break; } case 3: { gen.post.inc(v100); return unit; break; } case 8: { (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen.post.inc(v100); return unit; break; } default: { break; } };}"
+	"{ decl int<4> v0 = CAST<int<4>>(( *v100)); switch(v0) { case 10: { break; (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen_post_inc(v100); return unit; break; } case 2: { (v100 := 1); continue; gen_post_inc(v100); return unit; break; } case 3: { gen_post_inc(v100); return unit; break; } case 8: { (v100 := (( *v100)+10)); break; (v100 := 1); continue; gen_post_inc(v100); return unit; break; } default: { break; } };}"
 	switch(a) {
 		case 10:
 			break;
@@ -404,11 +406,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test expected \
-	"( *(ref.vector.to.ref.array(v100)&[0u]))"
+	"( *(ref_vector_to_ref_array(v100)&[0u]))"
 	a[0];
 
 	#pragma test expected \
-	"((ref.vector.to.ref.array(v100)&[0u]) := 1)"
+	"((ref_vector_to_ref_array(v100)&[0u]) := 1)"
 	a[0] = 1;
 
 	#pragma test expected \
@@ -416,23 +418,23 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test expected \
-	"( *(ref.vector.to.ref.array((ref.vector.to.ref.array(v100)&[0u]))&[0u]))"
+	"( *(ref_vector_to_ref_array((ref_vector_to_ref_array(v100)&[0u]))&[0u]))"
 	b[0][0];
 
 	#pragma test expected \
-	"((ref.vector.to.ref.array((ref.vector.to.ref.array(v100)&[1u]))&[1u]) := 0)"
+	"((ref_vector_to_ref_array((ref_vector_to_ref_array(v100)&[1u]))&[1u]) := 0)"
 	b[1][1] = 0;
 
 	#pragma test expected \
-	"decl ref<vector<int<4>,10>> v0 = ( var(vector.init.partial(([0]), 10)))"
+	"decl ref<vector<int<4>,10>> v0 = ( var(vector_init_partial(([0]), 10)))"
 	int vec[10] = {0};
 
 	#pragma test expected \
-	"decl ref<ref<array<int<4>,1>>> v0 = ( var(ref.vector.to.ref.array(( var(vector.init.partial(([0,5,10]), 10))))))"
+	"decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_vector_to_ref_array(( var(vector_init_partial(([0,5,10]), 10))))))"
 	int *vec_ptr = (int[10]) {0, 5, 10};
 
 	#pragma test expected \
-	"fun(ref<array<ref<array<int<4>,1>>,1>> v1) -> unit { }(ref.reinterpret(ref.vector.to.ref.array(v100), type<array<ref<array<int<4>,1>>,1>>))"
+	"fun(ref<array<ref<array<int<4>,1>>,1>> v1) -> unit { }(ref_reinterpret(ref_vector_to_ref_array(v100), type<array<ref<array<int<4>,1>>,1>>))"
 	evil(b);
 }
 
@@ -444,12 +446,12 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test expected \
-	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[1u]))"
+	"( *(ref_vector_to_ref_array(( var([1, 2, 3])))&[1u]))"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;
 	#pragma test expected \
-	"(v100 := struct{weigth:=10, age:=20})"
+	"(v100 := struct{weight:=10, age:=20})"
 	p = (struct Person) {10, 20};
 
 	// #pragma test expected "fun(ref<array<'a,1>> v2){ return ( *v2);}(v1)"

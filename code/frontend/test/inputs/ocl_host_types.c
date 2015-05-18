@@ -121,11 +121,11 @@ int main(int argc, char **argv) {
 		cl_char2 var;
 
 		#pragma test expected \
-		"decl ref<union<s:vector<int<1>,2>,__m1:struct<x:int<1>,y:int<1>>,__m2:struct<s0:int<1>,s1:int<1>>,__m3:struct<lo:int<1>,hi:int<1>>>> v0 = ( var(union{AP(s):=[char.to.int('a', 1), char.to.int('b', 1)]}))" 
+		"decl ref<union<s:vector<int<1>,2>,__m1:struct<x:int<1>,y:int<1>>,__m2:struct<s0:int<1>,s1:int<1>>,__m3:struct<lo:int<1>,hi:int<1>>>> v0 = ( var(union{AP(s):=[char_to_int('a', 1), char_to_int('b', 1)]}))"
 		cl_char2 initVar = {'a','b'};
 
 		#pragma test expected \
-		"((ref.vector.to.ref.array((v100->s))&[0u]) := 1)"
+		"((ref_vector_to_ref_array((v100->s))&[0u]) := 1)"
 		initVar.s[0] = 1;
 
 		#pragma test expected \
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 		cl_short3 initVar = {1,2,3,4};
 
 		#pragma test expected \
-		"((ref.vector.to.ref.array((v100->s))&[0u]) := 1)"
+		"((ref_vector_to_ref_array((v100->s))&[0u]) := 1)"
 		initVar.s[0] = 1;
 
 		#pragma test expected \

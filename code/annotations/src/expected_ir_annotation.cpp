@@ -50,7 +50,7 @@ namespace insieme {
 namespace annotations {
 
 const string ExpectedIRAnnotation::NAME = "ExpectedIRAnnotation";
-const utils::StringKey<ExpectedIRAnnotation> ExpectedIRAnnotation::KEY("Loop");
+const utils::StringKey<ExpectedIRAnnotation> ExpectedIRAnnotation::KEY("ExpectedIRAnnotation");
 
 string ExpectedIRAnnotation::getExpected() const {
 	return expected;
@@ -75,7 +75,7 @@ namespace {
 	ANNOTATION_CONVERTER(ExpectedIRAnnotation)
 
 		core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<ExpectedIRAnnotation>(annotation) && "Only supports the conversion of Loop Annotations!");
+			assert(dynamic_pointer_cast<ExpectedIRAnnotation>(annotation) && "Only supports the conversion of ExpectedIRAnnotation Annotations!");
 			return core::encoder::toIR<string>(manager, static_pointer_cast<ExpectedIRAnnotation>(annotation)->getExpected());
 		};
 

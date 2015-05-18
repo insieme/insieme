@@ -47,6 +47,7 @@
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -62,21 +63,36 @@ using namespace insieme::annotations;
 
 TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-			PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+			PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, core::NodeList nodes) {
+
 				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
+
+				NodePtr node;
+				// if we are dealing with more than one node, construct a compound statement
+				if(nodes.size() > 1) {
+					stmtutils::StmtWrapper wrapper;
+					for(const auto& e : nodes) {
+						wrapper.push_back(e.as<core::StatementPtr>());
+					}
+					IRBuilder builder(nodes[0].getNodeManager());
+					node = stmtutils::tryAggregateStmts(builder, wrapper);
+				} else {
+					node = nodes[0];
+				}
+
 				ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
 				ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
-				res.getSingleStmt().addAnnotation(annot);
+				node->addAnnotation(annot);
 
-			return res;
+			return nodes;
 		})
 	));
 
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-			PragmaHandler("test", "dummy", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, stmtutils::StmtWrapper res) {
+			PragmaHandler("test", "dummy", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, core::NodeList nodes) {
 				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test dummy pragma expects exactly one string argument!";
 				dummyArguments.push_back(object.getString(ARG_LABEL));
-			return res;
+			return nodes;
 		})
 	));
 }
