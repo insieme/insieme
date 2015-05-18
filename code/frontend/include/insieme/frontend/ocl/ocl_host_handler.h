@@ -39,6 +39,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
+#include "insieme/frontend/ocl/ocl_code_snipplets.h"
 
 namespace insieme {
 namespace frontend {
@@ -70,30 +71,6 @@ public:
 		return path;
 	}
 };
-
-/**
- * This struct holds inspire representations of OpenCL built-in host functions
- */
-struct Ocl2Inspire {
-private:
-
-public:
-	Ocl2Inspire() { }
-
-	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,
-			core::ExpressionPtr& size, core::TypePtr& type, bool foundMul = false);
-
-	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet, core::IRBuilder builder);
-	core::ExpressionPtr getClCopyBuffer(core::IRBuilder builder);
-	core::ExpressionPtr getClCopyBufferFallback(core::IRBuilder builder);
-	core::ExpressionPtr getClWriteBuffer(core::IRBuilder builder);
-	core::ExpressionPtr getClWriteBufferFallback(core::IRBuilder builder);
-	core::ExpressionPtr getClReadBuffer(core::IRBuilder builder);
-	core::ExpressionPtr getClReadBufferFallback(core::IRBuilder builder);
-	core::ExpressionPtr getClGetIDs(core::IRBuilder builder);
-	core::ExpressionPtr getClSetKernelArg(core::IRBuilder builder);
-};
-
 /**
  * This class allows replaces a call to an OpenCL built-in function to an INSPIRE one
  */

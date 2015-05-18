@@ -47,6 +47,7 @@
 #include "insieme/core/annotations/source_location.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/ocl/ocl_code_snipplets.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/handler.h"
 
@@ -362,26 +363,7 @@ private:
 				// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
 				unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
-				std::string irCode = format(
-					"lambda (vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
-					"	decl ref<vector<'b,%i> > toVec = var( undefined(vector<'b,%i>) );"
-						""
-						"for(uint<8> i = 0u .. %iu ) "
-						"	toVec[i] = CAST('b) fromVec[i]; "
-						""
-						"return *toVec; "
-					"}", length, length, length, length, length, length);
-
-				core::ExpressionPtr irConvert = builder.parseExpr(irCode);
-						/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
-					"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
-					"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
-					""
-					"for(decl uint<8>:i = lit<uint<8>, 0> .. length ) "
-					"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
-					""
-					"return (op<ref.deref>(toVec )); "
-				"}}");*/
+				core::ExpressionPtr irConvert = getConvert(length, builder);
 
 				return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
         	} else {
