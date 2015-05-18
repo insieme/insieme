@@ -160,6 +160,20 @@ namespace frontend {
 		 * Creates a new setup covering the given include directories.
 		 */
 		ConversionSetup(const vector<path>& includeDirs = vector<path>());
+		
+		/**
+		 * Checks whether an extension is loaded.
+		 * For use in e.g. isPrerequisiteMissing
+		 */
+		template<class ExtensionType>
+		bool hasExtension() {
+			for(auto extPtr : getExtensions()) {
+				if(typeid(ExtensionType) == typeid(*extPtr)) {
+					return true;
+				}
+			}
+			return false;
+		}
 
 		/**
 		 * Allows to check for an option.
