@@ -125,7 +125,7 @@ static inline irt_##__type__* _irt_##__type__##_table_lookup_or_insert_impl(irt_
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 	return ret_element; \
 } \
-static inline void _irt_##__type__##_table_remove_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
+static inline irt_##__type__* _irt_##__type__##_table_remove_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; \
 	irt_##__type__ *element, *previous; \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
@@ -133,12 +133,12 @@ static inline void _irt_##__type__##_table_remove_impl(irt_##__type__** table, i
 	if(!element) { \
 		if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 		irt_throw_string_error(IRT_ERR_INTERNAL, "Removing nonexistent element from " #__type__ " table."); \
-		return; \
+		return NULL; \
 	} \
 	if(element->id.full == id.full) { \
 		table[hash_val] = element->__next_name__; \
 		if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
-		return; \
+		return element; \
 	} \
 	do { \
 		previous = element; \
@@ -147,10 +147,11 @@ static inline void _irt_##__type__##_table_remove_impl(irt_##__type__** table, i
 	if(!element) { \
 		if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 		irt_throw_string_error(IRT_ERR_INTERNAL, "Removing nonexistent element from " #__type__ " table."); \
-		return; \
+		return NULL; \
 	} \
 	previous->__next_name__ = element->__next_name__;\
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
+	return element; \
 } \
  \
 static inline void _irt_##__type__##_table_print_impl(FILE* log_file, irt_##__type__** table) { \
@@ -192,8 +193,8 @@ static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id 
 static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__type__* element) { \
 	return _irt_##__type__##_table_lookup_or_insert_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, element); \
 } \
-static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
-	_irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
+static inline irt_##__type__* irt_##__type__##_table_remove(irt_##__type__##_id id) { \
+	return _irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
 } \
 static inline void irt_dbg_print_##__type__##_table(FILE* log_file) { \
 	_irt_##__type__##_table_print_impl(log_file, irt_g_##__type__##_table); \
