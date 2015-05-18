@@ -47,6 +47,7 @@
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/utils/printable.h"
 
@@ -168,7 +169,7 @@ namespace frontend {
 		template<class ExtensionType>
 		bool hasExtension() {
 			for(auto extPtr : getExtensions()) {
-				if(typeid(ExtensionType) == typeid(*extPtr)) {
+				if(typeid(ExtensionType) == typeid(extPtr)) {
 					return true;
 				}
 			}
@@ -528,15 +529,27 @@ namespace frontend {
 
 		/**
 		 * Insert a frontend extension without concerning about cmd-line options for drivers
-		 * We get from the extensions possible options and parse the arguments which were unknonw to the driver
-		 * Most usefull to write tests involving extensions
+		 * We get from the extensions possible options and parse the arguments which were unknown to the driver
+		 * Most useful to write tests involving extensions
 		 */
-		template <class T>
+		template <class T, class Before = extensions::FrontendCleanupExtension>
 		void registerFrontendExtension() {
 			//we want to keep the newly registered frontend
 			auto extensionPtr = std::make_shared<T>();
 			boost::program_options::options_description extOptions;
-			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+
+			// insert the extension before "Before", unless it's not found
+			for(auto it = extensions.begin(); it < extensions.end()-1; ++it) {
+				if(it+1 != extensions.end()) {
+					auto next = (it+1)->first;
+					if(typeid(*next) == typeid(Before)) {
+						extensions.insert(it, { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+						break;
+					}
+				} else {
+					extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+				}
+			}
 
 			// some options were not parsed by the driver, parse them by the extension
 			boost::program_options::parsed_options parsed = boost::program_options::basic_command_line_parser<char>(this->unparsedOptions)

@@ -321,9 +321,9 @@ namespace integration {
 				if (!testCase.empty()) {
 					if (!fs::is_directory(testDir / testCase)) {
 						LOG(WARNING) << "Blacklisted test case \"" << testCase << "\" does not exist.";
-						return res;
+					} else {
+						testCases.erase(testCase);
 					}
-					testCases.erase(testCase);
 				}
 			}
 			blacklistedTestsFile.close();
