@@ -344,6 +344,20 @@ namespace frontend {
 		const std::list<extensions::FrontendExtension::FrontendExtensionPtr>& getExtensions() const {
 			return extensionList;
 		};
+
+		/**
+		 *  Return (the first) registered frontend extension of matching type
+		 */
+		template <class T>
+		const std::shared_ptr<T> getExtension() const {
+			for(const extensions::FrontendExtension::FrontendExtensionPtr ext : extensionList) {
+				if(typeid(*ext) == typeid(T)) {
+					return dynamic_pointer_cast<T>(ext);
+				}
+			}
+			assert_fail() << "Requested frontend extension of type " << typeid(T).name() << " but no extension of that type was registered!";
+			return nullptr;
+		};
 	};
 
 
@@ -492,9 +506,9 @@ namespace frontend {
 			this->unparsedOptions = unparsed;
 		}
 
-	        void registerExtensionFlags(boost::program_options::options_description& options);
+		void registerExtensionFlags(boost::program_options::options_description& options);
 
-	        /**
+		/**
 		 *  Frontend extension initialization method
 		 */
 		void frontendExtensionInit();
@@ -514,8 +528,8 @@ namespace frontend {
 
 		/**
 		 * Insert a frontend extension without concerning about cmd-line options for drivers
-		 * We get from the extensions possible options and parse the arguments which were unknonw to the driver
-		 * Most usefull to write tests involving extensions
+		 * We get from the extensions possible options and parse the arguments which were unknown to the driver
+		 * Most useful to write tests involving extensions
 		 */
 		template <class T>
 		void registerFrontendExtension() {
