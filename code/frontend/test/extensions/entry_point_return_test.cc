@@ -76,9 +76,9 @@ TEST(EntryPointReturn, Apply1) {
 
 		// parse temporary file
 		core::NodeManager manager;
-        const boost::filesystem::path& fileName = file;
-        std::vector<std::string> argv = { "compiler",  fileName.string() };
-        cmd::Options options = cmd::Options::parse(argv);
+		const boost::filesystem::path& fileName = file;
+		std::vector<std::string> argv = { "compiler",  fileName.string() };
+		cmd::Options options = cmd::Options::parse(argv);
 
 		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
@@ -115,9 +115,9 @@ TEST(EntryPointReturn, Apply2) {
 
 		// parse temporary file
 		core::NodeManager manager;
-        const boost::filesystem::path& fileName = file;
-        std::vector<std::string> argv = { "compiler",  fileName.string() };
-        cmd::Options options = cmd::Options::parse(argv);
+		const boost::filesystem::path& fileName = file;
+		std::vector<std::string> argv = { "compiler",  fileName.string() };
+		cmd::Options options = cmd::Options::parse(argv);
 
 		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
@@ -155,9 +155,9 @@ TEST(EntryPointReturn, Dont) {
 
 		// parse temporary file
 		core::NodeManager manager;
-        const boost::filesystem::path& fileName = file;
-        std::vector<std::string> argv = { "compiler",  fileName.string() };
-        cmd::Options options = cmd::Options::parse(argv);
+		const boost::filesystem::path& fileName = file;
+		std::vector<std::string> argv = { "compiler",  fileName.string() };
+		cmd::Options options = cmd::Options::parse(argv);
 
 		auto code = options.job.execute(manager);
 		EXPECT_TRUE(code);
