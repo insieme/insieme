@@ -37,13 +37,17 @@
 #include "insieme/frontend/extensions/significance_frontend_extension.h"
 
 #include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/pragma/matcher.h"
+
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/frontend/pragma/matcher.h"
+
 #include "insieme/utils/assert.h"
+#include "insieme/utils/unused.h"
+
 #include "insieme/annotations/meta_info/meta_infos.h"
 
 using namespace insieme::frontend::pragma;
@@ -59,7 +63,7 @@ namespace {
 	pragma::node* stripEod(pragma::node* eodDelimited) {
 		pragma::concat* eodConcat = dynamic_cast<pragma::concat*>(eodDelimited);
 		assert_true(eodConcat != nullptr) << "Tried to strip an eod from a token sequence which is not a concat.";
-		auto seceod = dynamic_cast<decltype(tok::eod)*>(eodConcat->second);
+		__unused auto seceod = dynamic_cast<decltype(tok::eod)*>(eodConcat->second);
 		assert_true(seceod != nullptr) << "Tried to strip an eod from a token sequence not ending on eod.";
 		return eodConcat->first;
 	}	
