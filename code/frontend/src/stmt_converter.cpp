@@ -874,10 +874,7 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	convFact.printDiagnosis(stmt->getLocStart());
 
     // Deal with pragmas
-	core::NodeList list;
-	for(const auto& e : retStmt) {
-		list.push_back(e);
-	}
+	core::NodeList list(retStmt.begin(), retStmt.end());
 	list = pragma::attachPragma(list, stmt, convFact);
 	retStmt.clear();
 	for(const auto& e : list) {
@@ -888,10 +885,6 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
     for(auto extension : convFact.getConversionSetup().getExtensions()) {
         retStmt = extension->PostVisit(stmt, retStmt, convFact);
     }
-
-//    for(const auto& e : retStmt) {
-//    	dumpPretty(e);
-//    }
 
     return retStmt;
 }

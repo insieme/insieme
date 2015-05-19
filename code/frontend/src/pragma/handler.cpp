@@ -38,9 +38,9 @@
 
 #include "insieme/frontend/convert.h"
 
-#include "clang/AST/Stmt.h"
-#include <llvm/Support/raw_ostream.h>
+#include <clang/AST/Stmt.h>
 #include <clang/AST/Expr.h>
+#include <llvm/Support/raw_ostream.h>
 
 using namespace clang;
 using namespace insieme::frontend;

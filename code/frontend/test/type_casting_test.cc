@@ -36,8 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/Stmt.h>
+#include <clang/AST/Type.h>
+#include <clang/AST/Decl.h>
+#pragma GCC diagnostic pop
 
 #include "insieme/annotations/expected_ir_annotation.h"
 

@@ -202,10 +202,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	convFact.printDiagnosis(stmt->getLocStart());
 
 	// Deal with transformation pragmas
-	core::NodeList list;
-	for(const auto& e : retStmt) {
-		list.push_back(e);
-	}
+	core::NodeList list(retStmt.begin(), retStmt.end());
 	list = pragma::attachPragma(list, stmt, convFact);
 	retStmt.clear();
 	for(const auto& e : list) {

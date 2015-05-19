@@ -45,10 +45,10 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
-#include "clang/Sema/Sema.h"
+#include <clang/Sema/Sema.h>
 #include <clang/Sema/Lookup.h>
-#include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Basic/Diagnostic.h"
+#include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Basic/Diagnostic.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/ASTContext.h>
 #pragma GCC diagnostic pop

@@ -40,7 +40,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include "clang/AST/Decl.h"
+#include <clang/AST/Decl.h>
 #pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
