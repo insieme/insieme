@@ -45,7 +45,7 @@
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), defct(0), usect(0) {
+VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), def(0) {
 	visit(frag);
 }
 
@@ -77,16 +77,16 @@ void VarUniqExtension::visitNode(const NodeAddress &node) {
 }
 
 void VarUniqExtension::visitVariable(const VariableAddress &var) {
-	// get variable number and increase counter for given variable
-	VariableAddress def=getVarDefinition(var);
-	if (def==var) {
-		defct++;
-		vuid[def]=0;
-		unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
-		/* FIXME: if empty */ idstaken[varid]=def;
+	// get variable definition point and increase counter for given variable
+	VariableAddress defpt=getVarDefinition(var);
+	if (defpt==var) {
+		def++;
+		unsigned int id=nextID();
+		use  [defpt]=0;
+		varid[defpt]=id;
+		idstaken[id]=defpt;
 	} else {
-		usect++;
-		vuid[def]++;
+		use[defpt]++;
 		//std::cout << var << " (" << *var << ") defined at " << def << " (" << *def << ")" << std::endl;
 	}
 
@@ -97,9 +97,9 @@ void VarUniqExtension::visitVariable(const VariableAddress &var) {
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR() {
 	// print some status information for debugging
-	for (auto dups: vuid)
-		std::cout << "var " << dups.first << " found " << dups.second << "×" << std::endl;
-	std::cout << "Found " << defct << " variable defs, " << usect << " uses." << std::endl;
+	for (auto dups: varid)
+		std::cout << "var " << dups.first << " (" << dups.second << ") found " << use[dups.first] << "×" << std::endl;
+	std::cout << "Found " << def << " variable defs, " << allUses() << " uses." << std::endl;
 
 	// return the newly generated code
 	return frag;
@@ -155,4 +155,18 @@ VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
 
 	// we have reached the root, and never found a binding for the variable; return the variable address itself
 	return var;
+}
+
+/// Return the next available ID for a variable renaming.
+unsigned int VarUniqExtension::nextID() {
+	unsigned int ret=0;
+	while (idstaken.find(ret)!=idstaken.end()) ++ret;
+	return ret;
+}
+
+/// Return the total of all variable uses.
+unsigned int VarUniqExtension::allUses() {
+	unsigned int ret=0;
+	for (auto pair: use) ret+=pair.second;
+	return ret;
 }

@@ -47,12 +47,28 @@ namespace insieme {
 namespace frontend {
 namespace extensions {
 
+/// \brief The VarUniqExtension class makes the internal variable identifiers unique and provides some statistics.
+/// The statistics is gathered while walking the variable def-use chains (which is required for the implementation
+/// of the variable uniquification process); eventually, this functionality should be broken out of this class
+/// and put in their own class.
+///
+/// Anyway, these statistics will play an important role in transformation/optimization.
+/// For example:
+/// * In one of our test cases, 211 variables were defined, but only 145 were used.
+/// * This means that some variables were never used, and others were used only once.
+/// * For never used variables, we can use DCE techniques to get rid of them completely.
+/// * For write-once-read-once variable, we can substitute the variable by its defining expression (given that
+///   INSPIRE is referentially transparent).
+///
 class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
         insieme::frontend::extensions::FrontendExtension {
 	insieme::core::NodeAddress frag;                                   /// < code fragment passed to this compiler pass
-	std::map<insieme::core::VariableAddress, unsigned int> vuid;       /// < variable unique ID
+	unsigned int def;                                                  /// < variable definition counter
+	std::map<insieme::core::VariableAddress, unsigned int> use, varid; /// < variable unique ID, use counter
 	std::map<unsigned int, insieme::core::VariableAddress> idstaken;   /// < IDs and their definition
-	unsigned int defct, usect; /// < variable definition, use counters
+
+	unsigned int nextID();
+	unsigned int allUses();
 
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
