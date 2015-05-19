@@ -116,9 +116,9 @@ SignificanceFrontendExtension::SignificanceFrontendExtension() : OmpFrontendExte
 	// add a new handler which uses the old
 	pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(
 		PragmaHandler("omp", "task", extendedTokenSequence,
-		[originalTaskHandler](MatchObject object, stmtutils::StmtWrapper node) {
+		[originalTaskHandler](const MatchObject& object, core::NodeList nodes) {
 			// perform basic omp task generation
-			auto newNodes = originalTaskHandler->getFunction()(object, node);
+			auto newNodes = originalTaskHandler->getFunction()(object, nodes);
 			// attach labels
 			insieme::annotations::significance_info sigMetainfo;
 			sigMetainfo.label = object.getString("task_label");

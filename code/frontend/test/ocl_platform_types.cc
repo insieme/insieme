@@ -46,6 +46,8 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/annotations/expected_ir_annotation.h"
+
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_converter.h"
@@ -106,39 +108,47 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-    std::string fileName = CLANG_SRC_DIR "/inputs/ocl_host_types.c";
-    std::vector<std::string> argv = { "compiler",  fileName };
-    cmd::Options options = cmd::Options::parse(argv);
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/ocl_host_types.c");
+	const std::string filename = CLANG_SRC_DIR "/inputs/ocl_host_types.c";
+	std::vector<std::string> argv = { "compiler", filename };
+	cmd::Options options = cmd::Options::parse(argv);
+	options.job.frontendExtensionInit();
+	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
 
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
+
+	const auto begin = tu.pragmas_begin(filter);
+	const auto end = tu.pragmas_end();
+
+	EXPECT_NE(begin, end);
 
 	NodeManager mgr;
-	insieme::frontend::conversion::Converter convFactory( mgr, tu, options.job);
+	insieme::frontend::conversion::Converter convFactory(mgr, tu, options.job);
 	convFactory.convert();
 
 	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
 
-	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
+	for(auto it = begin; it != end; ++it) {
+		const auto pragma = *it;
 
-		if(tp.isStatement()) {
-			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
-			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
-
+		if(pragma->isStatement()) {
+			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt(pragma->getStatement()))).as<StatementPtr>();
+			EXPECT_TRUE(stmt->hasAnnotation(insieme::annotations::ExpectedIRAnnotation::KEY));
+			EXPECT_EQ(insieme::annotations::ExpectedIRAnnotation::getValue(stmt), '\"' + getPrettyPrinted(stmt) + '\"');
 			// do semantics checking
 			checkSemanticErrors(stmt);
 
 		} else {
-			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
-				TypePtr type = resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )).as<TypePtr>();
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
+			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
+				TypePtr type = resolve(convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal())).as<TypePtr>();
+				EXPECT_TRUE(type->hasAnnotation(insieme::annotations::ExpectedIRAnnotation::KEY));
+				EXPECT_EQ(insieme::annotations::ExpectedIRAnnotation::getValue(type), '\"' + getPrettyPrinted(type) + '\"');
 				// do semantics checking
 				checkSemanticErrors(type);
-			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
+			} else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(pragma->getDecl())) {
 				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
-				assert_true(expr);
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
+				ASSERT_TRUE(expr);
+				EXPECT_TRUE(expr->hasAnnotation(insieme::annotations::ExpectedIRAnnotation::KEY));
+				EXPECT_EQ(insieme::annotations::ExpectedIRAnnotation::getValue(expr), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"');
 
 				// do semantics checking
 				checkSemanticErrors(expr);

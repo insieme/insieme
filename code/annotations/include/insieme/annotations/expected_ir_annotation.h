@@ -34,47 +34,54 @@
  * regarding third party software licenses.
  */
 
-#define FAKE(x) \
-	{ x++; }
+#pragma once
 
 
-int main (){
+#include "insieme/utils/annotation.h"
+#include "insieme/core/ir_expressions.h"
 
-	#pragma test dummy "first"
-	int x;
+#include <string>
 
-#pragma test dummy "macro"
-	FAKE(x)
+namespace insieme {
+namespace annotations {
 
-#pragma test dummy "solo"
-	
-
-}
+using namespace insieme::core;
 
 
-#pragma test dummy "function"
-int f(){
+class ExpectedIRAnnotation : public NodeAnnotation {
+	std::string expected;
 
-	return 0;
-}
+public:
+	static const string NAME;
+    static const utils::StringKey<ExpectedIRAnnotation> KEY;
 
-void g(){
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
+    const std::string& getAnnotationName() const { return NAME; }
 
-	int a;
-	int n;
-  #pragma test \
-       dummy "two lines"
-  for(a=0;a<n;a++) {
-  }
-}
+    ExpectedIRAnnotation(std::string expected): expected(expected) {}
 
+	std::string getExpected() const;
 
-void h(int x){
-	FAKE(x);
-#pragma test dummy "one"
-#pragma test dummy "two"
-#pragma test dummy "three"
-	for (x =0; x < 10; x ++){
+    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
+		after->addAnnotation(ptr);
+		return true;
 	}
 
-}
+    static void attach(const NodePtr& node, std::string expected);
+    static bool hasAttachedValue(const NodePtr& node);
+    static std::string getValue(const NodePtr& node);
+
+};
+
+typedef std::shared_ptr<ExpectedIRAnnotation> ExpectedIRAnnotationPtr;
+
+} // end namespace insieme
+} // end namespace annotations
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::ExpectedIRAnnotation& lAnnot);
+
+} // end namespace std

@@ -34,16 +34,21 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+
 #include "insieme/annotations/data_annotations.h"
+#include "insieme/annotations/expected_ir_annotation.h"
 #include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/transform.h"
+
 #include "insieme/core/annotations/source_location.h"
 #include "insieme/core/ir_expressions.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
+
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/stmt_wrapper.h"
+
 #include "insieme/utils/numeric_cast.h"
 
 namespace insieme {
@@ -51,31 +56,45 @@ namespace frontend {
 namespace extensions {
 
 using namespace insieme::frontend::pragma;
+using namespace insieme::frontend::pragma::tok;
+using namespace insieme::annotations;
 
-std::function<stmtutils::StmtWrapper(const MatchObject&, stmtutils::StmtWrapper)>
-TestPragmaExtension::getMarkerAttachmentLambda() {
-	return [this] (pragma::MatchObject object, stmtutils::StmtWrapper) {
-		std::cout << "pragma executed" << std::endl;
+#define ARG_LABEL "arg"
 
-		stmtutils::StmtWrapper res;
-		const std::string want="expected";
-		if (object.stringValueExists(want))
-			expected = object.getString(want);
-		return res;
-	};
-}
+TestPragmaExtension::TestPragmaExtension() : expected(""), dummyArguments(std::vector<string>()) {
+	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+			PragmaHandler("test", "expected", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, core::NodeList nodes) {
 
-TestPragmaExtension::TestPragmaExtension(): Pragma(clang::SourceLocation(), clang::SourceLocation(), "", MatchMap()) {
-	pragmaHandlers.push_back
-			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
-}
+				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test expected pragma expects exactly one string argument!";
 
-TestPragmaExtension::TestPragmaExtension(const clang::SourceLocation& s1, const clang::SourceLocation& s2, const string& str,
-					   const insieme::frontend::pragma::MatchMap& mm): Pragma(s1, s2, str, mm) {
-	pragmaHandlers.push_back
-			(std::make_shared<PragmaHandler>
-			 (PragmaHandler("test", "expected", tok::eod, getMarkerAttachmentLambda())));
+				NodePtr node;
+				// if we are dealing with more than one node, construct a compound statement
+				if(nodes.size() > 1) {
+					stmtutils::StmtWrapper wrapper;
+					for(const auto& e : nodes) {
+						wrapper.push_back(e.as<core::StatementPtr>());
+					}
+					IRBuilder builder(nodes[0].getNodeManager());
+					node = stmtutils::tryAggregateStmts(builder, wrapper);
+				} else {
+					node = nodes[0];
+				}
+
+				ExpectedIRAnnotation expectedIRAnnotation(object.getString(ARG_LABEL));
+				ExpectedIRAnnotationPtr annot = std::make_shared<ExpectedIRAnnotation>(expectedIRAnnotation);
+				node->addAnnotation(annot);
+
+			return nodes;
+		})
+	));
+
+	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
+			PragmaHandler("test", "dummy", string_literal[ARG_LABEL] >> tok::eod, [&] (const pragma::MatchObject& object, core::NodeList nodes) {
+				assert_eq(1, object.getStrings(ARG_LABEL).size()) << "Test dummy pragma expects exactly one string argument!";
+				dummyArguments.push_back(object.getString(ARG_LABEL));
+			return nodes;
+		})
+	));
 }
 
 } // extensions

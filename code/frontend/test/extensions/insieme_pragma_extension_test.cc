@@ -84,12 +84,12 @@ std::function<void (const NodePtr&)> getCheckingLambda() {
 TEST(InsiemePragmaTest, checkPragmas) {
 	NodeManager manager;
 
-    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    const std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
     std::vector<std::string> argv = { "compiler",  fileName };
     cmd::Options options = cmd::Options::parse(argv);
     options.job.frontendExtensionInit();
 
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/insieme_pragmas.c", options.job);
+	insieme::frontend::TranslationUnit tu(manager, fileName, options.job);
 
 	EXPECT_EQ(17, tu.getPragmaList().size());
 //	for(const auto& e : tu.getPragmaList())
@@ -99,7 +99,7 @@ TEST(InsiemePragmaTest, checkPragmas) {
 TEST(InsiemePragmaTest, checkAnnotations) {
 	NodeManager manager;
 
-    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    const std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
     std::vector<std::string> argv = { "compiler",  fileName };
     cmd::Options options = cmd::Options::parse(argv);
 
@@ -118,7 +118,7 @@ TEST(InsiemePragmaTest, checkAnnotations) {
 
 TEST(InsiemePragmaTest, checkMark) {
 	NodeManager manager;
-    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    const std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
     std::vector<std::string> argv = { "compiler",  fileName };
     cmd::Options options = cmd::Options::parse(argv);
 
@@ -134,7 +134,7 @@ TEST(InsiemePragmaTest, checkMark) {
 
 TEST(InsiemePragmaTest, checkTransformations) {
 	NodeManager manager;
-    std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
+    const std::string fileName = CLANG_SRC_DIR "/inputs/insieme_pragmas.c";
     std::vector<std::string> argv = { "compiler",  fileName };
     cmd::Options options = cmd::Options::parse(argv);
 

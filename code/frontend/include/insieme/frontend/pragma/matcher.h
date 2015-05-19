@@ -36,9 +36,10 @@
 
 #pragma once
 
-#include "insieme/utils/printable.h"
 #include "insieme/frontend/compiler.h"
+
 #include "insieme/utils/logging.h"
+#include "insieme/utils/printable.h"
 #include "insieme/utils/printable.h"
 
 #include <memory>
@@ -185,35 +186,48 @@ public:
 };
 
 class MatchObject {
-private:
-	bool called;
-	typedef std::vector<core::VariablePtr> VarList;
-	typedef std::vector<core::ExpressionPtr> ExprList;
-	typedef std::vector<std::string> StringList;
-	std::map<std::string, VarList> varList;
-	std::map<std::string, ExprList> exprList;
-	std::map<std::string, StringList> stringList;
-	core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
-	core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
-public:
-	MatchObject() : called(false) { }
+    private:
+        bool initialized;
+        typedef std::vector<core::VariablePtr> VarList;
+        typedef std::vector<core::ExpressionPtr> ExprList;
+        typedef std::vector<std::string> StringList;
+        std::map<std::string, VarList> varList;
+        std::map<std::string, ExprList> exprList;
+        std::map<std::string, StringList> stringList;
+        core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
+        core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
+    public:
+        MatchObject() : initialized(false) { };
 
-	const VarList getVars(const std::string& s) const {
-		if(varList.find(s) == varList.end())
-			return VarList();
-		return varList.at(s);
-	}
-	const ExprList getExprs(const std::string& s) const {
-		if(exprList.find(s) == exprList.end())
-			return ExprList();
-		return exprList.at(s);
-	}
+        const VarList getVars(const std::string& s) const {
+        	if(varList.find(s) == varList.end())
+        		return VarList();
+            return varList.at(s);
+        }
+        const ExprList getExprs(const std::string& s) const {
+        	if(exprList.find(s) == exprList.end())
+        		return ExprList();
+            return exprList.at(s);
+        }
 
-	const core::ExpressionPtr getSingleExpr(const std::string& key) {
-		const auto fitV = getVars(key);
-		const auto fitE = getExprs(key);
+		const core::ExpressionPtr getSingleExpr(const std::string& key) const {
+			const auto fitV = getVars(key);
+			const auto fitE = getExprs(key);
 
-		if(fitE.empty() && fitV.empty())
+			if(fitE.empty() && fitV.empty())
+				return core::ExpressionPtr();
+
+			// we have an expression
+			if(fitV.empty()) {
+				assert_eq(fitE.size(), 1);
+				return fitE.at(0);
+			}
+			// we have a variable
+			if(fitE.empty()) {
+				assert_eq(fitV.size(), 1);
+				return fitV.at(0);
+			}
+			assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
 			return core::ExpressionPtr();
 
 		// we have an expression
@@ -230,18 +244,16 @@ public:
 		return core::ExpressionPtr();
 	}
 
-	const StringList getStrings(const std::string& k) const {
-		if(stringList.find(k) == stringList.end()) {
-			return StringList();
-		}
-		return stringList.at(k);
-	}
-	const std::string getString(const std::string& k) const {
-		if(stringList.find(k) == stringList.end()) {
-			return std::string();
-		}
-		return getStrings(k).front();
-	}
+        const StringList getStrings(const std::string& k) const {
+        	if(stringList.find(k) == stringList.end())
+        		return StringList();
+            return stringList.at(k);
+        }
+        const std::string getString(const std::string& k) const {
+        	if(stringList.find(k) == stringList.end())
+        		return std::string();
+            return getStrings(k).front();
+        }
 
 	bool stringValueExists(const std::string& k) const {
 		return (stringList.find(k) != stringList.end());
@@ -509,7 +521,7 @@ struct kwd: public Tok<clang::tok::identifier> {
 
 /**
  * A var is an identifier which we have to resolve to get the actual variable identifier
- * This is an hack which has been done to solve the problem with OpenMP regions which receive an
+ * This is a hack which has been done to solve the problem with OpenMP regions which receive an
  * identifier as name and this could be arbitrary
  */
 struct var_p: public Tok<clang::tok::identifier> {

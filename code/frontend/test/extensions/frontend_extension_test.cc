@@ -107,28 +107,28 @@ public:
 
             //pragma that should be matched: #pragma te loop x num_threads(x*2)
             auto a = insieme::frontend::extensions::PragmaHandler("te", "loop", x,
-                            [](MatchObject object, stmtutils::StmtWrapper node) {
+                            [](const MatchObject& object, core::NodeList nodes) {
                                 EXPECT_TRUE(object.getVars("private").size() && object.getExprs("num_threads").size());
                                 EXPECT_TRUE(object.getVars("private")[0]);
                                 EXPECT_TRUE(object.getExprs("num_threads")[0]);
                                 LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "15");
                                 ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
-                                return stmtutils::StmtWrapper(stmt);
+                                return core::NodeList({stmt});
                             });
             //pragma that should be matched: #pragma te scheduling auto
             auto b = insieme::frontend::extensions::PragmaHandler("te", "scheduling", y,
-                            [](MatchObject object, stmtutils::StmtWrapper node) {
-                                EXPECT_EQ ("return 15", toString(*node[0]));
+                            [](const MatchObject& object, core::NodeList nodes) {
+                                EXPECT_EQ ("return 15", toString(*nodes[0]));
                                 LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
                                 ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
-                                return stmtutils::StmtWrapper(stmt);
+                                return core::NodeList({stmt});
                             });
             //pragma that should be matched: #pragma te barrier
             auto c = insieme::frontend::extensions::PragmaHandler("te", "barrier", tok::eod,
-                            [](MatchObject object, stmtutils::StmtWrapper node) {
+                            [](const MatchObject& object, core::NodeList nodes) {
                                 LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "0");
                                 ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
-                                return stmtutils::StmtWrapper(stmt);
+                                return core::NodeList({stmt});
                             });
 
 
