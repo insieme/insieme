@@ -318,7 +318,7 @@ uint32 irt_get_default_worker_count() {
 
 }
 
-bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *condbundlep) {
+bool _irt_runtime_standalone_end_func(void *condbundlep) {
 	irt_cond_bundle *condbundle = (irt_cond_bundle*)condbundlep;
 	irt_mutex_lock(&condbundle->mutex);
 	irt_cond_wake_one(&condbundle->condvar);

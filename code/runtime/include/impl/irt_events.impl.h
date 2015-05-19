@@ -198,7 +198,7 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
 	while(cur != NULL) { \
 		nex = cur->next; \
-		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+		if(!cur->func(cur->data)) { /* if event handled, remove */ \
 			if(prev == NULL) reg->handler[event_code] = nex; \
 			else prev->next = nex; \
 		} else { /* else keep the handler in the list */ \
@@ -222,7 +222,7 @@ void irt_##__short__##_event_trigger_existing(irt_##__subject__##_id __short__##
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
 	while(cur != NULL) { \
 		nex = cur->next; \
-		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+		if(!cur->func(cur->data)) { /* if event handled, remove */ \
 			if(prev == NULL) reg->handler[event_code] = nex; \
 			else prev->next = nex; \
 		} else { /* else keep the handler in the list */ \
@@ -250,7 +250,7 @@ void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id __short__##
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
 	while(cur != NULL) { \
 		nex = cur->next; \
-		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+		if(!cur->func(cur->data)) { /* if event handled, remove */ \
 			if(prev == NULL) reg->handler[event_code] = nex; \
 			else prev->next = nex; \
 		} else { /* else keep the handler in the list */ \
@@ -272,7 +272,7 @@ void irt_##__short__##_event_trigger_existing_no_count(irt_##__subject__##_id __
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
 	while(cur != NULL) { \
 		nex = cur->next; \
-		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+		if(!cur->func(cur->data)) { /* if event handled, remove */ \
 			if(prev == NULL) reg->handler[event_code] = nex; \
 			else prev->next = nex; \
 		} else { /* else keep the handler in the list */ \

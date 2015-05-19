@@ -137,7 +137,7 @@ typedef struct __irt_wg_barrier_event_data {
 	irt_work_item* involved_wi;
 	irt_worker* join_to;
 } _irt_wg_barrier_event_data;
-bool _irt_wg_barrier_event_complete(irt_wg_event_register* source_event_register, void *user_data) {
+bool _irt_wg_barrier_event_complete(void *user_data) {
 	_irt_wg_barrier_event_data* data = (_irt_wg_barrier_event_data*)user_data;
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_GROUPJOIN, data->involved_wi->id);
 	irt_scheduling_continue_wi(data->join_to, data->involved_wi);
@@ -225,7 +225,7 @@ typedef struct __irt_wg_join_event_data {
 	irt_work_item* joining_wi;
 	irt_worker* join_to;
 } _irt_wg_join_event_data;
-bool _irt_wg_join_event(irt_wg_event_register* wg_event_register, void *user_data) {
+bool _irt_wg_join_event(void *user_data) {
 	_irt_wg_join_event_data* join_data = (_irt_wg_join_event_data*)user_data;
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_GROUPJOIN, join_data->joining_wi->id);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);

@@ -44,7 +44,7 @@
 
 #define IRT_DECLARE_EVENTS(__subject__, __short__, __num_events__) \
 \
-typedef bool (irt_##__short__##_event_lambda_func)(irt_##__short__##_event_register* source_event_register, void *user_data); \
+typedef bool (irt_##__short__##_event_lambda_func)(void *user_data); \
 \
 typedef struct _irt_##__short__##_event_lambda { \
 	irt_##__short__##_event_lambda_func *func; \
