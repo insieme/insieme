@@ -314,6 +314,26 @@ namespace irp {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArraySubscript1D(); }), data, idx);
 	}
 
+	inline TreePattern arrayView(const TreePattern& data = any, const TreePattern& offset = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayView(); }), data, offset);
+	}
+
+	inline TreePattern arrayViewPostDec(const TreePattern& data = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayViewPostDec(); }), data);
+	}
+
+	inline TreePattern arrayViewPostInc(const TreePattern& data = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayViewPostInc(); }), data);
+	}
+
+	inline TreePattern arrayViewPreDec(const TreePattern& data = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayViewPreDec(); }), data);
+	}
+
+	inline TreePattern arrayViewPreInc(const TreePattern& data = any) {
+		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getArrayViewPreInc(); }), data);
+	}
+
 	inline TreePattern tupleMemberAccess(const TreePattern& data = any, const TreePattern& idx = any, const TreePattern& type = any) {
 		return callExpr(lazyAtom([](core::NodeManager& mgr) { return mgr.getLangBasic().getTupleMemberAccess(); }), data, idx, type);
 	}
