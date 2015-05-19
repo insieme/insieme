@@ -47,10 +47,11 @@
 #include <iostream>
 #include <iomanip>
 #include <utility>
+
 #include <unistd.h>
+#include <stdlib.h>
 
 #include <omp.h>
-
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -58,13 +59,11 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/config.h"
 
 #include "insieme/driver/integration/tests.h"
 #include "insieme/driver/integration/test_step.h"
 #include "insieme/driver/integration/test_framework.h"
-
-#include "insieme/utils/config.h"
-
 
 using std::pair;
 using std::string;
@@ -87,17 +86,17 @@ namespace{
 		// define options
 		bpo::options_description desc("Supported Parameters");
 		desc.add_options()
-				("help,h", 				"produce help message")
-				("config,c", 			"print the configuration of the selected test cases")
-				("mock,m", 				"make it a mock run just printing commands not really executing those")
-				("panic,p", 			"panic on first sign of trouble and stop execution")
-				("list,l", 				"just list the targeted test cases")
-				("worker,w", 			bpo::value<int>()->default_value(1), 	"the number of parallel workers to be utilized")
-				("cases", 				bpo::value<vector<string>>(), 			"the list of test cases to be executed")
-				("step,s", 				bpo::value<string>(), 					"the test step to be applied")
-				("repeat,r",				bpo::value<int>()->default_value(1), "the number of times the tests shell be repeated")
-				("no-clean",				"keep all output files")
-				("nocolor",				"no highlighting of output")
+			("help,h",      "produce help message")
+			("config,c",    "print the configuration of the selected test cases")
+			("mock,m",      "make it a mock run just printing commands not really executing those")
+			("panic,p",     "panic on first sign of trouble and stop execution")
+			("list,l",      "just list the targeted test cases")
+			("worker,w",    bpo::value<int>()->default_value(1),     "the number of parallel workers to be utilized")
+			("cases",       bpo::value<vector<string>>(),            "the list of test cases to be executed")
+			("step,s",      bpo::value<string>(),                    "the test step to be applied")
+			("repeat,r",    bpo::value<int>()->default_value(1),     "the number of times the tests shell be repeated")
+			("no-clean",    "keep all output files")
+			("nocolor",     "no highlighting of output")
 		;
 
 		// define positional options (all options not being named)
@@ -161,8 +160,7 @@ namespace{
 
 void printSummary(const int totalTests, const int okCount, const int omittedCount,
                   const std::map<TestCase, TestResult>& failedSteps,
-                  const int screenWidth,
-                  const tf::Colorize& colorize) {
+                  const int screenWidth, const tf::Colorize& col) {
 	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
 	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
 
@@ -170,17 +168,20 @@ void printSummary(const int totalTests, const int okCount, const int omittedCoun
 	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
-	std::cout << "# PASSED: " << colorize.green() << boost::format(footerSummaryFormat) % okCount << colorize.reset() << " #\n";
+	std::cout << "# PASSED: " << col.green() << boost::format(footerSummaryFormat) % okCount << col.reset() << " #\n";
 	if (omittedCount != 0) {
-		std::cout << "# " << colorize.yellow() << "OMITTED:" << boost::format(footerSummaryFormat) % omittedCount << colorize.reset() << " #\n";
+		std::cout << "# " << col.yellow() 
+			<< "OMITTED:" << boost::format(footerSummaryFormat) % omittedCount << col.reset() << " #\n";
 	}
-	std::cout << "# FAILED: " << colorize.red() << boost::format(footerSummaryFormat) % failedSteps.size() << colorize.reset() << " #\n";
+	std::cout << "# FAILED: " << col.red() 
+		<< boost::format(footerSummaryFormat) % failedSteps.size() << col.reset() << " #\n";
 	for(const auto& cur : failedSteps) {
 		TestCase testCase = cur.first;
 		TestResult testResult = cur.second;
 		string failedStepInfo(testResult.getStepName() + ": exit code " + to_string(testResult.getRetVal()));
 		string footerFailedListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
-		std::cout << "#" << colorize.red() << "   - " << testCase.getName() << ": " << colorize.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
+		std::cout << "#" << col.red() << "   - " << testCase.getName() << ": " 
+			<< col.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
 	}
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 }
@@ -190,6 +191,10 @@ int main(int argc, char** argv) {
 	//TODO custom root config file
 
 	Logger::setLevel(WARNING);
+
+	// set OMP/IRT environment variables if not already set
+	setenv("IRT_NUM_WORKERS", "3", 0);
+	setenv("OMP_NUM_THREADS", "3", 0);
 
 	// parse parameters
 	tf::Options options = parseCommandLine(argc, argv);
@@ -325,8 +330,9 @@ int main(int argc, char** argv) {
 				string paddingWidth(to_string(screenWidth-(8+maxCounterStringLength*2)));
 				// print test info
 				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
-				std::cout << "#    " << boost::format("%" + maxCounterStringLengthAsString + "d") % ++act << "/"<< boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests
-						<< " " << boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
+				std::cout << "#    " << boost::format("%" + maxCounterStringLengthAsString + "d") % ++act << "/"
+					<< boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests << " "
+					<< boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
 				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 
 				for(const auto& curRes : results) {
@@ -409,10 +415,11 @@ int main(int argc, char** argv) {
 
 	} // end repetition loop
 
-	if(!panic)
+	if(!panic) {
 		printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize);
+	}
 
 	// done
-	return (failed.empty())?0:1;
+	return (failed.empty()) ? 0 : 1;
 }
 
