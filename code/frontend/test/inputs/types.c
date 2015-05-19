@@ -38,60 +38,60 @@
 
 // builtin types
 void basic_type_test() {
-	#pragma test "decl ref<int<4>> v0 =  var(1)"
+	#pragma test expected "decl ref<int<4>> v0 = ( var(1))"
 	int a = 1;
 
-	#pragma test "decl ref<int<8>> v0 =  var(undefined(type<int<8>>))"
+	#pragma test expected "decl ref<int<8>> v0 = ( var(undefined(type<int<8>>)))"
 	long b;
 
-	#pragma test "decl ref<int<2>> v0 =  var(65535)"
+	#pragma test expected "decl ref<int<2>> v0 = ( var(65535))"
 	short c = 0xFFFF;
 
-	#pragma test "decl ref<char> v0 =  var('a')"
+	#pragma test expected "decl ref<char> v0 = ( var('a'))"
 	char d = 'a';
 
-	#pragma test "decl ref<ref<any>> v0 =  var(undefined(type<ref<any>>))"
+	#pragma test expected "decl ref<ref<any>> v0 = ( var(undefined(type<ref<any>>)))"
 	void* e;
 
-	#pragma test "decl ref<real<4>> v0 =  var(0.0E+0)"
+	#pragma test expected "decl ref<real<4>> v0 = ( var(0.0E+0))"
 	float f = 0.00f;
 
-	#pragma test "decl ref<real<8>> v0 =  var(undefined(type<real<8>>))"
+	#pragma test expected "decl ref<real<8>> v0 = ( var(undefined(type<real<8>>)))"
 	double g;
 
-	#pragma test "decl ref<real<16>> v0 =  var(undefined(type<real<16>>))"
+	#pragma test expected "decl ref<real<16>> v0 = ( var(undefined(type<real<16>>)))"
 	long double h;
 
-	#pragma test "decl ref<vector<real<4>,3>> v0 =  var(undefined(type<vector<real<4>,3>>))"
+	#pragma test expected "decl ref<vector<real<4>,3>> v0 = ( var(undefined(type<vector<real<4>,3>>)))"
 	float v[3];
 
-    #pragma test "decl ref<vector<vector<int<4>,2>,3>> v0 =  var(undefined(type<vector<vector<int<4>,2>,3>>))"
+    #pragma test expected "decl ref<vector<vector<int<4>,2>,3>> v0 = ( var(undefined(type<vector<vector<int<4>,2>,3>>)))"
 	int vv[3][2];
 
-	#pragma test "decl ref<vector<real<4>,3>> v0 =  var([0.0f, 0.0f, 0.0f])"
+	#pragma test expected "decl ref<vector<real<4>,3>> v0 = ( var([0.0f, 0.0f, 0.0f]))"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "decl ref<vector<vector<real<4>,1>,2>> v0 =  var([[0.0f], [0.0f]])"
+	#pragma test expected "decl ref<vector<vector<real<4>,1>,2>> v0 = ( var([[0.0f], [0.0f]]))"
 	float vvvv[][1] = { {0}, {0} };
 
-	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(ref.reinterpret(ref.null, type<array<int<4>,1>>))"
+	#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_reinterpret(ref_null, type<array<int<4>,1>>)))"
 	int* b1 = 0;
 
-	#pragma test "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 =  var(ref.reinterpret(ref.null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
+	#pragma test expected "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 = ( var(ref_reinterpret(ref_null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)))"
 	int*** c1 = 0;
 
-	#pragma test "v100 := ref.reinterpret(ref.null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
+	#pragma test expected "(v100 := ref_reinterpret(ref_null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
 	c1 = 0;
 
-	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931E+0)"
+	#pragma test expected "decl ref<real<8>> v0 = ( var(3.1415926535897931E+0))"
 	double pi = 3.14159265358979323846;
 
-//	#pragma test "decl ref<vector<char,10>> v0 =  var("Hello Mum")"
+//	#pragma test expected "decl ref<vector<char,10>> v0 =  var("Hello Mum")"
 //	char str[10] = "Hello Mum";
 }
 
 // Simple struct
-#pragma test "struct Person <height:int<4>,age:int<4>>"
+#pragma test expected "struct Person <height:int<4>,age:int<4>>"
 struct Person {
 	// cppcheck-suppress unusedStructMember
 	int height;
@@ -100,17 +100,17 @@ struct Person {
 };
 
 void test_func() {
-	#pragma test \
-	"decl ref<struct Person <height:int<4>,age:int<4>>> v0 =  var(undefined(type<struct Person <height:int<4>,age:int<4>>>))"
+	#pragma test expected \
+	"decl ref<struct Person <height:int<4>,age:int<4>>> v0 = ( var(undefined(type<struct Person <height:int<4>,age:int<4>>>)))"
 	struct Person p;
 
-	#pragma test \
-	"decl ref<struct Person <height:int<4>,age:int<4>>> v0 =  var(struct{height:=178, age:=28})"
+	#pragma test expected \
+	"decl ref<struct Person <height:int<4>,age:int<4>>> v0 = ( var(struct{height:=178, age:=28}))"
 	struct Person p2 = {178, 28};
 }
 
 // Self recursive struct
-#pragma test "rec 'PersonList.{'PersonList=struct PersonList <name:ref<array<char,1>>,age:int<4>,next:ref<array<'PersonList,1>>>}"
+#pragma test expected "rec 'PersonList.{'PersonList=struct PersonList <name:ref<array<char,1>>,age:int<4>,next:ref<array<'PersonList,1>>>}"
 struct PersonList {
 	// cppcheck-suppress unusedStructMember
 	char* name;
@@ -125,7 +125,7 @@ struct A;
 struct B;
 struct C;
 
-#pragma test "rec 'A.{'A=struct A <b:ref<array<'B,1>>,c:ref<array<'C,1>>>,'B=struct B <b:ref<array<'C,1>>>,'C=struct C <a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
+#pragma test expected "rec 'A.{'A=struct A <b:ref<array<'B,1>>,c:ref<array<'C,1>>>,'B=struct B <b:ref<array<'C,1>>>,'C=struct C <a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
 struct A {
 	// cppcheck-suppress unusedStructMember
 	struct B* b;
@@ -133,13 +133,13 @@ struct A {
 	struct C* c;
 };
 
-#pragma test "rec 'B.{'A=struct A <b:ref<array<'B,1>>,c:ref<array<'C,1>>>,'B=struct B <b:ref<array<'C,1>>>,'C=struct C <a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
+#pragma test expected "rec 'B.{'A=struct A <b:ref<array<'B,1>>,c:ref<array<'C,1>>>,'B=struct B <b:ref<array<'C,1>>>,'C=struct C <a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
 struct B {
 	// cppcheck-suppress unusedStructMember
 	struct C* b;
 };
 
-#pragma test "rec 'C.{'A=struct A <b:ref<array<'B,1>>,c:ref<array<'C,1>>>,'B=struct B <b:ref<array<'C,1>>>,'C=struct C <a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
+#pragma test expected "rec 'C.{'A=struct A <b:ref<array<'B,1>>,c:ref<array<'C,1>>>,'B=struct B <b:ref<array<'C,1>>>,'C=struct C <a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
 struct C {
 	// cppcheck-suppress unusedStructMember
 	struct A* a;
@@ -153,20 +153,20 @@ struct B1;
 struct C1;
 struct D1;
 
-#pragma test "struct A1 <b:ref<array<rec 'B1.{'B1=struct B1 <b:ref<array<'C1,1>>>,'C1=struct C1 <b:ref<array<'B1,1>>,d:ref<array<struct D1 <val:int<4>>,1>>>},1>>>"
+#pragma test expected "struct A1 <b:ref<array<rec 'B1.{'B1=struct B1 <b:ref<array<'C1,1>>>,'C1=struct C1 <b:ref<array<'B1,1>>,d:ref<array<struct D1 <val:int<4>>,1>>>},1>>>"
 struct A1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;
 };
 
-#pragma test \
+#pragma test expected \
 	"rec 'B1.{'B1=struct B1 <b:ref<array<'C1,1>>>,'C1=struct C1 <b:ref<array<'B1,1>>,d:ref<array<struct D1 <val:int<4>>,1>>>}"
 struct B1 {
 	// cppcheck-suppress unusedStructMember
 	struct C1* b;
 };
 
-#pragma test \
+#pragma test expected \
 	"rec 'C1.{'B1=struct B1 <b:ref<array<'C1,1>>>,'C1=struct C1 <b:ref<array<'B1,1>>,d:ref<array<struct D1 <val:int<4>>,1>>>}"
 struct C1 {
 	// cppcheck-suppress unusedStructMember
@@ -175,7 +175,7 @@ struct C1 {
 	struct D1* d;
 };
 
-#pragma test "struct D1 <val:int<4>>"
+#pragma test expected "struct D1 <val:int<4>>"
 struct D1 {
 	// cppcheck-suppress unusedStructMember
 	int val;
@@ -183,7 +183,7 @@ struct D1 {
 
 void mem_alloc() {
 
-	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(ref.reinterpret(malloc(4ul), type<array<int<4>,1>>))"
+	#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_reinterpret(malloc(4ul), type<array<int<4>,1>>)))"
 	int* a = malloc(4);
 	free(a); // make the static checks happy
 }
@@ -195,9 +195,9 @@ void mem_alloc() {
 //
 //	COMMENTED AS LONG AS THERE IS NOT A BETTER WAY TO HANDLE THIS
 //
-//	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9)"
+//	#pragma test expected "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9)"
 //	enum E a = ON;
-//	#pragma test "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17)"
+//	#pragma test expected "decl ref<__insieme_enum<_enum_home_luis_insieme_base_code_frontend_test__inputs_types_c1911_20,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c1919_9,0>,__insieme_enum_constant__<_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17,10>>> v0 =  var(_enumCtnt_home_luis_insieme_base_code_frontend_test__inputs_types_c19113_17)"
 //	enum E b = OFF;
 //}
 
@@ -208,13 +208,13 @@ void fun_ptr() {
 
 	// test declaration, assignment and call of function pointers
 
-	#pragma test "decl ref<(int<4>, int<4>) -> int<4>> v0 =  var(fun(int<4> v1, int<4> v2) -> int<4> {return v1+v2;})"
+	#pragma test expected "decl ref<(int<4>, int<4>) -> int<4>> v0 = ( var(fun(int<4> v1, int<4> v2) -> int<4> {return (v1+v2);}))"
 	int(* f)(int,int) = &add;
 
-	#pragma test "v100 := fun(int<4> v1, int<4> v2) -> int<4> {return v1-v2;}"
+	#pragma test expected "(v100 := fun(int<4> v1, int<4> v2) -> int<4> {return (v1-v2);})"
 	f = &sub;
 
-	#pragma test "v100(3, 4)"
+	#pragma test expected "(v100)(3, 4)"
 	f(3,4);
 
 }

@@ -65,7 +65,6 @@
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
-#include "insieme/frontend/utils/stmt_wrapper.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 
@@ -90,15 +89,15 @@ public:
 	UnitTestExtension() {
 		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
 		auto unitTestSymbolicPragma = insieme::frontend::extensions::PragmaHandler("unittest", "symbolic", tok::string_literal["expected"] >> tok::eod,
-			[&](MatchObject mo, stmtutils::StmtWrapper node) {
-				symbolicTests[node[0]] = mo.getString("expected");
-				return node;
+			[&](const MatchObject& mo, NodeList nodes) {
+				symbolicTests[nodes[0]] = mo.getString("expected");
+				return nodes;
 			});
 		//pragma that should be matched: #pragma unittest symbolic "expectedIR"
 		auto unitTestResolvedPragma = insieme::frontend::extensions::PragmaHandler("unittest", "resolved", tok::string_literal["expected"] >> tok::eod,
-			[&](MatchObject mo, stmtutils::StmtWrapper node) {
-				resolvedTests[node[0]] = mo.getString("expected");
-				return node;
+			[&](const MatchObject& mo, NodeList nodes) {
+				resolvedTests[nodes[0]] = mo.getString("expected");
+				return nodes;
 			});
 
 		pragmaHandlers.push_back(std::make_shared<insieme::frontend::extensions::PragmaHandler>(unitTestSymbolicPragma));

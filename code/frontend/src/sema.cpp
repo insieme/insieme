@@ -160,7 +160,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 	// we parse the original code segment, within the original locations
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
-	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
+	clang::CompoundStmt* CS = cast<clang::CompoundStmt>(ret.get());
 
 //	std::cout << "{InsiemeSema}: ActOnCompoundStmt()\n";
 //	std::cout << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
@@ -236,7 +236,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		bool found =false;
 		// problem with first pragma, compound start is delayed until fist usable line (first stmt)
 		if (CS->size()>0){
-			for (CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
+			for (clang::CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
 
 				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
 //				(*it)->dump();
@@ -314,8 +314,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 			ArrayRef<clang::Stmt*> stmtList(stmts, CS->size()+1);
 
-			CompoundStmt* newCS =
-					new (Context) CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(),
+			clang::CompoundStmt* newCS =
+					new (Context) clang::CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(),
 							CS->getSourceRange().getEnd()
 						);
 
@@ -347,7 +347,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			matched.push_back(P);
 
 			// transfer the ownership of the statement
-			CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
+			clang::CompoundStmt* oldStmt = ret.takeAs<clang::CompoundStmt>();
 			oldStmt->setStmts(Context, NULL, 0);
 			ret = newCS;
 			CS = newCS;
@@ -383,12 +383,12 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 	clang::StmtResult ret =
 			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
 
-	IfStmt* ifStmt = static_cast<IfStmt*>( ret.get() );
+	clang::IfStmt* ifStmt = static_cast<clang::IfStmt*>( ret.get() );
 	PragmaList matched;
 
 	matchStmt(ifStmt->getThen(), SourceRange(IfLoc, IfLoc), SourceMgr, matched);
 	// is there any pragmas to be associated with the 'then' statement of this if?
-	if ( !isa<CompoundStmt> (ifStmt->getThen()) ) {
+	if ( !isa<clang::CompoundStmt> (ifStmt->getThen()) ) {
 		// if there is no compound stmt, check the then part
 		matchStmt(ifStmt->getThen(), SourceRange(IfLoc, ThenVal->getLocEnd()), SourceMgr, matched);
 	}
@@ -396,7 +396,7 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 	matched.clear();
 
 	// is there any pragmas to be associated with the 'else' statement of this if?
-	if ( ifStmt->getElse() && !isa<CompoundStmt> (ifStmt->getElse()) ) {
+	if ( ifStmt->getElse() && !isa<clang::CompoundStmt> (ifStmt->getElse()) ) {
 		matchStmt(ifStmt->getElse(), SourceRange(ElseLoc, ifStmt->getSourceRange().getEnd()), SourceMgr, matched);
 	}
 
@@ -412,9 +412,9 @@ InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LP
 	clang::StmtResult ret =
 		Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));
 
-	ForStmt* forStmt = (ForStmt*) ret.get();
+	clang::ForStmt* forStmt = (clang::ForStmt*) ret.get();
 	PragmaList matched;
-	if ( !isa<CompoundStmt> (forStmt->getBody()) ) {
+	if ( !isa<clang::CompoundStmt> (forStmt->getBody()) ) {
 		matchStmt(forStmt->getBody(), forStmt->getSourceRange(), SourceMgr, matched);
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);

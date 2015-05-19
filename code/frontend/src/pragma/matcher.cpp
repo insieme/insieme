@@ -45,10 +45,10 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
-#include "clang/Sema/Sema.h"
+#include <clang/Sema/Sema.h>
 #include <clang/Sema/Lookup.h>
-#include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Basic/Diagnostic.h"
+#include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Basic/Diagnostic.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/ASTContext.h>
 #pragma GCC diagnostic pop
@@ -166,7 +166,7 @@ core::VariablePtr MatchObject::getVar(const ValueUnionPtr& p, conversion::Conver
 
 
 void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact) {
-    if(called) {
+    if(initialized) {
         return;
     } else {
         for(auto m : mmap) {
@@ -189,7 +189,7 @@ void MatchObject::cloneFromMatchMap(const MatchMap& mmap, conversion::Converter&
                 stringList[m.first] = StringList(1, "");
             }
         }
-        called = true;
+        initialized = true;
     }                                                                                                                                                                                
 }
 

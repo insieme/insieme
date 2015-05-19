@@ -680,7 +680,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
 
             // attach pragma to global variable
-			pragma::attachPragma(globVar.as<core::StatementPtr>(), valDecl, *this);
+			pragma::attachPragma(core::NodeList({globVar.as<core::NodePtr>()}), valDecl, *this);
 
 			varDeclMap.insert( { valDecl, globVar } );
 
@@ -977,7 +977,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------
 
-	pragma::attachPragma(node.as<core::StatementPtr>(),funcDecl,*this);
+	pragma::attachPragma(core::NodeList({node.as<core::NodePtr>()}), funcDecl, *this);
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -1471,6 +1471,12 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 			getIRTranslationUnit().addType(symbol, res);
 		}
 	}
+
+	// handle pragmas
+	core::NodeList list({res});
+	list = pragma::attachPragma(list, decl, *this);
+	assert_eq(1, list.size()) << "More than 1 node present";
+	res = list.front().as<core::TypePtr>();
 
 	for(auto extension : this->getConversionSetup().getExtensions()) {
         extension->PostVisit(decl, res, *this);

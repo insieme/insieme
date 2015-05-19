@@ -38,9 +38,9 @@
 
 #include "insieme/frontend/convert.h"
 
-#include "clang/AST/Stmt.h"
-#include <llvm/Support/raw_ostream.h>
+#include <clang/AST/Stmt.h>
 #include <clang/AST/Expr.h>
+#include <llvm/Support/raw_ostream.h>
 
 using namespace clang;
 using namespace insieme::frontend;
@@ -102,10 +102,7 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 }
 
 
-stmtutils::StmtWrapper attachPragma(    const stmtutils::StmtWrapper& 			node,
-            					        const clang::Stmt* 				clangNode,
-						                conversion::Converter& 	fact )
-{
+core::NodeList attachPragma(const core::NodeList& nodes, const clang::Stmt* clangNode, conversion::Converter& fact) {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
 	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter;
@@ -113,21 +110,17 @@ stmtutils::StmtWrapper attachPragma(    const stmtutils::StmtWrapper& 			node,
 	// Get the list of pragmas attached to the clang node
 	std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
 
-    stmtutils::StmtWrapper ret = node;
-	std::for_each(iter.first, iter.second,
-		[&] (const PragmaStmtMap::StmtMap::value_type& curr) {
-			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-			}
+	core::NodeList ret = nodes;
+	std::for_each(iter.first, iter.second, [&] (const PragmaStmtMap::StmtMap::value_type& curr) {
+		if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
+			ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+		}
 	});
 
 	return ret;
 }
 
-stmtutils::StmtWrapper attachPragma(const stmtutils::StmtWrapper& 			node,
-						            const clang::Decl* 				clangDecl,
-						            conversion::Converter& 	fact )
-{
+core::NodeList attachPragma(const core::NodeList& nodes, const clang::Decl* clangDecl, conversion::Converter& fact) {
 	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
 
 	typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter;
@@ -135,12 +128,11 @@ stmtutils::StmtWrapper attachPragma(const stmtutils::StmtWrapper& 			node,
 	// Get the list of pragmas attached to the clang node
 	std::pair<PragmaDeclIter, PragmaDeclIter>&& iter = pragmaDeclMap.equal_range(clangDecl);
 
-    stmtutils::StmtWrapper ret = node;
-	std::for_each(iter.first, iter.second,
-		[&] (const PragmaStmtMap::DeclMap::value_type& curr) {
-			if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
-				ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
-			}
+	core::NodeList ret = nodes;
+	std::for_each(iter.first, iter.second, [&] (const PragmaStmtMap::DeclMap::value_type& curr) {
+		if(auto pragma = dynamic_cast<pragma::FrontendExtensionPragma*>(&*(curr.second))) {
+			ret = (pragma->getFunction())(pragma->getMatchObject(fact), ret);
+		}
 	});
 
 	return ret;

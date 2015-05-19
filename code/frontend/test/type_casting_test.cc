@@ -36,50 +36,73 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_program.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/Stmt.h>
+#include <clang/AST/Type.h>
+#include <clang/AST/Decl.h>
+#pragma GCC diagnostic pop
 
-#include "insieme/frontend/translation_unit.h"
-#include "insieme/utils/config.h"
+#include "insieme/annotations/expected_ir_annotation.h"
+
+#include "insieme/core/ir_program.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/driver/cmd/insiemecc_options.h"
+
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/translation_unit.h"
 
+#include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
-
-#include "clang/AST/ASTContext.h"
-
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
-
-#include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme;
 using namespace insieme::core;
+using namespace insieme::driver;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
 using namespace insieme::frontend::extensions;
 
+namespace ia = insieme::annotations;
+
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/casts.c");
+	const std::string filename = CLANG_SRC_DIR "/inputs/casts.c";
+	std::vector<std::string> argv = { "compiler", filename };
+    cmd::Options options = cmd::Options::parse(argv);
+    options.job.frontendExtensionInit();
+	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
 	
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
 
-	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
+	const auto begin = tu.pragmas_begin(filter);
+	const auto end = tu.pragmas_end();
+
+	EXPECT_NE(begin, end);
+
+	for(auto it = begin; it != end; ++it) {
+		const auto pragma = *it;
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		Converter convFactory( mgr, tu);
+		Converter convFactory(mgr, tu);
+		convFactory.convert();
 
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
-
-		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
-		else {
-			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() )->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+		if(pragma->isStatement()) {
+			NodePtr node = analysis::normalize(convFactory.convertStmt(pragma->getStatement()));
+			EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + toString(printer::PrettyPrinter(node, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"');
+		} else {
+			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
+				NodePtr node = convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal());
+				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
+				NodePtr node = convFactory.convertVarDecl(vd);
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
 			}
 		}
 	}

@@ -36,9 +36,10 @@
 
 #pragma once
 
-#include "insieme/utils/printable.h"
 #include "insieme/frontend/compiler.h"
+
 #include "insieme/utils/logging.h"
+#include "insieme/utils/printable.h"
 #include "insieme/utils/printable.h"
 
 #include <memory>
@@ -186,7 +187,7 @@ public:
 
 class MatchObject {
 private:
-	bool called;
+	bool initialized;
 	typedef std::vector<core::VariablePtr> VarList;
 	typedef std::vector<core::ExpressionPtr> ExprList;
 	typedef std::vector<std::string> StringList;
@@ -196,25 +197,28 @@ private:
 	core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
 	core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
 public:
-	MatchObject() : called(false) { }
+	MatchObject() : initialized(false) { };
 
 	const VarList getVars(const std::string& s) const {
-		if(varList.find(s) == varList.end())
+		if(varList.find(s) == varList.end()) {
 			return VarList();
+		}
 		return varList.at(s);
 	}
 	const ExprList getExprs(const std::string& s) const {
-		if(exprList.find(s) == exprList.end())
+		if(exprList.find(s) == exprList.end()) {
 			return ExprList();
+		}
 		return exprList.at(s);
 	}
 
-	const core::ExpressionPtr getSingleExpr(const std::string& key) {
+	const core::ExpressionPtr getSingleExpr(const std::string& key) const {
 		const auto fitV = getVars(key);
 		const auto fitE = getExprs(key);
 
-		if(fitE.empty() && fitV.empty())
+		if(fitE.empty() && fitV.empty()) {
 			return core::ExpressionPtr();
+		}
 
 		// we have an expression
 		if(fitV.empty()) {
@@ -231,15 +235,13 @@ public:
 	}
 
 	const StringList getStrings(const std::string& k) const {
-		if(stringList.find(k) == stringList.end()) {
+		if(stringList.find(k) == stringList.end())
 			return StringList();
-		}
 		return stringList.at(k);
 	}
 	const std::string getString(const std::string& k) const {
-		if(stringList.find(k) == stringList.end()) {
+		if(stringList.find(k) == stringList.end())
 			return std::string();
-		}
 		return getStrings(k).front();
 	}
 
@@ -509,7 +511,7 @@ struct kwd: public Tok<clang::tok::identifier> {
 
 /**
  * A var is an identifier which we have to resolve to get the actual variable identifier
- * This is an hack which has been done to solve the problem with OpenMP regions which receive an
+ * This is a hack which has been done to solve the problem with OpenMP regions which receive an
  * identifier as name and this could be arbitrary
  */
 struct var_p: public Tok<clang::tok::identifier> {
