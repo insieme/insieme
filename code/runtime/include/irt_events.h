@@ -85,7 +85,7 @@ void irt_##__short__##_event_trigger_existing_no_count(irt_##__subject__##_id __
 IRT_MAKE_ID_TYPE(wi_event_register)
 
 typedef enum _irt_wi_event_code {
-	IRT_WI_EV_COMPLETED,
+	IRT_WI_EV_COMPLETED,       // triggered when this WI is completed
 	IRT_WI_CHILDREN_COMPLETED, // triggered when all children are completed
 	IRT_WI_EV_NUM // sentinel
 } irt_wi_event_code;
@@ -99,10 +99,8 @@ IRT_DEFINE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH
 IRT_MAKE_ID_TYPE(wg_event_register)
 
 typedef enum _irt_wg_event_code {
-	IRT_WG_EV_COMPLETED,				// used for WI joining
-	IRT_WG_EV_BARRIER_COMPLETE,			// indicates all WIs have reached a barrier
-	IRT_WG_EV_BARRIER_ENTERED,			// indicates how many wis have entered a barrier
-	IRT_WG_EV_BARRIER_EXITED,			// indicates how many wis have exited a barrier
+	IRT_WG_EV_COMPLETED,        // used for WI joining
+	IRT_WG_EV_BARRIER_COMPLETE, // indicates all WIs have reached a barrier
 	IRT_WG_EV_NUM // sentinel
 } irt_wg_event_code;
 
