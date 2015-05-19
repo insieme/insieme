@@ -186,49 +186,39 @@ public:
 };
 
 class MatchObject {
-    private:
-        bool initialized;
-        typedef std::vector<core::VariablePtr> VarList;
-        typedef std::vector<core::ExpressionPtr> ExprList;
-        typedef std::vector<std::string> StringList;
-        std::map<std::string, VarList> varList;
-        std::map<std::string, ExprList> exprList;
-        std::map<std::string, StringList> stringList;
-        core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
-        core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
-    public:
-        MatchObject() : initialized(false) { };
+private:
+	bool initialized;
+	typedef std::vector<core::VariablePtr> VarList;
+	typedef std::vector<core::ExpressionPtr> ExprList;
+	typedef std::vector<std::string> StringList;
+	std::map<std::string, VarList> varList;
+	std::map<std::string, ExprList> exprList;
+	std::map<std::string, StringList> stringList;
+	core::VariablePtr getVar(const ValueUnionPtr& p, conversion::Converter& fact);
+	core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
+public:
+	MatchObject() : initialized(false) { };
 
-        const VarList getVars(const std::string& s) const {
-        	if(varList.find(s) == varList.end())
-        		return VarList();
-            return varList.at(s);
-        }
-        const ExprList getExprs(const std::string& s) const {
-        	if(exprList.find(s) == exprList.end())
-        		return ExprList();
-            return exprList.at(s);
-        }
+	const VarList getVars(const std::string& s) const {
+		if(varList.find(s) == varList.end()) {
+			return VarList();
+		}
+		return varList.at(s);
+	}
+	const ExprList getExprs(const std::string& s) const {
+		if(exprList.find(s) == exprList.end()) {
+			return ExprList();
+		}
+		return exprList.at(s);
+	}
 
-		const core::ExpressionPtr getSingleExpr(const std::string& key) const {
-			const auto fitV = getVars(key);
-			const auto fitE = getExprs(key);
+	const core::ExpressionPtr getSingleExpr(const std::string& key) const {
+		const auto fitV = getVars(key);
+		const auto fitE = getExprs(key);
 
-			if(fitE.empty() && fitV.empty())
-				return core::ExpressionPtr();
-
-			// we have an expression
-			if(fitV.empty()) {
-				assert_eq(fitE.size(), 1);
-				return fitE.at(0);
-			}
-			// we have a variable
-			if(fitE.empty()) {
-				assert_eq(fitV.size(), 1);
-				return fitV.at(0);
-			}
-			assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
+		if(fitE.empty() && fitV.empty()) {
 			return core::ExpressionPtr();
+		}
 
 		// we have an expression
 		if(fitV.empty()) {
@@ -244,16 +234,16 @@ class MatchObject {
 		return core::ExpressionPtr();
 	}
 
-        const StringList getStrings(const std::string& k) const {
-        	if(stringList.find(k) == stringList.end())
-        		return StringList();
-            return stringList.at(k);
-        }
-        const std::string getString(const std::string& k) const {
-        	if(stringList.find(k) == stringList.end())
-        		return std::string();
-            return getStrings(k).front();
-        }
+	const StringList getStrings(const std::string& k) const {
+		if(stringList.find(k) == stringList.end())
+			return StringList();
+		return stringList.at(k);
+	}
+	const std::string getString(const std::string& k) const {
+		if(stringList.find(k) == stringList.end())
+			return std::string();
+		return getStrings(k).front();
+	}
 
 	bool stringValueExists(const std::string& k) const {
 		return (stringList.find(k) != stringList.end());
