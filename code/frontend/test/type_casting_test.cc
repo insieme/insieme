@@ -36,8 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include <clang/AST/Stmt.h>
-#include <clang/AST/Type.h>
+#include "insieme/frontend/clang.h"
 
 #include "insieme/annotations/expected_ir_annotation.h"
 

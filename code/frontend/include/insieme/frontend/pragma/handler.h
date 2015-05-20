@@ -41,9 +41,12 @@
 #include <map>
 #include <functional>
 
+#include "insieme/core/forward_decls.h"
+
 #include "insieme/frontend/sema.h"
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/clang_forward.h"
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>
@@ -51,24 +54,7 @@
 #include <clang/Parse/Parser.h>
 
 // forward declaration
-namespace clang {
-class Stmt;
-class Decl;
-class Expr;
-}
-
 namespace insieme {
-
-namespace core {
-
-template <class T>
-class Pointer;
-
-class Node;
-
-typedef Pointer<const Node> NodePtr;
-
-} // end core namespace
 
 namespace frontend {
 

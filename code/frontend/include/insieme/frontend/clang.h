@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,16 +46,23 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include <clang/AST/TemplateBase.h>
-	#include <clang/AST/Expr.h>
-	#include <clang/AST/CXXInheritance.h>
-	#include <clang/AST/StmtVisitor.h>
-	#include <clang/AST/DeclVisitor.h>
-	#include <clang/AST/RecursiveASTVisitor.h>
+
+	#include <clang/AST/ASTConsumer.h>
 	#include <clang/AST/ASTContext.h>
-	#include <clang/AST/TypeVisitor.h>
-	#include <clang/Sema/Sema.h>
-	#include <clang/Sema/Ownership.h>
-	#include "clang/AST/ASTConsumer.h"
+	#include <clang/AST/CXXInheritance.h>
 	#include <clang/AST/Decl.h>
+	#include <clang/AST/DeclVisitor.h>
+	#include <clang/AST/Expr.h>
+	#include <clang/AST/RecursiveASTVisitor.h>
+	#include <clang/AST/StmtVisitor.h>
+	#include <clang/AST/TemplateBase.h>
+	#include <clang/AST/TypeVisitor.h>
+
+	#include <clang/Basic/SourceLocation.h>
+
+	#include <clang/Lex/Token.h>
+
+	#include <clang/Sema/Ownership.h>
+	#include <clang/Sema/Sema.h>
+
 #pragma GCC diagnostic pop
