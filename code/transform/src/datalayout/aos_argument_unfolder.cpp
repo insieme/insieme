@@ -238,7 +238,7 @@ AosArgumentUnfolder::AosArgumentUnfolder(NodeManager& mgr, ExprAddressMap& varRe
 	  variablePattern(pirp::variable(typePattern) // local variable
 			| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
 	  namedVariablePattern(var("variable", variablePattern)),
-	  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern) | pirp::scalarToArray(namedVariablePattern)),
+	  varWithOptionalDeref(optionalDeref(namedVariablePattern)),
 	  tupleMemberAccess(pirp::refDeref(pirp::arrayRefElem1D(
 			pirp::tupleMemberAccess(namedVariablePattern, var("tupleIndex", pattern::any), pattern::any), var("arrayIndex", pattern::any)))) {}
 

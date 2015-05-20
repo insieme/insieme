@@ -649,7 +649,8 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 		pattern::TreePattern structAccessWithOptionalDeref = pattern::var("structAccess", optionalDeref(pattern::aT(
 				pattern::var("oldVar", pattern::atom(oldVar)))));
 		pattern::TreePattern structArrayElementAccess = pirp::arrayRefElem1D(structAccessWithOptionalDeref, var("index", pattern::any));
-		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(structArrayElementAccess, pattern::var("member", pattern::any)));
+		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(structArrayElementAccess,
+				pattern::var("member", pattern::any)));
 //pattern::TreePattern structMemberAccess1 =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(
 //		pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)))), var("index", pattern::any)), pattern::var("member", pattern::any)));
 
@@ -1019,10 +1020,12 @@ std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vect
 
 ExpressionPtr VariableAdder::updateArgument(const ExpressionAddress& oldArg) {
 	ExpressionPtr newArg;
-	pattern::AddressMatchOpt match = varWithOptionalDeref.matchAddress(oldArg);
-
+	pattern::AddressMatchOpt match = (varWithOptionalDeref | pirp::arrayView(varWithOptionalDeref)).matchAddress(oldArg);
+//std::cout << *getDeclaration(oldArg) << std::endl;
 	if(match) {
 		ExpressionAddress oldVarDecl = getDeclaration(match.get()["variable"].getValue().as<ExpressionAddress>());
+std::cout << oldVarDecl << std::endl;
+//{ExpressionAddress oldVarDecl = getDeclaration(oldArg);
 
 		auto varCheck = varsToReplace.find(oldVarDecl);
 		if(varCheck != varsToReplace.end()) {
@@ -1042,7 +1045,7 @@ VariableAdder::VariableAdder(core::NodeManager& mgr, ExprAddressMap& varReplacem
 	  variablePattern(pirp::variable(typePattern) // local variable
 			| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
 	  namedVariablePattern(var("variable", variablePattern)),
-	  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern) | pirp::scalarToArray(namedVariablePattern)){
+	  varWithOptionalDeref(optionalDeref(namedVariablePattern)) {
 
 //	for(std::pair<ExpressionPtr, ExpressionPtr> rep : varReplacements) {
 //		std::cout<< *rep.first << " -> " << *rep.second << std::endl;
