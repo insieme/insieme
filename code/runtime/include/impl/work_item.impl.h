@@ -249,8 +249,14 @@ void irt_wi_join(irt_work_item_id wi_id) {
 
 bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *user_data) {
 	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
-	// do not join wrong sink if multi-level optional wi in progress
-	// (signal received from inlined sibling child)
+	/*   I ... immediate WI    W ... real WI      A ... arbitrary WI
+	 *            A0
+	 *           /  \
+	 *          I0  W0
+	 *         /  \
+	 *        W1  W2
+	 * I0 is waiting in join_all, W0 triggered the event --> needs to be ignored 
+	 */
 	if(*(join_data->joining_wi->num_active_children) > 0) return true;
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
 	IRT_DEBUG(" > %p releasing %p\n", (void*) irt_worker_get_current()->finalize_wi, (void*) join_data->joining_wi);
