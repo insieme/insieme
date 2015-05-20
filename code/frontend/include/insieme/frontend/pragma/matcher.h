@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/compiler.h"
 
 #include "insieme/utils/logging.h"
@@ -48,22 +49,7 @@
 #include <vector>
 #include <map>
 
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
-#include <clang/Lex/Token.h>
-#include <clang/Basic/SourceLocation.h>
-
 #include <llvm/ADT/PointerUnion.h>
-
-// forward declarations
-namespace clang {
-	class Preprocessor;
-	class Stmt;
-	class ASTContext;
-	class SourceLocation;
-}
 
 namespace insieme {
 namespace frontend {
