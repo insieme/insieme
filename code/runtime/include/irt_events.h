@@ -97,6 +97,10 @@ void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id
  * This will execute (and potentially remove) all the associated event handlers */ \
 void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code); \
  \
+/* Triggers the event event_code on ##__short__##_id, doing nothing case the register doesn't exist. \
+ * This will execute (and potentially remove) all the associated event handlers */ \
+void irt_##__short__##_event_trigger_if_exists(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code); \
+ \
 /* Resets the occured flag for the event event_code on ##__short__##_id. */ \
 void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code);
 

@@ -349,8 +349,8 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
 		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1, uint32) == 0) {
 			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
-			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
-			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV1, worker->id);
+			//triggering the parent event might fail since the register could already have been destroyed if the parent finalized before we reach this point
+			irt_wi_event_trigger_if_exists(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
 		}
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);

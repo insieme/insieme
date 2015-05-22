@@ -139,12 +139,18 @@ void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id
 	irt_spin_unlock(&reg->lock); \
 } \
  \
-void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
+static inline void irt_##__short__##_event_trigger_impl(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, const bool assert_if_not_exists) { \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
-	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
+	if (reg == NULL) { \
+		if (assert_if_not_exists) { \
+			IRT_ASSERT(false, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
+		} else { \
+			return; \
+		} \
+	} \
 	/* No locking needed here - the lookup table already locked the lock for us */ \
 	reg->occured_flag[event_code] = true; \
 	/* go through all event handlers */ \
@@ -161,6 +167,13 @@ void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const
 		cur = nex; \
 	} \
 	irt_spin_unlock(&reg->lock); \
+} \
+ \
+void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_trigger_impl(item_id, event_code, true); \
+} \
+void irt_##__short__##_event_trigger_if_exists(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_trigger_impl(item_id, event_code, false); \
 } \
  \
 void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
