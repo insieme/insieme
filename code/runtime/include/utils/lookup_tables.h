@@ -196,7 +196,8 @@ static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__ty
 static inline irt_##__type__* irt_##__type__##_table_remove(irt_##__type__##_id id) { \
 	return _irt_##__type__##_table_remove_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks, id); \
 } \
-static inline void irt_dbg_print_##__type__##_table(FILE* log_file) { \
+/* Function dumping the full table to the given FILE (e.g. stdout) */ \
+__attribute__ ((used)) void irt_dbg_print_##__type__##_table(FILE* log_file) { \
 	_irt_##__type__##_table_print_impl(log_file, irt_g_##__type__##_table); \
 }
 

@@ -105,7 +105,7 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 }
 
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
-	// Todo distributed
+	// TODO distributed
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
 	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1, uint32);
 	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1, uint32);
@@ -115,7 +115,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	//IRT_INFO("G: % 8lu Mem: % 3d  wi_id: % 8lu  g_n: % 3u\n", wg->id.full, mem_num, wi->id.full, group_num);
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
-	// Todo distributed
+	// TODO distributed
 	irt_atomic_dec(&wg->local_member_count, uint32);
 	// cleaning up group membership in wi is not necessary, wis may only be removed from groups when they end
 }
