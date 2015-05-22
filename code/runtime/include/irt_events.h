@@ -42,6 +42,34 @@
 #include "id_generation.h"
 #include "utils/lookup_tables.h"
 
+// event debug logging definitions
+#ifdef IRT_ENABLE_EVENT_DEBUG_LOGGING
+	#define _IRT_EVENT_DEBUG_DEFINES(__short__) \
+		irt_spinlock _irt_##__short__##_event_debug_print_lock; \
+		FILE* _irt_##__short__##_event_debug_log_file;
+	#define _IRT_EVENT_DEBUG_INIT(__short__) \
+		irt_spin_init(&_irt_##__short__##_event_debug_print_lock); \
+		_irt_##__short__##_event_debug_log_file = fopen("irt_event_debug_" #__short__ "_event_register_table_log", "w");
+	#define _IRT_EVENT_DEBUG_DESTROY(__short__) \
+		fclose(_irt_##__short__##_event_debug_log_file); \
+		irt_spin_destroy(&_irt_##__short__##_event_debug_print_lock);
+	#define _IRT_EVENT_DEBUG_HEADER(__short__) \
+		irt_spin_lock(&_irt_##__short__##_event_debug_print_lock);
+	#define _IRT_EVENT_DEBUG_FOOTER(__short__, ...) \
+		fprintf(_irt_##__short__##_event_debug_log_file, "\n\n"); \
+		fprintf(_irt_##__short__##_event_debug_log_file, __VA_ARGS__); \
+		irt_dbg_print_##__short__##_event_register_table(_irt_##__short__##_event_debug_log_file); \
+		irt_spin_unlock(&_irt_##__short__##_event_debug_print_lock);
+#else //IRT_ENABLE_EVENT_DEBUG_LOGGING
+	#define _IRT_EVENT_DEBUG_DEFINES(__short__)
+	#define _IRT_EVENT_DEBUG_INIT(__short__)
+	#define _IRT_EVENT_DEBUG_DESTROY(__short__)
+	#define _IRT_EVENT_DEBUG_HEADER(__short__)
+	#define _IRT_EVENT_DEBUG_FOOTER(__short__, ...)
+#endif //IRT_ENABLE_EVENT_DEBUG_LOGGING
+
+
+
 // Event system declarations
 #define IRT_DECLARE_EVENTS(__subject__, __short__, __num_events__) \
  \
@@ -70,6 +98,9 @@ struct _irt_##__short__##_event_register { \
 	struct _irt_##__short__##_event_register *lookup_table_next; \
 }; \
 IRT_MAKE_ID_TYPE(__short__##_event_register) \
+ \
+ /* Define the fields we may need for debug event logging */ \
+_IRT_EVENT_DEBUG_DEFINES(__short__) \
  \
  \
 /* Creates a new event register for a given ##__short__##_item identified by ##__short__##_id */ \
@@ -128,6 +159,19 @@ typedef enum _irt_wg_event_code {
 IRT_DECLARE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
 
 
+
+
+void irt_event_debug_init() {
+	//add each new event type to this functions also
+	_IRT_EVENT_DEBUG_INIT(wi)
+	_IRT_EVENT_DEBUG_INIT(wg)
+}
+
+void irt_event_debug_destroy() {
+	//add each new event type to this functions also
+	_IRT_EVENT_DEBUG_DESTROY(wi)
+	_IRT_EVENT_DEBUG_DESTROY(wg)
+}
 
 
 #endif // ifndef __GUARD_IRT_EVENTS_H

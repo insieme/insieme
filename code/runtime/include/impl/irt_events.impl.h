@@ -66,13 +66,16 @@ irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
 } \
  \
 void irt_##__short__##_event_register_create(const irt_##__subject__##_id item_id) { \
+	_IRT_EVENT_DEBUG_HEADER(__short__) \
 	irt_##__short__##_event_register* reg = _irt_get_##__short__##_event_register(); \
 	reg->id.full = item_id.full; \
 	reg->id.cached = reg; \
 	irt_##__short__##_event_register_table_insert(reg); \
+	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_register_create for [%d %d %d] -> reg=%p\n", item_id.node, item_id.thread, item_id.index, (void*) reg) \
 } \
  \
 void irt_##__short__##_event_register_destroy(const irt_##__subject__##_id item_id) { \
+	_IRT_EVENT_DEBUG_HEADER(__short__) \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
@@ -82,20 +85,24 @@ void irt_##__short__##_event_register_destroy(const irt_##__subject__##_id item_
 	irt_worker* self = irt_worker_get_current(); \
 	reg->lookup_table_next = self->__short__##_ev_register_list; \
 	self->__short__##_ev_register_list = reg; \
+	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_register_destroy for [%d %d %d]\n", item_id.node, item_id.thread, item_id.index) \
 } \
  \
 static inline bool _irt_##__short__##_event_handler_check_and_register_impl(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler, const bool check_occured) { \
+	_IRT_EVENT_DEBUG_HEADER(__short__) \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	if (reg == NULL) { \
+		_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_handler_check_and_register on for [%d %d %d], event_code=%d, handler=%p, check_occured=%d -> reg not found\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) handler, check_occured) \
 		/* in case there is no register for this item */ \
 		return false; \
 	} \
 	/* No locking needed here - the lookup table already locked the lock for us */ \
 	if (check_occured && reg->occured_flag[event_code]) { \
 		irt_spin_unlock(&reg->lock); \
+		_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_handler_check_and_register on for [%d %d %d], event_code=%d, handler=%p, check_occured=%d -> reg=%p - did not register\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) handler, check_occured, (void*) reg) \
 		/* in case the event already happened and we should check for that */ \
 		return false; \
 	} \
@@ -103,6 +110,7 @@ static inline bool _irt_##__short__##_event_handler_check_and_register_impl(cons
 	handler->next = reg->handler[event_code]; \
 	reg->handler[event_code] = handler; \
 	irt_spin_unlock(&reg->lock); \
+	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_handler_check_and_register for [%d %d %d], event_code=%d, handler=%p, check_occured=%d -> reg=%p - registered successfully\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) handler, check_occured, (void*) reg) \
 	return true; \
 } \
  \
@@ -115,6 +123,7 @@ bool irt_##__short__##_event_handler_check_and_register(const irt_##__subject__#
 } \
  \
 void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
+	_IRT_EVENT_DEBUG_HEADER(__short__) \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
@@ -137,9 +146,11 @@ void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id
 	} \
 	IRT_ASSERT(cur != NULL, IRT_ERR_INTERNAL, "Deleting event handler which doesn't exist (but register does)"); \
 	irt_spin_unlock(&reg->lock); \
+	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_handler_remove for [%d %d %d], event_code=%d, handler=%p -> removed handler for reg=%p\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) handler, (void*) reg) \
 } \
  \
 static inline void irt_##__short__##_event_trigger_impl(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, const bool assert_if_not_exists) { \
+	_IRT_EVENT_DEBUG_HEADER(__short__) \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
@@ -148,6 +159,7 @@ static inline void irt_##__short__##_event_trigger_impl(const irt_##__subject__#
 		if (assert_if_not_exists) { \
 			IRT_ASSERT(false, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
 		} else { \
+			_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_trigger for [%d %d %d], event_code=%d -> reg not found\n", item_id.node, item_id.thread, item_id.index, event_code) \
 			return; \
 		} \
 	} \
@@ -167,6 +179,7 @@ static inline void irt_##__short__##_event_trigger_impl(const irt_##__subject__#
 		cur = nex; \
 	} \
 	irt_spin_unlock(&reg->lock); \
+	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_trigger for [%d %d %d], event_code=%d, -> triggered on reg=%p\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) reg) \
 } \
  \
 void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
@@ -177,6 +190,7 @@ void irt_##__short__##_event_trigger_if_exists(const irt_##__subject__##_id item
 } \
  \
 void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
+	_IRT_EVENT_DEBUG_HEADER(__short__) \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
@@ -185,6 +199,7 @@ void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const i
 	/* No locking needed here - the lookup table already locked the lock for us */ \
 	reg->occured_flag[event_code] = false; \
 	irt_spin_unlock(&reg->lock); \
+	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_reset for [%d %d %d], event_code=%d, -> reset on reg=%p\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) reg) \
 }
 
 

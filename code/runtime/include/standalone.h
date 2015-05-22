@@ -122,10 +122,14 @@ void irt_init_globals() {
 #endif
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
+
+	//maybe initialize the event debug logging
+	irt_event_debug_init();
 }
 
 // cleanup global variables and delete global data structures
 void irt_cleanup_globals() {
+	irt_event_debug_destroy();
 	irt_data_item_table_cleanup();
 	irt_context_table_cleanup();
 	irt_wi_event_register_table_cleanup();
