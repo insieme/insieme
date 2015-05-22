@@ -69,10 +69,7 @@ irt_work_group* _irt_wg_create(irt_worker* self) {
 	wg->cur_sched = irt_g_loop_sched_policy_default;
 	irt_spin_init(&wg->lock);
 	// create entry in event table
-	irt_wg_event_register *reg = _irt_get_wg_event_register();
-	reg->id.full = wg->id.full;
-	reg->id.cached = reg;
-	_irt_wg_event_register_only(reg);
+	irt_wg_event_register_create(wg->id);
 	irt_inst_region_wg_init(wg);
 	return wg;
 }
@@ -85,13 +82,16 @@ irt_work_group* irt_wg_create() {
 }
 void irt_wg_end(irt_work_group* wg) {
 	irt_inst_region_wg_finalize(wg);
-	irt_wg_event_register_id tgid;
-	tgid.full = wg->id.full;
-	tgid.cached = NULL;
-	irt_wg_event_register* reg = irt_wg_event_register_table_lookup(tgid);
-	IRT_ASSERT(reg->handler[IRT_WG_EV_COMPLETED] == NULL, IRT_ERR_INTERNAL, "Unfinished business");
-	IRT_ASSERT(reg->occurrence_count[IRT_WG_EV_COMPLETED] == 1, IRT_ERR_INTERNAL, "Incomplete triggering");
-	_irt_del_wg_event_register(wg->id);
+	IRT_DEBUG_ONLY(
+		irt_wg_event_register_id tgid;
+		tgid.full = wg->id.full;
+		tgid.cached = NULL;
+		irt_wg_event_register* reg = irt_wg_event_register_table_lookup(tgid);
+		IRT_ASSERT(reg->handler[IRT_WG_EV_COMPLETED] == NULL, IRT_ERR_INTERNAL, "Unfinished business");
+		IRT_ASSERT(reg->occured_flag[IRT_WG_EV_COMPLETED], IRT_ERR_INTERNAL, "Incomplete triggering");
+		irt_spin_unlock(&reg->lock);
+	)
+	irt_wg_event_register_destroy(wg->id);
 	irt_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
 }
@@ -99,7 +99,7 @@ void irt_wg_end(irt_work_group* wg) {
 static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
 	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1, uint32) == wg->local_member_count) {
-		irt_wg_event_trigger_existing(wg->id, IRT_WG_EV_COMPLETED);
+		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
 		irt_wg_end(wg);
 	}
 }
@@ -150,19 +150,16 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 	IRT_ASSERT(wg->id.index != 0, IRT_ERR_INTERNAL, "WG 0 barrier");
 	_irt_wg_barrier_event_data barrier_ev_data = { swi, self };
 	irt_wg_event_lambda barrier_lambda = { _irt_wg_barrier_event_complete, &barrier_ev_data, NULL };
-	//IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
-	int64 ret = irt_wg_event_check_exists_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
-	if(ret != 0) return;
+	irt_wg_event_handler_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 	// check if last
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1, uint32) == wg->local_member_count) {
 		// remove own handler from event register
-		irt_wg_event_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
+		irt_wg_event_handler_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
 		// trigger barrier completion
 		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0, uint32), IRT_ERR_INTERNAL, "Barrier count reset failed");
-		irt_wg_event_trigger_existing_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
-	}
-	else {
+		irt_wg_event_trigger(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
+	} else {
 		// suspend
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
@@ -236,11 +233,11 @@ void irt_wg_join(irt_work_group_id wg_id) {
 	irt_work_item* swi = self->cur_wi;
 	_irt_wg_join_event_data clo = {swi, self};
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
-	int64 occ = irt_wg_event_check_exists_and_register(wg_id, IRT_WG_EV_COMPLETED, &lambda);
-	if(occ==0) { // if not completed, suspend this wi
+	bool registered = irt_wg_event_handler_check_and_register(wg_id, IRT_WG_EV_COMPLETED, &lambda);
+	if(registered) { // if not completed, suspend this wi
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
-        _irt_worker_switch_from_wi(self, swi);
+		_irt_worker_switch_from_wi(self, swi);
 		irt_inst_region_start_measurements(swi);
 	}
 }

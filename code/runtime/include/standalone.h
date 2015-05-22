@@ -339,7 +339,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	handler.data = &condbundle;
 	handler.func = &_irt_runtime_standalone_end_func;
 	irt_mutex_lock(&condbundle.mutex);
-	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
+	irt_wi_event_handler_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 

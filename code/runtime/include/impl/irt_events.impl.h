@@ -39,6 +39,8 @@
 #define __GUARD_IMPL_IRT_EVENTS_IMPL_H
 
 #include "irt_events.h"
+#include "abstraction/spin_locks.h"
+
 
 #define IRT_DEFINE_EVENTS(__subject__, __short__, __num_events__) \
  \
@@ -63,34 +65,40 @@ irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
 	return reg; \
 } \
  \
-void _irt_##__short__##_event_register_create(irt_##__subject__##_id __short__##_id) { \
-	irt_##__short__##_event_register *reg = _irt_get_##__short__##_event_register(); \
-	reg->id.full = __short__##_id.full; \
+void irt_##__short__##_event_register_create(const irt_##__subject__##_id item_id) { \
+	irt_##__short__##_event_register* reg = _irt_get_##__short__##_event_register(); \
+	reg->id.full = item_id.full; \
 	reg->id.cached = reg; \
 	irt_##__short__##_event_register_table_insert(reg); \
 } \
  \
-void _irt_##__short__##_event_register_destroy(irt_##__subject__##_id __short__##_id) { \
+void irt_##__short__##_event_register_destroy(const irt_##__subject__##_id item_id) { \
 	irt_##__short__##_event_register_id reg_id; \
-	reg_id.full = __short__##_id.full; \
+	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
+	irt_spin_unlock(&reg->lock); /* For better style we unlock the lock here as it has been locked by the lookup table, even though it won't be used anymore */ \
 	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Couldn't find register to remove"); \
 	irt_worker* self = irt_worker_get_current(); \
 	reg->lookup_table_next = self->__short__##_ev_register_list; \
 	self->__short__##_ev_register_list = reg; \
 } \
  \
-static inline bool _irt_##__short__##_event_handler_check_and_register_impl(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler, bool check_occured) { \
+static inline bool _irt_##__short__##_event_handler_check_and_register_impl(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler, const bool check_occured) { \
 	irt_##__short__##_event_register_id reg_id; \
-	reg_id.full = __short__##_id.full; \
+	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
-	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
-	if (reg == NULL || (check_occured && reg->occured_flag[event_code])) { \
-		/* in case there is no register for this item or the event already happened and we should check for that */ \
+	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	if (reg == NULL) { \
+		/* in case there is no register for this item */ \
 		return false; \
 	} \
-	irt_spin_lock(&reg->lock); \
+	/* No locking needed here - the lookup table already locked the lock for us */ \
+	if (check_occured && reg->occured_flag[event_code]) { \
+		irt_spin_unlock(&reg->lock); \
+		/* in case the event already happened and we should check for that */ \
+		return false; \
+	} \
 	/* insert additional handler */ \
 	handler->next = reg->handler[event_code]; \
 	reg->handler[event_code] = handler; \
@@ -98,21 +106,21 @@ static inline bool _irt_##__short__##_event_handler_check_and_register_impl(irt_
 	return true; \
 } \
  \
-bool irt_##__short__##_event_handler_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
-	return _irt_##__short__##_event_handler_check_and_register_impl(__short__##_id, event_code, handler, false); \
+bool irt_##__short__##_event_handler_register(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
+	return _irt_##__short__##_event_handler_check_and_register_impl(item_id, event_code, handler, false); \
 } \
  \
-bool irt_##__short__##_event_handler_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
-	return _irt_##__short__##_event_handler_check_and_register_impl(__short__##_id, event_code, handler, true); \
+bool irt_##__short__##_event_handler_check_and_register(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
+	return _irt_##__short__##_event_handler_check_and_register_impl(item_id, event_code, handler, true); \
 } \
  \
-void irt_##__short__##_event_handler_remove(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
+void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler) { \
 	irt_##__short__##_event_register_id reg_id; \
-	reg_id.full = __short__##_id.full; \
+	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
-	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
+	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Deleting event handler for register that doesn't exist"); \
-	irt_spin_lock(&reg->lock); \
+	/* No locking needed here - the lookup table already locked the lock for us */ \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
@@ -131,13 +139,13 @@ void irt_##__short__##_event_handler_remove(irt_##__subject__##_id __short__##_i
 	irt_spin_unlock(&reg->lock); \
 } \
  \
-void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
+void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
 	irt_##__short__##_event_register_id reg_id; \
-	reg_id.full = __short__##_id.full; \
+	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
-	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
-	irt_spin_lock(&reg->lock); \
-	/* increase event count */ \
+	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
+	/* No locking needed here - the lookup table already locked the lock for us */ \
 	reg->occured_flag[event_code] = true; \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
@@ -153,13 +161,26 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 		cur = nex; \
 	} \
 	irt_spin_unlock(&reg->lock); \
+} \
+ \
+void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_register_id reg_id; \
+	reg_id.full = item_id.full; \
+	reg_id.cached = NULL; \
+	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
+	/* No locking needed here - the lookup table already locked the lock for us */ \
+	reg->occured_flag[event_code] = false; \
+	irt_spin_unlock(&reg->lock); \
 }
 
 
 // WI events //////////////////////////////////////
+IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS, {if(element) {irt_spin_lock(&((irt_wi_event_register*) element)->lock);}})
 IRT_DEFINE_EVENTS(work_item, wi, IRT_WI_EV_NUM)
 
 // WG events //////////////////////////////////////
+IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS, {if(element) {irt_spin_lock(&((irt_wg_event_register*) element)->lock);}})
 IRT_DEFINE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
 
 

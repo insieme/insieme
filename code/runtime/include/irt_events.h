@@ -39,14 +39,15 @@
 #define __GUARD_IRT_EVENTS_H
 
 #include "declarations.h"
-
+#include "id_generation.h"
 #include "utils/lookup_tables.h"
 
+// Event system declarations
 #define IRT_DECLARE_EVENTS(__subject__, __short__, __num_events__) \
  \
  /* A function prototype for event handlers.
   * Event handlers get passed a user data object of arbitrary type. Note that upon
-  * event register destoy this object will not be reclaimed in any way, so keep this
+  * event register destruction this object will not be reclaimed in any way, so keep this
   * in mind when you pass heap allocated objects or external resources like locks.
   * The handler function returns a boolean indicating whether the handler should
   * stay registered for this event or not. Handlers which return true here have to
@@ -72,29 +73,33 @@ IRT_MAKE_ID_TYPE(__short__##_event_register) \
  \
  \
 /* Creates a new event register for a given ##__short__##_item identified by ##__short__##_id */ \
-void _irt_##__short__##_event_register_create(irt_##__subject__##_id __short__##_id); \
+void irt_##__short__##_event_register_create(const irt_##__subject__##_id item_id); \
  \
 /* Destroys the event register associated with the ##__short__##_item identified by ##__short__##_id */ \
-void _irt_##__short__##_event_register_destroy(irt_##__subject__##_id __short__##_id); \
+void irt_##__short__##_event_register_destroy(const irt_##__subject__##_id item_id); \
  \
 /* Registers a new event handler for the ##__short__##_item identified by##__short__##_id,
  * for the event event_code. This function will register the handler only in case the
  * event register for the specified item does exist. In this case it will return true. */ \
-bool irt_##__short__##_event_handler_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler); \
+bool irt_##__short__##_event_handler_register(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler); \
  \
 /* Registers a new event handler for the ##__short__##_item identified by##__short__##_id,
  * for the event event_code. This function will register the handler only in case the
  * event register for the specified item does exist and the event didn't already occur.
  * In this case it will return true (i.e. false will be returned if the register does not
  * exist or the event already happened) */ \
-bool irt_##__short__##_event_handler_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler); \
+bool irt_##__short__##_event_handler_check_and_register(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler); \
  \
 /* Removes a given event handler for the ##__short__##_item identified by##__short__##_id, for the event event_code */ \
-void irt_##__short__##_event_handler_remove(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler); \
+void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda* handler); \
  \
-/* Triggers the event event_code on ##__short__##_id. \
+/* Triggers the event event_code on ##__short__##_id, failing in case the register doesn't exist. \
  * This will execute (and potentially remove) all the associated event handlers */ \
-void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code); \
+void irt_##__short__##_event_trigger(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code); \
+ \
+/* Resets the occured flag for the event event_code on ##__short__##_id. */ \
+void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const irt_##__short__##_event_code event_code);
+
 
 
 // WI events //////////////////////////////////////
@@ -107,8 +112,6 @@ typedef enum _irt_wi_event_code {
 
 IRT_DECLARE_EVENTS(work_item, wi, IRT_WI_EV_NUM)
 
-IRT_DEFINE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
-
 
 // WG events //////////////////////////////////////
 
@@ -120,7 +123,6 @@ typedef enum _irt_wg_event_code {
 
 IRT_DECLARE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
 
-IRT_DEFINE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 
 
 
