@@ -84,9 +84,6 @@ IRT_CREATE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONT
 IRT_CREATE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 IRT_CREATE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 
-static bool irt_g_exit_handling_done;
-static bool irt_g_globals_initialization_done = false;
-
 // initialize global variables and set up global data structures
 void irt_init_globals() {
 	if(irt_g_globals_initialization_done)
@@ -106,11 +103,9 @@ void irt_init_globals() {
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 	// not using IRT_ASSERT since environment is not yet set up
-	int err_flag = 0;
-	err_flag |= irt_tls_key_create(&irt_g_error_key);
-	err_flag |= irt_tls_key_create(&irt_g_worker_key);
+	int err_flag = irt_tls_key_create(&irt_g_worker_key);
 	if(err_flag != 0) {
-		fprintf(stderr, "Could not create thread local storage key(s). Aborting.\n");
+		fprintf(stderr, "Could not create thread local storage key. Aborting.\n");
 		exit(-1);
 	}
 	irt_mutex_init(&irt_g_error_mutex);
@@ -139,7 +134,6 @@ void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
 #endif
 	irt_mutex_destroy(&irt_g_error_mutex);
-	irt_tls_key_delete(irt_g_error_key);
 	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
 	irt_hwloc_cleanup();
@@ -206,33 +200,6 @@ void irt_exit_handler() {
 	free(irt_g_workers);
 	irt_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
-}
-
-// error handling
-void irt_error_handler(int signal) {
-	irt_mutex_lock(&irt_g_error_mutex); // not unlocked
-	_irt_worker_cancel_all_others();
-	irt_error* error = (irt_error*)irt_tls_get(irt_g_error_key);
-	// gcc will warn when the cast to void* is missing, Visual Studio will not compile with the cast
-	irt_thread t;
-	irt_thread_get_current(&t);
-
-	#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-		fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
-	#elif defined(_WIN32)
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
-	#else
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t, irt_errcode_string(error->errcode));
-	#endif
-
-	fprintf(stderr, "Additional information:\n");
-	irt_print_error_info(stderr, error);
-	exit(-error->errcode);
-}
-
-// interrupts are ignored
-void irt_interrupt_handler(int signal) {
-	// do nothing
 }
 
 // initialize objects required for signaling threads
@@ -319,8 +286,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// TODO [_GEMS]: signal is not supported by gems platform
 	// initialize error and termination signal handlers
 	if(handle_signals) {
-		signal(IRT_SIG_ERR, &irt_error_handler);
-		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 		signal(SIGTERM, &irt_term_handler);
 		signal(SIGINT, &irt_term_handler);
 		signal(SIGSEGV, &irt_abort_handler);

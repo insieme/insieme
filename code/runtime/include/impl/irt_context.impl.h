@@ -40,14 +40,14 @@
 
 #include "irt_context.h"
 
+#include "worker.h"
 #include "irt_optimizer.h"
 #include "irt_logging.h"
 #include "instrumentation_regions.h"
 #include "instrumentation_events.h"
+#include "wi_implementation.h"
 
 #include "utils/lookup_tables.h"
-#include "impl/worker.impl.h"
-#include "wi_implementation.h"
 
 IRT_DEFINE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS)
 

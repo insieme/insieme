@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,15 +38,16 @@
 #ifndef __GUARD_UTILS_AFFINITY_H
 #define __GUARD_UTILS_AFFINITY_H
 
-// in this file, only prototypes of platform independent shall be declared
+// in this file, only prototypes of platform independent functions shall be declared
+
+#include <limits.h>
 
 #include "declarations.h"
 #include "hwinfo.h"
 #include "irt_globals.h"
 #include "irt_logging.h"
-
-#include <limits.h>
-
+#include "abstraction/threads.h"
+#include "error_handling.h"
 
 typedef enum {
 	IRT_AFFINITY_NONE = 0,
@@ -70,9 +71,6 @@ typedef struct {
 } irt_affinity_physical_mapping;
 
 static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
-
-#include "abstraction/threads.h"
-#include "impl/error_handling.impl.h"
 
 #define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)   // number of processors identifiable through a bitmask
 #define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD) // number of bitmasks required to capture every processor

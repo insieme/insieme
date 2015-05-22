@@ -38,15 +38,40 @@
 #ifndef __GUARD_IMPL_ERROR_HANDLING_IMPL_H
 #define __GUARD_IMPL_ERROR_HANDLING_IMPL_H
 
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+
 #include "error_handling.h"
 
 #include "irt_globals.h"
 
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+
+#include "impl/worker.impl.h"
+
+void irt_error_handler(irt_error* error) {
+	irt_mutex_lock(&irt_g_error_mutex); // not unlocked, prevent multiple reports
+
+	irt_thread t;
+	irt_thread_get_current(&t);
+
+	#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
+		fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
+	#elif defined(_WIN32)
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
+	#else
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t, irt_errcode_string(error->errcode));
+	#endif
+
+	fprintf(stderr, "Additional information:\n");
+	irt_print_error_info(stderr, error);
+
+	// suppress exit handling
+	irt_g_exit_handling_done = true;
+	exit(-error->errcode);
+}
 
 void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 	va_list args;
@@ -59,33 +84,13 @@ void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 	err->errcode = code;
 	err->additional_bytes = additional_bytes;
 	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
-}
-
-void irt_throw_generic_error(irt_error* error) {
-	if(irt_tls_set(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		perror("System Error message");
-		exit(-1);
-	}
-	raise(IRT_SIG_ERR);
+	irt_error_handler(err);
 }
 
 const char* irt_errcode_string(irt_errcode code) {
 	static const char *irt_errcode_strings[] = {
-		"IRT_ERR_NONE",
-		"IRT_ERR_IO",
-		"IRT_ERR_INIT",
-		"IRT_ERR_INTERNAL",
-		"IRT_ERR_OVERFLOW",
-		"IRT_ERR_APP",
-		"IRT_ERR_OCL",
-		"IRT_ERR_INSTRUMENTATION",
-		"IRT_ERR_INVALIDARGUMENT",
-		"IRT_ERR_HW_INFO",
-		"IRT_ERR_OMPP",
-		"IRT_ERR_BLOB_CONTAINER",
-		//NOTE: When adding a new error string here also update the list of error codes in error_handling.h
+		#define IRT_ERROR(_err) #_err,
+		#include "irt_errors.def"
 	};
 	return irt_errcode_strings[code];
 }
@@ -95,6 +100,5 @@ void irt_print_error_info(FILE* target, irt_error* error) {
 		fprintf(target, "%s\n", (char*)error+sizeof(irt_error));
 	}
 }
-
 
 #endif // ifndef __GUARD_IMPL_ERROR_HANDLING_IMPL_H

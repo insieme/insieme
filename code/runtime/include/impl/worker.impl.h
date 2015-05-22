@@ -333,7 +333,6 @@ void _irt_worker_cancel_all_others() {
 			irt_thread_cancel(&(cur->thread));
 		}
 	}
-	
 }
 
 void _irt_worker_end_all() {
