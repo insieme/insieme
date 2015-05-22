@@ -38,12 +38,8 @@
 #include <pthread.h>
 #include <omp.h>
 
-#include <id_generation.h>
-
-#include <impl/error_handling.impl.h>
-
-// horrible hack incoming
-uint32 irt_g_error_key = 0;
+#include "irt_all_impls.h"
+#include "standalone.h"
 
 IRT_DECLARE_ID_TYPE(id_gen_test);
 IRT_MAKE_ID_TYPE(id_gen_test);

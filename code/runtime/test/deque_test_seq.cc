@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,12 +38,10 @@
 #include <pthread.h>
 #include <omp.h>
 
-#include <utils/deques.h>
+#include "utils/deques.h"
 
-#include <impl/error_handling.impl.h>
-
-// horrible hack incoming
-uint32 irt_g_error_key = 0;
+#include "irt_all_impls.h"
+#include "standalone.h"
 
 #define TEST_ELEMS 777
 
