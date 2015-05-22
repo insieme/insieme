@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,15 +29,16 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 #ifndef __GUARD_IRT_OCL_H
 #define __GUARD_IRT_OCL_H
-#include "impl/error_handling.impl.h"
+
+#include "error_handling.h"
 #include "abstraction/threads.h"
 
 #define IRT_OCL_INIT_DEVS	(1 << 1)
