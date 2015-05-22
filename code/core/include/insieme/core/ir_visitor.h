@@ -719,32 +719,33 @@ public:
 	 */
 	void visitNode(const Ptr<const Node>& node, P...context) {
 
+		// create a worklist
 		std::queue<Ptr<const Node>> queue;
 
-		IRVisitor<void, Ptr>* visitor;
-		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
+		// start with this node
+		queue.push(node);
 
-			// visit the current node
-			this->subVisitor.visit(node, context...);
+		// process until the queue is empty
+		while(!queue.empty()) {
+
+			// get the current node
+			auto cur = queue.front();
+			queue.pop();
+
+			// avoid visiting types if not necessary
+			if (!this->isVisitingTypes() && cur->getNodeCategory() == NC_Type) {
+				continue;
+			}
+
+			// visit current node
+			subVisitor.visit(cur, context...);
 
 			// add children of current node to the queue
-			for_each(node->getChildList(), [&](const Ptr<const Node>& cur) {
-				queue.push(cur);
-			});
-
-			// proceed with next node in the queue
-			if (!queue.empty()) {
-				Ptr<const Node> next = queue.front();
-				queue.pop();
-				visitor->visit(next);
+			for(const auto& child : cur->getChildList()) {
+				queue.push(child);
 			}
-		}, this->isVisitingTypes());
 
-		// update pointer ..
-		visitor = &lambdaVisitor;
-
-		// trigger the visit (only once)
-		visitor->visit(node);
+		}
 	}
 };
 

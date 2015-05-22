@@ -105,7 +105,7 @@ TEST(DataLayout, AosToSoa) {
 				a = *copy;
 				decl ref<ref<array<twoElem,1>>> uninitialized;
 				uninitialized = *a;
-				decl ref<ref<array<twoElem,1>>> ptr = ref_var(scalar_to_array((*a)[i]));
+				decl ref<ref<array<twoElem,1>>> ptr = ref_var(array_view((*a), i));
 				(*ptr)[i].int = i;
 				ref_deref(a)[i].int = i;
 			}
@@ -139,7 +139,7 @@ TEST(DataLayout, AosToSoa) {
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -156,8 +156,8 @@ TEST(DataLayout, AosToSoa) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(98, numberOfCompoundStmts(code));
-	EXPECT_EQ(10, countMarshalledAccesses(code));
+	EXPECT_EQ(92, numberOfCompoundStmts(code));
+	EXPECT_EQ(8, countMarshalledAccesses(code));
 	EXPECT_EQ(4, countMarshalledAssigns(code));
 }
 /*
@@ -172,58 +172,58 @@ let type001 = struct<
 >;
 
 {
-    decl ref<ref<array<type000,1>>> v0 =  var( new(array_create_1D(type<type000>, 100u)));
-    decl ref<type001> v90 =  var(undefined(type<type001>));
-    v90->int :=  new(array_create_1D(type<int<4>>, 100u));
-    v90->float :=  new(array_create_1D(type<real<4>>, 100u));
-    v0 :=  new(array_create_1D(type<type000>, 100u));
-    v90->int :=  new(array_create_1D(type<int<4>>, 100u));
-    v90->float :=  new(array_create_1D(type<real<4>>, 100u));
+    decl ref<ref<array<type000,1>>> v0 = ( var(( new(array_create_1D(type<type000>, 100u)))));
+    decl ref<type001> v60 = ( var(undefined(type<type001>)));
+    ((v60->int) := ( new(array_create_1D(type<int<4>>, 100u))));
+    ((v60->float) := ( new(array_create_1D(type<real<4>>, 100u))));
+    (v0 := ( new(array_create_1D(type<type000>, 100u))));
+    ((v60->int) := ( new(array_create_1D(type<int<4>>, 100u))));
+    ((v60->float) := ( new(array_create_1D(type<real<4>>, 100u))));
     for(decl int<4> v1 = 0 .. 100 : 1) {
-        decl ref<type000> v2 =  var(undefined(type<type000>));
-         *v0&[v1] :=  *v2;
+        decl ref<type000> v2 = ( var(undefined(type<type000>)));
+        ((( *v0)&[v1]) := ( *v2));
     };
-    for(decl int<4> v97 = 0 .. 100 : 1) {
-         *v90->int&[v97] :=  * *v0&[v97]->int;
-         *v90->float&[v97] :=  * *v0&[v97]->float;
+    for(decl int<4> v123 = 0 .. 100 : 1) {
+        ((( *(v60->int))&[v123]) := ( *((( *v0)&[v123])->int)));
+        ((( *(v60->float))&[v123]) := ( *((( *v0)&[v123])->float)));
     };
     for(decl int<4> v3 = 0 .. 42 : 1) {
-        decl ref<type000> v4 =  var(struct{int:= * *v90->int&[v3], float:= * *v90->float&[v3]});
-        decl ref<ref<array<type000,1>>> v5 =  var( *v0);
-        decl ref<type001> v91 =  var(undefined(type<type001>));
-        v91->int :=  *v90->int;
-        v91->float :=  *v90->float;
-        v5 :=  *v0;
-        v91->int :=  *v90->int;
-        v91->float :=  *v90->float;
-        v0 :=  *v5;
-        v90->int :=  *v91->int;
-        v90->float :=  *v91->float;
-        decl ref<ref<array<type000,1>>> v6 =  var(undefined(type<ref<array<type000,1>>>));
-        decl ref<type001> v92 =  var(undefined(type<type001>));
-        v92->int := undefined(type<ref<array<int<4>,1>>>);
-        v92->float := undefined(type<ref<array<real<4>,1>>>);
-        v6 :=  *v0;
-        v92->int :=  *v90->int;
-        v92->float :=  *v90->float;
-        decl ref<ref<array<type000,1>>> v7 =  var(scalar_to_array( *v0&[v3]));
-        decl ref<type001> v93 =  var(undefined(type<type001>));
-        v93->int := scalar_to_array( *v90->int&[v3]);
-        v93->float := scalar_to_array( *v90->float&[v3]);
-         *v93.int&[v3] := v3;
-         *v90.int&[v3] := v3;
+        decl ref<type000> v4 = ( var(struct{int:=( *(( *(v60->int))&[v3])), float:=( *(( *(v60->float))&[v3]))}));
+        decl ref<ref<array<type000,1>>> v5 = ( var(( *v0)));
+        decl ref<type001> v61 = ( var(undefined(type<type001>)));
+        ((v61->int) := ( *(v60->int)));
+        ((v61->float) := ( *(v60->float)));
+        (v5 := ( *v0));
+        ((v61->int) := ( *(v60->int)));
+        ((v61->float) := ( *(v60->float)));
+        (v0 := ( *v5));
+        ((v60->int) := ( *(v61->int)));
+        ((v60->float) := ( *(v61->float)));
+        decl ref<ref<array<type000,1>>> v6 = ( var(undefined(type<ref<array<type000,1>>>)));
+        decl ref<type001> v62 = ( var(undefined(type<type001>)));
+        ((v62->int) := undefined(type<ref<array<int<4>,1>>>));
+        ((v62->float) := undefined(type<ref<array<real<4>,1>>>));
+        (v6 := ( *v0));
+        ((v62->int) := ( *(v60->int)));
+        ((v62->float) := ( *(v60->float)));
+        decl ref<ref<array<type000,1>>> v7 = ( var(array_view(( *v0), v3)));
+        decl ref<type001> v63 = ( var(undefined(type<type001>)));
+        ((v63->int) := array_view(( *(v60->int)), v3));
+        ((v63->float) := array_view(( *(v60->float)), v3));
+        (((( *v63).int)&[v3]) := v3);
+        (((( *v60).int)&[v3]) := v3);
     };
-    for(decl int<4> v98 = 0 .. 100 : 1) {
-         *v0&[v98]->int :=  * *v90->int&[v98];
-         *v0&[v98]->float :=  * *v90->float&[v98];
+    for(decl int<4> v124 = 0 .. 100 : 1) {
+        (((( *v0)&[v124])->int) := ( *(( *(v60->int))&[v124])));
+        (((( *v0)&[v124])->float) := ( *(( *(v60->float))&[v124])));
     };
     for(decl int<4> v8 = 0 .. 100 : 1) {
-        decl ref<type000> v9 =  var(undefined(type<type000>));
-        v9 :=  * *v0&[v8];
+        decl ref<type000> v9 = ( var(undefined(type<type000>)));
+        (v9 := ( *(( *v0)&[v8])));
     };
-     del( *v90->int);
-     del( *v90->float);
-     del( *v0);
+    ( del(( *(v60->int))));
+    ( del(( *(v60->float))));
+    ( del(( *v0)));
 }
 */
 
@@ -383,7 +383,7 @@ TEST(DataLayout, Globals) {
 			let globalAccess = lambda (int<4> idx)->unit {
 				decl ref<twoElem> tmp = ref_var(*((*a)[idx]));
 				decl ref<ref<array<twoElem,1>>> copy = ref_var(*a);
-				decl ref<ref<array<twoElem,1>>> ptr = ref_var(scalar_to_array((*a)[idx]));
+				decl ref<ref<array<twoElem,1>>> ptr = ref_var(array_view((*a), idx));
 				(*ptr)[idx].int = idx;
 				ref_deref(a)[idx].int = idx;
 			};
@@ -417,8 +417,8 @@ TEST(DataLayout, Globals) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(72, numberOfCompoundStmts(code));
-	EXPECT_EQ(13, countMarshalledAccesses(code));
+	EXPECT_EQ(66, numberOfCompoundStmts(code));
+	EXPECT_EQ(11, countMarshalledAccesses(code));
 	EXPECT_EQ(7, countMarshalledAssigns(code));
 }
 /*
@@ -432,49 +432,49 @@ let type001 = struct<
 	float:ref<array<real<4>,1>>
 >;
 
-let fun000 = fun(ref<ref<array<type000,1>>> v1, ref<type001> v154) -> unit {
+let fun000 = fun(ref<ref<array<type000,1>>> v1, ref<type001> v164) -> unit {
     for(decl int<4> v2 = 0 .. 42 : 1) {
-         *v154.int&[v2] := v2;
+        (((( *v164).int)&[v2]) := v2);
     };
 };
 
 let fun001 = fun(int<4> v1) -> unit {
-    decl ref<type000> v2 =  var(struct{int:= * *a_soa->int&[v1], float:= * *a_soa->float&[v1]});
-    decl ref<ref<array<type000,1>>> v3 =  var( *a);
-    decl ref<type001> v155 =  var(undefined(type<type001>));
-    v155->int :=  *a_soa->int;
-    v155->float :=  *a_soa->float;
-    decl ref<ref<array<type000,1>>> v4 =  var(scalar_to_array( *a&[v1]));
-    decl ref<type001> v156 =  var(undefined(type<type001>));
-    v156->int := scalar_to_array( *a_soa->int&[v1]);
-    v156->float := scalar_to_array( *a_soa->float&[v1]);
-     *v156.int&[v1] := v1;
-     *a_soa.int&[v1] := v1;
+    decl ref<type000> v2 = ( var(struct{int:=( *(( *(a_soa->int))&[v1])), float:=( *(( *(a_soa->float))&[v1]))}));
+    decl ref<ref<array<type000,1>>> v3 = ( var(( *a)));
+    decl ref<type001> v165 = ( var(undefined(type<type001>)));
+    ((v165->int) := ( *(a_soa->int)));
+    ((v165->float) := ( *(a_soa->float)));
+    decl ref<ref<array<type000,1>>> v4 = ( var(array_view(( *a), v1)));
+    decl ref<type001> v166 = ( var(undefined(type<type001>)));
+    ((v166->int) := array_view(( *(a_soa->int)), v1));
+    ((v166->float) := array_view(( *(a_soa->float)), v1));
+    (((( *v166).int)&[v1]) := v1);
+    (((( *a_soa).int)&[v1]) := v1);
 };
 
 {
-    a :=  new(array_create_1D(type<type000>, 100u));
-    a_soa->int :=  new(array_create_1D(type<int<4>>, 100u));
-    a_soa->float :=  new(array_create_1D(type<real<4>>, 100u));
+    (a := ( new(array_create_1D(type<type000>, 100u))));
+    ((a_soa->int) := ( new(array_create_1D(type<int<4>>, 100u))));
+    ((a_soa->float) := ( new(array_create_1D(type<real<4>>, 100u))));
     loadData(a);
-    for(decl uint<4> v157 = 0 .. 100u : 1) {
-         *a_soa->int&[v157] :=  * *a&[v157]->int;
-         *a_soa->float&[v157] :=  * *a&[v157]->float;
+    for(decl uint<4> v221 = 0 .. 100u : 1) {
+        ((( *(a_soa->int))&[v221]) := ( *((( *a)&[v221])->int)));
+        ((( *(a_soa->float))&[v221]) := ( *((( *a)&[v221])->float)));
     };
     fun000(a, a_soa);
     fun001(7);
-    for(decl uint<4> v159 = 0 .. 100u : 1) {
-         *a&[v159]->int :=  * *a_soa->int&[v159];
-         *a&[v159]->float :=  * *a_soa->float&[v159];
+    for(decl uint<4> v223 = 0 .. 100u : 1) {
+        (((( *a)&[v223])->int) := ( *(( *(a_soa->int))&[v223])));
+        (((( *a)&[v223])->float) := ( *(( *(a_soa->float))&[v223])));
     };
-    storeData( *a);
-    for(decl uint<4> v158 = 0 .. 100u : 1) {
-         *a_soa->int&[v158] :=  * *a&[v158]->int;
-         *a_soa->float&[v158] :=  * *a&[v158]->float;
+    storeData(( *a));
+    for(decl uint<4> v222 = 0 .. 100u : 1) {
+        ((( *(a_soa->int))&[v222]) := ( *((( *a)&[v222])->int)));
+        ((( *(a_soa->float))&[v222]) := ( *((( *a)&[v222])->float)));
     };
-     del( *a_soa->int);
-     del( *a_soa->float);
-     del( *a);
+    ( del(( *(a_soa->int))));
+    ( del(( *(a_soa->float))));
+    ( del(( *a)));
 }
 */
 
@@ -502,9 +502,9 @@ TEST(DataLayout, Tuple) {
 			let actualWork = lambda (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, 
 					                 vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {
 				decl ref<ref<array<twoElem,1>>> d = var(a);
-				decl ref<ref<array<twoElem,1>>> f = var(scalar_to_array(a[17]));
+				decl ref<ref<array<twoElem,1>>> f = var(array_view(a, 17));
 				(*d)[13].int = 5;
-				f = scalar_to_array(a[42]);
+				f = array_view(a, 42);
 
 //				decl ref<array<twoElem,1>> e; 	not supported
 //				e = *a;							asshole
@@ -574,7 +574,7 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(78, numberOfCompoundStmts(code));
+	EXPECT_EQ(70, numberOfCompoundStmts(code));
 	EXPECT_EQ(2, countMarshalledAccesses(code));
 	EXPECT_EQ(2, countMarshalledAssigns(code));
 }
