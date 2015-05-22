@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <sstream>
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/varuniq_extension.h"
 
@@ -112,9 +113,13 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
+	std::stringstream strbuf;
 	VarUniqExtension vu((NodeAddress(fragment)));
 	auto result=vu.IR();
-	/*std::cout << printer::PrettyPrinter(fragment) << std::endl
-	          << printer::PrettyPrinter(result.getAddressedNode()) << std::endl; */
+	strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
+	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
+	       << "# # # # #   NEW CODE   # # # # #" << std::endl
+	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
+	std::cout << strbuf.str();
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }

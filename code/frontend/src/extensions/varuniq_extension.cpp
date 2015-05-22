@@ -38,7 +38,11 @@
 #include <ostream>
 #include <string>
 
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_node_accessor.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/frontend/extensions/varuniq_extension.h"
 #include "insieme/utils/logging.h"
 
@@ -87,7 +91,6 @@ void VarUniqExtension::visitVariable(const VariableAddress &var) {
 		idstaken[id]=defpt;
 	} else {
 		use[defpt]++;
-		//std::cout << var << " (" << *var << ") defined at " << def << " (" << *def << ")" << std::endl;
 	}
 
 	// visit children
@@ -102,7 +105,20 @@ NodeAddress VarUniqExtension::IR() {
 	std::cout << "Found " << def << " variable defs, " << allUses() << " uses." << std::endl;
 
 	// return the newly generated code
-	return frag;
+	NodeManager& mgr=frag->getNodeManager();
+	NodePtr newfrag=frag.getAddressedNode();
+	for (auto id: idstaken) {
+		if (false && id.first<=5) {
+			printNode(id.second);
+			VariablePtr var3=Variable::get(mgr, id.second->getType(), id.first);
+			printNode(NodeAddress(var3));
+		}
+		NodePtr oldvar=id.second.getAddressedNode(),
+		        newvar=NodeAddress(Variable::get(mgr, id.second->getType(), id.first)),
+		        oldfrag=newfrag;
+		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, true);
+	}
+	return NodeAddress(newfrag);
 }
 
 /// Find the address where the given variable has been defined.
