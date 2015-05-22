@@ -57,7 +57,7 @@ extern irt_spinlock irt_g_##__type__##_table_locks[__num_buckets__];
 
 //Defines the functions doing the actual work.
 //The passed __locked__ parameter will determine whether table modifications will be protected by locks.
-#define _IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
+#define _IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__, __post_lookup_action__) \
  \
 static inline void _irt_##__type__##_table_init_impl(irt_##__type__** table, irt_spinlock* table_locks) { \
 	for(int i=0; i<__num_buckets__; ++i) { \
@@ -108,22 +108,24 @@ static inline irt_##__type__* _irt_##__type__##_table_lookup_impl(irt_##__type__
 	element = table[hash_val]; \
 	IRT_DEBUG_ONLY(if(element)) { IRT_DEBUG("Starting at elem %p, id %u/%u/%u", (void*) element, element->id.node, element->id.thread, element->id.index); } \
 	while(element && element->id.full != id.full) { element = element->__next_name__; IRT_DEBUG("Looking at elem %p, id %u/%u/%u", (void*) element, element->id.node, element->id.thread, element->id.index); } \
+	__post_lookup_action__; /* allow for some post lookup action like locking */ \
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 	id.cached = element; IRT_DEBUG("Found elem %p\n", (void*) element); \
 	return element; \
 } \
-static inline irt_##__type__* _irt_##__type__##_table_lookup_or_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* element) { \
-	uint32 hash_val = __hashing_expression__(element->id) % __num_buckets__; \
+static inline irt_##__type__* _irt_##__type__##_table_lookup_or_insert_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__* new_element) { \
+	uint32 hash_val = __hashing_expression__(new_element->id) % __num_buckets__; \
 	if(__locked__) irt_spin_lock(&table_locks[hash_val]); \
-	irt_##__type__* ret_element = table[hash_val]; \
-	while(ret_element && ret_element->id.full != element->id.full) { ret_element = ret_element->__next_name__; } \
-	if(!ret_element) { \
-		element->__next_name__ = table[hash_val]; \
-		table[hash_val] = element; \
-		ret_element = element; \
+	irt_##__type__* element = table[hash_val]; \
+	while(element && element->id.full != new_element->id.full) { element = element->__next_name__; } \
+	if(!element) { \
+		new_element->__next_name__ = table[hash_val]; \
+		table[hash_val] = new_element; \
+		element = new_element; \
 	} \
+	__post_lookup_action__; /* allow for some post lookup action like locking */ \
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
-	return ret_element; \
+	return element; \
 } \
 static inline irt_##__type__* _irt_##__type__##_table_remove_impl(irt_##__type__** table, irt_spinlock* table_locks, irt_##__type__##_id id) { \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; \
@@ -137,6 +139,7 @@ static inline irt_##__type__* _irt_##__type__##_table_remove_impl(irt_##__type__
 	} \
 	if(element->id.full == id.full) { \
 		table[hash_val] = element->__next_name__; \
+		__post_lookup_action__; /* allow for some post lookup action like locking */ \
 		if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 		return element; \
 	} \
@@ -150,6 +153,7 @@ static inline irt_##__type__* _irt_##__type__##_table_remove_impl(irt_##__type__
 		return NULL; \
 	} \
 	previous->__next_name__ = element->__next_name__;\
+	__post_lookup_action__; /* allow for some post lookup action like locking */ \
 	if(__locked__) irt_spin_unlock(&table_locks[hash_val]); \
 	return element; \
 } \
@@ -173,8 +177,8 @@ static inline void _irt_##__type__##_table_print_impl(FILE* log_file, irt_##__ty
 }
 
 //Defines the function wrappers with a simpler interface used externally.
-#define _IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
-_IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
+#define _IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__, __post_lookup_action__) \
+_IRT_DEFINE_LOOKUP_TABLE_FUNCTIONS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__, __post_lookup_action__) \
 static inline void irt_##__type__##_table_init() { \
 	_irt_##__type__##_table_init_impl(irt_g_##__type__##_table, irt_g_##__type__##_table_locks); \
 } \
@@ -202,28 +206,34 @@ __attribute__ ((used)) void irt_dbg_print_##__type__##_table(FILE* log_file) { \
 }
 
 //Defines the lookup table functions and the needed data structures.
-#define _IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
+#define _IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__, __post_lookup_action__) \
 _IRT_DEFINE_LOOKUP_TABLE_DATA(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__) \
-_IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__)
+_IRT_DEFINE_LOOKUP_TABLE_FUNCTION_WRAPPERS(__type__, __next_name__, __hashing_expression__, __num_buckets__, __locked__, __post_lookup_action__)
 
 /* Defines a global lookup table and the functions to insert, retrieve and
  * delete elements from it. Note that there are two variants of
  * lookup tables - locked and non-locked ones. Only the locked variant can be
- * modified safely by multiple concurrent threads.
+ * modified safely by multiple concurrent threads. The locked lookup table also
+ * comes in a variant which supports passing a post_lookup_action code block.
  *
  * Arguments:
- * __type__ : struct type to create table for (assumed to have an "id" member)
- * __next_name__ : name of the next pointer in the struct
- * __hashing_expression__ : expression that generates a hash value from an id
- * __num_buckets__ : number of slots in the hash map
+ * __type__                 struct type to create table for (assumed to have an "id" member)
+ * __next_name__            name of the next pointer in the struct
+ * __hashing_expression__   expression that generates a hash value from an id
+ * __num_buckets__          number of slots in the hash map
+ * __post_lookup_action__   an optional code block argument for locked lookup tables which
+ *                          is executed after a successful lookup, lookup_or_insert or remove
  *
  * Note: The globals must still be created using the matching CREATE_LOOKUP_TABLE macro
  */
 #define IRT_DEFINE_LOCKED_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
-_IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 1)
+_IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 1, {})
+
+#define IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(__type__, __next_name__, __hashing_expression__, __num_buckets__, __post_lookup_action__) \
+_IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 1, __post_lookup_action__)
 
 #define IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__) \
-_IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 0)
+_IRT_DEFINE_LOOKUP_TABLE(__type__, __next_name__, __hashing_expression__, __num_buckets__, 0, {})
 
 /* Creates the data structures necessary for the lookup tables to store their
  * data.
