@@ -100,15 +100,17 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 	EXPECT_GT(frequencies[0], 0);
 	EXPECT_GE(frequencies[1], frequencies[0]);
 
+	uint32 total_num_logical_cpus = irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket() * irt_hw_get_num_threads_per_core();
+
 	// try each frequency once
 	for(uint32 freq_id = 0; freq_id < length; ++freq_id) {
-		uint32 all_core_frequencies_min[irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket()];
-		uint32 all_core_frequencies_max[irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket()];
+		uint32 all_core_frequencies_min[total_num_logical_cpus];
+		uint32 all_core_frequencies_max[total_num_logical_cpus];
 		uint32 frequency = frequencies[freq_id];
 		// try each socket once
 		for(uint32 socket_id = 0; socket_id < sockets; ++socket_id) {
 			// save the current frequency settings
-			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
+			for(uint32 core_id = 0; core_id < total_num_logical_cpus; ++core_id) {
 				all_core_frequencies_min[core_id] = _irt_cpu_freq_get_uncached(core_id, "scaling_min_freq");
 				all_core_frequencies_max[core_id] = _irt_cpu_freq_get_uncached(core_id, "scaling_max_freq");
 			}
