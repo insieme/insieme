@@ -110,6 +110,33 @@ void func7() {
    printf("%d: %d\n",__LINE__, i);
 }
 
+void func8() {
+    int n=0;
+    int x=1;
+    //loop should be converted to while
+    for(int i=1; i<10; i+=i) {
+        n+=i;
+    }
+    printf("21: %i\n", n);
+    n=1;
+    //loop should be converted to while
+    for(int i=1; i<10; i+=i) {
+        n+=n;
+    }
+    printf("22: %i\n", n);
+    n=0;
+    //loop should not be converted to while
+    for(int i=1; i<10; i+=x) {
+        n+=i;
+    }
+    printf("23: %i\n", n);
+    n=1;
+    //loop should not be converted to while
+    for(int i=1; i<10; i+=x) {
+        n+=n;
+    }
+    printf("24: %i\n", n);
+}
 
 int main(int argc, char* argv[]) {
 
@@ -183,4 +210,5 @@ int main(int argc, char* argv[]) {
 	func5(a);
 	func6();
     func7();
+    func8();
 }
