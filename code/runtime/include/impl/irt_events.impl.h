@@ -81,7 +81,7 @@ void irt_##__short__##_event_register_destroy(const irt_##__subject__##_id item_
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
 	irt_spin_unlock(&reg->lock); /* For better style we unlock the lock here as it has been locked by the lookup table, even though it won't be used anymore */ \
-	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Couldn't find register to remove"); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Couldn't find register for [%d %d %d] to remove", item_id.node, item_id.thread, item_id.index); \
 	irt_worker* self = irt_worker_get_current(); \
 	reg->lookup_table_next = self->__short__##_ev_register_list; \
 	self->__short__##_ev_register_list = reg; \
@@ -128,7 +128,7 @@ void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
-	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Deleting event handler for register that doesn't exist"); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Deleting event handler for register [%d %d %d] (event_code %d) that doesn't exist", item_id.node, item_id.thread, item_id.index, event_code); \
 	/* No locking needed here - the lookup table already locked the lock for us */ \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
@@ -144,7 +144,7 @@ void irt_##__short__##_event_handler_remove(const irt_##__subject__##_id item_id
 		} \
 		cur = nex; \
 	} \
-	IRT_ASSERT(cur != NULL, IRT_ERR_INTERNAL, "Deleting event handler which doesn't exist (but register does)"); \
+	IRT_ASSERT(cur != NULL, IRT_ERR_INTERNAL, "Deleting event handler which doesn't exist (but register [%d %d %d] does)", item_id.node, item_id.thread, item_id.index); \
 	irt_spin_unlock(&reg->lock); \
 	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_handler_remove for [%d %d %d], event_code=%d, handler=%p -> removed handler for reg=%p\n", item_id.node, item_id.thread, item_id.index, event_code, (void*) handler, (void*) reg) \
 } \
@@ -157,7 +157,7 @@ static inline void irt_##__short__##_event_trigger_impl(const irt_##__subject__#
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	if (reg == NULL) { \
 		if (assert_if_not_exists) { \
-			IRT_ASSERT(false, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
+			IRT_ASSERT(false, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d] for event_code %d", item_id.node, item_id.thread, item_id.index, event_code); \
 		} else { \
 			_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_trigger for [%d %d %d], event_code=%d -> reg not found\n", item_id.node, item_id.thread, item_id.index, event_code) \
 			return; \
@@ -195,7 +195,7 @@ void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const i
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
-	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d]", item_id.node, item_id.thread, item_id.index); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Triggering event with no associated register [%d %d %d] for event_code %d", item_id.node, item_id.thread, item_id.index, event_code); \
 	/* No locking needed here - the lookup table already locked the lock for us */ \
 	reg->occured_flag[event_code] = false; \
 	irt_spin_unlock(&reg->lock); \
