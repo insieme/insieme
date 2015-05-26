@@ -443,6 +443,17 @@ insieme::core::ForStmtPtr LoopAnalyzer::getLoop(const insieme::core::StatementPt
 			throw analysis::LoopNormalizationError("Induction variable is not preserved during loop");
 	}
 
+	// if the iteration variable is used in the step expr we convert it into a while loop
+	visitDepthFirst(stepExpr, [&] (const core::VariablePtr& var) {
+            //does the induction variable occur in the step expr
+            for(auto c : vars) {
+                if(c == var) {
+                    //we know that the step expression uses the loop variable (e.g., i+=i)
+                    throw analysis::LoopNormalizationError("Induction variable is used in step expression");
+                }
+            }
+        });
+
 	// substitute the induction expression by the induction var
 	core::StatementPtr newBody = core::transform::replaceAllGen(mgr, body, originalInductionExpr, newInductionExpr, true);
 
