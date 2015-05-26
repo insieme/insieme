@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,14 +29,16 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 #ifndef __GUARD_UTILS_FREQUENCY_H
 #define __GUARD_UTILS_FREQUENCY_H
+
+#include "config.h"
 
 /*
  * These functions provide an interface to get and set CPU frequency settings.
@@ -45,6 +47,9 @@
  */
 
 static irt_affinity_mask irt_g_frequency_setting_modified_mask = { { 0 } };
+
+// cached information about the current cpu min/max frequencies, eliminates superfluous writes
+static uint32 irt_g_frequency_cur_state[IRT_MAX_CORES][2];
 
 /*
  * reads all available frequencies for all available cores as a list into the provided pointer
@@ -122,6 +127,8 @@ int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker);
  */
 
 int32 irt_cpu_freq_set_frequency_worker(const irt_worker* worker, const uint32 frequency);
+
+int32 irt_cpu_freq_set_frequency_core(const uint32 coreid, const uint32 frequency);
 
 /*
  * sets the frequency of a core of a worker to the value specified by the environment variable

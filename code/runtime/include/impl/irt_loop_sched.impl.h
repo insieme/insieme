@@ -302,12 +302,14 @@ inline static void irt_schedule_loop(
 	uint16 w_id = worker->id.thread;
 	if(variant.meta_info && variant.meta_info->autotuning.available) {
 		if(w_id < variant.meta_info->autotuning.map.size) {
-			irt_affinity_mask_clear(&(worker->affinity));
-			irt_affinity_mask_set(&(worker->affinity), variant.meta_info->autotuning.map.data[w_id], true);
-			irt_set_affinity(worker->affinity, worker->thread);
+			if(!irt_affinity_mask_is_single_cpu(worker->affinity, variant.meta_info->autotuning.map.data[w_id])) {
+				irt_affinity_mask_clear(&(worker->affinity));
+				irt_affinity_mask_set(&(worker->affinity), variant.meta_info->autotuning.map.data[w_id], true);
+				irt_set_affinity(worker->affinity, worker->thread);
+			}
 		}
 		if(worker->id.thread < variant.meta_info->autotuning.frequencies.size) {
-			irt_cpu_freq_set_frequency_worker(worker, variant.meta_info->autotuning.frequencies.data[w_id]);
+			irt_cpu_freq_set_frequency_core(variant.meta_info->autotuning.map.data[w_id], variant.meta_info->autotuning.frequencies.data[w_id]);
 		}
 	}
 	#endif // IRT_ENABLE_AUTOTUNING
