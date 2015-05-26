@@ -130,27 +130,6 @@ namespace lang {
 		const std::map<const std::string, std::function<const Extension&(NodeManager&)>> getExtensionFactories() const {
 			return extensionFactories;
 		}
-
-		/**
-		 * Checks if a the given node is
-		 * an element of a core language extension
-		 *
-		 * @param node the node pointer to look up
-		 * @return true if defined in a core lang extension, false otherwise
-		 */
-		bool isDefinedInExtension(const NodePtr& node) const {
-                    for (auto factory : getExtensionFactories()) {
-                        //create an instance of the extension
-                        auto& extension = factory.second(node->getNodeManager());
-                        auto& listOfElements = extension.getNamedIrExtensions();
-                        for(auto& element : listOfElements) {
-                            if(element.second == node) {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                }
 	};
 
 

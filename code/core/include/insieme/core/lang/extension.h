@@ -206,6 +206,7 @@ namespace lang {
 			const insieme::core::LiteralPtr create##NAME() const { \
 				checkIrNameNotAlreadyInUse(IR_NAME); \
 				const insieme::core::LiteralPtr result = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE, getNamedIrExtensions()); \
+				insieme::core::lang::markAsDerived(result, VALUE); \
 				addNamedIrExtension(IR_NAME, result); \
 				return result; \
 			} \
