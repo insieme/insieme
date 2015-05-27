@@ -383,7 +383,7 @@ LITERAL(SrcToRef,		"src_to_ref",			"(src<'a>) -> ref<'a>")
 LITERAL(SinkToRef,		"sink_to_ref",			"(sink<'a>) -> ref<'a>")
 
 LITERAL(RefToInt,		"ref_to_int",			"(ref<'a>) -> uint<8>")
-LITERAL(IntToRef,		"int_to_ref",			"(uint<8>, type<'a>) -> ref<'a>")
+LITERAL(IntToRef,		"int_to_ref",			"(int<16>, type<'a>) -> ref<'a>")
 
 DERIVED(RefVar,  			"ref_var",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_stack); r = v; return r; }")
 DERIVED(RefNew,  			"ref_new",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_heap ); r = v; return r; }")
