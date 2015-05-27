@@ -47,19 +47,20 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-int SystemInfo::obtainSystemInformation() {
+int SystemInfo::obtainSystemInformation() const {
 	core::NodeManager manager;
+	auto tempCompiler = compiler;
 	auto target = backend->convert(insieme::driver::integration::loadIntegrationTest(manager, "base/hello_world", false));
 
 	for(const auto& e : backendCompilerDefs) {
 		string temp = "-D" + string(e.first) + "=" + string(e.second);
-		compiler.addFlag(temp);
+		tempCompiler.addFlag(temp);
 	}
-	compiler.addFlag("-I " PAPI_HOME "/include");
-	compiler.addFlag("-L " PAPI_HOME "/lib/");
-	compiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
+	tempCompiler.addFlag("-I " PAPI_HOME "/include");
+	tempCompiler.addFlag("-L " PAPI_HOME "/lib/");
+	tempCompiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
 
-	auto binary = utils::compiler::compileToBinary(*target, compiler);
+	auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
 
 	const string workDir = ".";
 
@@ -88,23 +89,48 @@ int SystemInfo::obtainSystemInformation() {
 	return 0;
 }
 
-std::string SystemInfo::query(const std::string object) {
+string SystemInfo::queryStringSingle(const std::string regex) const {
+	const auto temp = queryString(regex);
+	string res;
+	if(!temp.empty()) {
+		res = temp.front();
+	}
+	return res;
+}
+
+vector<std::string> SystemInfo::queryString(const std::string regexString) const {
+	vector<string> retval;
 	if(result.empty()) {
-		if(obtainSystemInformation() < 0) return string();
+		if(obtainSystemInformation() < 0) return retval;
 	}
 
-	boost::regex ip_regex("Number of sockets:\\s*(\\d+)");
-	boost::sregex_iterator it(result.begin(), result.end(), ip_regex);
-	std::cout << "TODOTODOTODO: return only capturing group|" << it->str() << "|\n";
+	boost::regex regex(regexString.c_str());
+	boost::match_results<std::string::const_iterator> matches;
+
+	std::string::const_iterator start = result.begin();
+
+	while(boost::regex_search(start, result.cend(), matches, regex)) {
+		// save all capturing groups
+		for(unsigned i = 1; i < matches.size(); ++i) {
+			retval.push_back(matches[i]);
+		}
+		// move iterator
+		start = matches[0].second;
+	}
 
 	/**
 	 * TODO:
-	 * have query() take a regex and return a vector of strings that was the result
-	 * allow correct subclassing for systeminfo, implement a base class and move the current content to autotuning systeminfo subclass
-	 * actually use it correctly in optimizer survey
+	 * systeminfo inheritance, implement a base class and move the current content to autotuning systeminfo subclass
 	 */
 
-	return it->str();
+	return retval;
+}
+
+std::string SystemInfo::getFullInformation() const {
+	if(result.empty()) {
+		obtainSystemInformation();
+	}
+	return result;
 }
 
 } // end namespace measure

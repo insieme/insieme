@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include "boost/lexical_cast.hpp"
+
 #include "insieme/driver/measure/executor.h"
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/backend/backend.h"
@@ -49,13 +51,10 @@ namespace measure {
 	using std::string;
 	using std::map;
 
-	/**
-	 * The basic interface of an executor.
-	 */
 	class SystemInfo {
 	private:
 
-		string result;
+		mutable string result;
 
 		map<string,string> env;
 
@@ -67,7 +66,7 @@ namespace measure {
 
 		ExecutorPtr executor;
 
-		virtual int obtainSystemInformation();
+		virtual int obtainSystemInformation() const;
 
 	public:
 		SystemInfo(map<string, string> env = { {"IRT_REPORT", "1"}, { "IRT_REPORT_TO_FILE", "1" } }, map<string,string> backendCompilerDefs = { { "IRT_ENABLE_REGION_INSTRUMENTATION", "1" }, { "IRT_USE_PAPI", "1" } },
@@ -76,9 +75,37 @@ namespace measure {
 				insieme::driver::measure::ExecutorPtr executor = insieme::driver::measure::makeLocalExecutor()) :
 					result(""), env(env), backendCompilerDefs(backendCompilerDefs), backend(backend), compiler(compiler), executor(executor) { }
 
-		virtual ~SystemInfo() {};
+		virtual ~SystemInfo() { };
 
-		virtual std::string query(const std::string);
+		virtual vector<string> queryString(const std::string regex) const;
+
+		virtual string queryStringSingle(const std::string regex) const;
+
+		template<typename T>
+		vector<T> query(const std::string regex) const {
+			const vector<string> temp = queryString(regex);
+			vector<T> res;
+			for(const auto& e : temp) {
+				try {
+					res.push_back(boost::lexical_cast<T>(e));
+				} catch (boost::bad_lexical_cast& blc) {
+					std::cout << "Unable to lexically cast " << e << ": " << blc.what() << "\n";
+				}
+			}
+			return res;
+		}
+
+		template<typename T>
+		T querySingle(const std::string regex) const {
+			const auto temp = query<T>(regex);
+			T res;
+			if(!temp.empty()) {
+				res = temp.front();
+			}
+			return res;
+		}
+
+		virtual string getFullInformation() const;
 	};
 
 } // end namespace measure
