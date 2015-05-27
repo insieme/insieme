@@ -76,10 +76,10 @@ TEST(DatalayoutTransformTest, OclTest) {
 
 	core::NodePtr prog = program->getElement(0);
 
-	transform::datalayout::AosToSoa ats(prog);
-	ats.transform();
+//	transform::datalayout::AosToSoa ats(prog);
+//	ats.transform();
 
-	dumpPretty(prog);
+//	dumpPretty(prog);
 
 	auto errors = core::checks::check(prog).getAll();
 

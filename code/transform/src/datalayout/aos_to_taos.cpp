@@ -212,8 +212,8 @@ StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, 
 
 	allDecls.push_back(decl);
 
-	NodeMap inInitReplacementsInCaseOfNovarInInit;
-	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, newStructType);
+//	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
 	// divide initialization size by tilesize
 	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, genericTileSizeExpr);
 
@@ -229,8 +229,8 @@ StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacement
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
-	NodeMap inInitReplacementsInCaseOfNovarInInit;
-	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, newStructType);
+//	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
 	// divide initialization size by tilesize
 	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, genericTileSizeExpr);
 

@@ -90,8 +90,8 @@ StatementList ParSecSoa::generateNewDecl(const ExprAddressMap& varReplacements, 
 	// split up initialization expressions
 	for(std::pair<StringValuePtr, VariablePtr> member : fieldReplacements[decl->getVariable()]) {
 
-		NodeMap inInitReplacementsInCaseOfNovarInInit;
-		inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(member.second->getType(), member.first);
+		NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, getBaseType(member.second->getType(), member.first));
+//		inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(member.second->getType(), member.first);
 //
 //			allDecls.push_back(builder.assign(builder.accessMember(newVar, memberType->getName()),
 //					updateInit(varReplacements, removeRefVar(decl->getInitialization()), inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
@@ -114,8 +114,8 @@ StatementList ParSecSoa::generateNewAssigns(const ExprAddressMap& varReplacement
 
 	unsigned i = 0;
 	for(NamedTypePtr memberType : newStructType->getElements()) {
-		NodeMap inInitReplacementsInCaseOfNovarInInit;
-		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
+		NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, removeRefArray(memberType->getType()));
+//		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
 
 		allAssigns.push_back(builder.assign(newVars[i++].as<ExpressionPtr>(),
 				updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit, memberType->getName())));

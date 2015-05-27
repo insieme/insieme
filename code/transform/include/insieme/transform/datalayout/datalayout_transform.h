@@ -85,7 +85,7 @@ protected:
 	std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
 	std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;
-	virtual core::NodeMap generateTypeReplacements(core::TypePtr oldStructType, core::StructTypePtr newStructType);
+	virtual core::NodeMap generateTypeReplacements(core::TypePtr oldStructType, core::TypePtr newStructType);
 
 	virtual core::ExpressionPtr updateAccess(const core::ExpressionPtr& oldAccess, const std::pair<core::ExpressionAddress, core::StatementPtr>& varInInit,
 			const core::StringValuePtr& fieldName);

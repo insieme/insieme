@@ -306,7 +306,7 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 //	std::cout << "from " << addr << "  " << *addr << std::endl;
 }
 
-NodeMap DatalayoutTransformer::generateTypeReplacements(TypePtr oldStructType, StructTypePtr newStructType) {
+NodeMap DatalayoutTransformer::generateTypeReplacements(TypePtr oldStructType, TypePtr newStructType) {
 	NodeMap tyReplace;
 	tyReplace[(oldStructType)] = newStructType;
 
@@ -821,11 +821,11 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 				newTupleVar = tupleVars[oldTupleVar].as<ExpressionPtr>();
 			}
 
-
 			ExpressionAddress oldRootVar = getRootVariable(oldTupleVar, node).as<ExpressionAddress>();
 
 			if(tupleVars.find(oldRootVar) == tupleVars.end()) {
-				TypePtr newRootType = core::transform::replaceAllGen(mgr, oldRootVar->getType().getAddressedNode(), oldStructType, newStructType, true);
+				TypePtr newRootType = generateNewTupleType(oldRootVar->getType().getAddressedNode(), newStructType, oldStructType);
+
 				LiteralPtr globalRoot = oldRootVar.isa<LiteralPtr>();
 				ExpressionPtr newRootVar = globalRoot ?
 						builder.literal(globalRoot->getStringValue() + "_soa", newRootType).as<ExpressionPtr>() :
@@ -865,6 +865,7 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 			NodeMap tyReplace = generateTypeReplacements(oldStructType, newStructType);
 
 			ExpressionPtr newInit = updateInit(varReplacements, decl->getInitialization(), tyReplace, StringValuePtr());
+
 			addToReplacements(replacements, decl, builder.declarationStmt(newVar.as<VariablePtr>(), newInit));
 		}
 

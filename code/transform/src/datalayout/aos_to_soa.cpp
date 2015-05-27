@@ -155,7 +155,7 @@ void AosToSoa::transform() {
 }
 
 
-NodeMap AosToSoa::generateTypeReplacements(TypePtr oldStructType, StructTypePtr newStructType) {
+NodeMap AosToSoa::generateTypeReplacements(TypePtr oldStructType, TypePtr newStructType) {
 	IRBuilder builder(mgr);
 	NodeMap tyReplace;
 	tyReplace[builder.refType(oldStructType)] = newStructType; // TODO what about src types?
@@ -194,7 +194,7 @@ StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, c
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
 
-			NodeMap inInitReplacementsInCaseOfNovarInInit;
+			NodeMap inInitReplacementsInCaseOfNovarInInit;// = generateTypeReplacements(oldStructType, getBaseType(memberType->getType(), memberType->getName()));
 			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(memberType->getType(), memberType->getName());
 
 			allDecls.push_back(builder.assign(builder.accessMember(newVar.as<VariablePtr>(), memberType->getName()),
@@ -223,7 +223,7 @@ StatementList AosToSoa::generateNewAssigns(const ExprAddressMap& varReplacements
 	allAssigns.push_back(call);
 
 	for(NamedTypePtr memberType : newStructType->getElements()) {
-		NodeMap inInitReplacementsInCaseOfNovarInInit;
+		NodeMap inInitReplacementsInCaseOfNovarInInit;// = generateTypeReplacements(oldStructType, removeRefArray(memberType->getType()));
 		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
 
 		allAssigns.push_back(builder.assign(builder.refMember(newVar.as<ExpressionPtr>(), memberType->getName()),
