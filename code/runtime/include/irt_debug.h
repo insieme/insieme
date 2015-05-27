@@ -40,6 +40,8 @@
 
 // IRT context information printing
 
+void irt_dbg_dump_context(FILE* fd, irt_context* c);
+
 void irt_dbg_print_context(irt_context* c);
 
 

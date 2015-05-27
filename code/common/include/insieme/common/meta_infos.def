@@ -116,7 +116,7 @@ INFO_STRUCT_BEGIN(autotuning)
 INFO_STRUCT_END()
 
 /*
- * A struct providing information about region-based autotuning settings
+ * A struct providing information about region-based significance settings
  */
 INFO_STRUCT_BEGIN(significance)
 	INFO_FIELD_EXT(label,		

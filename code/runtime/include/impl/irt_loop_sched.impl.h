@@ -297,21 +297,24 @@ inline static void irt_schedule_loop(
 	mem->pfor_count++;
 
 	#ifdef IRT_ENABLE_AUTOTUNING
-	irt_wi_implementation_variant variant = impl->variants[0];
-	irt_worker* worker = irt_worker_get_current();
-	uint16 w_id = worker->id.thread;
-	if(variant.meta_info && variant.meta_info->autotuning.available) {
-		if(w_id < variant.meta_info->autotuning.map.size) {
-			if(!irt_affinity_mask_is_single_cpu(worker->affinity, variant.meta_info->autotuning.map.data[w_id])) {
-				irt_affinity_mask_clear(&(worker->affinity));
-				irt_affinity_mask_set(&(worker->affinity), variant.meta_info->autotuning.map.data[w_id], true);
-				irt_set_affinity(worker->affinity, worker->thread);
+		irt_wi_implementation_variant variant = impl->variants[0];
+		irt_worker* worker = irt_worker_get_current();
+		uint16 w_id = worker->id.thread;
+		if(variant.meta_info && variant.meta_info->autotuning.available) {
+			if(w_id < variant.meta_info->autotuning.map.size) {
+				if(!irt_affinity_mask_is_single_cpu(worker->affinity, variant.meta_info->autotuning.map.data[w_id])) {
+					irt_affinity_mask_clear(&(worker->affinity));
+					irt_affinity_mask_set(&(worker->affinity), variant.meta_info->autotuning.map.data[w_id], true);
+					irt_set_affinity(worker->affinity, worker->thread);
+				}
+
+				if(irt_cpu_freq_cores_have_individual_domains()) {
+					if(worker->id.thread < variant.meta_info->autotuning.frequencies.size) {
+						irt_cpu_freq_set_frequency_core(variant.meta_info->autotuning.map.data[w_id], variant.meta_info->autotuning.frequencies.data[w_id]);
+					}
+				}
 			}
 		}
-		if(worker->id.thread < variant.meta_info->autotuning.frequencies.size) {
-			irt_cpu_freq_set_frequency_core(variant.meta_info->autotuning.map.data[w_id], variant.meta_info->autotuning.frequencies.data[w_id]);
-		}
-	}
 	#endif // IRT_ENABLE_AUTOTUNING
 
 	// prepare policy if first loop to reach pfor
@@ -324,6 +327,13 @@ inline static void irt_schedule_loop(
 			group->cur_sched.participants = variant.meta_info->autotuning.number_of_workers;
 			group->cur_sched.type = variant.meta_info->autotuning.loop_scheduling;
 			group->cur_sched.param.chunk_size = variant.meta_info->autotuning.loop_scheduling_chunk_size;
+
+			if(!irt_cpu_freq_cores_have_individual_domains()) {
+				for(uint32 i = 0; i < irt_hw_get_num_sockets(); ++i) {
+					irt_cpu_freq_set_frequency_socket(i, variant.meta_info->autotuning.frequencies.data[i]);
+				}
+			}
+
 		#endif // IRT_ENABLE_AUTOTUNING
 
 		// run optimizer

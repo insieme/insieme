@@ -40,35 +40,38 @@
 #include "meta_information/meta_infos.h"
 
 // IRT context information printing
-
-void irt_dbg_print_context(irt_context* c) {
-	printf("--------\nIRT context dump:\n");
-	printf("Client app library: %p\n", c->client_app ? (void*) c->client_app->library : NULL);
-	printf("Number of instrumentation regions: %u\n", c->num_regions);
-	printf("----\nType table (%u entries):\n", c->type_table_size);
+void irt_dbg_dump_context(FILE* fd, irt_context* c) {
+	fprintf(fd, "--------\nIRT context dump:\n");
+	fprintf(fd, "Client app library: %p\n", c->client_app ? (void*) c->client_app->library : NULL);
+	fprintf(fd, "Number of instrumentation regions: %u\n", c->num_regions);
+	fprintf(fd, "----\nType table (%u entries):\n", c->type_table_size);
 	for(uint32 i = 0; i<c->type_table_size; ++i) {
 		irt_type *t = &c->type_table[i];
-		printf("  Type %3u -- kind: %16s, bytes: %6u, #components: %3u\n", i, irt_type_kind_get_name(t->kind), t->bytes, t->num_components);
+		fprintf(fd, "  Type %3u -- kind: %16s, bytes: %6u, #components: %3u\n", i, irt_type_kind_get_name(t->kind), t->bytes, t->num_components);
 	}
-	printf("----\nWork Item table (%u entries):\n", c->impl_table_size);
+	fprintf(fd, "----\nWork Item table (%u entries):\n", c->impl_table_size);
 	for(uint32 i = 0; i<c->impl_table_size; ++i) {
 		irt_wi_implementation *impl = &c->impl_table[i];
-		printf("  WI %3u -- #variants: %3u\n", i, impl->num_variants);
+		fprintf(fd, "  WI %3u -- #variants: %3u\n", i, impl->num_variants);
 		for(uint32 j = 0; j<impl->num_variants; ++j) {
 			irt_wi_implementation_variant *v = &impl->variants[j];
-			printf("    Variant %2u -- requirements (DIs/channels): %3u/%3u, meta info index: %3ld\n",
+			fprintf(fd, "    Variant %2u -- requirements (DIs/channels): %3u/%3u, meta info index: %3ld\n",
 				   j, v->num_required_data_items, v->num_required_channels, v->meta_info ? (long signed)(v->meta_info - c->info_table) : 0l);
 		}
 	}
-	printf("----\nMeta Info table (%u entries):\n", c->info_table_size);
+	fprintf(fd, "----\nMeta Info table (%u entries):\n", c->info_table_size);
 	for(uint32 i = 0; i<c->info_table_size; ++i) {
 		irt_meta_info_table_entry *m = &c->info_table[i];
-		printf("  Info %3u:\n", i);
+		fprintf(fd, "  Info %3u:\n", i);
 		#define INFO_STRUCT_BEGIN(__name) \
-		printf("    "); irt_meta_info_print_##__name(stdout, m); printf("\n");
+		fprintf(fd, "    "); irt_meta_info_print_##__name(fd, m); fprintf(fd, "\n");
 		#include "insieme/common/meta_infos.def"
 	}
-	printf("--------\n");
+	fprintf(fd, "--------\n");
+}
+
+void irt_dbg_print_context(irt_context* c) {
+	irt_dbg_dump_context(stdout, c);
 }
 
 

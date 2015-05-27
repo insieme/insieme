@@ -168,7 +168,7 @@ int32 _irt_cpu_freq_read(const char* path_to_cpufreq) {
 
 bool __irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, irt_cpu_frequency_type freq_type) {
 
-	if(irt_g_frequency_cur_state[coreid][freq_type] == frequency)
+	if(irt_g_cpu_freq_cur_state[coreid][freq_type] == frequency)
 		return true;
 
 	char path_to_cpufreq[FREQ_PATH_MAX_LENGTH];
@@ -179,8 +179,7 @@ bool __irt_cpu_freq_set(const uint32 coreid, const uint32 frequency, irt_cpu_fre
 		sprintf(path_to_cpufreq, FREQ_PATH_STRING, coreid, FREQ_MAX_STRING);
 
 	if(_irt_cpu_freq_write(path_to_cpufreq, frequency)) {
-		irt_affinity_mask_set(&irt_g_frequency_setting_modified_mask, coreid, true);
-		irt_g_frequency_cur_state[coreid][freq_type] = frequency;
+		irt_g_cpu_freq_cur_state[coreid][freq_type] = frequency;
 		return true;
 	}
 	return false;
@@ -217,8 +216,8 @@ int32 _irt_cpu_freq_get_uncached(const uint32 coreid, const char* freq_type) {
 int32 _irt_cpu_freq_get_cached(const uint32 coreid, irt_cpu_frequency_type freq_type) {
 
 	if(freq_type == SCALING_MIN_FREQ || freq_type == SCALING_MAX_FREQ) {
-		if(irt_g_frequency_cur_state[coreid][freq_type] != 0)
-			return irt_g_frequency_cur_state[coreid][freq_type];
+		if(irt_g_cpu_freq_cur_state[coreid][freq_type] != 0)
+			return irt_g_cpu_freq_cur_state[coreid][freq_type];
 	}
 
 	if(freq_type == SCALING_MIN_FREQ)
@@ -297,15 +296,17 @@ bool irt_cpu_freq_reset_frequencies() {
 	uint32 total_cores = irt_hw_get_num_cpus();
 
 	for(uint32 coreid = 0; coreid < total_cores; ++coreid) {
-		if(irt_affinity_mask_is_set(irt_g_frequency_setting_modified_mask, coreid)) {
-			frequency = _irt_cpu_freq_get_uncached(coreid, "cpuinfo_max_freq");
-			retval &= _irt_cpu_freq_set(coreid, frequency, SCALING_MAX_FREQ);
+		if(irt_g_cpu_freq_cur_state[coreid][SCALING_MIN_FREQ] != 0) {
 			frequency = _irt_cpu_freq_get_uncached(coreid, "cpuinfo_min_freq");
 			retval &= _irt_cpu_freq_set(coreid, frequency, SCALING_MIN_FREQ);
+			irt_g_cpu_freq_cur_state[coreid][SCALING_MIN_FREQ] = 0;
+		}
+		if(irt_g_cpu_freq_cur_state[coreid][SCALING_MAX_FREQ] != 0) {
+			frequency = _irt_cpu_freq_get_uncached(coreid, "cpuinfo_max_freq");
+			retval &= _irt_cpu_freq_set(coreid, frequency, SCALING_MAX_FREQ);
+			irt_g_cpu_freq_cur_state[coreid][SCALING_MAX_FREQ] = 0;
 		}
 	}
-	if(retval)
-		irt_affinity_mask_clear(&irt_g_frequency_setting_modified_mask);
 	return retval;
 }
 
@@ -367,13 +368,11 @@ bool irt_cpu_freq_set_frequency_socket(const uint32 socket, const uint32 frequen
 	uint32 core_start = socket * irt_hw_get_num_cores_per_socket();
 	uint32 core_end = (socket + 1) * irt_hw_get_num_cores_per_socket();
 
-	// first HT unit
 	for(uint32 coreid = core_start; coreid < core_end; ++coreid) {
-		// write max, min, max because we don't know the old frequency and setting max below min is rejected by the OS
-		// reading the old frequency before to determine that has approximately the same overhead
-		retval |= _irt_cpu_freq_set(coreid, frequency, SCALING_MAX_FREQ);
-		retval |= _irt_cpu_freq_set(coreid, frequency, SCALING_MIN_FREQ);
-		retval |= _irt_cpu_freq_set(coreid, frequency, SCALING_MAX_FREQ);
+		retval |= (irt_cpu_freq_set_frequency_core(coreid, frequency) == 0);
+		if(irt_hw_get_hyperthreading_enabled()) {
+			retval |= (irt_cpu_freq_set_frequency_core(irt_hw_get_sibling_hyperthread(coreid), frequency) == 0);
+		}
 	}
 
 	return retval;
@@ -413,7 +412,14 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	char cpu_freq_output[1024] = { 0 };
 	char* cur = cpu_freq_output;
-	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
+	bool has_been_set = false;
+	for(uint32 i = 0; i < IRT_MAX_CORES; ++i) {
+		if(irt_g_cpu_freq_cur_state[i][SCALING_MIN_FREQ] != 0 || irt_g_cpu_freq_cur_state[i][SCALING_MAX_FREQ] != 0) {
+			has_been_set = true;
+			break;
+		}
+	}
+	if(has_been_set)
 		cur += sprintf(cur, "set, ");
 	else
 		cur += sprintf(cur, "not set, ");
@@ -458,5 +464,13 @@ int32 irt_cpu_freq_set_frequency(const uint32 frequency) {
 	return 0;
 }
 
+/*
+ * checks whether cores have individual clock frequency domains
+ */
+
+bool irt_cpu_freq_cores_have_individual_domains() {
+	// TODO: investigate ways of determining this
+	return false;
+}
 
 #endif // ifndef __GUARD_UTILS_IMPL_FREQUENCY_STD_H

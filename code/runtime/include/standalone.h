@@ -177,8 +177,7 @@ void irt_exit_handler() {
 
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
-	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
-		irt_cpu_freq_reset_frequencies();
+	irt_cpu_freq_reset_frequencies();
 #endif
 
 	_irt_hw_info_shutdown();
@@ -383,8 +382,23 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_context* context = irt_runtime_start_in_context(worker_count, init_fun, cleanup_fun, true);
 
 	if(getenv(IRT_REPORT_ENV)) {
-		irt_dbg_print_context(context);
-		irt_hw_dump_info();
+		if(getenv(IRT_REPORT_TO_FILE_ENV)) {
+			char* output_path = getenv("IRT_INST_OUTPUT_PATH");
+			char fn[] = "insieme_runtime.report";
+			char buffer[1024];
+			if(output_path != NULL) {
+				sprintf(buffer, "%s/%s", output_path, fn);
+			} else {
+				sprintf(buffer, "%s", fn);
+			}
+			FILE* temp = fopen(buffer, "w");
+			irt_dbg_dump_context(temp, context);
+			irt_hw_dump_info(temp);
+			fclose(temp);
+		} else {
+			irt_dbg_print_context(context);
+			irt_hw_print_info();
+		}
 		exit(0);
 	}
 

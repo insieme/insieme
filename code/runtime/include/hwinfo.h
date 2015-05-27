@@ -47,6 +47,7 @@
 #include "papi_helper.h"
 #endif
 #include "error_handling.h"
+#include "utils/frequency.h"
 
 typedef struct _irt_hw_cpuid_info {
 	uint32 family;
@@ -234,55 +235,62 @@ char* irt_hw_get_model_string() {
 	return __irt_g_cached_hw_info.model_string;
 }
 
-void irt_hw_dump_info() {
+void irt_hw_dump_info(FILE* fd) {
 	_irt_hw_info_init();
-	printf("--------\nIRT hardware dump:\n");
+	fprintf(fd, "--------\nIRT hardware dump:\n");
+	fprintf(fd, "  Number of CPUs: %u\n", irt_hw_get_num_cpus());
 #ifdef IRT_USE_PAPI
-	printf("  System type:\n");
-	printf("    CPU vendor: %s\n", __irt_g_cached_hw_info.vendor_string);
-	printf("    CPU model: %s\n", __irt_g_cached_hw_info.model_string);
-	printf("    CPU cpuid: family: %u, model: %u, stepping: %u\n", irt_hw_get_cpuid_info().family, irt_hw_get_cpuid_info().model, irt_hw_get_cpuid_info().stepping);
-	printf("  CPU hierarchy:\n");
-	printf("    Number of numa nodes:\t\t%4u\n", irt_hw_get_num_numa_nodes());
-	printf("    Number of sockets: \t\t\t%4u\n", irt_hw_get_num_sockets());
-	printf("    Number of cores per socket: \t%4u\n", irt_hw_get_num_cores_per_socket());
-	printf("    Number of HW threads per core: \t%4u\n", irt_hw_get_num_threads_per_core());
+	fprintf(fd, "  System type:\n");
+	fprintf(fd, "    CPU vendor: %s\n", __irt_g_cached_hw_info.vendor_string);
+	fprintf(fd, "    CPU model: %s\n", __irt_g_cached_hw_info.model_string);
+	fprintf(fd, "    CPU cpuid: family: %u, model: %u, stepping: %u\n", irt_hw_get_cpuid_info().family, irt_hw_get_cpuid_info().model, irt_hw_get_cpuid_info().stepping);
+	fprintf(fd, "  CPU hierarchy:\n");
+	fprintf(fd, "    Number of numa nodes:\t\t%4u\n", irt_hw_get_num_numa_nodes());
+	fprintf(fd, "    Number of sockets: \t\t\t%4u\n", irt_hw_get_num_sockets());
+	fprintf(fd, "    Number of cores per socket: \t%4u\n", irt_hw_get_num_cores_per_socket());
+	fprintf(fd, "    Number of HW threads per core: \t%4u\n", irt_hw_get_num_threads_per_core());
 
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
 
-	printf("  Cache hierarchy: %u levels\n", hwinfo->mem_hierarchy.levels);
+	fprintf(fd, "  Cache hierarchy: %u levels\n", hwinfo->mem_hierarchy.levels);
 	for(int32 i = 0; i < hwinfo->mem_hierarchy.levels; ++i) {
 		uint32 number_of_memories = 0;
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j)
 			if(hwinfo->mem_hierarchy.level[i].cache[j].type != PAPI_MH_TYPE_EMPTY)
 				number_of_memories++;
-		printf("    Level %u: number of entities: %u \n", i, number_of_memories);
+		fprintf(fd, "    Level %u: number of entities: %u \n", i, number_of_memories);
 
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j) {
 			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_EMPTY)
 				continue;
-			printf("      Type:");
+			fprintf(fd, "      Type:");
 			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_INST)
-				printf("%16s", "instruction");
+				fprintf(fd, "%16s", "instruction");
 			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_DATA)
-				printf("%16s", "data");
+				fprintf(fd, "%16s", "data");
 			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_UNIFIED)
-				printf("%16s", "unified");
+				fprintf(fd, "%16s", "unified");
 			else
-				printf("%16s", "unknown");
-			printf(", size: %10u KB, ", hwinfo->mem_hierarchy.level[i].cache[j].size);
-			printf("(line size: %4u B, ", hwinfo->mem_hierarchy.level[i].cache[j].line_size);
-			printf("lines: %8u, ", hwinfo->mem_hierarchy.level[i].cache[j].num_lines);
-			printf("associativity: %4u)\n", hwinfo->mem_hierarchy.level[i].cache[j].associativity);
+				fprintf(fd, "%16s", "unknown");
+			fprintf(fd, ", size: %10u KB, ", hwinfo->mem_hierarchy.level[i].cache[j].size);
+			fprintf(fd, "(line size: %4u B, ", hwinfo->mem_hierarchy.level[i].cache[j].line_size);
+			fprintf(fd, "lines: %8u, ", hwinfo->mem_hierarchy.level[i].cache[j].num_lines);
+			fprintf(fd, "associativity: %4u)\n", hwinfo->mem_hierarchy.level[i].cache[j].associativity);
 		}
 	}
-	printf("  Miscellaneous:\n");
-	printf("    CPU DVFS range: min: %u MHz, max: %u MHz\n", irt_hw_get_cpu_min_mhz(), irt_hw_get_cpu_max_mhz());
 #else
-	printf("  Number of CPUs: %u\n", irt_hw_get_num_cpus());
-	printf("(Note: Compile with -DIRT_USE_PAPI to get more detailed hardware information)\n");
 #endif
-	printf("--------\n");
+	fprintf(fd, "  Miscellaneous:\n");
+	fprintf(fd, "    CPU DVFS domain:\t\t\t%s\n", irt_cpu_freq_cores_have_individual_domains()?"cores":"sockets");
+	fprintf(fd, "    CPU DVFS range: min: %u MHz, max: %u MHz\n", irt_hw_get_cpu_min_mhz(), irt_hw_get_cpu_max_mhz());
+#ifndef IRT_USE_PAPI
+	fprintf(fd, "(Note: Compile with -DIRT_USE_PAPI to get more detailed hardware information)\n");
+#endif
+	fprintf(fd, "--------\n");
+}
+
+void irt_hw_print_info() {
+	irt_hw_dump_info(stdout);
 }
 
 
