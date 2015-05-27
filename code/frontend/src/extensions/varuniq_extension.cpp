@@ -83,12 +83,24 @@ void VarUniqExtension::visitNode(const NodeAddress &node) {
 void VarUniqExtension::visitVariable(const VariableAddress &var) {
 	// get variable definition point and increase counter for given variable
 	VariableAddress defpt=getVarDefinition(var);
+
+	// do not change anything inside derived constructs
+	if (lang::isDerived(defpt.getParentNode())) return;
+
+	// we did not find any earlier occurrence of the given variable
 	if (defpt==var) {
+		//std::cout << *(var.getParentAddress().getParentAddress());
+		//printNode(var.getParentAddress(), "variable definition "+std::to_string(def)); std::cout << std::endl;
+		if (lang::isDerived(var.getParentNode()))
+			printNode(var.getParentAddress(), "is derived");
+
 		def++;
 		unsigned int id=nextID();
 		use  [defpt]=0;
 		varid[defpt]=id;
 		idstaken[id]=defpt;
+
+	// the variable is not defined but used here, increase use counter
 	} else {
 		use[defpt]++;
 	}
@@ -100,11 +112,11 @@ void VarUniqExtension::visitVariable(const VariableAddress &var) {
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR() {
 	// print some status information for debugging
-	for (auto dups: varid)
-		std::cout << "var " << dups.first << " (" << dups.second << ") found " << use[dups.first] << "×" << std::endl;
+	//for (auto dups: varid)
+	//	std::cout << "var " << dups.first << " (" << dups.second << ") found " << use[dups.first] << "×" << std::endl;
 	std::cout << "Found " << def << " variable defs, " << allUses() << " uses." << std::endl;
 
-	// return the newly generated code
+	// now that everything is in place, do the actual replacement
 	NodeManager& mgr=frag->getNodeManager();
 	NodePtr newfrag=frag.getAddressedNode();
 	for (auto id: idstaken) {
@@ -116,61 +128,64 @@ NodeAddress VarUniqExtension::IR() {
 		NodePtr oldvar=id.second.getAddressedNode(),
 		        newvar=NodeAddress(Variable::get(mgr, id.second->getType(), id.first)),
 		        oldfrag=newfrag;
-		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, true);
+		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
+		//std::cout << "node count: " << countNodes(NodeAddress(oldfrag)) << " " << countNodes(NodeAddress(newfrag)) << std::endl;
 	}
+
+	// return the newly generated code
 	return NodeAddress(newfrag);
 }
 
 /// Find the address where the given variable has been defined.
-VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
+VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& givenaddr) {
 	// first, save the pointer of the given variable so that we have something to compare with
-	VariablePtr varptr=var.getAddressedNode();
-	NodeAddress cur=var;
+	VariablePtr givenptr=givenaddr.getAddressedNode();
+	NodeAddress current=givenaddr;
 
-	while (!cur.isRoot()) {
-		NodeAddress var=cur.getParentAddress();
+	while (!current.isRoot()) {
+		NodeAddress oneup=current.getParentAddress();
 
-		switch (var->getNodeType()) {
+		switch (oneup->getNodeType()) {
 		case NT_BindExpr: {
-			for (auto n: var.as<BindExprAddress>()->getParameters())
-				if (n.as<VariablePtr>()==varptr) return n;
+			for (auto n: oneup.as<BindExprAddress>()->getParameters())
+				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_CompoundStmt: {
-			auto compound=var.as<CompoundStmtAddress>();
-			for (int i=cur.getIndex(); i>=0; i--)
+			auto compound=oneup.as<CompoundStmtAddress>();
+			for (int i=current.getIndex(); i>=0; i--)
 				if (DeclarationStmtAddress decl=compound[i].isa<DeclarationStmtAddress>()) {
 					auto n=decl->getVariable();
-					if (n.as<VariablePtr>()==varptr) return n;
+					if (n.as<VariablePtr>()==givenptr) return n;
 				}
 			break; }
 		case NT_Parameters: {   // FIXME: this variable is a parameter; trace var to outer scope
-			ParametersAddress par=var.as<ParametersAddress>();
+			ParametersAddress par=oneup.as<ParametersAddress>();
 			for (VariableAddress n: par->getParameters())
-				if (n.as<VariablePtr>()==varptr) return n;
+				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_Lambda: {
-			for (auto n: var.as<LambdaAddress>()->getParameters())
-				if (n.as<VariablePtr>()==varptr) return n;
+			for (auto n: oneup.as<LambdaAddress>()->getParameters())
+				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_LambdaBinding: {
-			auto n=var.as<LambdaBindingAddress>()->getVariable();
-			if (n.as<VariablePtr>()==varptr) return n;
+			auto n=oneup.as<LambdaBindingAddress>()->getVariable();
+			if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_LambdaDefinition: {
-			if (auto n=var.as<LambdaDefinitionAddress>()->getBindingOf(varptr))
+			if (auto n=oneup.as<LambdaDefinitionAddress>()->getBindingOf(givenptr))
 				return n->getVariable();
 			break; }
 		case NT_ForStmt: {
-			auto n=var.as<ForStmtAddress>()->getIterator();
-			if (n.as<VariablePtr>()==varptr) return n;
+			auto n=oneup.as<ForStmtAddress>()->getIterator();
+			if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		default: break;
 		}
-		cur=var;
+		current=oneup; // we did not find a binding yet, try to find it one level up
 	}
 
-	// we have reached the root, and never found a binding for the variable; return the variable address itself
-	return var;
+	// we have reached the root, and never found a binding for the variable; return the given variable address
+	return givenaddr;
 }
 
 /// Return the next available ID for a variable renaming.
@@ -185,4 +200,14 @@ unsigned int VarUniqExtension::allUses() {
 	unsigned int ret=0;
 	for (auto pair: use) ret+=pair.second;
 	return ret;
+}
+
+unsigned int VarUniqExtension::countNodes(const NodeAddress &node) {
+	unsigned int count=0;
+	core::visitDepthFirst(node, [&](const core::NodeAddress &n) { ++count; });
+	return count;
+}
+
+int VarUniqExtension::nodeDelta(const NodeAddress &n1, const NodeAddress &n2) {
+	return countNodes(n1)-countNodes(n2);
 }

@@ -113,13 +113,22 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
-	std::stringstream strbuf;
-	VarUniqExtension vu((NodeAddress(fragment)));
-	auto result=vu.IR();
-	strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
-	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
-	       << "# # # # #   NEW CODE   # # # # #" << std::endl
-	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-	std::cout << strbuf.str();
+	NodeAddress orig=NodeAddress(fragment);
+	VarUniqExtension vu(orig);
+	NodeAddress result=vu.IR();
+	if (false) {
+		VarUniqExtension::printNode(orig  .getAddressOfChild(11, 1, 2, 0, 1, 2, 0, 3, 2, 1, 2, 0, 1, 1), "old code");
+		VarUniqExtension::printNode(result.getAddressOfChild(11, 1, 2, 0, 1, 2, 0, 3, 2, 1, 2, 0, 1, 1), "new code");
+	} else {
+		//std::cout << "overall node count: " << VarUniqExtension::countNodes(orig)
+		//          << " " << VarUniqExtension::countNodes(result) << std::endl;
+
+		std::stringstream strbuf;
+		strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
+		       << printer::PrettyPrinter(fragment) << std::endl << std::endl
+		       << "# # # # #   NEW CODE   # # # # #" << std::endl
+		       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
+		std::cout << strbuf.str();
+	}
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
