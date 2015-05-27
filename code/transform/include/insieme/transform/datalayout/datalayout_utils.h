@@ -93,7 +93,7 @@ core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress&
 /*
  * Returns true if the type of expr is of ref type and contains structType
  */
-bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
+bool isRefStruct(core::ExpressionPtr expr, core::TypePtr structType);
 
 /*
  * Returns true if contains contains type

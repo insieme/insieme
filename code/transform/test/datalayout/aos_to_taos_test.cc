@@ -353,7 +353,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -362,8 +362,7 @@ TEST(DataLayout, Tuple) {
 		LOG(INFO) << cur << std::endl;
 	});
 
-	auto y = checks::check(code);
-	EXPECT_EQ(0u, y.getErrors().size()) << y.getErrors();
+	EXPECT_EQ(0u, semantic.getErrors().size()) << semantic.getErrors();
 
 	EXPECT_EQ(81, numberOfCompoundStmts(code));
 	EXPECT_EQ(6, countMarshalledAccesses(code));

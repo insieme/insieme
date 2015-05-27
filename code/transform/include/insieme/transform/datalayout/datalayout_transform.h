@@ -63,13 +63,13 @@ template<class ValueType>
 struct VariableMap : public std::map<core::ExpressionAddress, ValueType, VariableComparator> {};
 struct ExprAddressSet : public std::set<core::ExpressionAddress, VariableComparator> {};
 
-typedef VariableMap<core::RefTypePtr> ExprAddressRefTypeMap;
+typedef VariableMap<core::ArrayTypePtr> ExprAddressArrayTypeMap;
 typedef VariableMap<core::StatementPtr> ExprAddressMap;
 //typedef std::set<core::ExpressionAddress> ExprAddressSet;
-typedef std::function<ExprAddressRefTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
+typedef std::function<ExprAddressArrayTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
-ExprAddressRefTypeMap findAllSuited(const core::NodeAddress& toTransform);
-ExprAddressRefTypeMap findPragma(const core::NodeAddress& toTransform);
+ExprAddressArrayTypeMap findAllSuited(const core::NodeAddress& toTransform);
+ExprAddressArrayTypeMap findPragma(const core::NodeAddress& toTransform);
 
 class DatalayoutTransformer {
 protected:
@@ -79,12 +79,13 @@ protected:
 
 	void addToReplacements( std::map<core::NodeAddress, core::NodePtr>& replacements, const core::NodeAddress& toReplace, const core::NodePtr& replacement);
 
-	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
-	void collectVariables(const std::pair<core::ExpressionAddress, core::RefTypePtr>& transformRoot,
+	virtual ExprAddressArrayTypeMap findCandidates(const core::NodeAddress& toTransform);
+	void collectVariables(const std::pair<core::ExpressionAddress, core::ArrayTypePtr>& transformRoot,
 			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform);
-	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
-	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::RefTypePtr>>& toReplaceLists);
+	std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
+	std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;
+	virtual core::NodeMap generateTypeReplacements(core::TypePtr oldStructType, core::StructTypePtr newStructType);
 
 	virtual core::ExpressionPtr updateAccess(const core::ExpressionPtr& oldAccess, const std::pair<core::ExpressionAddress, core::StatementPtr>& varInInit,
 			const core::StringValuePtr& fieldName);
@@ -122,7 +123,7 @@ protected:
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
 			std::map<core::StatementPtr, core::ExpressionPtr>& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	virtual core::TypePtr generateNewTupleType(const core::TypePtr& oldTupleVarType, const core::StructTypePtr& newStructType,
+	core::TypePtr generateNewTupleType(const core::TypePtr& oldTupleVarType, const core::StructTypePtr& newStructType,
 			const core::TypePtr& oldStructType);
 	void updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);

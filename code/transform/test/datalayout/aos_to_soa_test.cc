@@ -237,6 +237,10 @@ TEST(DataLayout, AosToSoa2) {
 		"	let store = expr lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	let load = expr lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
 		""
+		"	let access2 = lambda (ref<array<twoElem,1>> x)->unit {"
+		"		decl ref<real<4>> l = x[7].float;"
+		"	};"
+		""
 		"	let access1 = lambda (ref<array<twoElem,1>> x)->unit {"
 		"		x[7].float = 0.0f;"
 		"	};"
@@ -254,6 +258,7 @@ TEST(DataLayout, AosToSoa2) {
 		"	store(*copy);"
 		""
 		"	access(*a, 0);"
+		"	access2(*a);"
 		"	store(*a);"
 		"	ref_delete(*a);"
 		"}"
@@ -279,7 +284,7 @@ TEST(DataLayout, AosToSoa2) {
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
-//	dumpPretty(code);
+	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -296,8 +301,8 @@ TEST(DataLayout, AosToSoa2) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(75, numberOfCompoundStmts(code));
-	EXPECT_EQ(12, countMarshalledAccesses(code));
+	EXPECT_EQ(77, numberOfCompoundStmts(code));
+	EXPECT_EQ(13, countMarshalledAccesses(code));
 	EXPECT_EQ(8, countMarshalledAssigns(code));
 }
 /*
@@ -503,11 +508,17 @@ TEST(DataLayout, Tuple) {
 					                 vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {
 				decl ref<ref<array<twoElem,1>>> d = var(a);
 				decl ref<ref<array<twoElem,1>>> f = var(array_view(a, 17));
+
 				(*d)[13].int = 5;
 				f = array_view(a, 42);
+				decl ref<real<4>> scalar = var(*((*d)[55].float));
+				for(int<4> i = 0 .. 99 : 1) {
+					scalar = *(a[i].float);
+					scalar = *((*d)[i].float);
+				}
 
 //				decl ref<array<twoElem,1>> e; 	not supported
-//				e = *a;							asshole
+//				e = *a;							
 			};
 		
 			let local = lambda (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, 
@@ -574,7 +585,7 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(70, numberOfCompoundStmts(code));
+	EXPECT_EQ(76, numberOfCompoundStmts(code));
 	EXPECT_EQ(2, countMarshalledAccesses(code));
 	EXPECT_EQ(2, countMarshalledAssigns(code));
 }

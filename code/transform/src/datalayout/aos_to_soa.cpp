@@ -69,14 +69,14 @@ void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
 	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
 
-	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
+	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
+		StructTypePtr oldStructType = toReplaceList.second.as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
@@ -87,8 +87,8 @@ void AosToSoa::transform() {
 			// update root for in case it has been modified in a previous iteration
 			oldVar = oldVar.switchRoot(toTransform);
 
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second, newStructType).as<TypePtr>();
-//std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), /*check this for src types*/builder.refType(toReplaceList.second), newStructType).as<TypePtr>();
+//std::cout << "NT: " << newStructType << " var " << toReplaceList.second << std::endl;
 
 
 			// check if local or global variable
@@ -154,6 +154,14 @@ void AosToSoa::transform() {
 //dumpPretty(toTransform);
 }
 
+
+NodeMap AosToSoa::generateTypeReplacements(TypePtr oldStructType, StructTypePtr newStructType) {
+	IRBuilder builder(mgr);
+	NodeMap tyReplace;
+	tyReplace[builder.refType(oldStructType)] = newStructType; // TODO what about src types?
+
+	return tyReplace;
+}
 
 StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	IRBuilder builder(mgr);

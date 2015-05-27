@@ -457,15 +457,17 @@ ExpressionAddress removeMemLocationCreators(const ExpressionAddress& expr) {
 }
 
 
-bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
+bool isRefStruct(ExpressionPtr expr, TypePtr structType) {
 	TypePtr type = expr->getType();
 
-	if(!type.isa<RefTypePtr>())
-		return false;
+	if(RefTypePtr refType = type.isa<RefTypePtr>()) {
+		IRBuilder builder(expr->getNodeManager());
+		pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
 
-	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
+		return containsStructType.match(refType->getElementType());
+	}
 
-	return containsStructType.match(type);
+	return false;
 }
 
 bool containsType(const TypePtr& contains, const TypePtr type) {

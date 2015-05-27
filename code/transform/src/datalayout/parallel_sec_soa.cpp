@@ -173,13 +173,13 @@ void ParSecSoa::transform() {
 	IRBuilder builder(m);
 	NodeAddress tta(toTransform);
 
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(tta);
+	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(tta);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(m.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 	VariableMap<std::map<LiteralPtr, ExpressionPtr>> map;
 
-	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
+	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
 		std::map<StatementPtr, ExpressionPtr> nElems;
 
 		std::vector<NamedTypePtr> newStructElemsTypes;
@@ -190,11 +190,10 @@ void ParSecSoa::transform() {
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 //std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
-			TypePtr newType;
 			StatementList newVars;
 			std::map<StringValuePtr, VariablePtr> fieldMap;
 			for(NamedTypePtr elemTy : newStructType->getElements()) {
-				newType = core::transform::replaceAll(m, oldVar->getType(), builder.refType(builder.arrayType(oldStructType)), elemTy->getType()).as<TypePtr>();
+				TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), builder.refType(builder.arrayType(oldStructType)), elemTy->getType()).as<TypePtr>();
 				fieldMap[elemTy->getName()] = builder.variable(newType);
 				newVars.push_back(fieldMap[elemTy->getName()]);
 //std::cout << "NT: " << newType << " " << newVars.back() << " var " << *oldVar->getType() << " " << *oldVar << std::endl;

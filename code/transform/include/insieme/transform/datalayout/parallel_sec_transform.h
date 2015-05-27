@@ -61,7 +61,7 @@ protected:
 	const core::StructTypePtr& oldStructType;
 	std::vector<core::LambdaExprAddress> globalLambdas;
 
-	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
+	virtual ExprAddressArrayTypeMap findCandidates(const core::NodeAddress& toTransform);
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,

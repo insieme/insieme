@@ -76,13 +76,13 @@ void AosToTaos::transform() {
 	IRBuilder builder(mgr);
 
 	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
+	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
+		StructTypePtr oldStructType = toReplaceList.second.as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
@@ -93,7 +93,7 @@ void AosToTaos::transform() {
 			// update root for in case it has been modified in a previous iteration
 			oldVar = oldVar.switchRoot(toTransform);
 
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), /*check this for src types*/builder.refType(toReplaceList.second),
 					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
 

@@ -48,6 +48,8 @@ protected:
 
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
 
+	virtual core::NodeMap generateTypeReplacements(core::TypePtr oldStructType, core::StructTypePtr newStructType);
+
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems = core::ExpressionPtr());
