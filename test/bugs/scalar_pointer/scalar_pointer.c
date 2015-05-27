@@ -25,5 +25,14 @@ int main (){
 	if (*ptr == a[1])
 		printf ("values equal\n");
 
+	// test integral to pointer casts with negative value
+	int* nptr;
+	nptr = (int*) -1;
+        if(nptr == -1) {
+		printf("nptr == -1\n");
+	} else {
+		printf("nptr != -1\n");
+	}
+
 	return 0;
 }
