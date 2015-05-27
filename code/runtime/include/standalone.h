@@ -177,8 +177,7 @@ void irt_exit_handler() {
 
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
-	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
-		irt_cpu_freq_reset_frequencies();
+	irt_cpu_freq_reset_frequencies();
 #endif
 
 	_irt_hw_info_shutdown();

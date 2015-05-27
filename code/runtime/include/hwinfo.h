@@ -47,6 +47,7 @@
 #include "papi_helper.h"
 #endif
 #include "error_handling.h"
+#include "utils/frequency.h"
 
 typedef struct _irt_hw_cpuid_info {
 	uint32 family;
@@ -237,6 +238,7 @@ char* irt_hw_get_model_string() {
 void irt_hw_dump_info(FILE* fd) {
 	_irt_hw_info_init();
 	fprintf(fd, "--------\nIRT hardware dump:\n");
+	fprintf(fd, "  Number of CPUs: %u\n", irt_hw_get_num_cpus());
 #ifdef IRT_USE_PAPI
 	fprintf(fd, "  System type:\n");
 	fprintf(fd, "    CPU vendor: %s\n", __irt_g_cached_hw_info.vendor_string);
@@ -276,10 +278,12 @@ void irt_hw_dump_info(FILE* fd) {
 			fprintf(fd, "associativity: %4u)\n", hwinfo->mem_hierarchy.level[i].cache[j].associativity);
 		}
 	}
-	fprintf(fd, "  Miscellaneous:\n");
-	fprintf(fd, "    CPU DVFS range: min: %u MHz, max: %u MHz\n", irt_hw_get_cpu_min_mhz(), irt_hw_get_cpu_max_mhz());
 #else
-	fprintf(fd, "  Number of CPUs: %u\n", irt_hw_get_num_cpus());
+#endif
+	fprintf(fd, "  Miscellaneous:\n");
+	fprintf(fd, "    CPU DVFS domain:\t\t\t%s\n", irt_cpu_freq_cores_have_individual_domains()?"cores":"sockets");
+	fprintf(fd, "    CPU DVFS range: min: %u MHz, max: %u MHz\n", irt_hw_get_cpu_min_mhz(), irt_hw_get_cpu_max_mhz());
+#ifndef IRT_USE_PAPI
 	fprintf(fd, "(Note: Compile with -DIRT_USE_PAPI to get more detailed hardware information)\n");
 #endif
 	fprintf(fd, "--------\n");

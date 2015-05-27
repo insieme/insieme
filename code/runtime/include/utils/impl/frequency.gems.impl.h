@@ -207,4 +207,13 @@ int32 irt_cpu_freq_reset_frequency_worker(const irt_worker* worker){
     return (IRT_GEM_MAX_FREQ - IRT_GEM_MIN_FREQ) / IRT_GEM_STEP_FREQ + 1;
 }
 
+/*
+ * checks whether cores have individual clock frequency domains
+ */
+
+bool irt_cpu_freq_cores_have_individual_domains() {
+	// TODO: check whether this applies to gemsclaim
+	return false;
+}
+
 #endif // ifndef __GUARD_UTILS_IMPL_FREQUENCY_GEMS_H

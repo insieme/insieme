@@ -46,10 +46,8 @@
  * HyperThreading support: Values are only read for the first HT unit, but written for both of them for safety reasons.
  */
 
-static irt_affinity_mask irt_g_frequency_setting_modified_mask = { { 0 } };
-
 // cached information about the current cpu min/max frequencies, eliminates superfluous writes
-static uint32 irt_g_frequency_cur_state[IRT_MAX_CORES][2];
+static uint32 irt_g_cpu_freq_cur_state[IRT_MAX_CORES][2];
 
 /*
  * reads all available frequencies for all available cores as a list into the provided pointer
@@ -167,7 +165,13 @@ int32 irt_cpu_freq_print_cur_frequency();
  * sets the frequency of all cores of all workers to a given value
  */
 
-int32 irt_cpu_freq_set_frequency(const uint32 frequency); 
+int32 irt_cpu_freq_set_frequency(const uint32 frequency);
+
+/*
+ * checks whether cores have individual clock frequency domains
+ */
+
+bool irt_cpu_freq_cores_have_individual_domains();
 
 #endif
 
