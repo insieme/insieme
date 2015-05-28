@@ -50,10 +50,13 @@ namespace measure {
 using std::string;
 
 int SystemInfo::obtainSystemInformation() const {
-	core::NodeManager manager;
-	auto tempCompiler = compiler;
-	auto target = backend->convert(insieme::driver::integration::loadIntegrationTest(manager, "base/hello_world", false));
 
+	core::NodeManager manager;
+	auto testCode = insieme::driver::integration::loadIntegrationTest(manager, "hello_world", false);
+	assert_true(testCode) << "SystemInfo dummy code invalid!";
+	auto target = backend->convert(testCode);
+
+	auto tempCompiler = compiler;
 	for(const auto& e : backendCompilerDefs) {
 		string temp = "-D" + string(e.first) + "=" + string(e.second);
 		tempCompiler.addFlag(temp);

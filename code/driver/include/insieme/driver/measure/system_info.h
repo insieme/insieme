@@ -112,6 +112,9 @@ namespace measure {
 				insieme::driver::measure::ExecutorPtr executor = insieme::driver::measure::makeLocalExecutor()) :
 					valid(false), data(""), env(env), backendCompilerDefs(backendCompilerDefs), backend(backend), compiler(compiler), executor(executor) {
 
+			assert_true(backend) << "SystemInfo requires a valid backend!";
+			assert_true(executor) << "SystemInfo requires a valid executor!";
+
 			if(obtainSystemInformation() < 0) {
 				valid = false;
 				LOG(ERROR) << "Failed trying to obtain system information";
