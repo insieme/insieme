@@ -82,12 +82,22 @@ void AosToSoa::transform() {
 		ExprAddressMap varReplacements;
 		std::map<StatementPtr, ExpressionPtr> nElems;
 		std::map<NodeAddress, NodePtr> replacements;
+		pattern::TreePattern refTypePattern = pattern::aT(var("toBeReplaced", pirp::refType(pattern::atom(toReplaceList.second))));
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 			// update root for in case it has been modified in a previous iteration
 			oldVar = oldVar.switchRoot(toTransform);
 
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), /*check this for src types*/builder.refType(toReplaceList.second), newStructType).as<TypePtr>();
+			TypeAddress ovta = oldVar->getType();
+			NodePtr oldTypeToBeReplaced;
+
+			pattern::MatchOpt typeToBeReplacedMatch = refTypePattern.matchPointer(ovta);
+			if(typeToBeReplacedMatch){
+				oldTypeToBeReplaced = typeToBeReplacedMatch.get()["toBeReplaced"].getValue();
+			}
+			assert_true(oldTypeToBeReplaced) << " could not identify the type to be replaced in " << *ovta;
+
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), oldTypeToBeReplaced, /*check this for src types*/newStructType).as<TypePtr>();
 //std::cout << "NT: " << newStructType << " var " << toReplaceList.second << std::endl;
 
 
@@ -158,7 +168,8 @@ void AosToSoa::transform() {
 NodeMap AosToSoa::generateTypeReplacements(TypePtr oldStructType, TypePtr newStructType) {
 	IRBuilder builder(mgr);
 	NodeMap tyReplace;
-	tyReplace[builder.refType(oldStructType)] = newStructType; // TODO what about src types?
+	tyReplace[builder.refType(oldStructType)] = newStructType;
+	tyReplace[builder.refType(oldStructType, RK_SOURCE)] = newStructType; // TODO that for src types?
 
 	return tyReplace;
 }

@@ -1036,7 +1036,6 @@ ExpressionPtr VariableAdder::updateArgument(const ExpressionAddress& oldArg) {
 //std::cout << *getDeclaration(oldArg) << std::endl;
 	if(match) {
 		ExpressionAddress oldVarDecl = getDeclaration(match.get()["variable"].getValue().as<ExpressionAddress>());
-std::cout << oldVarDecl << std::endl;
 //{ExpressionAddress oldVarDecl = getDeclaration(oldArg);
 
 		auto varCheck = varsToReplace.find(oldVarDecl);

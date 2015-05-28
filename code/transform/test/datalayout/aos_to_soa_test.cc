@@ -237,7 +237,7 @@ TEST(DataLayout, AosToSoa2) {
 		"	let store = expr lit(\"storeData\":(ref<array<twoElem,1>>)->unit);"
 		"	let load = expr lit(\"loadData\":(ref<ref<array<twoElem,1>>>)->unit);"
 		""
-		"	let access2 = lambda (ref<array<twoElem,1>> x)->unit {"
+		"	let access2 = lambda (src<array<twoElem,1>> x)->unit {"
 		"		decl ref<real<4>> l = x[7].float;"
 		"	};"
 		""
@@ -284,7 +284,7 @@ TEST(DataLayout, AosToSoa2) {
 	datalayout::AosToSoa ats(code, datalayout::findAllSuited);
 	ats.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -490,7 +490,7 @@ TEST(DataLayout, Tuple) {
 	NodePtr code = builder.normalize(builder.parseStmt(R"(
 		{
 			let twoElem = struct{int<4> int; real<4> float;};
-			let tuple = (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>);
+			let tuple = (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>);
 		
 			let access = lambda (ref<array<ref<array<twoElem,1>>, 1>> x)->unit {
 				for(int<4> i = 0 .. 42 : 1) {
@@ -498,13 +498,13 @@ TEST(DataLayout, Tuple) {
 				}
 			};
 		
-			let writeToTuple = lambda (ref<(ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>)> lt, 
+			let writeToTuple = lambda (ref<tuple> lt, 
 					ref<array<ref<array<twoElem,1>>,1>> x)->unit {
 				(*x[0])[3].int = 7;
 				tuple_ref_elem(lt,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = x;
 			};
 		
-			let actualWork = lambda (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, 
+			let actualWork = lambda (ref<array<twoElem,1>> a, src<array<twoElem,1>> a1, ref<array<real<4>,1>> b, uint<8> c, 
 					                 vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {
 				decl ref<ref<array<twoElem,1>>> d = var(a);
 				decl ref<ref<array<twoElem,1>>> f = var(array_view(a, 17));
@@ -515,45 +515,50 @@ TEST(DataLayout, Tuple) {
 				for(int<4> i = 0 .. 99 : 1) {
 					scalar = *(a[i].float);
 					scalar = *((*d)[i].float);
+					scalar = *(a1[i].float);
 				}
 
 //				decl ref<array<twoElem,1>> e; 	not supported
 //				e = *a;							
 			};
 		
-			let local = lambda (ref<array<real<4>,1>> b, ref<array<twoElem,1>> a, uint<8> c, 
+			let local = lambda (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, src<array<twoElem,1>> a1, uint<8> c, 
 					vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {
 				parallel(job([vector_reduction(local_size, 1u, uint_mul):vector_reduction(local_size, 1u, uint_mul)]
-				,	actualWork(a, b, c, local_size, global_size)
+				,	actualWork(a, a1, b, c, local_size, global_size)
 				));
 			};
 		
-			let global = lambda (ref<array<twoElem,1>> a, ref<array<real<4>,1>> b, uint<8> c, 
+			let global = lambda (ref<array<twoElem,1>> a, src<array<twoElem,1>> a1, ref<array<real<4>,1>> b, uint<8> c, 
 					vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> unit {
 				decl vector<uint<8>,3> groups = vector_pointwise(uint_div)(global_size, local_size);
 				parallel(job([vector_reduction(groups, 1u, uint_mul):vector_reduction(groups, 1u, uint_mul)]
-				,	local(b, a, c, local_size, global_size)
+				,	local(a, b, a1, c, local_size, global_size)
 				));
 			};
 		
 			let kernelFct = lambda (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {
 				global(
 					*(tuple_member_access(kernel, 0u, lit(ref<array<ref<array<twoElem,1>>,1>>))[0]),
-					*(tuple_member_access(kernel, 1u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0]),
-					*(tuple_member_access(kernel, 2u, lit(ref<array<uint<8>,1>>))[0]),
+					*(tuple_member_access(kernel, 1u, lit(ref<array<ref<array<twoElem,1>>,1>>))[0]),
+					*(tuple_member_access(kernel, 2u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0]),
+					*(tuple_member_access(kernel, 3u, lit(ref<array<uint<8>,1>>))[0]),
 					local_size, global_size);
 		
 				return 0;
 			};
 		
 			decl ref<ref<array<twoElem,1>>> a;
+			decl ref<ref<array<twoElem,1>>> a1;
 			decl ref<ref<array<real<4>,1>>> b;
 			decl ref<uint<8>> c;
 			decl ref<ref<tuple>> t;
-			t = new(undefined( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>) ));
+			t = new(undefined( (ref<array<ref<array<twoElem,1>>,1>>, ref<array<ref<array<twoElem,1>>,1>>, 
+					ref<array<ref<array<real<4>,1>>,1>>, ref<array<uint<8>,1>>) ));
 			ref_deref(a);
 			access(scalar_to_array(a));
 			tuple_ref_elem(*t,0u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar_to_array(a);
+			tuple_ref_elem(*t,1u, lit(ref<array<ref<array<twoElem,1>>,1>>)) = scalar_to_array(a1);
 			writeToTuple(*t, scalar_to_array(a));
 		
 			decl vector<uint<8>,3> ls;
@@ -585,11 +590,38 @@ TEST(DataLayout, Tuple) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(76, numberOfCompoundStmts(code));
+	EXPECT_EQ(89, numberOfCompoundStmts(code));
 	EXPECT_EQ(2, countMarshalledAccesses(code));
 	EXPECT_EQ(2, countMarshalledAssigns(code));
 }
 /*
+let type000 = struct<
+	int:int<4>,
+	float:real<4>
+>;
+
+v1
+argREf: AP(ref<array<real<4>,1>>)
+let type000 = struct<
+	int:int<4>,
+	float:real<4>
+>;
+
+v1
+argREf: AP(ref<array<int<4>,1>>)
+let type000 = struct<
+	int:int<4>,
+	float:real<4>
+>;
+
+v2
+argREf: AP(ref<array<real<4>,1>>)
+let type000 = struct<
+	int:int<4>,
+	float:real<4>
+>;
+
+v2
 let type000 = struct<
 	int:int<4>,
 	float:real<4>
@@ -600,15 +632,15 @@ let type001 = struct<
 	float:ref<array<real<4>,1>>
 >;
 
-let fun000 = fun(ref<array<ref<array<type000,1>>,1>> v1, ref<array<type001,1>> v213) -> unit {
+let fun000 = fun(ref<array<ref<array<type000,1>>,1>> v1, ref<array<type001,1>> v223) -> unit {
     for(decl int<4> v2 = 0 .. 42 : 1) {
-        (((( *(v213&[0])).int)&[v2]) := v2);
+        (((( *(v223&[0])).int)&[v2]) := v2);
     };
 };
 
-let fun001 = fun(ref<(ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)> v270, ref<array<ref<array<type000,1>>,1>> v2, ref<array<type001,1>> v214) -> unit {
-    (((( *(v214&[0])).int)&[3]) := 7);
-    (tuple_ref_elem(v270, 0, type<ref<array<type001,1>>>) := v214);
+let fun001 = fun(ref<(ref<array<type001,1>>,ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)> v226, ref<array<ref<array<type000,1>>,1>> v2, ref<array<type001,1>> v224) -> unit {
+    (((( *(v224&[0])).int)&[3]) := 7);
+    (tuple_ref_elem(v226, 0, type<ref<array<type001,1>>>) := v224);
 };
 
 let fun002 = fun(vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) -> 'res v3) -> vector<'res,#l> {
@@ -619,53 +651,63 @@ let fun002 = fun(vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) ->
     return ( *v4);
 };
 
-let fun003 = fun(ref<array<int<4>,1>> v276, ref<array<real<4>,1>> v277, ref<array<real<4>,1>> v2, uint<8> v3, vector<uint<8>,3> v4, vector<uint<8>,3> v5) -> unit {
-    decl ref<ref<array<int<4>,1>>> v278 = ( var(v276));
-    decl ref<ref<array<real<4>,1>>> v279 = ( var(v277));
-    decl ref<ref<array<int<4>,1>>> v280 = ( var(scalar_to_array((v276&[17]))));
-    decl ref<ref<array<real<4>,1>>> v281 = ( var(scalar_to_array((v277&[17]))));
-    ((( *v278)&[13]) := 5);
-    (v280 := scalar_to_array((v276&[42])));
-    (v281 := scalar_to_array((v277&[42])));
+let fun003 = fun(ref<array<int<4>,1>> v237, ref<array<real<4>,1>> v238, ref<array<int<4>,1>> v239, ref<array<real<4>,1>> v240, ref<array<real<4>,1>> v3, uint<8> v4, vector<uint<8>,3> v5, vector<uint<8>,3> v6) -> unit {
+    decl ref<ref<array<int<4>,1>>> v241 = ( var(v237));
+    decl ref<ref<array<real<4>,1>>> v242 = ( var(v238));
+    decl ref<ref<array<int<4>,1>>> v243 = ( var(array_view(v237, 17)));
+    decl ref<ref<array<real<4>,1>>> v244 = ( var(array_view(v238, 17)));
+    ((( *v241)&[13]) := 5);
+    (v243 := array_view(v237, 42));
+    (v244 := array_view(v238, 42));
+    decl ref<real<4>> v9 = ( var(( *(( *v242)&[55]))));
+    for(decl int<4> v10 = 0 .. 99 : 1) {
+        (v9 := ( *(v238&[v10])));
+        (v9 := ( *(( *v242)&[v10])));
+        (v9 := ( *(v240&[v10])));
+    };
 };
 
-let fun004 = fun(ref<array<real<4>,1>> v1, ref<array<int<4>,1>> v274, ref<array<real<4>,1>> v275, uint<8> v3, vector<uint<8>,3> v4, vector<uint<8>,3> v5) -> unit {
-    parallel(job(([vector_reduction(v5, 1u, uint_mul)-vector_reduction(v5, 1u, uint_mul)])){
-        bind(){fun003(v274, v275, v1, v3, v5, v4)}
-    });
-};
-
-let fun005 = fun(ref<array<int<4>,1>> v272, ref<array<real<4>,1>> v273, ref<array<real<4>,1>> v2, uint<8> v3, vector<uint<8>,3> v4, vector<uint<8>,3> v5) -> unit {
-    decl vector<uint<8>,3> v6 = vector_pointwise(uint_div)(v4, v5);
+let fun004 = fun(ref<array<int<4>,1>> v233, ref<array<real<4>,1>> v234, ref<array<real<4>,1>> v2, ref<array<int<4>,1>> v235, ref<array<real<4>,1>> v236, uint<8> v4, vector<uint<8>,3> v5, vector<uint<8>,3> v6) -> unit {
     parallel(job(([vector_reduction(v6, 1u, uint_mul)-vector_reduction(v6, 1u, uint_mul)])){
-        bind(){fun004(v2, v272, v273, v3, v5, v4)}
+        bind(){fun003(v233, v234, v235, v236, v2, v4, v6, v5)}
     });
 };
 
-let fun006 = fun((ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>) v271, vector<uint<8>,3> v2, vector<uint<8>,3> v3) -> int<4> {
-    fun005(( *((tuple_member_access(v271, 0, type<ref<array<type001,1>>>)&[0])->int)), ( *((tuple_member_access(v271, 0, type<ref<array<type001,1>>>)&[0])->float)), ( *(tuple_member_access(v271, 1, type<ref<array<ref<array<real<4>,1>>,1>>>)&[0])), ( *(tuple_member_access(v271, 2, type<ref<array<uint<8>,1>>>)&[0])), v3, v2);
+let fun005 = fun(ref<array<int<4>,1>> v229, ref<array<real<4>,1>> v230, ref<array<int<4>,1>> v231, ref<array<real<4>,1>> v232, ref<array<real<4>,1>> v3, uint<8> v4, vector<uint<8>,3> v5, vector<uint<8>,3> v6) -> unit {
+    decl vector<uint<8>,3> v7 = vector_pointwise(uint_div)(v5, v6);
+    parallel(job(([vector_reduction(v7, 1u, uint_mul)-vector_reduction(v7, 1u, uint_mul)])){
+        bind(){fun004(v229, v230, v3, v231, v232, v4, v6, v5)}
+    });
+};
+
+let fun006 = fun((ref<array<type001,1>>,ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>) v228, vector<uint<8>,3> v2, vector<uint<8>,3> v3) -> int<4> {
+    fun005(( *((tuple_member_access(v228, 0, type<ref<array<type001,1>>>)&[0])->int)), ( *((tuple_member_access(v228, 0, type<ref<array<type001,1>>>)&[0])->float)), ( *((tuple_member_access(v228, 1, type<ref<array<type001,1>>>)&[0])->int)), ( *((tuple_member_access(v228, 1, type<ref<array<type001,1>>>)&[0])->float)), ( *(tuple_member_access(v228, 2, type<ref<array<ref<array<real<4>,1>>,1>>>)&[0])), ( *(tuple_member_access(v228, 3, type<ref<array<uint<8>,1>>>)&[0])), v3, v2);
     return 0;
 };
 
 {
     decl ref<ref<array<type000,1>>> v0 = ( var(undefined(type<ref<array<type000,1>>>)));
-    decl ref<type001> v212 = ( var(undefined(type<type001>)));
-    ((v212->int) := undefined(type<ref<array<int<4>,1>>>));
-    ((v212->float) := undefined(type<ref<array<real<4>,1>>>));
-    decl ref<ref<array<real<4>,1>>> v1 = ( var(undefined(type<ref<array<real<4>,1>>>)));
-    decl ref<uint<8>> v2 = ( var(undefined(type<uint<8>>)));
-    decl ref<ref<(ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)>> v269 = ( var(undefined(type<ref<(ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)>>)));
-    (v269 := ( new(undefined(type<(ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)>))));
+    decl ref<type001> v221 = ( var(undefined(type<type001>)));
+    ((v221->int) := undefined(type<ref<array<int<4>,1>>>));
+    ((v221->float) := undefined(type<ref<array<real<4>,1>>>));
+    decl ref<ref<array<type000,1>>> v1 = ( var(undefined(type<ref<array<type000,1>>>)));
+    decl ref<type001> v222 = ( var(undefined(type<type001>)));
+    ((v222->int) := undefined(type<ref<array<int<4>,1>>>));
+    ((v222->float) := undefined(type<ref<array<real<4>,1>>>));
+    decl ref<ref<array<real<4>,1>>> v2 = ( var(undefined(type<ref<array<real<4>,1>>>)));
+    decl ref<uint<8>> v3 = ( var(undefined(type<uint<8>>)));
+    decl ref<ref<(ref<array<type001,1>>,ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)>> v225 = ( var(undefined(type<ref<(ref<array<type001,1>>,ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)>>)));
+    (v225 := ( new(undefined(type<(ref<array<type001,1>>,ref<array<type001,1>>,ref<array<ref<array<real<4>,1>>,1>>,ref<array<uint<8>,1>>)>))));
     ( *v0);
-    fun000(scalar_to_array(v0), scalar_to_array(v212));
-    (tuple_ref_elem(( *v269), 0, type<ref<array<type001,1>>>) := scalar_to_array(v212));
-    fun001(( *v269), scalar_to_array(v0), scalar_to_array(v212));
-    decl vector<uint<8>,3> v4 = undefined(type<vector<uint<8>,3>>);
+    fun000(scalar_to_array(v0), scalar_to_array(v221));
+    (tuple_ref_elem(( *v225), 0, type<ref<array<type001,1>>>) := scalar_to_array(v221));
+    (tuple_ref_elem(( *v225), 1, type<ref<array<type001,1>>>) := scalar_to_array(v222));
+    fun001(( *v225), scalar_to_array(v0), scalar_to_array(v221));
     decl vector<uint<8>,3> v5 = undefined(type<vector<uint<8>,3>>);
-    fun006(( *( *v269)), v4, v5);
-    ( del(( *v269)));
+    decl vector<uint<8>,3> v6 = undefined(type<vector<uint<8>,3>>);
+    fun006(( *( *v225)), v5, v6);
+    ( del(( *v225)));
 }
-
 */
 
 } // transform

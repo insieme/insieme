@@ -179,6 +179,8 @@ void ParSecSoa::transform() {
 			pattern::any << var("nElems", pattern::any))));
 	VariableMap<std::map<LiteralPtr, ExpressionPtr>> map;
 
+	pattern::TreePattern refTypePattern = pattern::aT(var("toBeReplaced", pirp::refType(pirp::arrayType(pattern::atom(oldStructType)))));
+
 	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
 		std::map<StatementPtr, ExpressionPtr> nElems;
 
@@ -191,9 +193,18 @@ void ParSecSoa::transform() {
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 //std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
 			StatementList newVars;
+
+			NodePtr oldTypeToBeReplaced;
+
+			pattern::MatchOpt typeToBeReplacedMatch = refTypePattern.matchPointer(oldVar->getType());
+			if(typeToBeReplacedMatch){
+				oldTypeToBeReplaced = typeToBeReplacedMatch.get()["toBeReplaced"].getValue();
+			}
+			assert_true(oldTypeToBeReplaced) << " could not identify the type to be replaced";
+
 			std::map<StringValuePtr, VariablePtr> fieldMap;
 			for(NamedTypePtr elemTy : newStructType->getElements()) {
-				TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), builder.refType(builder.arrayType(oldStructType)), elemTy->getType()).as<TypePtr>();
+				TypePtr newType = core::transform::replaceAll(m, oldVar->getType(), oldTypeToBeReplaced, elemTy->getType()).as<TypePtr>();
 				fieldMap[elemTy->getName()] = builder.variable(newType);
 				newVars.push_back(fieldMap[elemTy->getName()]);
 //std::cout << "NT: " << newType << " " << newVars.back() << " var " << *oldVar->getType() << " " << *oldVar << std::endl;

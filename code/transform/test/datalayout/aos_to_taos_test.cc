@@ -92,9 +92,15 @@ TEST(DataLayout, AosToTaos) {
 			let store = expr lit("storeData":(ref<array<twoElem,1>>)->unit);
 			let load =  expr lit("loadData":(ref<ref<array<twoElem,1>>>)->unit);
 		
-			let access = lambda (ref<array<twoElem,1>> x)->unit {
+			let write = lambda (ref<array<twoElem,1>> x)->unit {
 				for(int<4> i = 0 .. 42 : 1) {
 					x[i].int = i;
+				}
+			};
+		
+			let access = lambda (src<array<twoElem,1>> x)->unit {
+				for(int<4> i = 0 .. 42 : 1) {
+					x[i].int;
 				}
 			};
 		
@@ -116,6 +122,7 @@ TEST(DataLayout, AosToTaos) {
 				(*ptr)[i].int = i;
 				ref_deref(a)[i].int = i;
 			}
+			write(*a);
 			access(*a);
 		
 			decl ref<int<4>> e = (*a)[5].int;
@@ -150,100 +157,86 @@ TEST(DataLayout, AosToTaos) {
 		std::cout << cur << std::endl;
 	});
 
-	EXPECT_EQ(128, numberOfCompoundStmts(code));
-	EXPECT_EQ(18, countMarshalledAccesses(code));
+	EXPECT_EQ(133, numberOfCompoundStmts(code));
+	EXPECT_EQ(19, countMarshalledAccesses(code));
 	EXPECT_EQ(9, countMarshalledAssigns(code));
 }
 /*
-let type000 = struct<
-	int:int<4>,
-	float:real<4>
->;
-
-let type001 = struct<
-	int:vector<int<4>,64>,
-	float:vector<real<4>,64>
->;
-
-let fun000 = fun(ref<array<type000,1>> v1, ref<array<type001,1>> v173) -> unit {
-    for(decl int<4> v2 = 0 .. 42 : 1) {
-        ((((v173&[(v2/64)])->int)&[(v2%64)]) := v2);
-    };
-};
-
 {
     decl ref<ref<array<type000,1>>> v0 = ( var(( new(array_create_1D(type<type000>, 100u)))));
-    decl ref<ref<array<type001,1>>> v169 = ( var(( new(array_create_1D(type<type001>, (100u/64))))));
+    decl ref<ref<array<type001,1>>> v173 = ( var(( new(array_create_1D(type<type001>, (100u/64))))));
     (v0 := ( new(array_create_1D(type<type000>, 100u))));
-    (v169 := ( new(array_create_1D(type<type001>, (100u/64)))));
+    (v173 := ( new(array_create_1D(type<type001>, (100u/64)))));
     for(decl int<4> v1 = 0 .. 100 : 1) {
         decl ref<type000> v2 = ( var(undefined(type<type000>)));
         ((( *v0)&[v1]) := ( *v2));
     };
-    for(decl int<4> v228 = (0/64) .. (100/64) : 1) {
-        for(decl int<4> v229 = 0 .. 64 : 1) {
-            ((((( *v169)&[v228])->int)&[v229]) := ( *((( *v0)&[((v228*64)+v229)])->int)));
-            ((((( *v169)&[v228])->float)&[v229]) := ( *((( *v0)&[((v228*64)+v229)])->float)));
+    for(decl int<4> v179 = (0/64) .. (100/64) : 1) {
+        for(decl int<4> v180 = 0 .. 64 : 1) {
+            ((((( *v173)&[v179])->int)&[v180]) := ( *((( *v0)&[((v179*64)+v180)])->int)));
+            ((((( *v173)&[v179])->float)&[v180]) := ( *((( *v0)&[((v179*64)+v180)])->float)));
         };
     };
-    for(decl uint<4> v234 = (0/64) .. (100u/64) : 1) {
-        for(decl uint<4> v235 = 0 .. 64 : 1) {
-            (((( *v0)&[((v234*64)+v235)])->int) := ( *(((( *v169)&[v234])->int)&[v235])));
-            (((( *v0)&[((v234*64)+v235)])->float) := ( *(((( *v169)&[v234])->float)&[v235])));
+    for(decl uint<4> v185 = (0/64) .. (100u/64) : 1) {
+        for(decl uint<4> v186 = 0 .. 64 : 1) {
+            (((( *v0)&[((v185*64)+v186)])->int) := ( *(((( *v173)&[v185])->int)&[v186])));
+            (((( *v0)&[((v185*64)+v186)])->float) := ( *(((( *v173)&[v185])->float)&[v186])));
         };
     };
     loadData(v0);
-    for(decl uint<4> v230 = (0/64) .. (100u/64) : 1) {
-        for(decl uint<4> v231 = 0 .. 64 : 1) {
-            ((((( *v169)&[v230])->int)&[v231]) := ( *((( *v0)&[((v230*64)+v231)])->int)));
-            ((((( *v169)&[v230])->float)&[v231]) := ( *((( *v0)&[((v230*64)+v231)])->float)));
+    for(decl uint<4> v181 = (0/64) .. (100u/64) : 1) {
+        for(decl uint<4> v182 = 0 .. 64 : 1) {
+            ((((( *v173)&[v181])->int)&[v182]) := ( *((( *v0)&[((v181*64)+v182)])->int)));
+            ((((( *v173)&[v181])->float)&[v182]) := ( *((( *v0)&[((v181*64)+v182)])->float)));
         };
     };
     for(decl int<4> v3 = 0 .. 42 : 1) {
-        decl ref<type000> v4 = ( var(struct{int:=( *(((( *v169)&[(v3/64)])->int)&[(v3%64)])), float:=( *(((( *v169)&[(v3/64)])->float)&[(v3%64)]))}));
+        decl ref<type000> v4 = ( var(struct{int:=( *(((( *v173)&[(v3/64)])->int)&[(v3%64)])), float:=( *(((( *v173)&[(v3/64)])->float)&[(v3%64)]))}));
         decl ref<ref<array<type000,1>>> v5 = ( var(( *v0)));
-        decl ref<ref<array<type001,1>>> v170 = ( var(( *v169)));
+        decl ref<ref<array<type001,1>>> v174 = ( var(( *v173)));
         (v5 := ( *v0));
-        (v170 := ( *v169));
+        (v174 := ( *v173));
         (v0 := ( *v5));
-        (v169 := ( *v170));
+        (v173 := ( *v174));
         decl ref<ref<array<type000,1>>> v6 = ( var(undefined(type<ref<array<type000,1>>>)));
-        decl ref<ref<array<type001,1>>> v171 = ( var(undefined(type<ref<array<type001,1>>>)));
+        decl ref<ref<array<type001,1>>> v175 = ( var(undefined(type<ref<array<type001,1>>>)));
         (v6 := ( *v0));
-        (v171 := ( *v169));
+        (v175 := ( *v173));
         decl ref<ref<array<type000,1>>> v7 = ( var(array_view(( *v0), v3)));
-        decl ref<ref<array<type001,1>>> v172 = ( var(array_view(( *v169), v3)));
-        ((((( *v172)&[(v3/64)])->int)&[(v3%64)]) := v3);
-        ((((( *v169)&[(v3/64)])->int)&[(v3%64)]) := v3);
+        decl ref<ref<array<type001,1>>> v176 = ( var(array_view(( *v173), v3)));
+        ((((( *v176)&[(v3/64)])->int)&[(v3%64)]) := v3);
+        ((((( *v173)&[(v3/64)])->int)&[(v3%64)]) := v3);
     };
-    fun000(( *v0), ( *v169));
-    decl ref<int<4>> v8 = (((( *v169)&[(5/64)])->int)&[(5%64)]);
-    for(decl uint<4> v236 = (0/64) .. (100u/64) : 1) {
-        for(decl uint<4> v237 = 0 .. 64 : 1) {
-            (((( *v0)&[((v236*64)+v237)])->int) := ( *(((( *v169)&[v236])->int)&[v237])));
-            (((( *v0)&[((v236*64)+v237)])->float) := ( *(((( *v169)&[v236])->float)&[v237])));
+    fun000(( *v0), ( *v173));
+    fun001(( *v0), ( *v173));
+    decl ref<int<4>> v8 = (((( *v173)&[(5/64)])->int)&[(5%64)]);
+    for(decl uint<4> v187 = (0/64) .. (100u/64) : 1) {
+        for(decl uint<4> v188 = 0 .. 64 : 1) {
+            (((( *v0)&[((v187*64)+v188)])->int) := ( *(((( *v173)&[v187])->int)&[v188])));
+            (((( *v0)&[((v187*64)+v188)])->float) := ( *(((( *v173)&[v187])->float)&[v188])));
         };
     };
     storeData(( *v0));
-    for(decl uint<4> v232 = (0/64) .. (100u/64) : 1) {
-        for(decl uint<4> v233 = 0 .. 64 : 1) {
-            ((((( *v169)&[v232])->int)&[v233]) := ( *((( *v0)&[((v232*64)+v233)])->int)));
-            ((((( *v169)&[v232])->float)&[v233]) := ( *((( *v0)&[((v232*64)+v233)])->float)));
+    for(decl uint<4> v183 = (0/64) .. (100u/64) : 1) {
+        for(decl uint<4> v184 = 0 .. 64 : 1) {
+            ((((( *v173)&[v183])->int)&[v184]) := ( *((( *v0)&[((v183*64)+v184)])->int)));
+            ((((( *v173)&[v183])->float)&[v184]) := ( *((( *v0)&[((v183*64)+v184)])->float)));
         };
     };
-    for(decl int<4> v238 = (0/64) .. (100/64) : 1) {
-        for(decl int<4> v239 = 0 .. 64 : 1) {
-            (((( *v0)&[((v238*64)+v239)])->int) := ( *(((( *v169)&[v238])->int)&[v239])));
-            (((( *v0)&[((v238*64)+v239)])->float) := ( *(((( *v169)&[v238])->float)&[v239])));
+    for(decl int<4> v189 = (0/64) .. (100/64) : 1) {
+        for(decl int<4> v190 = 0 .. 64 : 1) {
+            (((( *v0)&[((v189*64)+v190)])->int) := ( *(((( *v173)&[v189])->int)&[v190])));
+            (((( *v0)&[((v189*64)+v190)])->float) := ( *(((( *v173)&[v189])->float)&[v190])));
         };
     };
     for(decl int<4> v9 = 0 .. 100 : 1) {
         decl ref<type000> v10 = ( var(undefined(type<type000>)));
         (v10 := ( *(( *v0)&[v9])));
     };
-    ( del(( *v169)));
+    ( del(( *v173)));
     ( del(( *v0)));
 }
+
 */
 
 TEST(DataLayout, Tuple) {
@@ -353,7 +346,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();

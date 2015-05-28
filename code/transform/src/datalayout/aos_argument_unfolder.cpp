@@ -159,17 +159,16 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 				for_range(make_paired_range(newStructType, paramToReplace->second.as<CompoundStmtPtr>()),
 						[&](const std::pair<NamedTypePtr, StatementPtr>& cur) {
 					NamedTypePtr newType = cur.first;
-					StatementPtr param =cur.second;
+					VariablePtr param = cur.second.as<VariablePtr>();
 
-					VariablePtr p = param.as<VariablePtr>();
-					newParam.push_back(p);
-					paramTys.push_back(p->getType());
+					newParam.push_back(param);
+					paramTys.push_back(param->getType());
 
 					ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
 					ExpressionPtr argRef = builder.accessMember(builder.arrayRefElem(accessTuple, arrayIndex), newType->getName());
 
-					if(argRef->getType() != builder.refType(p->getType())) // add ref_reinterpret if necessary
-						argRef = builder.refReinterpret(argRef, p->getType());
+					if(argRef->getType() != builder.refType(param->getType())) // add ref_reinterpret if necessary
+						argRef = builder.refReinterpret(argRef, param->getType());
 
 					newArg.push_back(builder.deref(argRef));
 				});

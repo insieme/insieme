@@ -93,9 +93,9 @@ void AosToTaos::transform() {
 			// update root for in case it has been modified in a previous iteration
 			oldVar = oldVar.switchRoot(toTransform);
 
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), /*check this for src types*/builder.refType(toReplaceList.second),
-					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
-//std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
+					builder.arrayType(newStructType)).as<TypePtr>();
+
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
