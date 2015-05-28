@@ -47,6 +47,8 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
+using std::string;
+
 int SystemInfo::obtainSystemInformation() const {
 	core::NodeManager manager;
 	auto tempCompiler = compiler;
@@ -76,21 +78,49 @@ int SystemInfo::obtainSystemInformation() const {
 	std::ifstream in(reportFile);
 	if(!in.is_open()) return -2;
 
-	result = string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	data = string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
 	in.close();
 	boost::filesystem::remove(reportFile);
 
-	if(result.empty()) {
-		std::cout << "Error while trying to obtain system information, result was empty\n";
+	if(data.empty()) {
+		LOG(ERROR) << "Error while trying to obtain system information, result was empty\n";
 		return -3;
 	}
 
 	return 0;
 }
 
-string SystemInfo::queryStringSingle(const std::string regex) const {
-	const auto temp = queryString(regex);
+bool SystemInfo::isValid() const {
+	return valid;
+}
+
+const string& SystemInfo::getFullInformation() const {
+	return data;
+}
+
+unsigned SystemInfo::getNumberOfCPUsTotal() const {
+	return queryGeneric<unsigned>("Number of CPUs:\\s+(\\d+)").front();
+}
+
+unsigned SystemInfo::getNumberOfCoresPerSocket() const {
+	return queryGeneric<unsigned>("Number of cores per socket:\\s+(\\d+)").front();
+}
+
+unsigned SystemInfo::getNumberOfSockets() const {
+	return queryGeneric<unsigned>("Number of sockets:\\s+(\\d+)").front();
+}
+
+unsigned SystemInfo::getNumberOfHWThreadsPerCore() const {
+	return queryGeneric<unsigned>("Number of HW threads per core:\\s+(\\d+)").front();
+}
+
+bool SystemInfo::hasDVFSDomainPerCore() const {
+	return (queryGenericString("CPU DVFS domain:\\s+(\\w+)").front() == string("cores"));
+}
+
+string SystemInfo::queryGenericStringSingle(const string& regex) const {
+	const auto temp = queryGenericString(regex);
 	string res;
 	if(!temp.empty()) {
 		res = temp.front();
@@ -98,18 +128,15 @@ string SystemInfo::queryStringSingle(const std::string regex) const {
 	return res;
 }
 
-vector<std::string> SystemInfo::queryString(const std::string regexString) const {
+vector<string> SystemInfo::queryGenericString(const string& regexString) const {
 	vector<string> retval;
-	if(result.empty()) {
-		if(obtainSystemInformation() < 0) return retval;
-	}
 
 	boost::regex regex(regexString.c_str());
-	boost::match_results<std::string::const_iterator> matches;
+	boost::match_results<string::const_iterator> matches;
 
-	std::string::const_iterator start = result.begin();
+	string::const_iterator start = data.begin();
 
-	while(boost::regex_search(start, result.cend(), matches, regex)) {
+	while(boost::regex_search(start, data.cend(), matches, regex)) {
 		// save all capturing groups
 		for(unsigned i = 1; i < matches.size(); ++i) {
 			retval.push_back(matches[i]);
@@ -124,13 +151,6 @@ vector<std::string> SystemInfo::queryString(const std::string regexString) const
 	 */
 
 	return retval;
-}
-
-std::string SystemInfo::getFullInformation() const {
-	if(result.empty()) {
-		obtainSystemInformation();
-	}
-	return result;
 }
 
 } // end namespace measure
