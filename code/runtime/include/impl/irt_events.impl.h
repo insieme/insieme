@@ -80,11 +80,12 @@ void irt_##__short__##_event_register_destroy(const irt_##__subject__##_id item_
 	reg_id.full = item_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_remove(reg_id); \
-	irt_spin_unlock(&reg->lock); /* For better style we unlock the lock here as it has been locked by the lookup table, even though it won't be used anymore */ \
+	/* No locking needed here - the lookup table already locked the lock for us */ \
 	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Couldn't find register for [%d %d %d] to remove", item_id.node, item_id.thread, item_id.index); \
 	irt_worker* self = irt_worker_get_current(); \
 	reg->lookup_table_next = self->__short__##_ev_register_list; \
 	self->__short__##_ev_register_list = reg; \
+	irt_spin_unlock(&reg->lock); /* For better style we unlock the lock here as it has been locked by the lookup table, even though it won't be used anymore */ \
 	_IRT_EVENT_DEBUG_FOOTER(__short__, "Called event_register_destroy for [%d %d %d]\n", item_id.node, item_id.thread, item_id.index) \
 } \
  \
