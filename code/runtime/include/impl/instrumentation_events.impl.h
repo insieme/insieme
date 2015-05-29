@@ -328,7 +328,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 	} else {
 		for(uint i = 0; i < table->number_of_elements; ++i) {
-			irt_inst_event_data_output_single(table->data[i], outputfile, false);
+			irt_inst_event_data_output_single(table->data[i], outputfile, true);
 		}
 	}
 
