@@ -106,7 +106,7 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%" PRId64 "..%" PRId64 " : %" PRId64, r->begin, r->end, r->step);
 }
 
-static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range, 
+static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range,
 		irt_wi_implementation* impl, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
@@ -123,10 +123,10 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
-		} else { 
-			wi->parameters = (irt_lw_data_item*)malloc(size); 
+		} else {
+			wi->parameters = (irt_lw_data_item*)malloc(size);
 		}
-		memcpy(wi->parameters, params, size); 
+		memcpy(wi->parameters, params, size);
 	} else {
 		wi->parameters = NULL;
 	}
