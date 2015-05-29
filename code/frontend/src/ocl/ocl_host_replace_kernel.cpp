@@ -49,6 +49,7 @@
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/cast_tool.h"
+#include "insieme/core/types/subtype_constraints.h"
 
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
@@ -316,7 +317,7 @@ ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr
 
 
 		TypePtr refArtTy = builder.refType(argTy);
-		if(argument->getType() != refArtTy) {// e.g. argument of kernel is an ocl vector type
+		if(!types::isSubTypeOf(argument->getType(), refArtTy)) {// e.g. argument of kernel is an ocl vector type
 
 			argument = builder.callExpr(refArtTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
 		}

@@ -184,11 +184,7 @@ void ParSecSoa::transform() {
 	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
 		std::map<StatementPtr, ExpressionPtr> nElems;
 
-		std::vector<NamedTypePtr> newStructElemsTypes;
-
-		for(NamedTypePtr elemTy : newStructType->getElements()) {
-			newStructElemsTypes.push_back(elemTy);
-		}
+		std::vector<NamedTypePtr> newStructElemsTypes = newStructType->getElements();
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 //std::cout << "NT: " << newStructType << " var " << oldVar << " " << *oldVar << std::endl;
@@ -209,7 +205,7 @@ void ParSecSoa::transform() {
 				newVars.push_back(fieldMap[elemTy->getName()]);
 //std::cout << "NT: " << newType << " " << newVars.back() << " var " << *oldVar->getType() << " " << *oldVar << std::endl;
 			}
-//std::cout << "heyho " << oldVar << " " << *oldVar << "\n";
+//std::cout << "heyho " << oldVar << " " << *oldVar <<  "\n";
 			// note, there are no global variables to be handled here
 			varReplacements[oldVar] = builder.compoundStmt(newVars);
 			fieldReplacements[oldVar] = fieldMap;

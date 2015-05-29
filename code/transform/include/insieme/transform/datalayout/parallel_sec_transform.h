@@ -49,8 +49,6 @@ typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScope
 namespace transform {
 namespace datalayout {
 
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
-
 template<class Baseclass>
 class ParSecTransform : public Baseclass {
 protected:

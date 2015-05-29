@@ -68,7 +68,7 @@ ExprAddressArrayTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAdd
 			// check if tuple argument has a member which will be updated
 			ExpressionAddress oldRootVar = getRootVariable(call, call->getArgument(0)).as<ExpressionAddress>();
 			auto newRootVarIter = varsToPropagate.find(oldRootVar);
-//std::cout << "\nat the tuple member access " << oldRootVar << "\n";
+//std::cout << "\nat the tuple member access " << *newRootVarIter->second << "\n";
 
 			if(newRootVarIter != varsToPropagate.end()) { // tuple has been updated, check if it was the current field
 				ExpressionPtr newRootVar = newRootVarIter->second.as<ExpressionPtr>();
@@ -76,7 +76,7 @@ ExprAddressArrayTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAdd
 				RefTypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
 						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>()).as<RefTypePtr>();
 				TypePtr oldType = call->getArgument(2)->getType().as<GenericTypePtr>()->getTypeParameter(0);
-//std::cout << "Creating var of new type: " << newRootVar->getType() << std::endl;
+//std::cout << "Creating var of new type: " << newType << std::endl;
 
 				// check if and update is needed
 				if(newType == oldType) {
@@ -84,7 +84,10 @@ ExprAddressArrayTypeMap ParSecTransform<Baseclass>::findCandidates(const NodeAdd
 					return;
 				}
 
-				ExpressionAddress argument = call.getParentAddress(2).isa<CallExprAddress>();
+				CallExprAddress argument = call.getParentAddress(2).isa<CallExprAddress>();
+				if(core::analysis::isCallOf(argument.getAddressedNode(), m.getLangBasic().getRefReinterpret()))
+					argument = argument.getParentAddress(1).isa<CallExprAddress>();
+
 				CallExprAddress parent = argument.getParentAddress(1).isa<CallExprAddress>();
 				if(!parent){
 					return;

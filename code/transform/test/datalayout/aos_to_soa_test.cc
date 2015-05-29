@@ -540,7 +540,7 @@ TEST(DataLayout, Tuple) {
 			let kernelFct = lambda (tuple kernel, vector<uint<8>,3> global_size, vector<uint<8>,3> local_size) -> int<4> {
 				global(
 					*(tuple_member_access(kernel, 0u, lit(ref<array<ref<array<twoElem,1>>,1>>))[0]),
-					*(tuple_member_access(kernel, 1u, lit(ref<array<ref<array<twoElem,1>>,1>>))[0]),
+					*ref_reinterpret(tuple_member_access(kernel, 1u, lit(ref<array<ref<array<twoElem,1>>,1>>))[0], lit(src<array<twoElem,1>>)),
 					*(tuple_member_access(kernel, 2u, lit(ref<array<ref<array<real<4>,1>>,1>>))[0]),
 					*(tuple_member_access(kernel, 3u, lit(ref<array<uint<8>,1>>))[0]),
 					local_size, global_size);
