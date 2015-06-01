@@ -315,17 +315,10 @@ void irt_wi_end(irt_work_item* wi) {
 		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
 	}
 
-	// update state, trigger completion event
+	// update state
 	irt_atomic_store(&wi->state, IRT_WI_STATE_DONE);
-	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
-
-	// remove from groups
-	for(uint32 g=0; g<wi->num_groups; ++g) {
-		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
-	}
 
 	// cleanup
-	irt_wi_event_register_destroy(wi->id);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	irt_inst_region_wi_finalize(wi);
 	
@@ -345,8 +338,6 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	lwt_recycle(worker->id.thread, wi);
 	// check for parent, if there, notify
 	if(wi->parent_num_active_children) {
-		//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV3, worker->id);
-		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
 		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1, uint32) == 0) {
 			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
 			//triggering the parent event might fail since the register could already have been destroyed if the parent finalized before we reach this point
@@ -355,6 +346,37 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);
 	IRT_DEBUG(" ^ %p finalize\n", (void*) wi);
+
+	/* NOTE:
+	 * Triggering our own completion event that late is necessary to avoid stack-
+	 * or heap corruption as a side effect of a race condition in case a parent
+	 * WI is waiting for us to terminate using irt_wi_join.
+	 * In this case we have to make sure that we are decrementing the correct
+	 * parent_num_active_children variable (the one of our actual parent, not a
+	 * stale pointer to some arbitrary other WI struct lying on the reuse-stack
+	 * or worse - the member of some currently running new WI which reused this
+	 * struct. Another scenario which could happen with immediate WIs involved is
+	 * that decrementing the variable might cause a stack corruption, since for
+	 * immediate WIs these values are moved to the stack before calling the
+	 * children's implementation).
+	 * Triggering our own completion event after decrementing
+	 * parent_num_active_children member makes sure that the pointer is still
+	 * valid, since a parent waiting for it's child to die using irt_wi_join will
+	 * blocking wait for the event to happen.
+	 *
+	 * The same reasoning can be applied to moving the ending of work group
+	 * membership (and the associated firing of the WG event) down to here. In
+	 * this case the problem may arise when joining the WG (i.e. by joining on the
+	 * result of irt_parallel).
+	 */
+	// remove from groups
+	for(uint32 g=0; g<wi->num_groups; ++g) {
+		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
+	}
+	// notify (the parent) of our end
+	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
+	irt_wi_event_register_destroy(wi->id);
+
 	_irt_wi_recycle(wi, worker);
 }
 
