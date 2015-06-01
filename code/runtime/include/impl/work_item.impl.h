@@ -377,6 +377,18 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 	irt_wi_event_register_destroy(wi->id);
 
+	/* NOTE:
+	 * The triggering of events just at the end of the finalization and _after_
+	 * the decrementing of parent_num_active_children enables us to change the
+	 * life cycle of WIs and we actually enforce that each parent dies after all
+	 * children have done so and not before that. This is to ensure that each
+	 * child may safely access parent_num_active_children.
+	 *
+	 * This means that a WI always has to wait explicitly (i.e. by using
+	 * irt_wi_join or irt_wi_join_all) for it's spawned children to die.
+	 */
+	IRT_ASSERT(*wi->num_active_children == 0, IRT_ERR_INTERNAL, "Parent died before all children did")
+
 	_irt_wi_recycle(wi, worker);
 }
 
