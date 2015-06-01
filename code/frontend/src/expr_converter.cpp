@@ -64,6 +64,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
@@ -195,6 +196,24 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 				membType = cur->getType();
 				break;
 			}
+		}
+		// we want to access a member but maybe we have a static data member. So if nothing was found
+		// check the global tu container if it contains the requested element.
+		if (!membType && llvm::dyn_cast<const clang::VarDecl>(membExpr->getMemberDecl())->isStaticDataMember()) {
+                    ident = builder.stringValue(
+				frontend::utils::buildNameForVariable(
+                                    llvm::dyn_cast<const clang::VarDecl>(membExpr->getMemberDecl())
+				)
+                            );
+                    for(const auto& pair : convFact.getIRTranslationUnit().getGlobals()) {
+                        if(pair.first->getValue() == ident) {
+                            // we have to preserve the base call, because it can be 
+                            // a function call that has side effects like initialization 
+                            // of statics. (e.g., return initialize().staticVar;)
+                            auto compound = builder.compoundStmt({ base, builder.returnStmt(pair.first) });
+                            return builder.createCallExprFromBody(compound, pair.first->getType(), false);
+			}
+                    }
 		}
 		frontend_assert(membType) << "queried field not found while building member access\n"
 					<< "\tlooking for: " << ident << "\n\tin type: " << baseTy;
@@ -629,18 +648,36 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 	// return converted node
 	core::ExpressionPtr irNode;
-    LOG_EXPR_CONVERSION(callExpr, irNode);
+        LOG_EXPR_CONVERSION(callExpr, irNode);
 
 	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
-	core::FunctionTypePtr funcTy = func->getType().as<core::FunctionTypePtr>() ;
+
+	//check if we have a call expr that wraps a call
+	//expr (most likely this is a nested static call)
+	bool isStatic = false;
+	if (callExpr->getDirectCallee()) {
+            if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) {
+                isStatic = mdecl->isStatic();
+            }
+        }
+
+        core::CallExprPtr call = func.isa<core::CallExprPtr>();
+        core::FunctionTypePtr funcTy;
+
+        //if we have a nested function call to a static function
+        //try to retrieve the the function type from the inner call expression.
+        (call && isStatic) ? (funcTy = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()) :
+                             (funcTy = func->getType().as<core::FunctionTypePtr>());
 
 	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'>
 	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
-		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		//FIXME changing type to fit "free" -- with refDelete
-		funcTy = convFact.convertFunctionType(funcDecl);
-
+            const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
+            if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) {
+                isStatic = mdecl->isStatic();
+            }
+            //FIXME changing type to fit "free" -- with refDelete
+            funcTy = convFact.convertFunctionType(funcDecl);
 	}
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
@@ -654,8 +691,16 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 		func = core::transform::replaceAddress(mgr, core::ExpressionAddress(func)->getType(), newFuncTy).getRootNode().as<core::ExpressionPtr>();
 	}
 
-	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
+        // in case that there is a nested call to static functions try to
+        // rebuild the intended behavior (e.g., fun(...) { nested_call(arg1); return outer_call(arg2); } )
+        if(call && isStatic) {
+            irNode = builder.callExpr(funcTy->getReturnType(), call->getFunctionExpr(), args);
+            core::CompoundStmtPtr comp = builder.compoundStmt({call, builder.returnStmt(irNode)});
+            irNode = builder.createCallExprFromBody(comp, irNode->getType(), false);
+            return irNode;
+        }
 
+	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
 	return irNode;
 }
 

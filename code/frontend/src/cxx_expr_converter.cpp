@@ -77,7 +77,6 @@
 #include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -177,18 +176,25 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr){
 	core::ExpressionPtr retIr;
-    LOG_EXPR_CONVERSION(membExpr, retIr);
+	LOG_EXPR_CONVERSION(membExpr, retIr);
 
 	// get the base we want to access to
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
-	if (core::analysis::isAnyCppRef(convFact.lookupTypeDetails(base->getType()))){
-		base = builder.toIRRef(base);
-	}
 
 	// it might be that is a function, therefore we retrieve a callable expression
 	const clang::ValueDecl *valDecl = membExpr->getMemberDecl ();
-	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)){
-		return convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
+	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)) {
+            // exceptional handling if the val decl is a static function -> outline code (see CallExprVisitor)
+            const clang::CXXMethodDecl* mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(valDecl);
+            if(mdecl && mdecl->isStatic() && base.isa<core::CallExprPtr>()) {
+                return base;
+            }
+            retIr = convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
+            return retIr;
+	}
+
+	if (core::analysis::isAnyCppRef(convFact.lookupTypeDetails(base->getType()))){
+		base = builder.toIRRef(base);
 	}
 
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
@@ -196,7 +202,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	// if the  resulting expression is a ref to cpp ref, we remove one ref, no need to provide one extra ref
 	if (retIr->getType().isa<core::RefTypePtr>() && core::analysis::isAnyCppRef(retIr->getType().as<core::RefTypePtr>()->getElementType()))
 		retIr = builder.deref(retIr);
-
 	return retIr;
 }
 
