@@ -57,6 +57,9 @@ class SingletonClass {
 		static int get_rank(){
                     return instance().instance().rank;
                 }
+		static int get_rank(int i){
+                    return instance().instance().rank+i;
+                }
 		static int get_nprocs(){
                     return instance().nprocs;
                 }
@@ -95,5 +98,9 @@ int main(){
 
         std::cout <<  "singletonTest rank: " << SingletonClass::get_rank() << std::endl;
         std::cout <<  "singletonTest nprocs: " << SingletonClass::get_nprocs() << std::endl;
+
+        std::cout <<  "singletonTest rank: " << SingletonClass::instance().get_rank() << std::endl;
+        std::cout <<  "singletonTest rank: " << SingletonClass::instance().get_rank(10) << std::endl;
+
         return 0;
 }

@@ -199,7 +199,8 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& convFa
 		}
 		// we want to access a member but maybe we have a static data member. So if nothing was found
 		// check the global tu container if it contains the requested element.
-		if (!membType && llvm::dyn_cast<const clang::VarDecl>(membExpr->getMemberDecl())->isStaticDataMember()) {
+		if (!membType && llvm::isa<const clang::VarDecl>(membExpr->getMemberDecl()) &&
+                        llvm::dyn_cast<const clang::VarDecl>(membExpr->getMemberDecl())->isStaticDataMember()) {
                     ident = builder.stringValue(
 				frontend::utils::buildNameForVariable(
                                     llvm::dyn_cast<const clang::VarDecl>(membExpr->getMemberDecl())
@@ -652,8 +653,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
 
-	//check if we have a call expr that wraps a call
-	//expr (most likely this is a nested static call)
+	//check if we have a call to a static function
 	bool isStatic = false;
 	if (callExpr->getDirectCallee()) {
             if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) {
@@ -666,6 +666,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
         //if we have a nested function call to a static function
         //try to retrieve the the function type from the inner call expression.
+        assert_true(func->getType().isa<core::FunctionTypePtr>() || call->getFunctionExpr()->getType().as<core::FunctionTypePtr>())
+                << "Cannot find a function type in the converted callee expression";
         (call && isStatic) ? (funcTy = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()) :
                              (funcTy = func->getType().as<core::FunctionTypePtr>());
 
@@ -673,9 +675,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
             const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-            if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) {
-                isStatic = mdecl->isStatic();
-            }
             //FIXME changing type to fit "free" -- with refDelete
             funcTy = convFact.convertFunctionType(funcDecl);
 	}
@@ -692,11 +691,12 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 	}
 
         // in case that there is a nested call to static functions try to
-        // rebuild the intended behavior (e.g., fun(...) { nested_call(arg1); return outer_call(arg2); } )
+        // rebuild the intended behavior (e.g., fun() { base_call(); return nested_call; } (args) )
         if(call && isStatic) {
-            irNode = builder.callExpr(funcTy->getReturnType(), call->getFunctionExpr(), args);
-            core::CompoundStmtPtr comp = builder.compoundStmt({call, builder.returnStmt(irNode)});
-            irNode = builder.createCallExprFromBody(comp, irNode->getType(), false);
+            auto originalFunType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
+            irNode = builder.callExpr(originalFunType->getReturnType(), call->getFunctionExpr());
+            assert_true(originalFunType->getReturnType().isa<core::FunctionTypePtr>());
+            irNode = builder.callExpr(originalFunType->getReturnType().as<core::FunctionTypePtr>()->getReturnType(), irNode, args);
             return irNode;
         }
 

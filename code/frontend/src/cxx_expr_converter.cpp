@@ -184,12 +184,14 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	// it might be that is a function, therefore we retrieve a callable expression
 	const clang::ValueDecl *valDecl = membExpr->getMemberDecl ();
 	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)) {
+            retIr = convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
             // exceptional handling if the val decl is a static function -> outline code (see CallExprVisitor)
             const clang::CXXMethodDecl* mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(valDecl);
             if(mdecl && mdecl->isStatic() && base.isa<core::CallExprPtr>()) {
-                return base;
+                //create a function that calls a function like fun() { base(); return call; }
+                core::CompoundStmtPtr comp = builder.compoundStmt({base, builder.returnStmt(retIr) });
+                retIr = builder.createCallExprFromBody(comp, retIr->getType());
             }
-            retIr = convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
             return retIr;
 	}
 
