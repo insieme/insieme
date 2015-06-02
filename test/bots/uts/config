@@ -1,2 +1,2 @@
 files=${files},"uts.c","brg_sha1.c"
-executionFlags=-c -f ${PATH}/test.input
+executionFlags=-c -f ${PATH}/tiny.input

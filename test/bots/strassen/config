@@ -1,2 +1,2 @@
 files=${files},"strassen.c"
-executionFlags=-c
+executionFlags=-c -n 2048

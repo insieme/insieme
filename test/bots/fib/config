@@ -1,2 +1,2 @@
 files=${files},"fib.c"
-executionFlags=-c -t
+executionFlags=-n 40 -c -t

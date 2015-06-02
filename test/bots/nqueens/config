@@ -1,2 +1,2 @@
 files=${files},"nqueens.c"
-executionFlags=-n 8 -c -t
+executionFlags=-n 13 -c -t
