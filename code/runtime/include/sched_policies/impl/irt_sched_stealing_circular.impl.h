@@ -106,6 +106,10 @@ irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_ran
 #ifndef IRT_TASK_OPT
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
+		/* Note that we intentionally do not lock the CWBs here mostly to reduce complexity
+		 * Locking is actually not needed here, since the current size will only influence
+		 * our scheduling decision and not affect correctness in any way.
+		 */
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
 	}

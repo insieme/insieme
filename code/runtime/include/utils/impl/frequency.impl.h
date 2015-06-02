@@ -38,6 +38,8 @@
 #ifndef __GUARD_UTILS_IMPL_FREQUENCY_IMPL_H
 #define __GUARD_UTILS_IMPL_FREQUENCY_IMPL_H
 
+#include "utils/frequency.h"
+
 #if defined(_GEMS)
 	
 	#include "frequency.gems.impl.h"

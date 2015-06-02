@@ -122,10 +122,14 @@ void irt_init_globals() {
 #endif
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
+
+	//maybe initialize the event debug logging
+	irt_event_debug_init();
 }
 
 // cleanup global variables and delete global data structures
 void irt_cleanup_globals() {
+	irt_event_debug_destroy();
 	irt_data_item_table_cleanup();
 	irt_context_table_cleanup();
 	irt_wi_event_register_table_cleanup();
@@ -318,7 +322,7 @@ uint32 irt_get_default_worker_count() {
 
 }
 
-bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *condbundlep) {
+bool _irt_runtime_standalone_end_func(void *condbundlep) {
 	irt_cond_bundle *condbundle = (irt_cond_bundle*)condbundlep;
 	irt_mutex_lock(&condbundle->mutex);
 	irt_cond_wake_one(&condbundle->condvar);
@@ -339,7 +343,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	handler.data = &condbundle;
 	handler.func = &_irt_runtime_standalone_end_func;
 	irt_mutex_lock(&condbundle.mutex);
-	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
+	irt_wi_event_handler_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 
@@ -350,9 +354,9 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
-    #ifdef _GEMS_SIM
-        irt_mutex_init(&print_mutex);
-    #endif
+#ifdef _GEMS_SIM
+	irt_mutex_init(&print_mutex);
+#endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);
 	// initialize globals
 	irt_init_globals();
