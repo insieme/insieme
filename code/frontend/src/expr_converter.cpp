@@ -649,34 +649,34 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 
 	// return converted node
 	core::ExpressionPtr irNode;
-        LOG_EXPR_CONVERSION(callExpr, irNode);
+	LOG_EXPR_CONVERSION(callExpr, irNode);
 
 	core::ExpressionPtr func = convFact.convertExpr(callExpr->getCallee());
 
 	//check if we have a call to a static function
 	bool isStatic = false;
 	if (callExpr->getDirectCallee()) {
-            if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) {
-                isStatic = mdecl->isStatic();
-            }
-        }
+		if(auto mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getDirectCallee())) {
+			isStatic = mdecl->isStatic();
+		}
+	}
 
-        core::CallExprPtr call = func.isa<core::CallExprPtr>();
-        core::FunctionTypePtr funcTy;
+	core::CallExprPtr call = func.isa<core::CallExprPtr>();
+	core::FunctionTypePtr funcTy;
 
-        //if we have a nested function call to a static function
-        //try to retrieve the the function type from the inner call expression.
-        assert_true(func->getType().isa<core::FunctionTypePtr>() || call->getFunctionExpr()->getType().as<core::FunctionTypePtr>())
-                << "Cannot find a function type in the converted callee expression";
-        (call && isStatic) ? (funcTy = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()) :
-                             (funcTy = func->getType().as<core::FunctionTypePtr>());
+	//if we have a nested function call to a static function
+	//try to retrieve the the function type from the inner call expression.
+	assert_true(func->getType().isa<core::FunctionTypePtr>() || call->getFunctionExpr()->getType().as<core::FunctionTypePtr>())
+				<< "Cannot find a function type in the converted callee expression";
+	(call && isStatic) ? (funcTy = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()) :
+						 (funcTy = func->getType().as<core::FunctionTypePtr>());
 
 	// FIXME if we have a call to "free" we get a refDelete back which expects ref<'a'>
 	// this results in a cast ot "'a" --> use the type we get from the funcDecl
 	if (callExpr->getDirectCallee()) {
-            const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-            //FIXME changing type to fit "free" -- with refDelete
-            funcTy = convFact.convertFunctionType(funcDecl);
+		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
+		//FIXME changing type to fit "free" -- with refDelete
+		funcTy = convFact.convertFunctionType(funcDecl);
 	}
 
 	ExpressionList&& args = getFunctionArguments( callExpr, funcTy);
@@ -690,15 +690,15 @@ core::ExpressionPtr Converter::ExprConverter::VisitCallExpr(const clang::CallExp
 		func = core::transform::replaceAddress(mgr, core::ExpressionAddress(func)->getType(), newFuncTy).getRootNode().as<core::ExpressionPtr>();
 	}
 
-        // in case that there is a nested call to static functions try to
-        // rebuild the intended behavior (e.g., fun() { base_call(); return nested_call; } (args) )
-        if(call && isStatic) {
-            auto originalFunType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
-            irNode = builder.callExpr(originalFunType->getReturnType(), call->getFunctionExpr());
-            assert_true(originalFunType->getReturnType().isa<core::FunctionTypePtr>());
-            irNode = builder.callExpr(originalFunType->getReturnType().as<core::FunctionTypePtr>()->getReturnType(), irNode, args);
-            return irNode;
-        }
+	// in case that there is a nested call to static functions try to
+	// rebuild the intended behavior (e.g., fun() { base_call(); return nested_call; } (args) )
+	if(call && isStatic) {
+		auto originalFunType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
+		irNode = builder.callExpr(originalFunType->getReturnType(), call->getFunctionExpr());
+		assert_true(originalFunType->getReturnType().isa<core::FunctionTypePtr>());
+		irNode = builder.callExpr(originalFunType->getReturnType().as<core::FunctionTypePtr>()->getReturnType(), irNode, args);
+		return irNode;
+	}
 
 	irNode = builder.callExpr(funcTy->getReturnType(), func, args);
 	return irNode;

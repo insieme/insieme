@@ -71,15 +71,6 @@ namespace extensions {
 //               C++11 expressions
 
 /**
- *			Cxx11 default init expression
- */
-insieme::core::ExpressionPtr Cpp11Extension::VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr,
-												insieme::frontend::conversion::Converter& convFact) {
-    return convFact.convertExpr(initExpr->getExpr());
-}
-
-
-/**
  *			Cxx11 null pointer
  */
 insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
