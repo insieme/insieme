@@ -172,7 +172,7 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 				wi->stack_ptr -= wi->stack_ptr % LWT_STACK_ALIGNMENT;
 				return;
 			} else {
-				// otherwise give it back stack, since we shouldn't have taken it in the first place
+				// otherwise give it back, since we shouldn't have taken it in the first place
 				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack to parent.\n");
 			}
 		}
