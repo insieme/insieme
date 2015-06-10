@@ -68,12 +68,13 @@ class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Add
 	std::map<unsigned int, insieme::core::VariableAddress> idstaken;   /// < IDs and their definition
 
 	unsigned int nextID();
-	unsigned int allUses();
+	unsigned int countUses();
 
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
 
 	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
+	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitVariable(const insieme::core::VariableAddress &node);
 

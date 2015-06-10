@@ -75,25 +75,34 @@ void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, uns
 		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
 }
 
+/// Print the chain of types that the given node is contained in. Count says how many nodes are considered at most.
+void VarUniqExtension::printTypeChain(const NodeAddress &node, std::string descr, int count) {
+	if (!count) return;
+	if (!descr.empty()) std::cout << "(" << descr << "):";
+	NodeAddress addr=node;
+	while (count--) {
+		std::cout << " " << addr.getNodeType();
+		//if (lang::isDerived(addr)) std::cout << "(derived)";
+		if (!addr.isRoot()) addr=addr.getParentAddress();
+		else count=0;
+	}
+	std::cout << std::endl;
+}
+
+
 /// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
 void VarUniqExtension::visitNode(const NodeAddress &node) {
-	for (auto child: node->getChildList()) visit(child);
+	// if not a derived construct, visit the children
+	if (!lang::isDerived(node))
+		for (auto child: node->getChildList()) visit(child);
 }
 
 void VarUniqExtension::visitVariable(const VariableAddress &var) {
 	// get variable definition point and increase counter for given variable
 	VariableAddress defpt=getVarDefinition(var);
 
-	// do not change anything inside derived constructs
-	if (lang::isDerived(defpt.getParentNode())) return;
-
 	// we did not find any earlier occurrence of the given variable
 	if (defpt==var) {
-		//std::cout << *(var.getParentAddress().getParentAddress());
-		//printNode(var.getParentAddress(), "variable definition "+std::to_string(def)); std::cout << std::endl;
-		if (lang::isDerived(var.getParentNode()))
-			printNode(var.getParentAddress(), "is derived");
-
 		def++;
 		unsigned int id=nextID();
 		use  [defpt]=0;
@@ -106,7 +115,7 @@ void VarUniqExtension::visitVariable(const VariableAddress &var) {
 	}
 
 	// visit children
-	for (auto child: var->getChildList()) visit(child);
+	visitNode(var);
 }
 
 /// Return the updated code with unique variable identifiers.
@@ -114,22 +123,16 @@ NodeAddress VarUniqExtension::IR() {
 	// print some status information for debugging
 	//for (auto dups: varid)
 	//	std::cout << "var " << dups.first << " (" << dups.second << ") found " << use[dups.first] << "×" << std::endl;
-	std::cout << "Found " << def << " variable defs, " << allUses() << " uses." << std::endl;
+	std::cout << "Found " << def << " variable defs, " << countUses() << " uses." << std::endl;
 
 	// now that everything is in place, do the actual replacement
 	NodeManager& mgr=frag->getNodeManager();
 	NodePtr newfrag=frag.getAddressedNode();
 	for (auto id: idstaken) {
-		if (false && id.first<=5) {
-			printNode(id.second);
-			VariablePtr var3=Variable::get(mgr, id.second->getType(), id.first);
-			printNode(NodeAddress(var3));
-		}
 		NodePtr oldvar=id.second.getAddressedNode(),
 		        newvar=NodeAddress(Variable::get(mgr, id.second->getType(), id.first)),
 		        oldfrag=newfrag;
 		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
-		//std::cout << "node count: " << countNodes(NodeAddress(oldfrag)) << " " << countNodes(NodeAddress(newfrag)) << std::endl;
 	}
 
 	// return the newly generated code
@@ -188,7 +191,7 @@ VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& givena
 	return givenaddr;
 }
 
-/// Return the next available ID for a variable renaming.
+/// Return the next available ID which is not already in use.
 unsigned int VarUniqExtension::nextID() {
 	unsigned int ret=0;
 	while (idstaken.find(ret)!=idstaken.end()) ++ret;
@@ -196,7 +199,7 @@ unsigned int VarUniqExtension::nextID() {
 }
 
 /// Return the total of all variable uses.
-unsigned int VarUniqExtension::allUses() {
+unsigned int VarUniqExtension::countUses() {
 	unsigned int ret=0;
 	for (auto pair: use) ret+=pair.second;
 	return ret;
