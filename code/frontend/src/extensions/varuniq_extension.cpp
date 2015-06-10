@@ -53,43 +53,6 @@ VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), def(0) {
 	visit(frag);
 }
 
-/// Debug routine to print the given node and its immediate children. The node address is the only mandatory
-/// argument; the other arguments are a textual description, and a start index and a node count. The start index
-/// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
-/// n means the n-th child node. The count gives the number of child nodes which should be printed;
-/// 0 means print only the given node, 1 means print only one child node, etc.
-void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
-	// determine total number of child nodes, and adjust count accordingly
-	auto children=node.getChildAddresses();
-	if (count<0) count=children.size();
-
-	// if requested (start=0), print the node itself with some debug information
-	if (start==0) {
-		if (!descr.empty()) descr=" ("+descr+")";
-		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
-		start++;
-	}
-
-	// iterate over the requested children to complete the output
-	for (unsigned int n=start-1; n<start-1+count; n++)
-		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
-}
-
-/// Print the chain of types that the given node is contained in. Count says how many nodes are considered at most.
-void VarUniqExtension::printTypeChain(const NodeAddress &node, std::string descr, int count) {
-	if (!count) return;
-	if (!descr.empty()) std::cout << "(" << descr << "):";
-	NodeAddress addr=node;
-	while (count--) {
-		std::cout << " " << addr.getNodeType();
-		//if (lang::isDerived(addr)) std::cout << "(derived)";
-		if (!addr.isRoot()) addr=addr.getParentAddress();
-		else count=0;
-	}
-	std::cout << std::endl;
-}
-
-
 /// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
 void VarUniqExtension::visitNode(const NodeAddress &node) {
 	// if not a derived construct, visit the children
@@ -203,6 +166,42 @@ unsigned int VarUniqExtension::countUses() {
 	unsigned int ret=0;
 	for (auto pair: use) ret+=pair.second;
 	return ret;
+}
+
+/// Debug routine to print the given node and its immediate children. The node address is the only mandatory
+/// argument; the other arguments are a textual description, and a start index and a node count. The start index
+/// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
+/// n means the n-th child node. The count gives the number of child nodes which should be printed;
+/// 0 means print only the given node, 1 means print only one child node, etc.
+void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
+	// determine total number of child nodes, and adjust count accordingly
+	auto children=node.getChildAddresses();
+	if (count<0) count=children.size();
+
+	// if requested (start=0), print the node itself with some debug information
+	if (start==0) {
+		if (!descr.empty()) descr=" ("+descr+")";
+		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
+		start++;
+	}
+
+	// iterate over the requested children to complete the output
+	for (unsigned int n=start-1; n<start-1+count; n++)
+		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
+}
+
+/// Print the chain of types that the given node is contained in. Count says how many nodes are considered at most.
+void VarUniqExtension::printTypeChain(const NodeAddress &node, std::string descr, int count) {
+	if (!count) return;
+	if (!descr.empty()) std::cout << "(" << descr << "):";
+	NodeAddress addr=node;
+	while (count--) {
+		std::cout << " " << addr.getNodeType();
+		//if (lang::isDerived(addr)) std::cout << "(derived)";
+		if (!addr.isRoot()) addr=addr.getParentAddress();
+		else count=0;
+	}
+	std::cout << std::endl;
 }
 
 unsigned int VarUniqExtension::countNodes(const NodeAddress &node) {

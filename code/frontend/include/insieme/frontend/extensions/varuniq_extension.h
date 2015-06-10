@@ -70,16 +70,17 @@ class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Add
 	unsigned int nextID();
 	unsigned int countUses();
 
-public:
-	VarUniqExtension(const insieme::core::NodeAddress frag);
-
-	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
-	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitVariable(const insieme::core::VariableAddress &node);
 
-	insieme::core::NodeAddress IR();
+public:
+	VarUniqExtension(const insieme::core::NodeAddress frag);
+
 	static insieme::core::VariableAddress getVarDefinition(const insieme::core::VariableAddress& givenaddr);
+	insieme::core::NodeAddress IR();
+
+	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
+	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 	static unsigned int countNodes(const insieme::core::NodeAddress &node);
 	static int nodeDelta(const insieme::core::NodeAddress &n1, const insieme::core::NodeAddress &n2);
 };
