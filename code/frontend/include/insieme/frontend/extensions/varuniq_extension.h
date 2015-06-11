@@ -62,27 +62,23 @@ namespace extensions {
 ///
 class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
         insieme::frontend::extensions::FrontendExtension {
-	insieme::core::NodeAddress frag;                                   /// < code fragment passed to this compiler pass
-	unsigned int def;                                                  /// < variable definition counter
-	std::map<insieme::core::VariableAddress, unsigned int> use, varid; /// < variable unique ID, use counter
-	std::map<unsigned int, insieme::core::VariableAddress> idstaken;   /// < IDs and their definition
-
-	unsigned int nextID();
-	unsigned int countUses();
+	insieme::core::NodeAddress frag;                                  /// < code fragment passed to this compiler pass
+	std::map<insieme::core::VariableAddress, std::vector<insieme::core::VariableAddress> > uses; /// uses for each def
 
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitVariable(const insieme::core::VariableAddress &node);
+	void recordDef(const insieme::core::VariableAddress &def);
+	void recordUse(const insieme::core::VariableAddress &def, const insieme::core::VariableAddress &use);
 
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
+	static insieme::core::VariableAddress getDef(const insieme::core::VariableAddress& givenaddr);
+	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
 
-	static insieme::core::VariableAddress getVarDefinition(const insieme::core::VariableAddress& givenaddr);
-	insieme::core::NodeAddress IR();
+	insieme::core::NodeAddress IR(bool renumberUnused=false);
 
 	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
 	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
-	static unsigned int countNodes(const insieme::core::NodeAddress &node);
-	static int nodeDelta(const insieme::core::NodeAddress &n1, const insieme::core::NodeAddress &n2);
 };
 
 }}}

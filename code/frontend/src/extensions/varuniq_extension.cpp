@@ -49,7 +49,7 @@
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), def(0) {
+VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag) {
 	visit(frag);
 }
 
@@ -62,38 +62,58 @@ void VarUniqExtension::visitNode(const NodeAddress &node) {
 
 void VarUniqExtension::visitVariable(const VariableAddress &var) {
 	// get variable definition point and increase counter for given variable
-	VariableAddress defpt=getVarDefinition(var);
+	VariableAddress defpt=getDef(var);
 
-	// we did not find any earlier occurrence of the given variable
-	if (defpt==var) {
-		def++;
-		unsigned int id=nextID();
-		use  [defpt]=0;
-		varid[defpt]=id;
-		idstaken[id]=defpt;
-
-	// the variable is not defined but used here, increase use counter
-	} else {
-		use[defpt]++;
-	}
+	if (defpt==var) recordDef(defpt);   // the given variable is not defined somewhere else but here
+	else recordUse(defpt, var);         // the variable is not defined but used here
 
 	// visit children
 	visitNode(var);
 }
 
+/// Records a variable definition by creating appropriate data structures in our protected "uses" class member.
+void VarUniqExtension::recordDef(const VariableAddress &def) {
+	auto ret=uses.insert(std::pair<VariableAddress, std::vector<VariableAddress> >(def, std::vector<VariableAddress>()));
+	if (!ret.second && ret.first->first!=def) {   // the definition point does not match the recorded definition point
+		LOG(ERROR) << "Cannot insert a single variable with two distinct definition points!" << std::endl;
+	}
+}
+
+/// Records a variable use by linking its definition point to the use address in the "uses" class member.
+void VarUniqExtension::recordUse(const VariableAddress &def, const VariableAddress &use) {
+	// first, determine whether some other uses have already been recorded, and preserve these
+	std::vector<VariableAddress> uselist;
+	auto it=uses.find(def);
+	bool isnew=0;
+	if (it==uses.end()) isnew=1;
+	else uselist=it->second;
+
+	// second, push the new use address to the vector of uses
+	uselist.push_back(use);
+
+	// third, update the definition point with the correspending use vector
+	if (isnew) {
+		std::pair<VariableAddress, std::vector<VariableAddress> > value={def, uselist};
+		uses.insert(value);
+	} else
+		it->second=uselist;
+}
+
 /// Return the updated code with unique variable identifiers.
-NodeAddress VarUniqExtension::IR() {
+NodeAddress VarUniqExtension::IR(bool renumberUnused) {
 	// print some status information for debugging
 	//for (auto dups: varid)
 	//	std::cout << "var " << dups.first << " (" << dups.second << ") found " << use[dups.first] << "×" << std::endl;
-	std::cout << "Found " << def << " variable defs, " << countUses() << " uses." << std::endl;
+	std::cout << "uses: " << uses.size() << " def points " << std::endl;
 
+	// TODO: when replacing variables, consider the renumberUnused flag
 	// now that everything is in place, do the actual replacement
+	unsigned int ctr=0;
 	NodeManager& mgr=frag->getNodeManager();
 	NodePtr newfrag=frag.getAddressedNode();
-	for (auto id: idstaken) {
-		NodePtr oldvar=id.second.getAddressedNode(),
-		        newvar=NodeAddress(Variable::get(mgr, id.second->getType(), id.first)),
+	for (auto var: uses) {
+		NodePtr oldvar=var.first.getAddressedNode(),
+		        newvar=NodeAddress(Variable::get(mgr, var.first->getType(), ctr++)),
 		        oldfrag=newfrag;
 		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
 	}
@@ -103,7 +123,7 @@ NodeAddress VarUniqExtension::IR() {
 }
 
 /// Find the address where the given variable has been defined.
-VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& givenaddr) {
+VariableAddress VarUniqExtension::getDef(const VariableAddress& givenaddr) {
 	// first, save the pointer of the given variable so that we have something to compare with
 	VariablePtr givenptr=givenaddr.getAddressedNode();
 	NodeAddress current=givenaddr;
@@ -154,17 +174,12 @@ VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& givena
 	return givenaddr;
 }
 
-/// Return the next available ID which is not already in use.
-unsigned int VarUniqExtension::nextID() {
-	unsigned int ret=0;
-	while (idstaken.find(ret)!=idstaken.end()) ++ret;
-	return ret;
-}
-
-/// Return the total of all variable uses.
-unsigned int VarUniqExtension::countUses() {
-	unsigned int ret=0;
-	for (auto pair: use) ret+=pair.second;
+/// Return an array with all of the uses of the given variable definition point. If the variable definition point is
+/// not yet known, call getDef first.
+std::vector<VariableAddress> VarUniqExtension::getUse(const VariableAddress& def) {
+	std::vector<VariableAddress> ret;     // return an empty array in case we cannot find the variable definition
+	auto it=uses.find(def);
+	if (it!=uses.end()) ret=it->second;
 	return ret;
 }
 
@@ -202,14 +217,4 @@ void VarUniqExtension::printTypeChain(const NodeAddress &node, std::string descr
 		else count=0;
 	}
 	std::cout << std::endl;
-}
-
-unsigned int VarUniqExtension::countNodes(const NodeAddress &node) {
-	unsigned int count=0;
-	core::visitDepthFirst(node, [&](const core::NodeAddress &n) { ++count; });
-	return count;
-}
-
-int VarUniqExtension::nodeDelta(const NodeAddress &n1, const NodeAddress &n2) {
-	return countNodes(n1)-countNodes(n2);
 }

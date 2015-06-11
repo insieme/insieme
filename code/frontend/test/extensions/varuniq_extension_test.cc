@@ -128,7 +128,7 @@ TEST(VarUniq, Simple) {
 		       << printer::PrettyPrinter(fragment) << std::endl << std::endl
 		       << "# # # # #   NEW CODE   # # # # #" << std::endl
 		       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-		//std::cout << strbuf.str();
+		std::cout << strbuf.str();
 	}
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
