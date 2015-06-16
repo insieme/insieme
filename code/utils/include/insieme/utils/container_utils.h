@@ -131,6 +131,19 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 	return res;
 }
 
+
+/**
+ * Convenience function for std::transform for simple map-like types.
+ */
+template<template <typename, typename> class SimpleMapLikeContainer, typename Functor, 
+	typename K, typename V, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = SimpleMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type>>
+inline Result transform(const SimpleMapLikeContainer<K, V>& m, const Functor& f) {
+	Result res;
+	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
+	return res;
+}
+
 /**
  * Convenience function for std::transform for map-like types.
  */
@@ -142,6 +155,21 @@ inline Result transform(const MapLikeContainer<K, V, C, A<T>>& m, const Functor&
 	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
 	return res;
 }
+
+/**
+ * Convenience function for std::transform for unordered_map-like types.
+ */
+template<template <typename, typename, typename, typename, typename> class HashLikeContainer, typename Functor, 
+	typename T, typename K, typename V, template <typename> class H, template <typename> class E, 
+	template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = HashLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, 
+		H<typename ResultMember::first_type>, E<typename ResultMember::first_type>, A<ResultMember>>>
+inline Result transform(const HashLikeContainer<K, V, H<K>, E<K>, A<T>>& m, const Functor& f) {
+	Result res;
+	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
+	return res;
+}
+
 
 /**
  * Convenience function for std::transform for changing vector-like types to other vector-like types.
