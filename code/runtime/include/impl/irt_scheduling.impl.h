@@ -151,7 +151,7 @@ void irt_scheduling_loop(irt_worker* self) {
 	}
 }
 
-void irt_signal_worker(irt_worker* target) {
+inline void _irt_signal_worker(irt_worker* target) {
 #ifdef IRT_WORKER_SLEEPING
 	irt_mutex_lock(&irt_g_active_worker_mutex);
 	target->wake_signal = true;
