@@ -217,6 +217,22 @@ insieme::core::ProgramPtr  VariadicArgumentsExtension::IRVisit(insieme::core::Pr
 	replacements [ vectorVaList ] = vaListTy;
 	prog = core::transform::replaceAllGen (mgr, prog, replacements, false);
 
+	// collect and remove wrongly typed vector inits, happens when using var. args in c++
+	auto vectorInitCleanup = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+				if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+					core::IRBuilder builder (node->getNodeManager());
+					const auto& gen = node->getNodeManager().getLangBasic();
+
+					if (core::analysis::isCallOf(call, gen.getVectorInitUniform())){
+						if (call->getType() == vaListTy)
+							return call[0];
+					}
+				}
+
+				return node;
+			});
+	prog = vectorInitCleanup.map(prog);
+
 	// cleanup the not needed casts
 	auto castRemover = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
 				if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){

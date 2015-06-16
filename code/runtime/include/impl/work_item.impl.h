@@ -143,7 +143,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		wi->default_parallel_wi_count = self->cur_wi->default_parallel_wi_count;
 	}
 #ifdef IRT_ASTEROIDEA_STACKS
-	wi->stack_available = false;
+	irt_atomic_store(&wi->stack_available, false);
 #endif //IRT_ASTEROIDEA_STACKS
 	irt_inst_region_wi_init(wi);
 }
@@ -255,6 +255,28 @@ bool _irt_wi_join_all_event(void *user_data) {
 	 * I0 is waiting in join_all, W0 triggered the event --> needs to be ignored 
 	 */
 	if(*(join_data->joining_wi->num_active_children) > 0) return true;
+
+	#ifdef IRT_ASTEROIDEA_STACKS
+	/* NOTE:
+	 * We have to wait for the stack to be available here in order to avoid a race condition,
+	 * which may arise in a small window of vulnerability in the following situation:
+	 *
+	 *   I ... immediate WI    W ... real WI      A ... arbitrary WI
+	 *            A0
+	 *           /  \
+	 *          I0  W0
+	 *         /
+	 *        W1
+	 *
+	 * I0 is suspended, waiting for all of it's children to complete using join_all.
+	 * Meanwhile W0 is started and got the stack of A0 for re-use (see function lwt_prepare in file minlwt.impl.h).
+	 * Now W1 ends and I0 could continue it's execution. We must not resume the execution here until W0
+	 * released the stack again after realizing that it shouldn't have taken it in the first place, since it has
+	 * an immediate sibling.
+	 */
+	while(!irt_atomic_bool_compare_and_swap(&join_data->joining_wi->stack_available, true, false, bool));
+	#endif //IRT_ASTEROIDEA_STACKS
+
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
 	IRT_DEBUG(" > %p releasing %p\n", (void*) irt_worker_get_current()->finalize_wi, (void*) join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
@@ -280,9 +302,6 @@ void irt_wi_join_all(irt_work_item* wi) {
 		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
 		_irt_worker_switch_from_wi(self, wi);
-#ifdef IRT_ASTEROIDEA_STACKS
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
-#endif //IRT_ASTEROIDEA_STACKS
 		irt_inst_region_start_measurements(wi);
 	} else {
 		// check if multi-level immediate wi was signaled instead of current wi

@@ -120,7 +120,7 @@ void irt_scheduling_loop(irt_worker* self) {
 			#ifdef IRT_ASTEROIDEA_STACKS
 			if(self->share_stack_wi != NULL) {
 				IRT_DEBUG(" - %p allowing stack stealing: %d children\n", (void*) self->share_stack_wi, *self->share_stack_wi->num_active_children);
-				self->share_stack_wi->stack_available = true;
+				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&self->share_stack_wi->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not make stack available after suspension.\n");
 				self->share_stack_wi = NULL;
 			}
 			#endif //IRT_ASTEROIDEA_STACKS

@@ -193,12 +193,12 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
     //we need to replace right and left shift operators with a dummy
     //to avoid wrong renaming and double occurence when both operators
     //have been overloaded
-	boost::algorithm::replace_last(name, "operator<<","dummyss");
-	boost::algorithm::replace_last(name, "operator>>","dummygg");
+	boost::algorithm::replace_last(name, "operator<<","LESSLESSdummy");
+	boost::algorithm::replace_last(name, "operator>>","GREATERGREATERdummy");
 	//if no shift operators found lets check for less, greater
 	//and less equals, greater equals (handled in one case)
-	boost::algorithm::replace_last(name, "operator<","sdummy");
-	boost::algorithm::replace_last(name, "operator>","gdummy");
+	boost::algorithm::replace_last(name, "operator<","LESSdummy");
+	boost::algorithm::replace_last(name, "operator>","GREATERdummy");
 	// also other*symbols
 	boost::algorithm::replace_last(name, "operator()","PARENdummy");
 	boost::algorithm::replace_last(name, "operator/=","DIVEQdummy");
@@ -214,6 +214,7 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "operator/","DIVIDEdummy");
 	boost::algorithm::replace_last(name, "operator=","EQUALSdummy");
 
+	boost::algorithm::replace_last(name, "operator new","NEWdummy");
 
 	//if(!funcDecl->isOverloadedOperator())
 	{
@@ -287,11 +288,11 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 	REMOVE_SYMBOLS(name);
 
     //check for dummyss or dummygg and replace it with the original name
-	boost::algorithm::replace_last(name, "dummyss", "operator<<");
-	boost::algorithm::replace_last(name, "dummygg", "operator>>");
+	boost::algorithm::replace_last(name, "LESSLESSdummy", "operator<<");
+	boost::algorithm::replace_last(name, "GREATERGREATERdummy", "operator>>");
 	//if nothing was found check for the other ones
-	boost::algorithm::replace_last(name, "sdummy", "operator<");
-	boost::algorithm::replace_last(name, "gdummy", "operator>");
+	boost::algorithm::replace_last(name, "LESSdummy", "operator<");
+	boost::algorithm::replace_last(name, "GREATERdummy", "operator>");
 	// and the asterisc symbol
 	boost::algorithm::replace_last(name, "ASTdummy","operator*");
 	boost::algorithm::replace_last(name, "COMdummy","operator,");
@@ -308,6 +309,7 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 	boost::algorithm::replace_last(name, "TIMEQdummy", "operator*=");
 	boost::algorithm::replace_last(name, "EQEQdummy", "operator==");
 
+	boost::algorithm::replace_last(name, "NEWdummy", "operator new");
 
 	// all done
 	return name;
