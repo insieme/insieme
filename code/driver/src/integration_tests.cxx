@@ -169,12 +169,16 @@ void printSummary(const int totalTests, const int okCount, const int omittedCoun
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
 	std::cout << "# PASSED: " << col.green() << boost::format(footerSummaryFormat) % okCount << col.reset() << " #\n";
-	if (omittedCount != 0) {
-		std::cout << "# " << col.yellow() 
-			<< "OMITTED:" << boost::format(footerSummaryFormat) % omittedCount << col.reset() << " #\n";
-	}
-	std::cout << "# FAILED: " << col.red() 
-		<< boost::format(footerSummaryFormat) % failedSteps.size() << col.reset() << " #\n";
+	std::cout << "# OMITTED:"
+			<< (omittedCount != 0 ? col.yellow() : "")
+			<< boost::format(footerSummaryFormat) % omittedCount
+			<< (omittedCount != 0 ? col.reset() : "")
+			<< " #\n";
+	std::cout << "# FAILED: "
+			<< (failedSteps.size() != 0 ? col.red() : "")
+			<< boost::format(footerSummaryFormat) % failedSteps.size()
+			<< (failedSteps.size() != 0 ? col.reset() : "")
+			<< " #\n";
 	for(const auto& cur : failedSteps) {
 		TestCase testCase = cur.first;
 		TestResult testResult = cur.second;
