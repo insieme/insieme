@@ -583,7 +583,7 @@ for_each(kernelTypes[kernel], [](NodePtr doll) {
 	});
 
 	// perform the replacements
-	prog = transform::replaceAll(mgr, prog, replacements, false);
+	prog = transform::replaceAll(mgr, prog, replacements, core::transform::globalReplacement);
 }
 
 void updateStruct(const ExpressionPtr& kernelStruct, TypePtr& kernelType, const ExpressionPtr& identifier) {
@@ -704,7 +704,7 @@ void KernelReplacer::inlineKernelCode() {
 //	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(newKernelCall);
 	});
 
-	prog = transform::replaceAll(mgr, prog, replacements, false);
+	prog = transform::replaceAll(mgr, prog, replacements, core::transform::globalReplacement);
 }
 
 ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {

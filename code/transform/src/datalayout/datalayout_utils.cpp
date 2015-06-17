@@ -451,7 +451,7 @@ StatementPtr allocTypeUpdate(const StatementPtr& stmt, pattern::TreePattern& old
 	}
 
 	if(oldType)
-		return core::transform::replaceAllGen(mgr, stmt, oldType, newType, false);
+		return core::transform::replaceAllGen(mgr, stmt, oldType, newType, core::transform::globalReplacement);
 
 	return stmt;
 }

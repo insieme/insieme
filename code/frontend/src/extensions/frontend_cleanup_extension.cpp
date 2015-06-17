@@ -615,7 +615,7 @@ namespace {
                 //the name of the var everywhere..
                 core::DeclarationStmtPtr newDecl = core::transform::replaceAllGen(convFact.getNodeManager(), decl,
                                                                 decl->getInitialization(),
-                                                                builder.undefinedVar(var->getType()), true);
+                                                                builder.undefinedVar(var->getType()));
                 //this is our new declaration statement
                 newStmts[0] = newDecl;
                 //if it is a ctor call we have to call a deref operation

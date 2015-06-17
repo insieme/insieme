@@ -159,7 +159,7 @@ void AosToTaos::transform() {
 		NodeMap tilesize;
 		tilesize[genericTileSizeExpr] = builder.uintLit(64);
 		tilesize[genericTileSize] = builder.concreteIntTypeParam(64);
-		toTransform = core::transform::replaceAll(mgr, toTransform, tilesize, false);
+		toTransform = core::transform::replaceAll(mgr, toTransform, tilesize, core::transform::globalReplacement);
 	}
 
 	// remove all inserted compound expressions

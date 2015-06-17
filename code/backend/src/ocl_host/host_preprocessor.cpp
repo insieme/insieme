@@ -788,7 +788,7 @@ using insieme::core::pattern::anyList;
 
 		// this used to enable limitScope, but *actually* limiting the scope breaks a unit test.
 		// someone familiar with this code should investigate
-		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, false);
+		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, core::transform::globalReplacement);
 
 		nodeMap.clear();
 		for (uint n = 0; n < vecBufVarNames.size(); ++n) {
@@ -884,7 +884,7 @@ using insieme::core::pattern::anyList;
 					LambdaExprPtr newLambdaEx = builder.lambdaExpr(le->getFunctionType()->getReturnType(), le->getBody(), newParams);
 					CallExprPtr newCall = builder.callExpr(newLambdaEx, newArgs);
 					nodeMap.insert(std::make_pair(call, newCall));
-					code2 = core::transform::replaceAll(manager, code2, nodeMap, false);
+					code2 = core::transform::replaceAll(manager, code2, nodeMap, core::transform::globalReplacement);
 					nodeMap.clear();
 				}
 			});
@@ -1341,7 +1341,7 @@ using insieme::core::pattern::anyList;
 				nodeMap.clear();
 				nodeMap.insert(std::make_pair(ifSplit, mergeCall));
 
-				code2 = core::transform::replaceAll(manager, code2, nodeMap, false);
+				code2 = core::transform::replaceAll(manager, code2, nodeMap, core::transform::globalReplacement);
 
 				std::cout << "FINAL CODE " << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 

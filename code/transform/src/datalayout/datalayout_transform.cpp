@@ -343,7 +343,7 @@ ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplace
 	}
 
 	// backup, works for e.g. memory allocation
-	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
+	return core::transform::replaceAll(mgr, init, backupReplacements, core::transform::globalReplacement).as<ExpressionPtr>();
 }
 
 std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> DatalayoutTransformer::createCandidateLists(const core::NodeAddress& toTransform) {
@@ -774,7 +774,7 @@ void DatalayoutTransformer::addNewDel(const ExprAddressMap& varReplacements, con
 
 TypePtr DatalayoutTransformer::generateNewTupleType(const TypePtr& oldTupleVarType, const StructTypePtr& newStructType, const TypePtr& oldStructType) {
 	NodeMap tyReplace = generateTypeReplacements(oldStructType, newStructType);
-	return core::transform::replaceAllGen(mgr, oldTupleVarType, tyReplace, true);
+	return core::transform::replaceAllGen(mgr, oldTupleVarType, tyReplace);
 }
 
 void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
@@ -843,7 +843,7 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 //dumpPretty(oldStructType);
 //dumpPretty(newStructType);
 
-			newStructAccess = core::transform::replaceAllGen(mgr, newStructAccess, oldTupleVarType, newTupleType, false);
+			newStructAccess = core::transform::replaceAllGen(mgr, newStructAccess, oldTupleVarType, newTupleType, core::transform::globalReplacement);
 
 //			std::cout << "\nreplacing\n";
 //			dumpPretty(newTupleType);
@@ -914,7 +914,7 @@ void DatalayoutTransformer::updateCopyDeclarations(ExprAddressMap& varReplacemen
 			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
 
 			TypePtr oldType = var->getType();
-			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, false);
+			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, core::transform::globalReplacement);
 
 			if(oldType == newType) // check if the type depends on the transformation
 				return;

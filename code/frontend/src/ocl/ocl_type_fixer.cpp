@@ -222,7 +222,7 @@ TypeFixer::TypeFixer(NodePtr toTransform, std::vector<TypePtr> types) : prog(toT
 		cleanStructures(st, ptrReplacements);
 	}, true, true);
 
-	prog = transform::replaceAll(mgr, prog, ptrReplacements, false);
+	prog = transform::replaceAll(mgr, prog, ptrReplacements, core::transform::globalReplacement);
 }
 
 }

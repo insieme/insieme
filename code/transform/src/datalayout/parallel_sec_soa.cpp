@@ -77,7 +77,7 @@ ExpressionPtr ParSecSoa::updateInit(const ExprAddressMap& varReplacements, core:
 	}
 
 	// backup, works for e.g. memory allocation
-	return core::transform::replaceAll(mgr, init, backupReplacements, false).as<ExpressionPtr>();
+	return core::transform::replaceAll(mgr, init, backupReplacements, core::transform::globalReplacement).as<ExpressionPtr>();
 }
 
 StatementList ParSecSoa::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVars,

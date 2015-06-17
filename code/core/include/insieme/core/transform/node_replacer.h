@@ -52,9 +52,23 @@ class IRBuilder;
 
 namespace transform {
 
-namespace {
-    static const std::function<bool(const NodePtr&)> falseReturner = [](const NodePtr& node) { return false; };
-}
+/**
+ * Possible actions for the replacement utility limiter
+ *
+ * Process: simply process the given node
+ * Skip: skip the given node, but continue processing those below it
+ * Prune: prune the tree at this point, skipping the node and everything below it
+ * Interrupt: interrupt replacement, and stop completely
+ */
+enum class ReplaceAction { Process, Skip, Prune, Interrupt };
+
+typedef std::function<ReplaceAction(const NodePtr&)> ReplaceLimiter;
+
+const static ReplaceLimiter globalReplacement = [](const NodePtr& cur) { return ReplaceAction::Process; };
+const static ReplaceLimiter localReplacement = [](const NodePtr& cur) { 
+	return cur.isa<LambdaExprPtr>() ? ReplaceAction::Prune : ReplaceAction::Process; 
+};
+
 
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
@@ -63,22 +77,11 @@ namespace {
  * @param root the root of the sub-tree to be manipulated
  * @param toReplace the node to be replaced during this operation
  * @param replacement the node to be used as a substitution for the toReplace node
+ * @param limiter customizes the scope of the replacement
+ * @return the modified version of the root node
  */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true,
-		std::function<bool(const NodePtr&)> skip = falseReturner);
-
-/**
- * Replaces all occurrences of the specified variable within the given sub-tree with the given replacement.
- *
- * @param mgr the manager used for creating and maintaining new node instances if required
- * @param root the root of the sub-tree to be manipulated
- * @param toReplace the variable to be replaced during this operation
- * @param replacement the node to be used as a substitution for the toReplace node
- */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope = true,
-		std::function<bool(const NodePtr&)> skip = falseReturner);
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, 
+				   const NodePtr& replacement, const ReplaceLimiter limiter = localReplacement);
 
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
@@ -87,11 +90,11 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping nodes to their replacements
+ * @param limiter customizes the scope of the replacement
  * @return the modified version of the root node
  */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-        const NodeMap& replacements, bool limitScope = true,
-        std::function<bool(const NodePtr&)> skip = falseReturner);
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, 
+				   const ReplaceLimiter limiter = localReplacement);
 
 /**
  * A generic wrapper for the function provided above. This operation returns the same kind of node
@@ -99,9 +102,8 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  */
 template<typename T>
 core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
-        const NodeMap& replacements, bool limitScope = true,
-        std::function<bool(const NodePtr&)> skip = falseReturner) {
-	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limitScope, skip));
+        const NodeMap& replacements, const ReplaceLimiter limiter = localReplacement) {
+	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limiter));
 }
 
 /**
@@ -110,9 +112,8 @@ core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
  */
 template<typename T>
 core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
-		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true,
-		std::function<bool(const NodePtr&)> skip = falseReturner) {
-	return static_pointer_cast<T>(replaceAll(mgr, root, toReplace, replacement, limitScope, skip));
+		const NodePtr& toReplace, const NodePtr& replacement, const ReplaceLimiter limiter = localReplacement) {
+	return static_pointer_cast<T>(replaceAll(mgr, root, toReplace, replacement, limiter));
 }
 
 

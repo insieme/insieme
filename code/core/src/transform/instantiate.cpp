@@ -59,14 +59,17 @@ namespace {
 		std::function<bool(const NodePtr& node)> skip;
 
 		LambdaExprPtr generateSubstituteLambda(NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
+			ReplaceLimiter limiter = [&](const NodePtr& ptr) { 
+				return ptr.isa<core::LambdaExprPtr>() || skip(ptr) ? ReplaceAction::Prune : ReplaceAction::Process;
+			};
 			// using the derived mapping, we generate a new lambda expression with instantiated type params
 			// tricky: we apply the same mapping recursively on the *new* body
 			auto builder = IRBuilder(nodeMan);
 			auto funType = funExp->getFunctionType();
-			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, true, skip)->substitute(nodeMan, *this);
-			auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, true, skip);
+			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter)->substitute(nodeMan, *this);
+			auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
 			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
-				return core::transform::replaceAllGen(nodeMan, t, nodeMap, true, skip);
+				return core::transform::replaceAllGen(nodeMan, t, nodeMap, limiter);
 			});
 			auto newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
 			utils::migrateAnnotations(funExp, newLambda);

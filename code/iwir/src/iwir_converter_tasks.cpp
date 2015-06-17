@@ -1277,9 +1277,9 @@ CONVERTER(ParallelForTask) {
 	//replace "leIterator" literal in forBody with iterator variable
 	//NOTE when we see a link for to a outputPort we create a "leIterator" literal in Link-converter
 	core::LiteralPtr leIterator = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-	forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar, /*limitScope=*/true);
+	forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar);
 
-	core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, irBuilder.compoundStmt(forBody));
+	core::ForStmtPtr forStmt = irBuilder.forStmt(iterVar, startVal, endVal, step, irBuilder.compoundStmt(forBody));
 	
 	core::ExpressionPtr pFor = irBuilder.pfor(forStmt);	
 
@@ -1484,7 +1484,7 @@ CONVERTER(ForEachTask) {
 	//replace "leIterator" literal in forBody with iterator variable
 	//NOTE when we see a link for a loopElement we create a "leIterator" literal in Link-converter
 	core::LiteralPtr leIterator = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-	forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar, /*limitScope=*/true);
+	forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar);
 
 	core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, forBody);
 
@@ -1676,7 +1676,7 @@ CONVERTER(ParallelForEachTask) {
 	//replace "leIterator" literal in forBody with iterator variable
 	//NOTE when we see a link for a loopElement we create a "leIterator" literal in Link-converter
 	core::LiteralPtr leIterator = irBuilder.literal(irBuilder.getLangBasic().getInt4(), "leIterator");
-	forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar, /*limitScope=*/true);
+	forBody = core::transform::replaceAllGen(irMgr, forBody, leIterator, iterVar);
 
 	core::ForStmtPtr forStmt = irBuilder.forStmt( iterVar, startVal, endVal, step, forBody);
 

@@ -455,7 +455,7 @@ insieme::core::ForStmtPtr LoopAnalyzer::getLoop(const insieme::core::StatementPt
         });
 
 	// substitute the induction expression by the induction var
-	core::StatementPtr newBody = core::transform::replaceAllGen(mgr, body, originalInductionExpr, newInductionExpr, true);
+	core::StatementPtr newBody = core::transform::replaceAllGen(mgr, body, originalInductionExpr, newInductionExpr);
 
 	// append extra code that might be needed
 	// reproduce first stmts (like assign value if not loop local)

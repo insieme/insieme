@@ -215,7 +215,7 @@ insieme::core::ProgramPtr  VariadicArgumentsExtension::IRVisit(insieme::core::Pr
 	core::NodeMap replacements;
 	replacements [ arrayVaList ]  = vaListTy;
 	replacements [ vectorVaList ] = vaListTy;
-	prog = core::transform::replaceAllGen (mgr, prog, replacements, false);
+	prog = core::transform::replaceAllGen (mgr, prog, replacements, core::transform::globalReplacement);
 
 	// collect and remove wrongly typed vector inits, happens when using var. args in c++
 	auto vectorInitCleanup = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{

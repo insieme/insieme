@@ -650,7 +650,8 @@ namespace tu {
 					replacements.insert( {toReplace, replacement} );
 				}
 			}
-			internalMainFunc = transform::replaceAll(internalMainFunc->getNodeManager(), internalMainFunc, replacements, false).as<LambdaExprPtr>();
+			internalMainFunc = transform::replaceAll(internalMainFunc->getNodeManager(), 
+				internalMainFunc, replacements, core::transform::globalReplacement).as<LambdaExprPtr>();
 
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			for (auto cur : unit.getGlobals()) {

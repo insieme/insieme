@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -230,14 +230,14 @@ std::ostream& ThreadPrivate::dump(std::ostream& out) const {
 void replaceVars (core::ExpressionPtr& expr, core::NodeMap map){
 	if (!expr) return;
 	core::NodeManager& mgr =  expr->getNodeManager();
-	expr=  core::transform::replaceAll(mgr, expr, map, false).as<core::ExpressionPtr>();
+	expr = core::transform::replaceAll(mgr, expr, map, core::transform::globalReplacement).as<core::ExpressionPtr>();
 }
 
 void replaceVars (VarListPtr& list, core::NodeMap map){
 	if (!list) return;
 	for(core::ExpressionPtr& cur : *list){
 		core::NodeManager& mgr =  cur->getNodeManager();
-		cur=  core::transform::replaceAll(mgr, cur, map, false).as<core::ExpressionPtr>();
+		cur = core::transform::replaceAll(mgr, cur, map, core::transform::globalReplacement).as<core::ExpressionPtr>();
 	}
 }
 

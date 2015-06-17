@@ -190,7 +190,8 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	if(lambdaExpr->isRecursive()) {
 		// TODO: update recursive call, not only function; => arguments are missing!
 		// 		implementing this is easier when general add-parameter function is available
-		newBody = core::transform::replaceAll(build.getNodeManager(), newBody, recVar, newRecVar, false).as<CompoundStmtPtr>();
+		newBody = core::transform::replaceAll(
+			build.getNodeManager(), newBody, recVar, newRecVar, core::transform::globalReplacement).as<CompoundStmtPtr>();
 	}
 
 	auto newLambda = build.lambda(lambdaType, newParams, newBody);

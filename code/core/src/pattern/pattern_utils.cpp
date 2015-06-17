@@ -171,7 +171,8 @@ namespace irp {
 
 	NodePtr replaceAllAddr(const TreePattern& pattern, const core::NodePtr& root,
 		std::function<core::NodePtr(const NodeAddress& matchingAddr)> lambda, bool matchTypes) {
-			return replaceAllInternal(pattern, root, std::function<core::NodePtr(const NodeAddress&)>(lambda), matchTypes, true);
+			return replaceAllInternal(pattern, root, 
+				std::function<core::NodePtr(const NodeAddress&)>(lambda), matchTypes, true);
 	}
 
 } // end namespace irp

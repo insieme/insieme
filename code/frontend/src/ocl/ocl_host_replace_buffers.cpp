@@ -325,7 +325,7 @@ void BufferReplacer::performReplacements() {
 	});
 
 	prog = transform::replaceVarsRecursive(prog->getNodeManager(), prog, em, false, transform::defaultTypeRecovery, id<StatementPtr>(), declInitReplacements);
-	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, false);
+	prog = transform::replaceAll(prog->getNodeManager(), prog, generalReplacements, core::transform::globalReplacement);
 }
 
 IclBufferReplacer::IclBufferReplacer(NodePtr prog) : BufferReplacer(prog) { }

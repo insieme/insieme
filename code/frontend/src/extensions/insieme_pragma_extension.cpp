@@ -437,7 +437,8 @@ namespace {
 		// FIXME filter all the for stmt
 		core::visitDepthFirstOnce(program, core::makeLambdaVisitor(transformer));
 
-		return static_pointer_cast<const core::ProgramPtr>(core::transform::replaceAll(program->getNodeManager(), program, replacements, false));
+		return static_pointer_cast<const core::ProgramPtr>(core::transform::replaceAll(
+			program->getNodeManager(), program, replacements, core::transform::globalReplacement));
 
 	}
 

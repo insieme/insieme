@@ -265,7 +265,8 @@ core::ExpressionPtr Cpp11Extension::FuncDeclPostVisit(const clang::FunctionDecl*
 				}
 
 				// update implementation
-				irFunc = insieme::core::transform::replaceAllGen(builder.getNodeManager(), irFunc, replacements, false );
+				irFunc = insieme::core::transform::replaceAllGen(
+					builder.getNodeManager(), irFunc, replacements, core::transform::globalReplacement);
 				convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
 
 				// clean map
