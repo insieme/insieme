@@ -41,6 +41,7 @@
 #include "declarations.h"
 #include "irt_lock.h"
 #include "abstraction/impl/threads.impl.h"
+#include "abstraction/unused.h"
 #include "impl/irt_scheduling.impl.h"
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
@@ -82,7 +83,7 @@ void irt_lock_release(irt_lock* lock) {
 	if(lock->top) { // release a waiting task
 		locked_wi *task = lock->top;
 		lock->top = task->next;
-		irt_worker* wo = task->worker;
+		__irt_unused irt_worker* wo = task->worker;
 		irt_scheduling_continue_wi(task->worker, task->wi);
 		irt_signal_worker(wo);
 	} else { // none waiting, lock is now unlocked
