@@ -102,25 +102,22 @@ void VarUniqExtension::recordUse(const VariableAddress &def, const VariableAddre
 
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR(bool renumberUnused) {
-	// print some status information for debugging
-	std::cout << "uses:      " << uses.size()      << " def points" << std::endl;
-	std::cout << "getDefs:   " << getDefs().size() << " def points" << std::endl;
-	std::function<bool(VariableAddress)> inuse=
-	        [this](const VariableAddress &def){ return this->getUse(def).size(); };
-	std::cout << "used vars: " << getDefs(inuse).size() << " def points" << std::endl;
+	// convert boolean parameter to functional for node selection
+	std::function<bool(VariableAddress)>
+		pred=[this](const VariableAddress &def){ return this->getUse(def).size(); };
+	if (renumberUnused)
+		pred=[this](const VariableAddress &   ){ return true; };
 
-	// now that everything is in place, do the actual replacement
+	// do the actual replacement variable-by-variable (do we need switchroot?)
 	unsigned int ctr=0;
 	NodeManager& mgr=frag->getNodeManager();
 	NodePtr newfrag=frag.getAddressedNode();
-	for (auto var: uses) {
-		if (!renumberUnused && var.second.size()==0) continue;
-		NodePtr oldvar=var.first.getAddressedNode(),
-		        newvar=NodeAddress(Variable::get(mgr, var.first->getType(), ctr++)),
+	for (auto var: getDefs(pred)) {
+		NodePtr oldvar=var.getAddressedNode(),
+		        newvar=NodeAddress(Variable::get(mgr, var->getType(), ctr++)),
 		        oldfrag=newfrag;
 		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
 	}
-	std::cout << "used man.: " << ctr << " def points" << std::endl;
 
 	// return the newly generated code
 	return NodeAddress(newfrag);
@@ -185,6 +182,15 @@ std::vector<VariableAddress> VarUniqExtension::getDefs(std::function<bool(const 
 	for (auto def: uses)
 		if (predicate(def.first)) defs.push_back(def.first);
 	return defs;
+}
+
+/// Get the definition of all variables that have the given ID as their internal variable number. As this ID is not
+/// unique, several variable nodes can be returned.
+std::vector<VariableAddress> VarUniqExtension::getDefs(unsigned int id) {
+	std::function<bool(const VariableAddress &def)> pred=[this, id](const VariableAddress &def) {
+		return def.getAddressOfChild(1).as<UIntValueAddress>()->getValue()==id;
+	};
+	return getDefs(pred);
 }
 
 /// Return an array with all of the uses of the given variable definition point. If the variable definition point is

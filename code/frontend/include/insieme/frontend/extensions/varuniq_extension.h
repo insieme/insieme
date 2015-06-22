@@ -76,7 +76,9 @@ public:
 	static insieme::core::VariableAddress getDef(const insieme::core::VariableAddress& givenaddr);
 	std::vector<insieme::core::VariableAddress> getDefs(std::function<bool(const insieme::core::VariableAddress&)>
 	    predicate=[](const insieme::core::VariableAddress&) { return true; });
+	std::vector<insieme::core::VariableAddress> getDefs(unsigned int id);
 	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
+
 
 	insieme::core::NodeAddress IR(bool renumberUnused=false);
 

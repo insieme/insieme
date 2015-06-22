@@ -42,6 +42,19 @@
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
+unsigned int getIDfromVar(const VariableAddress &va) {
+	return va.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+}
+
+unsigned int maxID(std::vector<VariableAddress> vv) {
+	unsigned int ret=0;
+	for (auto v: vv) {
+		unsigned int id=getIDfromVar(v);
+		if (id>ret) ret=id;
+	}
+	return ret;
+}
+
 TEST(VarUniq, Simple) {
 	NodeManager man;
 	IRBuilder builder(man);
@@ -114,8 +127,9 @@ TEST(VarUniq, Simple) {
 	ASSERT_TRUE(fragment);
 
 	NodeAddress orig=NodeAddress(fragment);   // the original code from above
-	VarUniqExtension vu(orig);                // parsing the code
+	VarUniqExtension vu(orig);                // parse the original code for variables
 	NodeAddress result=vu.IR();               // perform the replacement of the variables
+	VarUniqExtension nu(result);              // parse the resulting code for variables
 
 	// show the changes of the variable uniquification process visually
 	std::stringstream strbuf;
@@ -125,12 +139,34 @@ TEST(VarUniq, Simple) {
 	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
 	//std::cout << strbuf.str();
 
+	// get all variable definitions from both codes
+	std::vector<VariableAddress>
+	        vu_all=vu.getDefs(),
+	        nu_all=nu.getDefs();
+	//nu_use=nu.getDefs(inuse);
+
 	// check some boundary conditions
 	std::function<bool(VariableAddress)> inuse=
 	        [&vu](const VariableAddress &def){ return vu.getUse(def).size(); };
-	EXPECT_TRUE(vu.getDefs().size()==40);        // this program has 40 variable definitions, excluding derived operands
+	EXPECT_TRUE(vu_all.size()==40);              // this program has 40 variable definitions, excluding derived operands
 	EXPECT_TRUE(vu.getDefs(inuse).size()==23);   // of these, 23 are actually used
 
+	// in the original code, we expect some vacant IDs
+	unsigned int max_vu=maxID(vu_all);
+	std::cout << "max ID in old code: " << max_vu << std::endl;
+	bool vu_allset=true;
+	for (unsigned int cur_vu=0; cur_vu<max_vu; ++cur_vu)
+		vu_allset=vu_allset && vu.getDefs(cur_vu).size();
+	EXPECT_FALSE(vu_allset);
 
-	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
+	// in the new code, every variable ID should be used
+	unsigned int max_nu=maxID(nu_all);
+	std::cout << "max ID in new code: " << max_nu << std::endl;
+	bool nu_allset=true;
+	for (unsigned int cur_nu=0; cur_nu<max_nu; ++cur_nu)
+		nu_allset=nu_allset && nu.getDefs(cur_nu).size();
+	//EXPECT_TRUE(nu_allset);
+
+	// the ultimate test; this one should not fail
+	//EXPECT_TRUE(max_nu+1==nu_all.size());
 }
