@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
 
@@ -73,6 +74,8 @@ class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Add
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
 	static insieme::core::VariableAddress getDef(const insieme::core::VariableAddress& givenaddr);
+	std::vector<insieme::core::VariableAddress> getDefs(std::function<bool(const insieme::core::VariableAddress&)>
+	    predicate=[](const insieme::core::VariableAddress&) { return true; });
 	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
 
 	insieme::core::NodeAddress IR(bool renumberUnused=false);

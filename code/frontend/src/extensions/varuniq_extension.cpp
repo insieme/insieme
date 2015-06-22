@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#include <algorithm>
 #include <iomanip>
 #include <ostream>
 #include <string>
@@ -102,21 +103,24 @@ void VarUniqExtension::recordUse(const VariableAddress &def, const VariableAddre
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR(bool renumberUnused) {
 	// print some status information for debugging
-	//for (auto dups: varid)
-	//	std::cout << "var " << dups.first << " (" << dups.second << ") found " << use[dups.first] << "×" << std::endl;
-	std::cout << "uses: " << uses.size() << " def points " << std::endl;
+	std::cout << "uses:      " << uses.size()      << " def points" << std::endl;
+	std::cout << "getDefs:   " << getDefs().size() << " def points" << std::endl;
+	std::function<bool(VariableAddress)> inuse=
+	        [this](const VariableAddress &def){ return this->getUse(def).size(); };
+	std::cout << "used vars: " << getDefs(inuse).size() << " def points" << std::endl;
 
-	// TODO: when replacing variables, consider the renumberUnused flag
 	// now that everything is in place, do the actual replacement
 	unsigned int ctr=0;
 	NodeManager& mgr=frag->getNodeManager();
 	NodePtr newfrag=frag.getAddressedNode();
 	for (auto var: uses) {
+		if (!renumberUnused && var.second.size()==0) continue;
 		NodePtr oldvar=var.first.getAddressedNode(),
 		        newvar=NodeAddress(Variable::get(mgr, var.first->getType(), ctr++)),
 		        oldfrag=newfrag;
 		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
 	}
+	std::cout << "used man.: " << ctr << " def points" << std::endl;
 
 	// return the newly generated code
 	return NodeAddress(newfrag);
@@ -172,6 +176,15 @@ VariableAddress VarUniqExtension::getDef(const VariableAddress& givenaddr) {
 
 	// we have reached the root, and never found a binding for the variable; return the given variable address
 	return givenaddr;
+}
+
+/// Get all variable definitions in the given code fragment that satisfy the given predicate. If not explicitly set,
+/// the predicate is true for all definitions, yielding any variable definition in the given code fragment.
+std::vector<VariableAddress> VarUniqExtension::getDefs(std::function<bool(const VariableAddress&)> predicate) {
+	std::vector<VariableAddress> defs;
+	for (auto def: uses)
+		if (predicate(def.first)) defs.push_back(def.first);
+	return defs;
 }
 
 /// Return an array with all of the uses of the given variable definition point. If the variable definition point is

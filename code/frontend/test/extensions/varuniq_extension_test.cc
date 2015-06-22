@@ -113,22 +113,24 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
-	NodeAddress orig=NodeAddress(fragment);
-	VarUniqExtension vu(orig);
-	NodeAddress result=vu.IR();
-	if (false) {
-		VarUniqExtension::printNode(orig  .getAddressOfChild(11, 1, 2, 0, 1, 2, 0, 3, 2, 1, 2, 0, 1, 1), "old code");
-		VarUniqExtension::printNode(result.getAddressOfChild(11, 1, 2, 0, 1, 2, 0, 3, 2, 1, 2, 0, 1, 1), "new code");
-	} else {
-		//std::cout << "overall node count: " << VarUniqExtension::countNodes(orig)
-		//          << " " << VarUniqExtension::countNodes(result) << std::endl;
+	NodeAddress orig=NodeAddress(fragment);   // the original code from above
+	VarUniqExtension vu(orig);                // parsing the code
+	NodeAddress result=vu.IR();               // perform the replacement of the variables
 
-		std::stringstream strbuf;
-		strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
-		       << printer::PrettyPrinter(fragment) << std::endl << std::endl
-		       << "# # # # #   NEW CODE   # # # # #" << std::endl
-		       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-		std::cout << strbuf.str();
-	}
+	// show the changes of the variable uniquification process visually
+	std::stringstream strbuf;
+	strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
+	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
+	       << "# # # # #   NEW CODE   # # # # #" << std::endl
+	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
+	//std::cout << strbuf.str();
+
+	// check some boundary conditions
+	std::function<bool(VariableAddress)> inuse=
+	        [&vu](const VariableAddress &def){ return vu.getUse(def).size(); };
+	EXPECT_TRUE(vu.getDefs().size()==40);        // this program has 40 variable definitions, excluding derived operands
+	EXPECT_TRUE(vu.getDefs(inuse).size()==23);   // of these, 23 are actually used
+
+
 	//EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
 }
