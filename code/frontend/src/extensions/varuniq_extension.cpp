@@ -100,6 +100,12 @@ void VarUniqExtension::recordUse(const VariableAddress &def, const VariableAddre
 		it->second=uselist;
 }
 
+/// Get the internal variable ID for the given variable address. This method is private, as the
+/// variable ID is non-portable.
+unsigned int VarUniqExtension::getVarID(const VariableAddress &var) {
+	return var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+}
+
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR(bool renumberUnused) {
 	// convert boolean parameter to functional for node selection
@@ -108,15 +114,18 @@ NodeAddress VarUniqExtension::IR(bool renumberUnused) {
 	if (renumberUnused)
 		pred=[this](const VariableAddress &   ){ return true; };
 
-	// do the actual replacement variable-by-variable (do we need switchroot?)
+	// do the actual replacement variable-by-variable
 	unsigned int ctr=0;
 	NodeManager& mgr=frag->getNodeManager();
 	NodePtr newfrag=frag.getAddressedNode();
 	for (auto var: getDefs(pred)) {
+		if (getVarID(var)<ctr)
+			std::cout << "Possible bug (id → ctr): " << getVarID(var) << " → " << ctr << std::endl;
 		NodePtr oldvar=var.getAddressedNode(),
 		        newvar=NodeAddress(Variable::get(mgr, var->getType(), ctr++)),
 		        oldfrag=newfrag;
 		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
+
 	}
 
 	// return the newly generated code
@@ -188,7 +197,7 @@ std::vector<VariableAddress> VarUniqExtension::getDefs(std::function<bool(const 
 /// unique, several variable nodes can be returned.
 std::vector<VariableAddress> VarUniqExtension::getDefs(unsigned int id) {
 	std::function<bool(const VariableAddress &def)> pred=[this, id](const VariableAddress &def) {
-		return def.getAddressOfChild(1).as<UIntValueAddress>()->getValue()==id;
+		return getVarID(def)==id;
 	};
 	return getDefs(pred);
 }

@@ -128,7 +128,7 @@ TEST(VarUniq, Simple) {
 
 	NodeAddress orig=NodeAddress(fragment);   // the original code from above
 	VarUniqExtension vu(orig);                // parse the original code for variables
-	NodeAddress result=vu.IR();               // perform the replacement of the variables
+	NodeAddress result=vu.IR(true);           // perform the replacement of the variables, even the unused ones
 	VarUniqExtension nu(result);              // parse the resulting code for variables
 
 	// show the changes of the variable uniquification process visually
@@ -143,11 +143,12 @@ TEST(VarUniq, Simple) {
 	std::vector<VariableAddress>
 	        vu_all=vu.getDefs(),
 	        nu_all=nu.getDefs();
-	//nu_use=nu.getDefs(inuse);
 
-	// check some boundary conditions
+	// this functions returns true if the variable with given VariableAddress is in use, ie: size()>0
 	std::function<bool(VariableAddress)> inuse=
 	        [&vu](const VariableAddress &def){ return vu.getUse(def).size(); };
+	// check some boundary conditions
+	EXPECT_TRUE(vu_all.size()==nu_all.size());   // the number of variable definitions must match in both codes
 	EXPECT_TRUE(vu_all.size()==40);              // this program has 40 variable definitions, excluding derived operands
 	EXPECT_TRUE(vu.getDefs(inuse).size()==23);   // of these, 23 are actually used
 
@@ -163,10 +164,13 @@ TEST(VarUniq, Simple) {
 	unsigned int max_nu=maxID(nu_all);
 	std::cout << "max ID in new code: " << max_nu << std::endl;
 	bool nu_allset=true;
-	for (unsigned int cur_nu=0; cur_nu<max_nu; ++cur_nu)
-		nu_allset=nu_allset && nu.getDefs(cur_nu).size();
+	for (unsigned int cur_nu=0; cur_nu<max_nu; ++cur_nu) {
+		bool isFound=nu.getDefs(cur_nu).size();
+		if (!isFound) std::cout << "variable v" << cur_nu << " not found!" << std::endl;
+		nu_allset=nu_allset && isFound;
+	}
 	//EXPECT_TRUE(nu_allset);
 
-	// the ultimate test; this one should not fail
-	//EXPECT_TRUE(max_nu+1==nu_all.size());
+	// the ultimate test; this one should not fail: the number of definitions must match the highest variable ID
+	EXPECT_TRUE(max_nu+1==nu_all.size());
 }

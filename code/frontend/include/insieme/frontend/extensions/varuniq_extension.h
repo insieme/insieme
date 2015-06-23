@@ -70,6 +70,7 @@ class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Add
 	void visitVariable(const insieme::core::VariableAddress &node);
 	void recordDef(const insieme::core::VariableAddress &def);
 	void recordUse(const insieme::core::VariableAddress &def, const insieme::core::VariableAddress &use);
+	unsigned int getVarID(const insieme::core::VariableAddress &var);
 
 public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
