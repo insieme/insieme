@@ -47,35 +47,78 @@
 #include "insieme/frontend/extensions/varuniq_extension.h"
 #include "insieme/utils/logging.h"
 
+using namespace insieme::analysis;
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
 VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), dep(frag) {
 }
 
+/// Do the actual variable ID replacement in the complete IR "tree" for the variable "from" to a variable with ID "to".
+/// Checks need to be done beforehand, especially to ensure that the target ID "to" is not used by another
+/// variable with the same parameters (type, etc) in the same scope. To do these checks, you can for example
+/// utilize DataDependence::getDefs(unsigned int).
+NodeAddress VarUniqExtension::renameVar(NodeAddress tree, VariableAddress from, unsigned int to) {
+	// set up the node manager
+	NodeManager& mgr=tree->getNodeManager();
+
+	// convert from node addresses to node ptrs
+	NodePtr treeptr=tree.getAddressedNode(),
+	        fromptr=from.getAddressedNode(),
+	        toptr=NodeAddress(Variable::get(mgr, from->getType(), to)),
+	        newtreeptr=transform::replaceAll(mgr, treeptr, fromptr, toptr, false);
+
+	// return the newly generated IR tree
+	return NodeAddress(newtreeptr);
+}
+
+/// findPerfectID assigns each variable in consecutive (execution) order an increasing, unique ID.
+std::map<VariableAddress, unsigned int> VarUniqExtension::findPerfectID(std::vector<VariableAddress> vars) {
+	std::map<VariableAddress, unsigned int> ret;
+	unsigned int ctr=0;
+	for (auto var: vars)
+		ret.emplace(var, ctr++);
+	return ret;
+}
+
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR(bool renumberUnused) {
+	NodeAddress ret=frag;
+
 	// convert boolean parameter to functional for node selection
 	std::function<bool(VariableAddress)>
 		pred=[this](const VariableAddress &def){ return this->dep.getUse(def).size(); };
 	if (renumberUnused)
 		pred=[]    (const VariableAddress &   ){ return true; };
 
-	// do the actual replacement variable-by-variable
-	unsigned int ctr=0;
-	NodeManager& mgr=frag->getNodeManager();
-	NodePtr newfrag=frag.getAddressedNode();
-	for (auto var: dep.getDefs(pred)) {
-		unsigned int varid=insieme::analysis::DataDependence::getVarID(var);
-		if (varid<ctr)
-			std::cout << "Possible bug (id → ctr): " << varid << " → " << ctr << std::endl;
-		NodePtr oldvar=var.getAddressedNode(),
-		        newvar=NodeAddress(Variable::get(mgr, var->getType(), ctr++)),
-		        oldfrag=newfrag;
-		newfrag=transform::replaceAll(mgr, oldfrag, oldvar, newvar, false);
+	// do the actual variable replacement with a multi-step iteration until a fixed-point is reached
+	// first, calculate the goal
+	std::map<VariableAddress, unsigned int> goalID=findPerfectID(dep.getDefs(pred));
+	DataDependence newdep=dep;
 
+	// second: iterate over the goal until empty
+	while (!goalID.empty()) {
+		// third: retrieve and remove the first target from the map
+		std::pair<VariableAddress, unsigned int> p=*(goalID.begin());
+		goalID.erase(goalID.begin());
+
+		// fourth, check if the target variable ID is already unused
+		// four A: there is still a definition for the target variable ID
+		if (newdep.getDefs(p.second).size()) {
+			// get unused ID
+			unsigned int unusedID=findUnusedID(newdep.getDefs()); // all IDs are considered here: no ID clash!
+			// rename the variable to the unused ID
+			ret=renameVar(ret, p.first, unusedID);
+			// append the previously removed element at the end of the map
+			FIXME;
+
+		// four B: for the target variable ID no definition could be found
+		} else {
+			// rename the variable directly to the target ID
+			ret=renameVar(ret, p.first, p.second);
+		}
 	}
 
-	// return the newly generated code
-	return NodeAddress(newfrag);
+	// step 6: done
+	return ret;
 }

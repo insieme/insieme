@@ -54,10 +54,14 @@ namespace extensions {
 class VarUniqExtension: public  insieme::frontend::extensions::FrontendExtension {
 	insieme::core::NodeAddress frag;         /// < code fragment given to this compiler pass
 
+	std::map<insieme::core::VariableAddress, unsigned int> findPerfectID(std::vector<insieme::core::VariableAddress> vars);
+
 public:
 	insieme::analysis::DataDependence dep;   /// < data dependence state for the above code fragment
 
 	VarUniqExtension(const insieme::core::NodeAddress frag);
+	static insieme::core::NodeAddress renameVar(insieme::core::NodeAddress tree,
+	                                            insieme::core::VariableAddress from, unsigned int to);
 	insieme::core::NodeAddress IR(bool renumberUnused=false);
 };
 
