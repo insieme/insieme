@@ -36,20 +36,17 @@
 
 #include <gtest/gtest.h>
 #include <sstream>
+#include "insieme/analysis/datadep.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/varuniq_extension.h"
 
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-unsigned int getIDfromVar(const VariableAddress &va) {
-	return va.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
-}
-
 unsigned int maxID(std::vector<VariableAddress> vv) {
 	unsigned int ret=0;
 	for (auto v: vv) {
-		unsigned int id=getIDfromVar(v);
+		unsigned int id=insieme::analysis::DataDependence::getVarID(v);
 		if (id>ret) ret=id;
 	}
 	return ret;
@@ -126,10 +123,10 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
-	NodeAddress orig=NodeAddress(fragment);   // the original code from above
-	VarUniqExtension vu(orig);                // parse the original code for variables
-	NodeAddress result=vu.IR(true);           // perform the replacement of the variables, even the unused ones
-	VarUniqExtension nu(result);              // parse the resulting code for variables
+	NodeAddress orig=NodeAddress(fragment);                     // the original code from above
+	insieme::frontend::extensions::VarUniqExtension vu(orig);   // parse the original code for variables
+	NodeAddress result=vu.IR(true);                             // replacement of vars, even the unused ones
+	insieme::analysis::DataDependence nu(result);               // parse the resulting code for variables
 
 	// show the changes of the variable uniquification process visually
 	std::stringstream strbuf;
@@ -141,23 +138,23 @@ TEST(VarUniq, Simple) {
 
 	// get all variable definitions from both codes
 	std::vector<VariableAddress>
-	        vu_all=vu.getDefs(),
+	        vu_all=vu.dep.getDefs(),
 	        nu_all=nu.getDefs();
 
 	// this functions returns true if the variable with given VariableAddress is in use, ie: size()>0
 	std::function<bool(VariableAddress)> inuse=
-	        [&vu](const VariableAddress &def){ return vu.getUse(def).size(); };
+	        [&vu](const VariableAddress &def){ return vu.dep.getUse(def).size(); };
 	// check some boundary conditions
-	EXPECT_TRUE(vu_all.size()==nu_all.size());   // the number of variable definitions must match in both codes
-	EXPECT_TRUE(vu_all.size()==40);              // this program has 40 variable definitions, excluding derived operands
-	EXPECT_TRUE(vu.getDefs(inuse).size()==23);   // of these, 23 are actually used
+	EXPECT_TRUE(vu_all.size()==nu_all.size());    // the number of variable definitions must match in both codes
+	EXPECT_TRUE(vu_all.size()==40);               // this program has 40 variable definitions excluding derived operands
+	EXPECT_TRUE(vu.dep.getDefs(inuse).size()==23);// of these, 23 are actually used
 
 	// in the original code, we expect some vacant IDs
 	unsigned int max_vu=maxID(vu_all);
 	std::cout << "max ID in old code: " << max_vu << std::endl;
 	bool vu_allset=true;
 	for (unsigned int cur_vu=0; cur_vu<max_vu; ++cur_vu)
-		vu_allset=vu_allset && vu.getDefs(cur_vu).size();
+		vu_allset=vu_allset && vu.dep.getDefs(cur_vu).size();
 	EXPECT_FALSE(vu_allset);
 
 	// in the new code, every variable ID should be used

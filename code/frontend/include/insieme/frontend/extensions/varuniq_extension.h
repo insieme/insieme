@@ -40,8 +40,8 @@
 #include <map>
 #include <string>
 
+#include "insieme/analysis/datadep.h"
 #include "insieme/core/ir_values.h"
-#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
@@ -49,42 +49,16 @@ namespace frontend {
 namespace extensions {
 
 /// \brief The VarUniqExtension class makes the internal variable identifiers unique and provides some statistics.
-/// The statistics is gathered while walking the variable def-use chains (which is required for the implementation
-/// of the variable uniquification process); eventually, this functionality should be broken out of this class
-/// and put in their own class.
+/// The statistics is gathered using the DataDependence class.
 ///
-/// Anyway, these statistics will play an important role in transformation/optimization.
-/// For example:
-/// * In one of our test cases, 211 variables were defined, but only 145 were used.
-/// * This means that some variables were never used, and others were used only once.
-/// * For never used variables, we can use DCE techniques to get rid of them completely.
-/// * For write-once-read-once variable, we can substitute the variable by its defining expression (given that
-///   INSPIRE is referentially transparent).
-///
-class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
-        insieme::frontend::extensions::FrontendExtension {
-	insieme::core::NodeAddress frag;                                  /// < code fragment passed to this compiler pass
-	std::map<insieme::core::VariableAddress, std::vector<insieme::core::VariableAddress> > uses; /// uses for each def
-
-	void visitNode(const insieme::core::NodeAddress &node);
-	void visitVariable(const insieme::core::VariableAddress &node);
-	void recordDef(const insieme::core::VariableAddress &def);
-	void recordUse(const insieme::core::VariableAddress &def, const insieme::core::VariableAddress &use);
-	unsigned int getVarID(const insieme::core::VariableAddress &var);
+class VarUniqExtension: public  insieme::frontend::extensions::FrontendExtension {
+	insieme::core::NodeAddress frag;         /// < code fragment given to this compiler pass
 
 public:
+	insieme::analysis::DataDependence dep;   /// < data dependence state for the above code fragment
+
 	VarUniqExtension(const insieme::core::NodeAddress frag);
-	static insieme::core::VariableAddress getDef(const insieme::core::VariableAddress& givenaddr);
-	std::vector<insieme::core::VariableAddress> getDefs(std::function<bool(const insieme::core::VariableAddress&)>
-	    predicate=[](const insieme::core::VariableAddress&) { return true; });
-	std::vector<insieme::core::VariableAddress> getDefs(unsigned int id);
-	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
-
-
 	insieme::core::NodeAddress IR(bool renumberUnused=false);
-
-	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
-	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 };
 
 }}}
