@@ -62,7 +62,8 @@ public:
 	VarUniqExtension(const insieme::core::NodeAddress frag);
 	static insieme::core::NodeAddress renameVar(insieme::core::NodeAddress tree,
 	                                            insieme::core::VariableAddress from, unsigned int to);
-	insieme::core::NodeAddress IR(bool renumberUnused=false);
+	insieme::core::NodeAddress IR();
+	static unsigned int findMaxID(std::vector<insieme::core::VariableAddress> vars);
 };
 
 }}}

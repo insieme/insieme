@@ -81,39 +81,50 @@ std::map<VariableAddress, unsigned int> VarUniqExtension::findPerfectID(std::vec
 	return ret;
 }
 
-/// Return the updated code with unique variable identifiers.
-NodeAddress VarUniqExtension::IR(bool renumberUnused) {
-	NodeAddress ret=frag;
+/// For all the given variables get their internal ID and return the maximum one.
+unsigned int VarUniqExtension::findMaxID(std::vector<VariableAddress> vars) {
+	unsigned int max=0;
 
-	// convert boolean parameter to functional for node selection
-	std::function<bool(VariableAddress)>
-		pred=[this](const VariableAddress &def){ return this->dep.getUse(def).size(); };
-	if (renumberUnused)
-		pred=[]    (const VariableAddress &   ){ return true; };
+	// search all existing IDs
+	for (auto var: vars) {
+		unsigned int elem=insieme::analysis::DataDependence::getVarID(var);
+		if (elem>max) max=elem;
+	}
+
+	return max;
+}
+
+/// Return the updated code with unique variable identifiers.
+NodeAddress VarUniqExtension::IR() {
+	NodeAddress ret=frag;
 
 	// do the actual variable replacement with a multi-step iteration until a fixed-point is reached
 	// first, calculate the goal
-	std::map<VariableAddress, unsigned int> goalID=findPerfectID(dep.getDefs(pred));
-	DataDependence newdep=dep;
+	std::map<VariableAddress, unsigned int> goalID=findPerfectID(dep.getDefs());
 
 	// second: iterate over the goal until empty
 	while (!goalID.empty()) {
+		DataDependence dep(ret);   // have a fresh look at how variables are being used currently
+
 		// third: retrieve and remove the first target from the map
 		std::pair<VariableAddress, unsigned int> p=*(goalID.begin());
 		goalID.erase(goalID.begin());
+		std::cout << "processing var [" << goalID.size() << "]: " << DataDependence::getVarID(p.first) << " → ";
 
 		// fourth, check if the target variable ID is already unused
 		// four A: there is still a definition for the target variable ID
-		if (newdep.getDefs(p.second).size()) {
-			// get unused ID
-			unsigned int unusedID=findUnusedID(newdep.getDefs()); // all IDs are considered here: no ID clash!
+		if (dep.getDefs(p.second).size()) {
+			// get unused ID (maximum seen ID plus one)
+			unsigned int unusedID=findMaxID(dep.getDefs())+1;
+			std::cout << unusedID << " (target: " << p.second << ")" << std::endl;
 			// rename the variable to the unused ID
 			ret=renameVar(ret, p.first, unusedID);
 			// append the previously removed element at the end of the map
-			FIXME;
+			goalID.emplace_hint(goalID.end(), p.first.switchRoot(ret.getAddressedNode()), p.second);
 
 		// four B: for the target variable ID no definition could be found
 		} else {
+			std::cout << p.second << std::endl;
 			// rename the variable directly to the target ID
 			ret=renameVar(ret, p.first, p.second);
 		}

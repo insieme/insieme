@@ -43,15 +43,6 @@
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-unsigned int maxID(std::vector<VariableAddress> vv) {
-	unsigned int ret=0;
-	for (auto v: vv) {
-		unsigned int id=insieme::analysis::DataDependence::getVarID(v);
-		if (id>ret) ret=id;
-	}
-	return ret;
-}
-
 TEST(VarUniq, Simple) {
 	NodeManager man;
 	IRBuilder builder(man);
@@ -125,7 +116,7 @@ TEST(VarUniq, Simple) {
 
 	NodeAddress orig=NodeAddress(fragment);                     // the original code from above
 	insieme::frontend::extensions::VarUniqExtension vu(orig);   // parse the original code for variables
-	NodeAddress result=vu.IR(true);                             // replacement of vars, even the unused ones
+	NodeAddress result=vu.IR();                                 // replacement of vars
 	insieme::analysis::DataDependence nu(result);               // parse the resulting code for variables
 
 	// show the changes of the variable uniquification process visually
@@ -134,7 +125,7 @@ TEST(VarUniq, Simple) {
 	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
 	       << "# # # # #   NEW CODE   # # # # #" << std::endl
 	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-	//std::cout << strbuf.str();
+	std::cout << strbuf.str();
 
 	// get all variable definitions from both codes
 	std::vector<VariableAddress>
@@ -150,7 +141,7 @@ TEST(VarUniq, Simple) {
 	EXPECT_TRUE(vu.dep.getDefs(inuse).size()==23);// of these, 23 are actually used
 
 	// in the original code, we expect some vacant IDs
-	unsigned int max_vu=maxID(vu_all);
+	unsigned int max_vu=VarUniqExtension::findMaxID(vu_all);
 	std::cout << "max ID in old code: " << max_vu << std::endl;
 	bool vu_allset=true;
 	for (unsigned int cur_vu=0; cur_vu<max_vu; ++cur_vu)
@@ -158,7 +149,7 @@ TEST(VarUniq, Simple) {
 	EXPECT_FALSE(vu_allset);
 
 	// in the new code, every variable ID should be used
-	unsigned int max_nu=maxID(nu_all);
+	unsigned int max_nu=VarUniqExtension::findMaxID(nu_all);
 	std::cout << "max ID in new code: " << max_nu << std::endl;
 	bool nu_allset=true;
 	for (unsigned int cur_nu=0; cur_nu<max_nu; ++cur_nu) {
