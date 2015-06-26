@@ -73,11 +73,15 @@ NodeAddress VarUniqExtension::renameVar(NodeAddress tree, VariableAddress from, 
 }
 
 /// findPerfectID assigns each variable in consecutive (execution) order an increasing, unique ID.
-std::map<VariableAddress, unsigned int> VarUniqExtension::findPerfectID(std::vector<VariableAddress> vars) {
-	std::map<VariableAddress, unsigned int> ret;
+std::vector<std::pair<VariableAddress, unsigned int> > VarUniqExtension::findPerfectID(std::vector<VariableAddress> vars) {
+	std::vector<std::pair<VariableAddress, unsigned int> > ret;
 	unsigned int ctr=0;
-	for (auto var: vars)
-		ret.emplace(var, ctr++);
+	for (auto var: vars) {
+		unsigned int varid=DataDependence::getVarID(var);
+		// -----------------------------------------------------------------------------------------
+		if (varid==0) DataDependence::printNode(var, "id="+toString(varid)+", goal="+toString(ctr));
+		ret.push_back(std::pair<VariableAddress, unsigned int>(var, ctr++));
+	}
 	return ret;
 }
 
@@ -94,20 +98,28 @@ unsigned int VarUniqExtension::findMaxID(std::vector<VariableAddress> vars) {
 	return max;
 }
 
+// ------------------------------------------------------------------------------------------------
+void VarUniqExtension::printGoalID(std::vector<std::pair<VariableAddress, unsigned int> > goalID) {
+	std::cout << "##";
+	for (auto p: goalID)
+		std::cout << " " << DataDependence::getVarID(p.first) << "→" << p.second;
+	std::cout << std::endl;
+}
+
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR() {
 	NodeAddress ret=frag;
 
 	// do the actual variable replacement with a multi-step iteration until a fixed-point is reached
 	// first, calculate the goal
-	std::map<VariableAddress, unsigned int> goalID=findPerfectID(dep.getDefs());
+	std::vector<std::pair<VariableAddress, unsigned int> > goalID=findPerfectID(dep.getDefs());
 
 	// second: iterate over the goal until empty
 	while (!goalID.empty()) {
 		DataDependence dep(ret);   // have a fresh look at how variables are being used currently
 
 		// third: retrieve and remove the first target from the map
-		std::pair<VariableAddress, unsigned int> p=*(goalID.begin());
+		std::pair<VariableAddress, unsigned int> p=goalID.front();
 		goalID.erase(goalID.begin());
 		std::cout << "processing var [" << goalID.size() << "]: " << DataDependence::getVarID(p.first) << " → ";
 
@@ -120,7 +132,8 @@ NodeAddress VarUniqExtension::IR() {
 			// rename the variable to the unused ID
 			ret=renameVar(ret, p.first, unusedID);
 			// append the previously removed element at the end of the map
-			goalID.emplace_hint(goalID.end(), p.first.switchRoot(ret.getAddressedNode()), p.second);
+			goalID.push_back(std::pair<VariableAddress, unsigned int>
+			                 (p.first.switchRoot(ret.getAddressedNode()), p.second));
 
 		// four B: for the target variable ID no definition could be found
 		} else {

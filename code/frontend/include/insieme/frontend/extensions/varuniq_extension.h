@@ -37,8 +37,8 @@
 #pragma once
 
 #include <functional>
-#include <map>
 #include <string>
+#include <vector>
 
 #include "insieme/analysis/datadep.h"
 #include "insieme/core/ir_values.h"
@@ -54,7 +54,9 @@ namespace extensions {
 class VarUniqExtension: public  insieme::frontend::extensions::FrontendExtension {
 	insieme::core::NodeAddress frag;         /// < code fragment given to this compiler pass
 
-	std::map<insieme::core::VariableAddress, unsigned int> findPerfectID(std::vector<insieme::core::VariableAddress> vars);
+	std::vector<std::pair<insieme::core::VariableAddress, unsigned int> > findPerfectID
+	   (std::vector<insieme::core::VariableAddress> vars);
+	void printGoalID(std::vector<std::pair<insieme::core::VariableAddress, unsigned int> > goalID);
 
 public:
 	insieme::analysis::DataDependence dep;   /// < data dependence state for the above code fragment

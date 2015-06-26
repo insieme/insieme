@@ -125,7 +125,7 @@ TEST(VarUniq, Simple) {
 	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
 	       << "# # # # #   NEW CODE   # # # # #" << std::endl
 	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-	std::cout << strbuf.str();
+	//std::cout << strbuf.str();
 
 	// get all variable definitions from both codes
 	std::vector<VariableAddress>
