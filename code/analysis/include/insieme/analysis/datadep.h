@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <boost/optional.hpp>
 #include <functional>
 #include <map>
 #include <string>
@@ -78,6 +79,8 @@ public:
 	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
 
 	static unsigned int getVarID(const insieme::core::VariableAddress &var);
+	static boost::optional<insieme::core::NodeAddress> commonPathPrefix(const insieme::core::NodeAddress &n1,
+	                                                                    const insieme::core::NodeAddress &n2);
 	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
 	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 };

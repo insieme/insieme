@@ -132,6 +132,12 @@ VariableAddress DataDependence::getDef(const VariableAddress& givenaddr) {
 			for (auto n: oneup.as<LambdaAddress>()->getParameters())
 				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
+		case NT_LambdaExpr: {
+			break;
+			auto n=oneup.as<LambdaExprAddress>()->getVariable();
+			if (n.as<VariablePtr>()==givenptr) return n;
+			break;
+		}
 		case NT_LambdaBinding: {
 			auto n=oneup.as<LambdaBindingAddress>()->getVariable();
 			if (n.as<VariablePtr>()==givenptr) return n;
@@ -184,6 +190,26 @@ std::vector<VariableAddress> DataDependence::getUse(const VariableAddress& def) 
 /// variable ID is non-portable.
 unsigned int DataDependence::getVarID(const VariableAddress &var) {
 	return var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
+}
+
+/// Return the address of the element that is common to both addresses.
+boost::optional<NodeAddress> DataDependence::commonPathPrefix(const NodeAddress &n1, const NodeAddress &n2) {
+	boost::optional<NodeAddress> ret;
+	unsigned int max=n1.getDepth(), shorter=0;
+	if (n2.getDepth()<max) { max=n2.getDepth(); shorter=1; }
+	unsigned int matching=max;
+
+	std::vector<NodeAddress> up={n1.getParentAddress(n1.getDepth()-max), n2.getParentAddress(n2.getDepth()-max)};
+	for (unsigned int i=max; i>0; --i) {
+		if (up[0].getIndex()!=up[1].getIndex()) matching=i-1;
+		if (i>0) for (unsigned int j=0; j<2; ++j) up[j]=up[j].getParentAddress();
+	}
+
+	if (matching>0) {
+		if (shorter==0) ret=boost::optional<NodeAddress>(n1.getParentAddress(max-matching));
+		else            ret=boost::optional<NodeAddress>(n2.getParentAddress(max-matching));
+	}
+	return ret;
 }
 
 /// Debug routine to print the given node and its immediate children. The node address is the only mandatory

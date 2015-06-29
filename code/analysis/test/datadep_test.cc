@@ -128,7 +128,15 @@ TEST(DataDependence, Unique) {
 	EXPECT_TRUE(same.size()==0);
 	if (same.size()) {
 		std::cout << "There are " << same.size() << " identical variable pairs:" << std::endl;
-		for (auto p: same)
-			std::cout << "\t" << p.first << " : " << p.second << std::endl;
+		for (auto p: same) {
+			boost::optional<NodeAddress> pfx=DataDependence::commonPathPrefix(p.first, p.second);
+			if (pfx) {
+				std::cout << "\t"
+				          << p.first  << "(" << p.first.getDepth()- pfx->getDepth() << ") : "
+				          << p.second << "(" << p.second.getDepth()-pfx->getDepth() << ")";
+				DataDependence::printNode(*pfx);
+				std::cout << std::endl;
+			}
+		}
 	}
 }
