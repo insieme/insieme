@@ -55,20 +55,7 @@ namespace extensions {
 	}
 
 	insieme::core::ExpressionPtr InterceptorExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
-
-		if (const clang::CXXConstructExpr* ctorExpr =  llvm::dyn_cast<clang::CXXConstructExpr>(expr)){
-			auto ctorDecl = ctorExpr->getConstructor ();
-			if (getInterceptor().isIntercepted(ctorDecl)){
-				if (ctorDecl->isDefaultConstructor ()){
-					core::TypePtr classTy = convFact.convertType(ctorExpr->getType());
-					if(classTy->getNodeType() == core::NT_RefType) {
-						classTy = classTy.as<core::RefTypePtr>()->getElementType();
-					}
-					return	convFact.getIRBuilder().getZero(classTy);
-				}
-			}
-		}
-
+		
 		if(const clang::DeclRefExpr* declRefExpr = llvm::dyn_cast<clang::DeclRefExpr>(expr) ) {
 
 			const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(declRefExpr->getDecl());
@@ -90,26 +77,9 @@ namespace extensions {
 				}
 			}
 
-			if (const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRefExpr->getDecl() ) ) {
+			if(const clang::EnumConstantDecl* enumConstant = llvm::dyn_cast<clang::EnumConstantDecl>(declRefExpr->getDecl())) {
 				const clang::EnumType* enumType = llvm::dyn_cast<clang::EnumType>(llvm::cast<clang::TypeDecl>(enumConstant->getDeclContext())->getTypeForDecl());
-				if( getInterceptor().isIntercepted(enumType->getCanonicalTypeInternal()) ) {
-					/*core::TypePtr enumTy = convFact.convertType(enumType);
-					auto enumDecl = enumType->getDecl();
-					std::string qualifiedTypeName = enumDecl->getQualifiedNameAsString();
-					std::string typeName = enumDecl->getNameAsString();
-					std::string constantName = enumConstant->getNameAsString();
-
-					//remove typeName from qualifiedTypeName and append enumConstantName
-					size_t pos = qualifiedTypeName.find(typeName);
-					assert(pos!= std::string::npos);
-					std::string fixedQualifiedName = qualifiedTypeName.replace(pos,typeName.size(), constantName);
-
-					VLOG(2) << qualifiedTypeName << " " << typeName << " " << constantName;
-					VLOG(2) << fixedQualifiedName;
-
-					std::string enumConstantName = fixedQualifiedName;
-					return convFact.getIRBuilder().literal(enumConstantName, enumTy);
-					*/
+				if(getInterceptor().isIntercepted(enumType->getCanonicalTypeInternal())) {
 					return getInterceptor().intercept(enumConstant, convFact);
 				}
 			}
@@ -119,7 +89,7 @@ namespace extensions {
 
     core::ExpressionPtr InterceptorExtension::FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic) {
         // check whether function should be intercected
-        if( getInterceptor().isIntercepted(funcDecl) ) {
+        if(getInterceptor().isIntercepted(funcDecl)) {
             auto irExpr = getInterceptor().intercept(funcDecl, convFact);
             VLOG(2) << "interceptorextension" << irExpr;
             return irExpr;
@@ -138,11 +108,11 @@ namespace extensions {
 	}
 
     core::ExpressionPtr InterceptorExtension::ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact) {
-		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl) ) {
+		if(const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)) {
 
-			if (getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+			if(getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
 
-				if( varDecl->hasGlobalStorage()){
+				if(varDecl->hasGlobalStorage()){
 
 					//we expect globals to be literals -- get the "standard IR"which we need to change
 					core::LiteralPtr globalLit = convFact.lookUpVariable(varDecl).as<core::LiteralPtr>();
@@ -159,13 +129,13 @@ namespace extensions {
 					core::transform::utils::migrateAnnotations(globalLit, replacement);
 
 					//standard way only add nonstaticlocal and nonexternal to the globals
-					if( !varDecl->isStaticLocal() && !varDecl->hasExternalStorage() ) {
+					if(!varDecl->isStaticLocal() && !varDecl->hasExternalStorage()) {
 						auto git = std::find_if(globals.begin(), globals.end(),
 								[&](const insieme::frontend::tu::IRTranslationUnit::Global& cur)->bool {
 									return *globalLit == *cur.first;
 								});
 						assert(git != globals.end() && "only remove the intercepted globals which were added in the standard way");
-						if (varDecl->isStaticDataMember()) {
+						if(varDecl->isStaticDataMember()) {
 							//remove varDecl from TU -- as they are declared by the intercepted party
 							if( git != globals.end() ) {
 								globals.erase(git);
@@ -173,7 +143,7 @@ namespace extensions {
 							}
 						} else {
 							// replace in TU the "wrong" literal with the "simple" name with the qualified name
-							if( git != globals.end() ) {
+							if(git != globals.end()) {
 								git->first = replacement;
 								VLOG(2) << "replaced in TU.globals";
 							}

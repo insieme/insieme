@@ -1793,6 +1793,8 @@ core::ExpressionPtr Converter::CExprConverter::Visit(const clang::Expr* expr) {
 		convFact.trackSourceLocation(expr);
         retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
 		convFact.untrackSourceLocation();
+	} else {
+		VLOG(2) << "CExprConverter::Visit handled by plugin";
 	}
 
 	// print diagnosis messages

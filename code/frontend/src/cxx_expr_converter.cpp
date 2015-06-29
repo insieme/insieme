@@ -510,8 +510,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 
 	// if no constructor is found, it is a new over an non-class type, can be any kind of pointer of array
 	// spetialy double pointer
-	if (!callExpr->getConstructExpr() ){
-
+	if(!callExpr->getConstructExpr() ){
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType());
 		core::ExpressionPtr placeHolder;
 		if(callExpr->hasInitializer()) {
@@ -519,12 +518,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
 			frontend_assert(initializerExpr);
             placeHolder = initializerExpr;
-		}
-        else {
+		} else {
             placeHolder  = builder.undefinedNew(type);
         }
 
-		if (callExpr->isArray()){
+		if(callExpr->isArray()){
 			core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
 			placeHolder = builder.callExpr( builder.arrayType(type),
 											builder.getLangBasic().getArrayCreate1D(),
@@ -535,8 +533,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
 		}
 	}
-	else{
-
+	else {
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
@@ -562,10 +559,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 
 			frontend_assert( ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size()) << "not default ctor used in array construction\n";
 
-			retExpr = ( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
-			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
+			retExpr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr);
 		}
-		else{
+		else {
 			// the basic constructor translation defines a stack variable as argument for the call
 			// in order to turn this into a diynamic memory allocation, we only need to substitute
 			// the first argument for a heap location
@@ -1045,6 +1042,8 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 		convFact.trackSourceLocation(expr);
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 		convFact.untrackSourceLocation();
+	} else {
+		VLOG(2) << "CXXExprConverter::Visit handled by plugin";
 	}
 
 	// print diagnosis messages
