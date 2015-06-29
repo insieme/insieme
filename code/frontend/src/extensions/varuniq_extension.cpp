@@ -79,7 +79,11 @@ std::vector<std::pair<VariableAddress, unsigned int> > VarUniqExtension::findPer
 	for (auto var: vars) {
 		unsigned int varid=DataDependence::getVarID(var);
 		// -----------------------------------------------------------------------------------------
-		if (varid==0) DataDependence::printNode(var, "id="+toString(varid)+", goal="+toString(ctr));
+		if (varid==0) {
+			std::cout << "var ptr = " << var.getAddressedNode().as<VariablePtr>();
+			DataDependence::printNode(var, "id="+toString(varid)+", goal="+toString(ctr));
+			std::cout << std::endl;
+		}
 		ret.push_back(std::pair<VariableAddress, unsigned int>(var, ctr++));
 	}
 	return ret;
