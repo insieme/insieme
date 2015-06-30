@@ -54,6 +54,7 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/integration/test_step.h"
 #include "insieme/frontend/translation_unit.h"
 
 namespace insieme {
@@ -83,10 +84,10 @@ namespace integration {
                         driver::cmd::Options options = driver::cmd::Options::parse(args);
 			options.job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
-			std::string step="insiemecc_run_c_convert";
+			std::string step=TEST_STEP_INSIEMECC_RUN_C_CONVERT;
 			if (testCase.isCXX11()){
 				options.job.setStandard(frontend::ConversionSetup::Cxx11);
-				step="insiemecc_run_c++_convert";
+				step=TEST_STEP_INSIEMECC_RUN_CPP_CONVERT;
 			}
 
 			// add pre-processor definitions
