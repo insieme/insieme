@@ -51,7 +51,7 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 
 /// DataDependence constructor: Collect data about the given code fragment by kicking off the visiting process.
-DataDependence::DataDependence(NodeAddress frag): frag(frag) {
+DataDependence::DataDependence(NodeAddress frag): frag(frag), count(0) {
 	visit(frag);
 }
 
@@ -63,11 +63,45 @@ void DataDependence::visitNode(const NodeAddress &node) {
 }
 
 void DataDependence::visitVariable(const VariableAddress &var) {
+	bool dbg_vars=false, dbg_class=true, dbg_misclassified=true, misclassified=false;
+	boost::optional<VariableAddress> comp;
+	if (dbg_vars)
+		std::cout << "visit variable: " << var;
+
+	count++;
+
 	// get variable definition point and increase counter for given variable
 	VariableAddress defpt=getDef(var);
 
 	if (defpt==var) recordDef(defpt);   // the given variable is not defined somewhere else but here
 	else recordUse(defpt, var);         // the variable is not defined but used here
+
+	if (dbg_vars) {
+		std::string defuse=(defpt==var? "def:": "use:");
+		std::cout << " (" << defuse << *var << ")";
+	}
+	if (dbg_class) {
+		if (var.getDepth()>=3) {
+			std::vector<int> diff(var.getDepth());
+			diff.pop_back(); diff.pop_back(); diff[diff.size()-1]--;
+			comp=DataDependence::otherVar(var, diff);
+			if (comp && comp->getAddressedNode().as<VariablePtr>() == var.getAddressedNode().as<VariablePtr>())
+				misclassified=true;
+		}
+	}
+	if (dbg_vars) {
+		if (misclassified) std::cout << " misclassified";
+		std::cout << std::endl;
+	}
+	if (misclassified && dbg_misclassified) {
+		auto n=commonAncestor(var, *comp);
+		if (n) {
+			std::vector<int> diff(n->getDepth());
+			diff[diff.size()-1]++;
+			diff.push_back(0);
+			printNode(*otherNode(*n, diff));
+		}
+	}
 
 	// visit children
 	visitNode(var);
@@ -99,6 +133,46 @@ void DataDependence::recordUse(const VariableAddress &def, const VariableAddress
 		uses.insert(value);
 	} else
 		it->second=uselist;
+}
+
+/// Returns the indices of the path of the given address as a vector of integers.
+std::vector<unsigned int> DataDependence::addressVector(const NodeAddress &a) {
+	std::vector<unsigned int> ret(a.getDepth());
+	NodeAddress t=a;
+	for (int i=a.getDepth()-1; i>=0; --i) {
+		ret[i]=t.getIndex();
+		if (!t.isRoot()) t=t.getParentAddress();
+	}
+	return ret;
+}
+
+/// Eventually return the other node that can be found relative (with offset addressDiff) to the given node.
+boost::optional<NodeAddress> DataDependence::otherNode(const NodeAddress &a, std::vector<int> addressDiff) {
+	// set up the base
+	boost::optional<NodeAddress> nothing;
+	NodeAddress reta=a.getRootAddress();
+	std::vector<unsigned int> base=addressVector(a);
+	if (!addressDiff.size() || addressDiff[0]) return nothing;
+
+	// extend the root node according to the values calculated from the base address and the address diff
+	for (unsigned int i=1; i<addressDiff.size(); ++i) {
+		unsigned int idx=addressDiff[i];   // we know that addressDiff[i] is defined for every i (if negative: invalid)
+		if (i<base.size()) idx+=base[i];   // add base[i] only after checking that base is long enough
+		std::vector<NodeAddress> children=reta.getChildAddresses();
+		if (idx>=children.size()) return nothing;
+		else reta=children[idx];
+	}
+	return boost::optional<NodeAddress>(reta);
+}
+
+/// Eventually return the other variable address that can be found relative (with offset addressDiff) to the
+/// given node address.
+boost::optional<VariableAddress> DataDependence::otherVar(const NodeAddress &a, std::vector<int> addressDiff) {
+	boost::optional<NodeAddress> optnode=otherNode(a, addressDiff);
+	if (optnode && optnode->getNodeType()==NT_Variable)
+		return boost::optional<VariableAddress>(optnode->as<VariableAddress>());
+	// else
+		return boost::optional<VariableAddress>();
 }
 
 /// Find the address where the given variable has been defined.
@@ -133,7 +207,7 @@ VariableAddress DataDependence::getDef(const VariableAddress& givenaddr) {
 				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_LambdaExpr: {
-			break;
+			//break;
 			auto n=oneup.as<LambdaExprAddress>()->getVariable();
 			if (n.as<VariablePtr>()==givenptr) return n;
 			break;
@@ -186,6 +260,11 @@ std::vector<VariableAddress> DataDependence::getUse(const VariableAddress& def) 
 	return ret;
 }
 
+/// Return the total number of variables found in this code block.
+unsigned int DataDependence::size() {
+	return count;
+}
+
 /// Get the internal variable ID for the given variable address. This method is private, as the
 /// variable ID is non-portable.
 unsigned int DataDependence::getVarID(const VariableAddress &var) {
@@ -193,7 +272,7 @@ unsigned int DataDependence::getVarID(const VariableAddress &var) {
 }
 
 /// Return the address of the element that is common to both addresses.
-boost::optional<NodeAddress> DataDependence::commonPathPrefix(const NodeAddress &n1, const NodeAddress &n2) {
+boost::optional<NodeAddress> DataDependence::commonAncestor(const NodeAddress &n1, const NodeAddress &n2) {
 	boost::optional<NodeAddress> ret;
 	unsigned int max=n1.getDepth(), shorter=0;
 	if (n2.getDepth()<max) { max=n2.getDepth(); shorter=1; }

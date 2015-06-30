@@ -63,12 +63,16 @@ namespace analysis {
 ///
 class DataDependence: public insieme::core::IRVisitor<void, insieme::core::Address> {
 	insieme::core::NodeAddress frag;                                  /// < code fragment passed to this compiler pass
+	unsigned int count;                                                          /// < total number of variables found
 	std::map<insieme::core::VariableAddress, std::vector<insieme::core::VariableAddress> > uses; /// uses for each def
 
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitVariable(const insieme::core::VariableAddress &node);
 	void recordDef(const insieme::core::VariableAddress &def);
 	void recordUse(const insieme::core::VariableAddress &def, const insieme::core::VariableAddress &use);
+
+	static std::vector<unsigned int> addressVector(const insieme::core::NodeAddress &a);
+	static boost::optional<insieme::core::NodeAddress> otherNode(const insieme::core::NodeAddress &a, std::vector<int> addressDiff);
 
 public:
 	DataDependence(const insieme::core::NodeAddress frag);
@@ -78,9 +82,13 @@ public:
 	std::vector<insieme::core::VariableAddress> getDefs(unsigned int id);
 	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
 
+	unsigned int size();
 	static unsigned int getVarID(const insieme::core::VariableAddress &var);
-	static boost::optional<insieme::core::NodeAddress> commonPathPrefix(const insieme::core::NodeAddress &n1,
-	                                                                    const insieme::core::NodeAddress &n2);
+	static boost::optional<insieme::core::VariableAddress> otherVar(const insieme::core::NodeAddress &a,
+	                                                                std::vector<int> addressDiff);
+	static boost::optional<insieme::core::NodeAddress> commonAncestor(const insieme::core::NodeAddress &n1,
+	                                                                  const insieme::core::NodeAddress &n2);
+
 	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
 	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 };

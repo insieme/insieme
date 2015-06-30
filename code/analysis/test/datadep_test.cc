@@ -127,14 +127,14 @@ TEST(DataDependence, Unique) {
 
 	EXPECT_TRUE(same.size()==0);
 	if (same.size()) {
-		std::cout << "There are " << same.size() << " identical variable pairs:" << std::endl;
+		std::cout << "In " << alldefs.size() << " defs, there are " << same.size() << " identical variable pairs:" << std::endl;
 		for (auto p: same) {
-			boost::optional<NodeAddress> pfx=DataDependence::commonPathPrefix(p.first, p.second);
+			boost::optional<NodeAddress> pfx=DataDependence::commonAncestor(p.first, p.second);
 			if (pfx) {
 				std::cout << "\t"
 				          << p.first  << "(" << p.first.getDepth()- pfx->getDepth() << ") : "
 				          << p.second << "(" << p.second.getDepth()-pfx->getDepth() << ")";
-				DataDependence::printNode(*pfx);
+				//DataDependence::printNode(*pfx);
 				std::cout << std::endl;
 			}
 		}
