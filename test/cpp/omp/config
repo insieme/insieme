@@ -1,2 +1,2 @@
 use_omp=1
-excludeSteps="*_c_*", "*_ocl_*", "*_seq_c++_*"
+excludeSteps="*_c_*", "*_ocl_*", "*_seq_cpp_*"

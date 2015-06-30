@@ -459,7 +459,7 @@ namespace integration {
 
 					std::string langstr("_c_");
 					if(l==CPP)
-						langstr=string("_c++_");
+						langstr=string("_cpp_");
 
 					std::string schedString("");
 					if(sched==STATIC)
@@ -515,7 +515,7 @@ namespace integration {
 
 					std::string langstr("c");
 					if(l==CPP)
-						langstr=string("c++");
+						langstr=string("cpp");
 
 					std::stringstream cmd;
 					TestSetup set=setup;
