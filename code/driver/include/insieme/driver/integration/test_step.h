@@ -72,16 +72,16 @@ namespace integration {
 	// ------------------------------------------------------------------------
 
 	static const std::string TEST_STEP_REF_C_COMPILE = "ref_c_compile";
-	static const std::string TEST_STEP_REF_CPP_COMPILE = "ref_c++_compile";
+	static const std::string TEST_STEP_REF_CPP_COMPILE = "ref_cpp_compile";
 
 	static const std::string TEST_STEP_REF_C_EXECUTE = "ref_c_execute";
-	static const std::string TEST_STEP_REF_CPP_EXECUTE = "ref_c++_execute";
+	static const std::string TEST_STEP_REF_CPP_EXECUTE = "ref_cpp_execute";
 
 	static const std::string TEST_STEP_REF_C_CHECK = "ref_c_check";
-	static const std::string TEST_STEP_REF_CPP_CHECK = "ref_c++_check";
+	static const std::string TEST_STEP_REF_CPP_CHECK = "ref_cpp_check";
 
 	static const std::string TEST_STEP_INSIEMECC_C_SEMA = "insiemecc_c_sema";
-	static const std::string TEST_STEP_INSIEMECC_CPP_SEMA = "insiemecc_c++_sema";
+	static const std::string TEST_STEP_INSIEMECC_CPP_SEMA = "insiemecc_cpp_sema";
 
 	static const std::string TEST_STEP_INSIEMECC_SEQ_C_CONVERT = "insiemecc_seq_c_convert";
 	static const std::string TEST_STEP_INSIEMECC_RUN_C_CONVERT = "insiemecc_run_c_convert";
