@@ -268,12 +268,12 @@ int main(int argc, char** argv) {
 
 	// setup highlighted tests:
 	std::set<std::string> highlight;
-	highlight.insert("insiemecc_seq_c_execute");
-	highlight.insert("insiemecc_seq_c++_execute");
-	highlight.insert("insiemecc_run_c_execute");
-	highlight.insert("insiemecc_run_c++_execute");
-	highlight.insert("ref_c_execute");
-	highlight.insert("ref_c++_execute");
+	highlight.insert(itc::TEST_STEP_INSIEMECC_SEQ_C_EXECUTE);
+	highlight.insert(itc::TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE);
+	highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE);
+	highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE);
+	highlight.insert(itc::TEST_STEP_REF_C_EXECUTE);
+	highlight.insert(itc::TEST_STEP_REF_CPP_EXECUTE);
 
 	// run test cases in parallel
 	vector<TestCase> ok;

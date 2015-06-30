@@ -1,2 +1,2 @@
-excludeSteps="*_c++_*", "*_ocl_*"
+excludeSteps="*_cpp_*", "*_ocl_*"
 use_o3=1

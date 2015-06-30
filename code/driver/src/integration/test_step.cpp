@@ -459,7 +459,7 @@ namespace integration {
 
 					std::string langstr("_c_");
 					if(l==CPP)
-						langstr=string("_c++_");
+						langstr=string("_cpp_");
 
 					std::string schedString("");
 					if(sched==STATIC)
@@ -515,7 +515,7 @@ namespace integration {
 
 					std::string langstr("c");
 					if(l==CPP)
-						langstr=string("c++");
+						langstr=string("cpp");
 
 					std::stringstream cmd;
 					TestSetup set=setup;
@@ -567,100 +567,109 @@ namespace integration {
 
 			// --- real steps ----
 
-			add(createRefCompStep("ref_c_compile", C));
-			add(createRefCompStep("ref_c++_compile", CPP));
+			//ref compile steps
+			add(createRefCompStep(TEST_STEP_REF_C_COMPILE, C));
+			add(createRefCompStep(TEST_STEP_REF_CPP_COMPILE, CPP));
 
-			//add steps for each number of threads
-
-			add(createRefRunStep("ref_c_execute", { "ref_c_compile" },1));
-			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" },1));
-
+			//ref run steps
+			add(createRefRunStep(TEST_STEP_REF_C_EXECUTE, { TEST_STEP_REF_C_COMPILE },1));
+			add(createRefRunStep(TEST_STEP_REF_CPP_EXECUTE, { TEST_STEP_REF_CPP_COMPILE },1));
 			//iterate over whole vector starting with second element (> 1 thread)
 			for(int i:vector<int>(++threadList.begin(),threadList.end())){
-				add(createRefRunStep(std::string("ref_c_execute_")+std::to_string(i), { "ref_c_compile" },i));
-				add(createRefRunStep(std::string("ref_c++_execute_")+std::to_string(i), { "ref_c++_compile" },i));
+				std::string suffix = "_" + std::to_string(i);
+				add(createRefRunStep(TEST_STEP_REF_C_EXECUTE + suffix, { TEST_STEP_REF_C_COMPILE }, i));
+				add(createRefRunStep(TEST_STEP_REF_CPP_EXECUTE + suffix, { TEST_STEP_REF_CPP_COMPILE }, i));
 			}
 
-			add(createInsiemeccSemaStep("insiemecc_c_sema", C));
-			add(createInsiemeccSemaStep("insiemecc_c++_sema", CPP));
+			//insiemecc sema steps
+			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_C_SEMA, C));
+			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_CPP_SEMA, CPP));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c_convert", Sequential, C));
-			add(createInsiemeccConversionStep("insiemecc_run_c_convert", Runtime, C));
-			add(createInsiemeccConversionStep("insiemecc_ocl_c_convert", Opencl, C));
+			//insiemecc conversion steps
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_C_CONVERT, Sequential, C));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_C_CONVERT, Runtime, C));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_OCL_C_CONVERT, Opencl, C));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT, Sequential, CPP));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_CPP_CONVERT, Runtime, CPP));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c++_convert", Sequential, CPP));
-			add(createInsiemeccConversionStep("insiemecc_run_c++_convert", Runtime, CPP));
+			//insiemecc compilation steps
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_C_COMPILE, Sequential, C, { TEST_STEP_INSIEMECC_SEQ_C_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, { TEST_STEP_INSIEMECC_OCL_C_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE, Sequential, CPP, { TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_CPP_COMPILE, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_CONVERT }));
 
-			add(createInsiemeccCompilationStep("insiemecc_seq_c_compile", Sequential, C, { "insiemecc_seq_c_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c_compile", Runtime, C, { "insiemecc_run_c_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_ocl_c_compile", Opencl, C, { "insiemecc_ocl_c_convert" }));
-
-			add(createInsiemeccCompilationStep("insiemecc_seq_c++_compile", Sequential, CPP, { "insiemecc_seq_c++_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c++_compile", Runtime, CPP, { "insiemecc_run_c++_convert" }));
-
-			// main seq execute
-			add(createInsiemeccExecuteStep("insiemecc_seq_c_execute", Sequential, { "insiemecc_seq_c_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_seq_c++_execute", Sequential, { "insiemecc_seq_c++_compile" }));
-
-			// main seq check
-			add(createInsiemeccCheckStep("insiemecc_seq_c_check", Sequential, C, { "insiemecc_seq_c_execute", "ref_c_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_seq_c++_check", Sequential, CPP, { "insiemecc_seq_c++_execute", "ref_c++_execute" }));
-
-			// ocl execute & check
-			add(createInsiemeccExecuteStep("insiemecc_ocl_c_execute", Opencl, { "insiemecc_ocl_c_compile" }));
-			add(createInsiemeccCheckStep("insiemecc_ocl_c_check", Opencl, C, { "insiemecc_ocl_c_execute", "ref_c_execute" },1,STATIC));
-
+			//insiemecc execute steps
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, Sequential, { TEST_STEP_INSIEMECC_SEQ_C_COMPILE }));
 			for(int i:threadList){
-				// insiemecc_run execute
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_")+std::to_string(i), Runtime, { "insiemecc_run_c_compile" },i));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_")+std::to_string(i), Runtime, { "insiemecc_run_c++_compile" },i));
+				std::string suffix = "_" + std::to_string(i);
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + suffix, Runtime, { TEST_STEP_INSIEMECC_RUN_C_COMPILE }, i));
+			}
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_OCL_C_EXECUTE, Opencl, { TEST_STEP_INSIEMECC_OCL_C_COMPILE }));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, Sequential, { TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE }));
+			for(int i:threadList){
+				std::string suffix = "_" + std::to_string(i);
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + suffix, Runtime, { TEST_STEP_INSIEMECC_RUN_CPP_COMPILE }, i));
+			}
 
+			//insiemecc check steps
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_C_CHECK, Sequential, C, { TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, TEST_STEP_REF_C_EXECUTE }));
+			for(int i:threadList){
+				std::string suffix = "_" + std::to_string(i);
+				add(createInsiemeccCheckStep(std::string(TEST_STEP_INSIEMECC_RUN_C_CHECK) + suffix, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_EXECUTE + suffix, TEST_STEP_REF_C_EXECUTE }, i));
+			}
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_OCL_C_CHECK, Opencl, C, { TEST_STEP_INSIEMECC_OCL_C_EXECUTE, TEST_STEP_REF_C_EXECUTE }));
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_CPP_CHECK, Sequential, CPP, { TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE }));
+			for(int i:threadList){
+				std::string suffix = "_" + std::to_string(i);
+				add(createInsiemeccCheckStep(std::string(TEST_STEP_INSIEMECC_RUN_CPP_CHECK) + suffix, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + suffix, TEST_STEP_REF_CPP_EXECUTE }, i));
+			}
+
+			//additional ref steps
+			for(int i:threadList){
+				std::string suffix = "_" + std::to_string(i);
 				// ref check
 				if(i!=1){
-					add(createRefCheckStep(std::string("ref_c_check_")+std::to_string(i),C,{ "ref_c_execute",std::string("ref_c_execute_")+std::to_string(i) },i));
-					add(createRefCheckStep(std::string("ref_c++_check_")+std::to_string(i),CPP,{"ref_c++_execute",std::string("ref_c++_execute_")+std::to_string(i)},i));
+					add(createRefCheckStep(TEST_STEP_REF_C_CHECK + suffix, C, { TEST_STEP_REF_C_EXECUTE, TEST_STEP_REF_C_EXECUTE + suffix }, i));
+					add(createRefCheckStep(TEST_STEP_REF_CPP_CHECK + suffix, CPP, { TEST_STEP_REF_CPP_EXECUTE, TEST_STEP_REF_C_EXECUTE + suffix }, i));
 				}
-
-				// insiemecc_run check
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_")+std::to_string(i), Runtime, C, { std::string("insiemecc_run_c_execute_")+std::to_string(i), "ref_c_execute" },i));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_")+std::to_string(i), Runtime, CPP, { std::string("insiemecc_run_c++_execute_")+std::to_string(i), "ref_c++_execute"},i));
-
 			}
 
-			// clone insieme runs using different scheduling policies
+			// clone insiemecc steps using different scheduling policies
 			if(schedule){
-				// main run execute STATIC
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_stat_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c_compile" },statThreads,STATIC));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_stat_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c++_compile" },statThreads,STATIC));
+				std::string suffix = "_" + std::to_string(statThreads);
 
-				// insiemecc_run check STATIC
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_stat_")+std::to_string(statThreads), Runtime, C, { std::string("insiemecc_run_c_execute_stat_")+std::to_string(statThreads),"ref_c_execute" },statThreads,STATIC));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_stat_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_stat_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,STATIC));
+				std::string statSuffix = "_stat" + suffix;
+				// execute STATIC
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + statSuffix, Runtime, { TEST_STEP_INSIEMECC_RUN_C_COMPILE }, statThreads, STATIC));
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + statSuffix, Runtime, { TEST_STEP_INSIEMECC_RUN_CPP_COMPILE }, statThreads, STATIC));
+				// check STATIC
+				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK + statSuffix, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_EXECUTE + statSuffix, TEST_STEP_REF_C_EXECUTE }, statThreads, STATIC));
+				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + statSuffix, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + statSuffix, TEST_STEP_REF_CPP_EXECUTE }, statThreads, STATIC));
 
-				// main run execute DYNAMIC
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_dyn_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c_compile" },statThreads,DYNAMIC));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_dyn_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c++_compile" },statThreads,DYNAMIC));
+				std::string dynSuffix = "_dyn" + suffix;
+				// execute DYNAMIC
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + dynSuffix, Runtime, { TEST_STEP_INSIEMECC_RUN_C_COMPILE }, statThreads, DYNAMIC));
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + dynSuffix, Runtime, { TEST_STEP_INSIEMECC_RUN_CPP_COMPILE }, statThreads, DYNAMIC));
+				// check DYNAMIC
+				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK + dynSuffix, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_EXECUTE + dynSuffix, TEST_STEP_REF_C_EXECUTE }, statThreads, DYNAMIC));
+				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + dynSuffix, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + dynSuffix, TEST_STEP_REF_CPP_EXECUTE }, statThreads, DYNAMIC));
 
-				// insiemecc_run check DYNAMIC
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_dyn_")+std::to_string(statThreads), Runtime, C, { std::string("insiemecc_run_c_execute_dyn_")+std::to_string(statThreads), "ref_c_execute"},statThreads,DYNAMIC));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_dyn_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_dyn_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,DYNAMIC));
-
-				// main run execute GUIDED
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c_execute_guid_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c_compile" },statThreads,GUIDED));
-				add(createInsiemeccExecuteStep(std::string("insiemecc_run_c++_execute_guid_")+std::to_string(statThreads), Runtime, { "insiemecc_run_c++_compile" },statThreads,GUIDED));
-
-				// insiemecc_run check GUIDED
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c_check_guid_")+std::to_string(statThreads), Runtime, C, { std::string("insiemecc_run_c_execute_guid_")+std::to_string(statThreads), "ref_c_execute"},statThreads,GUIDED));
-				add(createInsiemeccCheckStep(std::string("insiemecc_run_c++_check_guid_")+std::to_string(statThreads), Runtime, CPP, { std::string("insiemecc_run_c++_execute_guid_")+std::to_string(statThreads), "ref_c++_execute"},statThreads,GUIDED));
+				std::string guidSuffix = "_guid" + suffix;
+				// execute GUIDED
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE + guidSuffix, Runtime, { TEST_STEP_INSIEMECC_RUN_C_COMPILE }, statThreads, GUIDED));
+				add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + guidSuffix, Runtime, { TEST_STEP_INSIEMECC_RUN_CPP_COMPILE }, statThreads, GUIDED));
+				// check GUIDED
+				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK + guidSuffix, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_EXECUTE + guidSuffix, TEST_STEP_REF_C_EXECUTE }, statThreads, GUIDED));
+				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + guidSuffix, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + guidSuffix, TEST_STEP_REF_CPP_EXECUTE }, statThreads, GUIDED));
 			}
 
 			// PreCommand and PostCommand are executed before and after all the other steps
 			// see "scheduleSteps" function
-			add(createBashCommandStep("preprocessing"));
-			add(createBashCommandStep("postprocessing"));
+			add(createBashCommandStep(TEST_STEP_PREPROCESSING));
+			add(createBashCommandStep(TEST_STEP_POSTPROCESSING));
 
 			return list;
-
 		}
 
 
@@ -672,50 +681,50 @@ namespace integration {
 				list.insert({step.getName(), step});
 			};
 
-			// --- real steps ----
+			//ref compile steps
+			add(createRefCompStep(TEST_STEP_REF_C_COMPILE, C));
+			add(createRefCompStep(TEST_STEP_REF_CPP_COMPILE, CPP));
 
-			add(createRefCompStep("ref_c_compile", C));
-			add(createRefCompStep("ref_c++_compile", CPP));
+			//ref run steps
+			add(createRefRunStep(TEST_STEP_REF_C_EXECUTE, { TEST_STEP_REF_C_COMPILE }));
+			add(createRefRunStep(TEST_STEP_REF_CPP_EXECUTE, { TEST_STEP_REF_CPP_COMPILE }));
 
-			//add steps for each number of threads
-			add(createRefRunStep("ref_c_execute", { "ref_c_compile" }));
-			add(createRefRunStep("ref_c++_execute", { "ref_c++_compile" }));
+			//insiemecc sema steps
+			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_C_SEMA, C));
+			add(createInsiemeccSemaStep(TEST_STEP_INSIEMECC_CPP_SEMA, CPP));
 
-			add(createInsiemeccSemaStep("insiemecc_c_sema", C));
-			add(createInsiemeccSemaStep("insiemecc_c++_sema", CPP));
+			//insiemecc conversion steps
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_C_CONVERT, Sequential, C));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_C_CONVERT, Runtime, C));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_OCL_C_CONVERT, Opencl, C));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT, Sequential, CPP));
+			add(createInsiemeccConversionStep(TEST_STEP_INSIEMECC_RUN_CPP_CONVERT, Runtime, CPP));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c_convert", Sequential, C));
-			add(createInsiemeccConversionStep("insiemecc_run_c_convert", Runtime, C));
-			add(createInsiemeccConversionStep("insiemecc_ocl_c_convert", Opencl, C));
+			//insiemecc compilation steps
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_C_COMPILE, Sequential, C, { TEST_STEP_INSIEMECC_SEQ_C_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_C_COMPILE, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_OCL_C_COMPILE, Opencl, C, { TEST_STEP_INSIEMECC_OCL_C_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE, Sequential, CPP, { TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT }));
+			add(createInsiemeccCompilationStep(TEST_STEP_INSIEMECC_RUN_CPP_COMPILE, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_CONVERT }));
 
-			add(createInsiemeccConversionStep("insiemecc_seq_c++_convert", Sequential, CPP));
-			add(createInsiemeccConversionStep("insiemecc_run_c++_convert", Runtime, CPP));
+			//insiemecc execution steps
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, Sequential, { TEST_STEP_INSIEMECC_SEQ_C_COMPILE }));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_C_EXECUTE, Runtime, { TEST_STEP_INSIEMECC_RUN_C_COMPILE }));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_OCL_C_EXECUTE, Opencl, { TEST_STEP_INSIEMECC_OCL_C_COMPILE }));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, Sequential, { TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE }));
+			add(createInsiemeccExecuteStep(TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE, Runtime, { TEST_STEP_INSIEMECC_RUN_CPP_COMPILE }));
 
-			add(createInsiemeccCompilationStep("insiemecc_seq_c_compile", Sequential, C, { "insiemecc_seq_c_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c_compile", Runtime, C, { "insiemecc_run_c_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_ocl_c_compile", Opencl, C, { "insiemecc_ocl_c_convert" }));
-
-			add(createInsiemeccCompilationStep("insiemecc_seq_c++_compile", Sequential, CPP, { "insiemecc_seq_c++_convert" }));
-			add(createInsiemeccCompilationStep("insiemecc_run_c++_compile", Runtime, CPP, { "insiemecc_run_c++_convert" }));
-
-			add(createInsiemeccExecuteStep("insiemecc_seq_c_execute", Sequential, { "insiemecc_seq_c_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_run_c_execute", Runtime, { "insiemecc_run_c_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_ocl_c_execute", Opencl, { "insiemecc_ocl_c_compile" }));
-
-			add(createInsiemeccExecuteStep("insiemecc_seq_c++_execute", Sequential, { "insiemecc_seq_c++_compile" }));
-			add(createInsiemeccExecuteStep("insiemecc_run_c++_execute", Runtime, { "insiemecc_run_c++_compile" }));
-
-			add(createInsiemeccCheckStep("insiemecc_seq_c_check", Sequential, C, { "insiemecc_seq_c_execute", "ref_c_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_run_c_check", Runtime, C, { "insiemecc_run_c_execute", "ref_c_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_ocl_c_check", Opencl, C, { "insiemecc_ocl_c_execute", "ref_c_execute" }));
-
-			add(createInsiemeccCheckStep("insiemecc_seq_c++_check", Sequential, CPP, { "insiemecc_seq_c++_execute", "ref_c++_execute" }));
-			add(createInsiemeccCheckStep("insiemecc_run_c++_check", Runtime, CPP, { "insiemecc_run_c++_execute", "ref_c++_execute" }));
+			//insiemecc check steps
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_C_CHECK, Sequential, C, { TEST_STEP_INSIEMECC_SEQ_C_EXECUTE, TEST_STEP_REF_C_EXECUTE }));
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_C_CHECK, Runtime, C, { TEST_STEP_INSIEMECC_RUN_C_EXECUTE, TEST_STEP_REF_C_EXECUTE }));
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_OCL_C_CHECK, Opencl, C, { TEST_STEP_INSIEMECC_OCL_C_EXECUTE, TEST_STEP_REF_C_EXECUTE }));
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_CPP_CHECK, Sequential, CPP, { TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE }));
+			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE }));
 
 			// preprocessing and postprocessing steps are executed before and after all the other steps
 			// see "scheduleSteps" function
-			add(createBashCommandStep("preprocessing"));
-			add(createBashCommandStep("postprocessing"));
+			add(createBashCommandStep(TEST_STEP_PREPROCESSING));
+			add(createBashCommandStep(TEST_STEP_POSTPROCESSING));
 
 			return list;
 		}
@@ -843,8 +852,8 @@ namespace integration {
 		vector<TestStep> final;
 		TestStep pre, post;
 		for(const auto& cur : res) {
-			if (cur.getName() == "preprocessing")	pre = cur;
-			else if (cur.getName() == "postprocessing") post = cur;
+			if (cur.getName() == TEST_STEP_PREPROCESSING)	pre = cur;
+			else if (cur.getName() == TEST_STEP_POSTPROCESSING) post = cur;
 			else final.push_back(cur);
 		}
 

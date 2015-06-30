@@ -53,6 +53,7 @@
 
 #include "insieme/utils/config.h"
 #include "insieme/driver/integration/tests.h"
+#include "insieme/driver/integration/test_step.h"
 
 namespace insieme {
 
@@ -89,11 +90,11 @@ namespace insieme {
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
-		std::string step="insiemecc_run_c_compile";
+		std::string step=TEST_STEP_INSIEMECC_RUN_C_COMPILE;
 		// switch to C++ compiler if necessary
 		if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
 			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
-			step="insiemecc_run_c++_compile";
+			step=TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
 		}
 
 		// add extra compiler flags from test case

@@ -55,6 +55,7 @@
 
 #include "insieme/utils/config.h"
 #include "insieme/driver/integration/tests.h"
+#include "insieme/driver/integration/test_step.h"
 
 // Execute & get result string
 #include <stdio.h>
@@ -113,7 +114,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 		
 		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments("insiemecc_run_c_compile")) {
+		for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE)) {
 			compiler.addFlag(flag);
 		}
 
@@ -183,7 +184,7 @@ namespace insieme {
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 			// add extra compiler flags from test case
-			for(const auto& flag : testCase.getCompilerArguments("insiemecc_run_c_compile")) {
+			for(const auto& flag : testCase.getCompilerArguments(TEST_STEP_INSIEMECC_RUN_C_COMPILE)) {
 				compiler.addFlag(flag);
 			}
 
