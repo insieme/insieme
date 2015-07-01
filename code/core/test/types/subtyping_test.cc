@@ -570,6 +570,23 @@ namespace types {
 
 	}
 
+	TEST(TypeUtils, TypeLiteralArgument) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TypePtr alpha = builder.genericType("alpha");
+		LiteralPtr alphaLit = builder.getTypeLiteral(alpha);
+
+		FunctionTypePtr ft = builder.functionType(toVector(alpha), builder.refType(alpha));
+		VariablePtr alphaVar = builder.variable(alphaLit->getType());
+		LambdaExprPtr lambda = builder.lambdaExpr(ft, toVector(alphaVar), builder.compoundStmt(builder.returnStmt(builder.refNew(alphaVar))));
+
+		LiteralPtr intLit = builder.getTypeLiteral(builder.getLangBasic().getInt4());
+		CallExprPtr call = builder.callExpr(builder.refType(intLit->getType()), lambda, intLit);
+
+		EXPECT_EQ(builder.refType(intLit->getType()), call->getType());
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme
