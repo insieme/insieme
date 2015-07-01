@@ -54,6 +54,14 @@ using namespace insieme::analysis;
 /// DataDependence constructor: Collect data about the given code fragment by kicking off the visiting process.
 DataDependence::DataDependence(NodeAddress frag): frag(frag), count(0) {
 	visit(frag);
+
+	// FIXME
+	uses.clear();
+	for (auto u2: uses2) {
+		VariableAddress def=u2.second.front();
+		u2.second.erase(u2.second.begin());
+		uses.insert(std::pair<VariableAddress, std::vector<VariableAddress> >(def, u2.second));
+	}
 }
 
 /// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
@@ -64,11 +72,6 @@ void DataDependence::visitNode(const NodeAddress &node) {
 }
 
 void DataDependence::visitVariable(const VariableAddress &var) {
-	bool dbg_vars=false, dbg_class=true, dbg_misclassified=true, misclassified=false;
-	boost::optional<VariableAddress> comp;
-	if (dbg_vars)
-		std::cout << "visit variable: " << var;
-
 	count++;
 
 	// get variable definition point and increase counter for given variable
@@ -76,29 +79,18 @@ void DataDependence::visitVariable(const VariableAddress &var) {
 
 	if (defpt==var) recordDef(defpt);   // the given variable is not defined somewhere else but here
 	else recordUse(defpt, var);         // the variable is not defined but used here
-
-	if (dbg_vars) {
-		std::string defuse=(defpt==var? "def:": "use:");
-		std::cout << " (" << defuse << *var << ")";
-	}
-	if (dbg_class) {
-		if (var.getDepth()>=3) {
-			std::vector<int> diff(var.getDepth());
-			diff.pop_back(); diff.pop_back(); diff[diff.size()-1]--;
-			comp=DataDependence::otherVar(var, diff);
-			if (comp && comp->getAddressedNode().as<VariablePtr>() == var.getAddressedNode().as<VariablePtr>())
-				misclassified=true;
-		}
-	}
-	if (dbg_vars) {
-		if (misclassified) std::cout << " misclassified";
-		std::cout << std::endl;
-	}
-	if (misclassified && dbg_misclassified)
-		std::cout << printRange(*comp, var, "misclassified");
+	record(var);
 
 	// visit children
 	visitNode(var);
+}
+
+/// Record the given variable so that in the end all variables are collected in a map.
+void DataDependence::record(const VariableAddress &var) {
+	VariablePtr vptr=var.getAddressedNode();
+	auto it_ok=uses2.insert(std::pair<VariablePtr, std::vector<VariableAddress> >(vptr, std::vector<VariableAddress>{var}));
+	if (!it_ok.second)
+		it_ok.first->second.push_back(var);
 }
 
 /// Records a variable definition by creating appropriate data structures in our protected "uses" class member.

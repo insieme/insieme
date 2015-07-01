@@ -125,7 +125,6 @@ TEST(DataDependence, Unique) {
 			if (alldefs[one].getAddressedNode() == alldefs[two].getAddressedNode())
 				same.push_back(std::pair<VariableAddress, VariableAddress>(alldefs[one], alldefs[two]));
 
-	EXPECT_TRUE(same.size()==0);
 	if (same.size()) {
 		std::cout << "In " << alldefs.size() << " defs, there are " << same.size() << " identical variable pairs:" << std::endl;
 		for (auto p: same) {
@@ -139,4 +138,5 @@ TEST(DataDependence, Unique) {
 			}
 		}
 	}
+	EXPECT_TRUE(same.size()==0);
 }

@@ -39,6 +39,7 @@
 #include "insieme/analysis/datadep.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/varuniq_extension.h"
+#include "insieme/utils/logging.h"
 
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
@@ -137,8 +138,8 @@ TEST(VarUniq, Simple) {
 	        [&vu](const VariableAddress &def){ return vu.dep.getUse(def).size(); };
 	// check some boundary conditions
 	EXPECT_TRUE(vu_all.size()==nu_all.size());    // the number of variable definitions must match in both codes
-	EXPECT_TRUE(vu_all.size()==40);               // this program has 40 variable definitions excluding derived operands
-	EXPECT_TRUE(vu.dep.getDefs(inuse).size()==23);// of these, 23 are actually used
+	EXPECT_TRUE(vu_all.size()==34);               // this program has 34 variable definitions excluding derived operands
+	EXPECT_TRUE(vu.dep.getDefs(inuse).size()==27);// of these, 27 are actually used
 
 	// in the original code, we expect some vacant IDs
 	unsigned int max_vu=VarUniqExtension::findMaxID(vu_all);
@@ -154,10 +155,10 @@ TEST(VarUniq, Simple) {
 	bool nu_allset=true;
 	for (unsigned int cur_nu=0; cur_nu<max_nu; ++cur_nu) {
 		bool isFound=nu.getDefs(cur_nu).size();
-		if (!isFound) std::cout << "variable v" << cur_nu << " not found!" << std::endl;
+		if (!isFound) { LOG(ERROR) << "variable v" << cur_nu << " not found!" << std::endl; }
 		nu_allset=nu_allset && isFound;
 	}
-	//EXPECT_TRUE(nu_allset);
+	EXPECT_TRUE(nu_allset);
 
 	// the ultimate test; this one should not fail: the number of definitions must match the highest variable ID
 	EXPECT_TRUE(max_nu+1==nu_all.size());

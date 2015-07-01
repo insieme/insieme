@@ -76,16 +76,8 @@ NodeAddress VarUniqExtension::renameVar(NodeAddress tree, VariableAddress from, 
 std::vector<std::pair<VariableAddress, unsigned int> > VarUniqExtension::findPerfectID(std::vector<VariableAddress> vars) {
 	std::vector<std::pair<VariableAddress, unsigned int> > ret;
 	unsigned int ctr=0;
-	for (auto var: vars) {
-		unsigned int varid=DataDependence::getVarID(var);
-		// -----------------------------------------------------------------------------------------
-		if (varid==0) {
-			std::cout << "var ptr = " << var.getAddressedNode().as<VariablePtr>();
-			DataDependence::printNode(var, "id="+toString(varid)+", goal="+toString(ctr));
-			std::cout << std::endl;
-		}
+	for (auto var: vars)
 		ret.push_back(std::pair<VariableAddress, unsigned int>(var, ctr++));
-	}
 	return ret;
 }
 
@@ -100,14 +92,6 @@ unsigned int VarUniqExtension::findMaxID(std::vector<VariableAddress> vars) {
 	}
 
 	return max;
-}
-
-// ------------------------------------------------------------------------------------------------
-void VarUniqExtension::printGoalID(std::vector<std::pair<VariableAddress, unsigned int> > goalID) {
-	std::cout << "##";
-	for (auto p: goalID)
-		std::cout << " " << DataDependence::getVarID(p.first) << "→" << p.second;
-	std::cout << std::endl;
 }
 
 /// Return the updated code with unique variable identifiers.
@@ -125,14 +109,12 @@ NodeAddress VarUniqExtension::IR() {
 		// third: retrieve and remove the first target from the map
 		std::pair<VariableAddress, unsigned int> p=goalID.front();
 		goalID.erase(goalID.begin());
-		std::cout << "processing var [" << goalID.size() << "]: " << DataDependence::getVarID(p.first) << " → ";
 
 		// fourth, check if the target variable ID is already unused
 		// four A: there is still a definition for the target variable ID
 		if (dep.getDefs(p.second).size()) {
 			// get unused ID (maximum seen ID plus one)
 			unsigned int unusedID=findMaxID(dep.getDefs())+1;
-			std::cout << unusedID << " (target: " << p.second << ")" << std::endl;
 			// rename the variable to the unused ID
 			ret=renameVar(ret, p.first, unusedID);
 			// append the previously removed element at the end of the map
@@ -141,7 +123,6 @@ NodeAddress VarUniqExtension::IR() {
 
 		// four B: for the target variable ID no definition could be found
 		} else {
-			std::cout << p.second << std::endl;
 			// rename the variable directly to the target ID
 			ret=renameVar(ret, p.first, p.second);
 		}

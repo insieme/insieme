@@ -65,9 +65,11 @@ class DataDependence: public insieme::core::IRVisitor<void, insieme::core::Addre
 	insieme::core::NodeAddress frag;                                  /// < code fragment passed to this compiler pass
 	unsigned int count;                                                          /// < total number of variables found
 	std::map<insieme::core::VariableAddress, std::vector<insieme::core::VariableAddress> > uses; /// uses for each def
+	std::map<insieme::core::VariablePtr, std::vector<insieme::core::VariableAddress> > uses2;
 
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitVariable(const insieme::core::VariableAddress &node);
+	void record(const insieme::core::VariableAddress &var);
 	void recordDef(const insieme::core::VariableAddress &def);
 	void recordUse(const insieme::core::VariableAddress &def, const insieme::core::VariableAddress &use);
 

@@ -56,7 +56,6 @@ class VarUniqExtension: public  insieme::frontend::extensions::FrontendExtension
 
 	std::vector<std::pair<insieme::core::VariableAddress, unsigned int> > findPerfectID
 	   (std::vector<insieme::core::VariableAddress> vars);
-	void printGoalID(std::vector<std::pair<insieme::core::VariableAddress, unsigned int> > goalID);
 
 public:
 	insieme::analysis::DataDependence dep;   /// < data dependence state for the above code fragment
