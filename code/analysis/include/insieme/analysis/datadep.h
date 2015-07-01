@@ -89,8 +89,10 @@ public:
 	static boost::optional<insieme::core::NodeAddress> commonAncestor(const insieme::core::NodeAddress &n1,
 	                                                                  const insieme::core::NodeAddress &n2);
 
-	static void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
-	static void printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
+	static std::string printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
+	static std::string printRange(const insieme::core::NodeAddress &n1, const insieme::core::NodeAddress &n2, std::string descr="");
+	static std::string printTrace(std::vector<insieme::core::NodeAddress> trace, bool printHead=true, std::string descr="");
+	static std::string printTypeChain(const insieme::core::NodeAddress &node, std::string descr="", int count=-1);
 };
 
 }}

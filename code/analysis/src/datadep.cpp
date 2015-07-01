@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 #include "insieme/analysis/datadep.h"
@@ -93,15 +94,8 @@ void DataDependence::visitVariable(const VariableAddress &var) {
 		if (misclassified) std::cout << " misclassified";
 		std::cout << std::endl;
 	}
-	if (misclassified && dbg_misclassified) {
-		auto n=commonAncestor(var, *comp);
-		if (n) {
-			std::vector<int> diff(n->getDepth());
-			diff[diff.size()-1]++;
-			diff.push_back(0);
-			printNode(*otherNode(*n, diff));
-		}
-	}
+	if (misclassified && dbg_misclassified)
+		std::cout << printRange(*comp, var, "misclassified");
 
 	// visit children
 	visitNode(var);
@@ -179,54 +173,54 @@ boost::optional<VariableAddress> DataDependence::otherVar(const NodeAddress &a, 
 VariableAddress DataDependence::getDef(const VariableAddress& givenaddr) {
 	// first, save the pointer of the given variable so that we have something to compare with
 	VariablePtr givenptr=givenaddr.getAddressedNode();
-	NodeAddress current=givenaddr;
+	NodeAddress prev=givenaddr;
 
-	while (!current.isRoot()) {
-		NodeAddress oneup=current.getParentAddress();
+	while (!prev.isRoot()) {
+		NodeAddress current=prev.getParentAddress();
 
-		switch (oneup->getNodeType()) {
+		switch (current->getNodeType()) {
 		case NT_BindExpr: {
-			for (auto n: oneup.as<BindExprAddress>()->getParameters())
+			for (auto n: current.as<BindExprAddress>()->getParameters())
 				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_CompoundStmt: {
-			auto compound=oneup.as<CompoundStmtAddress>();
-			for (int i=current.getIndex(); i>=0; i--)
+			auto compound=current.as<CompoundStmtAddress>();
+			for (int i=prev.getIndex(); i>=0; i--)
 				if (DeclarationStmtAddress decl=compound[i].isa<DeclarationStmtAddress>()) {
 					auto n=decl->getVariable();
 					if (n.as<VariablePtr>()==givenptr) return n;
 				}
 			break; }
 		case NT_Parameters: {   // FIXME: this variable is a parameter; trace var to outer scope
-			ParametersAddress par=oneup.as<ParametersAddress>();
+			ParametersAddress par=current.as<ParametersAddress>();
 			for (VariableAddress n: par->getParameters())
 				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_Lambda: {
-			for (auto n: oneup.as<LambdaAddress>()->getParameters())
+			for (auto n: current.as<LambdaAddress>()->getParameters())
 				if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_LambdaExpr: {
-			//break;
-			auto n=oneup.as<LambdaExprAddress>()->getVariable();
+			break;
+			auto n=current.as<LambdaExprAddress>()->getVariable();
 			if (n.as<VariablePtr>()==givenptr) return n;
 			break;
 		}
 		case NT_LambdaBinding: {
-			auto n=oneup.as<LambdaBindingAddress>()->getVariable();
+			auto n=current.as<LambdaBindingAddress>()->getVariable();
 			if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		case NT_LambdaDefinition: {
-			if (auto n=oneup.as<LambdaDefinitionAddress>()->getBindingOf(givenptr))
+			if (auto n=current.as<LambdaDefinitionAddress>()->getBindingOf(givenptr))
 				return n->getVariable();
 			break; }
 		case NT_ForStmt: {
-			auto n=oneup.as<ForStmtAddress>()->getIterator();
+			auto n=current.as<ForStmtAddress>()->getIterator();
 			if (n.as<VariablePtr>()==givenptr) return n;
 			break; }
 		default: break;
 		}
-		current=oneup; // we did not find a binding yet, try to find it one level up
+		prev=current; // we did not find a binding yet, try to find it one level up
 	}
 
 	// we have reached the root, and never found a binding for the variable; return the given variable address
@@ -296,7 +290,9 @@ boost::optional<NodeAddress> DataDependence::commonAncestor(const NodeAddress &n
 /// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
 /// n means the n-th child node. The count gives the number of child nodes which should be printed;
 /// 0 means print only the given node, 1 means print only one child node, etc.
-void DataDependence::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
+std::string DataDependence::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
+	std::stringstream strbuf;
+
 	// determine total number of child nodes, and adjust count accordingly
 	auto children=node.getChildAddresses();
 	if (count<0) count=children.size();
@@ -304,25 +300,86 @@ void DataDependence::printNode(const NodeAddress &node, std::string descr, unsig
 	// if requested (start=0), print the node itself with some debug information
 	if (start==0) {
 		if (!descr.empty()) descr=" ("+descr+")";
-		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
+		strbuf << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
 		start++;
 	}
 
-	// iterate over the requested children to complete the output
+	// iterate over the requested children and complete the output
 	for (unsigned int n=start-1; n<start-1+count; n++)
-		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
+		strbuf << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
+	return strbuf.str();
+}
+
+/// Return a printed representation of the nodes in between n1 and n2.
+std::string DataDependence::printRange(const NodeAddress &n1, const NodeAddress &n2, std::string descr) {
+	std::stringstream strbuf;
+
+	// derive the common ancestor of n1 and n2, and the vector representation of the corresponding paths
+	boost::optional<NodeAddress> a=commonAncestor(n1, n2);
+	if (!a) return "No common ancestor for "+toString(n1)+" and "+toString(n2)+".\n";
+	std::vector<unsigned int>
+	        n1vec=addressVector(n1),
+	        n2vec=addressVector(n2);
+
+	// remove prefixes of paths n1, n2 that correspond to the common ancestor
+	n1vec.erase(n1vec.begin(), n1vec.begin()+a->getDepth());
+	n2vec.erase(n2vec.begin(), n2vec.begin()+a->getDepth());
+
+	// show trace from a to n1
+	std::vector<NodeAddress> trace{*a};
+	for (int d: n1vec) trace.push_back(trace.back().getChildAddresses()[d]);
+	strbuf << printTrace(trace, true, descr);
+
+	// show trace from a to n2
+	trace.clear();
+	trace.push_back(*a);
+	for (int d: n2vec) trace.push_back(trace.back().getChildAddresses()[d]);
+	strbuf << printTrace(trace, false) << std::endl;
+
+	return strbuf.str();
+}
+
+/// Return a printed representation of the trace (list of node addresses that are related) given.
+std::string DataDependence::printTrace(std::vector<NodeAddress> trace, bool printHead, std::string descr) {
+	std::stringstream strbuf;
+
+	NodeAddress headnode=trace.front();
+	if (printHead)
+		strbuf << headnode << (!descr.empty()? " ("+descr+")": "") << std::endl;
+	strbuf << "\t\t" << headnode.getNodeType();
+	if (headnode.getNodeType()!=NT_LambdaBinding)
+		strbuf << ": " << printer::PrettyPrinter(headnode, printer::PrettyPrinter::PRINT_SINGLE_LINE, 1) << std::endl;
+	for (auto it=trace.begin()+1; it!=trace.end(); ++it) {
+		strbuf << "\t-" << it->getIndex() << "\t" << it->getNodeType();
+		if (it->getNodeType()!=NT_LambdaBinding)
+			strbuf << ": " << printer::PrettyPrinter(*it, printer::PrettyPrinter::PRINT_SINGLE_LINE, 1);
+		strbuf << std::endl;
+	}
+
+	// compact string (just a quick hack to make functions less verbose)
+	std::string full=strbuf.str();
+	for (size_t p=full.find("  ", 0); p!=std::string::npos; p=full.find("  ", p)) full.replace(p, 2, " ");
+	for (size_t p=full.find("... ...", 0); p!=std::string::npos; p=full.find("... ...", p)) full.replace(p, 7, "...");
+	for (size_t p=full.find("( ", 0); p!=std::string::npos; p=full.find("( ", p)) full.replace(p, 2, "(");
+	for (size_t p=full.find(" )", 0); p!=std::string::npos; p=full.find(" )", p)) full.replace(p, 2, ")");
+	for (size_t p=full.find(" ,", 0); p!=std::string::npos; p=full.find(" ,", p)) full.replace(p, 2, ",");
+	for (size_t p=full.find("...", 0); p!=std::string::npos; p=full.find("...", p)) full.replace(p, 3, "…");
+
+	return full;
 }
 
 /// Print the chain of types that the given node is contained in. Count says how many nodes are considered at most.
-void DataDependence::printTypeChain(const NodeAddress &node, std::string descr, int count) {
-	if (!count) return;
-	if (!descr.empty()) std::cout << "(" << descr << "):";
+std::string DataDependence::printTypeChain(const NodeAddress &node, std::string descr, int count) {
+	std::stringstream strbuf;
+	if (!count) return strbuf.str();
+	if (!descr.empty()) strbuf << "(" << descr << "):";
 	NodeAddress addr=node;
 	while (count--) {
-		std::cout << " " << addr.getNodeType();
-		//if (lang::isDerived(addr)) std::cout << "(derived)";
+		strbuf << " " << addr.getNodeType();
+		//if (lang::isDerived(addr)) strbuf << "(derived)";
 		if (!addr.isRoot()) addr=addr.getParentAddress();
 		else count=0;
 	}
-	std::cout << std::endl;
+	strbuf << std::endl;
+	return strbuf.str();
 }
