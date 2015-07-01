@@ -66,6 +66,12 @@ namespace integration {
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
 
+	//performs only the preprocessing of a test case in case there is such a step. Returns false if the step failed.
+	bool performPreprocessing(const IntegrationTestCase& test);
+
+	//performs only the postprocessing of a test case in case there is such a step. Returns false if the step failed.
+	bool performPostprocessing(const IntegrationTestCase& test);
+
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
 

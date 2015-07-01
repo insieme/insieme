@@ -882,6 +882,36 @@ namespace integration {
 		return output;
 	}
 
+
+	namespace {
+		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName) {
+			//get all steps
+			auto steps = getFullStepList();
+
+			//iterate through them and look for the preprocessing step
+			for (auto& current : steps) {
+				TestStep& step = current.second;
+				if (step.getName() == stepName) {
+					//we found the preprocessing step - execute it
+					TestSetup setup;
+					setup.executionDir="";
+					auto result = step.run(setup, test, TestRunner::getInstance());
+					return result.wasSuccessful();
+				}
+			}
+
+			return true;
+		}
+	}
+
+	bool performPreprocessing(const IntegrationTestCase& test) {
+		return runSingleTestStep(test, TEST_STEP_PREPROCESSING);
+	}
+
+	bool performPostprocessing(const IntegrationTestCase& test) {
+		return runSingleTestStep(test, TEST_STEP_POSTPROCESSING);
+	}
+
 	/*
 	 *  Test Runner member functions
 	 */
