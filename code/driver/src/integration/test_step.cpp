@@ -60,6 +60,8 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
+	using namespace std;
+
 	namespace {
 
 		namespace {
