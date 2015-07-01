@@ -68,20 +68,20 @@ namespace integration {
 			// load code using frontend
 			std::vector<std::string> args = {"compiler"};
 			for(auto file : testCase.getFiles()) {
-                            args.push_back(file.string());
-                        }
-                        for(auto includeDir : testCase.getIncludeDirs()) {
-                            std::string include = "-I"+includeDir.string();
-                            args.push_back(include);
-                        }
-                        if(testCase.isEnableOpenMP()) {
-                            args.push_back("-fopenmp");
-                        }
-                        if(testCase.isEnableOpenCL()) {
-                            args.push_back("--flib-icl -lOpenCL");
-                        }
+				args.push_back(file.string());
+			}
+			for(auto includeDir : testCase.getIncludeDirs()) {
+				std::string include = "-I"+includeDir.string();
+				args.push_back(include);
+			}
+			if(testCase.isEnableOpenMP()) {
+				args.push_back("-fopenmp");
+			}
+			if(testCase.isEnableOpenCL()) {
+				args.push_back("--flib-icl -lOpenCL");
+			}
 
-                        driver::cmd::Options options = driver::cmd::Options::parse(args);
+			driver::cmd::Options options = driver::cmd::Options::parse(args);
 			options.job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
 			std::string step=TEST_STEP_INSIEMECC_RUN_C_CONVERT;
@@ -107,11 +107,11 @@ namespace integration {
 
 
 	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
-            return toJob(*this).execute(manager);
+		return toJob(*this).execute(manager);
 	}
 
 	frontend::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
-            return toJob(*this).toIRTranslationUnit(manager);
+		return toJob(*this).toIRTranslationUnit(manager);
 	}
 
 	namespace fs = boost::filesystem;
@@ -439,14 +439,14 @@ namespace integration {
 		// load code using frontend - using given options
 		std::vector<std::string> args = {"compiler"};
 		for(auto file : curCase->getFiles()) {
-                    args.push_back(file.string());
-                        }
-                for(auto incl : curCase->getIncludeDirs()) {
-                    std::string inc = "-I"+incl.string();
-                    args.push_back(inc);
-                }
-                if(enableOpenMP) args.push_back("-fopenmp");
-                    insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
+			args.push_back(file.string());
+		}
+		for(auto incl : curCase->getIncludeDirs()) {
+			std::string inc = "-I"+incl.string();
+			args.push_back(inc);
+		}
+		if(enableOpenMP) args.push_back("-fopenmp");
+		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
 
 		// add pre-processor definitions
 		for(const auto& cur : definitions) {

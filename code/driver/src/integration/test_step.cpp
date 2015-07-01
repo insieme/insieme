@@ -882,15 +882,15 @@ namespace integration {
 		return output;
 	}
 
-    /*
-     *  Test Runner member functions
-     */
-    int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
-							const string& environmentParam, const string& outFilePath,
-							const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
-        /*
-         * Setup arguments
-         */
+	/*
+	 *  Test Runner member functions
+	 */
+	int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
+	                                   const string& environmentParam, const string& outFilePath,
+	                                   const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
+		/*
+		 * Setup arguments
+		 */
 
 		// quick and dirty: have boost split everything and then reassemble tokens that were quoted
 		vector<string> argumentsVecTemp;
@@ -1014,8 +1014,8 @@ namespace integration {
 			if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1)
 				std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
 		} else {
-		    #pragma omp critical (pids)
-            TestRunner::getInstance().pids.push_back(pid);
+			#pragma omp critical (pids)
+			TestRunner::getInstance().pids.push_back(pid);
 			if(waitpid(pid, &retVal, 0) == -1)
 				std::cerr << "Unable to wait for child process " << pid << ", reason: " << strerror(errno) << "\n";
 		}
@@ -1031,7 +1031,7 @@ namespace integration {
 		producedFiles.push_back(setup.stdErrFile);
 
 		map<string,float> metricResults;
-        //insert dummy vals
+		//insert dummy vals
 		metricResults["walltime"]=0;
 		metricResults["cputime"]=0;
 		metricResults["mem"]=0;
@@ -1111,7 +1111,7 @@ namespace integration {
 				perfString=perfString+"-e "+s+" ";
 			}
 
-        }
+		}
 
 		string executable = string(testConfig["time_executable"]);
 		string envString = env.str();
@@ -1133,7 +1133,7 @@ namespace integration {
 
 		int actualReturnCode = WEXITSTATUS(retVal);
 
-       		if(actualReturnCode > 128) {
+		if(actualReturnCode > 128) {
 			actualReturnCode -= 128;
 			if(actualReturnCode > 0)
 				std::cerr << "Killed by signal " << actualReturnCode << "\n";
