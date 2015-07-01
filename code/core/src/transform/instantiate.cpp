@@ -43,6 +43,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/types/subtype_constraints.h"
 
 namespace insieme {
 namespace core {
@@ -59,15 +60,35 @@ namespace {
 		std::function<bool(const NodePtr& node)> skip;
 
 		LambdaExprPtr generateSubstituteLambda(NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
+
+			const bool debug = false;
+
 			ReplaceLimiter limiter = [&](const NodePtr& ptr) { 
 				return ptr.isa<core::LambdaExprPtr>() || skip(ptr) ? ReplaceAction::Prune : ReplaceAction::Process;
 			};
+
 			// using the derived mapping, we generate a new lambda expression with instantiated type params
 			// tricky: we apply the same mapping recursively on the *new* body
 			auto builder = IRBuilder(nodeMan);
 			auto funType = funExp->getFunctionType();
 			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter)->substitute(nodeMan, *this);
-			auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
+
+			// we now need to determine the new return type to use
+			TypePtr newReturnType = nodeMan.getLangBasic().getUnit();
+			auto returns = analysis::getFreeNodes(newBody, NT_ReturnStmt, toVector(NT_LambdaExpr, NT_JobExpr, NT_ReturnStmt));
+			if(debug) std::cout << "{{{{{{{{{{{{{ Returns: " << returns << "\n";
+			if(!returns.empty()) { // if no returns, unit is fine
+				auto typeList = ::transform(returns, [](const NodePtr& ret) { return ret.as<ReturnStmtPtr>()->getReturnExpr()->getType(); });
+				if(debug) std::cout << "{{{{{{{{{{{{{ typeList: " << typeList << "\n";
+				newReturnType = types::getSmallestCommonSuperType(typeList);
+				if(debug) std::cout << "{{{{{{{{{{{{{ returnType: " << newReturnType << "\n";
+				assert_true(newReturnType) << "Instantiating types in lambda, return types have no common supertype.";
+			}
+
+			// now we can generate the substitution
+			auto replacedFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
+			auto newFunType = builder.functionType(replacedFunType->getParameterTypes(), newReturnType, replacedFunType->getKind());
+
 			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
 				return core::transform::replaceAllGen(nodeMan, t, nodeMap, limiter);
 			});

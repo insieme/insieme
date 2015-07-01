@@ -190,11 +190,13 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 		// try deducing the return type ...
 		return tryDeduceReturnType(funType, argumentTypes);
 
-	} catch (const ReturnTypeDeductionException&) {
+	} catch (const ReturnTypeDeductionException& e) {
 
 		// didn't work => print a warning
 		LOG(DEBUG) << "Unable to deduce return type for call to function of type "
 				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
+
+		LOG(DEBUG) << "Exception:\n" << e.what();
 	}
 	// return null ptr
 	return unitOnFail ? funType->getNodeManager().getLangBasic().getUnit() : TypePtr();
