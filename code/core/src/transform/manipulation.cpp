@@ -47,6 +47,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
@@ -900,22 +901,13 @@ bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, con
 	return hasFree;
 }
 
-bool isOutlineAble(const StatementPtr& stmt) {
+bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
 
-	// the statement must not contain a "free" return
-	bool hasFreeReturn = false;
-	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
-		if (cur->getNodeType() == NT_LambdaExpr) {
-			return true; // do not decent here
+	if(!allowReturns) {
+		// the statement must not contain a "free" return
+		if(hasFreeControlStatement(stmt, NT_ReturnStmt, toVector(NT_LambdaExpr))) {
+			return false;
 		}
-		if (cur->getNodeType() == NT_ReturnStmt) {
-			hasFreeReturn = true;	// "bound" return found
-		}
-		return hasFreeReturn;
-	});
-
-	if (hasFreeReturn) {
-		return false;
 	}
 
 	// search for "bound" break or continue statements
@@ -930,9 +922,10 @@ bool isOutlineAble(const StatementPtr& stmt) {
 }
 
 
-CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
+CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt, bool allowReturns) {
 	// check whether it is allowed
-	assert_true(isOutlineAble(stmt)) << "Cannot outline given code - it contains 'free' return, break or continue stmts.";
+	assert_true(isOutlineAble(stmt, allowReturns))
+		<< "Cannot outline given code - it contains 'free' return, break or continue stmts.";
 
 	// Obtain list of free variables
 	VariableList free = analysis::getFreeVariables(manager.get(stmt));
@@ -951,11 +944,17 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	});
 	StatementPtr body = replaceVarsGen(manager, stmt, replacements);
 
-	// create lambda accepting all free variables as arguments
-	LambdaExprPtr lambda = builder.lambdaExpr(body, parameter);
+	// determine return type if necessary
+	auto retType = manager.getLangBasic().getUnit();
+	if(allowReturns) {
+		retType = analysis::autoReturnType(manager, builder.compoundStmt(body));
+	}
 
+	// create lambda accepting all free variables as arguments
+	LambdaExprPtr lambda = builder.lambdaExpr(retType, body, parameter);
+	
 	// create call to this lambda
-	return builder.callExpr(manager.getLangBasic().getUnit(), lambda, convertList<Expression>(free));
+	return builder.callExpr(retType, lambda, convertList<Expression>(free));
 }
 
 CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {

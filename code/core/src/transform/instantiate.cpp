@@ -39,11 +39,11 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/address_mapper.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/type_variable_deduction.h"
-#include "insieme/core/types/subtype_constraints.h"
 
 namespace insieme {
 namespace core {
@@ -60,9 +60,7 @@ namespace {
 		std::function<bool(const NodePtr& node)> skip;
 
 		LambdaExprPtr generateSubstituteLambda(NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
-
-			const bool debug = false;
-
+			// check if the limiter applies
 			ReplaceLimiter limiter = [&](const NodePtr& ptr) { 
 				return ptr.isa<core::LambdaExprPtr>() || skip(ptr) ? ReplaceAction::Prune : ReplaceAction::Process;
 			};
@@ -74,24 +72,18 @@ namespace {
 			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter)->substitute(nodeMan, *this);
 
 			// we now need to determine the new return type to use
-			TypePtr newReturnType = nodeMan.getLangBasic().getUnit();
-			auto returns = analysis::getFreeNodes(newBody, NT_ReturnStmt, toVector(NT_LambdaExpr, NT_JobExpr, NT_ReturnStmt));
-			if(debug) std::cout << "{{{{{{{{{{{{{ Returns: " << returns << "\n";
-			if(!returns.empty()) { // if no returns, unit is fine
-				auto typeList = ::transform(returns, [](const NodePtr& ret) { return ret.as<ReturnStmtPtr>()->getReturnExpr()->getType(); });
-				if(debug) std::cout << "{{{{{{{{{{{{{ typeList: " << typeList << "\n";
-				newReturnType = types::getSmallestCommonSuperType(typeList);
-				if(debug) std::cout << "{{{{{{{{{{{{{ returnType: " << newReturnType << "\n";
-				assert_true(newReturnType) << "Instantiating types in lambda, return types have no common supertype.";
-			}
+			auto newReturnType = analysis::autoReturnType(nodeMan, newBody);
 
 			// now we can generate the substitution
 			auto replacedFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
 			auto newFunType = builder.functionType(replacedFunType->getParameterTypes(), newReturnType, replacedFunType->getKind());
 
+			// and our new parameters
 			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
 				return core::transform::replaceAllGen(nodeMan, t, nodeMap, limiter);
 			});
+
+			// finally, build the new lambda and migrate migratable annotations
 			auto newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
 			utils::migrateAnnotations(funExp, newLambda);
 			return newLambda;
@@ -104,6 +96,7 @@ namespace {
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) override {
 			auto& nodeMan = ptr->getNodeManager();
 			auto builder = IRBuilder(nodeMan);
+
 			// we are looking for CallExprs which have a concrete type params in the arguments,
 			// but a variable type param in the lambda which is called
 			if(ptr.isa<CallExprPtr>()) {

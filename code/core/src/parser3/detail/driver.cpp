@@ -428,23 +428,23 @@ namespace detail{
 
     ExpressionPtr inspire_driver::genClosure(const location& l, const VariableList& params, StatementPtr stmt){
 
-        if (!stmt) {
+        if(!stmt) {
             error(l, "closure statement malformed");
             return nullptr;
         }
         CallExprPtr call;
-        if (stmt.isa<CallExprPtr>()){
+        if(stmt.isa<CallExprPtr>()) {
             call = stmt.as<CallExprPtr>();
         } 
-        else if( stmt->getNodeCategory() == NC_Expression){
+        else if(stmt->getNodeCategory() == NC_Expression) {
             call = builder.id(stmt.as<ExpressionPtr>());
         }
-        else if (transform::isOutlineAble(stmt)) {
-            call = transform::outline(builder.getNodeManager(), stmt);  
+		else if(transform::isOutlineAble(stmt, true)) {
+			call = transform::outline(builder.getNodeManager(), stmt, true);
         }
 
         // check whether call-conversion was successful
-        if (!call) {
+        if(!call) {
             error(l, "Not an outline-able context");
             return nullptr;
         }

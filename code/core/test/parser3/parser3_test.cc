@@ -150,11 +150,16 @@ namespace parser3{
 
         EXPECT_FALSE(test_expression(nm, "x"));
 
-        EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool { return true; }"));
+		EXPECT_TRUE(test_expression(nm, "lambda ('a _) -> bool { return true; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return(x+CAST('a) 3); }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) -> 'a { return x+CAST('a) 3; }"));
         EXPECT_TRUE(test_expression(nm, "lambda ('a x) => x+CAST('a) 3"));
+
+		// return type deduction
+		EXPECT_TRUE(test_expression(nm, "lambda () => { return true; }"));
+		EXPECT_TRUE(test_expression(nm, "lambda (bool x) => { if(x) { return true; } else { return false; } }"));
+		EXPECT_TRUE(test_expression(nm, "lambda (bool x) => { if(x) { return 1; } else { return -5; } }"));
 
         EXPECT_TRUE(test_expression(nm, "type(int<4>)"));
 
