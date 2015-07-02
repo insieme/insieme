@@ -115,51 +115,53 @@ TEST(VarUniq, Simple) {
 
 	ASSERT_TRUE(fragment);
 
-	NodeAddress orig=NodeAddress(fragment);                     // the original code from above
-	insieme::frontend::extensions::VarUniqExtension vu(orig);   // parse the original code for variables
-	NodeAddress result=vu.IR();                                 // replacement of vars
-	insieme::analysis::DataDependence nu(result);               // parse the resulting code for variables
+	NodeAddress orig=NodeAddress(fragment);                      // the original code from above
+	insieme::frontend::extensions::VarUniqExtension old(orig);   // parse the original code for variables
+	NodeAddress result=old.IR();                                 // replacement of vars
+	insieme::analysis::DataDependence now(result);               // parse the resulting code for variables
 
 	// show the changes of the variable uniquification process visually
 	std::stringstream strbuf;
 	strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
-	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
+	       << printer::PrettyPrinter(orig.getAddressedNode()) << std::endl << std::endl
 	       << "# # # # #   NEW CODE   # # # # #" << std::endl
 	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-	std::cout << strbuf.str();
+	//std::cout << strbuf.str();
 
 	// get all variable definitions from both codes
 	std::vector<VariableAddress>
-	        vu_all=vu.dep.getDefs(),
-	        nu_all=nu.getDefs();
+	        old_defs=old.dep.getDefs(),
+	        now_defs=now.getDefs();
 
-	// this functions returns true if the variable with given VariableAddress is in use, ie: size()>0
-	std::function<bool(VariableAddress)> inuse=
-	        [&vu](const VariableAddress &def){ return vu.dep.getUse(def).size(); };
 	// check some boundary conditions
-	EXPECT_EQ(vu_all.size(), nu_all.size());     // the number of variable definitions must match in both codes
-	EXPECT_EQ(vu_all.size(), 34);                // this program has 34 variable definitions excluding derived operands
-	EXPECT_EQ(vu.dep.getDefs(inuse).size(), 27); // of these, 27 are actually used
+	EXPECT_EQ(old.dep.size(), now.size());         // the number of variables must match in both codes
+	EXPECT_EQ(old_defs.size(), now_defs.size());   // the number of variable definitions must match in both codes
 
-	// in the original code, we expect some vacant IDs
-	unsigned int max_vu=VarUniqExtension::findMaxID(vu_all);
-	std::cout << "max ID in old code: " << max_vu << std::endl;
-	bool vu_allset=true;
-	for (unsigned int cur_vu=0; cur_vu<max_vu; ++cur_vu)
-		vu_allset=vu_allset && vu.dep.getDefs(cur_vu).size();
-	EXPECT_FALSE(vu_allset);
+	// basic test that should not fail: the number of definitions must match the highest variable ID
+	unsigned int old_maxid=VarUniqExtension::findMaxID(old_defs);
+	unsigned int now_maxid=VarUniqExtension::findMaxID(now_defs);
+	EXPECT_EQ(now_maxid+1, now_defs.size());
 
-	// in the new code, every variable ID should be used
-	unsigned int max_nu=VarUniqExtension::findMaxID(nu_all);
-	std::cout << "max ID in new code: " << max_nu << std::endl;
-	bool nu_allset=true;
-	for (unsigned int cur_nu=0; cur_nu<max_nu; ++cur_nu) {
-		bool isFound=nu.getDefs(cur_nu).size();
-		if (!isFound) { LOG(ERROR) << "variable v" << cur_nu << " not found!" << std::endl; }
-		nu_allset=nu_allset && isFound;
+	// in the original code, we expect some vacant and some double booked IDs
+	bool old_allset=true;
+	unsigned int old_doublebooked=0;
+	for (unsigned int old_i=0; old_i<old_maxid; ++old_i) {
+		unsigned int count=old.dep.getDefs(old_i).size();
+		old_allset=old_allset && count;
+		if (count>1) old_doublebooked+=count;
 	}
-	EXPECT_TRUE(nu_allset);
+	EXPECT_FALSE(old_allset);
+	EXPECT_TRUE(old_doublebooked);
 
-	// the ultimate test; this one should not fail: the number of definitions must match the highest variable ID
-	EXPECT_EQ(max_nu+1, nu_all.size());
+	// in the new code, every variable ID should be used but not more than once
+	bool now_allset=true;
+	unsigned int now_doublebooked=0;
+	for (unsigned int now_i=0; now_i<now_maxid; ++now_i) {
+		unsigned int count=now.getDefs(now_i).size();
+		if (!count) { LOG(ERROR) << "variable v" << now_i << " not found!" << std::endl; }
+		now_allset=now_allset && count;
+		if (count>1) now_doublebooked+=count;
+	}
+	EXPECT_TRUE(now_allset);
+	EXPECT_FALSE(now_doublebooked);
 }

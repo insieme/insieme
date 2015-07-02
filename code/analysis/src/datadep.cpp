@@ -141,7 +141,7 @@ std::vector<VariableAddress> DataDependence::getDefs(std::function<bool(const Va
 	std::vector<VariableAddress> defs;
 	for (auto def: uses)
 		if (predicate(def.second.front())) defs.push_back(def.second.front());
-	std::sort(defs.begin(), defs.end());
+	std::sort(defs.begin(), defs.end());   // for fast lookup, the variables are stored in a map that has different sort
 	return defs;
 }
 

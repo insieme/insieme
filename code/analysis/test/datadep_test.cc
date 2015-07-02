@@ -112,11 +112,21 @@ TEST(DataDependence, Unique) {
 				}
 			)");
 
-	ASSERT_TRUE(fragment);
+	ASSERT_TRUE(fragment);   // the code fragment must be valid IR
 
-	NodeAddress orig=NodeAddress(fragment);               // the original code from above
-	insieme::analysis::DataDependence dep(orig);          // parse the original code for variables
+	NodeAddress orig=NodeAddress(fragment);               // convert from pointer to address (0)
+	insieme::analysis::DataDependence dep(orig);          // do variable analysis for the code fragment
 	std::vector<VariableAddress> alldefs=dep.getDefs();   // get all variable definitions
+
+	// ### now, the first round of tests
+
+	// this functions returns true if the variable with given VariableAddress is in use, ie: size()>0
+	std::function<bool(VariableAddress)> inuse=
+	        [&dep](const VariableAddress &def){ return dep.getUse(def).size(); };
+	EXPECT_EQ(alldefs.size(), 34);               // this program has 34 variable definitions excluding derived operands
+	EXPECT_EQ(dep.getDefs(inuse).size(), 27);    // of these, 27 are actually in use
+
+	// ### no two variable definitions must point to the same variable
 
 	// compare every variable definition with every other definition
 	std::vector<std::pair<VariableAddress, VariableAddress> > same;
@@ -125,6 +135,7 @@ TEST(DataDependence, Unique) {
 			if (alldefs[one].getAddressedNode() == alldefs[two].getAddressedNode())
 				same.push_back(std::pair<VariableAddress, VariableAddress>(alldefs[one], alldefs[two]));
 
+	// do some debug output, if identical variables were found
 	if (same.size()) {
 		std::cout << "In " << alldefs.size() << " defs, there are " << same.size() << " identical variable pairs:" << std::endl;
 		for (auto p: same) {
@@ -133,10 +144,11 @@ TEST(DataDependence, Unique) {
 				std::cout << "\t"
 				          << p.first  << "(" << p.first.getDepth()- pfx->getDepth() << ") : "
 				          << p.second << "(" << p.second.getDepth()-pfx->getDepth() << ")";
-				//DataDependence::printNode(*pfx);
 				std::cout << std::endl;
 			}
 		}
 	}
+
+	// now, fail!
 	EXPECT_TRUE(same.size()==0);
 }
