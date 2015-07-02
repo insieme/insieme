@@ -47,7 +47,6 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"

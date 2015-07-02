@@ -37,26 +37,14 @@
 #ifndef PRAGMA_TEST_EXTENSION_H
 #define PRAGMA_TEST_EXTENSION_H
 
-#include <functional>
+#pragma once
+
 #include <string>
 
-#include "insieme/core/ir_node.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
-#include "insieme/frontend/pragma/handler.h"
-#include "insieme/frontend/pragma/matcher.h"
-
-namespace clang {
-class Preprocessor;
-}
 
 namespace insieme {
 namespace frontend {
-namespace conversion {
-
-class Converter;
-
-} // end convert namespace
-
 namespace extensions {
 
 /**
@@ -67,17 +55,17 @@ namespace extensions {
  *
  * checks if the conversion of the C statement matches the one specified by the user
  */
-class TestPragmaExtension: public insieme::frontend::pragma::Pragma, public FrontendExtension {
+class TestPragmaExtension : public FrontendExtension {
+	// holds the IR that is expected for the target statement, to be used for comparison and testing
 	std::string expected;
-
-	std::function<stmtutils::StmtWrapper(const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)>
-	getMarkerAttachmentLambda();
+	// holds a number of dummy arguments used for pragma parsing and location testing
+	std::vector<std::string> dummyArguments;
 
 public:
 	TestPragmaExtension();
-	TestPragmaExtension(const clang::SourceLocation &s1, const clang::SourceLocation &s2, const std::string &str,
-			   const pragma::MatchMap &mm);
 	std::string getExpected() const { return expected; }
+	std::vector<std::string> getDummyArguments() const { return dummyArguments; }
+
 };
 
 } // extensions

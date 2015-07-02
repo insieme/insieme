@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,15 +39,15 @@
 
 void decl_stmt_test() {
 
-	#pragma test \
+	#pragma test dummy \
 	"first"
 	int b = 0;
 
-	#pragma test \
+	#pragma test dummy \
 	"second"
 	unsigned int c;
 
-	#pragma test \
+	#pragma test dummy \
 	"third"
 	float d;
 

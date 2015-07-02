@@ -1,5 +1,5 @@
 includes="./"
 files="nbody.cpp"
-excludeSteps="ref_c_execute","ref_c_compile","insiemecc_c_sema"
+excludeSteps="*_ocl_*", "*_c_*"
 executionFlags=1000 300
 use_libmath=1

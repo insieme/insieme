@@ -51,14 +51,29 @@
 
 #include "insieme/utils/logging.h"
 
-// WARNING: this file is only preliminary and might be heavily modified or moved ...
-
-
 namespace insieme {
 namespace core {
 namespace analysis {
 
 using std::map;
+
+NodeList getFreeNodes(
+	const NodePtr& node, NodeType controlStmt,	const vector<NodeType>& pruneNodes) {
+
+	NodeList returnNodes;
+	visitDepthFirstOncePrunable(node, [&](const NodePtr& cur) {
+		auto curType = cur->getNodeType();
+		if(cur->getNodeType() == controlStmt) {
+			returnNodes.push_back(cur);
+		}
+		if(::contains(pruneNodes, curType)) {
+			return true; // do not descent here
+		}
+		return false;
+	});
+	return returnNodes;
+}
+
 
 bool isSideEffectFree(const ExpressionPtr& expr) {
 	// all variables and literals are side-effect free accessible

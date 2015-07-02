@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -47,6 +47,9 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 namespace utils {
+
+
+#define BASIC builder.getLangBasic()
 
 /*
  * Returns either the expression itself or the first argument if expression was a call to function

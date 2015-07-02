@@ -9,7 +9,7 @@
 #include "CL/cl.h"
 #include "vecops.hh"
 
-#define bench 1
+#define bench 0
 #define version 1
 
 #if bench
@@ -110,8 +110,10 @@ int main(int argc, const char** argv)
 	struct svm_node* px = (struct svm_node*)malloc((x+1)*sizeof(struct svm_node));
 	gen_data(px, x, 1, 3);
 	struct svm_node* py = (struct svm_node*)malloc((x+1)*y*sizeof(struct svm_node));
-	for(size_t i = 0; i < y; ++i)
-		gen_data(py+i*(x+1), x, 3,2);
+	for(size_t i = 0; i < y; ++i) {
+		struct svm_node* tmp = py+i*(x+1);
+		gen_data(tmp, x, 3,2);
+	}
 	dtype* result = (dtype*)malloc(y*sizeof(dtype));
 	int* pyLength = (int*)malloc(y*sizeof(int));
 	
@@ -375,7 +377,6 @@ int main(int argc, const char** argv)
 #if bench
 	start_timer(3);
 #endif
-
 	bool correct = validate(px, py, result, x, y);
 #if bench
 	stop_timer(3);

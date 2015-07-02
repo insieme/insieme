@@ -73,7 +73,7 @@ void irt_log_init() {
 	}
 	irt_g_log_file = fopen(buffer, "w+");
 
-	IRT_ASSERT(irt_g_log_file != NULL, IRT_ERR_IO, "Unable to create insieme_runtime_log");
+	IRT_ASSERT(irt_g_log_file != NULL, IRT_ERR_IO, "Unable to create insieme_runtime.log");
 
 	irt_log("# Runtime logging started on %s\n", _irt_time_string());
 

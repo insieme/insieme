@@ -38,7 +38,6 @@
 #define __EXTERN extern
 #endif
 
-__EXTERN irt_tls_key irt_g_error_key;
 __EXTERN irt_mutex_obj irt_g_error_mutex;
 
 __EXTERN irt_tls_key irt_g_worker_key;
@@ -51,6 +50,8 @@ struct _irt_worker;
 __EXTERN struct _irt_worker **irt_g_workers;
 
 __EXTERN bool irt_g_rt_is_initialized;
+__EXTERN bool irt_g_exit_handling_done;
+__EXTERN bool irt_g_globals_initialization_done;
 __EXTERN irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 
 __EXTERN irt_mutex_obj irt_g_exit_handler_mutex;

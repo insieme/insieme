@@ -346,6 +346,49 @@ TEST(TypeInstantiation, HigherOrderFunction) {
 	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>().getType());
 }
 
+TEST(TypeInstantiation, ReturnTypeSimple) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a arg) -> 'b {
+			return arg;
+	}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_EQ(build.parseType("int<4>"), instantiated.as<CallExprPtr>()->getType());
+}
+
+
+TEST(TypeInstantiation, ReturnTypeMultiple) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a arg, 'b x) -> 'c {
+			if(x) {
+				return arg;
+			} else {
+				return 5u;
+			}
+	}(-5l, true)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_EQ(build.parseType("int<8>"), instantiated.as<CallExprPtr>()->getType());
+}
+
 /*
 TEST(InRecFunc, Simple) {
 	NodeManager mgr;

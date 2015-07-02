@@ -39,7 +39,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/asm_extension.h"
 #include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -47,6 +46,8 @@
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/lang/varargs_extension.h"
+#include "insieme/core/lang/instrumentation_extension.h"
+#include "insieme/core/lang/asm_extension.h"
 
 #include "insieme/utils/assert.h"
 
@@ -80,6 +81,7 @@ namespace lang {
 			extensionFactories.insert(getExtensionFactory<SIMDVectorExtension>("ext.simd"));
 			extensionFactories.insert(getExtensionFactory<StaticVariableExtension>("ext.static"));
 			extensionFactories.insert(getExtensionFactory<VarArgsExtension>("ext.varargs"));
+			extensionFactories.insert(getExtensionFactory<InstrumentationExtension>("ext.instrumentation"));
 		}
 
 		//prevent copies
@@ -119,6 +121,7 @@ namespace lang {
 			assert_true(result != extensionFactories.end()) << "Can't find extension with name \"" << extensionName << "\". Please check the name and also register it in the constructor of ExtensionRegistry";
 			return result->second;
 		}
+
 		/**
 		 * Returns all extension factories
 		 *

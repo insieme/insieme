@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,24 +29,24 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 # some configuration options 
 compiler[ref_c_compile]=gcc
-compiler[ref_c++_compile]=g++
+compiler[ref_cpp_compile]=g++
 compiler[insiemecc_c_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_c++_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_cpp_sema]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_run_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_run_c++_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_run_cpp_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_run_c_compile]=gcc
-compiler[insiemecc_run_c++_compile]=g++
+compiler[insiemecc_run_cpp_compile]=g++
 compiler[insiemecc_seq_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
-compiler[insiemecc_seq_c++_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
+compiler[insiemecc_seq_cpp_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_seq_c_compile]=gcc
-compiler[insiemecc_seq_c++_compile]=g++
+compiler[insiemecc_seq_cpp_compile]=g++
 compiler[insiemecc_ocl_c_convert]=@PROJECT_BINARY_DIR@/driver/insiemecc
 compiler[insiemecc_ocl_c_compile]=gcc
 
@@ -59,13 +59,13 @@ boost_include=@Boost_INCLUDE_DIRS@
 boost_lib=@Boost_LIBRARY_DIRS@
 
 # mpfr path
-mpfr_home=@MPFR_HOME@
-
+mpfr_include_dir=@MPFR_INCLUDE_DIRS@
+mpfr_libraries_dir=@MPFR_LIBRARY_DIRS@
 # gmp path
-gmp_home=@GMP_HOME@
+gmp_include_dir=@GMP_INCLUDE_DIRS@
 
 # third party libraries
-third_part_libs_home=@third_part_libs_home@
+third_party_libs_home=@THIRD_PARTY_LIBS_HOME@
 
 # result comparison script
 sortdiff=@insieme_root_dir@/test/sortdiff

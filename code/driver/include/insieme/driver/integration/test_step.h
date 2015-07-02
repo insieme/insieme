@@ -61,14 +61,54 @@ namespace integration {
 	const std::map<std::string,TestStep>& getFullStepList();
 
 	// filters out test steps that are not suitable for the given tests
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test);
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test,map<string,string> conflicting);
+	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string,string>& conflicting = map<string,string>());
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
 
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
+
+	// ------------------------------------------------------------------------
+
+	static const std::string TEST_STEP_REF_C_COMPILE = "ref_c_compile";
+	static const std::string TEST_STEP_REF_CPP_COMPILE = "ref_cpp_compile";
+
+	static const std::string TEST_STEP_REF_C_EXECUTE = "ref_c_execute";
+	static const std::string TEST_STEP_REF_CPP_EXECUTE = "ref_cpp_execute";
+
+	static const std::string TEST_STEP_REF_C_CHECK = "ref_c_check";
+	static const std::string TEST_STEP_REF_CPP_CHECK = "ref_cpp_check";
+
+	static const std::string TEST_STEP_INSIEMECC_C_SEMA = "insiemecc_c_sema";
+	static const std::string TEST_STEP_INSIEMECC_CPP_SEMA = "insiemecc_cpp_sema";
+
+	static const std::string TEST_STEP_INSIEMECC_SEQ_C_CONVERT = "insiemecc_seq_c_convert";
+	static const std::string TEST_STEP_INSIEMECC_RUN_C_CONVERT = "insiemecc_run_c_convert";
+	static const std::string TEST_STEP_INSIEMECC_OCL_C_CONVERT = "insiemecc_ocl_c_convert";
+	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT = "insiemecc_seq_cpp_convert";
+	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_CONVERT = "insiemecc_run_cpp_convert";
+
+	static const std::string TEST_STEP_INSIEMECC_SEQ_C_COMPILE = "insiemecc_seq_c_compile";
+	static const std::string TEST_STEP_INSIEMECC_RUN_C_COMPILE = "insiemecc_run_c_compile";
+	static const std::string TEST_STEP_INSIEMECC_OCL_C_COMPILE = "insiemecc_ocl_c_compile";
+	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE = "insiemecc_seq_cpp_compile";
+	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_COMPILE = "insiemecc_run_cpp_compile";
+
+	static const std::string TEST_STEP_INSIEMECC_SEQ_C_EXECUTE = "insiemecc_seq_c_execute";
+	static const std::string TEST_STEP_INSIEMECC_RUN_C_EXECUTE = "insiemecc_run_c_execute";
+	static const std::string TEST_STEP_INSIEMECC_OCL_C_EXECUTE = "insiemecc_ocl_c_execute";
+	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE = "insiemecc_seq_cpp_execute";
+	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE = "insiemecc_run_cpp_execute";
+
+	static const std::string TEST_STEP_INSIEMECC_SEQ_C_CHECK = "insiemecc_seq_c_check";
+	static const std::string TEST_STEP_INSIEMECC_RUN_C_CHECK = "insiemecc_run_c_check";
+	static const std::string TEST_STEP_INSIEMECC_OCL_C_CHECK = "insiemecc_ocl_c_check";
+	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_CHECK = "insiemecc_seq_cpp_check";
+	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_CHECK = "insiemecc_run_cpp_check";
+
+	static const std::string TEST_STEP_PREPROCESSING = "preprocessing";
+	static const std::string TEST_STEP_POSTPROCESSING = "postprocessing";
 
 	// ------------------------------------------------------------------------
 

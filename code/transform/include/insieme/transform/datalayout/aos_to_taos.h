@@ -50,16 +50,20 @@ namespace datalayout {
 class AosToTaos : public DatalayoutTransformer {
 protected:
 	core::IntTypeParamPtr genericTileSize;
+	core::ExpressionPtr genericTileSizeExpr;
 
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType);
+
+	virtual core::ExpressionPtr updateAccess(const core::ExpressionPtr& oldAccess, const std::pair<core::ExpressionAddress, core::StatementPtr>& varInInit,
+			const core::StringValuePtr& fieldName);
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems);
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems);
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr());
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType);
@@ -70,10 +74,10 @@ protected:
 	virtual core::StatementList generateDel(const core::StatementAddress& stmt, const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar,
 			const core::StructTypePtr& newStructType);
 
-	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionAddress& oldVar, const core::StatementPtr& newVar, const core::StringValuePtr& member,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess);
 
-	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::StatementPtr& newVar, const core::StructTypePtr& newStructType,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess);
 
 	virtual const ExprAddressMap replaceStructsInJobs(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,

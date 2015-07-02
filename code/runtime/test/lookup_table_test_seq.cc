@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,12 +38,8 @@
 #include <pthread.h>
 #include <omp.h>
 
-#include <utils/lookup_tables.h>
-
-#include <impl/error_handling.impl.h>
-
-// horrible hack incoming
-irt_tls_key irt_g_error_key = 0;
+#include "irt_all_impls.h"
+#include "standalone.h"
 
 #define TEST_ELEMS 77
 #define TEST_BUCKETS 111
@@ -57,8 +53,8 @@ typedef struct _irt_lookup_test {
 	struct _irt_lookup_test* next_lt;
 } irt_lookup_test;
 
-IRT_DEFINE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS);
-IRT_CREATE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS);
+IRT_DEFINE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS)
+IRT_CREATE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS)
 
 uint32 num = 0;
 #pragma omp threadprivate(num)

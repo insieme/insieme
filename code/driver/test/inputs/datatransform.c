@@ -47,9 +47,22 @@ int main() {
 	struct Aos* aos = (struct Aos*)malloc(sizeof(struct Aos) * 100);
 
 	for(int i = 0; i < 100; ++i) {
-		int a1 = aos[i].a;
-		double c1 = aos[i].c;
+		struct Aos init;
+		init.a = 0;
+		init.b = 1.0f;
+		init.c = 2.0;
+
+		aos[i] = init;
 	}
 
+	for(int i = 0; i < 100; ++i) {
+		int a1;
+		a1 = aos[i].a;
+//		double c1 = aos[i].c; probably translated wrong by the frontend (compositeMemberAccess) and therefore not handled
+		aos[i].b = (float)i;
+	}
+
+	struct Aos* aos1 = &(aos[15]);
+	struct Aos* aos2 = aos + 3;
 	free(aos);
 }

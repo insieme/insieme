@@ -45,29 +45,11 @@
 
 //#define IRT_VERBOSE 1
 
-#if defined(_WIN32) || defined(_GEMS_SIM)
-#define IRT_SIG_ERR SIGABRT
-#define IRT_SIG_INTERRUPT SIGINT
-#else
-#define IRT_SIG_ERR SIGUSR1
-#define IRT_SIG_INTERRUPT SIGUSR2
-#endif
 /* ------------------------------ data structures ----- */
 
 typedef enum _irt_errcode {
-	IRT_ERR_NONE,				// no error
-	IRT_ERR_IO,					// I/O error
-	IRT_ERR_INIT,				// error related to initialization
-	IRT_ERR_INTERNAL,			// internal error caused by runtime system
-	IRT_ERR_OVERFLOW,			// overflow of an internal IR buffer
-	IRT_ERR_APP,				// error caused by the user application running on the IRT
-	IRT_ERR_OCL,				// error caused by the opencl runtime system
-	IRT_ERR_INSTRUMENTATION,	// error related to the instrumentation system
-	IRT_ERR_INVALIDARGUMENT,	// error caused by calls to irt functions with invalid arguments
-	IRT_ERR_HW_INFO,			// error caused by requesting hardware information that is not available
-	IRT_ERR_OMPP,			    // error caused by OpenMP+ optimizations 
-	IRT_ERR_BLOB_CONTAINER,		// error caused by the blobs container
-	//NOTE: When adding a new error code here also update the list of strings in error_handling.impl.h
+#define IRT_ERROR(_err) _err,
+#include "irt_errors.def"
 } irt_errcode;
 
 struct _irt_error {
@@ -75,83 +57,77 @@ struct _irt_error {
 	uint32 additional_bytes;
 };
 
-
 /* ------------------------------ operations ----- */
 
 #if !defined(NDEBUG) || defined(IRT_VERBOSE) || defined(IRT_ENABLE_ASSERTS)
-#ifdef _GEMS_SIM
-	/* lcc does not support macro called with 0 variadic arguments. The solution is to make the last named 
-	 * argument part of the variadic arguments in a way to have always at least one variadic argument */
-
-	#define IRT_ASSERT(__condition, __errcode, /*__message,*/ ...) \
-	/* All following variadic macros used to have an explicit "message" parameter" which has been removed for this ^^ very reason */ \
-	if(!(__condition)) { \
-		fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-		irt_throw_string_error(__errcode, __VA_ARGS__); \
-	}
-	#define IRT_WARN(/*__message,*/ ...) { \
-		fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
-		fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); \
-	}
-	#define IRT_INFO(...) { \
-		printf(__VA_ARGS__); fflush(stdout); \
-	}
-	#ifdef IRT_VERBOSE
-	#define IRT_DEBUG_ONLY(__code__) __code__
-	#define IRT_DEBUG(...) { \
-		printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-		printf(__VA_ARGS__); printf("\n"); fflush(stdout); \
-	}
+	#ifdef _GEMS_SIM
+		/* lcc does not support macro called with 0 variadic arguments. The solution is to make the last named
+		 * argument part of the variadic arguments in a way to have always at least one variadic argument */
+		#define IRT_ASSERT(__condition, __errcode, /*__message,*/ ...) \
+		/* All following variadic macros used to have an explicit "message" parameter" which has been removed for this ^^ very reason */ \
+		if(!(__condition)) { \
+			fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
+			irt_throw_string_error(__errcode, __VA_ARGS__); \
+		}
+		#define IRT_WARN(/*__message,*/ ...) { \
+			fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
+			fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); fflush(stderr); \
+		}
+		#define IRT_INFO(...) { \
+			printf(__VA_ARGS__); fflush(stdout); \
+		}
+		#ifdef IRT_VERBOSE
+			#define IRT_DEBUG_ONLY(__code__) __code__
+			#define IRT_DEBUG(...) { \
+				printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
+				printf(__VA_ARGS__); printf("\n"); fflush(stdout); \
+			}
+		#else
+			#define IRT_DEBUG_ONLY(__code__)
+			#define IRT_DEBUG(...)
+		#endif
 	#else
-	#define IRT_DEBUG_ONLY(__code__)
-	#define IRT_DEBUG(...)
+		#define IRT_ASSERT(__condition, __errcode, ...) \
+		if(!(__condition)) { \
+			fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
+			irt_throw_string_error(__errcode, __VA_ARGS__); \
+		}
+		#define IRT_WARN(...) { \
+			fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
+			fprintf(stderr, __VA_ARGS__); fflush(stderr); \
+		}
+		#define IRT_INFO(...) { \
+			printf(__VA_ARGS__); fflush(stdout); \
+		}
+		#ifdef IRT_VERBOSE
+			#define IRT_DEBUG_ONLY(__code__) __code__
+			#define IRT_DEBUG(...) { \
+				printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
+				printf(__VA_ARGS__); fflush(stdout); \
+			}
+		#else
+			#define IRT_DEBUG_ONLY(__code__)
+			#define IRT_DEBUG(...)
+		#endif
 	#endif
 #else
-#define IRT_ASSERT(__condition, __errcode, ...) \
-if(!(__condition)) { \
-	fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-	irt_throw_string_error(__errcode, __VA_ARGS__); \
-}
-#define IRT_WARN(...) { \
-	fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
-	fprintf(stderr, __VA_ARGS__); fflush(stderr); \
-}
-#define IRT_INFO(...) { \
-	printf(__VA_ARGS__); fflush(stdout); \
-}
-#ifdef IRT_VERBOSE
-#define IRT_DEBUG_ONLY(__code__) __code__
-#define IRT_DEBUG(...) { \
-	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-	printf(__VA_ARGS__); fflush(stdout); \
-}
-#else
-#define IRT_DEBUG_ONLY(__code__)
-#define IRT_DEBUG(...)
-#endif
-#endif
-#else
-#define IRT_DEBUG_PRINTS_OFF
-#define IRT_ASSERT(__condition, __errcode, ...) if(__condition);
-#define IRT_WARN(...)
-#define IRT_INFO(...)
-#define IRT_DEBUG(...)
-#define IRT_DEBUG_ONLY(__code__)
+	#define IRT_DEBUG_PRINTS_OFF
+	#define IRT_ASSERT(__condition, __errcode, ...) if(__condition);
+	#define IRT_WARN(...)
+	#define IRT_INFO(...)
+	#define IRT_DEBUG(...)
+	#define IRT_DEBUG_ONLY(__code__)
 #endif
 
 #ifdef IRT_VERBOSE
-#define IRT_VERBOSE_ONLY(__code) __code
+	#define IRT_VERBOSE_ONLY(__code) __code
 #else
-#define IRT_VERBOSE_ONLY(__code)
+	#define IRT_VERBOSE_ONLY(__code)
 #endif
 
 void irt_throw_string_error(irt_errcode code, const char* message, ...);
-void irt_throw_generic_error(irt_error* error);
 
 const char* irt_errcode_string(irt_errcode code);
 void irt_print_error_info(FILE* target, irt_error* error);
-
-void irt_error_handler(int signal);
-
 
 #endif // ifndef __GUARD_ERROR_HANDLING_H

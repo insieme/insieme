@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -215,7 +215,23 @@ insieme::core::ProgramPtr  VariadicArgumentsExtension::IRVisit(insieme::core::Pr
 	core::NodeMap replacements;
 	replacements [ arrayVaList ]  = vaListTy;
 	replacements [ vectorVaList ] = vaListTy;
-	prog = core::transform::replaceAllGen (mgr, prog, replacements, false);
+	prog = core::transform::replaceAllGen (mgr, prog, replacements, core::transform::globalReplacement);
+
+	// collect and remove wrongly typed vector inits, happens when using var. args in c++
+	auto vectorInitCleanup = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{
+				if (core::CallExprPtr call = node.isa<core::CallExprPtr>()){
+					core::IRBuilder builder (node->getNodeManager());
+					const auto& gen = node->getNodeManager().getLangBasic();
+
+					if (core::analysis::isCallOf(call, gen.getVectorInitUniform())){
+						if (call->getType() == vaListTy)
+							return call[0];
+					}
+				}
+
+				return node;
+			});
+	prog = vectorInitCleanup.map(prog);
 
 	// cleanup the not needed casts
 	auto castRemover = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node)-> core::NodePtr{

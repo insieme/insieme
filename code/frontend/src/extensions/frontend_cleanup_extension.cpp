@@ -240,11 +240,13 @@ namespace {
 		
 
 	boost::optional<std::string> FrontendCleanupExtension::isPrerequisiteMissing(ConversionSetup& setup) const {
-		//second-last
+		// last or second-last
 		auto it = setup.getExtensions().crbegin();
-		std::advance(it, 1);
 		if( it->get() != this ) {
-			return boost::optional<std::string>("FrontendCleanup needs to be the second-last Extension");
+			std::advance(it, 1);
+			if( it->get() != this ) {
+				return boost::optional<std::string>("FrontendCleanup needs to be the last or second-to-last Extension");
+			}
 		}
 
 		//prerequisites are met - no prerequisite is missing
@@ -613,7 +615,7 @@ namespace {
                 //the name of the var everywhere..
                 core::DeclarationStmtPtr newDecl = core::transform::replaceAllGen(convFact.getNodeManager(), decl,
                                                                 decl->getInitialization(),
-                                                                builder.undefinedVar(var->getType()), true);
+                                                                builder.undefinedVar(var->getType()));
                 //this is our new declaration statement
                 newStmts[0] = newDecl;
                 //if it is a ctor call we have to call a deref operation

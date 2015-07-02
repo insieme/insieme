@@ -41,7 +41,6 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/annotations/data_annotations.h"
-
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
 #include "insieme/utils/config.h"
@@ -58,7 +57,7 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(DatatransformTest, SimplePragma) {
-	Logger::get(std::cerr, ERROR);
+	Logger::get(std::cerr, INFO);
 
 	core::NodeManager manager;
 
@@ -74,20 +73,6 @@ TEST(DatatransformTest, SimplePragma) {
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);
 	EXPECT_TRUE(manager.contains(program));
-
-	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-
-	LOG(INFO) << "Printing the IR: " << pp;
-
-	auto semantic = core::checks::check(program);
-	auto warnings = semantic.getWarnings();
-	std::sort(warnings.begin(), warnings.end());
-	for_each(warnings, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
-
-	auto errors = semantic.getErrors();
-	EXPECT_EQ(0u, errors.size()) ;
 
 	bool foundAnnot = false;
 
@@ -108,5 +93,17 @@ TEST(DatatransformTest, SimplePragma) {
 	dl::AosToSoa ats(p, dl::findPragma);
 	ats.transform();
 
-	dumpPretty(p);
+	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+	LOG(INFO) << "Printing the IR: " << pp;
+
+	auto semantic = core::checks::check(program);
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const core::checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size()) ;
 }

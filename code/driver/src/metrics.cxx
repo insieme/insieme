@@ -106,31 +106,31 @@ int main(int argc, char** argv) {
 	auto steps = tf::getTestSteps(options);
 
 	//define some conflicting steps, so either c or c++ is executed (not both of them)
-	conflictingSteps["insiemecc_c++_sema"]="insiemecc_c_sema";
-	conflictingSteps["insiemecc_run_c++_check"]="insiemecc_run_c_check";
-	conflictingSteps["insiemecc_run_c++_execute"]="insiemecc_run_c_execute";
-	conflictingSteps["insiemecc_run_c++_compile"]="insiemecc_run_c_compile";
-	conflictingSteps["insiemecc_run_c++_convert"]="insiemecc_run_c_convert";
-	conflictingSteps["insiemecc_seq_c++_check"]="insiemecc_seq_c_check";
-	conflictingSteps["insiemecc_seq_c++_compile"]="insiemecc_seq_c_compile";
-	conflictingSteps["insiemecc_seq_c++_convert"]="insiemecc_seq_c_convert";
-	conflictingSteps["insiemecc_seq_c++_execute"]="insiemecc_seq_c_execute";
-	conflictingSteps["ref_c++_check"]="ref_c_check";
-	conflictingSteps["ref_c++_compile"]="ref_c_compile";
-	conflictingSteps["ref_c++_execute"]="ref_c_execute";
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_CPP_SEMA] = itc::TEST_STEP_INSIEMECC_C_SEMA;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_CPP_CHECK] = itc::TEST_STEP_INSIEMECC_RUN_C_CHECK;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE] = itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_CPP_COMPILE] = itc::TEST_STEP_INSIEMECC_RUN_C_COMPILE;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_CPP_CONVERT] = itc::TEST_STEP_INSIEMECC_RUN_C_CONVERT;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_CPP_CHECK] = itc::TEST_STEP_INSIEMECC_SEQ_C_CHECK;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE] = itc::TEST_STEP_INSIEMECC_SEQ_C_COMPILE;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT] = itc::TEST_STEP_INSIEMECC_SEQ_C_CONVERT;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE] = itc::TEST_STEP_INSIEMECC_SEQ_C_EXECUTE;
+	conflictingSteps[itc::TEST_STEP_REF_CPP_CHECK] = itc::TEST_STEP_REF_C_CHECK;
+	conflictingSteps[itc::TEST_STEP_REF_CPP_COMPILE] = itc::TEST_STEP_REF_C_COMPILE;
+	conflictingSteps[itc::TEST_STEP_REF_CPP_EXECUTE] = itc::TEST_STEP_REF_C_EXECUTE;
 
-	conflictingSteps["insiemecc_c_sema"]="insiemecc_c++_sema";
-	conflictingSteps["insiemecc_run_c_check"]="insiemecc_run_c++_check";
-	conflictingSteps["insiemecc_run_c_execute"]="insiemecc_run_c++_execute";
-	conflictingSteps["insiemecc_run_c_compile"]="insiemecc_run_c++_compile";
-	conflictingSteps["insiemecc_run_c_convert"]="insiemecc_run_c++_convert";
-	conflictingSteps["insiemecc_seq_c_check"]="insiemecc_seq_c++_check";
-	conflictingSteps["insiemecc_seq_c_compile"]="insiemecc_seq_c++_compile";
-	conflictingSteps["insiemecc_seq_c_convert"]="insiemecc_seq_c++_convert";
-	conflictingSteps["insiemecc_seq_c_execute"]="insiemecc_seq_c++_execute";
-	conflictingSteps["ref_c_check"]="ref_c++_check";
-	conflictingSteps["ref_c_compile"]="ref_c++_compile";
-	conflictingSteps["ref_c_execute"]="ref_c++_execute";
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_C_SEMA] = itc::TEST_STEP_INSIEMECC_CPP_SEMA;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_C_CHECK] = itc::TEST_STEP_INSIEMECC_RUN_CPP_CHECK;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE] = itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_C_COMPILE] = itc::TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_RUN_C_CONVERT] = itc::TEST_STEP_INSIEMECC_RUN_CPP_CONVERT;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_C_CHECK] = itc::TEST_STEP_INSIEMECC_SEQ_CPP_CHECK;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_C_COMPILE] = itc::TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_C_CONVERT] = itc::TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT;
+	conflictingSteps[itc::TEST_STEP_INSIEMECC_SEQ_C_EXECUTE] = itc::TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE;
+	conflictingSteps[itc::TEST_STEP_REF_C_CHECK] = itc::TEST_STEP_REF_CPP_CHECK;
+	conflictingSteps[itc::TEST_STEP_REF_C_COMPILE] = itc::TEST_STEP_REF_CPP_COMPILE;
+	conflictingSteps[itc::TEST_STEP_REF_C_EXECUTE] = itc::TEST_STEP_REF_CPP_EXECUTE;
 
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
@@ -146,29 +146,31 @@ int main(int argc, char** argv) {
 
 	// setup highlighted tests:
 	std::set<std::string> highlight;
-	highlight.insert("insiemecc_seq_c_execute");
-	highlight.insert("insiemecc_seq_c++_execute");
-	highlight.insert("ref_c++_execute");
-	highlight.insert("ref_c_execute");
+	highlight.insert(itc::TEST_STEP_INSIEMECC_SEQ_C_EXECUTE);
+	highlight.insert(itc::TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE);
+	highlight.insert(itc::TEST_STEP_REF_CPP_EXECUTE);
+	highlight.insert(itc::TEST_STEP_REF_C_EXECUTE);
 
 	for(int i=1;i<options.statThreads;i*=2){
-		highlight.insert(std::string("insiemecc_run_c_execute_")+std::to_string(i));
-		highlight.insert(std::string("insiemecc_run_c++_execute_")+std::to_string(i));
-		highlight.insert(std::string("ref_c_execute_")+std::to_string(i));
-		highlight.insert(std::string("ref_c++_execute_")+std::to_string(i));
+		std::string suffix = "_" + std::to_string(i);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE + suffix);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + suffix);
+		highlight.insert(itc::TEST_STEP_REF_C_EXECUTE + suffix);
+		highlight.insert(itc::TEST_STEP_REF_CPP_EXECUTE + suffix);
 	}
-	highlight.insert(std::string("insiemecc_run_c_execute_")+std::to_string(options.statThreads));
-	highlight.insert(std::string("insiemecc_run_c++_execute_")+std::to_string(options.statThreads));
-	highlight.insert(std::string("ref_c_execute_")+std::to_string(options.statThreads));
-	highlight.insert(std::string("ref_c++_execute_")+std::to_string(options.statThreads));
+	std::string statThreadsSuffix = "_" + std::to_string(options.statThreads);
+	highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE + statThreadsSuffix);
+	highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + statThreadsSuffix);
+	highlight.insert(itc::TEST_STEP_REF_C_EXECUTE + statThreadsSuffix);
+	highlight.insert(itc::TEST_STEP_REF_CPP_EXECUTE + statThreadsSuffix);
 
 	if(options.scheduling){
-		highlight.insert(std::string("insiemecc_run_c_execute_dyn_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("insiemecc_run_c++_execute_dyn_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("insiemecc_run_c_execute_stat_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("insiemecc_run_c++_execute_stat_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("insiemecc_run_c_execute_guid_")+std::to_string(options.statThreads));
-		highlight.insert(std::string("insiemecc_run_c++_execute_guid_")+std::to_string(options.statThreads));
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE + "_stat" + statThreadsSuffix);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + "_stat" + statThreadsSuffix);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE + "_dyn" + statThreadsSuffix);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + "_dyn" + statThreadsSuffix);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_C_EXECUTE + "_guid" + statThreadsSuffix);
+		highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + "_guid" + statThreadsSuffix);
 	}
 
 	//check if backup file exists, read results

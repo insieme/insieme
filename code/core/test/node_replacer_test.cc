@@ -97,36 +97,31 @@ TEST(NodeReplacer, SkipperTest) {
 
 	NodePtr mod;
 
-	mod = transform::replaceAll(manager, typeC, typeA, typeD, true, [&](const NodePtr& node){
-                                if(node==typeA)
-                                    return true;
-                                return false;
-                             });
+	mod = transform::replaceAll(manager, typeC, typeA, typeD, [&](const NodePtr& node) {
+		if(node==typeA) return transform::ReplaceAction::Prune;
+		return transform::ReplaceAction::Process;
+	});
 	EXPECT_EQ("C<A,B,A>", toString(*mod));
 
-	mod = transform::replaceAll(manager, typeC, typeA, typeD, true, [&](const NodePtr& node){
-                                if(node==typeB)
-                                    return true;
-                                return false;
-                             });
+	mod = transform::replaceAll(manager, typeC, typeA, typeD, [&](const NodePtr& node) {
+		if(node==typeB) return transform::ReplaceAction::Prune;
+		return transform::ReplaceAction::Process;
+	});
 	EXPECT_EQ("C<D,B,D>", toString(*mod));
 
 	NodeMap nodemap;
 	nodemap[typeA] = typeB;
 	nodemap[typeB] = typeC;
-	mod = transform::replaceAll(manager, typeC, nodemap, true, [&](const NodePtr& node){
-                                if(node==typeA || node==typeB)
-                                    return true;
-                                return false;
-                             });
+	mod = transform::replaceAll(manager, typeC, nodemap, [&](const NodePtr& node){
+		if(node==typeA || node==typeB) return transform::ReplaceAction::Prune;
+		return transform::ReplaceAction::Process;
+	});
 	EXPECT_EQ("C<A,B,A>", toString(*mod));
 
-	mod = transform::replaceAll(manager, typeC, typeB, typeD, true, [&](const NodePtr& node){
-                                if(node==typeA)
-                                    return true;
-                                return false;
-                             });
-
+	mod = transform::replaceAll(manager, typeC, typeB, typeD, [&](const NodePtr& node){
+		if(node==typeA) return transform::ReplaceAction::Prune;
+		return transform::ReplaceAction::Process;
+    });
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 
 }
@@ -297,7 +292,7 @@ TEST(NodeReplacer, ReplaceVariable) {
 
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool> v2 =  var(false)");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool> v2 = ( var(false))");
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(bool");
 
 }
@@ -373,10 +368,10 @@ TEST(NodeReplacer, RecVarsReplacement) {
 /* fixed by functor passed to replaceVarsRecutsiveGen
 	NodePtr kernelInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
 			basic.getTypeLiteral(kernelReplacementTy->getElementType())));
-	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement, false);
+	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement, core::transform::globalReplacement);
 	NodePtr clMemInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
 			basic.getTypeLiteral(clMemReplacementTy->getElementType())));
-	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement, false);
+	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement, core::transform::globalReplacement);
 
 	std::cout << ":(" << std::endl << printer::PrettyPrinter(stmt2) << std::endl;;
 	std::cout << "(N)" << std::endl << stmt2 << std::endl;*/
@@ -385,8 +380,8 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v0 =\
-  var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>));");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<ref<array<real<4>,1>>> v1 =  var(undefined(type<ref<array<real<4>,1>>>))");
+ ( var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>)));");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<ref<array<real<4>,1>>> v1 = ( var(undefined(type<ref<array<real<4>,1>>>)))");
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "fun(ref<(ref<array<real<4>,1>>)> v1, ref<array<real<4>,1>> v2)");
 
 }
@@ -423,7 +418,7 @@ TEST(NodeReplacer, ReplaceAllMapScope) {
 	replacements.insert(std::make_pair(x, c4));
 	replacements.insert(std::make_pair(y, c6));
 
-	auto inner_not_replaced = transform::replaceAll(mgr, addresses[0].getAddressedNode(), replacements, true);
+	auto inner_not_replaced = transform::replaceAll(mgr, addresses[0].getAddressedNode(), replacements);
 
 	EXPECT_TRUE(analysis::contains(inner_not_replaced, l));
 	EXPECT_FALSE(analysis::contains(inner_not_replaced, x));
@@ -432,7 +427,8 @@ TEST(NodeReplacer, ReplaceAllMapScope) {
 	EXPECT_TRUE(analysis::contains(inner_not_replaced, c4));
 	EXPECT_TRUE(analysis::contains(inner_not_replaced, c6));
 
-	auto inner_replaced = transform::replaceAll(mgr, addresses[0].getAddressedNode(), replacements, false);
+	auto inner_replaced = 
+		transform::replaceAll(mgr, addresses[0].getAddressedNode(), replacements, transform::globalReplacement);
 
 	EXPECT_FALSE(analysis::contains(inner_replaced, l));
 	EXPECT_FALSE(analysis::contains(inner_replaced, x));

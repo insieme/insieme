@@ -69,23 +69,24 @@ StatementPtr aosToTaosAllocTypeUpdate(const StatementPtr& stmt) {
 AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder) : DatalayoutTransformer(toTransform, candidateFinder) {
 	IRBuilder builder(mgr);
 	genericTileSize = builder.variableIntTypeParam('t');
+	genericTileSizeExpr = builder.uintLit(84537493);
 }
 
 void AosToTaos::transform() {
 	IRBuilder builder(mgr);
 
 	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
+	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
+		StructTypePtr oldStructType = toReplaceList.second.as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
-		ExpressionMap nElems;
+		std::map<StatementPtr, ExpressionPtr> nElems;
 		std::map<NodeAddress, NodePtr> replacements;
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
@@ -93,8 +94,8 @@ void AosToTaos::transform() {
 			oldVar = oldVar.switchRoot(toTransform);
 
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
-					builder.refType(builder.arrayType(newStructType))).as<TypePtr>();
-//std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+					builder.arrayType(newStructType)).as<TypePtr>();
+
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -156,9 +157,9 @@ void AosToTaos::transform() {
 		doReplacements(kernelVarReplacements, replacements, aosToTaosAllocTypeUpdate);
 
 		NodeMap tilesize;
-		tilesize[builder.uintLit(84537493)] = builder.uintLit(64);
+		tilesize[genericTileSizeExpr] = builder.uintLit(64);
 		tilesize[genericTileSize] = builder.concreteIntTypeParam(64);
-		toTransform = core::transform::replaceAll(mgr, toTransform, tilesize, false);
+		toTransform = core::transform::replaceAll(mgr, toTransform, tilesize, core::transform::globalReplacement);
 	}
 
 	// remove all inserted compound expressions
@@ -180,6 +181,28 @@ StructTypePtr AosToTaos::createNewType(core::StructTypePtr oldType) {
 	return builder.structType(newMember);
 }
 
+ExpressionPtr AosToTaos::updateAccess(const ExpressionPtr& oldAccess, const std::pair<ExpressionAddress, StatementPtr>& varInInit,
+		const StringValuePtr& fieldName) {
+	// replace accesses to old variable with accesses to field in new variable
+	IRBuilder builder(mgr);
+	ExpressionMap localReplacement;
+	localReplacement[varInInit.first] = fieldName ?
+			builder.accessMember(varInInit.second.as<ExpressionPtr>(), fieldName) : varInInit.second.as<ExpressionPtr>();
+
+	core::pattern::TreePattern arrayAccess = pattern::aT(pirp::arrayRefElem1D(pattern::any, var("idx", pattern::any)));
+	pattern::MatchOpt match = arrayAccess.matchPointer(oldAccess);
+
+	if(match) {
+		// replace index expression with one divided by tilesize
+		// it has to be devidable, otherwise it won't produce correct code
+		// TODO add check
+		ExpressionPtr idxExpr = match.get()["idx"].getValue().as<ExpressionPtr>();
+		localReplacement[idxExpr] = builder.div(idxExpr, genericTileSizeExpr);
+	}
+
+	return core::transform::fixTypesGen(mgr, oldAccess, localReplacement, true);
+}
+
 StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
 		const StructTypePtr& newStructType,	const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
@@ -189,10 +212,10 @@ StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, 
 
 	allDecls.push_back(decl);
 
-	NodeMap inInitReplacementsInCaseOfNovarInInit;
-	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, newStructType);
+//	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
 	// divide initialization size by tilesize
-	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, genericTileSizeExpr);
 
 	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(),
 		inInitReplacementsInCaseOfNovarInInit)));
@@ -201,17 +224,17 @@ StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, 
 }
 
 StatementList AosToTaos::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+		const StatementPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
-	NodeMap inInitReplacementsInCaseOfNovarInInit;
-	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+	NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, newStructType);
+//	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
 	// divide initialization size by tilesize
-	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, builder.uintLit(84537493));
+	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, genericTileSizeExpr);
 
-	allAssigns.push_back(builder.assign(newVar, updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit)));
+	allAssigns.push_back(builder.assign(newVar.as<ExpressionPtr>(), updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit)));
 
 	return allAssigns;
 }
@@ -226,7 +249,7 @@ StatementPtr AosToTaos::generateMarshalling(const ExpressionAddress& oldVar, con
 	VariablePtr tiledIterator = builder.variable(boundaryType);
 
 	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
-	ExpressionPtr tilesize = builder.uintLit(84537493);
+	ExpressionPtr tilesize = genericTileSizeExpr;
 
 	for(NamedTypePtr memberType : structType->getElements()) {
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
@@ -256,7 +279,7 @@ StatementPtr AosToTaos::generateUnmarshalling(const ExpressionAddress& oldVar, c
 	VariablePtr tiledIterator = builder.variable(boundaryType);
 
 	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
-	ExpressionPtr tilesize = builder.uintLit(84537493);
+	ExpressionPtr tilesize = genericTileSizeExpr;
 
 	for(NamedTypePtr memberType : structType->getElements()) {
 		ExpressionPtr globalIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.add(builder.mul(iterator, tilesize), tiledIterator));
@@ -296,30 +319,28 @@ StatementList AosToTaos::generateDel(const StatementAddress& stmt, const Express
 	return deletes;
 }
 
-ExpressionPtr AosToTaos::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
+ExpressionPtr AosToTaos::generateNewAccesses(const ExpressionAddress& oldVar, const StatementPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
 		const ExpressionPtr& oldStructAccess) {
 	IRBuilder builder(mgr);
-	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar, false);
+	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar.as<ExpressionPtr>(), false);
 
 	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
-	ExpressionPtr tilesize = builder.uintLit(84537493);
-	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
-	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
+	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, genericTileSizeExpr));
+	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, genericTileSizeExpr));
 
 	ExpressionPtr vectorAccess = refAccess(newStructAccess, arrayIdx, member, vectorIdx);
 
 	return vectorAccess;
 }
 
-ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const core::StructTypePtr& newStructType,
+ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, const StatementPtr& newVar, const core::StructTypePtr& newStructType,
 		const ExpressionPtr& index, const ExpressionPtr& oldStructAccess) {
 	IRBuilder builder(mgr);
-	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar, false).as<ExpressionPtr>();
+	ExpressionPtr newStructAccess = core::transform::fixTypesGen(mgr, oldStructAccess, oldVar, newVar.as<ExpressionPtr>(), false).as<ExpressionPtr>();
 
 	// 84537493 is a placeholder for tilesize. Hopefully nobody else is going to use this number...
-	ExpressionPtr tilesize = builder.uintLit(84537493);
-	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, tilesize));
-	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, tilesize));
+	ExpressionPtr arrayIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.div(index, genericTileSizeExpr));
+	ExpressionPtr vectorIdx = builder.castExpr(builder.getLangBasic().getUInt8(), builder.mod(index, genericTileSizeExpr));
 
 	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 	for(NamedTypePtr memberType : newStructType->getElements()) {
@@ -336,122 +357,9 @@ ExpressionPtr AosToTaos::generateByValueAccesses(const ExpressionPtr& oldVar, co
 const ExprAddressMap AosToTaos::replaceStructsInJobs(ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
 			NodePtr& toTransform, const pattern::TreePattern& allocPattern, std::map<NodeAddress, NodePtr>& replacements) {
 
-//	ExpressionSet varsToPropagate;
-//	for(std::pair<ExpressionPtr, ExpressionPtr> oldToNew : varReplacements) {
-//		varsToPropagate.insert(oldToNew.first);
-//		std::cout << "ölkjasfdökljsfda " << oldToNew.first  << " -- " << oldToNew.second << std::endl;
-////assert_fail();
-//	}
-
 	ParSecTransform<AosToTaos> psa(toTransform, varReplacements, replacements, newStructType, oldStructType);
 	psa.transform();
 	return psa.getKernelVarReplacements();
-#if 0
-	ExpressionMap jobReplacements;
-	IRBuilder builder(mgr);
-
-	core::visitBreadthFirst(toTransform, [&](const ExpressionAddress& expr) {
-		// adding arguments which use a tuple member expression as argument which's tuple member has been replaced already to replace list
-		if(CallExprAddress call = expr.isa<CallExprAddress>()) {
-			if(!core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getTupleMemberAccess()))
-				return;
-std::cout << "\nat the tuple member access\n";
-
-			// check if tuple argument has a member which will be updated
-			ExpressionPtr oldRootVar = getRootVariable(call, call->getArgument(0)).as<ExpressionPtr>();
-			auto newRootVarIter = structures.find(oldRootVar);
-
-			if(newRootVarIter != structures.end()) { // tuple has been updated, check if it was the current field
-				ExpressionPtr newRootVar = newRootVarIter->second;
-
-				RefTypePtr newType = getBaseType(newRootVar->getType()).as<TupleTypePtr>()->getElement(
-						call->getArgument(1).as<LiteralPtr>()->getValueAs<unsigned>()).as<RefTypePtr>();
-				TypePtr oldType = call->getArgument(2)->getType().as<GenericTypePtr>()->getTypeParameter(0);
-std::cout << "Creating var of new type: " << newType << std::endl;
-
-				// check if and update is needed
-				if(newType == oldType)
-					return;
-
-				ExpressionAddress argument = call.getParentAddress(2).isa<CallExprAddress>();
-				CallExprAddress parent = argument.getParentAddress(1).isa<CallExprAddress>();
-				if(!parent)
-					return;
-
-				LambdaExprAddress lambda = parent->getFunctionExpr().isa<LambdaExprAddress>();
-
-				if(!lambda)
-					return;
-
-				for_range(make_paired_range(parent->getArguments(), lambda->getLambda()->getParameters()->getElements()),
-						[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-					if(pair.first == argument) {// found the argument which will be updated
-						// create replacement for corresponding parameter
-						TypePtr newParamType = newType->getElementType().as<ArrayTypePtr>()->getElementType();
-						VariablePtr newParam = builder.variable(newParamType);
-
-						// add corresponding parameter to update list
-						jobReplacements[pair.second] = newParam;
-std::cout << ": \nAdding: " << *pair.second << " - " << newParamType << std::endl;
-					}
-				});
-			}
-		}
-
-		// propagating variables to be replaced through job expressions
-		if(JobExprPtr job = expr.isa<JobExprPtr>()) {
-			CallExprPtr parallelCall = job->getBody().isa<BindExprPtr>()->getCall();
-
-			if(!parallelCall)
-				return;
-
-			LambdaExprPtr parallelLambda = parallelCall->getFunctionExpr().isa<LambdaExprPtr>();
-			if(!parallelLambda)
-				return;
-
-			for_range(make_paired_range(parallelCall->getArguments(), parallelLambda->getParameterList()->getElements()),
-					[&](const std::pair<const ExpressionPtr, const VariablePtr>& pair) {
-std::cout << "Looking for " << pair.first << std::endl;
-				auto newArgIter = varReplacements.find(pair.first);
-				if(newArgIter != varReplacements.end()) {
-					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
-	std::cout << "Found in VARreplacements: " << pair.first << " -> " << jobReplacements[pair.second]->getType() << std::endl;
-				}
-
-				newArgIter = jobReplacements.find(pair.first);
-				if(newArgIter != jobReplacements.end()) {
-					jobReplacements[pair.second] = builder.variable(newArgIter->second->getType());
-	std::cout << "Found in jobREPLACEMENTS: " << pair.first << " -> " << jobReplacements[pair.second]->getType() << std::endl;
-				}
-			});
-		}
-	});
-
-	std::vector<StatementAddress> empty;
-
-	ExpressionMap nElems;
-std::cout << "\n---------------------------------------------------------------------\n\n";
-
-	//replace array accesses
-//	replaceAccesses(jobReplacements, newStructType, toTransform, empty, empty, replacements, structures);
-
-	updateCopyDeclarations(jobReplacements, newStructType, oldStructType, toTransform, replacements, structures);
-
-	// assignments to the entire struct should be ported to the new sturct members
-	replaceAssignments(jobReplacements, newStructType, oldStructType, toTransform, allocPattern, nElems, replacements);
-
-//	for(std::pair<NodeAddress, NodePtr> r : replacements) {
-//		std::cout << "\nFRom:\n";
-//		dumpPretty(r.first);
-//		std::cout << "\nTo: \n";
-//		dumpPretty(r.second);
-//		std::cout << "\n------------------------------------------------------------------------------------------------------------------------\n";
-//	}
-
-//	doReplacements(replacements, structures, aosToTaosAllocTypeUpdate);
-
-//	assert_fail();
-#endif
 }
 
 } // datalayout

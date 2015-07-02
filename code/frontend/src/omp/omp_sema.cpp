@@ -951,7 +951,8 @@ protected:
 		if(par->hasApproximate()) {
 			auto target = par->getApproximateTarget();
 			auto replacement = par->getApproximateReplacement();
-			auto approxLambda = core::transform::replaceAllGen(nodeMan, parLambda, target, replacement, false);
+			auto approxLambda = core::transform::replaceAllGen(
+				nodeMan, parLambda, target, replacement, core::transform::globalReplacement);
 			auto pick = build.pickVariant(ExpressionList{parLambda, approxLambda});
 			jobExp = build.jobExpr(range, pick.as<ExpressionPtr>());
 		} else {
@@ -963,6 +964,7 @@ protected:
         }
 
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+		insieme::annotations::migrateMetaInfos(stmtNode, parallelCall);
 		resultStmts.push_back(parallelCall);
 
 		return build.compoundStmt(resultStmts);

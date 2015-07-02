@@ -45,6 +45,15 @@ namespace core {
 namespace analysis {
 
 /**
+ * Gets all nodes of the given type in node which are free.
+ * A node is free if it is not enclosed by any node of the types listed in pruneNodes.
+ *
+ * @param stmt the statement to be tested
+ * @return list of free nodes
+ */
+NodeList getFreeNodes(const NodePtr& node, NodeType controlStmt, const vector<NodeType>& pruneNodes);
+
+/**
  * Tests whether the given expression is side effect free.
  * An expression is side effect free if it is composed only of calls to pure functions.
  *

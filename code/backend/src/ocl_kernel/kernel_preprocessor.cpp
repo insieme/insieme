@@ -587,19 +587,17 @@ namespace {
 
 
 				//change all var uses in the body of the lambda
-				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, parameters, false,
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, parameters,
 					[&](const core::NodePtr& ptr){
-						if(ptr.isa<core::ParametersPtr>())
-							return true;
-						return false;
+						if(ptr.isa<core::ParametersPtr>()) return core::transform::ReplaceAction::Prune;
+						return core::transform::ReplaceAction::Process;
 				}));
 				//modify the argument types of the lambda
-				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, arguments, false,
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, arguments,
 					[&](const core::NodePtr& ptr){
 						//skip the body
-						if(ptr.isa<core::CompoundStmtPtr>())
-							return true;
-						return false;
+						if(ptr.isa<core::CompoundStmtPtr>()) return core::transform::ReplaceAction::Prune;
+						return core::transform::ReplaceAction::Process;
 				}));
 
 				//lets build a new function type and replace it
@@ -612,7 +610,8 @@ namespace {
 				}
 				auto oldFunType = core.as<core::LambdaExprPtr>()->getFunctionType();
 				auto newFunType = builder.functionType(typeList, builder.getLangBasic().getUnit());
-				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, oldFunType, newFunType, false));
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, 
+					core, oldFunType, newFunType, core::transform::globalReplacement));
 
 
 				// float* gl = &g[0] where g is global => __global float* gl
@@ -662,7 +661,8 @@ namespace {
 				core = static_pointer_cast<const core::Statement>(core->substitute(manager, replacer));
 				//update the core. remove two params at the end
 				core::ParametersPtr newParams = builder.parameters(varList);
-				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, paramList, newParams, false));
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(
+					manager, core, paramList, newParams, core::transform::globalReplacement));
 
 				// ------------------------- Replace IR convert version to convert builtin --------------
 				//   decl ref<vector<uint<1>,4>> v34 = ( var(fun(vector<real<4>,4> v46, type<uint<1>> v47){
@@ -685,7 +685,8 @@ namespace {
 						nodeMap.insert(std::make_pair(call, convert));
 					}
 				});
-				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, nodeMap, false));
+				core = static_pointer_cast<const core::Statement>(
+					core::transform::replaceAll(manager, core, nodeMap, core::transform::globalReplacement));
 
 				//LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
 				//std::cout << "Core After: " << core::printer::PrettyPrinter(core) << std::endl;

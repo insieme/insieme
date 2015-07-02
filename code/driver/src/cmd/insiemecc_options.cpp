@@ -51,16 +51,16 @@ namespace cmd {
 	namespace bpo = boost::program_options;
 	namespace fe = insieme::frontend;
 
-    std::ostream& operator<<(std::ostream& out, const BackendHint& b) {
-        switch(b.backend) {
-            case BackendEnum::Runtime: out << "runtime"; break;
-            case BackendEnum::Sequential: out << "sequential"; break;
-            case BackendEnum::OpenCL: out << "opencl"; break;
-            case BackendEnum::Pthreads: out << "pthreads"; break;
-            default: out << "unknown";
+        std::ostream& operator<<(std::ostream& out, const BackendHint& b) {
+            switch(b.backend) {
+                case BackendEnum::Runtime: out << "runtime"; break;
+                case BackendEnum::Sequential: out << "sequential"; break;
+                case BackendEnum::OpenCL: out << "opencl"; break;
+                case BackendEnum::Pthreads: out << "pthreads"; break;
+                default: out << "unknown";
+            }
+            return out;
         }
-        return out;
-    }
 
 	detail::OptionParser Options::parse(const std::vector<std::string>& argv) {
 		return detail::OptionParser(argv);
@@ -82,7 +82,7 @@ namespace cmd {
 			;
 
 			//get information how the plugins are activated
-            res.job.registerExtensionFlags(desc);
+                        res.job.registerExtensionFlags(desc);
 		}
 
 
@@ -90,10 +90,10 @@ namespace cmd {
 
 			// add flag to description
 			if(symbol.empty()) {
-                desc.add_options()(name.c_str(), description);
-            } else {
-                desc.add_options()((name + "," + symbol).c_str(), description);
-            }
+                            desc.add_options()(name.c_str(), description);
+                        } else {
+                            desc.add_options()((name + "," + symbol).c_str(), description);
+                        }
 
 			// add parser step
 			//be careful what you pass to the lambda. This is a little
@@ -107,8 +107,8 @@ namespace cmd {
 
 		OptionParser::operator Options() {
 			// -- parsing -------------------------------------------
-            // remove the first entry: this should be some string like "insiemecc"
-            argv.erase(argv.begin());
+                        // remove the first entry: this should be some string like "insiemecc"
+                        argv.erase(argv.begin());
 
 			// define positional options (all options not being named)
 			bpo::positional_options_description pos;

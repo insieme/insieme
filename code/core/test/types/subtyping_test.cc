@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -568,6 +568,23 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<int<4>>>"), refAny);
 		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<ref<int<4>>>>"), refAny);
 
+	}
+
+	TEST(TypeUtils, TypeLiteralArgument) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TypePtr alpha = builder.genericType("alpha");
+		LiteralPtr alphaLit = builder.getTypeLiteral(alpha);
+
+		FunctionTypePtr ft = builder.functionType(toVector(alpha), builder.refType(alpha));
+		VariablePtr alphaVar = builder.variable(alphaLit->getType());
+		LambdaExprPtr lambda = builder.lambdaExpr(ft, toVector(alphaVar), builder.compoundStmt(builder.returnStmt(builder.refNew(alphaVar))));
+
+		LiteralPtr intLit = builder.getTypeLiteral(builder.getLangBasic().getInt4());
+		CallExprPtr call = builder.callExpr(builder.refType(intLit->getType()), lambda, intLit);
+
+		EXPECT_EQ(builder.refType(intLit->getType()), call->getType());
 	}
 
 } // end namespace types

@@ -77,20 +77,20 @@ namespace extensions {
 
     class PragmaHandler {
     protected:
-        typedef std::function<stmtutils::StmtWrapper (const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)> pragmaHandlerFunction;
+        typedef std::function<core::NodeList(const insieme::frontend::pragma::MatchObject&, core::NodeList)> pragmaHandlerFunction;
         pragmaHandlerFunction f;
         const std::string name;
         const std::string keyw;
         insieme::frontend::pragma::node* tok;
     public:
-        PragmaHandler( const std::string& pragmaNamespace,
+        PragmaHandler(const std::string& pragmaNamespace,
                         const std::string& keyword,
                         insieme::frontend::pragma::node const& re,
-                        std::function<stmtutils::StmtWrapper (const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)> lambda);
-        PragmaHandler( PragmaHandler& pragma );
-        PragmaHandler( const PragmaHandler& pragma );
+                        pragmaHandlerFunction lambda);
+        PragmaHandler(PragmaHandler& pragma);
+        PragmaHandler(const PragmaHandler& pragma);
         ~PragmaHandler();
-        const std::function<stmtutils::StmtWrapper (const insieme::frontend::pragma::MatchObject&, stmtutils::StmtWrapper)>  getFunction() {
+        const pragmaHandlerFunction getFunction() {
             return f;
         }
         const std::string& getName() const {

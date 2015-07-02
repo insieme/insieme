@@ -106,13 +106,25 @@ ExpressionPtr getBaseExpression(ExpressionPtr expr) {
 }
 
 /*
- * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ * Returns either the expression itself or the expression inside a nest of ref_deref calls
  */
 ExpressionAddress tryRemoveDeref(const ExpressionAddress& expr) {
 	NodeManager& mgr = expr->getNodeManager();
 	if(const CallExprAddress& call = expr.isa<CallExprAddress>()) {
 		if(mgr.getLangBasic().isRefDeref(call->getFunctionExpr()))
 			return tryRemoveDeref(call->getArgument(0));
+	}
+	return expr;
+}
+
+/*
+ * Returns either the expression itself or the expression inside a nest of ref_reinterpret calls
+ */
+ExpressionAddress tryRemoveReinterpret(const ExpressionAddress& expr) {
+	NodeManager& mgr = expr->getNodeManager();
+	if(const CallExprAddress& call = expr.isa<CallExprAddress>()) {
+		if(mgr.getLangBasic().isRefReinterpret(call->getFunctionExpr()))
+			return tryRemoveReinterpret(call->getArgument(0));
 	}
 	return expr;
 }
@@ -439,7 +451,7 @@ StatementPtr allocTypeUpdate(const StatementPtr& stmt, pattern::TreePattern& old
 	}
 
 	if(oldType)
-		return core::transform::replaceAllGen(mgr, stmt, oldType, newType, false);
+		return core::transform::replaceAllGen(mgr, stmt, oldType, newType, core::transform::globalReplacement);
 
 	return stmt;
 }
@@ -457,15 +469,17 @@ ExpressionAddress removeMemLocationCreators(const ExpressionAddress& expr) {
 }
 
 
-bool isRefStruct(ExpressionPtr expr, RefTypePtr structType) {
+bool isRefStruct(ExpressionPtr expr, TypePtr structType) {
 	TypePtr type = expr->getType();
 
-	if(!type.isa<RefTypePtr>())
-		return false;
+	if(RefTypePtr refType = type.isa<RefTypePtr>()) {
+		IRBuilder builder(expr->getNodeManager());
+		pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
 
-	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
+		return containsStructType.match(refType->getElementType());
+	}
 
-	return containsStructType.match(type);
+	return false;
 }
 
 bool containsType(const TypePtr& contains, const TypePtr type) {

@@ -54,6 +54,11 @@ core::ExpressionPtr getBaseExpression(core::ExpressionPtr expr);
 core::ExpressionAddress tryRemoveDeref(const core::ExpressionAddress& expr);
 
 /*
+ * Returns either the expression itself or the expression inside a nest of ref.deref calls
+ */
+core::ExpressionAddress tryRemoveReinterpret(const core::ExpressionAddress& expr);
+
+/*
  * Checks if the variable addressed in var is the same as the one declared in decl. Save to be used in programs with multiple scopes as long as var and decl
  * refer to the same base address
  */
@@ -93,7 +98,7 @@ core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress&
 /*
  * Returns true if the type of expr is of ref type and contains structType
  */
-bool isRefStruct(core::ExpressionPtr expr, core::RefTypePtr structType);
+bool isRefStruct(core::ExpressionPtr expr, core::TypePtr structType);
 
 /*
  * Returns true if contains contains type

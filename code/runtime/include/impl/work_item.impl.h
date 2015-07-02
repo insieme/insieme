@@ -106,7 +106,7 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%" PRId64 "..%" PRId64 " : %" PRId64, r->begin, r->end, r->step);
 }
 
-static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range, 
+static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range,
 		irt_wi_implementation* impl, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
@@ -123,15 +123,15 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
-		} else { 
-			wi->parameters = (irt_lw_data_item*)malloc(size); 
+		} else {
+			wi->parameters = (irt_lw_data_item*)malloc(size);
 		}
-		memcpy(wi->parameters, params, size); 
+		memcpy(wi->parameters, params, size);
 	} else {
 		wi->parameters = NULL;
 	}
 	wi->range = *range;
-	wi->state = IRT_WI_STATE_NEW;
+	irt_atomic_store(&wi->state, IRT_WI_STATE_NEW);
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
@@ -143,7 +143,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		wi->default_parallel_wi_count = self->cur_wi->default_parallel_wi_count;
 	}
 #ifdef IRT_ASTEROIDEA_STACKS
-	wi->stack_available = false;
+	irt_atomic_store(&wi->stack_available, false);
 #endif //IRT_ASTEROIDEA_STACKS
 	irt_inst_region_wi_init(wi);
 }
@@ -157,10 +157,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	}
 	//IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", (void*) retval, (void*) self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? (void*) self->cur_wi->num_active_children : NULL);
 	// create entry in event table
-	irt_wi_event_register *reg = _irt_get_wi_event_register();
-	reg->id.full = retval->id.full;
-	reg->id.cached = reg;
-	_irt_wi_event_register_only(reg);
+	irt_wi_event_register_create(retval->id);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
@@ -224,7 +221,7 @@ typedef struct __irt_wi_join_event_data {
 	irt_work_item* joining_wi;
 	irt_worker* join_to;
 } _irt_wi_join_event_data;
-bool _irt_wi_join_event(irt_wi_event_register* source_event_register, void *user_data) {
+bool _irt_wi_join_event(void *user_data) {
 	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN, join_data->joining_wi->id);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
@@ -236,8 +233,8 @@ void irt_wi_join(irt_work_item_id wi_id) {
 	irt_work_item* swi = self->cur_wi;
 	_irt_wi_join_event_data clo = {swi, self};
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
-	int64 occ = irt_wi_event_check_exists_and_register(wi_id, IRT_WI_EV_COMPLETED, &lambda);
-	if(occ==0) { // if not completed, suspend this wi
+	bool registered = irt_wi_event_handler_check_and_register(wi_id, IRT_WI_EV_COMPLETED, &lambda);
+	if(registered) { // if not completed, suspend this wi
 		irt_inst_region_end_measurements(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		_irt_worker_switch_from_wi(self, swi);
@@ -247,11 +244,39 @@ void irt_wi_join(irt_work_item_id wi_id) {
 
 // join all ---------------------------------------------------------------------------------------
 
-bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *user_data) {
+bool _irt_wi_join_all_event(void *user_data) {
 	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
-	// do not join wrong sink if multi-level optional wi in progress
-	// (signal received from inlined sibling child)
+	/*   I ... immediate WI    W ... real WI      A ... arbitrary WI
+	 *            A0
+	 *           /  \
+	 *          I0  W0
+	 *         /  \
+	 *        W1  W2
+	 * I0 is waiting in join_all, W0 triggered the event --> needs to be ignored 
+	 */
 	if(*(join_data->joining_wi->num_active_children) > 0) return true;
+
+	#ifdef IRT_ASTEROIDEA_STACKS
+	/* NOTE:
+	 * We have to wait for the stack to be available here in order to avoid a race condition,
+	 * which may arise in a small window of vulnerability in the following situation:
+	 *
+	 *   I ... immediate WI    W ... real WI      A ... arbitrary WI
+	 *            A0
+	 *           /  \
+	 *          I0  W0
+	 *         /
+	 *        W1
+	 *
+	 * I0 is suspended, waiting for all of it's children to complete using join_all.
+	 * Meanwhile W0 is started and got the stack of A0 for re-use (see function lwt_prepare in file minlwt.impl.h).
+	 * Now W1 ends and I0 could continue it's execution. We must not resume the execution here until W0
+	 * released the stack again after realizing that it shouldn't have taken it in the first place, since it has
+	 * an immediate sibling.
+	 */
+	while(!irt_atomic_bool_compare_and_swap(&join_data->joining_wi->stack_available, true, false, bool));
+	#endif //IRT_ASTEROIDEA_STACKS
+
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
 	IRT_DEBUG(" > %p releasing %p\n", (void*) irt_worker_get_current()->finalize_wi, (void*) join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
@@ -259,14 +284,8 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 }
 
 void irt_wi_join_all(irt_work_item* wi) {
-	/*IRT_DEBUG_ONLY(
-		irt_wi_event_register_id reg_id = ({ { wi->id.full }, NULL });
-		irt_wi_event_register *reg = irt_wi_event_register_table_lookup(reg_id);
-		if(reg->handler[IRT_WI_CHILDREN_COMPLETED] != NULL) irt_throw_string_error(IRT_ERR_INTERNAL, "join all registered before start");
-	);*/
-
 	// reset the occurrence count
-	irt_wi_event_set_occurrence_count(wi->id, IRT_WI_CHILDREN_COMPLETED, 0);
+	irt_wi_event_reset(wi->id, IRT_WI_CHILDREN_COMPLETED);
 	if(*(wi->num_active_children) == 0) {
 		return; // early exit
 	}
@@ -274,8 +293,8 @@ void irt_wi_join_all(irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
 	_irt_wi_join_event_data clo = {wi, self};
 	irt_wi_event_lambda lambda = { &_irt_wi_join_all_event, &clo, NULL };
-	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
-	if(occ==0) { // if not completed, suspend this wi
+	bool registered = irt_wi_event_handler_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
+	if(registered) { // if not completed, suspend this wi
 		irt_inst_region_end_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 #ifdef IRT_ASTEROIDEA_STACKS
@@ -283,9 +302,6 @@ void irt_wi_join_all(irt_work_item* wi) {
 		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
 		_irt_worker_switch_from_wi(self, wi);
-#ifdef IRT_ASTEROIDEA_STACKS
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false, bool), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
-#endif //IRT_ASTEROIDEA_STACKS
 		irt_inst_region_start_measurements(wi);
 	} else {
 		// check if multi-level immediate wi was signaled instead of current wi
@@ -318,17 +334,10 @@ void irt_wi_end(irt_work_item* wi) {
 		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
 	}
 
-	// update state, trigger completion event
-	wi->state = IRT_WI_STATE_DONE;
-	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
-
-	// remove from groups
-	for(uint32 g=0; g<wi->num_groups; ++g) {
-		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
-	}
+	// update state
+	irt_atomic_store(&wi->state, IRT_WI_STATE_DONE);
 
 	// cleanup
-	_irt_del_wi_event_register(wi->id);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	irt_inst_region_wi_finalize(wi);
 	
@@ -346,18 +355,58 @@ void irt_wi_end(irt_work_item* wi) {
 
 void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	lwt_recycle(worker->id.thread, wi);
-	// check for parent, if there, notify
+	// check for parent, if there, notify (only the first WI does not have a parent)
 	if(wi->parent_num_active_children) {
-		//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV3, worker->id);
-		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
 		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1, uint32) == 0) {
-			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV2, worker->id);
-			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
-			//irt_inst_insert_db_event(worker, IRT_INST_DBG_EV1, worker->id);
+			//triggering the parent event might fail since the register could already have been destroyed if the parent finalized before we reach this point
+			irt_wi_event_trigger_if_exists(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
 		}
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);
 	IRT_DEBUG(" ^ %p finalize\n", (void*) wi);
+
+	/* NOTE:
+	 * Triggering our own completion event that late is necessary to avoid stack-
+	 * or heap corruption as a side effect of a race condition in case a parent
+	 * WI is waiting for us to terminate using irt_wi_join.
+	 * In this case we have to make sure that we are decrementing the correct
+	 * parent_num_active_children variable (the one of our actual parent, not a
+	 * stale pointer to some arbitrary other WI struct lying on the reuse-stack
+	 * or worse - the member of some currently running new WI which reused this
+	 * struct. Another scenario which could happen with immediate WIs involved is
+	 * that decrementing the variable might cause a stack corruption, since for
+	 * immediate WIs these values are moved to the stack before calling the
+	 * children's implementation).
+	 * Triggering our own completion event after decrementing
+	 * parent_num_active_children member makes sure that the pointer is still
+	 * valid, since a parent waiting for it's child to die using irt_wi_join will
+	 * blocking wait for the event to happen.
+	 *
+	 * The same reasoning can be applied to moving the ending of work group
+	 * membership (and the associated firing of the WG event) down to here. In
+	 * this case the problem may arise when joining the WG (i.e. by joining on the
+	 * result of irt_parallel).
+	 */
+	// remove from groups
+	for(uint32 g=0; g<wi->num_groups; ++g) {
+		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
+	}
+	// notify (the parent) of our end
+	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
+	irt_wi_event_register_destroy(wi->id);
+
+	/* NOTE:
+	 * The triggering of events just at the end of the finalization and _after_
+	 * the decrementing of parent_num_active_children enables us to change the
+	 * life cycle of WIs and we actually enforce that each parent dies after all
+	 * children have done so and not before that. This is to ensure that each
+	 * child may safely access parent_num_active_children.
+	 *
+	 * This means that a WI always has to wait explicitly (i.e. by using
+	 * irt_wi_join or irt_wi_join_all) for it's spawned children to die.
+	 */
+	IRT_ASSERT(*wi->num_active_children == 0, IRT_ERR_INTERNAL, "Parent died before all children did")
+
 	_irt_wi_recycle(wi, worker);
 }
 

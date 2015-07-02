@@ -65,10 +65,11 @@ TEST(DatalayoutTransformTest, OclTest) {
     std::string inputFile = SRC_ROOT_DIR "transform/test/datalayout/inputs/sparsevec.c";
     std::string includeA = "-I" SRC_ROOT_DIR "transform/test/datalayout/inputs/";
     std::string includeB = "-I" CLANG_SRC_DIR "inputs";
-    std::vector<std::string> args = {"compiler", inputFile, includeA, includeB};
+    std::vector<std::string> args = {"compiler", inputFile, includeA, includeB, "-fopencl"};
     driver::cmd::Options options = driver::cmd::Options::parse(args);
 	options.job.setDefinition("INSIEME", "");
 	options.job.setDefinition("UNIX", "");
+
 
 	core::ProgramPtr program = options.job.execute(manager, false);
 	LOG(INFO) << "Done.";
@@ -76,6 +77,7 @@ TEST(DatalayoutTransformTest, OclTest) {
 	core::NodePtr prog = program->getElement(0);
 
 //	transform::datalayout::AosToSoa ats(prog);
+//	ats.transform();
 
 //	dumpPretty(prog);
 

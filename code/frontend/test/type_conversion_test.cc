@@ -38,28 +38,24 @@
 
 #include <map>
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/Stmt.h>
-#include <clang/AST/Type.h>
-#include <clang/AST/Decl.h>
-#pragma GCC diagnostic pop
+#include "insieme/frontend/clang.h"
 
-#include "insieme/frontend/translation_unit.h"
-#include "insieme/utils/config.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/type_converter.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
-#include "insieme/utils/logging.h"
+#include "insieme/annotations/expected_ir_annotation.h"
+
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "test_utils.inc"
-
 #include "insieme/driver/cmd/insiemecc_options.h"
+
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/translation_unit.h"
+#include "insieme/frontend/type_converter.h"
+
+#include "insieme/utils/config.h"
+#include "insieme/utils/logging.h"
+
+#include "test_utils.inc"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -67,6 +63,8 @@ using namespace insieme::driver;
 using namespace insieme::utils::log;
 using namespace insieme::frontend::conversion;
 using namespace insieme::frontend::extensions;
+
+namespace ia = insieme::annotations;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
 	{ Converter convFactory( manager, tu);\
@@ -491,38 +489,46 @@ TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/types.c");
+	const std::string filename = CLANG_SRC_DIR "/inputs/types.c";
+	std::vector<std::string> argv = { "compiler", filename };
+	cmd::Options options = cmd::Options::parse(argv);
+	options.job.frontendExtensionInit();
+	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
 
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
+
+	const auto begin = tu.pragmas_begin(filter);
+	const auto end = tu.pragmas_end();
+
+	EXPECT_NE(begin, end);
 
 	// we use an internal manager to have private counter for variables so we can write independent tests
 	NodeManager mgr;
 
-
-    std::string fileName = CLANG_SRC_DIR "/inputs/types.c";
-    std::vector<std::string> argv = { "compiler",  fileName };
-    cmd::Options options = cmd::Options::parse(argv);
-
-	insieme::frontend::conversion::Converter convFactory( mgr, tu, options.job);
+	insieme::frontend::conversion::Converter convFactory(mgr, tu, options.job);
 	convFactory.convert();
 
 	auto resolve = [&](const core::NodePtr& cur) {
 		return convFactory.getIRTranslationUnit().resolve(cur);
 	};
 
-	for(auto it = tu.pragmas_begin(filter), end = tu.pragmas_end(); it != end; ++it) {
+	for(auto it = begin; it != end; ++it) {
+		const auto pragma = *it;
 
-		const TestPragmaExtension& tp = static_cast<const TestPragmaExtension&>(*(*it));
-
-		if(tp.isStatement()) {
-			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+		if(pragma->isStatement()) {
+			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt(pragma->getStatement()))).as<StatementPtr>();
             std::string match = toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE));
-   			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+            EXPECT_TRUE(stmt->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(stmt), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		} else {
-			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-   				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl()->getCanonicalTypeInternal() ))->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
+			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
+				NodePtr node = resolve(convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal()));
+				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
+				NodePtr node = resolve(convFactory.convertVarDecl(vd));
+				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
 			}
 		}
 	}

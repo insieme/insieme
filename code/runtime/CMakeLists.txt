@@ -2,7 +2,8 @@
 # Builds the insieme runtime
 #
 project(insieme_runtime C CXX)
-cmake_minimum_required(VERSION 2.6)
+message(STATUS "========== configure runtime =============")
+cmake_minimum_required(VERSION 3.2)
 
 # user configurable options
 if (WIN32)
@@ -10,12 +11,23 @@ if (WIN32)
 endif()
 option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 
-if (NOT third_part_libs_home )
-	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+if (DEFINED ENV{THIRD_PARTY_LIBS_HOME} )
+	set ( THIRD_PARTY_LIBS_HOME $ENV{THIRD_PARTY_LIBS_HOME} CACHE PATH "Third party library home")
+elseif (DEFINED ENV{INSIEME_LIBS_HOME} )
+	set ( THIRD_PARTY_LIBS_HOME $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third party library home")
 endif()
 
-include(../lookup_lib.cmake)
-include(../add_unit_test.cmake)
+#to find the custom modules (for find_package)
+#TODO better path
+get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
+
+list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/../cmake/")
+
+#find them in CMAKE_MODULE_PATH
+include(default_library_configuration)
+include(insieme_find_package)
+include(add_unit_test)
+
 include(../environment_common.cmake)
 
 # for win64 we need to add a assembly object file to each target, see below.
@@ -32,11 +44,11 @@ if(WIN32)
 		message(STATUS "Creating WIN x64 project")
 		set (WIN64ASM_OBJ "${CMAKE_CURRENT_SOURCE_DIR}/asm/win64asm.obj")
 		if (USE_PTHREADS)
-			set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x64/pthreadVC2.lib")
+			set (CMAKE_THREAD_LIBS_INIT "$ENV{PTHREAD_ROOT}/lib/x64/pthreadVC2.lib")
 		endif()
 	else () #32 bit apps
 		if (USE_PTHREADS)
-			set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x86/pthreadVC2.lib")
+			set (CMAKE_THREAD_LIBS_INIT "$ENV{PTHREAD_ROOT}/lib/x86/pthreadVC2.lib")
 		endif()
 	endif()
 	
@@ -45,15 +57,18 @@ if(WIN32)
 		set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}/include")	
 	endif()
 	
-else() #only look for pthread lib on linux
-	find_library(pthread_LIB pthread)
-	lookup_lib( PAPI papi )
+else() 
+	#only look for pthread lib on linux
+	find_package(Threads REQUIRED)
+
+	#look for papi
+	insieme_find_package(NAME PAPI)
 endif()
 	
 # set compiler flags for gcc
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
-
+	
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fPIC")
   
@@ -64,20 +79,23 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 	include(CheckCCompilerFlag)
-	check_c_compiler_flag( --std=gnu99 C99_Support )
+	check_c_compiler_flag( -std=gnu99 C99_Support )
+	check_c_compiler_flag( -std=c11   C11_Support )
 	
-	if(NOT WIN32)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp") #as one gtest uses openmp
-	endif()
-	
+
 	#Compile with C11 and all warnings enabled, pedantic and warnings treated as errors for GCC>=4.9
+	#to avoid a problem with 4.8 and C11 we only want c11 with 4.9
 	if (CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9 OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 4.9)
-		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=c11")
-		set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Werror -pedantic")
+		set(WE_HAVE_GCC_49 TRUE)
+	endif()
+
+	if(C11_Support AND WE_HAVE_GCC_49)
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
 	elseif(C99_Support)
-		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 	else()
-		message( "WARNING: --std=gnu99 not supported by your compiler!" )
+		message(WARNING "WARNING: -std=gnu99 not supported by your compiler!" )
 	endif()
 endif()
 
@@ -94,32 +112,32 @@ elseif (WIN32 AND USE_PTHREADS)
 endif()
 
 # find HWloc package
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
-
-#TODO Q'N'D fix -- we only check third_part_libs_home/hwloc-latest nothing else - fix to give more
-#flexibility
-if( EXISTS ${third_part_libs_home}/hwloc-latest AND IS_DIRECTORY ${third_part_libs_home}/hwloc-latest)
-	set(HWLOC_ROOT ${third_part_libs_home}/hwloc-latest)
-endif()
-
-find_package(Hwloc)
-if (Hwloc_FOUND)
-	add_definitions(-DIRT_USE_HWLOC)
-	# I tried to do this as it is supposed to be done, but CMake sucks
-	add_definitions("${Hwloc_CFLAGS}")
-	# this would be the correct way, but it requires the user to set LD_LIBRARY_FLAGS
-	# however, it would obviate the need for the link_hwloc function
-	#string (REPLACE ";" " " Hwloc_LDFLAGS_STR "${Hwloc_LDFLAGS}")
-	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${Hwloc_LDFLAGS_STR}")
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Hwloc_LDFLAGS_STR}")
-endif()
-
-function(link_hwloc target)
+if (NOT MSVC)
+	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/code/cmake")
+	insieme_find_package(NAME Hwloc)
 	if (Hwloc_FOUND)
+		add_definitions(-DIRT_USE_HWLOC)
 		# I tried to do this as it is supposed to be done, but CMake sucks
-		target_link_libraries(${target} ${Hwloc_INCLUDE_DIRS}/../lib/lib${Hwloc_LIBRARIES}.so)
+		add_definitions("${Hwloc_CFLAGS}")
+		# this would be the correct way, but it requires the user to set LD_LIBRARY_FLAGS
+		# however, it would obviate the need for the link_hwloc function
+		#string (REPLACE ";" " " Hwloc_LDFLAGS_STR "${Hwloc_LDFLAGS}")
+		#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${Hwloc_LDFLAGS_STR}")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Hwloc_LDFLAGS_STR}")
 	endif()
-endfunction(link_hwloc)
+
+	function(link_hwloc target)
+		if (Hwloc_FOUND)
+			# I tried to do this as it is supposed to be done, but CMake sucks
+			#target_link_libraries(${target} ${Hwloc_LIBRARIES})
+			target_link_libraries(${target} ${Hwloc_LDFLAGS})
+			#target_link_libraries(${target} ${Hwloc_INCLUDE_DIRS}/../lib/lib${Hwloc_LIBRARIES}.so)
+		endif()
+	endfunction(link_hwloc)
+else()
+	function(link_hwloc target)
+	endfunction(link_hwloc)
+endif()
 
 #collect all source and header files
 file(GLOB_RECURSE insieme_runtime_srcs 	src/runtime.c )
@@ -166,12 +184,15 @@ if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
-#link libraries for the insieme_runtime target
-if(NOT WIN32 OR USE_PTHREADS) #if(NOT MSVC OR USE_PTHREADS)
-	target_link_libraries(insieme_runtime ${pthread_LIB})
+#link pthread libraries for the insieme_runtime target
+if(NOT WIN32 OR USE_PTHREADS) 
+	target_link_libraries(insieme_runtime ${CMAKE_THREAD_LIBS_INIT})
 endif()
-if(NOT WIN32) #if(NOT MSVC)
-	target_link_libraries(insieme_runtime dl rt m ${papi_LIB})
+
+#papi header+libraries
+if(NOT WIN32) 
+	target_include_directories(insieme_runtime PRIVATE ${PAPI_INCLUDE_DIRS})
+	target_link_libraries(insieme_runtime dl rt m ${PAPI_LIBRARIES})
 endif()
 
 if ( USE_MPI_OPENCL )
@@ -185,73 +206,89 @@ if ( USE_MPI_OPENCL )
 	target_link_libraries(insieme_runtime ${MPI_C_LIBRARIES} )
 endif ( USE_MPI_OPENCL )
 
-# lookup Google Test libraries
-lookup_lib ( GTEST gtest )
-lookup_lib ( GTEST_MAIN gtest_main )
+include_directories(${PTHREAD_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
 
-#include_directories(include/ ${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR}) #what's this include/ thing? S. Widerin
-include_directories(${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
-
-# add meta information include path
-get_filename_component( insieme_runtime_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
-get_directory_property( insieme_code_dir DIRECTORY ${insieme_runtime_dir} PARENT_DIRECTORY )
-include_directories( ${insieme_code_dir}/common/include )
+#insieme_common is header-only library
+target_link_libraries(insieme_runtime insieme_common)
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
-if (NOT MEMORY_CHECK_SETUP)
+if(NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
 
-	# add -all-valgrind target
-	add_custom_target(valgrind)
+	if(NOT TARGET valgrind)
+		# the valgrind target was not added before
+		# happens when we build runtime only
+		# add -all-valgrind target
+		add_custom_target(valgrind)
+	endif()
+	# mark as defined
+	set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
+endif()
 
-endif (NOT MEMORY_CHECK_SETUP)
-
-# mark as defined
-set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
-
-
+# --------------------------------------------------------- Unit tests ---------------
 # handle gtest unit tests
-set ( ut_prefix  ut_rt_ )
+set(ut_prefix  ut_rt )
 file(GLOB_RECURSE test_cases test/*.cc)
 # get energy unit tests, to be removed if papi and msr module are not present
 file(GLOB_RECURSE energy_test_cases test/energy*.cc)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+include(CheckCXXCompilerFlag)
+# check for -std=c++0x
+check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
+# check for -std=c++11
+check_cxx_compiler_flag( -std=c++11 CXX11_Support )
+
+#carefull! the unit tests are compiled with g++ so the runtime code is compiled as well as c++
+#this gives problems with anonymous structs as they are not supported by C++/C (before C11)
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+
+if(CXX11_Support)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(CXX0X_Support)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+	message(WARNING "WARNING: -std=c++0x or -std=c++11 not supported by your compiler!" )
+endif()
+
+# runtime unit tests use openmp
+if(NOT WIN32)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+endif()
 
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	set ( case_name ${ut_prefix}${case_name} )
+	set ( case_name ${ut_prefix}_${case_name} )
+
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
-	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
-		target_link_libraries(${case_name} ${papi_LIB})
+
+		#papi header+libraries
+		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
+		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES})
-			target_link_libraries(${case_name} ${MPI_LIBRARIES})
 		endif ( USE_MPI_OPENCL )
 	endif()
-	# add dependency to google test libraries
-	target_link_libraries(${case_name} ${gtest_LIB})
-	target_link_libraries(${case_name} ${gtest_main_LIB})
 	link_hwloc(${case_name})
 		
 	if ( USE_OPENCL )
-    		target_link_libraries(${case_name} ${OPENCL_LIBS})
+		target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )
 	
 	# disable valgrind for parallel test cases
-	set(VFLAG ${TRUE})
+	set(VFLAG true)
 	if(case_name MATCHES ".*_par")
 		set(VFLAG FALSE)
 	endif(case_name MATCHES ".*_par")
 	
-	#add_unit_test(${case_name} ${VFLAG})
-	add_unit_test(${case_name} FALSE)
+	#disable valgrind for runtime unit tests
+	add_unit_test(${case_name} ${ut_prefix} FALSE)
 	
 endforeach(case_file)
 
@@ -261,11 +298,15 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} SHARED ${case_file} ${WIN64ASM_OBJ})
+	target_link_libraries(${case_name} insieme_common)
 	if(NOT WIN32)
-		target_link_libraries(${case_name} ${pthread_LIB})
+		target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} m)
-		target_link_libraries(${case_name} ${papi_LIB})
+
+		#papi header+libraries
+		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
+		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES} )
 		endif ( USE_MPI_OPENCL )
@@ -282,12 +323,16 @@ foreach (case_file ${test_cases})
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
-	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} insieme_common)
+	target_link_libraries(${case_name} ${CMAKE_THREAD_LIBS_INIT})
 	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
-		target_link_libraries(${case_name} ${papi_LIB})
+		
+		#papi header+libraries
+		target_include_directories(${case_name} PRIVATE ${PAPI_INCLUDE_DIRS})
+		target_link_libraries(${case_name} ${PAPI_LIBRARIES})
 		if ( USE_MPI_OPENCL )
 			target_link_libraries(${case_name} ${MPI_C_LIBRARIES} )
 		endif ( USE_MPI_OPENCL )

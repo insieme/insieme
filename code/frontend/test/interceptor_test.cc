@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -159,7 +159,7 @@ TEST(Interception, SimpleInterception) {
 
 	//intercept_memFunc1
 	auto mf1 = builder.literal("intercept_memFunc1", funcTy);
-	auto mf1_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ( var(zero(type<ns::S>))); memberFunc(v2, ( *v1));}";
+	auto mf1_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}";
 
 	res = analysis::normalize(tu[mf1]);
 	code = toString(getPrettyPrinted(res));
@@ -167,7 +167,7 @@ TEST(Interception, SimpleInterception) {
 	EXPECT_EQ(mf1_expected, code);
 	//intercept_memFunc2
 	auto mf2 = builder.literal("intercept_memFunc2", funcTy);
-	auto mf2_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ( var(zero(type<ns::S>))); memberFunc(v2, ( *v1));}";
+	auto mf2_expected = "fun() -> unit { decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}";
 
 	res = analysis::normalize(tu[mf2]);
 	code = toString(getPrettyPrinted(res));

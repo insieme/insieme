@@ -477,27 +477,27 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 			// the cases to explicitly write refVar or not to do so, in the backend
 			if (isUsedToCreateConstRef(body, wrap) || isUsedToCreateRValRef(body, wrap)) {
 				auto access = builder.refVar(currParam);
-				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, access, true);
-				core::visitDepthFirstOnce (newBody, transferAnnotations);
+				newBody = core::transform::replaceAllGen(mgr, newBody, wrap, access);
+				core::visitDepthFirstOnce(newBody, transferAnnotations);
 				wrapRefMap.erase(currParam);
 			}
 			// we only consider the usage of this variable in the local scope,
 			// there is no need to materialize the variable with a ref.var when
 			// we can do that more clean by using a scope declared variable
-			else if (core::analysis::isReadOnlyWithinScope(body, wrap)){
+			else if (core::analysis::isReadOnlyWithinScope(body, wrap)) {
 				// replace read uses
-				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+				newBody = core::transform::replaceAllGen(mgr, newBody, builder.deref(wrap), currParam);
 
 				// this variables might apear in annotations inside:
-				core::visitDepthFirstOnce (newBody, transferAnnotations);
+				core::visitDepthFirstOnce(newBody, transferAnnotations);
 
 				// cleanup the wrap cache to avoid future uses, this var does not exist anymore
 				// at this point, no use of wrap should exist in the code;
 				wrapRefMap.erase(currParam);
 			}
-			else{
+			else {
 				// other case materialize a var, declare it at the beginning of the body
-				decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
+				decls.push_back(this->builder.declarationStmt(fit->second, this->builder.refVar(fit->first)));
 			}
 		}
 	}
@@ -680,7 +680,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			getHeaderTagger().addHeaderForDecl(globVar, valDecl);
 
             // attach pragma to global variable
-			pragma::attachPragma(globVar.as<core::StatementPtr>(), valDecl, *this);
+			pragma::attachPragma(core::NodeList({globVar.as<core::NodePtr>()}), valDecl, *this);
 
 			varDeclMap.insert( { valDecl, globVar } );
 
@@ -977,7 +977,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------
 
-	pragma::attachPragma(node.as<core::StatementPtr>(),funcDecl,*this);
+	pragma::attachPragma(core::NodeList({node.as<core::NodePtr>()}), funcDecl, *this);
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -1471,6 +1471,12 @@ void Converter::convertTypeDecl(const clang::TypeDecl* decl){
 			getIRTranslationUnit().addType(symbol, res);
 		}
 	}
+
+	// handle pragmas
+	core::NodeList list({res});
+	list = pragma::attachPragma(list, decl, *this);
+	assert_eq(1, list.size()) << "More than 1 node present";
+	res = list.front().as<core::TypePtr>();
 
 	for(auto extension : this->getConversionSetup().getExtensions()) {
         extension->PostVisit(decl, res, *this);

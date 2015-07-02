@@ -67,6 +67,36 @@
 //	return ret;
 //}
 
+void _irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, irt_wi_implementation* impl, irt_lw_data_item* args) {
+	// calculate chunk size
+	uint32 id = irt_wg_get_wi_num(group, self);
+	uint32 participants = group->local_member_count;
+	uint64 length = base_range.end - base_range.begin;
+	uint64 numit = length / (base_range.step) + (length%base_range.step > 0);
+	uint64 chunk = numit / participants;
+	uint64 rem = numit % participants;
+	base_range.begin = base_range.begin + id * chunk * base_range.step;
+
+	// adjust chunk and begin to take care of remainder
+	if(id < rem) {
+		chunk++;
+	}
+	base_range.begin += MIN(rem, id) * base_range.step;
+	base_range.end = base_range.begin + chunk * base_range.step;
+
+	// run chunk
+	irt_work_item_range range = base_range;
+	if(range.begin == range.end) return;
+	irt_lw_data_item *prev_args = self->parameters;
+	irt_work_item_range prev_range = self->range;
+	self->parameters = args;
+	self->range = range;
+	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
+	(impl->variants[0].implementation)(self);
+	self->parameters = prev_args;
+	self->range = prev_range;
+}
+
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* args) {
 	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
 	irt_optimizer_runtime_data* old_data = irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(impl->variants[0]));

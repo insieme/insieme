@@ -78,8 +78,8 @@ assert_fail();
 			ExpressionAddress oldVar = varCheck->first;
 			ExpressionPtr newVar = varCheck->second.as<ExpressionPtr>();
 
-std::cout << "oldVar: " << oldVar << " " << *oldVar << std::endl;
-std::cout << "newVar: " << newVar->getType() << " " << *newVar << std::endl;
+//std::cout << "oldVar: " << oldVar << " " << *oldVar << std::endl;
+//std::cout << "newVar: " << newVar->getType() << " " << *newVar << std::endl;
 			ExpressionPtr tupleIndex = match.get()["tupleIndex"].getValue().as<LiteralPtr>();
 			ExpressionPtr arrayIndex = match.get()["arrayIndex"].getValue().as<ExpressionPtr>();
 			for(NamedTypePtr newType : newStructType) {
@@ -87,6 +87,8 @@ std::cout << "newVar: " << newVar->getType() << " " << *newVar << std::endl;
 				ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
 				newArgs.push_back(builder.deref(builder.accessMember(builder.arrayRefElem(accessTuple, arrayIndex), newType->getName())));
 			}
+
+
 		}
 	}
 
@@ -118,7 +120,7 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 //		std::cout << "toll\n";
 			for(StatementPtr arg : argToReplace->second.as<CompoundStmtPtr>()) {
 //		std::cout << "ARG: " << *arg << std::endl;
-			  newArg.push_back(arg.as<ExpressionPtr>());
+				newArg.push_back(arg.as<ExpressionPtr>());
 			}
 			for(StatementPtr param : paramToReplace->second.as<CompoundStmtPtr>()) {
 				VariablePtr p = param.as<VariablePtr>();
@@ -154,21 +156,29 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 			auto paramToReplace = varsToReplace.find(oldParam);
 			bool paramFound = paramToReplace != varsToReplace.end();
 			if(structType.match(oldArg->getType()) && paramFound) {
-				for(NamedTypePtr newType : newStructType) {
+				for_range(make_paired_range(newStructType, paramToReplace->second.as<CompoundStmtPtr>()),
+						[&](const std::pair<NamedTypePtr, StatementPtr>& cur) {
+					NamedTypePtr newType = cur.first;
+					VariablePtr param = cur.second.as<VariablePtr>();
+
+					newParam.push_back(param);
+					paramTys.push_back(param->getType());
+
 					ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
-					newArg.push_back(builder.deref(builder.accessMember(builder.arrayRefElem(accessTuple, arrayIndex), newType->getName())));
-				}
-				for(StatementPtr param : paramToReplace->second.as<CompoundStmtPtr>()) {
-					VariablePtr p = param.as<VariablePtr>();
-					newParam.push_back(p);
-					paramTys.push_back(p->getType());
-				}
+					ExpressionPtr argRef = builder.accessMember(builder.arrayRefElem(accessTuple, arrayIndex), newType->getName());
+
+					if(argRef->getType() != builder.refType(param->getType())) // add ref_reinterpret if necessary
+						argRef = builder.refReinterpret(argRef, param->getType());
+
+					newArg.push_back(builder.deref(argRef));
+				});
 			} else {
 				ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
 				newArg.push_back(builder.deref(builder.arrayRefElem(accessTuple, arrayIndex)));
 				newParam.push_back(oldParam);
 				paramTys.push_back(oldParam->getType());
 			}
+
 			return true;
 		}
 	}
@@ -202,7 +212,7 @@ const CallExprPtr AosArgumentUnfolder::updateArgumentsAndParams(CallExprAddress 
 		VariableList newParam;
 		TypeList paramTy;
 
-		changed |= updateArgumentAndParam(oldArg, oldParam, newArg, newParam, paramTys);
+		changed |= updateArgumentAndParam(oldArg, oldParam, newArg, newParam, paramTy);
 
 		// connect individual lists of arguments/parameters (containing only one element if not replaced) to the full function call
 		for(ExpressionPtr na : newArg)
@@ -218,7 +228,7 @@ const CallExprPtr AosArgumentUnfolder::updateArgumentsAndParams(CallExprAddress 
 
 	IRBuilder builder(mgr);
 	FunctionTypePtr newFunTy = builder.functionType(paramTys, newCall->getType());
-	LambdaExprPtr newLambda = builder.lambdaExpr(newFunTy, newCall->getFunctionExpr().as<LambdaExprPtr>()->getBody(), newParams);
+	LambdaExprPtr newLambda = builder.lambdaExpr(newFunTy, newParams, newCall->getFunctionExpr().as<LambdaExprPtr>()->getBody());
 
 //	std::cout << "type " << *newCall->getType() << std::endl;
 //		std::cout << "lambda " << *newLambda << std::endl;
@@ -238,9 +248,9 @@ AosArgumentUnfolder::AosArgumentUnfolder(NodeManager& mgr, ExprAddressMap& varRe
 	  variablePattern(pirp::variable(typePattern) // local variable
 			| pirp::literal(pirp::refType(typePattern), pattern::any)),// global variable
 	  namedVariablePattern(var("variable", variablePattern)),
-	  varWithOptionalDeref(namedVariablePattern | pirp::refDeref(namedVariablePattern) | pirp::scalarToArray(namedVariablePattern)),
-	  tupleMemberAccess(pirp::refDeref(pirp::arrayRefElem1D(
-			pirp::tupleMemberAccess(namedVariablePattern, var("tupleIndex", pattern::any), pattern::any), var("arrayIndex", pattern::any)))) {}
+	  varWithOptionalDeref(optionalDeref(namedVariablePattern)),
+	  tupleMemberAccess(pirp::refDeref(pattern::aT(pirp::arrayRefElem1D(
+			pirp::tupleMemberAccess(namedVariablePattern, var("tupleIndex", pattern::any), pattern::any), var("arrayIndex", pattern::any))))) {}
 
 
 const NodePtr AosArgumentUnfolder::mapAddress(const NodePtr& ptr, NodeAddress& prevAddr) {

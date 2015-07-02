@@ -171,10 +171,6 @@ else()
     include(FindPackageHandleStandardArgs)
     find_package_handle_standard_args(Hwloc DEFAULT_MSG Hwloc_LIBRARIES)
 
-    if(NOT ${Hwloc_VERSION} VERSION_LESS 1.7.0)
-      set(Hwloc_GL_FOUND 1)
-    endif()
-
     if(_hwloc_output)
       message(STATUS
         "Found hwloc ${Hwloc_VERSION} in ${Hwloc_INCLUDE_DIRS}:${Hwloc_LIBRARIES}")

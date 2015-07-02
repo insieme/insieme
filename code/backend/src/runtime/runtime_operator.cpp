@@ -49,6 +49,8 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/core/lang/parallel_extension.h"
+#include "insieme/core/lang/instrumentation_extension.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/backend/backend_config.h"
 
@@ -74,6 +76,7 @@ namespace runtime {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 		const core::lang::ParallelExtension& parExt = manager.getLangExtension<core::lang::ParallelExtension>();
+		const core::lang::InstrumentationExtension& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		#include "insieme/backend/operator_converter_begin.inc"
@@ -319,17 +322,17 @@ namespace runtime {
 			return c_ast::call( C_NODE_MANAGER->create("irt_exit"), CONVERT_ARG(0));
 		});
 
-		table[ext.instrumentationInitRegions] = OP_CONVERTER({
+		table[instExt.getInstrumentationInitRegions()] = OP_CONVERTER({
 			// just add info to context init
 			ContextHandlingFragment::get(context.getConverter())->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
 			return NULL; // this is not producing an expression
 		});
 
-		table[ext.instrumentationRegionStart] = OP_CONVERTER({
+		table[instExt.getInstrumentationRegionStart()] = OP_CONVERTER({
 			return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_start"), CONVERT_ARG(0));
 		});
 
-		table[ext.instrumentationRegionEnd] = OP_CONVERTER({
+		table[instExt.getInstrumentationRegionEnd()] = OP_CONVERTER({
 			return c_ast::call(C_NODE_MANAGER->create("ir_inst_region_end"), CONVERT_ARG(0));
 		});
 

@@ -91,7 +91,12 @@ void irt_scheduling_loop(irt_worker* self);
 /* A notification function that should be called whenever a new wi
  * enters the queue of the target worker.
  */
-void irt_signal_worker(irt_worker* target);
+void _irt_signal_worker(irt_worker* target);
+#ifdef IRT_WORKER_SLEEPING
+#define irt_signal_worker(__target) _irt_signal_worker(__target)
+#else
+#define irt_signal_worker(__target)
+#endif
 
 /* Initialize scheduling-related data in the worker self
  */

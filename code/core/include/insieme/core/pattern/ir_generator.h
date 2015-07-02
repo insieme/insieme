@@ -118,7 +118,7 @@ namespace irg {
 	}
 
 	inline TreeGenerator typeLiteral(const TreeGenerator& type) {
-		return literal(genericType(stringValue("type"), empty, single(type), empty), stringValue(type));
+		return literal(genericType(stringValue("type"), empty, single(type), empty), "type_literal");
 	}
 
 	inline TreeGenerator tupleType(const ListGenerator& pattern) {

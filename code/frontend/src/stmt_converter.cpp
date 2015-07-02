@@ -864,7 +864,7 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 		if(retStmt.size())
 			break;
 	}
-    if(retStmt.size()==0){
+    if(retStmt.size() == 0) {
 		convFact.trackSourceLocation(stmt);
         retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 		convFact.untrackSourceLocation();
@@ -873,8 +873,13 @@ stmtutils::StmtWrapper Converter::CStmtConverter::Visit(clang::Stmt* stmt) {
 	// print diagnosis messages
 	convFact.printDiagnosis(stmt->getLocStart());
 
-    // Deal with transformation pragmas
-	retStmt = pragma::attachPragma(retStmt,stmt,convFact);
+    // Deal with pragmas
+	core::NodeList list(retStmt.begin(), retStmt.end());
+	list = pragma::attachPragma(list, stmt, convFact);
+	retStmt.clear();
+	for(const auto& e : list) {
+		retStmt.push_back(e.as<core::StatementPtr>());
+	}
 
     // call frontend extension post visitors
     for(auto extension : convFact.getConversionSetup().getExtensions()) {

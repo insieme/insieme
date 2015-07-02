@@ -84,9 +84,6 @@ IRT_CREATE_LOCKED_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONT
 IRT_CREATE_LOCKED_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 IRT_CREATE_LOCKED_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS)
 
-static bool irt_g_exit_handling_done;
-static bool irt_g_globals_initialization_done = false;
-
 // initialize global variables and set up global data structures
 void irt_init_globals() {
 	if(irt_g_globals_initialization_done)
@@ -106,11 +103,9 @@ void irt_init_globals() {
 #endif // IRT_ENABLE_REGION_INSTRUMENTATION
 
 	// not using IRT_ASSERT since environment is not yet set up
-	int err_flag = 0;
-	err_flag |= irt_tls_key_create(&irt_g_error_key);
-	err_flag |= irt_tls_key_create(&irt_g_worker_key);
+	int err_flag = irt_tls_key_create(&irt_g_worker_key);
 	if(err_flag != 0) {
-		fprintf(stderr, "Could not create thread local storage key(s). Aborting.\n");
+		fprintf(stderr, "Could not create thread local storage key. Aborting.\n");
 		exit(-1);
 	}
 	irt_mutex_init(&irt_g_error_mutex);
@@ -127,10 +122,14 @@ void irt_init_globals() {
 #endif
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
+
+	//maybe initialize the event debug logging
+	irt_event_debug_init();
 }
 
 // cleanup global variables and delete global data structures
 void irt_cleanup_globals() {
+	irt_event_debug_destroy();
 	irt_data_item_table_cleanup();
 	irt_context_table_cleanup();
 	irt_wi_event_register_table_cleanup();
@@ -139,7 +138,6 @@ void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
 #endif
 	irt_mutex_destroy(&irt_g_error_mutex);
-	irt_tls_key_delete(irt_g_error_key);
 	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
 	irt_hwloc_cleanup();
@@ -179,10 +177,11 @@ void irt_exit_handler() {
 	if (irt_g_exit_handling_done)
 		return;
 
+	_irt_worker_end_all();
+
 	// reset the clock frequency of the cores of all workers
 #ifndef _WIN32
-	if(!irt_affinity_mask_is_empty(irt_g_frequency_setting_modified_mask))
-		irt_cpu_freq_reset_frequencies();
+	irt_cpu_freq_reset_frequencies();
 #endif
 
 	_irt_hw_info_shutdown();
@@ -195,7 +194,6 @@ void irt_exit_handler() {
 	irt_ocl_release_devices();	
 #endif
 	irt_g_exit_handling_done = true;
-	_irt_worker_end_all();
 	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
 
@@ -205,33 +203,6 @@ void irt_exit_handler() {
 	free(irt_g_workers);
 	irt_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
-}
-
-// error handling
-void irt_error_handler(int signal) {
-	irt_mutex_lock(&irt_g_error_mutex); // not unlocked
-	_irt_worker_cancel_all_others();
-	irt_error* error = (irt_error*)irt_tls_get(irt_g_error_key);
-	// gcc will warn when the cast to void* is missing, Visual Studio will not compile with the cast
-	irt_thread t;
-	irt_thread_get_current(&t);
-
-	#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-		fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
-	#elif defined(_WIN32)
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
-	#else
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t, irt_errcode_string(error->errcode));
-	#endif
-
-	fprintf(stderr, "Additional information:\n");
-	irt_print_error_info(stderr, error);
-	exit(-error->errcode);
-}
-
-// interrupts are ignored
-void irt_interrupt_handler(int signal) {
-	// do nothing
 }
 
 // initialize objects required for signaling threads
@@ -279,7 +250,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	// initialize globals
 	irt_init_globals();
-	// TODO: superfluous?
+
+	// Required for multiple startup/shutdown of RT in same process
 	irt_g_exit_handling_done = false;
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
@@ -317,8 +289,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// TODO [_GEMS]: signal is not supported by gems platform
 	// initialize error and termination signal handlers
 	if(handle_signals) {
-		signal(IRT_SIG_ERR, &irt_error_handler);
-		signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 		signal(SIGTERM, &irt_term_handler);
 		signal(SIGINT, &irt_term_handler);
 		signal(SIGSEGV, &irt_abort_handler);
@@ -352,7 +322,7 @@ uint32 irt_get_default_worker_count() {
 
 }
 
-bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *condbundlep) {
+bool _irt_runtime_standalone_end_func(void *condbundlep) {
 	irt_cond_bundle *condbundle = (irt_cond_bundle*)condbundlep;
 	irt_mutex_lock(&condbundle->mutex);
 	irt_cond_wake_one(&condbundle->condvar);
@@ -373,7 +343,7 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 	handler.data = &condbundle;
 	handler.func = &_irt_runtime_standalone_end_func;
 	irt_mutex_lock(&condbundle.mutex);
-	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
+	irt_wi_event_handler_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 
@@ -384,9 +354,9 @@ void irt_runtime_run_wi(irt_wi_implementation* impl, irt_lw_data_item *params) {
 }
 
 irt_context* irt_runtime_start_in_context(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, bool handle_signals) {
-    #ifdef _GEMS_SIM
-        irt_mutex_init(&print_mutex);
-    #endif
+#ifdef _GEMS_SIM
+	irt_mutex_init(&print_mutex);
+#endif
 	IRT_DEBUG("Workers count: %d\n", worker_count);
 	// initialize globals
 	irt_init_globals();
@@ -416,8 +386,23 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_context* context = irt_runtime_start_in_context(worker_count, init_fun, cleanup_fun, true);
 
 	if(getenv(IRT_REPORT_ENV)) {
-		irt_dbg_print_context(context);
-		irt_hw_dump_info();
+		if(getenv(IRT_REPORT_TO_FILE_ENV)) {
+			char* output_path = getenv("IRT_INST_OUTPUT_PATH");
+			char fn[] = "insieme_runtime.report";
+			char buffer[1024];
+			if(output_path != NULL) {
+				sprintf(buffer, "%s/%s", output_path, fn);
+			} else {
+				sprintf(buffer, "%s", fn);
+			}
+			FILE* temp = fopen(buffer, "w");
+			irt_dbg_dump_context(temp, context);
+			irt_hw_dump_info(temp);
+			fclose(temp);
+		} else {
+			irt_dbg_print_context(context);
+			irt_hw_print_info();
+		}
 		exit(0);
 	}
 

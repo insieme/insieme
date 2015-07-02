@@ -63,13 +63,13 @@ template<class ValueType>
 struct VariableMap : public std::map<core::ExpressionAddress, ValueType, VariableComparator> {};
 struct ExprAddressSet : public std::set<core::ExpressionAddress, VariableComparator> {};
 
-typedef VariableMap<core::RefTypePtr> ExprAddressRefTypeMap;
+typedef VariableMap<core::ArrayTypePtr> ExprAddressArrayTypeMap;
 typedef VariableMap<core::StatementPtr> ExprAddressMap;
 //typedef std::set<core::ExpressionAddress> ExprAddressSet;
-typedef std::function<ExprAddressRefTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
+typedef std::function<ExprAddressArrayTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
-ExprAddressRefTypeMap findAllSuited(const core::NodeAddress& toTransform);
-ExprAddressRefTypeMap findPragma(const core::NodeAddress& toTransform);
+ExprAddressArrayTypeMap findAllSuited(const core::NodeAddress& toTransform);
+ExprAddressArrayTypeMap findPragma(const core::NodeAddress& toTransform);
 
 class DatalayoutTransformer {
 protected:
@@ -79,58 +79,61 @@ protected:
 
 	void addToReplacements( std::map<core::NodeAddress, core::NodePtr>& replacements, const core::NodeAddress& toReplace, const core::NodePtr& replacement);
 
-	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
-	void collectVariables(const std::pair<core::ExpressionAddress, core::RefTypePtr>& transformRoot,
+	virtual ExprAddressArrayTypeMap findCandidates(const core::NodeAddress& toTransform);
+	void collectVariables(const std::pair<core::ExpressionAddress, core::ArrayTypePtr>& transformRoot,
 			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform);
-	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
-	std::vector<std::pair<ExprAddressSet, core::RefTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::RefTypePtr>>& toReplaceLists);
+	std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
+	std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::ArrayTypePtr>>& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;
+	virtual core::NodeMap generateTypeReplacements(core::TypePtr oldStructType, core::TypePtr newStructType);
 
+	virtual core::ExpressionPtr updateAccess(const core::ExpressionPtr& oldAccess, const std::pair<core::ExpressionAddress, core::StatementPtr>& varInInit,
+			const core::StringValuePtr& fieldName);
 	virtual core::ExpressionPtr updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
 			core::StringValuePtr fieldName = core::StringValuePtr());
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr()) =0;
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) { return core::StatementList(); }
 	void addNewDecls(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems, std::map<core::NodeAddress,
-			core::NodePtr>& replacements);
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::StatementPtr, core::ExpressionPtr>& nElems,
+			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	void addNewParams(const core::ExpressionMap& varReplacements, const core::NodeAddress& toTransform, std::map<core::NodeAddress,
 			core::NodePtr>& replacements);
 
 	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
-			const core::ExpressionPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::ExpressionPtr& nElems = core::ExpressionPtr()) =0;
-	void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
-			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, core::ExpressionMap& nElems,
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr()) {assert_fail(); return core::StatementList(); }
+	virtual void replaceAssignments(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::NodeAddress& toTransform, const core::pattern::TreePattern& allocPattern, std::map<core::StatementPtr, core::ExpressionPtr>& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	core::ExpressionPtr determineNumberOfElements(const core::ExpressionPtr& newVar,const core::ExpressionMap&  nElems);
+	core::ExpressionPtr determineNumberOfElements(const core::StatementPtr& newVar,const std::map<core::StatementPtr, core::ExpressionPtr>& nElems);
 
 	virtual core::StatementPtr generateMarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) =0;
 	std::vector<core::StatementAddress> addMarshalling(const ExprAddressMap& varReplacements,
-			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, core::ExpressionMap& nElems,
+			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, std::map<core::StatementPtr, core::ExpressionPtr>& nElems,
 			std::map<core::NodeAddress, core::NodePtr>& replacements);
 
 	virtual core::StatementPtr generateUnmarshalling(const core::ExpressionAddress& oldVar, const core::ExpressionPtr& newVar, const core::ExpressionPtr& start,
 			const core::ExpressionPtr& end, const core::StructTypePtr& structType) =0;
 	std::vector<core::StatementAddress> addUnmarshalling(const ExprAddressMap& varReplacements,
 			const core::StructTypePtr& newStructType, const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin,
-			core::ExpressionMap& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
+			std::map<core::StatementPtr, core::ExpressionPtr>& nElems, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	virtual core::TypePtr generateNewTupleType(const core::TypePtr& oldTupleVarType, const core::StructTypePtr& newStructType,
+	core::TypePtr generateNewTupleType(const core::TypePtr& oldTupleVarType, const core::StructTypePtr& newStructType,
 			const core::TypePtr& oldStructType);
 	void updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
 			const core::NodeAddress& toTransform, std::map<core::NodeAddress, core::NodePtr>& replacements);
 
-	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar, const core::StringValuePtr& member,
+	virtual core::ExpressionPtr generateNewAccesses(const core::ExpressionAddress& oldVar, const core::StatementPtr& newVar, const core::StringValuePtr& member,
 			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess) =0;
 	void replaceAccesses(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
 			std::map<core::NodeAddress,	core::NodePtr>& replacements);
-	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::ExpressionPtr& newVar,
+	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::StatementPtr& newVar,
 			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) =0;
 	void updateScalarStructAccesses(core::NodePtr& toTransform);
 

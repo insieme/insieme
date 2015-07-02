@@ -69,26 +69,36 @@ void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
 	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, RefTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
 
-	for(std::pair<ExprAddressSet, RefTypePtr> toReplaceList : toReplaceLists) {
-		StructTypePtr oldStructType = toReplaceList.second->getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
+	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
+		StructTypePtr oldStructType = toReplaceList.second.as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
-		ExpressionMap nElems;
+		std::map<StatementPtr, ExpressionPtr> nElems;
 		std::map<NodeAddress, NodePtr> replacements;
+		pattern::TreePattern refTypePattern = pattern::aT(var("toBeReplaced", pirp::refType(pattern::atom(toReplaceList.second))));
 
 		for(ExpressionAddress oldVar : toReplaceList.first) {
 			// update root for in case it has been modified in a previous iteration
 			oldVar = oldVar.switchRoot(toTransform);
 
-			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second, newStructType).as<TypePtr>();
-//std::cout << "NT: " << newStructType << " var " << oldVar << std::endl;
+			TypeAddress ovta = oldVar->getType();
+			NodePtr oldTypeToBeReplaced;
+
+			pattern::MatchOpt typeToBeReplacedMatch = refTypePattern.matchPointer(ovta);
+			if(typeToBeReplacedMatch){
+				oldTypeToBeReplaced = typeToBeReplacedMatch.get()["toBeReplaced"].getValue();
+			}
+			assert_true(oldTypeToBeReplaced) << " could not identify the type to be replaced in " << *ovta;
+
+			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), oldTypeToBeReplaced, /*check this for src types*/newStructType).as<TypePtr>();
+//std::cout << "NT: " << newStructType << " var " << toReplaceList.second << std::endl;
 
 
 			// check if local or global variable
@@ -155,6 +165,15 @@ void AosToSoa::transform() {
 }
 
 
+NodeMap AosToSoa::generateTypeReplacements(TypePtr oldStructType, TypePtr newStructType) {
+	IRBuilder builder(mgr);
+	NodeMap tyReplace;
+	tyReplace[builder.refType(oldStructType)] = newStructType;
+	tyReplace[builder.refType(oldStructType, RK_SOURCE)] = newStructType; // TODO that for src types?
+
+	return tyReplace;
+}
+
 StructTypePtr AosToSoa::createNewType(core::StructTypePtr oldType) {
 	IRBuilder builder(mgr);
 
@@ -186,7 +205,7 @@ StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, c
 //builder.refMember(newVar, memberType->getName());
 //removeRefVar(decl->getInitialization());
 
-			NodeMap inInitReplacementsInCaseOfNovarInInit;
+			NodeMap inInitReplacementsInCaseOfNovarInInit;// = generateTypeReplacements(oldStructType, getBaseType(memberType->getType(), memberType->getName()));
 			inInitReplacementsInCaseOfNovarInInit[oldStructType] = getBaseType(memberType->getType(), memberType->getName());
 
 			allDecls.push_back(builder.assign(builder.accessMember(newVar.as<VariablePtr>(), memberType->getName()),
@@ -208,17 +227,17 @@ StatementList AosToSoa::generateNewDecl(const ExprAddressMap& varReplacements, c
 
 
 StatementList AosToSoa::generateNewAssigns(const ExprAddressMap& varReplacements, const CallExprAddress& call,
-		const ExpressionPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
+		const StatementPtr& newVar, const StructTypePtr& newStructType, const StructTypePtr& oldStructType, const ExpressionPtr& nElems) {
 	IRBuilder builder(mgr);
 	StatementList allAssigns;
 
 	allAssigns.push_back(call);
 
 	for(NamedTypePtr memberType : newStructType->getElements()) {
-		NodeMap inInitReplacementsInCaseOfNovarInInit;
+		NodeMap inInitReplacementsInCaseOfNovarInInit;// = generateTypeReplacements(oldStructType, removeRefArray(memberType->getType()));
 		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
 
-		allAssigns.push_back(builder.assign(builder.refMember(newVar, memberType->getName()),
+		allAssigns.push_back(builder.assign(builder.refMember(newVar.as<ExpressionPtr>(), memberType->getName()),
 				updateInit(varReplacements, call[1], inInitReplacementsInCaseOfNovarInInit, memberType->getName())));
 	}
 
@@ -278,22 +297,22 @@ StatementPtr AosToSoa::generateUnmarshalling(const ExpressionAddress& oldVar, co
 //	return core::transform::replaceAllGen(mgr, oldTupleVarType, oldTupleType, builder.tupleType(newTupleTypeElements));
 //}
 
-ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
+ExpressionPtr AosToSoa::generateNewAccesses(const ExpressionAddress& oldVar, const StatementPtr& newVar, const StringValuePtr& member, const ExpressionPtr& index,
 		const ExpressionPtr& structAccess) {
 	IRBuilder builder(mgr);
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, structAccess,
-			oldVar, newVar, false).as<ExpressionPtr>();
+			oldVar, newVar.as<ExpressionPtr>(), false).as<ExpressionPtr>();
 	ExpressionPtr replacement = refAccess(newStructAccess, index, member);
 
 	return replacement;
 }
 
-ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, const ExpressionPtr& newVar, const StructTypePtr& newStructType,
+ExpressionPtr AosToSoa::generateByValueAccesses(const ExpressionPtr& oldVar, const StatementPtr& newVar, const StructTypePtr& newStructType,
 		const ExpressionPtr& index, const ExpressionPtr& oldStructAccess) {
 	IRBuilder builder(mgr);
 
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, oldStructAccess,
-			oldVar, newVar, false).as<ExpressionPtr>();
+			oldVar, newVar.as<ExpressionPtr>(), false).as<ExpressionPtr>();
 
 	vector<std::pair<StringValuePtr, ExpressionPtr>> values;
 	for(NamedTypePtr memberType : newStructType->getElements()) {

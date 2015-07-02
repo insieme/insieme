@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,6 +56,7 @@
 #include "insieme/driver/object_file_utils.h"
 #include "insieme/utils/config.h"
 #include "insieme/driver/integration/tests.h"
+#include "insieme/driver/integration/test_step.h"
 
 namespace insieme {
 
@@ -75,18 +76,26 @@ namespace insieme {
 
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
+                auto keys = testCase.getProperties().getKeys();
+                if(std::find(keys.begin(), keys.end(), "preprocessing") != keys.end()) {
+                    SCOPED_TRACE("WARNING: This test was skipped because there is a preprocessing step required: " + testCase.getName());
+                    LOG(INFO) << "WARNING: This test was skipped because there is a preprocessing step required: " + testCase.getName();
+                    //omit test
+                    return;
+                }
 
-        std::string filename;
-        {
-            core::NodeManager tmpManager;
-            //load program and create IR TU
-            frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
-            char tmpname[] = "tmp.XXXXXX";
-            mkstemp(tmpname);
-            filename = tmpname;
-            insieme::driver::saveLib(code, filename);
-            EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
-        }
+
+                std::string filename;
+                {
+                    core::NodeManager tmpManager;
+                    //load program and create IR TU
+                    frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
+                    char tmpname[] = "tmp.XXXXXX";
+                    mkstemp(tmpname);
+                    filename = tmpname;
+                    insieme::driver::saveLib(code, filename);
+                    EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
+                }
 
 		// load TU using the frontend (and all its potential extensions)
 		insieme::frontend::ConversionJob job;
@@ -99,11 +108,11 @@ namespace insieme {
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
-		std::string step="insiemecc_run_c_compile";
+		std::string step=TEST_STEP_INSIEMECC_RUN_C_COMPILE;
 		// switch to C++ compiler if necessary
 		if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
 			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
-			step="insiemecc_run_c++_compile";
+			step=TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
 		}
 
 		// add extra compiler flags from test case

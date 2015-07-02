@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,6 +38,11 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/types/subtype_constraints.h"
+
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace core {
@@ -73,15 +78,42 @@ namespace analysis {
 			}
 
 			bool visitNode(const NodePtr& cur, NodeSet& knownVariables) {
-				return any(cur.getChildList(), [&](const NodePtr& cur)->bool { return this->visit(cur, knownVariables); });
+				return any(cur.getChildList(), [&](const NodePtr& cur)->bool { 
+					return this->visit(cur, knownVariables);
+				});
 			}
 
 		};
 
 		NodeSet tmp;
 		return HasFreeTypeVariableVisitor().visit(type, tmp);
-
 	}
+
+	insieme::core::TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body) {
+		auto debug = false;
+		if(debug) std::cout << "{{{{{{ autoReturnType ----\n";
+
+		// find all returns
+		TypePtr newReturnType = nodeMan.getLangBasic().getUnit();
+		auto returns = analysis::getFreeNodes(body, NT_ReturnStmt, toVector(NT_LambdaExpr, NT_JobExpr, NT_ReturnStmt));
+		if(debug) std::cout << "{{{{{{{{{{{{{ Returns: " << returns << "\n";
+
+		// if no returns, unit is fine
+		if(!returns.empty()) { 
+			auto typeList = ::transform(returns, [](const NodePtr& ret) { 
+				return ret.as<ReturnStmtPtr>()->getReturnExpr()->getType(); 
+			});
+			if(debug) std::cout << "{{{{{{{{{{{{{ typeList: " << typeList << "\n";
+
+			newReturnType = types::getSmallestCommonSuperType(typeList);
+			if(debug) std::cout << "{{{{{{{{{{{{{ returnType: " << newReturnType << "\n";
+
+			assert_true(newReturnType) << "Return type deduction, multiple return types have no common supertype.";
+		}
+
+		return newReturnType;
+	}
+
 
 } // end namespace analysis
 } // end namespace core

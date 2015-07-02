@@ -82,39 +82,65 @@ void insieme_cleanup_context(irt_context* context) {
 
 void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 	uint32 sockets = irt_hw_get_num_sockets();
-	uint32 length;
-	uint32 frequencies[IRT_INST_MAX_CPU_FREQUENCIES];
+	uint32 length = 0;
+	uint32 frequencies[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
 
-	// assumes that all cores support the same frequencies (which they do, in a sane universe)
+	// assumes that all cores support the same frequencies
 	irt_cpu_freq_get_available_frequencies_core(0, frequencies, &length);
+
+	if (length == 0) {
+		printf("warning, query for available frequencies was not successful, trying only with min and max\n");
+		frequencies[0] = _irt_cpu_freq_get_uncached(0, "cpuinfo_min_freq");
+		frequencies[1] = _irt_cpu_freq_get_uncached(0, "cpuinfo_max_freq");
+		length = 2;
+	}
+
+	// make sure there are at least two frequency settings available
+	ASSERT_GT(length, 1);
+	EXPECT_GT(frequencies[0], 0);
+	EXPECT_GE(frequencies[1], frequencies[0]);
+
+	uint32 total_num_logical_cpus = irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket() * irt_hw_get_num_threads_per_core();
 
 	// try each frequency once
 	for(uint32 freq_id = 0; freq_id < length; ++freq_id) {
-		uint32 all_core_frequencies_min[irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket()];
-		uint32 all_core_frequencies_max[irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket()];
+		uint32 all_core_frequencies_min[total_num_logical_cpus];
+		uint32 all_core_frequencies_max[total_num_logical_cpus];
 		uint32 frequency = frequencies[freq_id];
 		// try each socket once
 		for(uint32 socket_id = 0; socket_id < sockets; ++socket_id) {
 			// save the current frequency settings
-			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
-				all_core_frequencies_min[core_id] = _irt_cpu_freq_get(core_id, "scaling_min_freq");
-				all_core_frequencies_max[core_id] = _irt_cpu_freq_get(core_id, "scaling_max_freq");
+			for(uint32 core_id = 0; core_id < total_num_logical_cpus; ++core_id) {
+				all_core_frequencies_min[core_id] = _irt_cpu_freq_get_uncached(core_id, "scaling_min_freq");
+				all_core_frequencies_max[core_id] = _irt_cpu_freq_get_uncached(core_id, "scaling_max_freq");
 			}
 			// set the frequency of the current socket
 			irt_cpu_freq_set_frequency_socket(socket_id, frequency);
 			// check all cores, the ones on this socket must be set correctly, the rest must remain unchanged
 			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
 				if(core_id >= socket_id * irt_hw_get_num_cores_per_socket() && core_id < (socket_id+1)*irt_hw_get_num_cores_per_socket()) {
-					EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_cur_freq"), frequency);
-					if(irt_hw_get_hyperthreading_enabled())
-						EXPECT_EQ(_irt_cpu_freq_get(irt_hw_get_sibling_hyperthread(core_id), "scaling_cur_freq"), frequency);
-				} else {
-					EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_cur_freq"), all_core_frequencies_min[core_id]);
-					EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_cur_freq"), all_core_frequencies_max[core_id]);
+					EXPECT_EQ(_irt_cpu_freq_get_uncached(core_id, "scaling_min_freq"), frequency);
+					EXPECT_EQ(_irt_cpu_freq_get_uncached(core_id, "scaling_max_freq"), frequency);
+					EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MIN_FREQ), frequency);
+					EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MAX_FREQ), frequency);
 					if(irt_hw_get_hyperthreading_enabled()) {
 						uint32 sibling = irt_hw_get_sibling_hyperthread(core_id);
-						EXPECT_EQ(_irt_cpu_freq_get(sibling, "scaling_cur_freq"), all_core_frequencies_min[sibling]);
-						EXPECT_EQ(_irt_cpu_freq_get(sibling, "scaling_cur_freq"), all_core_frequencies_max[sibling]);
+						EXPECT_EQ(_irt_cpu_freq_get_uncached(sibling, "scaling_min_freq"), frequency);
+						EXPECT_EQ(_irt_cpu_freq_get_uncached(sibling, "scaling_max_freq"), frequency);
+						EXPECT_EQ(_irt_cpu_freq_get_cached(sibling, SCALING_MIN_FREQ), frequency);
+						EXPECT_EQ(_irt_cpu_freq_get_cached(sibling, SCALING_MAX_FREQ), frequency);
+					}
+				} else {
+					EXPECT_EQ(_irt_cpu_freq_get_uncached(core_id, "scaling_min_freq"), all_core_frequencies_min[core_id]);
+					EXPECT_EQ(_irt_cpu_freq_get_uncached(core_id, "scaling_max_freq"), all_core_frequencies_max[core_id]);
+					EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MIN_FREQ), all_core_frequencies_min[core_id]);
+					EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MAX_FREQ), all_core_frequencies_max[core_id]);
+					if(irt_hw_get_hyperthreading_enabled()) {
+						uint32 sibling = irt_hw_get_sibling_hyperthread(core_id);
+						EXPECT_EQ(_irt_cpu_freq_get_uncached(sibling, "scaling_min_freq"), all_core_frequencies_min[sibling]);
+						EXPECT_EQ(_irt_cpu_freq_get_uncached(sibling, "scaling_max_freq"), all_core_frequencies_max[sibling]);
+						EXPECT_EQ(_irt_cpu_freq_get_cached(sibling, SCALING_MIN_FREQ), all_core_frequencies_min[core_id]);
+						EXPECT_EQ(_irt_cpu_freq_get_cached(sibling, SCALING_MAX_FREQ), all_core_frequencies_max[core_id]);
 					}
 				}
 			}
@@ -122,8 +148,8 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 			irt_cpu_freq_reset_frequencies();
 			// check that all frequencies have been reset
 			for(uint32 core_id = 0; core_id < irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket(); ++core_id) {
-				EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_min_freq"), _irt_cpu_freq_get(core_id, "cpuinfo_min_freq"));
-				EXPECT_EQ(_irt_cpu_freq_get(core_id, "scaling_max_freq"), _irt_cpu_freq_get(core_id, "cpuinfo_max_freq"));
+				EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MIN_FREQ), _irt_cpu_freq_get_uncached(core_id, "cpuinfo_min_freq"));
+				EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MAX_FREQ), _irt_cpu_freq_get_uncached(core_id, "cpuinfo_max_freq"));
 			}
 		}
 	}

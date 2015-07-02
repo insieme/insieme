@@ -66,6 +66,7 @@
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace frontend {
@@ -87,9 +88,9 @@ namespace {
 		return core::annotations::Location::getShared();
 	}
 
-	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getTransformLambda(ia::TransformationHint::Type type) {
-		return [&, type] (const pragma::MatchObject& object, StmtWrapper node) {
-			auto& trg = node.front();
+	pragmaHandlerFunction getTransformLambda(ia::TransformationHint::Type type) {
+		return [&, type] (const pragma::MatchObject& object, core::NodeList nodes) {
+			auto&& trg = nodes.front().as<StatementPtr>();
 
 			vector<unsigned> intValues = ::transform(object.getStrings("values"), [](const string& element) {
 				return insieme::utils::numeric_cast<unsigned>(element);
@@ -102,7 +103,7 @@ namespace {
 			ia::TransformAnnotation& ann = *trg->getAnnotation(ia::TransformAnnotation::KEY);
 			ann.getAnnotationList().push_back(std::make_shared<ia::TransformationHint>(type, intValues));
 
-			return node;
+			return nodes;
 		};
 	}
 
@@ -116,8 +117,9 @@ namespace {
 	frontend::tu::IRTranslationUnit InsiemePragmaExtension::IRVisit(frontend::tu::IRTranslationUnit& tu) {
 
 		// if there are no previously marked entry points, there's nothing to be done
-		if(entryPoints.size() < 1)
+		if(entryPoints.size() < 1) {
 			return tu;
+		}
 
 		// get IR for checking whether nodes are still valid
 		core::ExpressionPtr&& singlenode = frontend::tu::toIR(tu.getNodeManager(), tu);
@@ -129,10 +131,13 @@ namespace {
 			visitBreadthFirstInterruptible(singlenode, [&](const NodePtr& node){
 				ExpressionPtr expr = dynamic_pointer_cast<core::ExpressionPtr>(node);
 
-				if(!expr)
+				if(!expr) {
 					return false;
-				if(*it != expr)
+				}
+
+				if(*it != expr) {
 					return false;
+				}
 
 				LambdaExprPtr lambda = dynamic_pointer_cast<core::LambdaExprPtr>(expr);
 				assert_true(lambda) << "Non-LambdaExpression marked as entry point!";
@@ -163,13 +168,13 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "mark",
 				pragma::tok::eod,
-				[&](const pragma::MatchObject& object, StmtWrapper node) {
-					LambdaExprPtr expr = dynamic_pointer_cast<const LambdaExpr>(node.front());
+				[&](const pragma::MatchObject& object, core::NodeList nodes) {
+					LambdaExprPtr expr = dynamic_pointer_cast<const LambdaExpr>(nodes.front());
 					assert_true(expr) << "Insieme mark pragma can only be attached to function declarations!";
 
 					entryPoints.push_back(expr);
 
-					return node;
+					return nodes;
 				})
 		));
 
@@ -177,28 +182,27 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "kernelFile",
 				string_literal["arg"] >> pragma::tok::eod,
-				[](const pragma::MatchObject& object, StmtWrapper node) {
-
-					assert(object.getStrings("arg").size() == 1 && "Insieme KernelFile pragma cannot have more than one argument!");
+				[](const pragma::MatchObject& object, core::NodeList nodes) {
+					assert_eq(1, object.getStrings("arg").size()) && "Insieme KernelFile pragma cannot have more than one argument!";
 					ia::ocl::KernelFileAnnotation kernelFile(object.getStrings("arg").front());
 					core::NodeAnnotationPtr annot = std::make_shared<ia::ocl::KernelFileAnnotation>(kernelFile);
-					auto& callExprPtr = dynamic_pointer_cast<const CallExprPtr>(node.front());
+					auto& callExprPtr = dynamic_pointer_cast<const CallExprPtr>(nodes.front());
 					assert_true(callExprPtr) << "Insieme KernelFile pragma must be attached to a valid assignment CallExpression!";
 					auto& arguments = callExprPtr->getArguments();
 					assert_eq(arguments.size(), 2) << "Insieme KernelFile pragma must be attached to a valid assignment CallExpression with exactly 2 arguments!";
 					arguments[1].addAnnotation(annot);
 
-					return node;
+					return nodes;
 				})
 		));
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "datarange",
 				range_list["ranges"] >> pragma::tok::eod,
-				[](const pragma::MatchObject& object, StmtWrapper node) {
+				[](const pragma::MatchObject& object, core::NodeList nodes) {
 					const auto& exprs = object.getExprs("ranges");
 					const auto& vars = object.getVars("ranges");
-					assert(exprs.size() == (vars.size() * 2) && "Mismatching number of variables and expressions in insieme datarange pragma handling");
+					assert_eq(exprs.size(), vars.size() * 2) << "Mismatching number of variables and expressions in insieme datarange pragma handling";
 
 					ia::DataRangeAnnotation dataRanges;
 					auto exprIt = exprs.cbegin();
@@ -211,9 +215,9 @@ namespace {
 					}
 
 					core::NodeAnnotationPtr annot = std::make_shared<ia::DataRangeAnnotation>((dataRanges));
-					node.front().addAnnotation(annot);
+					nodes.front().addAnnotation(annot);
 
-					return node;
+					return nodes;
 				})
 		));
 
@@ -221,17 +225,17 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "data_transform",
 				string_literal["arg"] >> pragma::tok::eod,
-				[] (const pragma::MatchObject& object, StmtWrapper node) {
+				[] (const pragma::MatchObject& object, core::NodeList nodes) {
 
-					assert(object.getStrings("arg").size() == 1 && "Insieme DataTransform pragma must have exactly one argument");
+					assert_eq(1, object.getStrings("arg").size()) << "Insieme DataTransform pragma must have exactly one argument";
 					std::string datalayout = object.getStrings("arg").front();
 
 					const unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
 
 					ia::DataTransformAnnotation dataTransform(tilesize);
 					core::NodeAnnotationPtr annot = std::make_shared<ia::DataTransformAnnotation>(dataTransform);
-					node.front().addAnnotation(annot);
-					return node;
+					nodes.front().addAnnotation(annot);
+					return nodes;
 				})
 		));
 
@@ -239,12 +243,12 @@ namespace {
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "iterations",
 				tok::numeric_constant["value"] >> pragma::tok::eod,
-				[] (const pragma::MatchObject& object, StmtWrapper node) {
+				[] (const pragma::MatchObject& object, core::NodeList nodes) {
 
 					const size_t n = insieme::utils::numeric_cast<size_t>(object.getStrings("value").front());
 					core::NodeAnnotationPtr annot = std::make_shared<ia::LoopAnnotation>(n);
-					node.front().addAnnotation(annot);
-					return node;
+					nodes.front().addAnnotation(annot);
+					return nodes;
 				})
 		));
 
@@ -329,7 +333,7 @@ namespace {
 		typedef std::shared_ptr<ia::TransformationHint> HintPtr;
 
 		auto&& transformer = [&]( const core::NodePtr& cur ) {
-			if( const TransformAnnPtr& trans = cur->getAnnotation( ia::TransformAnnotation::KEY ) ) {
+			if(const TransformAnnPtr& trans = cur->getAnnotation(ia::TransformAnnotation::KEY)) {
 				try {
 					std::vector<TransformationPtr> tr;
 					for_each(trans->getAnnotationList(), [&](const HintPtr& hint) {
@@ -433,7 +437,8 @@ namespace {
 		// FIXME filter all the for stmt
 		core::visitDepthFirstOnce(program, core::makeLambdaVisitor(transformer));
 
-		return static_pointer_cast<const core::ProgramPtr>(core::transform::replaceAll(program->getNodeManager(), program, replacements, false));
+		return static_pointer_cast<const core::ProgramPtr>(core::transform::replaceAll(
+			program->getNodeManager(), program, replacements, core::transform::globalReplacement));
 
 	}
 

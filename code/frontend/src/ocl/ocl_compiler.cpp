@@ -47,6 +47,7 @@
 #include "insieme/core/annotations/source_location.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/ocl/ocl_code_snipplets.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/handler.h"
 
@@ -362,26 +363,7 @@ private:
 				// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
 				unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
-				std::string irCode = format(
-					"lambda (vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
-					"	decl ref<vector<'b,%i> > toVec = var( undefined(vector<'b,%i>) );"
-						""
-						"for(uint<8> i = 0u .. %iu ) "
-						"	toVec[i] = CAST('b) fromVec[i]; "
-						""
-						"return *toVec; "
-					"}", length, length, length, length, length, length);
-
-				core::ExpressionPtr irConvert = builder.parseExpr(irCode);
-						/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
-					"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
-					"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
-					""
-					"for(decl uint<8>:i = lit<uint<8>, 0> .. length ) "
-					"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
-					""
-					"return (op<ref.deref>(toVec )); "
-				"}}");*/
+				core::ExpressionPtr irConvert = getConvert(length, builder);
 
 				return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
         	} else {
@@ -849,6 +831,18 @@ private:
         });
     }
 
+    void createArgList(ArgList& outVec, core::VariablePtr& in, core::TypeList& types) {
+            core::VariablePtr tmp = builder.variable(in->getType());
+
+            // capture a newly generated variable and initialize the one in in in it
+            outVec.first.push_back(in);
+            outVec.second.push_back(tmp);
+
+            // store the new variable in in
+            in = tmp;
+            types.push_back(in->getType());
+    }
+
     void initArgInList(ArgList& outVec, std::vector<core::DeclarationStmtPtr>& inVec,
         core::TypeList& types) {
         for_each(inVec, [&](core::DeclarationStmtPtr& in) {
@@ -863,16 +857,22 @@ private:
 
 
     core::ExpressionPtr genFunCall(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
-            constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
+            constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs,
+			const std::vector<OCL_ADDRESS_SPACE>& argsOrder) {
         // define and init all arguments
 
         ArgList arguments;
         core::TypeList argTypes;
 
-        createArgList(arguments, constantArgs, argTypes);
-        createArgList(arguments, globalArgs, argTypes);
-        createArgList(arguments, localArgs, argTypes);
-        createArgList(arguments, privateArgs, argTypes);
+        size_t con = 0, glo = 0, loc = 0, pri = 0;
+        for(auto I = argsOrder.begin(), E = argsOrder.end(); I != E; I++) {
+            switch (*I) {
+            case CONSTANT: createArgList(arguments, constantArgs.at(con++), argTypes); break;
+            case GLOBAL: createArgList(arguments, globalArgs.at(glo++), argTypes); break;
+            case LOCAL: createArgList(arguments, localArgs.at(loc++), argTypes); loc++; break;
+            case PRIVATE: createArgList(arguments, privateArgs.at(pri++), argTypes); break;
+            }
+        }
 
         // in-body local variables
         if(scope == OCL_LOCAL_JOB /*|| scope == OCL_LOCAL_PAR*/)
@@ -950,7 +950,6 @@ public:
                 }
 
                 core::VariableList params = func->getParameterList()->getElements();
-
                 std::vector<OCL_ADDRESS_SPACE> argsOrder;
 
                 // vectors to store Arguments
@@ -1038,7 +1037,7 @@ public:
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
-                    core::ExpressionPtr localParFct = genFunCall(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
+                    core::ExpressionPtr localParFct = genFunCall(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
 
                     // calculate localRange[0] * localRange[1] * localRange[2] to use as maximum number of threads
                     core::ExpressionPtr localRangeProduct = vecProduct(kd.localRange, 3);
@@ -1072,7 +1071,7 @@ public:
 
                     // build expression to be used as body of global job
                     core::ExpressionPtr globalParFct = genFunCall(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
-                            privateArgs);
+                            privateArgs, argsOrder);
 
 //                    createDeclarations(globalJobShared, constantArgs);
 //                    createDeclarations(globalJobShared, globalArgs);
@@ -1137,11 +1136,10 @@ public:
 						argTys.push_back(param->getType());
   					// function returns unit
                     core::FunctionTypePtr newFuncType = builder.functionType(argTys, BASIC.getUnit());
-
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
                     // get address spaces of variables in body
-    //                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
+                    // kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                     // put opencl annotation to the new function for eventual future use
                     newFunc->addAnnotation(funcAnnotation);

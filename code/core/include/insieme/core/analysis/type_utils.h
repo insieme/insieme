@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,6 +49,15 @@ namespace analysis {
 	 * @return true if there are free type variables, false otherwise
 	 */
 	bool hasFreeTypeVariables(const TypePtr& type);
+	
+	/**
+	 * Determines the return type of a function based on its return statements.
+	 *
+	 * @param nodeMan NodeManager used to generate required types if necessary
+	 * @param body body of the function
+	 * @return the deduced return type
+	 */
+	TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body);
 
 } // end namespace analysis
 } // end namespace core

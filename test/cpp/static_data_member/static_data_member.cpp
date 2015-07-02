@@ -46,6 +46,40 @@ int Obj::public_value = 40;
 const int Obj::private_const_value = 5;
 const int Obj::public_const_value = 50;
 
+class SingletonClass {
+		~SingletonClass(){}
+		SingletonClass(){}
+		static int rank;
+		static int nprocs;
+	public:
+		static SingletonClass& instance();
+		static void init();
+		static int get_rank(){
+                    return instance().instance().rank;
+                }
+		static int get_rank(int i){
+                    return instance().instance().rank+i;
+                }
+		static int get_nprocs(){
+                    return instance().nprocs;
+                }
+};
+
+int SingletonClass::rank=-1;
+int SingletonClass::nprocs=-1;
+
+SingletonClass& SingletonClass::instance() {
+	init();
+	static SingletonClass* instance = new SingletonClass;
+	return *instance;
+}
+
+void SingletonClass::init() {
+	rank = 150;
+	nprocs = 130;
+}
+
+
 int main(){
 
 	Obj o(10);
@@ -61,4 +95,12 @@ int main(){
 	//std::cout << Obj::private_const_value << std::endl;
 	std::cout << "public " << Obj::public_value << std::endl;
 	std::cout << "public const" << Obj::public_const_value << std::endl;
+
+        std::cout <<  "singletonTest rank: " << SingletonClass::get_rank() << std::endl;
+        std::cout <<  "singletonTest nprocs: " << SingletonClass::get_nprocs() << std::endl;
+
+        std::cout <<  "singletonTest rank: " << SingletonClass::instance().get_rank() << std::endl;
+        std::cout <<  "singletonTest rank: " << SingletonClass::instance().get_rank(10) << std::endl;
+
+        return 0;
 }

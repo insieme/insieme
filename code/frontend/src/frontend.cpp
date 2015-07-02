@@ -41,7 +41,6 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/utils/config.h"
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
@@ -64,6 +63,7 @@
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
 #include "insieme/frontend/extensions/crosscompilation_extension.h"
 #include "insieme/frontend/extensions/omp_frontend_extension.h"
+#include "insieme/frontend/extensions/significance_frontend_extension.h"
 #include "insieme/frontend/extensions/instrumentation_region_extension.h"
 #include "insieme/frontend/extensions/anonymous_rename_extension.h"
 #include "insieme/frontend/extensions/cilk_extension.h"
@@ -122,7 +122,8 @@ namespace frontend {
         for(auto ext : getExtensions()) {
             auto isMissing = ext->isPrerequisiteMissing(*this);
             if(isMissing) {
-				std::cerr << "Prerequisite for an extension is missing: " <<  *isMissing << std::endl;
+				std::cerr << "Prerequisite for an extension is missing:\n" <<  *isMissing << std::endl;
+				assert_fail() << "Aborting due to frontend extension prerequisite error.";
 			}
         }
 	}
@@ -234,7 +235,8 @@ namespace frontend {
 		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);
 		registerFrontendExtension<extensions::TestPragmaExtension>(options);
 		registerFrontendExtension<extensions::InsiemePragmaExtension>(options);
-        registerFrontendExtension<extensions::OmpFrontendExtension>(options);
+		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
+		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
         registerFrontendExtension<extensions::CilkFrontendExtension>(options);
         registerFrontendExtension<extensions::GemsclaimExtension>(options);
         registerFrontendExtension<extensions::CrossCompilationExtension>(options);

@@ -49,6 +49,7 @@
 #endif
 
 
+#include "abstraction/atomic.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
 #include "impl/irt_context.impl.h"
@@ -169,7 +170,7 @@ void* _irt_worker_func(void *argvp) {
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
 	self->lazy_wi.id.cached = &self->lazy_wi;
-	self->lazy_wi.state = IRT_WI_STATE_DONE;
+	irt_atomic_store(&self->lazy_wi.state, IRT_WI_STATE_DONE);
 	
 	// init reuse lists
 	self->wi_ev_register_list = NULL; // prepare some?
@@ -177,7 +178,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
 
-	self->state = IRT_WORKER_STATE_READY;
+	irt_atomic_store(&self->state, IRT_WORKER_STATE_READY);
 
 	// store self, free arg
 	irt_g_workers[arg->index] = self;
@@ -213,13 +214,15 @@ uint32 _irt_worker_select_implementation_variant(const irt_worker* self, const i
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", (void*) self);
 	// wait for previous operations on WI to complete
-	while(wi->state != IRT_WI_STATE_NEW && wi->state != IRT_WI_STATE_SUSPENDED);
-	IRT_ASSERT(wi->state == IRT_WI_STATE_NEW || wi->state == IRT_WI_STATE_SUSPENDED,
-		IRT_ERR_INTERNAL, "Worker %p switching to WI %p, WI not ready", (void*) self, (void*) wi);
+	irt_work_item_state current_state;
+	do {
+		current_state = irt_atomic_load(&wi->state);
+	}	while(current_state != IRT_WI_STATE_NEW && current_state != IRT_WI_STATE_SUSPENDED);
+
 	self->cur_context = wi->context_id;
-	if(wi->state == IRT_WI_STATE_NEW) {
+	if(irt_atomic_load(&wi->state) == IRT_WI_STATE_NEW) {
 		// start WI from scratch
-		wi->state = IRT_WI_STATE_STARTED;
+		irt_atomic_store(&wi->state, IRT_WI_STATE_STARTED);
 		lwt_prepare(self->id.thread, wi, &self->basestack);
 		self->cur_wi = wi;
 		#ifdef USING_MINLWT
@@ -240,7 +243,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
 		// resume WI
-		wi->state = IRT_WI_STATE_STARTED;
+		irt_atomic_store(&wi->state, IRT_WI_STATE_STARTED);
 		self->cur_wi = wi;
 		#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", (void*) self, (void*)wi->stack_ptr);
@@ -324,13 +327,12 @@ void _irt_worker_cancel_all_others() {
 	irt_worker *self = irt_worker_get_current(), *cur;
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		cur = irt_g_workers[i];
-		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
-			cur->state = IRT_WORKER_STATE_STOP;
+		if(cur != self && irt_atomic_load(&cur->state) == IRT_WORKER_STATE_RUNNING) {
+			irt_atomic_store(&cur->state, IRT_WORKER_STATE_STOP);
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STOP, cur->id);
 			irt_thread_cancel(&(cur->thread));
 		}
 	}
-	
 }
 
 void _irt_worker_end_all() {
@@ -342,19 +344,19 @@ void _irt_worker_end_all() {
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
 		irt_spin_lock(&cur->shutdown_lock);
-		if(cur->state == IRT_WORKER_STATE_JOINED) continue;
+		if(irt_atomic_load(&cur->state) == IRT_WORKER_STATE_JOINED) continue;
 		do {
-			cur->state = IRT_WORKER_STATE_STOP;
+			irt_atomic_store(&cur->state, IRT_WORKER_STATE_STOP);
 			irt_signal_worker(cur);
 			// workers stopped by dop setting should be woken up
 			irt_cond_wake_one(&cur->dop_wait_cond);
-		} while(cur->state != IRT_WORKER_STATE_STOP);
+		} while(irt_atomic_load(&cur->state) != IRT_WORKER_STATE_STOP);
 		// don't join calling thread
 		if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
 			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
-			if(cur->state != IRT_WORKER_STATE_JOINED) irt_thread_join(&(cur->thread));
+			if(irt_atomic_load(&cur->state) != IRT_WORKER_STATE_JOINED) irt_thread_join(&(cur->thread));
 			irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
-			cur->state = IRT_WORKER_STATE_JOINED;
+			irt_atomic_store(&cur->state, IRT_WORKER_STATE_JOINED);
 		}
 		irt_spin_unlock(&cur->shutdown_lock);
 	}

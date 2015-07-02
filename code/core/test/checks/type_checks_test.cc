@@ -972,7 +972,7 @@ TEST(LambdaExprType, Basic) {
 
 	// build an invalid variable as a replacement
 	VariablePtr invalid = builder.variable(outer->getType());
-
+	
 	// case 1 - lambda expression selects non-existing body
 	auto err = transform::replaceNode(manager, outer, invalid).as<LambdaExprPtr>();
 
@@ -987,8 +987,7 @@ TEST(LambdaExprType, Basic) {
 	errors = check(err,typeCheck);
 	EXPECT_EQ(1u, errors.size()) << errors;
 	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_TYPE, "", Message::ERROR));
-
-
+	
 	// case 3 - use invalid variable type in lambda
 	invalid = builder.variable(invalidType);
 	err = transform::replaceNode(manager,
@@ -997,13 +996,12 @@ TEST(LambdaExprType, Basic) {
 	errors = check(err,typeCheck);
 	EXPECT_EQ(1u, errors.size()) << errors;
 	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_REC_VAR_TYPE, "", Message::ERROR));
-
-
+	
 	// case 4 - wrong lambda type
 	VariablePtr param = lambda->getLambda()->getParameterList()[0];
 	VariablePtr invalidParam = builder.variable(basic.getFloat());
 
-	err = transform::replaceAll(manager,lambda, param, invalidParam, false).as<LambdaExprPtr>();
+	err = transform::replaceAll(manager, lambda, param, invalidParam, transform::globalReplacement).as<LambdaExprPtr>();
 	errors = check(err,typeCheck);
 	EXPECT_EQ(1u, errors.size()) << errors;
 	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
@@ -1175,7 +1173,7 @@ TEST(NarrowExpression, Basic) {
 	ASSERT_TRUE (res);
 	auto errors = check(res, typeCheck);
 	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
-	EXPECT_EQ("{decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 =  var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>));decl ref<int<4>> v1 = ref_narrow(v0, dp_root.b, type<int<4>>);decl ref<int<4>> v2 = ref_narrow(v0, dp_root.a.a, type<int<4>>);}",
+	EXPECT_EQ("{decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 = ( var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>)));decl ref<int<4>> v1 = ref_narrow(v0, (dp_root.b), type<int<4>>);decl ref<int<4>> v2 = ref_narrow(v0, ((dp_root.a).a), type<int<4>>);}",
 			  toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 	res = builder.parseStmt(

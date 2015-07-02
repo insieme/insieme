@@ -49,8 +49,6 @@ typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScope
 namespace transform {
 namespace datalayout {
 
-utils::map::PointerMap<core::ExpressionPtr, core::RefTypePtr> propagateTrhoughJobsAndTuples(core::NodeAddress toTransform, core::ExpressionSet vars);
-
 template<class Baseclass>
 class ParSecTransform : public Baseclass {
 protected:
@@ -61,12 +59,15 @@ protected:
 	const core::StructTypePtr& oldStructType;
 	std::vector<core::LambdaExprAddress> globalLambdas;
 
-	virtual ExprAddressRefTypeMap findCandidates(const core::NodeAddress& toTransform);
+	virtual ExprAddressArrayTypeMap findCandidates(const core::NodeAddress& toTransform);
 
 	virtual core::StatementList generateNewDecl(const ExprAddressMap& varReplacements, const core::DeclarationStmtAddress& decl,
 			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 			const core::ExpressionPtr& nElems);
 
+	virtual core::StatementList generateNewAssigns(const ExprAddressMap& varReplacements, const core::CallExprAddress& call,
+			const core::StatementPtr& newVar, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
+			const core::ExpressionPtr& nElems = core::ExpressionPtr());
 public:
 	ParSecTransform(core::NodePtr& toTransform, ExprAddressMap& varsToPropagate, std::map<core::NodeAddress, core::NodePtr>& replacements,
 			const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType);

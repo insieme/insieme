@@ -38,6 +38,7 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 #include <string>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -53,6 +54,8 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/driver/integration/test_step.h"
+#include "insieme/frontend/translation_unit.h"
 
 namespace insieme {
 namespace driver {
@@ -65,26 +68,26 @@ namespace integration {
 			// load code using frontend
 			std::vector<std::string> args = {"compiler"};
 			for(auto file : testCase.getFiles()) {
-                args.push_back(file.string());
-			}
-			for(auto includeDir : testCase.getIncludeDirs()) {
-                std::string include = "-I"+includeDir.string();
-                args.push_back(include);
-			}
-			if(testCase.isEnableOpenMP()) {
-                args.push_back("-fopenmp");
-			}
-            if(testCase.isEnableOpenCL()) {
-                args.push_back("-fopencl");
-            }
+                            args.push_back(file.string());
+                        }
+                        for(auto includeDir : testCase.getIncludeDirs()) {
+                            std::string include = "-I"+includeDir.string();
+                            args.push_back(include);
+                        }
+                        if(testCase.isEnableOpenMP()) {
+                            args.push_back("-fopenmp");
+                        }
+                        if(testCase.isEnableOpenCL()) {
+                            args.push_back("--flib-icl -lOpenCL");
+                        }
 
-			driver::cmd::Options options = driver::cmd::Options::parse(args);
+                        driver::cmd::Options options = driver::cmd::Options::parse(args);
 			options.job.setOption(insieme::frontend::ConversionSetup::ProgressBar);
 
-			std::string step="insiemecc_run_c_convert";
+			std::string step=TEST_STEP_INSIEMECC_RUN_C_CONVERT;
 			if (testCase.isCXX11()){
 				options.job.setStandard(frontend::ConversionSetup::Cxx11);
-				step="insiemecc_run_c++_convert";
+				step=TEST_STEP_INSIEMECC_RUN_CPP_CONVERT;
 			}
 
 			// add pre-processor definitions
@@ -104,11 +107,11 @@ namespace integration {
 
 
 	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
-		return toJob(*this).execute(manager);
+            return toJob(*this).execute(manager);
 	}
 
 	frontend::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
-		return toJob(*this).toIRTranslationUnit(manager);
+            return toJob(*this).toIRTranslationUnit(manager);
 	}
 
 	namespace fs = boost::filesystem;
@@ -275,29 +278,37 @@ namespace integration {
 			const fs::path testDir(testDirStr);
 
 			// check whether the directory is correct
-			if (!fs::exists(testDir)) {
+			if (!fs::exists(testDir) || !fs::is_directory(testDir)) {
 				LOG(WARNING) << "Test-Directory path not properly set!";
 				return res;
 			}
 
-			// read the test.cfg file
-			const fs::path testConfig = testDir / "test.cfg";
-			if (!fs::exists(testConfig)) {
-				LOG(WARNING) << "No test-configuration file found!";
+			// read the blacklisted_tests file
+			const fs::path blacklistedTestsPath = testDir / "blacklisted_tests";
+			if (!fs::exists(blacklistedTestsPath)) {
+				LOG(WARNING) << "No blacklisted_tests file found!";
 				return res;
 			}
 
-			fs::ifstream configFile;
-			configFile.open(testConfig);
-			if (!configFile.is_open()) {
-				LOG(WARNING) << "Unable to open test-configuration file!";
+			//Add all sub directories to the list of test cases to load
+			set<string> testCases;
+			for(fs::directory_iterator it(testDir); it != fs::directory_iterator(); ++it) {
+				const fs::path file = *it;
+				if (fs::is_directory(file)) {
+					testCases.insert(file.filename().string());
+				}
+			}
+
+			//now exclude all the blacklisted test cases
+			fs::ifstream blacklistedTestsFile;
+			blacklistedTestsFile.open(blacklistedTestsPath);
+			if (!blacklistedTestsFile.is_open()) {
+				LOG(WARNING) << "Unable to open blacklisted_tests file!";
 				return res;
 			}
-			vector<string> testCases;
 
-			string testCase ;
-			while ( getline(configFile, testCase) ) {
-
+			string testCase;
+			while (getline(blacklistedTestsFile, testCase)) {
 				// remove any comments, except if commented tests should be included
 				if(!forceCommented || !boost::starts_with(boost::algorithm::trim_copy(testCase),"#"))
 					testCase = testCase.substr(0,testCase.find("#",0));
@@ -308,11 +319,15 @@ namespace integration {
 				testCase.erase(0, testCase.find_first_not_of(" "));
 				testCase.erase(testCase.find_last_not_of(" ")+1);
 
-				if (!testCase.empty() && fs::is_directory(testDir / testCase)) {
-					testCases.push_back(testCase);
+				if (!testCase.empty()) {
+					if (!fs::is_directory(testDir / testCase)) {
+						LOG(WARNING) << "Blacklisted test case \"" << testCase << "\" does not exist.";
+					} else {
+						testCases.erase(testCase);
+					}
 				}
 			}
-			configFile.close();
+			blacklistedTestsFile.close();
 
 			// load individual test cases
 			for(const string& cur : testCases) {
@@ -325,8 +340,8 @@ namespace integration {
 				}
 
 				// check whether it is a test suite
-				const fs::path subTestConfig = testCaseDir / "test.cfg";
-				if (fs::exists(subTestConfig)) {
+				const fs::path subTestBlacklist = testCaseDir / "blacklisted_tests";
+				if (fs::exists(subTestBlacklist)) {
 					LOG(DEBUG) << "Descending into sub-test-directory " << (testCaseDir).string();
 					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), forceCommented);
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));
@@ -352,24 +367,6 @@ namespace integration {
 			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;
-	}
-
-	const vector<IntegrationTestCase> getAllCasesAt(const string& path){
-		const fs::path testDir(path);
-		const fs::path testConfig = testDir / "test.cfg";
-		vector<IntegrationTestCase> ret;
-		IntegrationTestCaseOpt testCase;
-
-		// parse subfolders if test.cfg is present
-		if (fs::exists(testConfig))
-			return vector<IntegrationTestCase>(loadAllCases(path));
-		else
-			testCase=getCase(path);
-			if(testCase)
-				ret.push_back(*testCase);
-			return ret;
-
-		return vector<IntegrationTestCase>();
 	}
 
 	const IntegrationTestCaseOpt getCase(const string& name) {
@@ -418,9 +415,9 @@ namespace integration {
 		frontend::path absolute_path = fs::canonical(fs::absolute(path));
 
 		// first check if it's an individual test case
-		const fs::path testConfig = absolute_path / "test.cfg";
-		if (!fs::exists(testConfig)) {
-			//individual test cases have no "test.cfg"
+		const fs::path blacklistFile = absolute_path / "blacklisted_tests";
+		if (!fs::exists(blacklistFile)) {
+			//individual test cases have no "blacklisted_tests" file in their folder
 			auto testCase = loadTestCase(path);
 			if (testCase) {
 				return toVector(*testCase);
@@ -442,14 +439,14 @@ namespace integration {
 		// load code using frontend - using given options
 		std::vector<std::string> args = {"compiler"};
 		for(auto file : curCase->getFiles()) {
-            args.push_back(file.string());
-		}
-        for(auto incl : curCase->getIncludeDirs()) {
-            std::string inc = "-I"+incl.string();
-            args.push_back(inc);
-        }
-        if(enableOpenMP) args.push_back("-fopenmp");
-		insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
+                    args.push_back(file.string());
+                        }
+                for(auto incl : curCase->getIncludeDirs()) {
+                    std::string inc = "-I"+incl.string();
+                    args.push_back(inc);
+                }
+                if(enableOpenMP) args.push_back("-fopenmp");
+                    insieme::driver::cmd::Options options = insieme::driver::cmd::Options::parse(args);
 
 		// add pre-processor definitions
 		for(const auto& cur : definitions) {

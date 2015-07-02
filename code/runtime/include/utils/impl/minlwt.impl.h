@@ -157,17 +157,23 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 #ifdef IRT_ASTEROIDEA_STACKS
 	// if parent stack is available, reuse it
 	irt_work_item* parent = wi->parent_id.cached;
-	if(parent && parent->num_active_children == wi->parent_num_active_children) {
+	if(parent) {
 		if(irt_atomic_bool_compare_and_swap(&parent->stack_available, true, false, intptr_t)) {
-			// check required to see if stack is not in use by directly evaluated child wi
-			if(parent->num_active_children != wi->parent_num_active_children) irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, intptr_t);
-			else {
+			/* NOTE:
+			 * Here we are in a window of vulnerability and we have to take measures to avoid a race condition.
+			 * For an explanation and the solution look in function _irt_wi_join_all_event in file work_item.impl.h
+			 */
+			// only use the stack if our parent runs no immediate sibling at the moment
+			if(parent->num_active_children == wi->parent_num_active_children) {
 				IRT_DEBUG(" + %p taking stack from %p\n", (void*) wi, (void*) parent);
 				IRT_DEBUG("   %p child count: %d\n", (void*) parent, *parent->num_active_children);
 				wi->stack_storage = NULL;
 				wi->stack_ptr = parent->stack_ptr - 8;
 				wi->stack_ptr -= wi->stack_ptr % LWT_STACK_ALIGNMENT;
 				return;
+			} else {
+				// otherwise give it back, since we shouldn't have taken it in the first place
+				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack to parent.\n");
 			}
 		}
 	}

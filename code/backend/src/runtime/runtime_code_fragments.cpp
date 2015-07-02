@@ -577,10 +577,19 @@ namespace runtime {
 		c_ast::ExpressionPtr convertMetaInfoEntry(const Converter& converter, ConversionContext& context, const core::ExpressionPtr& expr) {
 			static const core::encoder::DirectExprListConverter::is_encoding_of isEncodedList;
 			static const core::encoder::DirectExprListConverter::ir_to_value_converter decodeList;
-
+			
 			// if it is the null-expression => return 0 literal
 			if (!expr) {
 				return converter.getCNodeManager()->create<c_ast::Literal>("0");
+			}
+
+			// if it is a string literal => use directly
+			if (expr.isa<core::LiteralPtr>()) {
+				auto& basic = converter.getNodeManager().getLangBasic();
+				if(basic.isString(expr.getType())) {
+					return converter.getCNodeManager()->create<c_ast::Literal>(
+						format("\"%s\"", expr.as<core::LiteralPtr>().getStringValue()));
+				} 
 			}
 
 			// if it is an encoded expression => decode it

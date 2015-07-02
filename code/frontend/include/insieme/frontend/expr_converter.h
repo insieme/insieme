@@ -111,55 +111,50 @@ protected:
 	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
 	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
 
-template<class ClangExprTy>
-ExpressionList getFunctionArguments(ClangExprTy* callExpr,
-									const clang::FunctionDecl* declaration){
-	const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
-	return getFunctionArguments(callExpr, funcTy);
-}
-
-core::ExpressionPtr fixType(const core::ExpressionPtr& expr, const core::TypePtr& targetType);
-
-
-template<class ClangExprTy>
-ExpressionList getFunctionArguments(ClangExprTy* callExpr,
-									const core::FunctionTypePtr& funcTy){
-	ExpressionList args;
-
-	// if member function, need to skip one arg (the local scope arg)
-	int off =0;
-	if (funcTy->isMemberFunction() ||
-		funcTy->isConstructor() ||
-		funcTy->isDestructor() ){
-		off =1;
+	template<class ClangExprTy>
+	ExpressionList getFunctionArguments(ClangExprTy* callExpr, const clang::FunctionDecl* declaration) {
+		const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
+		return getFunctionArguments(callExpr, funcTy);
 	}
 
-	//FIXME find a cleaner solution
-	size_t argIdOffSet = 0;
-	// for CXXOperatorCallExpr we need to take care of the "this" arg separately
-	// is a memberfunctioncall -- arg(0) == this
-	if( const clang::CXXOperatorCallExpr* oc = llvm::dyn_cast<clang::CXXOperatorCallExpr>(callExpr) ) {
-		if( llvm::isa<clang::CXXMethodDecl>(oc->getCalleeDecl()) ) {
-			argIdOffSet = 1;
-			off=0;
-			VLOG(2) << " == Operator call == ";
+	core::ExpressionPtr fixType(const core::ExpressionPtr& expr, const core::TypePtr& targetType);
+
+
+	template<class ClangExprTy>
+	ExpressionList getFunctionArguments(ClangExprTy* callExpr, const core::FunctionTypePtr& funcTy) {
+		ExpressionList args;
+
+		// if member function, need to skip one arg (the local scope arg)
+		int off =0;
+		if (funcTy->isMemberFunction() ||
+			funcTy->isConstructor() ||
+			funcTy->isDestructor() ){
+			off =1;
 		}
-	}
 
-	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
-		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-		if ( argId < funcTy->getParameterTypes().size() ) {
-			arg = fixType(arg, funcTy->getParameterTypes()[argId+off]);
-		} else {
-			arg = core::types::smartCast(builder.getNodeManager().getLangBasic().getVarList(), arg);
+		//FIXME find a cleaner solution
+		size_t argIdOffSet = 0;
+		// for CXXOperatorCallExpr we need to take care of the "this" arg separately
+		// is a memberfunctioncall -- arg(0) == this
+		if( const clang::CXXOperatorCallExpr* oc = llvm::dyn_cast<clang::CXXOperatorCallExpr>(callExpr) ) {
+			if( llvm::isa<clang::CXXMethodDecl>(oc->getCalleeDecl()) ) {
+				argIdOffSet = 1;
+				off=0;
+				VLOG(2) << " == Operator call == ";
+			}
 		}
-		args.push_back( arg );
+
+		for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
+			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+			if ( argId < funcTy->getParameterTypes().size() ) {
+				arg = fixType(arg, funcTy->getParameterTypes()[argId+off]);
+			} else {
+				arg = core::types::smartCast(builder.getNodeManager().getLangBasic().getVarList(), arg);
+			}
+			args.push_back( arg );
+		}
+		return args;
 	}
-
-	return args;
-}
-
-
 
 public:
 	// CallGraph for functions, used to resolved eventual recursive functions
@@ -270,7 +265,6 @@ public:
 	//							CONDITIONAL OPERATOR
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitConditionalOperator(const clang::ConditionalOperator* condOp);
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						ARRAY SUBSCRIPT EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -279,7 +273,6 @@ public:
 	//							VAR DECLARATION REFERENCE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  VECTOR/STRUCT INITALIZATION EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -295,20 +288,18 @@ public:
 	//		((int [3]){1,2,3})[2]  -> 2
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCompoundLiteralExpr(const clang::CompoundLiteralExpr* compLitExpr);
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //                  StmtExpr EXPRESSION
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    core::ExpressionPtr VisitStmtExpr(const clang::StmtExpr* stmtExpr);
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //                  ImplicitValueInit EXPRESSION
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    core::ExpressionPtr VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr);
-
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //                  Atomic EXPRESSION
-    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    core::ExpressionPtr VisitAtomicExpr(const clang::AtomicExpr* atom);
-
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//                  StmtExpr EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitStmtExpr(const clang::StmtExpr* stmtExpr);
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//                  ImplicitValueInit EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitImplicitValueInitExpr(const clang::ImplicitValueInitExpr* initExpr);
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//                  Atomic EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitAtomicExpr(const clang::AtomicExpr* atom);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
@@ -412,6 +403,7 @@ public:
 	core::ExpressionPtr VisitExprWithCleanups			(const clang::ExprWithCleanups* cleanupExpr);
 	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
+        core::ExpressionPtr VisitCXXDefaultInitExpr         (const clang::CXXDefaultInitExpr* initExpr);
 	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
 
 	core::ExpressionPtr VisitUnaryOperator 				(const clang::UnaryOperator* unaryOp);

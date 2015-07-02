@@ -1,2 +1,2 @@
-executionFlags=-n 10 -c -t
+executionFlags=-n 5000000 -c -t
 files=${files},"fft.c"

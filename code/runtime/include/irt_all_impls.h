@@ -54,9 +54,8 @@
 #include "irt_types.h"
 #include "meta_information/meta_infos.h"
 #include "wi_implementation.h"
-#include "utils/timing.h"
+#include "abstraction/impl/rdtsc.impl.h"
 #include "utils/impl/timing.impl.h"
-#include "utils/frequency.h"
 #include "utils/impl/frequency.impl.h"
 
 #ifndef IRT_MIN_MODE

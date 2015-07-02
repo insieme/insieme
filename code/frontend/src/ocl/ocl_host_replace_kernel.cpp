@@ -49,6 +49,7 @@
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/cast_tool.h"
+#include "insieme/core/types/subtype_constraints.h"
 
 #include "insieme/frontend/ocl/ocl_host_replace_kernel.h"
 #include "insieme/frontend/ocl/ocl_host_utils1.h"
@@ -316,7 +317,7 @@ ExpressionPtr KernelReplacer::handleArgument(const TypePtr& argTy, const TypePtr
 
 
 		TypePtr refArtTy = builder.refType(argTy);
-		if(argument->getType() != refArtTy) {// e.g. argument of kernel is an ocl vector type
+		if(!types::isSubTypeOf(argument->getType(), refArtTy)) {// e.g. argument of kernel is an ocl vector type
 
 			argument = builder.callExpr(refArtTy, gen.getRefReinterpret(), argument, builder.getTypeLiteral(argTy));
 		}
@@ -582,7 +583,7 @@ for_each(kernelTypes[kernel], [](NodePtr doll) {
 	});
 
 	// perform the replacements
-	prog = transform::replaceAll(mgr, prog, replacements, false);
+	prog = transform::replaceAll(mgr, prog, replacements, core::transform::globalReplacement);
 }
 
 void updateStruct(const ExpressionPtr& kernelStruct, TypePtr& kernelType, const ExpressionPtr& identifier) {
@@ -703,7 +704,7 @@ void KernelReplacer::inlineKernelCode() {
 //	std::cout << "\nreplacing " << printer::PrettyPrinter(ndrangeKernel["enrk"].getValue()) << "\n\twith " << printer::PrettyPrinter(newKernelCall);
 	});
 
-	prog = transform::replaceAll(mgr, prog, replacements, false);
+	prog = transform::replaceAll(mgr, prog, replacements, core::transform::globalReplacement);
 }
 
 ProgramPtr KernelReplacer::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
@@ -767,7 +768,7 @@ std::vector<ExpressionPtr> KernelReplacer::lookForKernelFilePragma(const core::T
 	std::vector<ExpressionPtr> kernelEntries;
 
 	if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(utils::tryRemoveAlloc(createProgramWithSource))) {
-		std::cout << "createProgramWithSource:\n" << dumpPretty(createProgramWithSource) << "\n";
+//		std::cout << "createProgramWithSource:\n" << dumpPretty(createProgramWithSource) << "\n";
 		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>
 				(createProgramWithSource->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
 			const string& path = kfa->getKernelPath();

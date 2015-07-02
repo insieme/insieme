@@ -30,6 +30,8 @@ tar -xf $FILE
 
 cd $PACKAGE
 
+patch -p0 < ../patches/ppl_numeric_limits.patch
+
 export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$LD_LIBRARY_PATH
 
 echo "#### Building ppl library ####"

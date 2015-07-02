@@ -49,21 +49,21 @@ namespace extensions {
 
 namespace {
 
-	using namespace stmtutils;
 	using namespace insieme::core;
 
 	//returns the pragma function lambda which will add the annotation which is passed as a template argument when called
 	template<typename T>
-	std::function<StmtWrapper (const pragma::MatchObject&, StmtWrapper)> getMarkerAttachementLambda() {
-		return [] (pragma::MatchObject object, StmtWrapper node) {
-				StmtWrapper res;
-				for(StatementPtr element : node) {
+	PragmaHandler::pragmaHandlerFunction getMarkerAttachementLambda() {
+		return [] (const pragma::MatchObject& object, core::NodeList nodes) {
+				core::NodeList res;
+				for(const NodePtr& element : nodes) {
+					StatementPtr stmt = element.as<StatementPtr>();
 					StatementPtr tmp;
-					IRBuilder builder(element->getNodeManager());
+					IRBuilder builder(stmt->getNodeManager());
 					if (element->getNodeCategory() == NC_Statement) {
-						tmp = builder.markerStmt(element.as<StatementPtr>());
+						tmp = builder.markerStmt(stmt);
 					} else if (element->getNodeCategory() == NC_Expression) {
-						tmp = builder.markerExpr(element.as<ExpressionPtr>());
+						tmp = builder.markerExpr(stmt.as<ExpressionPtr>());
 					} else {
 						assert_fail() << "Cannot annotate non statement/expression!";
 					}

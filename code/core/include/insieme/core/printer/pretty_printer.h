@@ -99,7 +99,7 @@ struct PrettyPrinter {
 
 		PRINT_DEREFS 			= 1<<0,
 		PRINT_CASTS  			= 1<<1,
-		PRINT_BRACKETS  		= 1<<2,
+		SKIP_BRACKETS  			= 1<<2,
 		PRINT_SINGLE_LINE		= 1<<3,
 		PRINT_MARKERS			= 1<<4,
 		PRINT_ANNOTATIONS		= 1<<5,

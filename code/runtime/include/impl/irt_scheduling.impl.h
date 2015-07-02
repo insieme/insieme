@@ -86,7 +86,7 @@ void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops) {
 bool _irt_scheduling_sleep_if_dop_inactive(irt_worker* self) {
 	if(self->id.thread >= irt_g_degree_of_parallelism) {
 		irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
-		if(self->state == IRT_WORKER_STATE_STOP) {
+		if(irt_atomic_load(&self->state) == IRT_WORKER_STATE_STOP) {
 			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
 			return true;
 		}
@@ -105,13 +105,13 @@ bool _irt_scheduling_sleep_if_dop_inactive(irt_worker* self) {
 }
 
 void irt_scheduling_loop(irt_worker* self) {
-	while(self->state != IRT_WORKER_STATE_STOP) {
+	while(irt_atomic_load(&self->state) != IRT_WORKER_STATE_STOP) {
 #ifdef IRT_WORKER_SLEEPING
 #endif // IRT_WORKER_SLEEPING
 		// while there is something to do, continue scheduling
 		while(irt_scheduling_iteration(self)) {
 			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.thread==0?"":"\t\t\t\t\t\t", self->id.thread);
-			self->cur_wi->state = IRT_WI_STATE_SUSPENDED;
+			irt_atomic_store(&self->cur_wi->state, IRT_WI_STATE_SUSPENDED);
 			self->cur_wi = NULL;
 			if(self->finalize_wi != NULL) {
 				irt_wi_finalize(self, self->finalize_wi);
@@ -120,7 +120,7 @@ void irt_scheduling_loop(irt_worker* self) {
 			#ifdef IRT_ASTEROIDEA_STACKS
 			if(self->share_stack_wi != NULL) {
 				IRT_DEBUG(" - %p allowing stack stealing: %d children\n", (void*) self->share_stack_wi, *self->share_stack_wi->num_active_children);
-				self->share_stack_wi->stack_available = true;
+				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&self->share_stack_wi->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not make stack available after suspension.\n");
 				self->share_stack_wi = NULL;
 			}
 			#endif //IRT_ASTEROIDEA_STACKS
@@ -151,7 +151,7 @@ void irt_scheduling_loop(irt_worker* self) {
 	}
 }
 
-void irt_signal_worker(irt_worker* target) {
+inline void _irt_signal_worker(irt_worker* target) {
 #ifdef IRT_WORKER_SLEEPING
 	irt_mutex_lock(&irt_g_active_worker_mutex);
 	target->wake_signal = true;

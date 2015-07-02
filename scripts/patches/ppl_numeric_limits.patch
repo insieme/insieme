@@ -1,0 +1,40 @@
+--- src/mp_std_bits.cc	2012-04-16 14:12:30.000000000 +0200
++++ src/mp_std_bits_fixed.cc	2015-05-30 02:32:50.929822546 +0200
+@@ -25,6 +25,9 @@
+ #include "ppl-config.h"
+ #include "mp_std_bits.defs.hh"
+ 
++#if __GNU_MP_VERSION < 5 \
++	|| (__GNU_MP_VERSION == 5 && __GNU_MP_VERSION_MINOR < 1)
++
+ const bool std::numeric_limits<mpz_class>::is_specialized;
+ const int std::numeric_limits<mpz_class>::digits;
+ const int std::numeric_limits<mpz_class>::digits10;
+@@ -70,3 +73,5 @@
+ const bool std::numeric_limits<mpq_class>::traps;
+ const bool std::numeric_limits<mpq_class>::tininess_before;
+ const std::float_round_style std::numeric_limits<mpq_class>::round_style;
++#endif // __GNU_MP_VERSION < 5
++	// || (__GNU_MP_VERSION == 5 && __GNU_MP_VERSION_MINOR < 1)
+--- src/mp_std_bits.defs.hh	2012-04-16 14:12:30.000000000 +0200
++++ src/mp_std_bits.defs_fixed.hh	2015-05-30 02:34:31.429337487 +0200
+@@ -33,6 +33,9 @@
+ #endif // defined(PPL_DOXYGEN_INCLUDE_IMPLEMENTATION_DETAILS)
+ void swap(mpz_class& x, mpz_class& y);
+ 
++#if __GNU_MP_VERSION < 5 \
++	|| (__GNU_MP_VERSION == 5 && __GNU_MP_VERSION_MINOR < 1)
++
+ #ifdef PPL_DOXYGEN_INCLUDE_IMPLEMENTATION_DETAILS
+ //! Swaps \p x with \p y.
+ #endif // defined(PPL_DOXYGEN_INCLUDE_IMPLEMENTATION_DETAILS)
+@@ -164,6 +167,9 @@
+ 
+ } // namespace std
+ 
++#endif // __GNU_MP_VERSION < 5
++	// || (__GNU_MP_VERSION == 5 && __GNU_MP_VERSION_MINOR < 1)
++
+ #include "mp_std_bits.inlines.hh"
+ 
+ #endif // !defined(PPL_mp_std_bits_defs_hh)

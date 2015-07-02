@@ -71,15 +71,6 @@ namespace extensions {
 //               C++11 expressions
 
 /**
- *			Cxx11 default init expression
- */
-insieme::core::ExpressionPtr Cpp11Extension::VisitCXXDefaultInitExpr (const clang::CXXDefaultInitExpr* initExpr,
-												insieme::frontend::conversion::Converter& convFact) {
-    return convFact.convertExpr(initExpr->getExpr());
-}
-
-
-/**
  *			Cxx11 null pointer
  */
 insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr,
@@ -274,7 +265,8 @@ core::ExpressionPtr Cpp11Extension::FuncDeclPostVisit(const clang::FunctionDecl*
 				}
 
 				// update implementation
-				irFunc = insieme::core::transform::replaceAllGen(builder.getNodeManager(), irFunc, replacements, false );
+				irFunc = insieme::core::transform::replaceAllGen(
+					builder.getNodeManager(), irFunc, replacements, core::transform::globalReplacement);
 				convFact.getIRTranslationUnit().replaceFunction(symb.as<insieme::core::LiteralPtr>(), irFunc.as<core::LambdaExprPtr>());
 
 				// clean map

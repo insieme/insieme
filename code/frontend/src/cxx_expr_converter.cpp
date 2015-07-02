@@ -77,7 +77,6 @@
 #include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -177,18 +176,27 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitUnaryOperator(const clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr){
 	core::ExpressionPtr retIr;
-    LOG_EXPR_CONVERSION(membExpr, retIr);
+	LOG_EXPR_CONVERSION(membExpr, retIr);
 
 	// get the base we want to access to
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
-	if (core::analysis::isAnyCppRef(convFact.lookupTypeDetails(base->getType()))){
-		base = builder.toIRRef(base);
-	}
 
 	// it might be that is a function, therefore we retrieve a callable expression
 	const clang::ValueDecl *valDecl = membExpr->getMemberDecl ();
-	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)){
-		return convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
+	if (valDecl && llvm::isa<clang::FunctionDecl>(valDecl)) {
+            retIr = convFact.getCallableExpression(llvm::cast<clang::FunctionDecl>(valDecl));
+            // exceptional handling if the val decl is a static function -> outline code (see CallExprVisitor)
+            const clang::CXXMethodDecl* mdecl = llvm::dyn_cast<clang::CXXMethodDecl>(valDecl);
+            if(mdecl && mdecl->isStatic() && base.isa<core::CallExprPtr>()) {
+                //create a function that calls a function like fun() { base(); return call; }
+                core::CompoundStmtPtr comp = builder.compoundStmt({base, builder.returnStmt(retIr) });
+                retIr = builder.createCallExprFromBody(comp, retIr->getType());
+            }
+            return retIr;
+	}
+
+	if (core::analysis::isAnyCppRef(convFact.lookupTypeDetails(base->getType()))){
+		base = builder.toIRRef(base);
 	}
 
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
@@ -196,7 +204,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	// if the  resulting expression is a ref to cpp ref, we remove one ref, no need to provide one extra ref
 	if (retIr->getType().isa<core::RefTypePtr>() && core::analysis::isAnyCppRef(retIr->getType().as<core::RefTypePtr>()->getElementType()))
 		retIr = builder.deref(retIr);
-
 	return retIr;
 }
 
@@ -503,8 +510,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 
 	// if no constructor is found, it is a new over an non-class type, can be any kind of pointer of array
 	// spetialy double pointer
-	if (!callExpr->getConstructExpr() ){
-
+	if(!callExpr->getConstructExpr() ){
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType());
 		core::ExpressionPtr placeHolder;
 		if(callExpr->hasInitializer()) {
@@ -512,12 +518,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
 			frontend_assert(initializerExpr);
             placeHolder = initializerExpr;
-		}
-        else {
+		} else {
             placeHolder  = builder.undefinedNew(type);
         }
 
-		if (callExpr->isArray()){
+		if(callExpr->isArray()){
 			core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
 			placeHolder = builder.callExpr( builder.arrayType(type),
 											builder.getLangBasic().getArrayCreate1D(),
@@ -528,8 +533,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
 		}
 	}
-	else{
-
+	else {
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		frontend_assert(ctorCall.isa<core::CallExprPtr>()) << "aint constructor call in here, no way to translate NEW\n";
 
@@ -555,10 +559,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXNewExpr(const clang::CX
 
 			frontend_assert( ctorFunc->getType().as<core::FunctionTypePtr>()->getParameterTypes().size()) << "not default ctor used in array construction\n";
 
-			retExpr = ( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
-			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
+			retExpr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr);
 		}
-		else{
+		else {
 			// the basic constructor translation defines a stack variable as argument for the call
 			// in order to turn this into a diynamic memory allocation, we only need to substitute
 			// the first argument for a heap location
@@ -928,6 +932,13 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang:
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					Default init expr
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDefaultInitExpr(const clang::CXXDefaultInitExpr* initExpr) {
+	return convFact.convertExpr(initExpr->getExpr());
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //			Substituted non type template parameter expression
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitSubstNonTypeTemplateParmExpr(const clang::SubstNonTypeTemplateParmExpr* substExpr) {
@@ -1031,6 +1042,8 @@ core::ExpressionPtr Converter::CXXExprConverter::Visit(const clang::Expr* expr) 
 		convFact.trackSourceLocation(expr);
         retIr = ConstStmtVisitor<Converter::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 		convFact.untrackSourceLocation();
+	} else {
+		VLOG(2) << "CXXExprConverter::Visit handled by plugin";
 	}
 
 	// print diagnosis messages

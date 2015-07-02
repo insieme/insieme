@@ -42,6 +42,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <initializer_list>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/unordered_map.hpp>
@@ -49,14 +50,15 @@
 #include "string_utils.h"
 #include "container_utils.h"
 
-
 namespace insieme {
 namespace utils {
 namespace map {
 
 template<class KeyPtr, class ValueType>
 struct PointerMap : public std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> {
+	using Base = std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>>;
 	PointerMap() {};
+	PointerMap(std::initializer_list<typename Base::value_type> init) : Base(init) {}
 	template<typename Container> void insertAll(const Container& c) { this->insert(c.begin(), c.end()); }
 };
 
@@ -76,7 +78,7 @@ PointerMap<Key, Value> mapPointerTo(const Key& key, const Value& value) {
 /**
  * A utility function adding data to a given map. This is the terminal case,
  * where there is no data to be added. The same function is overloaded for
- * differnet parameters, allowing more data to be added.
+ * different parameters, allowing more data to be added.
  *
  * @param map the map to be extended with nothing.
  */

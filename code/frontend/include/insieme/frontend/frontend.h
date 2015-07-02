@@ -47,6 +47,7 @@
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/extensions/frontend_cleanup_extension.h"
 
 #include "insieme/utils/printable.h"
 
@@ -137,11 +138,11 @@ namespace frontend {
 		 */
 		string crossCompilationSystemHeadersDir;
 
-        /**
-         * A list of optimization flags (-f flags) that need to be used at least in the
-         * backend compiler
-         */
-        set<string> fflags;
+	        /**
+	         * A list of optimization flags (-f flags) that need to be used at least in the
+	         * backend compiler
+	         */
+	        set<string> fflags;
 
 		/**
 		 * Additional flags - a bitwise boolean combination of Options (see Option)
@@ -156,10 +157,24 @@ namespace frontend {
 
 	public:
 
-        /**
+        	/**
 		 * Creates a new setup covering the given include directories.
 		 */
 		ConversionSetup(const vector<path>& includeDirs = vector<path>());
+		
+		/**
+		 * Checks whether an extension is loaded.
+		 * For use in e.g. isPrerequisiteMissing
+		 */
+		template<class ExtensionType>
+		bool hasExtension() {
+			for(auto extPtr : getExtensions()) {
+				if(typeid(ExtensionType) == typeid(extPtr)) {
+					return true;
+				}
+			}
+			return false;
+		}
 
 		/**
 		 * Allows to check for an option.
@@ -316,19 +331,19 @@ namespace frontend {
 			this->crossCompilationSystemHeadersDir = crossCompilationSystemHeadersDir;
 		}
 
-        /**
-         * Adds a single optimization flag
-         */
-        void addFFlag(const string& flag) {
-            this->fflags.insert(flag);
-        }
+	        /**
+	         * Adds a single optimization flag
+	         */
+	        void addFFlag(const string& flag) {
+	            this->fflags.insert(flag);
+	        }
 
-        /**
-         * Obtains a reference to the currently defined f flags
-         */
-        const set<string>& getFFlags() const {
-            return fflags;
-        }
+	        /**
+	         * Obtains a reference to the currently defined f flags
+	         */
+	        const set<string>& getFFlags() const {
+	            return fflags;
+	        }
 
 		/**
 		 * A utility method to determine whether the given file should be
@@ -343,6 +358,20 @@ namespace frontend {
 		 */
 		const std::list<extensions::FrontendExtension::FrontendExtensionPtr>& getExtensions() const {
 			return extensionList;
+		};
+
+		/**
+		 *  Return (the first) registered frontend extension of matching type
+		 */
+		template <class T>
+		const std::shared_ptr<T> getExtension() const {
+			for(const extensions::FrontendExtension::FrontendExtensionPtr ext : extensionList) {
+				if(typeid(*ext) == typeid(T)) {
+					return dynamic_pointer_cast<T>(ext);
+				}
+			}
+			assert_fail() << "Requested frontend extension of type " << typeid(T).name() << " but no extension of that type was registered!";
+			return nullptr;
 		};
 	};
 
@@ -380,7 +409,7 @@ namespace frontend {
 		 */
 		ConversionJob(const path& file, const vector<path>& includeDirs = vector<path>())
 			: ConversionSetup(includeDirs), files(toVector(file)) {
-        }
+	        }
 
 		/**
 		 * Creates a new conversion job covering the given files.
@@ -389,12 +418,12 @@ namespace frontend {
 			: ConversionSetup(includeDirs), files(files) {
 			assert_false(files.empty());
 
-            // The user defined headers path is extended with c source files directories
-            auto inc = ConversionSetup::getIncludeDirectories();
-            for(auto cur : files) {
-                inc.push_back(cur.parent_path());
-            }
-            ConversionSetup::setIncludeDirectories(inc);
+	            // The user defined headers path is extended with c source files directories
+	            auto inc = ConversionSetup::getIncludeDirectories();
+	            for(auto cur : files) {
+	                inc.push_back(cur.parent_path());
+	            }
+	            ConversionSetup::setIncludeDirectories(inc);
 		}
 
 		/**
@@ -492,9 +521,9 @@ namespace frontend {
 			this->unparsedOptions = unparsed;
 		}
 
-        void registerExtensionFlags(boost::program_options::options_description& options);
+		void registerExtensionFlags(boost::program_options::options_description& options);
 
-        /**
+		/**
 		 *  Frontend extension initialization method
 		 */
 		void frontendExtensionInit();
@@ -514,15 +543,26 @@ namespace frontend {
 
 		/**
 		 * Insert a frontend extension without concerning about cmd-line options for drivers
-		 * We get from the extensions possible options and parse the arguments which were unknonw to the driver
-		 * Most usefull to write tests involving extensions
+		 * We get from the extensions possible options and parse the arguments which were unknown to the driver
+		 * Most useful to write tests involving extensions
 		 */
-		template <class T>
+		template <class T, class Before = extensions::FrontendCleanupExtension>
 		void registerFrontendExtension() {
 			//we want to keep the newly registered frontend
 			auto extensionPtr = std::make_shared<T>();
 			boost::program_options::options_description extOptions;
-			extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+
+
+			// insert the extension before "Before", unless it's not found
+			bool inserted = false;
+			for(auto it = extensions.begin(); it < extensions.end(); ++it) {
+				if(typeid(*(it->first)) == typeid(Before)) {
+					extensions.insert(it, { extensionPtr, extensionPtr->registerFlag(extOptions) } );
+					inserted = true;
+					break;
+				}
+			}
+			if(!inserted) extensions.push_back( { extensionPtr, extensionPtr->registerFlag(extOptions) } );
 
 			// some options were not parsed by the driver, parse them by the extension
 			boost::program_options::parsed_options parsed = boost::program_options::basic_command_line_parser<char>(this->unparsedOptions)

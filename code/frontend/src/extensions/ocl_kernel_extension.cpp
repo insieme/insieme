@@ -149,7 +149,8 @@ core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* varDecl, conver
 	}
 	return std::make_shared < annotations::ocl::BaseAnnotation > (declAnnotation);
 }
-}
+
+} // end anonymous namespace
 
 insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
 	if(!llvm::isa<clang::ExtVectorElementExpr>(expr))
@@ -359,70 +360,7 @@ insieme::core::ExpressionPtr OclKernelExtension::ValueDeclPostVisit(const clang:
 		}
 	}
 	return nullptr;
-
-	// check any other decl
-	//else if (const clang::WHATEVER* funcDecl = llvm::dyn_cast<clang::WHATEVER>(decl)){
-	//}
 }
-
-
-/*
-stmtutils::StmtWrapper OclKernelExtension::PostVisit(const clang::Stmt* stmt, const stmtutils::StmtWrapper& irStmt, conversion::Converter& convFact) {
-	// Function declarations have only one single statement
-	if(!irStmt.isSingleStmt())
-		return irStmt;
-
-	if(!llvm::isa<clang::AttributedStmt>(stmt))
-		return irStmt;
-
-	insieme::annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
-	const clang::AttributedStmt* funcDecl = llvm::dyn_cast<clang::AttributedStmt>(stmt);
-	const llvm::ArrayRef<const clang::Attr*> attrVec = funcDecl->getAttrs();
-
-	for (llvm::ArrayRef<const clang::Attr*>::const_iterator I = attrVec.begin(), E = attrVec.end(); I != E; ++I) {
-		if (const clang::AnnotateAttr * attr = llvm::dyn_cast<clang::AnnotateAttr>(*I)) {
-			//get annotate string
-			llvm::StringRef&& sr = attr->getAnnotation();
-assert_fail() << "attribute";
-			//check if it is an OpenCL kernel function
-			if ( sr == "__kernel" ) {
-					VLOG(1) << "is OpenCL kernel function";
-					kernelAnnotation.push_back( std::make_shared<insieme::annotations::ocl::KernelFctAnnotation>() );
-			}
-		}
-
-    }
-
-	assert_fail() << "post visit ";
-	return irStmt;
-}
-*/
-
-// OpenCL vector type
-/*
-insieme::core::TypePtr OclKernelExtension::PostVisit(const clang::Type* type, const insieme::core::TypePtr& irType,
-                                         insieme::frontend::conversion::Converter& convFact) {
-	if(!llvm::isa<clang::FunctionProtoType>(type))
-		return irType;
-
-	const clang::FunctionProtoType* funcTy = llvm::cast<clang::FunctionProtoType>(type);
-	core::FunctionTypePtr irFuncTy = irType.as<core::FunctionTypePtr>();
-	core::TypePtr&& irRetTy = irFuncTy->getReturnType();
-
-	// If the return type is of an OpenCL vector we need to remove a reference,
-	// introduce to maintain the semantics of C argument for normal C vectors
-	if(irRetTy->getNodeType() == core::NT_VectorType) {
-		// exceptions are OpenCL vectors and gcc-vectors
-		if( funcTy->getResultType()->getUnqualifiedDesugaredType()->isExtVectorType())
-		{
-			irRetTy = convFact.tryDeref(irRetTy);
-
-		}
-	}
-
-	return irType;//convFact.getIRBuilder().functionType(irFuncTy->getParameterTypeList(), irRetTy, irFuncTy->getFunctionKind());
-}
-*/
 
 //////////////////////////////////////////////////////////////////////////////////////
 //               opencl kernel file post processing

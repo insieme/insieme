@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -92,12 +92,6 @@ LITERAL(region, 	"irt_region", "(irt_parallel_job)->ref<irt_wi>")
 
 LITERAL(pfor, 		"irt_pfor", 	"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
 LITERAL(merge, 		"irt_merge", 	"(ref<irt_wi>)->unit")
-
-
-// -- IR instrumentation ---------
-LITERAL(instrumentationInitRegions, "ir_init_regions", "(uint<8>)->unit")
-LITERAL(instrumentationRegionStart, "ir_inst_region_start", "(uint<4>)->unit")
-LITERAL(instrumentationRegionEnd, 	"ir_inst_region_end", 	"(uint<4>)->unit")
 
 
 /*

@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/address_mapper.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -59,15 +60,30 @@ namespace {
 		std::function<bool(const NodePtr& node)> skip;
 
 		LambdaExprPtr generateSubstituteLambda(NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
+			// check if the limiter applies
+			ReplaceLimiter limiter = [&](const NodePtr& ptr) { 
+				return ptr.isa<core::LambdaExprPtr>() || skip(ptr) ? ReplaceAction::Prune : ReplaceAction::Process;
+			};
+
 			// using the derived mapping, we generate a new lambda expression with instantiated type params
 			// tricky: we apply the same mapping recursively on the *new* body
 			auto builder = IRBuilder(nodeMan);
 			auto funType = funExp->getFunctionType();
-			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, true, skip)->substitute(nodeMan, *this);
-			auto newFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, true, skip);
+			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter)->substitute(nodeMan, *this);
+
+			// we now need to determine the new return type to use
+			auto newReturnType = analysis::autoReturnType(nodeMan, newBody);
+
+			// now we can generate the substitution
+			auto replacedFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
+			auto newFunType = builder.functionType(replacedFunType->getParameterTypes(), newReturnType, replacedFunType->getKind());
+
+			// and our new parameters
 			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
-				return core::transform::replaceAllGen(nodeMan, t, nodeMap, true, skip);
+				return core::transform::replaceAllGen(nodeMan, t, nodeMap, limiter);
 			});
+
+			// finally, build the new lambda and migrate migratable annotations
 			auto newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
 			utils::migrateAnnotations(funExp, newLambda);
 			return newLambda;
@@ -80,6 +96,7 @@ namespace {
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) override {
 			auto& nodeMan = ptr->getNodeManager();
 			auto builder = IRBuilder(nodeMan);
+
 			// we are looking for CallExprs which have a concrete type params in the arguments,
 			// but a variable type param in the lambda which is called
 			if(ptr.isa<CallExprPtr>()) {

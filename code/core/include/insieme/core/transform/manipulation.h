@@ -283,9 +283,10 @@ bool hasFreeControlStatement(const StatementPtr& stmt, NodeType controlStmt, con
  * or continue has to target a node within the given code fragment.
  *
  * @param stmt the statement to be tested
+ * @param allowReturns allow free returns, generating a lambda which returns that value. Used e.g. in the parser
  * @return true if it could be outlined, false otherwise
  */
-bool isOutlineAble(const StatementPtr& stmt);
+bool isOutlineAble(const StatementPtr& stmt, bool allowReturns = false);
 
 /**
  * Outlines the given stmt by moving it into a lambda. The lambda will be requesting all free
@@ -294,9 +295,10 @@ bool isOutlineAble(const StatementPtr& stmt);
  *
  * @param manager the manager to be used to create and maintain nodes which might have to be created
  * @param stmt the statement to be outlined - it must not contain a break, continue or return.
+ * @param allowReturns allow free returns, generating a lambda which returns that value. Used e.g. in the parser
  * @return a call to the function being outlined
  */
-CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt);
+CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt, bool allowReturns = false);
 
 /**
  * Outlines a given expression by moving it into a isolated lambda. The lambda will request all
