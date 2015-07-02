@@ -43,6 +43,7 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
@@ -412,22 +413,9 @@ private:
 		// construct new body
 		CompoundStmtPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, recoverTypes, typeHandler);
 
-		// obtain return type
-		TypeList returnTypes;
-		visitDepthFirstPrunable(newBody, [&](const NodePtr& cur) {
-			if (cur->getNodeType() == NT_ReturnStmt) {
-				returnTypes.push_back(cur.as<ReturnStmtPtr>()->getReturnExpr()->getType());
-			}
-			return cur->getNodeType() == NT_LambdaExpr || cur->getNodeCategory() != NC_Statement;
-		});
-
 		// deduce return type
-		TypePtr returnType = (returnTypes.empty())?
-				manager.getLangBasic().getUnit() :
-				getSmallestCommonSuperType(returnTypes);
-
-		assert_true(returnType) << "Cannot find a common supertype of all return statements";
-
+		TypePtr returnType = analysis::autoReturnType(manager, newBody);
+			
 		// construct new function type
 		FunctionTypePtr funType = builder.functionType(extractTypes(newParams), returnType);
 		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
@@ -706,20 +694,7 @@ private:
 		CompoundStmtPtr newBody = fixTypesGen(manager, lambda->getBody(), map, limitScope, typeHandler);
 
 		// obtain return type
-		TypeList returnTypes;
-		visitDepthFirstPrunable(newBody, [&](const NodePtr& cur) {
-			if (cur->getNodeType() == NT_ReturnStmt) {
-				returnTypes.push_back(cur.as<ReturnStmtPtr>()->getReturnExpr()->getType());
-			}
-			return cur->getNodeType() == NT_LambdaExpr || cur->getNodeCategory() != NC_Statement;
-		});
-
-		// deduce return type
-		callTy = (returnTypes.empty())?
-				manager.getLangBasic().getUnit() :
-				getSmallestCommonSuperType(returnTypes);
-
-		assert_true(callTy) << "Cannot find a common supertype of all return statements";
+		callTy = analysis::autoReturnType(manager, newBody);
 
 		// assemble new lambda
 		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
