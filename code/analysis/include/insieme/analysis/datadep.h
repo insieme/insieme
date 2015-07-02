@@ -64,27 +64,24 @@ namespace analysis {
 class DataDependence: public insieme::core::IRVisitor<void, insieme::core::Address> {
 	insieme::core::NodeAddress frag;                                  /// < code fragment passed to this compiler pass
 	unsigned int count;                                                          /// < total number of variables found
-	std::map<insieme::core::VariableAddress, std::vector<insieme::core::VariableAddress> > uses; /// uses for each def
-	std::map<insieme::core::VariablePtr, std::vector<insieme::core::VariableAddress> > uses2;
+	std::map<insieme::core::VariablePtr, std::vector<insieme::core::VariableAddress> > uses; /// < all var occurrences
 
 	void visitNode(const insieme::core::NodeAddress &node);
 	void visitVariable(const insieme::core::VariableAddress &node);
-	void record(const insieme::core::VariableAddress &var);
-	void recordDef(const insieme::core::VariableAddress &def);
-	void recordUse(const insieme::core::VariableAddress &def, const insieme::core::VariableAddress &use);
+	void recordVar(const insieme::core::VariableAddress &var);
 
 	static std::vector<unsigned int> addressVector(const insieme::core::NodeAddress &a);
 	static boost::optional<insieme::core::NodeAddress> otherNode(const insieme::core::NodeAddress &a, std::vector<int> addressDiff);
 
 public:
 	DataDependence(const insieme::core::NodeAddress frag);
-	static insieme::core::VariableAddress getDef(const insieme::core::VariableAddress& givenaddr);
+	unsigned int size();
+	boost::optional<insieme::core::VariableAddress> getDef(const insieme::core::VariableAddress& givenaddr);
 	std::vector<insieme::core::VariableAddress> getDefs(std::function<bool(const insieme::core::VariableAddress&)>
 	    predicate=[](const insieme::core::VariableAddress&) { return true; });
 	std::vector<insieme::core::VariableAddress> getDefs(unsigned int id);
 	std::vector<insieme::core::VariableAddress> getUse(const insieme::core::VariableAddress& def);
 
-	unsigned int size();
 	static unsigned int getVarID(const insieme::core::VariableAddress &var);
 	static boost::optional<insieme::core::VariableAddress> otherVar(const insieme::core::NodeAddress &a,
 	                                                                std::vector<int> addressDiff);

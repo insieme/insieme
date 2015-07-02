@@ -54,14 +54,11 @@ using namespace insieme::analysis;
 /// DataDependence constructor: Collect data about the given code fragment by kicking off the visiting process.
 DataDependence::DataDependence(NodeAddress frag): frag(frag), count(0) {
 	visit(frag);
+}
 
-	// FIXME
-	uses.clear();
-	for (auto u2: uses2) {
-		VariableAddress def=u2.second.front();
-		u2.second.erase(u2.second.begin());
-		uses.insert(std::pair<VariableAddress, std::vector<VariableAddress> >(def, u2.second));
-	}
+/// Return the total number of variables found in this code block.
+unsigned int DataDependence::size() {
+	return count;
 }
 
 /// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
@@ -71,54 +68,22 @@ void DataDependence::visitNode(const NodeAddress &node) {
 		for (auto child: node->getChildList()) visit(child);
 }
 
+/// We found a variable: Count it, record it, and visit its children (if available?!)
 void DataDependence::visitVariable(const VariableAddress &var) {
+	// first, turn towards the variable itself and record its occurrence
+	recordVar(var);
+
+	// then, do some bookkeeping
 	count++;
-
-	// get variable definition point and increase counter for given variable
-	VariableAddress defpt=getDef(var);
-
-	if (defpt==var) recordDef(defpt);   // the given variable is not defined somewhere else but here
-	else recordUse(defpt, var);         // the variable is not defined but used here
-	record(var);
-
-	// visit children
 	visitNode(var);
 }
 
 /// Record the given variable so that in the end all variables are collected in a map.
-void DataDependence::record(const VariableAddress &var) {
+void DataDependence::recordVar(const VariableAddress &var) {
 	VariablePtr vptr=var.getAddressedNode();
-	auto it_ok=uses2.insert(std::pair<VariablePtr, std::vector<VariableAddress> >(vptr, std::vector<VariableAddress>{var}));
+	auto it_ok=uses.insert(std::pair<VariablePtr, std::vector<VariableAddress> >(vptr, std::vector<VariableAddress>{var}));
 	if (!it_ok.second)
 		it_ok.first->second.push_back(var);
-}
-
-/// Records a variable definition by creating appropriate data structures in our protected "uses" class member.
-void DataDependence::recordDef(const VariableAddress &def) {
-	auto ret=uses.insert(std::pair<VariableAddress, std::vector<VariableAddress> >(def, std::vector<VariableAddress>()));
-	if (!ret.second && ret.first->first!=def) {   // the definition point does not match the recorded definition point
-		LOG(ERROR) << "Cannot insert a single variable with two distinct definition points!" << std::endl;
-	}
-}
-
-/// Records a variable use by linking its definition point to the use address in the "uses" class member.
-void DataDependence::recordUse(const VariableAddress &def, const VariableAddress &use) {
-	// first, determine whether some other uses have already been recorded, and preserve these
-	std::vector<VariableAddress> uselist;
-	auto it=uses.find(def);
-	bool isnew=0;
-	if (it==uses.end()) isnew=1;
-	else uselist=it->second;
-
-	// second, push the new use address to the vector of uses
-	uselist.push_back(use);
-
-	// third, update the definition point with the correspending use vector
-	if (isnew) {
-		std::pair<VariableAddress, std::vector<VariableAddress> > value={def, uselist};
-		uses.insert(value);
-	} else
-		it->second=uselist;
 }
 
 /// Returns the indices of the path of the given address as a vector of integers.
@@ -162,61 +127,12 @@ boost::optional<VariableAddress> DataDependence::otherVar(const NodeAddress &a, 
 }
 
 /// Find the address where the given variable has been defined.
-VariableAddress DataDependence::getDef(const VariableAddress& givenaddr) {
-	// first, save the pointer of the given variable so that we have something to compare with
-	VariablePtr givenptr=givenaddr.getAddressedNode();
-	NodeAddress prev=givenaddr;
-
-	while (!prev.isRoot()) {
-		NodeAddress current=prev.getParentAddress();
-
-		switch (current->getNodeType()) {
-		case NT_BindExpr: {
-			for (auto n: current.as<BindExprAddress>()->getParameters())
-				if (n.as<VariablePtr>()==givenptr) return n;
-			break; }
-		case NT_CompoundStmt: {
-			auto compound=current.as<CompoundStmtAddress>();
-			for (int i=prev.getIndex(); i>=0; i--)
-				if (DeclarationStmtAddress decl=compound[i].isa<DeclarationStmtAddress>()) {
-					auto n=decl->getVariable();
-					if (n.as<VariablePtr>()==givenptr) return n;
-				}
-			break; }
-		case NT_Parameters: {   // FIXME: this variable is a parameter; trace var to outer scope
-			ParametersAddress par=current.as<ParametersAddress>();
-			for (VariableAddress n: par->getParameters())
-				if (n.as<VariablePtr>()==givenptr) return n;
-			break; }
-		case NT_Lambda: {
-			for (auto n: current.as<LambdaAddress>()->getParameters())
-				if (n.as<VariablePtr>()==givenptr) return n;
-			break; }
-		case NT_LambdaExpr: {
-			break;
-			auto n=current.as<LambdaExprAddress>()->getVariable();
-			if (n.as<VariablePtr>()==givenptr) return n;
-			break;
-		}
-		case NT_LambdaBinding: {
-			auto n=current.as<LambdaBindingAddress>()->getVariable();
-			if (n.as<VariablePtr>()==givenptr) return n;
-			break; }
-		case NT_LambdaDefinition: {
-			if (auto n=current.as<LambdaDefinitionAddress>()->getBindingOf(givenptr))
-				return n->getVariable();
-			break; }
-		case NT_ForStmt: {
-			auto n=current.as<ForStmtAddress>()->getIterator();
-			if (n.as<VariablePtr>()==givenptr) return n;
-			break; }
-		default: break;
-		}
-		prev=current; // we did not find a binding yet, try to find it one level up
-	}
-
-	// we have reached the root, and never found a binding for the variable; return the given variable address
-	return givenaddr;
+boost::optional<VariableAddress> DataDependence::getDef(const VariableAddress& givenaddr) {
+	boost::optional<VariableAddress> ret;   // if variable is not found in code fragment, return nothing
+	auto found=uses.find(givenaddr.getAddressedNode());
+	if (found!=uses.end())
+		ret=boost::optional<VariableAddress>(found->second.front());
+	return ret;
 }
 
 /// Get all variable definitions in the given code fragment that satisfy the given predicate. If not explicitly set,
@@ -224,7 +140,7 @@ VariableAddress DataDependence::getDef(const VariableAddress& givenaddr) {
 std::vector<VariableAddress> DataDependence::getDefs(std::function<bool(const VariableAddress&)> predicate) {
 	std::vector<VariableAddress> defs;
 	for (auto def: uses)
-		if (predicate(def.first)) defs.push_back(def.first);
+		if (predicate(def.second.front())) defs.push_back(def.second.front());
 	return defs;
 }
 
@@ -238,17 +154,13 @@ std::vector<VariableAddress> DataDependence::getDefs(unsigned int id) {
 }
 
 /// Return an array with all of the uses of the given variable definition point. If the variable definition point is
-/// not yet known, call getDef first.
+/// not known, an empty result is provided.
 std::vector<VariableAddress> DataDependence::getUse(const VariableAddress& def) {
-	std::vector<VariableAddress> ret;     // return an empty array in case we cannot find the variable definition
-	auto it=uses.find(def);
+	std::vector<VariableAddress> ret;           // return an empty array in case we cannot find the variable definition
+	auto it=uses.find(def.getAddressedNode());
 	if (it!=uses.end()) ret=it->second;
+	ret.erase(ret.begin());    // remove the first element of the array as this is the definition point of the variable
 	return ret;
-}
-
-/// Return the total number of variables found in this code block.
-unsigned int DataDependence::size() {
-	return count;
 }
 
 /// Get the internal variable ID for the given variable address. This method is private, as the

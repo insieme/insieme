@@ -126,7 +126,7 @@ TEST(VarUniq, Simple) {
 	       << printer::PrettyPrinter(fragment) << std::endl << std::endl
 	       << "# # # # #   NEW CODE   # # # # #" << std::endl
 	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-	//std::cout << strbuf.str();
+	std::cout << strbuf.str();
 
 	// get all variable definitions from both codes
 	std::vector<VariableAddress>
@@ -137,9 +137,9 @@ TEST(VarUniq, Simple) {
 	std::function<bool(VariableAddress)> inuse=
 	        [&vu](const VariableAddress &def){ return vu.dep.getUse(def).size(); };
 	// check some boundary conditions
-	EXPECT_TRUE(vu_all.size()==nu_all.size());    // the number of variable definitions must match in both codes
-	EXPECT_TRUE(vu_all.size()==34);               // this program has 34 variable definitions excluding derived operands
-	EXPECT_TRUE(vu.dep.getDefs(inuse).size()==27);// of these, 27 are actually used
+	EXPECT_EQ(vu_all.size(), nu_all.size());     // the number of variable definitions must match in both codes
+	EXPECT_EQ(vu_all.size(), 34);                // this program has 34 variable definitions excluding derived operands
+	EXPECT_EQ(vu.dep.getDefs(inuse).size(), 27); // of these, 27 are actually used
 
 	// in the original code, we expect some vacant IDs
 	unsigned int max_vu=VarUniqExtension::findMaxID(vu_all);
@@ -161,5 +161,5 @@ TEST(VarUniq, Simple) {
 	EXPECT_TRUE(nu_allset);
 
 	// the ultimate test; this one should not fail: the number of definitions must match the highest variable ID
-	EXPECT_TRUE(max_nu+1==nu_all.size());
+	EXPECT_EQ(max_nu+1, nu_all.size());
 }
