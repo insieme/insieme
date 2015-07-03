@@ -59,24 +59,28 @@ namespace {
 		InstantiationOption opt;
 		std::function<bool(const NodePtr& node)> skip;
 
-		LambdaExprPtr generateSubstituteLambda(NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
-			// check if the limiter applies
+		LambdaExprPtr generateSubstituteLambda(
+				NodeManager& nodeMan, const LambdaExprPtr& funExp, const NodeMap& nodeMap) {
+			
+			// create limiter based on skip
 			ReplaceLimiter limiter = [&](const NodePtr& ptr) { 
-				return ptr.isa<core::LambdaExprPtr>() || skip(ptr) ? ReplaceAction::Prune : ReplaceAction::Process;
+				return (ptr.isa<core::LambdaExprPtr>() || skip(ptr)) ? ReplaceAction::Prune : ReplaceAction::Process;
 			};
 
 			// using the derived mapping, we generate a new lambda expression with instantiated type params
-			// tricky: we apply the same mapping recursively on the *new* body
 			auto builder = IRBuilder(nodeMan);
 			auto funType = funExp->getFunctionType();
-			auto newBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter)->substitute(nodeMan, *this);
+			auto replacedBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter);
+			// tricky: we apply the same mapping recursively on the *new* body
+			auto newBody = replacedBody->substitute(nodeMan, *this);
 
 			// we now need to determine the new return type to use
 			auto newReturnType = analysis::autoReturnType(nodeMan, newBody);
 
 			// now we can generate the substitution
 			auto replacedFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
-			auto newFunType = builder.functionType(replacedFunType->getParameterTypes(), newReturnType, replacedFunType->getKind());
+			auto newFunType = 
+				builder.functionType(replacedFunType->getParameterTypes(), newReturnType, replacedFunType->getKind());
 
 			// and our new parameters
 			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
@@ -105,7 +109,9 @@ namespace {
 				auto args = call->getArguments();
 
 				// if we find a node that should not be touched we just return the unmodified node
-				if(skip(fun)) return ptr;
+				if(skip(fun)) {
+					return ptr;
+				}
 
 				if(fun.isa<LambdaExprPtr>()) {
 					// possibly do early check here and skip deriving of var instantiation
@@ -114,21 +120,26 @@ namespace {
 
 					core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(nodeMan, call);
 					NodeMap nodeMap;
-					if(opt == InstantiationOption::TYPE_VARIABLES || opt == InstantiationOption::BOTH) nodeMap.insertAll(map->getMapping());
-					if(opt == InstantiationOption::INT_TYPE_PARAMS || opt == InstantiationOption::BOTH) nodeMap.insertAll(map->getIntTypeParamMapping());
+					if(opt == InstantiationOption::TYPE_VARIABLES || opt == InstantiationOption::BOTH) {
+						nodeMap.insertAll(map->getMapping());
+					}
+					if(opt == InstantiationOption::INT_TYPE_PARAMS || opt == InstantiationOption::BOTH) {
+						nodeMap.insertAll(map->getIntTypeParamMapping());
+					}
 					if(nodeMap.empty()) return ptr->substitute(nodeMan, *this);
 
 					auto newLambdaExp = generateSubstituteLambda(nodeMan, funExp, nodeMap);
 
-					// handle higher order functions by performing replacements in arguments which are lambda expressions
+					// handle higher order functions: perform replacements in arguments which are lambda expressions
 					ExpressionList newArgs;
-					std::transform(args.cbegin(), args.cend(), std::back_inserter(newArgs), [&](const ExpressionPtr& t) -> ExpressionPtr {
-						if(t.isa<LambdaExprPtr>()) {
-							auto le = t.as<LambdaExprPtr>();
-							return generateSubstituteLambda(nodeMan, le, nodeMap);
-						}
-						return t;
-					});
+					std::transform(args.cbegin(), args.cend(), std::back_inserter(newArgs), 
+						[&](const ExpressionPtr& t) -> ExpressionPtr {
+							if(t.isa<LambdaExprPtr>()) {
+								auto le = t.as<LambdaExprPtr>();
+								return generateSubstituteLambda(nodeMan, le, nodeMap);
+							}
+							return t;
+						});
 
 					auto newCall = builder.callExpr(newLambdaExp, newArgs);
 					utils::migrateAnnotations(call, newCall);

@@ -786,13 +786,13 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		// Make sure to capture ternary operators 
 		const auto& gen = callExpr->getNodeManager().getLangBasic();
 
-		if (core::analysis::isCallOf(callExpr.getAddressedNode(), gen.getIfThenElse())) {
+		if(core::analysis::isCallOf(callExpr.getAddressedNode(), gen.getIfThenElse())) {
 			visitTernaryOperator(callExpr);
 			return;
 		}
 
 		vector<ExpressionPtr> newArgs;
-		for (const auto& arg : callExpr->getArguments()) {
+		for(const auto& arg : callExpr->getArguments()) {
 			newArgs.push_back( storeTemp(arg).second );
 		}
 		
@@ -800,10 +800,10 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 
 		auto fun = callExpr->getFunctionExpr();
-		if ( !gen.isBuiltIn(fun) && fun->getNodeType() == NT_LambdaExpr ) {
+		if(!core::lang::isBuiltIn(fun) && fun->getNodeType() == NT_LambdaExpr) {
 			const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 
-			if ( !cfg->hasSubGraph(lambdaExpr) ) {
+			if(!cfg->hasSubGraph(lambdaExpr)) {
 				// In the case the body has not been visited yet, proceed with the graph construction
 				// TODO: This can be executed in a separate thread (if necessary)
 				CFG::buildCFG<CP>(lambdaExpr.getAddressedNode(), cfg);
@@ -821,7 +821,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 			// we interconnect the two blocks so that if we want to have intra-procedural analysis
 			// we can jump directly to the return block without visiting the body of the function
-			call->setReturnBlock( *ret );
+			call->setReturnBlock(*ret);
 			// call->appendElement( cfg::Element(callExpr) );
 
 			ret->setCallBlock(*call);

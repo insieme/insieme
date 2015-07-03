@@ -1295,12 +1295,12 @@ OptionalMessageList GenericZeroCheck::visitCallExpr(const CallExprAddress& addre
 	auto type = call->getType();
 
 	// if the result type is a generic type everything is fine
-	if (!base.isBuiltIn(type) && type.isa<GenericTypePtr>()) {
+	if(!lang::isBuiltIn(type) && type.isa<GenericTypePtr>()) {
 		return res;
 	}
 
 	// only interested in get-zero expressions
-	if (!core::analysis::isCallOf(call, base.getZero())) {
+	if(!core::analysis::isCallOf(call, base.getZero())) {
 		return res;
 	}
 

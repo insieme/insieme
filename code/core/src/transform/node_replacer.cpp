@@ -85,10 +85,9 @@ private:
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
-
 		// we shouldn't do anything if replacement was interrupted
 		if(interrupted) return ptr;
-
+		
 		// if element to be replaced is a not a type but the current node is,
 		// the recursion can be pruned (since types only have other types as
 		// sub-nodes)
@@ -575,34 +574,36 @@ private:
 		});
 
 		// fix call to known built-in functions
-		if (manager.getLangBasic().isBuiltIn(call->getFunctionExpr()) || lang::isDerived(call->getFunctionExpr())) {
+		if(lang::isBuiltIn(call->getFunctionExpr())) {
 			return handleCallToBuiltIn(call, newArgs);
 		}
 
-		if (fun->getNodeType() == NT_LambdaExpr) {
+		if(fun->getNodeType() == NT_LambdaExpr) {
 			const CallExprPtr newCall = handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
 
 			return newCall;
 		}
 		// test whether there has been a change
-		if (args == newArgs && fun->getNodeType() != NT_Literal) {
+		if(args == newArgs && fun->getNodeType() != NT_Literal) {
 			return call;
 		}
 
-/*		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
-					if (manager.getLangBasic().isBuiltIn(literal))
-			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;*/
-		if (fun->getNodeType() == NT_Literal) {
+		if(fun->getNodeType() == NT_Literal) {
 			return handleCallToLiteral(call, call->getType(), newArgs).as<CallExprPtr>();
 		}
 
 		// don't act on pointwise and accuracy functions
-		if(CallExprPtr calledExpr = dynamic_pointer_cast<const CallExpr>(fun))
-			if(manager.getLangBasic().isPointwise(calledExpr->getFunctionExpr()) || manager.getLangBasic().isAccuracy(calledExpr->getFunctionExpr()))
-				return call->substitute(manager, *this);
+		if(CallExprPtr calledExpr = dynamic_pointer_cast<const CallExpr>(fun)) {
+			if(manager.getLangBasic().isPointwise(calledExpr->getFunctionExpr()) 
+				|| manager.getLangBasic().isAccuracy(calledExpr->getFunctionExpr())) {
+					return call->substitute(manager, *this);
+			}
+		}
 
 		LOG(ERROR) << fun;
-		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
+		for_each(call->getArguments(), [](ExpressionPtr arg) { 
+			std::cout << arg->getType() << " " << arg << std::endl; 
+		});
 		assert_fail() << "Unsupported call-target encountered - sorry!";
 		return call;
 	}
@@ -612,7 +613,7 @@ private:
 		auto fun = call->getFunctionExpr();
 
 		// should only be called for built-in functions
-		assert_true(lang::isDerived(fun) || manager.getLangBasic().isBuiltIn(fun));
+		assert_true(lang::isBuiltIn(fun));
 
 		// use type inference for the return type
 		if(manager.getLangBasic().isCompositeRefElem(fun)) {
@@ -974,7 +975,7 @@ namespace {
 		// check whether target of call is a literal
 		NodeManager& manager = call->getNodeManager();
 		const auto& basic = manager.getLangBasic();
-		if (basic.isBuiltIn(call->getFunctionExpr())) {
+		if(lang::isBuiltIn(call->getFunctionExpr())) {
 			IRBuilder builder(manager);
 
 			auto args = call->getArguments();

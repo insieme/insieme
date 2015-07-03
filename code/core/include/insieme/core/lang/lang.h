@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,6 +86,14 @@ namespace lang {
 	Pointer<T> markAsDerived(const Pointer<T>& node, const string& name) {
 		return markAsDerived(NodePtr(node), name).as<Pointer<T>>();
 	}
+
+	
+	/**
+	 * Struct used to mark Builtins, for efficient checking
+	 */
+	struct BuiltInTag {};
+	void markAsBuiltIn(const NodePtr& node);
+	bool isBuiltIn(const core::NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

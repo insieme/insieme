@@ -169,6 +169,7 @@ namespace lang {
 			const insieme::core::TypePtr create##NAME() const {\
 				checkIrNameNotAlreadyInUse(IR_NAME); \
 				const insieme::core::TypePtr result = insieme::core::lang::getType(getNodeManager(), TYPE, getNamedIrExtensions()); \
+				insieme::core::lang::markAsBuiltIn(result); \
 				addNamedIrExtension(IR_NAME, result); \
 				return result; \
 			} \
@@ -207,6 +208,7 @@ namespace lang {
 				checkIrNameNotAlreadyInUse(IR_NAME); \
 				const insieme::core::LiteralPtr result = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE, getNamedIrExtensions()); \
 				insieme::core::lang::markAsDerived(result, VALUE); \
+				insieme::core::lang::markAsBuiltIn(result); \
 				addNamedIrExtension(IR_NAME, result); \
 				return result; \
 			} \
@@ -245,6 +247,7 @@ namespace lang {
 				insieme::core::IRBuilder builder(getNodeManager()); \
 				const insieme::core::ExpressionPtr result = builder.normalize(builder.parseExpr(SPEC, getNamedIrExtensions())).as<insieme::core::ExpressionPtr>(); \
 				insieme::core::lang::markAsDerived(result, #NAME); \
+				insieme::core::lang::markAsBuiltIn(result); \
 				addNamedIrExtension(IR_NAME, result); \
 				return result; \
 			} \

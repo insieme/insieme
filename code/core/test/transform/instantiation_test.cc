@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
@@ -365,7 +366,6 @@ TEST(TypeInstantiation, ReturnTypeSimple) {
 	EXPECT_EQ(build.parseType("int<4>"), instantiated.as<CallExprPtr>()->getType());
 }
 
-
 TEST(TypeInstantiation, ReturnTypeMultiple) {
 	NodeManager mgr;
 	IRBuilder build(mgr);
@@ -387,6 +387,126 @@ TEST(TypeInstantiation, ReturnTypeMultiple) {
 	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
 	EXPECT_EQ(build.parseType("int<8>"), instantiated.as<CallExprPtr>()->getType());
+}
+
+TEST(TypeInstantiation, BindExpr) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a x) -> unit {
+			decl ref<'a> b;
+			lambda () => {
+				decl auto y = b;
+				return y;
+			};
+		}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+}
+
+TEST(TypeInstantiation, BindInBindExpr) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a x) -> unit {
+			decl ref<'a> b;
+			lambda () => {
+				decl auto y = b;
+				lambda () => {
+					decl auto z = y;
+					return z;
+				};
+				return y;
+			};
+		}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+}
+
+TEST(TypeInstantiation, JobExpr) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a x) -> unit {
+			decl ref<'a> b;		
+			parallel(job {
+				decl auto y = b;
+			});
+		}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+}
+
+TEST(TypeInstantiation, NestedLambda) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+    core::ProgramPtr program = build.parseProgram(
+            R"(
+            let int = int<4>;
+            let uint = uint<4>;
+
+            let differentbla = lambda ('b x) -> unit {
+                decl auto m = x;
+                decl auto l = m;
+            };
+
+            let bla = lambda ('a f) -> unit {
+                let anotherbla = lambda ('a x) -> unit {
+                    decl auto m = x;
+                };
+                anotherbla(f);
+                differentbla(f);
+                parallel(job { decl auto l = f; });
+            };
+
+            int main() {
+                // some bla
+                decl int x = 10;
+                bla(x);
+                return 0;
+            }
+            )"
+    );
+
+
+	EXPECT_TRUE(program);
+
+	auto instantiated = core::transform::instantiateTypes(program);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(program) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(program, build.parseType("'a")));
+	EXPECT_TRUE(core::analysis::contains(program, build.parseType("'b")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'b")));
 }
 
 /*

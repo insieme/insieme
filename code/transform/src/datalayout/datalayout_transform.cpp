@@ -76,7 +76,7 @@ public:
 					LambdaExprPtr lambdaExprFromReplacements = callFromReplacements->getFunctionExpr().isa<LambdaExprPtr>();
 					LambdaExprAddress lambdaExpr = oldCall->getFunctionExpr().isa<LambdaExprAddress>();
 
-					if(lambdaExpr && !mgr.getLangBasic().isBuiltIn(lambdaExpr)) {
+					if(lambdaExpr && !lang::isBuiltIn(lambdaExpr)) {
 						NodeAddress buf = lambdaExpr->getBody().as<NodeAddress>();
 
 						CompoundStmtPtr body = lambdaExprFromReplacements->getBody().as<NodePtr>()->substitute(mgr, *this, buf).as<CompoundStmtPtr>();
@@ -262,7 +262,7 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 			}
 
 			ExpressionAddress fun = call->getFunctionExpr();
-			if(mgr.getLangBasic().isBuiltIn(fun))
+			if(lang::isBuiltIn(fun))
 				return;
 
 			if(LambdaExprAddress lambda = fun.isa<LambdaExprAddress>()) {
@@ -516,7 +516,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 			} else { // externalAosCall
 				CallExprAddress call = match.as<CallExprAddress>();
 				// filter out builtins
-				if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+				if(lang::isBuiltIn(call->getFunctionExpr()))
 					return;
 
 				// check if oldVar is accessed
@@ -600,7 +600,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const Expr
 				CallExprAddress call = node.as<CallExprAddress>();
 
 				// filter out builtins
-				if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr()))
+				if(lang::isBuiltIn(call->getFunctionExpr()))
 					return;
 
 //				for(std::pair<ExpressionPtr, ExpressionPtr> e : nElems) {

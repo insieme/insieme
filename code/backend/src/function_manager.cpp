@@ -56,6 +56,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/instantiate.h"
 
 #include "insieme/core/types/type_variable_deduction.h"
 
@@ -170,8 +171,9 @@ namespace backend {
 		(store->resolve(lambda))->function->name->name = name;
 	}
 
-	bool FunctionManager::isBuiltIn(const core::ExpressionPtr& op) const {
-		return operatorTable.find(op) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
+	bool FunctionManager::isBuiltIn(const core::NodePtr& op) const {
+		if(op->getNodeCategory() != core::NC_Expression) return false;
+		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
 	}
 
 	namespace {
@@ -417,20 +419,18 @@ namespace backend {
 			// assumption: multiple functions with the exact same body will not be added multiple times to the backend output code.
 			fun = core::analysis::normalize(fun);
 
-			auto& manager = call->getNodeManager();
+			auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
+				return core::lang::isBuiltIn(node) || isBuiltIn(node);
+			};
+			auto res = core::transform::instantiateTypes(call, isLangOrOpBuiltin).as<core::CallExprPtr>();
 
-			// compute substitutions
-			core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(manager, call);
-
-			// instantiate type variables according to map
-			auto lambda = core::transform::instantiate(manager, fun.as<core::LambdaExprPtr>(), map);
-
+			std::cout << "isBuiltIn: " << isLangOrOpBuiltin(call) << "\n"; 
+			std::cout << "RES ============\n"; 
+			std::cout << dumpColor(res) << "\n";
+			
 			// check result
-			assert_true(lambda && lambda != fun) << "Lambda-Instantiation failed!" << "\nType: " << *lambda->getType(); // << "\nLambda: " << *lambda;
-			assert_false(core::analysis::isGeneric(lambda->getType())) << "Still generic!";
-
-			// produce new call expression
-			auto res = core::CallExpr::get(manager, call->getType(), lambda, call->getArguments());
+			assert_true(isLangOrOpBuiltin(call) || !core::analysis::isGeneric(res->getFunctionExpr()->getType())) << "Still generic!";
+			std::cout << "CHECKED ============\n"; 
 
 			// return encoding of resulting call
 			return getCall(res, context);

@@ -86,6 +86,16 @@ namespace lang {
 		return node;
 	}
 
+	// ----------------------------------------------------
+
+	void markAsBuiltIn(const NodePtr& node) {
+		node->attachValue<BuiltInTag>();
+	}
+
+	bool isBuiltIn(const core::NodePtr& node) {
+		return node->hasAttachedValue<BuiltInTag>();
+	}
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

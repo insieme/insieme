@@ -257,7 +257,7 @@ namespace backend {
                 if (stop) {
                     return true;
                 }
-                if (!base.isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) {
+                if (!core::lang::isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) {
                     stop = true;
                 }
 				// check whether it is an assignment
@@ -478,41 +478,42 @@ namespace backend {
 	}
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
-		// the recursive type instantiator does the magic.
-		// this pass has been implemented as part of the core manipulation utils
-		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
-			// only consider lambdas
-			if (code->getNodeType() != core::NT_LambdaExpr) return code;
-            // get the lambda and check if it contains recursive types
-			core::LambdaExprPtr lambda = code.as<core::LambdaExprPtr>();
-            bool containsRecType = false;
-            visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
-                    if(type.isa<core::RecTypePtr>()) containsRecType=true;
-            });
-            //if we have recurisve types in the lambda we must not use
-            //the instantiator, because it will iterate to infinity.
-            //The name "recurisve lambda instantiator" is used, because
-            //the instantiator is recursive and not the lambda itself!!
-            //FIXME: support for recurisve types in the instantiator
-            if(containsRecType) {
-                return lambda;
-            }
-			// use core library utility to fix types
-			lambda = core::transform::instantiateTypes(lambda, [&](const core::NodePtr& node) {
-                // only check expressions, this check is applied to all subelements
-                if(!node.isa<core::ExpressionPtr>())
-                    return false;
-                const core::ExpressionPtr& expr = node.as<core::ExpressionPtr>();
-                // skip builtins and sizeof literals
-                if(converter.getNodeManager().getLangBasic().isBuiltIn(expr) ||
-                   converter.getFunctionManager().isBuiltIn(expr)) {
-                    return true;
-                }
-                // do not skip any other nodes
-                return false;
-            }).as<core::LambdaExprPtr>();
-			return lambda;
-		}).map(code);
+		return code;
+		//// the recursive type instantiator does the magic.
+		//// this pass has been implemented as part of the core manipulation utils
+		//return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
+		//	// only consider lambdas
+		//	if (code->getNodeType() != core::NT_LambdaExpr) return code;
+  //          // get the lambda and check if it contains recursive types
+		//	core::LambdaExprPtr lambda = code.as<core::LambdaExprPtr>();
+  //          bool containsRecType = false;
+  //          visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
+  //                  if(type.isa<core::RecTypePtr>()) containsRecType=true;
+  //          });
+  //          //if we have recurisve types in the lambda we must not use
+  //          //the instantiator, because it will iterate to infinity.
+  //          //The name "recurisve lambda instantiator" is used, because
+  //          //the instantiator is recursive and not the lambda itself!!
+  //          //FIXME: support for recurisve types in the instantiator
+  //          if(containsRecType) {
+  //              return lambda;
+  //          }
+		//	// use core library utility to fix types
+		//	lambda = core::transform::instantiateTypes(lambda, [&](const core::NodePtr& node) {
+  //              // only check expressions, this check is applied to all subelements
+  //              if(!node.isa<core::ExpressionPtr>())
+  //                  return false;
+  //              const core::ExpressionPtr& expr = node.as<core::ExpressionPtr>();
+  //              // skip builtins and sizeof literals
+  //              if(core::lang::isBuiltIn(expr) ||
+  //                 converter.getFunctionManager().isBuiltIn(expr)) {
+  //                  return true;
+  //              }
+  //              // do not skip any other nodes
+  //              return false;
+  //          }).as<core::LambdaExprPtr>();
+		//	return lambda;
+		//}).map(code);
 	}
 
 } // end namespace backend

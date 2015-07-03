@@ -779,7 +779,7 @@ namespace {
 		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr){
 			OperatorStatistic res;
 			auto fun = ptr->getFunctionExpr();
-			if (fun->getNodeManager().getLangBasic().isBuiltIn(fun)) {
+			if (core::lang::isBuiltIn(fun)) {
 				res[fun] = 1;
 			}
 			return res;

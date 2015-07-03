@@ -176,7 +176,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 		// maps arguments to parameters
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
-			if(BASIC.isBuiltIn(lambda));
+			if(lang::isBuiltIn(lambda));
 				return ptr->substitute(mgr, *this);
 
 			ExpressionList args;

@@ -54,16 +54,15 @@ TEST(LangBasic, Generation) {
 TEST(LangBasic, BoolChecks) {
 	NodeManager nm;
 
-	EXPECT_TRUE(nm.getLangBasic().isBuiltIn(nm.getLangBasic().getInt4()));
-	EXPECT_TRUE(nm.getLangBasic().isBuiltIn(nm.getLangBasic().getSignedIntLShift()));
-	// EXPECT_FALSE(nm.getLangBasic().isBuiltIn(GenericType::get(nm, "surelyNotBuiltInISincerelyHope__")));
+	EXPECT_TRUE(lang::isBuiltIn(nm.getLangBasic().getInt4()));
+	EXPECT_TRUE(lang::isBuiltIn(nm.getLangBasic().getSignedIntLShift()));
+	EXPECT_FALSE(lang::isBuiltIn((GenericType::get(nm, "surelyNotBuiltInISincerelyHope__"))));
 }
 
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
 
 	EXPECT_EQ(nm.getLangBasic().getRedistribute(), nm.getLangBasic().getBuiltIn("redistribute"));
-	// EXPECT_EQ(LiteralPtr(), nm.getLangBasic().getBuiltIn("surelyNotBuiltInISincerelyHope__"));
 }
 
 TEST(LangBasic, Grouping) {

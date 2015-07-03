@@ -454,6 +454,7 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
 
 			auto& basic = converter.getNodeManager().getLangBasic();
+			auto builder = core::IRBuilder(converter.getNodeManager());
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			// try find a match
@@ -546,7 +547,7 @@ namespace backend {
 
 			// -------------- type literals -------------
 
-			if (basic.isTypeLiteralTypeGen(ptr)) {
+			if (ptr == builder.getTypeLiteralType(builder.typeVariable("a"))) {
 
 				// creates a empty struct and a new type "type"
 
@@ -566,7 +567,7 @@ namespace backend {
 
 			if (core::analysis::isTypeLiteralType(ptr)) {
 				// use same info then for the generic case
-				return resolveInternal(basic.getTypeLiteralTypeGen());
+				return resolveInternal(builder.getTypeLiteralType(builder.typeVariable("a")));
 			}
 
 			if (core::analysis::isVolatileType(ptr)) {
