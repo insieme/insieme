@@ -892,10 +892,17 @@ namespace integration {
 			for (auto& current : steps) {
 				TestStep& step = current.second;
 				if (step.getName() == stepName) {
-					//we found the preprocessing step - execute it
+					//we found the preprocessing step - prepare the setup
 					TestSetup setup;
+					setup.mockRun = false;
+					setup.sched = SCHED_UNDEFINED;
+					setup.clean = true;
 					setup.executionDir="";
+					setup.perf = false;
+					//now execute the step
 					auto result = step.run(setup, test, TestRunner::getInstance());
+					//and don't forget to clean up the produced files here
+					result.clean();
 					return result.wasSuccessful();
 				}
 			}
