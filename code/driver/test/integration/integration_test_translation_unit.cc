@@ -76,26 +76,29 @@ namespace insieme {
 
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
-                auto keys = testCase.getProperties().getKeys();
-                if(std::find(keys.begin(), keys.end(), "preprocessing") != keys.end()) {
-                    SCOPED_TRACE("WARNING: This test was skipped because there is a preprocessing step required: " + testCase.getName());
-                    LOG(INFO) << "WARNING: This test was skipped because there is a preprocessing step required: " + testCase.getName();
-                    //omit test
-                    return;
-                }
 
+		// skip OpenCL tests in case we have OpenCL disabled
+		#ifndef USE_OPENCL
+		if (testCase.isEnableOpenCL()) {
+			LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
+			return;
+		}
+		#endif
 
-                std::string filename;
-                {
-                    core::NodeManager tmpManager;
-                    //load program and create IR TU
-                    frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
-                    char tmpname[] = "tmp.XXXXXX";
-                    mkstemp(tmpname);
-                    filename = tmpname;
-                    insieme::driver::saveLib(code, filename);
-                    EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
-                }
+		//each test might require some preprocessing step which we execute here
+		performPreprocessing(testCase);
+
+		std::string filename;
+		{
+			core::NodeManager tmpManager;
+			//load program and create IR TU
+			frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
+			char tmpname[] = "tmp.XXXXXX";
+			mkstemp(tmpname);
+			filename = tmpname;
+			insieme::driver::saveLib(code, filename);
+			EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
+		}
 
 		// load TU using the frontend (and all its potential extensions)
 		insieme::frontend::ConversionJob job;
@@ -137,6 +140,9 @@ namespace insieme {
 
 		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
 		unlink(filename.c_str());
+
+		//each test might require some postprocessing step which we execute here
+		performPostprocessing(testCase);
 	}
 
 	// instantiate the test case
