@@ -82,8 +82,11 @@ namespace insieme {
 		}
 		#endif
 
-		//each test might require some preprocessing step which we execute here
-		performPreprocessing(testCase);
+		//each test might require some prerequisites which are checked here
+		if (!checkPrerequisites(testCase)) {
+			ASSERT_TRUE(false) << "Prerequisites for test case " << testCase.getName() << " are not satisfied";
+			return;
+		}
 
 		// load the code using the frontend
 		core::ProgramPtr code = testCase.load(manager);
@@ -123,9 +126,6 @@ namespace insieme {
 		}
 
 		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
-
-		//each test might require some postprocessing step which we execute here
-		performPostprocessing(testCase);
 	}
 
 	// instantiate the test case
