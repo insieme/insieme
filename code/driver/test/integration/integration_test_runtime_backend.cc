@@ -74,12 +74,20 @@ namespace insieme {
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
 
-		// skip OpenCL tests
+		// skip OpenCL tests in case we have OpenCL disabled
+		#ifndef USE_OPENCL
 		if (testCase.isEnableOpenCL()) {
-			LOG(INFO) << "Skipping OpenCL tests ...";
+			LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
 			return;
 		}
-	
+		#endif
+
+		//each test might require some prerequisites which are checked here
+		if (!checkPrerequisites(testCase)) {
+			ASSERT_TRUE(false) << "Prerequisites for test case " << testCase.getName() << " are not satisfied";
+			return;
+		}
+
 		// load the code using the frontend
 		core::ProgramPtr code = testCase.load(manager);
 

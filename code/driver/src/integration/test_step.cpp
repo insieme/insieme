@@ -60,6 +60,8 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
+	using namespace std;
+
 	namespace {
 
 		namespace {
@@ -664,10 +666,14 @@ namespace integration {
 				add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK + guidSuffix, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE + guidSuffix, TEST_STEP_REF_CPP_EXECUTE }, statThreads, GUIDED));
 			}
 
-			// PreCommand and PostCommand are executed before and after all the other steps
+			// preprocessing steps are executed by a special run of the integration test driver - as are postprocessing steps
+			// these steps are excluded from normal runs
 			// see "scheduleSteps" function
 			add(createBashCommandStep(TEST_STEP_PREPROCESSING));
 			add(createBashCommandStep(TEST_STEP_POSTPROCESSING));
+
+			// the check for the prerequisites is executed before all other steps
+			add(createBashCommandStep(TEST_STEP_CHECK_PREREQUISITES));
 
 			return list;
 		}
@@ -721,10 +727,14 @@ namespace integration {
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_SEQ_CPP_CHECK, Sequential, CPP, { TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE }));
 			add(createInsiemeccCheckStep(TEST_STEP_INSIEMECC_RUN_CPP_CHECK, Runtime, CPP, { TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE, TEST_STEP_REF_CPP_EXECUTE }));
 
-			// preprocessing and postprocessing steps are executed before and after all the other steps
+			// preprocessing steps are executed by a special run of the integration test driver - as are postprocessing steps
+			// these steps are excluded from normal runs
 			// see "scheduleSteps" function
 			add(createBashCommandStep(TEST_STEP_PREPROCESSING));
 			add(createBashCommandStep(TEST_STEP_POSTPROCESSING));
+
+			// the check for the prerequisites is executed before all other steps
+			add(createBashCommandStep(TEST_STEP_CHECK_PREREQUISITES));
 
 			return list;
 		}
@@ -743,7 +753,7 @@ namespace integration {
 		return list;
 	}
 
-	const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false) {
+	const TestStep& getStepByName(const std::string& name, int numThreads, bool scheduling) {
 		static const TestStep fail;
 
 		if(numThreads){
@@ -848,17 +858,21 @@ namespace integration {
 			scheduleStep(cur, res, test, numThreads, scheduling);
 		}
 
-		// Handling the preprocessing & postprocessing case
+		// Handling the preprocessing & postprocessing case as well as the prerequisite check
 		vector<TestStep> final;
-		TestStep pre, post;
+		TestStep prerequisiteCheck;
 		for(const auto& cur : res) {
-			if (cur.getName() == TEST_STEP_PREPROCESSING)	pre = cur;
-			else if (cur.getName() == TEST_STEP_POSTPROCESSING) post = cur;
-			else final.push_back(cur);
+			//store the prerequisite step
+			if (cur.getName() == TEST_STEP_CHECK_PREREQUISITES) {
+				prerequisiteCheck = cur;
+
+				//add all the others except pre- and post-processing which we'll simply drop
+			} else if (cur.getName() != TEST_STEP_PREPROCESSING && cur.getName() != TEST_STEP_POSTPROCESSING) {
+				final.push_back(cur);
+			}
 		}
 
-		if(!pre.getName().empty()) final.insert(final.begin(), pre);
-		if(!post.getName().empty()) final.push_back(post);
+		if(!prerequisiteCheck.getName().empty()) final.insert(final.begin(), prerequisiteCheck);
 		return final;
 	}
 
@@ -880,15 +894,43 @@ namespace integration {
 		return output;
 	}
 
-    /*
-     *  Test Runner member functions
-     */
-    int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
-							const string& environmentParam, const string& outFilePath,
-							const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
-        /*
-         * Setup arguments
-         */
+
+	namespace {
+		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName) {
+			TestStep step = getStepByName(stepName);
+
+			//prepare the setup
+			TestSetup setup;
+			setup.mockRun = false;
+			setup.sched = SCHED_UNDEFINED;
+			setup.clean = true;
+			setup.executionDir="";
+			setup.perf = false;
+
+			//now execute the step
+			auto result = step.run(setup, test, TestRunner::getInstance());
+
+			//and don't forget to clean up the produced files here
+			result.clean();
+
+			//also return true if the step was omitted
+			return result.wasSuccessful() || result.wasOmitted();
+		}
+	}
+
+	bool checkPrerequisites(const IntegrationTestCase& test) {
+		return runSingleTestStep(test, TEST_STEP_CHECK_PREREQUISITES);
+	}
+
+	/*
+	 *  Test Runner member functions
+	 */
+	int TestRunner::executeWithTimeout(const string& executableParam, const string& argumentsParam,
+	                                   const string& environmentParam, const string& outFilePath,
+	                                   const string& errFilePath, unsigned cpuTimeLimit, const string& execDir) const {
+		/*
+		 * Setup arguments
+		 */
 
 		// quick and dirty: have boost split everything and then reassemble tokens that were quoted
 		vector<string> argumentsVecTemp;
@@ -1012,8 +1054,8 @@ namespace integration {
 			if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1)
 				std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
 		} else {
-		    #pragma omp critical (pids)
-            TestRunner::getInstance().pids.push_back(pid);
+			#pragma omp critical (pids)
+			TestRunner::getInstance().pids.push_back(pid);
 			if(waitpid(pid, &retVal, 0) == -1)
 				std::cerr << "Unable to wait for child process " << pid << ", reason: " << strerror(errno) << "\n";
 		}
@@ -1029,7 +1071,7 @@ namespace integration {
 		producedFiles.push_back(setup.stdErrFile);
 
 		map<string,float> metricResults;
-        //insert dummy vals
+		//insert dummy vals
 		metricResults["walltime"]=0;
 		metricResults["cputime"]=0;
 		metricResults["mem"]=0;
@@ -1109,7 +1151,7 @@ namespace integration {
 				perfString=perfString+"-e "+s+" ";
 			}
 
-        }
+		}
 
 		string executable = string(testConfig["time_executable"]);
 		string envString = env.str();
@@ -1131,7 +1173,7 @@ namespace integration {
 
 		int actualReturnCode = WEXITSTATUS(retVal);
 
-       		if(actualReturnCode > 128) {
+		if(actualReturnCode > 128) {
 			actualReturnCode -= 128;
 			if(actualReturnCode > 0)
 				std::cerr << "Killed by signal " << actualReturnCode << "\n";

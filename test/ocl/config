@@ -2,6 +2,7 @@ use_opencl=1
 includes="../common/","../../../code/frontend/test/inputs","./"
 
 preprocessing=bash -c "gcc -std=c99 -Wall -fPIC -c ../common/*.c -I../../../code/frontend/test/inputs -lOpenCL -lrt -O3 -D_GNU_SOURCE=1 && gcc -shared -Wl,-soname,libicl.so.1 -o libicl.so.1.0 *.o && ln -sf libicl.so.1.0 libicl.so && ln -sf libicl.so.1.0 libicl.so.1 && rm ./*.o"
+check_prerequisites=bash -c "test -f libicl.so.1.0 -a -L libicl.so -a -L libicl.so.1"
 libPaths="./"
 libNames="icl","m"
 postprocessing=bash -c "rm libicl.so*"

@@ -60,11 +60,17 @@ namespace integration {
 	const std::map<std::string,TestStep>& getFullStepList(int statThreads,bool scheduling);
 	const std::map<std::string,TestStep>& getFullStepList();
 
+	// gets a specific test step by name
+	const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false);
+
 	// filters out test steps that are not suitable for the given tests
 	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string,string>& conflicting = map<string,string>());
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
+
+	//checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
+	bool checkPrerequisites(const IntegrationTestCase& test);
 
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
@@ -109,6 +115,8 @@ namespace integration {
 
 	static const std::string TEST_STEP_PREPROCESSING = "preprocessing";
 	static const std::string TEST_STEP_POSTPROCESSING = "postprocessing";
+
+	static const std::string TEST_STEP_CHECK_PREREQUISITES = "check_prerequisites";
 
 	// ------------------------------------------------------------------------
 
@@ -206,53 +214,53 @@ namespace integration {
 
 
 
-    //define the TestRunner here
-    class TestRunner {
-    private:
-        typedef insieme::driver::integration::IntegrationTestCase TestCase;
-        mutable std::vector<pid_t> pids;
-        std::function<void()> func;
-        std::function<void()> pre;
-        TestRunner() {
-            //register signal handler
-            signal(SIGINT, TestRunner::signalHandler);
-        }
-        TestRunner(const TestRunner&);
-        TestRunner& operator =(const TestRunner&);
-    public:
-        static TestRunner& getInstance() {
-            static TestRunner r = TestRunner();
-            return r;
-        }
-        int executeWithTimeout(const string& executableParam, const string& argumentsParam,
-                               const string& environmentParam, const string& outFilePath,
-                               const string& errFilePath, unsigned cpuTimeLimit, const string& execDir = "") const;
-        TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig,
-                              const string& cmd, const string& producedFile="", const string& execDir = "") const;
-        void attachExecuteOnKill(std::function<void()> f) {
-            func = f;
-        }
-        void attachExecuteBeforeKill(std::function<void()> f) {
-            pre = f;
-        }
+	//define the TestRunner here
+	class TestRunner {
+	private:
+		typedef insieme::driver::integration::IntegrationTestCase TestCase;
+		mutable std::vector<pid_t> pids;
+		std::function<void()> func;
+		std::function<void()> pre;
+		TestRunner() {
+			//register signal handler
+			signal(SIGINT, TestRunner::signalHandler);
+		}
+		TestRunner(const TestRunner&);
+		TestRunner& operator =(const TestRunner&);
+	public:
+		static TestRunner& getInstance() {
+			static TestRunner r = TestRunner();
+			return r;
+		}
+		int executeWithTimeout(const string& executableParam, const string& argumentsParam,
+		                       const string& environmentParam, const string& outFilePath,
+		                       const string& errFilePath, unsigned cpuTimeLimit, const string& execDir = "") const;
+		TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig,
+		                      const string& cmd, const string& producedFile="", const string& execDir = "") const;
+		void attachExecuteOnKill(std::function<void()> f) {
+			func = f;
+		}
+		void attachExecuteBeforeKill(std::function<void()> f) {
+			pre = f;
+		}
 
-        static void signalHandler(int signum) {
-            #pragma omp single
-            {
-                TestRunner::getInstance().pre();
-                sleep(1);
-                #pragma omp critical (pids)
-                {
-                    for(auto pid : TestRunner::getInstance().pids) {
-                        kill(pid, SIGINT);
-                    }
-                    sleep(3);
-                    TestRunner::getInstance().func();
-                }
-            }
-            exit(0);
-        }
-    };
+		static void signalHandler(int signum) {
+		#pragma omp single
+		{
+			TestRunner::getInstance().pre();
+			sleep(1);
+		#pragma omp critical (pids)
+			{
+				for(auto pid : TestRunner::getInstance().pids) {
+					kill(pid, SIGINT);
+				}
+				sleep(3);
+				TestRunner::getInstance().func();
+			}
+		}
+		exit(0);
+		}
+	};
 
 } // end namespace integration
 } // end namespace driver
