@@ -885,29 +885,24 @@ namespace integration {
 
 	namespace {
 		bool runSingleTestStep(const IntegrationTestCase& test, const std::string stepName) {
-			//get all steps
-			auto steps = getFullStepList();
+			TestStep step = getStepByName(stepName);
 
-			//iterate through them and look for the preprocessing step
-			for (auto& current : steps) {
-				TestStep& step = current.second;
-				if (step.getName() == stepName) {
-					//we found the preprocessing step - prepare the setup
-					TestSetup setup;
-					setup.mockRun = false;
-					setup.sched = SCHED_UNDEFINED;
-					setup.clean = true;
-					setup.executionDir="";
-					setup.perf = false;
-					//now execute the step
-					auto result = step.run(setup, test, TestRunner::getInstance());
-					//and don't forget to clean up the produced files here
-					result.clean();
-					return result.wasSuccessful();
-				}
-			}
+			//prepare the setup
+			TestSetup setup;
+			setup.mockRun = false;
+			setup.sched = SCHED_UNDEFINED;
+			setup.clean = true;
+			setup.executionDir="";
+			setup.perf = false;
 
-			return true;
+			//now execute the step
+			auto result = step.run(setup, test, TestRunner::getInstance());
+
+			//and don't forget to clean up the produced files here
+			result.clean();
+
+			//also return true if the step was omitted
+			return result.wasSuccessful() || result.wasOmitted();
 		}
 	}
 
