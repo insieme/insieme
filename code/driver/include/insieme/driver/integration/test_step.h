@@ -72,6 +72,9 @@ namespace integration {
 	//performs only the postprocessing of a test case in case there is such a step. Returns false if the step failed.
 	bool performPostprocessing(const IntegrationTestCase& test);
 
+	//checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
+	bool checkPrerequisites(const IntegrationTestCase& test);
+
 	//reads out a given file and returns the contents
 	std::string readFile(std::string filename);
 
@@ -115,6 +118,8 @@ namespace integration {
 
 	static const std::string TEST_STEP_PREPROCESSING = "preprocessing";
 	static const std::string TEST_STEP_POSTPROCESSING = "postprocessing";
+
+	static const std::string TEST_STEP_CHECK_PREREQUISITES = "check_prerequisites";
 
 	// ------------------------------------------------------------------------
 
