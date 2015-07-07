@@ -53,7 +53,9 @@ namespace encoder {
 		core::TypePtr getListType(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
 			core::TypePtr alpha = builder.typeVariable("a");
-			return GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(alpha));
+			auto ret = GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(alpha));
+			lang::markAsBuiltIn(ret);
+			return ret;
 		}
 
 		/**
@@ -65,7 +67,9 @@ namespace encoder {
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr typeArgType = builder.genericType("type", toVector(alpha));
 			core::TypePtr emptyType = builder.functionType(typeArgType, list);
-			return builder.literal(emptyType, "empty");
+			auto ret = builder.literal(emptyType, "empty");
+			lang::markAsBuiltIn(ret);
+			return ret;
 		}
 
 		/**
@@ -76,7 +80,9 @@ namespace encoder {
 			core::TypePtr list = getListType(manager);
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr consType = builder.functionType(toVector(alpha, list), list);
-			return builder.literal(consType, "cons");
+			auto ret = builder.literal(consType, "cons");
+			lang::markAsBuiltIn(ret);
+			return ret;
 		}
 
 	}

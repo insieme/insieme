@@ -703,15 +703,19 @@ namespace {
 			return CONVERT_ARG(0);
 		});
 
-
 		res[basic.getRefToInt()] = OP_CONVERTER({
 				return CONVERT_ARG(0);
-		}
-		);
+		});
+
+		res[basic.getRefIsNull()] = OP_CONVERTER({
+			ADD_HEADER_FOR("NULL");
+			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
+		});
 
 		res[basic.getIntToRef()] = OP_CONVERTER({
 				return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
 		});
+
 		// -- support narrow and expand --
 
 		res[basic.getRefNarrow()] = OP_CONVERTER({
@@ -754,9 +758,15 @@ namespace {
 
 		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
 			// add dependency to element type
-			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType()); \
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
-			const TypeInfo& info = GET_TYPE_INFO(elementType); \
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0): " << *call << "\n";
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0): " << *ARG(0) << "\n";
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0) TYPE: " << *ARG(0)->getType() << "\n";
+			core::TypePtr elementType = ARG(0)->getType();
+			//core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType()); 
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n elementType: " << *elementType << "\n";
+			//elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
+			//	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n elementType2: " << *elementType << "\n";
+			const TypeInfo& info = GET_TYPE_INFO(elementType); 
 			context.getDependencies().insert(info.definition);
 
 			// generated code &(X[Y])

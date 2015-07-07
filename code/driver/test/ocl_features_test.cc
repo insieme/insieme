@@ -119,7 +119,7 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	EXPECT_EQ(1.0, floatOPs);
 	EXPECT_EQ(14.0, vecFloatOPs);
 
-	EXPECT_EQ(13.0, intrinsics);
+	EXPECT_EQ(9.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 return;

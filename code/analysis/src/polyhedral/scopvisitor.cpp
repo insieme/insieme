@@ -1110,7 +1110,6 @@ IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 	//LOG(INFO) << "visitCallExpr:\n" << printer::PrettyPrinter(callExpr);
 
 	const NodeAddress& func = callExpr->getFunctionExpr();
-	const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 
 	// do not look into built-in functions
 	if (lang::isBuiltIn(func)) {

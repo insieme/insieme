@@ -411,30 +411,32 @@ namespace backend {
 			return handleMemberCall(call, res, context);
 		}
 
-		// 3) test whether target is generic => instantiate
-		if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
+		//// 3) test whether target is generic => instantiate
+		//if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
+		//	std::cout << "PRE ============\n"; 
+		//	std::cout << dumpColor(call) << "\n";
 
-			// normalize the function
-			// TODO/FIXME: if this is done at the start (outside this branch), which it should be, one unit test (be_multi_version) breaks.
-			// assumption: multiple functions with the exact same body will not be added multiple times to the backend output code.
-			fun = core::analysis::normalize(fun);
+		//	// normalize the function
+		//	// TODO/FIXME: if this is done at the start (outside this branch), which it should be, one unit test (be_multi_version) breaks.
+		//	// assumption: multiple functions with the exact same body will not be added multiple times to the backend output code.
+		//	fun = core::analysis::normalize(fun);
 
-			auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
-				return core::lang::isBuiltIn(node) || isBuiltIn(node);
-			};
-			auto res = core::transform::instantiateTypes(call, isLangOrOpBuiltin).as<core::CallExprPtr>();
+		//	auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
+		//		return core::lang::isBuiltIn(node) || isBuiltIn(node);
+		//	};
+		//	auto res = core::transform::instantiateTypes(call, isLangOrOpBuiltin).as<core::CallExprPtr>();
 
-			std::cout << "isBuiltIn: " << isLangOrOpBuiltin(call) << "\n"; 
-			std::cout << "RES ============\n"; 
-			std::cout << dumpColor(res) << "\n";
-			
-			// check result
-			assert_true(isLangOrOpBuiltin(call) || !core::analysis::isGeneric(res->getFunctionExpr()->getType())) << "Still generic!";
-			std::cout << "CHECKED ============\n"; 
+		//	std::cout << "isBuiltIn: " << isLangOrOpBuiltin(call) << "\n"; 
+		//	std::cout << "RES ============\n"; 
+		//	std::cout << dumpColor(res) << "\n";
+		//	
+		//	// check result
+		//	assert_true(isLangOrOpBuiltin(call->getFunctionExpr()) || !core::analysis::isGeneric(res->getFunctionExpr()->getType())) << "Still generic!";
+		//	std::cout << "CHECKED ============\n"; 
 
-			// return encoding of resulting call
-			return getCall(res, context);
-		}
+		//	// return encoding of resulting call
+		//	return getCall(res, context);
+		//}
 
 		// 4) test whether target is a lambda => call lambda directly, without creating a closure
 		if (fun->getNodeType() == core::NT_LambdaExpr) {

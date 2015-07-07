@@ -58,7 +58,7 @@
 namespace insieme {
 namespace backend {
 
-TEST(FunctionCall, templates) {
+TEST(FunctionCall, Templates) {
     core::NodeManager manager;
     core::IRBuilder builder(manager);
 
@@ -306,12 +306,11 @@ TEST(Literals, BoolLiterals) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
-TEST(Parallel, Whatever) {
+TEST(Parallel, NestedLambdaTypeDeduction) {
        core::NodeManager mgr;
        core::IRBuilder builder(mgr);
 
-        // create a code fragment allocating an array on the stack and using it
-        core::ProgramPtr program = builder.parseProgram(
+       core::ProgramPtr program = builder.parseProgram(
                 R"(
                 let int = int<4>;
                 let uint = uint<4>;
