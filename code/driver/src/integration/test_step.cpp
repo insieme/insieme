@@ -867,7 +867,7 @@ namespace integration {
 				prerequisiteCheck = cur;
 
 				//add all the others except pre- and post-processing which we'll simply drop
-			} else if (cur.getName() != TEST_STEP_PREPROCESSING && cur.getName() == TEST_STEP_POSTPROCESSING) {
+			} else if (cur.getName() != TEST_STEP_PREPROCESSING && cur.getName() != TEST_STEP_POSTPROCESSING) {
 				final.push_back(cur);
 			}
 		}
