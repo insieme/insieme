@@ -60,17 +60,14 @@ namespace integration {
 	const std::map<std::string,TestStep>& getFullStepList(int statThreads,bool scheduling);
 	const std::map<std::string,TestStep>& getFullStepList();
 
+	// gets a specific test step by name
+	const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false);
+
 	// filters out test steps that are not suitable for the given tests
 	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string,string>& conflicting = map<string,string>());
 
 	// schedules the list of test steps by adding dependent steps and fixing the order properly
 	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
-
-	//performs only the preprocessing of a test case in case there is such a step. Returns false if the step failed.
-	bool performPreprocessing(const IntegrationTestCase& test);
-
-	//performs only the postprocessing of a test case in case there is such a step. Returns false if the step failed.
-	bool performPostprocessing(const IntegrationTestCase& test);
 
 	//checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
 	bool checkPrerequisites(const IntegrationTestCase& test);

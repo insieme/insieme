@@ -753,7 +753,7 @@ namespace integration {
 		return list;
 	}
 
-	const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false) {
+	const TestStep& getStepByName(const std::string& name, int numThreads, bool scheduling) {
 		static const TestStep fail;
 
 		if(numThreads){
@@ -916,14 +916,6 @@ namespace integration {
 			//also return true if the step was omitted
 			return result.wasSuccessful() || result.wasOmitted();
 		}
-	}
-
-	bool performPreprocessing(const IntegrationTestCase& test) {
-		return runSingleTestStep(test, TEST_STEP_PREPROCESSING);
-	}
-
-	bool performPostprocessing(const IntegrationTestCase& test) {
-		return runSingleTestStep(test, TEST_STEP_POSTPROCESSING);
 	}
 
 	bool checkPrerequisites(const IntegrationTestCase& test) {
