@@ -156,7 +156,7 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 
 	// log level
 	if (map.count("log-level")) {
-		Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(map["log-level"].as<std::string>()));
+		Logger::get(std::cerr, loggingLevelFromStr(map["log-level"].as<std::string>()));
 	}
 
 	// model path

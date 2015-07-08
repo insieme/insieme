@@ -61,6 +61,7 @@ namespace utils {
 namespace log {
 
 #define LOG_DEFAULT DEBUG
+#define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
 
 namespace io = boost::iostreams;
 
@@ -130,38 +131,45 @@ struct LoggingLevelNotDefined: public std::runtime_error {
 	LoggingLevelNotDefined(const std::string& message): std::runtime_error(message){}
 };
 
+static inline std::string loggingLevelToStr(const Level& level) {
+	switch(level) {
+	case DEBUG:		return "DEBUG";
+	case INFO:		return "INFO ";
+	case WARNING:	return "WARN ";
+	case ERROR:		return "ERROR";
+	case FATAL:		return "FATAL";
+	default:
+		assert_fail(); return "UNKNOWN";
+	}
+}
+
+static inline Level loggingLevelFromStr(const std::string& level) {
+	if(level.empty())		return LOG_DEFAULT;
+	if(level == "DEBUG")	return DEBUG;
+	if(level == "INFO")		return INFO;
+	if(level == "WARNING")	return WARNING;
+	if(level == "ERROR")	return ERROR;
+	if(level == "FATAL")	return FATAL;
+	std::ostringstream os;
+	os << "Logging level '" << level << 
+		"' not valid. Available logging levels are: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL'" 
+		<< std::endl;
+	throw LoggingLevelNotDefined(os.str());
+}
+
+static inline Level getLevelFromEnv() {
+	auto lvl = getenv(LOG_LEVEL_ENV);
+	if(lvl != nullptr) {
+		return loggingLevelFromStr(lvl);
+	}
+	return INFO;
+}
+
 /**
  * Prints the level at which the log was taken.
  */
 template <const Level L=DEBUG>
 struct LevelSpec {
-
-	static std::string loggingLevelToStr(const Level& level) {
-		switch(level) {
-		case DEBUG:		return "DEBUG";
-		case INFO:		return "INFO ";
-		case WARNING:	return "WARN ";
-		case ERROR:		return "ERROR";
-		case FATAL:		return "FATAL";
-		default:
-		assert_fail(); return "UNKNOWN";
-		}
-	}
-	
-	static Level loggingLevelFromStr(const std::string& level) {
-		if(level.empty())		return LOG_DEFAULT;
-		if(level == "DEBUG")	return DEBUG;
-		if(level == "INFO")		return INFO;
-		if(level == "WARNING")	return WARNING;
-		if(level == "ERROR")	return ERROR;
-		if(level == "FATAL")	return FATAL;
-		std::ostringstream os;
-		os << "Logging level '" << level << 
-			"' not valid. Available logging levels are: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL'" 
-		   << std::endl;
-		throw LoggingLevelNotDefined(os.str());
-	}
-
 	static void format(std::ostream& out, const Ctx& ctx) {
 		out << loggingLevelToStr(L);
 	}
@@ -300,7 +308,7 @@ public:
 	 * Sequent calls to this method with different input parameters has no
 	 * effect on the underlying logger, the same logger is always returned.
 	 */
-	static Logger& get(std::ostream& out = std::cout, const Level& level = INFO, unsigned short verbosity = 0) {
+	static Logger& get(std::ostream& out = std::cout, const Level& level = getLevelFromEnv(), unsigned short verbosity = 0) {
 		static Logger logger(out, level, verbosity);
 		return logger;
 	}

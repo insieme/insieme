@@ -113,7 +113,7 @@
 		core::NodeManager manager;
 
 		// set up logger
-		Logger::get(cerr, LevelSpec<>::loggingLevelFromStr("ERROR"));
+		Logger::get(cerr, loggingLevelFromStr("ERROR"));
 
 		cout << " --- Insieme Code Feature Extractor ---- \n";
 
