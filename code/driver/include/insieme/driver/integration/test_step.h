@@ -150,6 +150,15 @@ namespace integration {
 
 		typedef std::function<TestResult(const TestSetup&, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
 
+	private:
+		std::string name;
+
+		StepOp step;
+
+		std::set<std::string> dependencies;
+
+		StepType type;
+
 	protected:
 		friend class boost::serialization::access;
 		template<class Archive>
@@ -160,17 +169,9 @@ namespace integration {
 			ar & type;
 		}
 
+		TestStep(StepType type) : type(type) {};
+
 	public:
-
-		std::string name;
-
-		StepOp step;
-
-		std::set<std::string> dependencies;
-
-		StepType type;
-	public:
-
 		TestStep() {};
 
 		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>(),
@@ -201,7 +202,7 @@ namespace integration {
 			return out << name;
 		}
 
-		const StepType getStepType(){
+		const StepType getStepType() const {
 			return type;
 		}
 	};
@@ -209,7 +210,7 @@ namespace integration {
 	//special test step only to contain results of static metrics
 	struct StaticMetricsStep : public TestStep{
 		public:
-		StaticMetricsStep(){type=STATIC_METRIC;};
+		StaticMetricsStep() : TestStep(STATIC_METRIC) {};
 	};
 
 
