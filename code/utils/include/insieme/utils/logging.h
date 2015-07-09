@@ -69,7 +69,7 @@ namespace io = boost::iostreams;
  * Temporary object used to wrap the log stream. This object is responsible to
  * collect logs and flush the stream once the object is deallocated.
  *
- * A lock is used to mantain exclusivity of logs, in case of multi-threaded application
+ * A lock is used to maintain exclusivity of logs, in case of multi-threaded application
  * the logger guarantees mutual exclusion between threads using the stream.
  */
 struct Writer {

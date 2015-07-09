@@ -311,16 +311,14 @@ namespace {
 		#include "insieme/backend/operator_converter_begin.inc"
 
 		// -- booleans --
+		
 		res[basic.getBoolLAnd()] = OP_CONVERTER({ return c_ast::logicAnd(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
 		res[basic.getBoolLOr()]  = OP_CONVERTER({ return c_ast::logicOr(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
 		res[basic.getBoolLNot()] = OP_CONVERTER({ return c_ast::logicNot(CONVERT_ARG(0)); });
 
 		res[basic.getBoolEq()]   = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getBoolNe()]   = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-
-		//moved whit the new cast operations
-		//res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
+		
 
 		// -- unsigned integers --
 
@@ -373,7 +371,8 @@ namespace {
 		res[basic.getSignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		// -- CASTS --
+		// -- casts --
+
 		auto cast = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
 
 		res[basic.getUnsignedToInt()] = cast;
@@ -462,6 +461,7 @@ namespace {
 		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- undefined --
+
 		res[basic.getZero()] = OP_CONVERTER({
 			auto type = call->getType();
 			// special case: intercepted object
@@ -503,12 +503,15 @@ namespace {
 		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 
-
 		// -- references --
 
 		res[basic.getRefDeref()] = OP_CONVERTER({
 
 			// check type
+			std::cout << "1: " << dumpColor(call);
+			std::cout << "2: " << dumpColor(ARG(0));
+			std::cout << "3: " << dumpColor(call->getType());
+
 			assert_true(ARG(0)->getType().isa<core::RefTypePtr>()) << ARG(0)->getType();
 
 			// special handling of derefing result of ref.new or ref.var => bogus
@@ -712,6 +715,11 @@ namespace {
 			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
 		});
 
+		res[basic.getFuncIsNull()] = OP_CONVERTER({
+			ADD_HEADER_FOR("NULL");
+			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
+		});
+
 		res[basic.getIntToRef()] = OP_CONVERTER({
 				return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
 		});
@@ -742,7 +750,6 @@ namespace {
 			return c_ast::cast(CONVERT_TYPE(call->getType()), res);
 		});
 
-
 		// -- arrays --
 
 		res[basic.getArraySubscript1D()] = OP_CONVERTER({
@@ -758,17 +765,10 @@ namespace {
 
 		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
 			// add dependency to element type
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0): " << *call << "\n";
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0): " << *ARG(0) << "\n";
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0) TYPE: " << *ARG(0)->getType() << "\n";
-			core::TypePtr elementType = ARG(0)->getType();
-			//core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType()); 
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n elementType: " << *elementType << "\n";
-			//elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); 
-			//	std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n elementType2: " << *elementType << "\n";
-			const TypeInfo& info = GET_TYPE_INFO(elementType); 
+			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
+			const TypeInfo& info = GET_TYPE_INFO(elementType);
 			context.getDependencies().insert(info.definition);
-
 			// generated code &(X[Y])
 			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
 		});
@@ -981,6 +981,9 @@ namespace {
 		// -- structs --
 
 		res[basic.getCompositeMemberAccess()] = OP_CONVERTER({
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n call: " << *call << "\n";
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0): " << *ARG(0) << "\n";
+			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0) TYPE: " << *ARG(0)->getType() << "\n";
 			// signature of operation:
 			//		('a, identifier, type<'b>) -> 'b
 

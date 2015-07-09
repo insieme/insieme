@@ -687,7 +687,8 @@ using insieme::core::pattern::anyList;
 					VariablePtr leftVar = getVar(matchReadWriteBuf, "leftVar");
 					VariablePtr rightVar = getVar(matchReadWriteBuf, "rightVar");
 					LiteralPtr op;
-					auto&& fit = std::find_if(begin(bufVarNames), end(bufVarNames), [&](const VariablePtr& vr){ return vr == bufVar;});
+					auto&& fit = std::find_if(begin(bufVarNames), end(bufVarNames), 
+						[&](const VariablePtr& vr){ return vr == bufVar;});
 					if (fit != end(bufVarNames)) {
 						if (parVar == leftVar) {
 							std::cout << "-> write_buffer(" << bufVar << ", .., ..)\n";

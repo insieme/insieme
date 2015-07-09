@@ -49,7 +49,6 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-
 namespace {
 	class TypeInstantiator : public NodeMapping<NodeMap> {
 	public:
@@ -60,11 +59,11 @@ namespace {
 		std::function<bool(const NodePtr& node)> skip;
 
 		template<template <typename> class Ptr, class T, typename Result = Ptr<T>>
-		Result apply(const NodeMap& map, const Ptr<T>& ptr) {
-			if(map.find(ptr) != map.end()) {
-				return (map.find(ptr)->second).template as<Result>();
-			} 
-			return ptr;
+			Result apply(const NodeMap& map, const Ptr<T>& ptr) {
+				if(map.find(ptr) != map.end()) {
+					return (map.find(ptr)->second).template as<Result>();
+				} 
+				return ptr;
 		}
 
 		LambdaExprPtr generateSubstituteLambda(
@@ -83,8 +82,12 @@ namespace {
 			auto newBody = replacedBody->substitute(nodeMan, *this, nodeMap);
 			
 			// we now need to determine the new return type to use
-			auto newReturnType = analysis::autoReturnType(nodeMan, newBody);
-			newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
+			TypePtr newReturnType = funType->getReturnType();
+			// constructors can not be automatically typed!
+			if(funType->getKind() != FK_CONSTRUCTOR) {
+				newReturnType = analysis::autoReturnType(nodeMan, newBody);
+				newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
+			}
 			std::cout << "body: " << *funExp->getBody() << "\n";
 			std::cout << "newBody: " << *newBody << "\n";
 			std::cout << "newReturnType nodemap: " << nodeMap << "\n";
@@ -100,8 +103,19 @@ namespace {
 				return core::transform::replaceAllGen(nodeMan, t, nodeMap, limiter);
 			});
 
-			// finally, build the new lambda and migrate migratable annotations
-			auto newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
+			// finally, build the new lambda 
+			auto newLambda = funExp;
+			if(newFunType != funType) {
+				// function type changed due to instantiation, we need to build a new one
+				newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
+				assert_false(funExp->isRecursive()) << "Instantiation of recursive functions not supported yet.";
+			} else {
+				// function type is unchanged, we just need to replace the body (prevent breaking rec lambdas)
+				auto oldBodyAddr = LambdaExprAddress(funExp)->getBody();
+				newLambda = replaceAddress(nodeMan, oldBodyAddr, newBody).getRootNode().as<LambdaExprPtr>();
+			}
+			
+			// migrate migratable annotations before returning
 			utils::migrateAnnotations(funExp, newLambda);
 			return newLambda;
 		}
@@ -129,16 +143,18 @@ namespace {
 				// generate replacement node map
 				core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(nodeMan, call);
 				NodeMap nodeMap;
-				if(opt == InstantiationOption::TYPE_VARIABLES || opt == InstantiationOption::BOTH) {
-					nodeMap.insertAll(map->getMapping());
-				}
-				if(opt == InstantiationOption::INT_TYPE_PARAMS || opt == InstantiationOption::BOTH) {
-					nodeMap.insertAll(map->getIntTypeParamMapping());
+				if(map) {
+					if(opt == InstantiationOption::TYPE_VARIABLES || opt == InstantiationOption::BOTH) {
+						nodeMap.insertAll(map->getMapping());
+					}
+					if(opt == InstantiationOption::INT_TYPE_PARAMS || opt == InstantiationOption::BOTH) {
+						nodeMap.insertAll(map->getIntTypeParamMapping());
+					}
 				}
 
 				// apply prev node map to RHS of new node map
 				for(auto& p : nodeMap) {
-					fullNodeMap.insert({p.first, apply(prevNodeMap, p.second)});
+					fullNodeMap[p.first] = apply(prevNodeMap, p.second);
 				}
 
 				if(fullNodeMap.empty()) { 

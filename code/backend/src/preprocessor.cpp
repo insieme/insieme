@@ -480,6 +480,8 @@ namespace backend {
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
 		std::cout << "PRE ============\n"; 
 		std::cout << dumpColor(code) << "\n";
+		std::cout << "PRE DETAIL ============\n"; 
+		std::cout << dumpDetailColored(code) << "\n";
 
 		auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
 			return core::lang::isBuiltIn(node) || converter.getFunctionManager().isBuiltIn(node);
@@ -489,6 +491,8 @@ namespace backend {
 
 		std::cout << "RET ============\n"; 
 		std::cout << dumpColor(ret) << "\n";
+		std::cout << "RET DETAIL ============\n"; 
+		std::cout << dumpDetailColored(ret) << "\n";
 		return ret;
 		//// the recursive type instantiator does the magic.
 		//// this pass has been implemented as part of the core manipulation utils

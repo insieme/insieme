@@ -622,15 +622,20 @@ namespace {
 				    auto&& var = decl->getVariable();
 				    auto&& init = decl->getInitialization();
 
-				    const core::TypePtr elementType = core::analysis::getReferencedType(core::analysis::getReferencedType(var->getType()));
-				    if (elementType && elementType->getNodeType() == core::NT_ArrayType){
-				        auto&& match = declUnwrapGlobal.matchPointer(init);
-				        if (match) {
-				            core::VariablePtr newVar = builder.variable(extensions.getType(AddressSpace::GLOBAL, var->getType()));
-				            varToGlobalize.insert(std::make_pair(var, newVar));
-				            varVec.push_back(newVar);
-				        }
-				    }
+					if(core::analysis::isRefType(var->getType()) 
+						&& core::analysis::isRefType(core::analysis::getReferencedType(var->getType()))) {
+						const core::TypePtr elementType = 
+							core::analysis::getReferencedType(core::analysis::getReferencedType(var->getType()));
+						if(elementType->getNodeType() == core::NT_ArrayType){
+							auto&& match = declUnwrapGlobal.matchPointer(init);
+							if(match) {
+								core::VariablePtr newVar = 
+									builder.variable(extensions.getType(AddressSpace::GLOBAL, var->getType()));
+								varToGlobalize.insert(std::make_pair(var, newVar));
+								varVec.push_back(newVar);
+							}
+						}
+					}
 				});
 
 				core = core::transform::replaceVarsRecursiveGen(manager, core, varToGlobalize, false, core::transform::no_type_fixes);

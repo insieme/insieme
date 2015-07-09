@@ -524,6 +524,34 @@ TEST(TypeInstantiation, NestedLambda) {
 	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'b")));
 }
 
+// ********** The following tests should be enabled / completed once instantiation of recursive functions is supported
+
+/*
+TEST(Recursion, Simple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto code = builder.parseStmt(R"raw(
+	{
+		let x = lambda ('a a)->unit {
+			x(a);
+		};
+		x(5);
+	}
+	)raw");
+
+	EXPECT_TRUE(code);
+
+
+	auto result = instantiateTypes(code);
+
+	std::cout << "Garbage in :\n" << dumpColor(code) << "\n";
+	std::cout << "Garbage out:\n" << dumpColor(result) << "\n";
+
+	std::cout << "Text in :\n" << dumpText(code) << "\n";
+	std::cout << "Text out:\n" << dumpText(result) << "\n";
+} */
+
 /*
 TEST(InRecFunc, Simple) {
 	NodeManager mgr;
@@ -548,12 +576,13 @@ TEST(InRecFunc, Simple) {
 
     dumpColor(addresses[0].getRootNode());
 
-	auto result = instantiateTypeVariables(addresses[0].getRootNode());
+	auto result = instantiateTypes(addresses[0].getRootNode());
 		
 	auto newAddr = addresses[0].switchRoot(result);
 	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
-}
+}*/
 
+/*
 TEST(InRecFunc, ExpressionArgument) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
