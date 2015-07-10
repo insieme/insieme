@@ -90,10 +90,13 @@ namespace {
 			
 			// we now need to determine the new return type to use
 			TypePtr newReturnType = funType->getReturnType();
-			// constructors can not be automatically typed!
-			if(!skip(funExp) && funType->getKind() != FK_CONSTRUCTOR && funType->getKind() != FK_DESTRUCTOR) {
-				newReturnType = analysis::autoReturnType(nodeMan, newBody);
-				newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
+			// generate a new return type if necessary
+			if(!skip(funExp) && analysis::isGeneric(newReturnType)) {
+				// constructors and destructors can not be automatically typed!
+				if(funType->getKind() != FK_CONSTRUCTOR && funType->getKind() != FK_DESTRUCTOR) {
+					newReturnType = analysis::autoReturnType(nodeMan, newBody);
+					newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
+				}
 			}
 			std::cout << "body: " << *funExp->getBody() << "\n";
 			std::cout << "newBody: " << *newBody << "\n";
