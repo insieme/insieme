@@ -50,7 +50,9 @@ namespace core {
 namespace transform {
 
 namespace {
-	class TypeInstantiator : public NodeMapping<NodeMap> {
+	typedef std::pair<NodeMap,bool> InstContext;
+
+	class TypeInstantiator : public NodeMapping<InstContext> {
 	public:
 		enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
 
@@ -77,14 +79,19 @@ namespace {
 			// using the derived mapping, we generate a new lambda expression with instantiated type params
 			auto builder = IRBuilder(nodeMan);
 			auto funType = funExp->getFunctionType();
-			auto replacedBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter);
+			auto replacedBody = funExp->getBody();
+			// only apply replacement to body of lambdas which we are not supposed to skip
+			if(!skip(funExp)) {
+				replacedBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter);
+			}
 			// tricky: we apply the same mapping recursively on the *new* body
-			auto newBody = replacedBody->substitute(nodeMan, *this, nodeMap);
+			InstContext newContext = {nodeMap, skip(funExp)};
+			auto newBody = replacedBody->substitute(nodeMan, *this, newContext);
 			
 			// we now need to determine the new return type to use
 			TypePtr newReturnType = funType->getReturnType();
 			// constructors can not be automatically typed!
-			if(funType->getKind() != FK_CONSTRUCTOR) {
+			if(!skip(funExp) && funType->getKind() != FK_CONSTRUCTOR && funType->getKind() != FK_DESTRUCTOR) {
 				newReturnType = analysis::autoReturnType(nodeMan, newBody);
 				newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
 			}
@@ -124,11 +131,12 @@ namespace {
 		TypeInstantiator(InstantiationOption opt, std::function<bool(const NodePtr& node)>
 			skip = [](const NodePtr& node){ return false; } ) : opt(opt), skip(skip) { }
 
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, NodeMap& prevNodeMap) override {
+		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, InstContext& context) override {
+			auto prevNodeMap = context.first;
 			auto& nodeMan = ptr->getNodeManager();
 			auto builder = IRBuilder(nodeMan);
-			std::cout << "===== mapElement: " << *ptr << "\n";
-
+			std::cout << "============ MAP: " << dumpOneLine(ptr) << " |==| " << *ptr << "\n";
+			std::cout << "===> CONTEXT: " << context.second << "\n";
 			// we are looking for CallExprs which have a concrete type params in the arguments,
 			// but a variable type param in the lambda which is called
 			if(ptr.isa<CallExprPtr>()) {
@@ -136,6 +144,7 @@ namespace {
 				auto call = ptr.as<CallExprPtr>();
 				auto fun = call->getFunctionExpr();
 				auto args = call->getArguments();
+				std::cout << " |-> isBuiltin: " << core::lang::isBuiltIn(fun) << "\n";
 				
 				auto newLambdaExp = fun;
 				NodeMap fullNodeMap = prevNodeMap;
@@ -159,7 +168,9 @@ namespace {
 
 				if(fullNodeMap.empty()) { 
 					std::cout << "nodeMap EMPTY\n";
-					return ptr->substitute(nodeMan, *this, fullNodeMap);
+					InstContext newContext = { fullNodeMap, false };
+					std::cout << "===> GENERATED CALL CONTEXT: " << skip(fun) << "\n";
+					return ptr->substitute(nodeMan, *this, newContext);
 				}
 				std::cout << "====== prev nodemap: " << prevNodeMap << "\n";
 				std::cout << "====== new  nodemap: " << nodeMap << "\n";
@@ -170,7 +181,7 @@ namespace {
 					// possibly do early check here and skip deriving of var instantiation
 					auto funExp = fun.as<LambdaExprPtr>();
 					auto funType = funExp->getFunctionType();
-
+					std::cout << "--> call gsl...\n";
 					newLambdaExp = generateSubstituteLambda(nodeMan, funExp, fullNodeMap);
 				}
 
@@ -178,43 +189,54 @@ namespace {
 				ExpressionList newArgs;
 				std::transform(args.cbegin(), args.cend(), std::back_inserter(newArgs), 
 					[&](const ExpressionPtr& t) -> ExpressionPtr {
-						std::cout << "ARG: " << *t << "\n";
-						if(t.isa<LambdaExprPtr>()) {
+						std::cout << "\n\nARG: " << *t << "\n";
+						if(t.isa<LambdaExprPtr>() && !skip(t)) {
 							std::cout << "LambdaExprPtr\n";
 							auto le = t.as<LambdaExprPtr>();
 							return generateSubstituteLambda(nodeMan, le, fullNodeMap);
 						}
-						return this->map(t, fullNodeMap);
+						InstContext newContext = {fullNodeMap, context.second || skip(t)};
+						std::cout << "--> call map...\n";
+						return this->map(t, newContext);
 					});
 
-				auto newReturnType = replaceAllGen(nodeMan, 
-					newLambdaExp->getType().as<FunctionTypePtr>()->getReturnType().as<TypePtr>(), 
-					fullNodeMap);
+				// build a new return type if necessary
+				auto newReturnType = call->getType();
+				if(core::analysis::isGeneric(newReturnType)) {
+					newReturnType = newLambdaExp->getType().as<FunctionTypePtr>()->getReturnType().as<TypePtr>();
+					std::cout << "===> CHECK CALL CONTEXT: " << context.second << "\n";
+					if(!context.second) {
+						newReturnType = replaceAllGen(nodeMan, newReturnType, fullNodeMap);
+					}
+				}
+
+				// finally, generate the typed call
 				auto newCall = builder.callExpr(newReturnType, newLambdaExp, newArgs);
 				utils::migrateAnnotations(call, newCall);
-				std::cout << "============ NEWCALL: " << *newCall << "\n";
+				std::cout << "============ NEWCALL: " << *newCall << "\n --> ret type: " << newReturnType << "\n";
 				return newCall;
 			}
-			return ptr->substitute(nodeMan, *this, prevNodeMap);
+			InstContext newContext = {prevNodeMap, context.second};
+			return ptr->substitute(nodeMan, *this, newContext);
 		}
 	};
 }
 
 NodePtr instantiateIntTypeParams(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
 	TypeInstantiator inst(TypeInstantiator::InstantiationOption::INT_TYPE_PARAMS, skip);
-	NodeMap emtpy;
+	InstContext emtpy = { {}, false };
 	return inst.map(root, emtpy);
 }
 
 NodePtr instantiateTypeVariables(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
 	TypeInstantiator inst(TypeInstantiator::InstantiationOption::TYPE_VARIABLES, skip);
-	NodeMap emtpy;
+	InstContext emtpy = { {}, false };
 	return inst.map(root, emtpy);
 }
 
 NodePtr instantiateTypes(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
 	TypeInstantiator inst(TypeInstantiator::InstantiationOption::BOTH, skip);
-	NodeMap emtpy;
+	InstContext emtpy = { {}, false };
 	return inst.map(root, emtpy);
 }
 

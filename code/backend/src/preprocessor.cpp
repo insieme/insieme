@@ -44,6 +44,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
@@ -478,7 +480,8 @@ namespace backend {
 	}
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
-		std::cout << "PRE ============\n"; 
+		auto elem = core::IRBuilder(converter.getNodeManager()).typeVariable("elem");
+		std::cout << "PRE ============ elem? " << core::analysis::contains(code, elem) << "\n"; 
 		std::cout << dumpColor(code) << "\n";
 		std::cout << "PRE DETAIL ============\n"; 
 		std::cout << dumpDetailColored(code) << "\n";
@@ -488,47 +491,29 @@ namespace backend {
 		};
 		auto ret = core::transform::instantiateTypes(code, isLangOrOpBuiltin);
 
+		visitDepthFirstOnce(code, [&](const core::TypePtr& t) {
+			if(core::hasMetaInfo(t)) {
+				auto meta = core::getMetaInfo(t);
+				auto metaEnc = core::encoder::toIR(t->getNodeManager(), meta);
+				auto pre = metaEnc;
+				std::cout << "META INFO PRE: elem? " 
+					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
+					<< "META INFO PRE TEXT:\n" << dumpText(metaEnc) << "\n";
+				metaEnc = core::transform::instantiateTypes(metaEnc, isLangOrOpBuiltin).as<core::ExpressionPtr>();
+				std::cout << "META INFO POST: elem? " 
+					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
+					<< "META INFO POST TEXT:\n" << dumpText(metaEnc) << "\n";
+				std::cout << "META INFO POST=PRE? " << (*metaEnc == *pre) << "\n";
+				core::setMetaInfo(t, core::encoder::toValue<core::ClassMetaInfo>(metaEnc));
+			}
+		}, true, true);
 
-		std::cout << "RET ============\n"; 
+
+		std::cout << "RET ============ elem? " << core::analysis::contains(ret, elem) << "\n";
 		std::cout << dumpColor(ret) << "\n";
 		std::cout << "RET DETAIL ============\n"; 
 		std::cout << dumpDetailColored(ret) << "\n";
 		return ret;
-		//// the recursive type instantiator does the magic.
-		//// this pass has been implemented as part of the core manipulation utils
-		//return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
-		//	// only consider lambdas
-		//	if (code->getNodeType() != core::NT_LambdaExpr) return code;
-  //          // get the lambda and check if it contains recursive types
-		//	core::LambdaExprPtr lambda = code.as<core::LambdaExprPtr>();
-  //          bool containsRecType = false;
-  //          visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
-  //                  if(type.isa<core::RecTypePtr>()) containsRecType=true;
-  //          });
-  //          //if we have recurisve types in the lambda we must not use
-  //          //the instantiator, because it will iterate to infinity.
-  //          //The name "recurisve lambda instantiator" is used, because
-  //          //the instantiator is recursive and not the lambda itself!!
-  //          //FIXME: support for recurisve types in the instantiator
-  //          if(containsRecType) {
-  //              return lambda;
-  //          }
-		//	// use core library utility to fix types
-		//	lambda = core::transform::instantiateTypes(lambda, [&](const core::NodePtr& node) {
-  //              // only check expressions, this check is applied to all subelements
-  //              if(!node.isa<core::ExpressionPtr>())
-  //                  return false;
-  //              const core::ExpressionPtr& expr = node.as<core::ExpressionPtr>();
-  //              // skip builtins and sizeof literals
-  //              if(core::lang::isBuiltIn(expr) ||
-  //                 converter.getFunctionManager().isBuiltIn(expr)) {
-  //                  return true;
-  //              }
-  //              // do not skip any other nodes
-  //              return false;
-  //          }).as<core::LambdaExprPtr>();
-		//	return lambda;
-		//}).map(code);
 	}
 
 } // end namespace backend

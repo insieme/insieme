@@ -388,6 +388,8 @@ namespace backend {
 		// extract target function
 		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
+		fun = core::IRBuilder(context.getConverter().getNodeManager()).normalize(fun);
+
 		// 1) see whether call is call to a known operator
 		auto pos = operatorTable.find(fun);
 		if (pos != operatorTable.end()) {
@@ -408,37 +410,13 @@ namespace backend {
 			context.getDependencies().insert(info.prototype);
 
 			// return external function call
-			return handleMemberCall(call, res, context);
+			auto ret = handleMemberCall(call, res, context);
+			std::cout << "mememememember:::::\n" << ret << std::endl;
+			return ret;
+
 		}
-
-		//// 3) test whether target is generic => instantiate
-		//if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
-		//	std::cout << "PRE ============\n"; 
-		//	std::cout << dumpColor(call) << "\n";
-
-		//	// normalize the function
-		//	// TODO/FIXME: if this is done at the start (outside this branch), which it should be, one unit test (be_multi_version) breaks.
-		//	// assumption: multiple functions with the exact same body will not be added multiple times to the backend output code.
-		//	fun = core::analysis::normalize(fun);
-
-		//	auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
-		//		return core::lang::isBuiltIn(node) || isBuiltIn(node);
-		//	};
-		//	auto res = core::transform::instantiateTypes(call, isLangOrOpBuiltin).as<core::CallExprPtr>();
-
-		//	std::cout << "isBuiltIn: " << isLangOrOpBuiltin(call) << "\n"; 
-		//	std::cout << "RES ============\n"; 
-		//	std::cout << dumpColor(res) << "\n";
-		//	
-		//	// check result
-		//	assert_true(isLangOrOpBuiltin(call->getFunctionExpr()) || !core::analysis::isGeneric(res->getFunctionExpr()->getType())) << "Still generic!";
-		//	std::cout << "CHECKED ============\n"; 
-
-		//	// return encoding of resulting call
-		//	return getCall(res, context);
-		//}
-
-		// 4) test whether target is a lambda => call lambda directly, without creating a closure
+		
+		// 3) test whether target is a lambda => call lambda directly, without creating a closure
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
 			// obtain lambda information
 			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
@@ -457,12 +435,14 @@ namespace backend {
 			appendAsArguments(context, c_call, call->getArguments(), false);
 
 			// handle potential member calls
-			return handleMemberCall(call, c_call, context);
+			auto ret = handleMemberCall(call, c_call, context);
+			std::cout << ret << std::endl;
+			return ret;
 		}
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
-		// 5) test whether target is a plane function pointer => call function pointer, no closure
+		// 4) test whether target is a plain function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parentheses(getValue(call->getFunctionExpr(), context)));
@@ -470,7 +450,7 @@ namespace backend {
 			return res;
 		}
 
-		// 6) if is a member function pointer
+		// 5) if is a member function pointer
 		if (funType->isMemberFunction()) {
 			// add call to function pointer (which is the value)
 
@@ -1059,7 +1039,6 @@ namespace backend {
 				// add includes
 				declarations->addIncludes(codeInfo.includes);
 			});
-
 
 			// C) create function definitions
 			for_each(lambdas, [&](const std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr>& pair) {

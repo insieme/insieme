@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/encoder/encoder.h"
@@ -1020,8 +1021,6 @@ namespace {
 			return c_ast::ref(access);
 		});
 
-
-
 		// -- tuples --
 
 		res[basic.getTupleMemberAccess()] = OP_CONVERTER({
@@ -1265,6 +1264,13 @@ namespace {
 			return C_NODE_MANAGER->create<c_ast::Initializer>(CONVERT_TYPE(call->getType()), v );
 		});
 
+		// ----------------------------  Enum extension ----------------------------
+		auto& enumExt = manager.getLangExtension<core::lang::EnumExtension>();
+		res[enumExt.getEnumElementAsBool()] = OP_CONVERTER({
+			// write it out as we got it in
+			return CONVERT_ARG(0);
+		});
+
 		// ----------------------------  Attribute extension --------------------------
 
 		auto& attrExt = manager.getLangExtension<core::analysis::AttributeExtension>();
@@ -1297,9 +1303,13 @@ namespace {
 
 				// add new if required
 				const auto& basic = LANG_BASIC;
-				if (basic.isRefVar(ARG(0))) {
+				core::IRBuilder builder(NODE_MANAGER);
+				auto normArg0 = builder.normalize(ARG(0));
+				std::cout << "normArg0:\n" << dumpText(normArg0);
+				std::cout << "basic:\n" << dumpText(basic.getRefNew());
+				if(basic.isRefVar(normArg0)) {
 					// nothing to do
-				} else if (basic.isRefNew(ARG(0))) {
+				} else if(basic.isRefNew(normArg0)) {
 					res = c_ast::newCall(res);
 				} else {
 					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";

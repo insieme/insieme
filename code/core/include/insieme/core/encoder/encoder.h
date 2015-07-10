@@ -427,6 +427,7 @@ namespace encoder {
 				} \
 				auto alpha = builder.typeVariable("a"); \
 				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				core::lang::markAsBuiltIn(wrapFun); \
 				return builder.callExpr(resType, wrapFun, value); \
 			} \
 			value_to_ir_converter() {} \
@@ -505,6 +506,7 @@ namespace encoder {
 				} \
 				auto alpha = builder.typeVariable("a"); \
 				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				core::lang::markAsBuiltIn(wrapFun); \
 				return builder.callExpr(resType, wrapFun, builder.getTypeLiteral(value)); \
 			} \
 			value_to_ir_converter() {} \
