@@ -906,22 +906,20 @@ namespace core {
 namespace transform {
 
 NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, SimpleNodeMapping& mapper) {
-	if(!root) {
-		return NodePtr(NULL);
-	}
+	NodePtr res=NodePtr(NULL);
+	if (!root)
+		return res;
 
 	// map root node element
-	NodePtr res = mapper.map(0, root);
-
-	// check whether something has changed
-	if (res == root) {
-		// nothing changed => return handed in node
-		return root;
+	try {
+		res = mapper.map(0, root);
+	} catch (const std::bad_function_call &e) {
+		LOG(ERROR) << e.what() << ": limiter/mapper invalid";
 	}
 
 	// preserve annotations
-	utils::migrateAnnotations(root, res);
-
+	if (res != root)
+		utils::migrateAnnotations(root, res);
 	return res;
 }
 

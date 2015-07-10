@@ -62,11 +62,14 @@ NodeAddress VarUniqExtension::renameVar(NodeAddress tree, VariableAddress from, 
 	// set up the node manager
 	NodeManager& mgr=tree->getNodeManager();
 
-	// convert from node addresses to node ptrs
+	// convert from node addresses, variable addresses to node ptrs, variable ptrs
 	NodePtr treeptr=tree.getAddressedNode(),
 	        fromptr=from.getAddressedNode(),
-	        toptr=NodeAddress(Variable::get(mgr, from->getType(), to)),
-	        newtreeptr=transform::replaceAll(mgr, treeptr, fromptr, toptr, false);
+	        toptr=Variable::get(mgr, from->getType(), to),
+
+	// do the replacement
+	        newtreeptr=transform::replaceAll(mgr, treeptr, fromptr, toptr, transform::globalReplacement);
+	if (!newtreeptr) { LOG(ERROR) << "replaceAll failed" << std::endl; }
 
 	// return the newly generated IR tree
 	return NodeAddress(newtreeptr);
