@@ -7,7 +7,7 @@ public:
 	~Base() {};
 	int i;
 	int j;
-	const Base operator() (int k, int x) { this->i=k; this->j=-1; }
+	const Base operator() (int k, int x) { this->i=k; this->j=-1; return *this; }
 	Base * test() {
 		std::cout << "Base test call\n";
 		Base * d = new Base((*this)(0,0));
@@ -29,7 +29,7 @@ public:
 	~BaseUD() { };
 	int i;
 	int j;
-	const BaseUD operator() (int k, int x) { this->i=k; this->j=-1; }
+	const BaseUD operator() (int k, int x) { this->i=k; this->j=-1; return *this; }
 	BaseUD * test() {
 		std::cout << "BaseUD test call\n";
 		BaseUD * d = new BaseUD((*this)(0,0));
