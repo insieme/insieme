@@ -509,10 +509,6 @@ namespace {
 		res[basic.getRefDeref()] = OP_CONVERTER({
 
 			// check type
-			std::cout << "1: " << dumpColor(call);
-			std::cout << "2: " << dumpColor(ARG(0));
-			std::cout << "3: " << dumpColor(call->getType());
-
 			assert_true(ARG(0)->getType().isa<core::RefTypePtr>()) << ARG(0)->getType();
 
 			// special handling of derefing result of ref.new or ref.var => bogus
@@ -982,9 +978,6 @@ namespace {
 		// -- structs --
 
 		res[basic.getCompositeMemberAccess()] = OP_CONVERTER({
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n call: " << *call << "\n";
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0): " << *ARG(0) << "\n";
-			std::cout << "%%%%%%%%%%%%%%%%%%%%%%%\n ARG(0) TYPE: " << *ARG(0)->getType() << "\n";
 			// signature of operation:
 			//		('a, identifier, type<'b>) -> 'b
 
@@ -1305,8 +1298,6 @@ namespace {
 				const auto& basic = LANG_BASIC;
 				core::IRBuilder builder(NODE_MANAGER);
 				auto normArg0 = builder.normalize(ARG(0));
-				std::cout << "normArg0:\n" << dumpText(normArg0);
-				std::cout << "basic:\n" << dumpText(basic.getRefNew());
 				if(basic.isRefVar(normArg0)) {
 					// nothing to do
 				} else if(basic.isRefNew(normArg0)) {

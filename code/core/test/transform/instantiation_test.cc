@@ -421,9 +421,9 @@ TEST(TypeInstantiation, BindExpr) {
 
 	auto instantiated = core::transform::instantiateTypes(expr);
 
-	std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
-	std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-	std::cout << "Less pretty instantiation: \n" << dumpText(instantiated) << "\n";
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	//std::cout << "Less pretty instantiation: \n" << dumpText(instantiated) << "\n";
 	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
 	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
 }

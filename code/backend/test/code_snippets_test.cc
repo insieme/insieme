@@ -184,11 +184,11 @@ TEST(FunctionCall, TypeLiterals) {
     );
     ASSERT_TRUE(program);
 
-    std::cout << "Program: " << *program << std::endl;
+    LOG(DEBUG) << "Program: " << *program << std::endl;
 
     auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 
-    std::cout << "Converted: \n" << *converted << std::endl;
+    LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
 
     string code = toString(*converted);
     EXPECT_PRED2(notContainsSubString, code, "<?>");
@@ -218,11 +218,11 @@ TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
     )");
     ASSERT_TRUE(program);
 
-    std::cout << "Program: " << *program << std::endl;
+    LOG(DEBUG) << "Program: " << *program << std::endl;
 
     auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 
-    std::cout << "Converted: \n" << *converted << std::endl;
+    LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
 
     string code = toString(*converted);
     EXPECT_PRED2(notContainsSubString, code, "<?>");
@@ -251,7 +251,7 @@ TEST(FunctionCall, RefNewCalls) {
 
     auto converted = sequential::SequentialBackend::getDefault()->convert(decl);
 
-    std::cout << "Converted: \n" << *converted << std::endl;
+    LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
 
     string code = toString(*converted);
     EXPECT_PRED2(notContainsSubString, code, "<?>");
@@ -289,11 +289,11 @@ TEST(Literals, BoolLiterals) {
     );
     ASSERT_TRUE(program);
 
-    std::cout << "Program: " << *program << std::endl;
+    LOG(DEBUG) << "Program: " << *program << std::endl;
 
     auto converted = sequential::SequentialBackend::getDefault()->convert(program);
 
-    std::cout << "Converted: \n" << *converted << std::endl;
+    LOG(DEBUG) << "Converted: \n" << *converted << std::endl;
 
     string code = toString(*converted);
     EXPECT_PRED2(containsSubString, code, "true");
@@ -307,42 +307,42 @@ TEST(Literals, BoolLiterals) {
 }
 
 TEST(Parallel, NestedLambdaTypeDeduction) {
-       core::NodeManager mgr;
-       core::IRBuilder builder(mgr);
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
 
-       core::ProgramPtr program = builder.parseProgram(
-                R"(
-                let int = int<4>;
-                let uint = uint<4>;
+	core::ProgramPtr program = builder.parseProgram(
+			R"(
+			let int = int<4>;
+			let uint = uint<4>;
 
-                let differentbla = lambda ('b x) -> unit {
-                    decl auto m = x;
-                    decl auto l = m;
-                };
+			let differentbla = lambda ('b x) -> unit {
+				decl auto m = x;
+				decl auto l = m;
+			};
 
-                let bla = lambda ('a f) -> unit {
-                    let anotherbla = lambda ('a x) -> unit {
-                        decl auto m = x;
-                    };
-                    anotherbla(f);
-                    differentbla(f);
-                    parallel(job { decl auto l = f; });
-                };
+			let bla = lambda ('a f) -> unit {
+				let anotherbla = lambda ('a x) -> unit {
+					decl auto m = x;
+				};
+				anotherbla(f);
+				differentbla(f);
+				parallel(job { decl auto l = f; });
+			};
 
-                int main() {
-                    // some bla
-                    decl int x = 10;
-                    bla(x);
-                    return 0;
-                }
-                )"
-        );
-        std::cout << "Program: " << *program << std::endl;
+			int main() {
+				// some bla
+				decl int x = 10;
+				bla(x);
+				return 0;
+			}
+			)"
+	);
+	LOG(DEBUG) << "Program: " << *program << std::endl;
 
-        auto converted = sequential::SequentialBackend::getDefault()->convert(program);
-        std::cout << "Converted Seq: \n" << *converted << std::endl;
-        auto converted_rt = runtime::RuntimeBackend::getDefault()->convert(program);
-        std::cout << "Converted Run: \n" << *converted_rt << std::endl;
+	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+	LOG(DEBUG) << "Converted Seq: \n" << *converted << std::endl;
+	auto converted_rt = runtime::RuntimeBackend::getDefault()->convert(program);
+	LOG(DEBUG) << "Converted Run: \n" << *converted_rt << std::endl;
 }
 
 

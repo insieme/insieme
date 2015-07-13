@@ -98,10 +98,10 @@ namespace {
 					newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
 				}
 			}
-			std::cout << "body: " << *funExp->getBody() << "\n";
-			std::cout << "newBody: " << *newBody << "\n";
-			std::cout << "newReturnType nodemap: " << nodeMap << "\n";
-			std::cout << "NewReturnType: " << *newReturnType << "\n";
+			LOG(DEBUG) << "body: " << *funExp->getBody() << "\n";
+			LOG(DEBUG) << "newBody: " << *newBody << "\n";
+			LOG(DEBUG) << "newReturnType nodemap: " << nodeMap << "\n";
+			LOG(DEBUG) << "NewReturnType: " << *newReturnType << "\n";
 
 			// now we can generate the substitution
 			auto replacedFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
@@ -138,16 +138,16 @@ namespace {
 			auto prevNodeMap = context.first;
 			auto& nodeMan = ptr->getNodeManager();
 			auto builder = IRBuilder(nodeMan);
-			std::cout << "============ MAP: " << dumpOneLine(ptr) << " |==| " << *ptr << "\n";
-			std::cout << "===> CONTEXT: " << context.second << "\n";
+			LOG(DEBUG) << "============ MAP: " << dumpOneLine(ptr) << " |==| " << *ptr << "\n";
+			LOG(DEBUG) << "===> CONTEXT: " << context.second << "\n";
 			// we are looking for CallExprs which have a concrete type params in the arguments,
 			// but a variable type param in the lambda which is called
 			if(ptr.isa<CallExprPtr>()) {
-				std::cout << "============ CALL: " << *ptr << "\n";
+				LOG(DEBUG) << "============ CALL: " << *ptr << "\n";
 				auto call = ptr.as<CallExprPtr>();
 				auto fun = call->getFunctionExpr();
 				auto args = call->getArguments();
-				std::cout << " |-> isBuiltin: " << core::lang::isBuiltIn(fun) << "\n";
+				LOG(DEBUG) << " |-> isBuiltin: " << core::lang::isBuiltIn(fun) << "\n";
 				
 				auto newLambdaExp = fun;
 				NodeMap fullNodeMap = prevNodeMap;
@@ -170,21 +170,21 @@ namespace {
 				}
 
 				if(fullNodeMap.empty()) { 
-					std::cout << "nodeMap EMPTY\n";
+					LOG(DEBUG) << "nodeMap EMPTY\n";
 					InstContext newContext = { fullNodeMap, false };
-					std::cout << "===> GENERATED CALL CONTEXT: " << skip(fun) << "\n";
+					LOG(DEBUG) << "===> GENERATED CALL CONTEXT: " << skip(fun) << "\n";
 					return ptr->substitute(nodeMan, *this, newContext);
 				}
-				std::cout << "====== prev nodemap: " << prevNodeMap << "\n";
-				std::cout << "====== new  nodemap: " << nodeMap << "\n";
-				std::cout << "====== full nodemap: " << fullNodeMap << "\n";
+				LOG(DEBUG) << "====== prev nodemap: " << prevNodeMap << "\n";
+				LOG(DEBUG) << "====== new  nodemap: " << nodeMap << "\n";
+				LOG(DEBUG) << "====== full nodemap: " << fullNodeMap << "\n";
 
 				// if it's a lambda, we need to substitute it
 				if(fun.isa<LambdaExprPtr>() && !skip(fun)) {
 					// possibly do early check here and skip deriving of var instantiation
 					auto funExp = fun.as<LambdaExprPtr>();
 					auto funType = funExp->getFunctionType();
-					std::cout << "--> call gsl...\n";
+					LOG(DEBUG) << "--> call gsl...\n";
 					newLambdaExp = generateSubstituteLambda(nodeMan, funExp, fullNodeMap);
 				}
 
@@ -192,14 +192,14 @@ namespace {
 				ExpressionList newArgs;
 				std::transform(args.cbegin(), args.cend(), std::back_inserter(newArgs), 
 					[&](const ExpressionPtr& t) -> ExpressionPtr {
-						std::cout << "\n\nARG: " << *t << "\n";
+						LOG(DEBUG) << "\n\nARG: " << *t << "\n";
 						if(t.isa<LambdaExprPtr>() && !skip(t)) {
-							std::cout << "LambdaExprPtr\n";
+							LOG(DEBUG) << "LambdaExprPtr\n";
 							auto le = t.as<LambdaExprPtr>();
 							return generateSubstituteLambda(nodeMan, le, fullNodeMap);
 						}
 						InstContext newContext = {fullNodeMap, context.second || skip(t)};
-						std::cout << "--> call map...\n";
+						LOG(DEBUG) << "--> call map...\n";
 						return this->map(t, newContext);
 					});
 
@@ -207,7 +207,7 @@ namespace {
 				auto newReturnType = call->getType();
 				if(core::analysis::isGeneric(newReturnType)) {
 					newReturnType = newLambdaExp->getType().as<FunctionTypePtr>()->getReturnType().as<TypePtr>();
-					std::cout << "===> CHECK CALL CONTEXT: " << context.second << "\n";
+					LOG(DEBUG) << "===> CHECK CALL CONTEXT: " << context.second << "\n";
 					if(!context.second) {
 						newReturnType = replaceAllGen(nodeMan, newReturnType, fullNodeMap);
 					}
@@ -216,7 +216,7 @@ namespace {
 				// finally, generate the typed call
 				auto newCall = builder.callExpr(newReturnType, newLambdaExp, newArgs);
 				utils::migrateAnnotations(call, newCall);
-				std::cout << "============ NEWCALL: " << *newCall << "\n --> ret type: " << newReturnType << "\n";
+				LOG(DEBUG) << "============ NEWCALL: " << *newCall << "\n --> ret type: " << newReturnType << "\n";
 				return newCall;
 			}
 			InstContext newContext = {prevNodeMap, context.second};

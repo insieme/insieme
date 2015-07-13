@@ -411,9 +411,7 @@ namespace backend {
 
 			// return external function call
 			auto ret = handleMemberCall(call, res, context);
-			std::cout << "mememememember:::::\n" << ret << std::endl;
 			return ret;
-
 		}
 		
 		// 3) test whether target is a lambda => call lambda directly, without creating a closure
@@ -436,7 +434,6 @@ namespace backend {
 
 			// handle potential member calls
 			auto ret = handleMemberCall(call, c_call, context);
-			std::cout << ret << std::endl;
 			return ret;
 		}
 

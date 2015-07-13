@@ -481,10 +481,10 @@ namespace backend {
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
 		auto elem = core::IRBuilder(converter.getNodeManager()).typeVariable("elem");
-		std::cout << "PRE ============ elem? " << core::analysis::contains(code, elem) << "\n"; 
-		std::cout << dumpColor(code) << "\n";
-		std::cout << "PRE DETAIL ============\n"; 
-		std::cout << dumpDetailColored(code) << "\n";
+		LOG(DEBUG) << "PRE ============ elem? " << core::analysis::contains(code, elem) << "\n"; 
+		LOG(DEBUG) << dumpColor(code) << "\n";
+		LOG(DEBUG) << "PRE DETAIL ============\n"; 
+		LOG(DEBUG) << dumpDetailColored(code) << "\n";
 
 		auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
 			return core::lang::isBuiltIn(node) || converter.getFunctionManager().isBuiltIn(node);
@@ -496,23 +496,23 @@ namespace backend {
 				auto meta = core::getMetaInfo(t);
 				auto metaEnc = core::encoder::toIR(t->getNodeManager(), meta);
 				auto pre = metaEnc;
-				std::cout << "META INFO PRE: elem? " 
+				LOG(DEBUG) << "META INFO PRE: elem? " 
 					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
 					<< "META INFO PRE TEXT:\n" << dumpText(metaEnc) << "\n";
 				metaEnc = core::transform::instantiateTypes(metaEnc, isLangOrOpBuiltin).as<core::ExpressionPtr>();
-				std::cout << "META INFO POST: elem? " 
+				LOG(DEBUG) << "META INFO POST: elem? " 
 					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
 					<< "META INFO POST TEXT:\n" << dumpText(metaEnc) << "\n";
-				std::cout << "META INFO POST=PRE? " << (*metaEnc == *pre) << "\n";
+				LOG(DEBUG) << "META INFO POST=PRE? " << (*metaEnc == *pre) << "\n";
 				core::setMetaInfo(t, core::encoder::toValue<core::ClassMetaInfo>(metaEnc));
 			}
 		}, true, true);
 
 
-		std::cout << "RET ============ elem? " << core::analysis::contains(ret, elem) << "\n";
-		std::cout << dumpColor(ret) << "\n";
-		std::cout << "RET DETAIL ============\n"; 
-		std::cout << dumpDetailColored(ret) << "\n";
+		LOG(DEBUG) << "RET ============ elem? " << core::analysis::contains(ret, elem) << "\n";
+		LOG(DEBUG) << dumpColor(ret) << "\n";
+		LOG(DEBUG) << "RET DETAIL ============\n"; 
+		LOG(DEBUG) << dumpDetailColored(ret) << "\n";
 		return ret;
 	}
 
