@@ -38,16 +38,45 @@
 #define NEWSCOP_H
 
 #include "boost/optional.hpp"
+#include "insieme/core/ir_address.h" // for the typedef insieme::core::NodeAddress
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 
 namespace insieme { namespace transform { namespace polyhedral { namespace novel {
 
 class SCoP {
-	boost::optional<unsigned int> obeysDeps;
-
 public:
-	SCoP(unsigned int valid=2);
-	int valid();
+	void iterationDomain() {}
+};
+
+class NestedSCoP {
+public:
+	unsigned int nestlvl;
+	std::vector<insieme::core::VariableAddress> itervec;
+
+	NestedSCoP(unsigned int nestlvl);
+	NestedSCoP(unsigned int nestlvl, std::vector<insieme::core::VariableAddress> itervec,
+	           insieme::core::NodeAddress lb, insieme::core::NodeAddress ub, insieme::core::NodeAddress stride);
+	NestedSCoP(unsigned int nestlvl, insieme::core::NodeAddress ifcond);
+	bool isAffine();
+	void debug();
+
+protected:
+	friend class SCoPVisitor;
+	std::vector<NestedSCoP> subscops;
+
+	// These vars should be used inside a public method "iterationDomain()" which generates the publicly available
+	// iteration domain.
+	// use in SCoPs originating from a conditional: lb=0, ub=condition, stride=1
+	// also possible: boost::variant<empty, loop, conditional>   http://stackoverflow.com/a/19579377
+	boost::optional<insieme::core::NodeAddress> lb, ub, stride, ifcond;
+
+	bool isAffine(insieme::core::NodeAddress addr);
+	std::string indentBy(std::string ident, std::string val);
+
+private:
+	std::string debugFor();
+	std::string debugIf();
 };
 
 }}}}

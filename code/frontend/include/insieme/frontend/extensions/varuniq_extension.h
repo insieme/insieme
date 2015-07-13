@@ -36,33 +36,35 @@
 
 #pragma once
 
-#include <map>
+#include <functional>
 #include <string>
+#include <vector>
 
+#include "insieme/analysis/datadep.h"
 #include "insieme/core/ir_values.h"
-#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/frontend/extensions/frontend_extension.h"
 
 namespace insieme {
 namespace frontend {
 namespace extensions {
 
-class VarUniqExtension: public insieme::core::IRVisitor<void, insieme::core::Address>,
-        insieme::frontend::extensions::FrontendExtension {
-	insieme::core::NodeAddress frag;                                   /// < code fragment passed to this compiler pass
-	std::map<insieme::core::VariableAddress, unsigned int> vuid;       /// < variable unique ID
-	std::map<unsigned int, insieme::core::VariableAddress> idstaken;   /// < IDs and their definition
-	unsigned int seen, total; /// < variables, total nodes processed
+/// \brief The VarUniqExtension class makes the internal variable identifiers unique and provides some statistics.
+/// The statistics is gathered using the DataDependence class.
+///
+class VarUniqExtension: public  insieme::frontend::extensions::FrontendExtension {
+	insieme::core::NodeAddress frag;         /// < code fragment given to this compiler pass
+
+	std::vector<std::pair<insieme::core::VariableAddress, unsigned int> > findPerfectID
+	   (std::vector<insieme::core::VariableAddress> vars);
 
 public:
+	insieme::analysis::DataDependence dep;   /// < data dependence state for the above code fragment
+
 	VarUniqExtension(const insieme::core::NodeAddress frag);
-
-	void printNode(const insieme::core::NodeAddress &node, std::string descr="", unsigned int start=0, int count=-1);
-	void visitNode(const insieme::core::NodeAddress &node);
-	void visitVariable(const insieme::core::VariableAddress &node);
-
+	static insieme::core::NodeAddress renameVar(insieme::core::NodeAddress tree,
+	                                            insieme::core::VariableAddress from, unsigned int to);
 	insieme::core::NodeAddress IR();
-	insieme::core::VariableAddress getVarDefinition(const insieme::core::VariableAddress& var);
+	static unsigned int findMaxID(std::vector<insieme::core::VariableAddress> vars);
 };
 
 }}}

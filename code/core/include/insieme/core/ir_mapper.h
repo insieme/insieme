@@ -121,7 +121,7 @@ namespace core {
 			return mapElement(index, ptr);
 		}
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) =0;
-		
+
 		template<typename T>
 		inline Pointer<T> map(const Pointer<T>& ptr) {
 			int ctxt = 0;

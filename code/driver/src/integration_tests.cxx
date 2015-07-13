@@ -86,17 +86,19 @@ namespace{
 		// define options
 		bpo::options_description desc("Supported Parameters");
 		desc.add_options()
-			("help,h",      "produce help message")
-			("config,c",    "print the configuration of the selected test cases")
-			("mock,m",      "make it a mock run just printing commands not really executing those")
-			("panic,p",     "panic on first sign of trouble and stop execution")
-			("list,l",      "just list the targeted test cases")
-			("worker,w",    bpo::value<int>()->default_value(1),     "the number of parallel workers to be utilized")
-			("cases",       bpo::value<vector<string>>(),            "the list of test cases to be executed")
-			("step,s",      bpo::value<string>(),                    "the test step to be applied")
-			("repeat,r",    bpo::value<int>()->default_value(1),     "the number of times the tests shell be repeated")
-			("no-clean",    "keep all output files")
-			("nocolor",     "no highlighting of output")
+			("help,h",             "produce help message")
+			("config,c",           "print the configuration of the selected test cases")
+			("mock,m",             "make it a mock run just printing commands not really executing those")
+			("panic,p",            "panic on first sign of trouble and stop execution")
+			("list,l",             "just list the targeted test cases")
+			("worker,w",           bpo::value<int>()->default_value(1),     "the number of parallel workers to be utilized")
+			("cases",              bpo::value<vector<string>>(),            "the list of test cases to be executed")
+			("step,s",             bpo::value<string>(),                    "the test step to be applied")
+			("repeat,r",           bpo::value<int>()->default_value(1),     "the number of times the tests shell be repeated")
+			("no-clean",           "keep all output files")
+			("nocolor",            "no highlighting of output")
+			("preprocessing",      "perform all pre-processing steps")
+			("postprocessing",     "perform all post-processing steps")
 		;
 
 		// define positional options (all options not being named)
@@ -153,6 +155,9 @@ namespace{
 		if (map.count("step")) {
 			res.steps.push_back(map["step"].as<string>());
 		}
+
+		res.preprocessingOnly = map.count("preprocessing");
+		res.postprocessingOnly = map.count("postprocessing");
 
 		return res;
 	}
@@ -304,16 +309,25 @@ int main(int argc, char** argv) {
 
 			if (panic) continue;
 
-			// filter applicable steps based on test case
-			vector<TestStep> list = itc::filterSteps(steps, cur);
+			vector<TestStep> list;
+
+			if (options.preprocessingOnly) {
+				list.push_back(itc::getStepByName(itc::TEST_STEP_PREPROCESSING));
+
+			} else if (options.postprocessingOnly) {
+				list.push_back(itc::getStepByName(itc::TEST_STEP_POSTPROCESSING));
+
+			} else {
+				// filter applicable steps based on test case
+				list = itc::filterSteps(steps, cur);
+				// schedule resulting steps
+				list = itc::scheduleSteps(list,cur);
+			}
 
 			//if this test doesn't schedule any steps we count it as omitted
 			if (list.empty()) {
 				omittedTestsCount++;
 			}
-
-			// schedule resulting steps
-			list = itc::scheduleSteps(list,cur);
 
 			// run steps
 			vector<pair<string, TestResult>> results;

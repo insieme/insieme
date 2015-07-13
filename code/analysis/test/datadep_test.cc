@@ -37,14 +37,13 @@
 #include <gtest/gtest.h>
 #include <sstream>
 #include "insieme/analysis/datadep.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/frontend/extensions/varuniq_extension.h"
-#include "insieme/utils/logging.h"
 
 using namespace insieme::core;
-using namespace insieme::frontend::extensions;
+using namespace insieme::analysis;
 
-TEST(VarUniq, Simple) {
+TEST(DataDependence, Unique) {
 	NodeManager man;
 	IRBuilder builder(man);
 
@@ -113,55 +112,43 @@ TEST(VarUniq, Simple) {
 				}
 			)");
 
-	ASSERT_TRUE(fragment);
+	ASSERT_TRUE(fragment);   // the code fragment must be valid IR
 
-	NodeAddress orig=NodeAddress(fragment);                      // the original code from above
-	insieme::frontend::extensions::VarUniqExtension old(orig);   // parse the original code for variables
-	NodeAddress result=old.IR();                                 // replacement of vars
-	insieme::analysis::DataDependence now(result);               // parse the resulting code for variables
+	NodeAddress orig=NodeAddress(fragment);               // convert from pointer to address (0)
+	insieme::analysis::DataDependence dep(orig);          // do variable analysis for the code fragment
+	std::vector<VariableAddress> alldefs=dep.getDefs();   // get all variable definitions
 
-	// show the changes of the variable uniquification process visually
-	std::stringstream strbuf;
-	strbuf << "# # # # #   OLD CODE   # # # # #" << std::endl
-	       << printer::PrettyPrinter(orig.getAddressedNode()) << std::endl << std::endl
-	       << "# # # # #   NEW CODE   # # # # #" << std::endl
-	       << printer::PrettyPrinter(result.getAddressedNode()) << std::endl;
-	//std::cout << strbuf.str();
+	// ### now, the first round of tests
 
-	// get all variable definitions from both codes
-	std::vector<VariableAddress>
-	        old_defs=old.dep.getDefs(),
-	        now_defs=now.getDefs();
+	// this functions returns true if the variable with given VariableAddress is in use, ie: size()>0
+	std::function<bool(VariableAddress)> inuse=
+	        [&dep](const VariableAddress &def){ return dep.getUse(def).size(); };
+	EXPECT_EQ(alldefs.size(), 34);               // this program has 34 variable definitions excluding derived operands
+	EXPECT_EQ(dep.getDefs(inuse).size(), 27);    // of these, 27 are actually in use
 
-	// check some boundary conditions
-	EXPECT_EQ(old.dep.size(), now.size());         // the number of variables must match in both codes
-	EXPECT_EQ(old_defs.size(), now_defs.size());   // the number of variable definitions must match in both codes
+	// ### no two variable definitions must point to the same variable
 
-	// basic test that should not fail: the number of definitions must match the highest variable ID
-	unsigned int old_maxid=VarUniqExtension::findMaxID(old_defs);
-	unsigned int now_maxid=VarUniqExtension::findMaxID(now_defs);
-	EXPECT_EQ(now_maxid+1, now_defs.size());
+	// compare every variable definition with every other definition
+	std::vector<std::pair<VariableAddress, VariableAddress> > same;
+	for (unsigned int one=0; one<alldefs.size(); one++)
+		for (unsigned int two=one+1; two<alldefs.size(); two++)
+			if (alldefs[one].getAddressedNode() == alldefs[two].getAddressedNode())
+				same.push_back(std::pair<VariableAddress, VariableAddress>(alldefs[one], alldefs[two]));
 
-	// in the original code, we expect some vacant and some double booked IDs
-	bool old_allset=true;
-	unsigned int old_doublebooked=0;
-	for (unsigned int old_i=0; old_i<old_maxid; ++old_i) {
-		unsigned int count=old.dep.getDefs(old_i).size();
-		old_allset=old_allset && count;
-		if (count>1) old_doublebooked+=count;
+	// do some debug output, if identical variables were found
+	if (same.size()) {
+		std::cout << "In " << alldefs.size() << " defs, there are " << same.size() << " identical variable pairs:" << std::endl;
+		for (auto p: same) {
+			boost::optional<NodeAddress> pfx=DataDependence::commonAncestor(p.first, p.second);
+			if (pfx) {
+				std::cout << "\t"
+				          << p.first  << "(" << p.first.getDepth()- pfx->getDepth() << ") : "
+				          << p.second << "(" << p.second.getDepth()-pfx->getDepth() << ")";
+				std::cout << std::endl;
+			}
+		}
 	}
-	EXPECT_FALSE(old_allset);
-	EXPECT_TRUE(old_doublebooked);
 
-	// in the new code, every variable ID should be used but not more than once
-	bool now_allset=true;
-	unsigned int now_doublebooked=0;
-	for (unsigned int now_i=0; now_i<now_maxid; ++now_i) {
-		unsigned int count=now.getDefs(now_i).size();
-		if (!count) { LOG(ERROR) << "variable v" << now_i << " not found!" << std::endl; }
-		now_allset=now_allset && count;
-		if (count>1) now_doublebooked+=count;
-	}
-	EXPECT_TRUE(now_allset);
-	EXPECT_FALSE(now_doublebooked);
+	// now, fail!
+	EXPECT_TRUE(same.size()==0);
 }

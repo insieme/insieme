@@ -71,7 +71,7 @@ std::string executeCommand(std::string command){
 		returnString="undefined";
 	}
 	else
-   		while(fgets(tmpString, 2048, pipe)!=NULL)
+		while(fgets(tmpString, 2048, pipe)!=NULL)
 			returnString+=string(tmpString);
 		
 	pclose(pipe);	

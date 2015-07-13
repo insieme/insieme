@@ -34,123 +34,103 @@
  * regarding third party software licenses.
  */
 
+#include <algorithm>
 #include <iomanip>
 #include <ostream>
 #include <string>
 
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_node_accessor.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/frontend/extensions/varuniq_extension.h"
 #include "insieme/utils/logging.h"
 
+using namespace insieme::analysis;
 using namespace insieme::core;
 using namespace insieme::frontend::extensions;
 
-VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), seen(0), total(0) {
-	visit(frag);
+VarUniqExtension::VarUniqExtension(NodeAddress frag): frag(frag), dep(frag) {
 }
 
-/// Debug routine to print the given node and its immediate children. The node address is the only mandatory
-/// argument; the other arguments are a textual description, and a start index and a node count. The start index
-/// tells the subroutine where to start printing (0 means the given node itself, 1 means the first child node,
-/// n means the n-th child node. The count gives the number of child nodes which should be printed;
-/// 0 means print only the given node, 1 means print only one child node, etc.
-void VarUniqExtension::printNode(const NodeAddress &node, std::string descr, unsigned int start, int count) {
-	// determine total number of child nodes, and adjust count accordingly
-	auto children=node.getChildAddresses();
-	if (count<0) count=children.size();
+/// Do the actual variable ID replacement in the complete IR "tree" for the variable "from" to a variable with ID "to".
+/// Checks need to be done beforehand, especially to ensure that the target ID "to" is not used by another
+/// variable with the same parameters (type, etc) in the same scope. To do these checks, you can for example
+/// utilize DataDependence::getDefs(unsigned int).
+NodeAddress VarUniqExtension::renameVar(NodeAddress tree, VariableAddress from, unsigned int to) {
+	// set up the node manager
+	NodeManager& mgr=tree->getNodeManager();
 
-	// if requested (start=0), print the node itself with some debug information
-	if (start==0) {
-		if (!descr.empty()) descr=" ("+descr+")";
-		std::cout << std::endl << node.getNodeType() << descr << ": " << node << std::endl;
-		start++;
+	// convert from node addresses, variable addresses to node ptrs, variable ptrs
+	NodePtr treeptr=tree.getAddressedNode(),
+	        fromptr=from.getAddressedNode(),
+	        toptr=Variable::get(mgr, from->getType(), to),
+
+	// do the replacement
+	        newtreeptr=transform::replaceAll(mgr, treeptr, fromptr, toptr, transform::globalReplacement);
+	if (!newtreeptr) { LOG(ERROR) << "replaceAll failed" << std::endl; }
+
+	// return the newly generated IR tree
+	return NodeAddress(newtreeptr);
+}
+
+/// findPerfectID assigns each variable in consecutive (execution) order an increasing, unique ID.
+std::vector<std::pair<VariableAddress, unsigned int> > VarUniqExtension::findPerfectID(std::vector<VariableAddress> vars) {
+	std::vector<std::pair<VariableAddress, unsigned int> > ret;
+	unsigned int ctr=0;
+	for (auto var: vars)
+		ret.push_back(std::pair<VariableAddress, unsigned int>(var, ctr++));
+	return ret;
+}
+
+/// For all the given variables get their internal ID and return the maximum one.
+unsigned int VarUniqExtension::findMaxID(std::vector<VariableAddress> vars) {
+	unsigned int max=0;
+
+	// search all existing IDs
+	for (auto var: vars) {
+		unsigned int elem=insieme::analysis::DataDependence::getVarID(var);
+		if (elem>max) max=elem;
 	}
 
-	// iterate over the requested children to complete the output
-	for (unsigned int n=start-1; n<start-1+count; n++)
-		std::cout << "\t-" << n << "\t" << children[n].getNodeType() << ": " << *children[n] << std::endl;
-}
-
-/// Generic visitor (used for every non-implemented node type) to visit all children of the current node.
-void VarUniqExtension::visitNode(const NodeAddress &node) {
-	total++;
-	for (auto child: node->getChildList()) visit(child);
-}
-
-void VarUniqExtension::visitVariable(const VariableAddress &var) {
-	total++; // seen++;
-
-	// get variable number and increase counter for given variable
-	VariableAddress def=getVarDefinition(var);
-	vuid[def]++;
-	if (def==var) {
-		seen++;
-		//unsigned int varid=var.getAddressOfChild(1).as<UIntValueAddress>()->getValue();
-	}
-
-	// visit children
-	for (auto child: var->getChildList()) visit(child);
+	return max;
 }
 
 /// Return the updated code with unique variable identifiers.
 NodeAddress VarUniqExtension::IR() {
-	// print some status information for debugging
-	for (auto dups: vuid)
-		std::cout << "var " << dups.first << " found " << dups.second << "×" << std::endl;
-	std::cout << "Found " << seen << " variables in " << total << " nodes." << std::endl;
+	NodeAddress ret=frag;
 
-	// return the newly generated code
-	return frag;
-}
+	// do the actual variable replacement with a multi-step iteration until a fixed-point is reached
+	// first, calculate the goal
+	std::vector<std::pair<VariableAddress, unsigned int> > goalID=findPerfectID(dep.getDefs());
 
-/// Find the address where the given variable has been defined.
-VariableAddress VarUniqExtension::getVarDefinition(const VariableAddress& var) {
-	// first, save the pointer of the given variable so that we have something to compare with
-	VariablePtr varptr=var.getAddressedNode();
-	NodeAddress cur=var;
+	// second: iterate over the goal until empty
+	while (!goalID.empty()) {
+		DataDependence dep(ret);   // have a fresh look at how variables are being used currently
 
-	while (!cur.isRoot()) {
-		NodeAddress var=cur.getParentAddress();
+		// third: retrieve and remove the first target from the map
+		std::pair<VariableAddress, unsigned int> p=goalID.front();
+		goalID.erase(goalID.begin());
 
-		switch (var->getNodeType()) {
-		case NT_BindExpr: {
-			for (auto n: var.as<BindExprAddress>()->getParameters())
-				if (n.as<VariablePtr>()==varptr) return n;
-			break; }
-		case NT_CompoundStmt: {
-			auto compound=var.as<CompoundStmtAddress>();
-			for (int i=cur.getIndex(); i>=0; i--)
-				if (DeclarationStmtAddress decl=compound[i].isa<DeclarationStmtAddress>()) {
-					auto n=decl->getVariable();
-					if (n.as<VariablePtr>()==varptr) return n;
-				}
-			break; }
-		case NT_Parameters: {   // FIXME: this variable is a parameter; trace var to outer scope
-			ParametersAddress par=var.as<ParametersAddress>();
-			for (VariableAddress n: par->getParameters())
-				if (n.as<VariablePtr>()==varptr) return n;
-			break; }
-		case NT_Lambda: {
-			for (auto n: var.as<LambdaAddress>()->getParameters())
-				if (n.as<VariablePtr>()==varptr) return n;
-			break; }
-		case NT_LambdaBinding: {
-			auto n=var.as<LambdaBindingAddress>()->getVariable();
-			if (n.as<VariablePtr>()==varptr) return n;
-			break; }
-		case NT_LambdaDefinition: {
-			if (auto n=var.as<LambdaDefinitionAddress>()->getBindingOf(varptr))
-				return n->getVariable();
-			break; }
-		case NT_ForStmt: {
-			auto n=var.as<ForStmtAddress>()->getIterator();
-			if (n.as<VariablePtr>()==varptr) return n;
-			break; }
-		default: break;
+		// fourth, check if the target variable ID is already unused
+		// four A: there is still a definition for the target variable ID
+		if (dep.getDefs(p.second).size()) {
+			// get unused ID (maximum seen ID plus one)
+			unsigned int unusedID=findMaxID(dep.getDefs())+1;
+			// rename the variable to the unused ID
+			ret=renameVar(ret, p.first, unusedID);
+			// append the previously removed element at the end of the map
+			goalID.push_back(std::pair<VariableAddress, unsigned int>
+			                 (p.first.switchRoot(ret.getAddressedNode()), p.second));
+
+		// four B: for the target variable ID no definition could be found
+		} else {
+			// rename the variable directly to the target ID
+			ret=renameVar(ret, p.first, p.second);
 		}
-		cur=var;
 	}
 
-	// we have reached the root, and never found a binding for the variable; return the variable address itself
-	return var;
+	// step 6: done
+	return ret;
 }
