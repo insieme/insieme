@@ -36,14 +36,13 @@
 
 #include "insieme/backend/addons/static_variables.h"
 
-
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/operator_converter.h"
-
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/statement_converter.h"
+#include "insieme/backend/preprocessor.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_class_info.h"
@@ -52,7 +51,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/backend/preprocessor.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {

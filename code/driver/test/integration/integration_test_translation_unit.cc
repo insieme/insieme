@@ -94,7 +94,7 @@ namespace insieme {
                     mkstemp(tmpname);
                     filename = tmpname;
                     insieme::driver::saveLib(code, filename);
-                    EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
+					EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
                 }
 
 		// load TU using the frontend (and all its potential extensions)

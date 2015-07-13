@@ -45,6 +45,8 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/types/type_variable_deduction.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
