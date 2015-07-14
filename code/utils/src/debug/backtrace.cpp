@@ -44,7 +44,7 @@ namespace insieme {
 namespace utils {
 namespace debug {
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 
 #include <execinfo.h>
 #include <cxxabi.h>
