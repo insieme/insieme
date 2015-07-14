@@ -110,10 +110,8 @@ public:
 
 	#include "insieme/core/lang/inspire_api/lang.def"
 
-	bool isBuiltIn(const NodePtr& node) const;
 	ExpressionPtr getBuiltIn(const std::string& name) const;
 	LiteralPtr getLiteral(const string& name) const;
-
 
 	/**
 	 * Required to support operators on type literals.

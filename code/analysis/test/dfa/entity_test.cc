@@ -131,7 +131,7 @@ TEST(EntityExtract, ExpressionExtractor) {
 
 	// filter out all builtin literal
 	auto twin = filterIterator(dom.begin(), dom.end(), [&mgr](const ExpressionPtr& cur) -> bool { 
-			return mgr.getLangBasic().isBuiltIn(cur); 
+			return lang::isBuiltIn(cur); 
 		} );
 
 	EXPECT_EQ(17u, std::distance(twin.first, twin.second));

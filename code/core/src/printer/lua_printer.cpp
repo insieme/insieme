@@ -115,7 +115,7 @@ namespace printer {
 
 				// check whether it is a built-in literal
 				if (function->getNodeType() == NT_Literal) {
-					if (call->getNodeManager().getLangBasic().isBuiltIn(function)) {
+					if (lang::isBuiltIn(function)) {
 						throw LuaConversionException(call, "Unsupported built-in function!");
 					}
 				}

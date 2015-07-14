@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
+#include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/encoder/encoder.h"
@@ -311,16 +312,14 @@ namespace {
 		#include "insieme/backend/operator_converter_begin.inc"
 
 		// -- booleans --
+		
 		res[basic.getBoolLAnd()] = OP_CONVERTER({ return c_ast::logicAnd(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
 		res[basic.getBoolLOr()]  = OP_CONVERTER({ return c_ast::logicOr(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
 		res[basic.getBoolLNot()] = OP_CONVERTER({ return c_ast::logicNot(CONVERT_ARG(0)); });
 
 		res[basic.getBoolEq()]   = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getBoolNe()]   = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
-
-		//moved whit the new cast operations
-		//res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
+		
 
 		// -- unsigned integers --
 
@@ -373,7 +372,8 @@ namespace {
 		res[basic.getSignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		// -- CASTS --
+		// -- casts --
+
 		auto cast = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
 
 		res[basic.getUnsignedToInt()] = cast;
@@ -462,6 +462,7 @@ namespace {
 		res[basic.getGenLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 		// -- undefined --
+
 		res[basic.getZero()] = OP_CONVERTER({
 			auto type = call->getType();
 			// special case: intercepted object
@@ -502,7 +503,6 @@ namespace {
 
 		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-
 
 		// -- references --
 
@@ -703,15 +703,24 @@ namespace {
 			return CONVERT_ARG(0);
 		});
 
-
 		res[basic.getRefToInt()] = OP_CONVERTER({
 				return CONVERT_ARG(0);
-		}
-		);
+		});
+
+		res[basic.getRefIsNull()] = OP_CONVERTER({
+			ADD_HEADER_FOR("NULL");
+			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
+		});
+
+		res[basic.getFuncIsNull()] = OP_CONVERTER({
+			ADD_HEADER_FOR("NULL");
+			return c_ast::eq(CONVERT_ARG(0), context.getConverter().getCNodeManager()->create<c_ast::Literal>("NULL"));
+		});
 
 		res[basic.getIntToRef()] = OP_CONVERTER({
 				return c_ast::cast(CONVERT_TYPE(call->getType()), CONVERT_ARG(0));
 		});
+
 		// -- support narrow and expand --
 
 		res[basic.getRefNarrow()] = OP_CONVERTER({
@@ -738,7 +747,6 @@ namespace {
 			return c_ast::cast(CONVERT_TYPE(call->getType()), res);
 		});
 
-
 		// -- arrays --
 
 		res[basic.getArraySubscript1D()] = OP_CONVERTER({
@@ -754,11 +762,10 @@ namespace {
 
 		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
 			// add dependency to element type
-			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType()); \
-			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
-			const TypeInfo& info = GET_TYPE_INFO(elementType); \
+			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType();
+			const TypeInfo& info = GET_TYPE_INFO(elementType);
 			context.getDependencies().insert(info.definition);
-
 			// generated code &(X[Y])
 			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
 		});
@@ -1007,8 +1014,6 @@ namespace {
 			return c_ast::ref(access);
 		});
 
-
-
 		// -- tuples --
 
 		res[basic.getTupleMemberAccess()] = OP_CONVERTER({
@@ -1252,6 +1257,13 @@ namespace {
 			return C_NODE_MANAGER->create<c_ast::Initializer>(CONVERT_TYPE(call->getType()), v );
 		});
 
+		// ----------------------------  Enum extension ----------------------------
+		auto& enumExt = manager.getLangExtension<core::lang::EnumExtension>();
+		res[enumExt.getEnumElementAsBool()] = OP_CONVERTER({
+			// write it out as we got it in
+			return CONVERT_ARG(0);
+		});
+
 		// ----------------------------  Attribute extension --------------------------
 
 		auto& attrExt = manager.getLangExtension<core::analysis::AttributeExtension>();
@@ -1284,9 +1296,11 @@ namespace {
 
 				// add new if required
 				const auto& basic = LANG_BASIC;
-				if (basic.isRefVar(ARG(0))) {
+				core::IRBuilder builder(NODE_MANAGER);
+				auto normArg0 = builder.normalize(ARG(0));
+				if(basic.isRefVar(normArg0)) {
 					// nothing to do
-				} else if (basic.isRefNew(ARG(0))) {
+				} else if(basic.isRefNew(normArg0)) {
 					res = c_ast::newCall(res);
 				} else {
 					assert_fail() << "Creating Arrays of objects neither on heap nor stack isn't supported!";

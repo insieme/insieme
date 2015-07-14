@@ -283,21 +283,23 @@ namespace {
 			visitDepthFirstOnce(node, [&](const NodePtr& cur) {
 
 				// do not let-bind build ins
-				if (cur->getNodeManager().getLangBasic().isBuiltIn(cur)) {
+				if(lang::isBuiltIn(cur)) {
 					return;
 				}
 
 				// do not decent into derived implementations if not printed
-				if (!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(cur)) {
+				if(!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(cur)) {
 					return;
 				}
 
 				NodeType type = cur->getNodeType();
 
-				if(type == NT_RecType || type == NT_StructType || type == NT_UnionType || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
+				if(type == NT_RecType || type == NT_StructType || type == NT_UnionType 
+					|| (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
 
 					// obtain a name (TODO: pick something more important)
-					string name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
+					string name = (type == NT_LambdaExpr) ? 
+						format("fun%03d", funCounter++) : format("type%03d", typeCounter++);
 
 					// avoid printing more than one scope
 					if(!printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)){
@@ -313,7 +315,7 @@ namespace {
 
 			}, false);	// iterate through IR in post-order
 
-			if (printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)){
+			if(printer.hasOption(PrettyPrinter::JUST_OUTERMOST_SCOPE)) {
 				letBindings.erase(node);
 			}
 
@@ -322,7 +324,7 @@ namespace {
 
 		}
 
-		~InspirePrinter(){
+		~InspirePrinter() {
 			// once the printer is done, the plugin might want to do something
 			printer.plugin.afterAllDone(out);
 		}

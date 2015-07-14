@@ -228,7 +228,7 @@ NodeAddress getRootVariable(const NodeAddress scope, NodeAddress var) {
 
 		if(CallExprAddress call = var.isa<CallExprAddress>()) {
 //std::cout << "\ncalling " << *call << std::endl;//"\narg0: " << *call->getArgument(0) << "\nvar: " << *extractVariable(call->getArgument(0)) << std::endl;
-			if(call->getNodeManager().getLangBasic().isBuiltIn(call->getFunctionExpr())) {
+			if(lang::isBuiltIn(call->getFunctionExpr())) {
 //std::cout << "\tthing: " << *call->getFunctionExpr() << std::endl;
 				return getRootVariable(scope, extractVariable(call->getArgument(0))); // crossing my fingers that that will work ;)
 			}

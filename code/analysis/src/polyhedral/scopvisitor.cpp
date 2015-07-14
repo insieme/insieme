@@ -430,7 +430,7 @@ IterationVector ScopVisitor::visitStmt(NodeAddress addr) {
 		CallExprAddress callExpr = static_address_cast<const CallExpr>(addr);
 
 		ExpressionPtr func = callExpr->getFunctionExpr();
-		bool isBuiltIn = addr->getNodeManager().getLangBasic().isBuiltIn(func);
+		bool isBuiltIn = lang::isBuiltIn(func);
 
 		if((!isBuiltIn) && callExpr->getFunctionExpr()->getNodeType() != NT_LambdaExpr) {
 			return ret;
@@ -1110,14 +1110,13 @@ IterationVector ScopVisitor::visitCallExpr(const CallExprAddress& callExpr) {
 	//LOG(INFO) << "visitCallExpr:\n" << printer::PrettyPrinter(callExpr);
 
 	const NodeAddress& func = callExpr->getFunctionExpr();
-	const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 
 	// do not look into built-in functions
-	if (gen.isBuiltIn(func)) {
+	if (lang::isBuiltIn(func)) {
 		return IterationVector();
 	}
 
-	if (func->getNodeType() == NT_Literal && !gen.isBuiltIn(func)) {
+	if (func->getNodeType() == NT_Literal && !lang::isBuiltIn(func)) {
 
 		FunctionSema&& usage = extractSemantics(callExpr);
 		// We cannot deal with function with side-effects as the polyhedral model could decide to split the function

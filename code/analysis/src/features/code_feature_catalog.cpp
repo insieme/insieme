@@ -321,7 +321,7 @@ using insieme::core::pattern::any;
 			lambdas["externalFunction"] = [&](core::NodePtr node) {
 				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
 					if(const core::LiteralPtr literal = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
-						if(!basic.isBuiltIn(literal)) {
+						if(!core::lang::isBuiltIn(literal)) {
 							//ignore helper functons introduced by the OpenCL backend
 							if(literal.toString().substr(0,5).compare(string("_ocl_")) != 0)
 								return 1.0;
@@ -332,7 +332,7 @@ using insieme::core::pattern::any;
 			};
 			lambdas["builtinFunction"] = [&](core::NodePtr node) {
 				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
-					if (basic.isBuiltIn(call->getFunctionExpr())) {
+					if (core::lang::isBuiltIn(call->getFunctionExpr())) {
 						return 1;
 					}
 				}

@@ -359,7 +359,7 @@ namespace access {
 				const auto& gen  = callExpr->getNodeManager().getLangBasic();
 				const auto& func = callExpr->getFunctionExpr();
 
-				if (!gen.isBuiltIn(func) && func->getNodeType() == core::NT_Literal) {
+				if (!core::lang::isBuiltIn(func) && func->getNodeType() == core::NT_Literal) {
 					// this is an external function
 					return false;
 				}

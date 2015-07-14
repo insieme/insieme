@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
@@ -54,7 +55,7 @@ TEST(IntTypeParamInstantiation, Simple) {
 	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
 		let test = lambda (vector<'res,#l> a) -> unit {
-			$decl vector<'res, #l> res;$
+			$decl vector<'res, #l> res = undefined('a);$
 		};
 
 		decl vector<int<4>, 8> a;
@@ -67,7 +68,10 @@ TEST(IntTypeParamInstantiation, Simple) {
 	auto result = instantiateIntTypeParams(addresses[0].getRootNode());
 	
 	auto newAddr = addresses[0].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<'res, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
+	
+	EXPECT_EQ(
+		builder.normalize(builder.parseStmt("decl vector<'res, 8> res = undefined('a);")), 
+		builder.normalize(newAddr.getAddressedNode()));
 }
 
 TEST(IntTypeParamInstantiation, Return) {
@@ -101,8 +105,8 @@ TEST(IntTypeParamInstantiation, Multiple) {
 	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
 		let test = lambda (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
-			$decl vector<'res, #l> res;$
-			$decl matrix<'res, #x, #y> res2;$
+			$decl vector<'res, #l> res = undefined('a);$
+			$decl matrix<'res, #x, #y> res2 = undefined('a);$
 		};
 
 		decl vector<int<4>, 8> a;
@@ -117,8 +121,12 @@ TEST(IntTypeParamInstantiation, Multiple) {
 
 	auto newAddrVec = addresses[0].switchRoot(result);
 	auto newAddrMat = addresses[1].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
-	EXPECT_EQ(builder.normalize(builder.parseStmt("decl matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
+	EXPECT_EQ(
+		builder.normalize(builder.parseStmt("decl vector<'res, 8> res = undefined('a);")), 
+		builder.normalize(newAddrVec.getAddressedNode()));
+	EXPECT_EQ(
+		builder.normalize(builder.parseStmt("decl matrix<'res, 16, 32> res2 = undefined('a);")), 
+		builder.normalize(newAddrMat.getAddressedNode()));
 }
 
 TEST(IntTypeParamInstantiation, Nested) {
@@ -128,11 +136,11 @@ TEST(IntTypeParamInstantiation, Nested) {
 	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
 		let test_array = lambda (vector<'res,#l> a) -> unit {
-			$decl vector<'res, #l> res;$
+			$decl vector<'res, #l> res = undefined('a);$
 		};
 		let test_outer = lambda (vector<'res,#l> a, matrix<'res,#x,#y> b) -> unit {
 			test_array(a);
-			$decl matrix<'res, #x, #y> res2;$
+			$decl matrix<'res, #x, #y> res2 = undefined('a);$
 		};
 
 		decl vector<int<4>, 8> a;
@@ -147,8 +155,12 @@ TEST(IntTypeParamInstantiation, Nested) {
 
 	auto newAddrVec = addresses[0].switchRoot(result);
 	auto newAddrMat = addresses[1].switchRoot(result);
-	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<'res, 8> res;")), builder.normalize(newAddrVec.getAddressedNode()));
-	EXPECT_EQ(builder.normalize(builder.parseStmt("decl matrix<'res, 16, 32> res2;")), builder.normalize(newAddrMat.getAddressedNode()));
+	EXPECT_EQ(
+		builder.normalize(builder.parseStmt("decl vector<'res, 8> res = undefined('a);")), 
+		builder.normalize(newAddrVec.getAddressedNode()));
+	EXPECT_EQ(
+		builder.normalize(builder.parseStmt("decl matrix<'res, 16, 32> res2 = undefined('a);")), 
+		builder.normalize(newAddrMat.getAddressedNode()));
 }
 
 TEST(TypeVariableInstantiation, Simple) {
@@ -225,6 +237,7 @@ TEST(TypeInstantiation, Simple) {
 	auto result = instantiateTypes(addresses[0].getRootNode());
 	
 	auto newAddr = addresses[0].switchRoot(result);
+
 	EXPECT_EQ(builder.normalize(builder.parseStmt("decl vector<int<4>, 8> res;")), builder.normalize(newAddr.getAddressedNode()));
 }
 
@@ -316,7 +329,9 @@ TEST(TypeInstantiation, AnnotationsOnCallExp) {
 	auto result = instantiateTypes(root);
 	auto newAddr = addresses[0].switchRoot(result);
 	EXPECT_TRUE(annotations::hasAttachedLocation(newAddr.getAddressedNode()));
-	EXPECT_EQ(annotations::getLocation(addresses[0].getAddressedNode()), annotations::getLocation(newAddr.getAddressedNode()));
+	EXPECT_EQ(
+		annotations::getLocation(addresses[0].getAddressedNode()), 
+		annotations::getLocation(newAddr.getAddressedNode()));
 }
 
 TEST(TypeInstantiation, HigherOrderFunction) {
@@ -362,9 +377,8 @@ TEST(TypeInstantiation, ReturnTypeSimple) {
 
 	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-	EXPECT_EQ(build.parseType("int<4>"), instantiated.as<CallExprPtr>()->getType());
+	EXPECT_EQ(build.parseType("int<4>"), instantiated->getType());
 }
-
 
 TEST(TypeInstantiation, ReturnTypeMultiple) {
 	NodeManager mgr;
@@ -386,8 +400,157 @@ TEST(TypeInstantiation, ReturnTypeMultiple) {
 
 	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-	EXPECT_EQ(build.parseType("int<8>"), instantiated.as<CallExprPtr>()->getType());
+	EXPECT_EQ(build.parseType("int<8>"), instantiated->getType());
 }
+
+TEST(TypeInstantiation, BindExpr) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a x) -> unit {
+			decl ref<'a> b;
+//			lambda () => {
+//				decl auto y = b;
+//				return y;
+//			};
+		}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	//std::cout << "Less pretty instantiation: \n" << dumpText(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+}
+
+TEST(TypeInstantiation, BindInBindExpr) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a x) -> unit {
+			decl ref<'a> b;
+			lambda () => {
+				decl auto y = b;
+				lambda () => {
+					decl auto z = y;
+					return z;
+				};
+				return y;
+			};
+		}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+}
+
+TEST(TypeInstantiation, JobExpr) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+	auto expr = build.parseExpr(R"(
+		lambda ('a x) -> unit {
+			decl ref<'a> b;		
+			parallel(job {
+				decl auto y = b;
+			});
+		}(5)
+	)");
+
+	EXPECT_TRUE(expr);
+
+	auto instantiated = core::transform::instantiateTypes(expr);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(expr, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+}
+
+TEST(TypeInstantiation, NestedLambda) {
+	NodeManager mgr;
+	IRBuilder build(mgr);
+
+    core::ProgramPtr program = build.parseProgram(
+            R"(
+            let int = int<4>;
+            let uint = uint<4>;
+
+            let differentbla = lambda ('b x) -> unit {
+                decl auto m = x;
+                decl auto l = m;
+            };
+
+            let bla = lambda ('a f) -> unit {
+                let anotherbla = lambda ('a x) -> unit {
+                    decl auto m = x;
+                };
+                anotherbla(f);
+                differentbla(f);
+                parallel(job { decl auto l = f; });
+            };
+
+            int main() {
+                // some bla
+                decl int x = 10;
+                bla(x);
+                return 0;
+            }
+            )"
+    );
+
+
+	EXPECT_TRUE(program);
+
+	auto instantiated = core::transform::instantiateTypes(program);
+
+	//std::cout << "Pretty uninstantiated: \n" << dumpColor(program) << "\n";
+	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
+	EXPECT_TRUE(core::analysis::contains(program, build.parseType("'a")));
+	EXPECT_TRUE(core::analysis::contains(program, build.parseType("'b")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'b")));
+}
+
+// ********** The following tests should be enabled / completed once instantiation of recursive functions is supported
+
+/*
+TEST(Recursion, Simple) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto code = builder.parseStmt(R"raw(
+	{
+		let x = lambda ('a a)->unit {
+			x(a);
+		};
+		x(5);
+	}
+	)raw");
+
+	EXPECT_TRUE(code);
+
+
+	auto result = instantiateTypes(code);
+
+	std::cout << "Garbage in :\n" << dumpColor(code) << "\n";
+	std::cout << "Garbage out:\n" << dumpColor(result) << "\n";
+
+	std::cout << "Text in :\n" << dumpText(code) << "\n";
+	std::cout << "Text out:\n" << dumpText(result) << "\n";
+} */
 
 /*
 TEST(InRecFunc, Simple) {
@@ -413,12 +576,13 @@ TEST(InRecFunc, Simple) {
 
     dumpColor(addresses[0].getRootNode());
 
-	auto result = instantiateTypeVariables(addresses[0].getRootNode());
+	auto result = instantiateTypes(addresses[0].getRootNode());
 		
 	auto newAddr = addresses[0].switchRoot(result);
 	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
-}
+}*/
 
+/*
 TEST(InRecFunc, ExpressionArgument) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);

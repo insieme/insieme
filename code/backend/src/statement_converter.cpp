@@ -345,11 +345,24 @@ namespace backend {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
 
-        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
-        context.addDependency(typeInfo.definition);
+		auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+		context.addDependency(typeInfo.definition);
 
-        // get type and create init expression
-        c_ast::TypePtr type = typeInfo.rValueType;
+		// get type
+		c_ast::TypePtr type = typeInfo.rValueType;
+
+		// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
+		if(auto stp = ptr->getType().isa<core::StructTypePtr>()) {
+			if(!stp.size()) {
+				auto cmgr = context.getConverter().getCNodeManager();
+				auto zero = cmgr->create("0");
+				auto r = c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
+				std::cout << "~~~~: " << r << std::endl;
+				return r;
+			}
+		}
+
+		// create init expression
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// obtain some helper

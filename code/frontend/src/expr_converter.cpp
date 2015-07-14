@@ -928,7 +928,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	        core::ExpressionPtr opFunc;
             if(binOp->isShiftAssignOp() || binOp->getOpcode() == clang::BO_XorAssign || binOp->getOpcode() == clang::BO_OrAssign || binOp->getOpcode() == clang::BO_AndAssign) {
-			    opFunc = gen.getOperator(gen.getAlpha(), op);
+			    opFunc = gen.getOperator(builder.typeVariable("a"), op);
             }
             else {
                 opFunc = gen.getOperator(exprTy, op);
@@ -1161,7 +1161,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 
             if(binOp->isBitwiseOp() || binOp->isShiftOp()) {
-			    opFunc = gen.getOperator(gen.getAlpha(), op);
+			    opFunc = gen.getOperator(builder.typeVariable("a"), op);
             }
             else {
 			    VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;

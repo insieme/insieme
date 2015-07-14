@@ -204,14 +204,20 @@ BasicGenerator::~BasicGenerator() {
 
 #define TYPE(_id, _spec) \
 TypePtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.parseType(_spec); \
+	if(!pimpl->ptr##_id) { \
+		pimpl->ptr##_id = pimpl->build.parseType(_spec); \
+		markAsBuiltIn(pimpl->ptr##_id); \
+	} \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
 #define LITERAL(_id, _name, _spec) \
 LiteralPtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(pimpl->build.parseType(_spec), _name); \
+	if(!pimpl->ptr##_id) { \
+		pimpl->ptr##_id = pimpl->build.literal(pimpl->build.parseType(_spec), _name); \
+		markAsBuiltIn(pimpl->ptr##_id); \
+	} \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
@@ -220,6 +226,7 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 ExpressionPtr BasicGenerator::get##_id() const { \
 	if(!pimpl->ptr##_id) { \
 		pimpl->ptr##_id = analysis::normalize(pimpl->build.parseExpr(_spec)); \
+		markAsBuiltIn(pimpl->ptr##_id); \
 		markAsDerived(pimpl->ptr##_id, _name); \
 	} \
 	return pimpl->ptr##_id; }; \
@@ -229,7 +236,10 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 
 #define OPERATION(_type, _op, _name, _spec) \
 LiteralPtr BasicGenerator::get##_type##_op() const { \
-	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->build.parseType(_spec), _name); \
+	if(!pimpl->ptr##_type##_op) { \
+		pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->build.parseType(_spec), _name); \
+		markAsBuiltIn(pimpl->ptr##_type##_op); \
+	} \
 	return pimpl->ptr##_type##_op; }; \
 bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 	return *p == *get##_type##_op(); };
@@ -238,6 +248,7 @@ bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 ExpressionPtr BasicGenerator::get##_type##_op() const { \
 	if(!pimpl->ptr##_type##_op) { \
 		pimpl->ptr##_type##_op = analysis::normalize(pimpl->build.parseExpr(_spec)); \
+		markAsBuiltIn(pimpl->ptr##_type##_op); \
 		markAsDerived(pimpl->ptr##_type##_op, _name); \
 	} \
 	return pimpl->ptr##_type##_op; }; \
@@ -251,32 +262,6 @@ const vector<NodePtr>& BasicGenerator::get##_id##Group() const { \
 	return pimpl->get##_id##Group(); } \
 
 #include "insieme/core/lang/inspire_api/lang.def"
-
-
-bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
-	if(auto tN = dynamic_pointer_cast<const Type>(node)) {
-		#define TYPE(_id, _spec) \
-		if(*node == *get##_id()) return true;
-		#include "insieme/core/lang/inspire_api/lang.def"
-	}
-	else if(auto lN = dynamic_pointer_cast<const Literal>(node)) {
-		#define LITERAL(_id, _name, _spec) \
-		if(*node == *get##_id()) return true;
-		#define DERIVED(_id, _name, _spec) // skip
-		#define OPERATION(_type, _op, _name, _spec) \
-		if(*node == *get##_type##_op()) return true;
-		#define DERIVED_OP(_type, _op, _name, _spec) // skip
-		#include "insieme/core/lang/inspire_api/lang.def"
-	}
-	else if(auto eN = dynamic_pointer_cast<const Expression>(node)) {
-		#define DERIVED(_id, _name, _spec) \
-		if(*node == *get##_id()) return true;
-		#define DERIVED_OP(_type, _op, _name, _spec) \
-		if(*node == *get##_type##_op()) return true;
-		#include "insieme/core/lang/inspire_api/lang.def"
-	}
-	return false;
-}
 
 LiteralPtr BasicGenerator::getLiteral(const string& name) const {
 	// check literals

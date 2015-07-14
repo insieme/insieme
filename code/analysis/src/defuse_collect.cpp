@@ -353,7 +353,7 @@ public:
 		// we check whether the function is builtin, in that case we are sure that the use of the
 		// variable will be a USE and not a definition. For any other unknown literal, we use the
 		// UKNWON
-		usage = mgr.getLangBasic().isBuiltIn( callExpr.getAddressOfChild(1).getAddressedNode() ) ? Ref::USE : Ref::UNKNOWN;
+		usage = core::lang::isBuiltIn(callExpr.getAddressOfChild(1).getAddressedNode() ) ? Ref::USE : Ref::UNKNOWN;
 		visitNode(callExpr);
 		usage = saveUsage;
 	}

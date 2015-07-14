@@ -8,6 +8,8 @@ build*/
 *~
 *.match
 *.swp
+*.so
+*.so.*
 /nbproject/private/
 create*.sh
 worker_event_log.*

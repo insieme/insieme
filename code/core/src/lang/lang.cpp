@@ -86,6 +86,36 @@ namespace lang {
 		return node;
 	}
 
+	// ----------------------------------------------------
+
+	void markAsBuiltIn(const NodePtr& node) {
+		node->attachValue<BuiltInTag>();
+	}
+
+	bool isBuiltIn(const core::NodePtr& node) {
+		return node->hasAttachedValue<BuiltInTag>();
+	}
+	
+	// ---------------- Support Dump ----------------------
+
+	VALUE_ANNOTATION_CONVERTER(BuiltInTag)
+
+		typedef core::value_node_annotation<BuiltInTag>::type annotation_type;
+	
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) 
+				<< "Only BuiltInTag annotations supported!";
+			return encoder::toIR(manager, string("builtin_tag"));
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) 
+				<< "Invalid encoding of BuiltInTag encountered!";
+			return std::make_shared<annotation_type>(BuiltInTag());
+		}
+	};
+
+
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

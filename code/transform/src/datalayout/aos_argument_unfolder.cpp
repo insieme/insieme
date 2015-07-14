@@ -260,7 +260,7 @@ const NodePtr AosArgumentUnfolder::mapAddress(const NodePtr& ptr, NodeAddress& p
 	if(CallExprAddress oldCall = prevAddr.isa<CallExprAddress>()) {
 		LambdaExprAddress lambdaExpr = oldCall->getFunctionExpr().isa<LambdaExprAddress>();
 
-		if(lambdaExpr && !mgr.getLangBasic().isBuiltIn(lambdaExpr)) {
+		if(lambdaExpr && !lang::isBuiltIn(lambdaExpr)) {
 			const CallExprPtr newCall = ptr->substitute(ptr->getNodeManager(), *this, prevAddr).as<CallExprPtr>();
 			const CallExprPtr updated = updateArgumentsAndParams(oldCall, newCall);
 

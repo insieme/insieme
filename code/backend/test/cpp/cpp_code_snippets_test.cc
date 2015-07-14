@@ -294,7 +294,9 @@ namespace backend {
 
 		// ------------ create code using the counter type --------
 
-		auto prog = builder.parseProgram("int<4> main() { decl ref<ref<Counter>> c; return (*c).value; }", symbols);
+		auto prog = builder.parseProgram("int<4> main() { decl ref<ref<Counter>> c; return *((*c).value); }", symbols);
+
+		EXPECT_TRUE(core::checks::check(prog).empty());
 
 		// generate code
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);

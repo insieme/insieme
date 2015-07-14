@@ -59,7 +59,7 @@ class BuiltinFunctionExtension : public insieme::frontend::extensions::FrontendE
                 if(funcDecl->getNameAsString() == "__builtin_constant_p") {
                     auto builder = convFact.getIRBuilder();
                     auto tyList = core::TypeList();
-                    tyList.push_back(builder.getLangBasic().getAlpha());
+                    tyList.push_back(builder.typeVariable("a"));
                     auto type = builder.functionType(tyList, builder.getLangBasic().getInt4());
                     auto ret = builder.literal(type, insieme::frontend::utils::buildNameForFunction(funcDecl));
                     //tell the compiler that this builtin is included somewhere else, even if it is not true

@@ -53,7 +53,9 @@ namespace encoder {
 		core::GenericTypePtr getPairType(core::NodeManager& manager) {
 			core::TypePtr alpha = TypeVariable::get(manager, "a");
 			core::TypePtr beta  = TypeVariable::get(manager, "b");
-			return GenericType::get(manager, PairExtension::PAIR_TYPE_NAME, toVector(alpha, beta));
+			auto ret = GenericType::get(manager, PairExtension::PAIR_TYPE_NAME, toVector(alpha, beta));
+			lang::markAsBuiltIn(ret);
+			return ret;
 		}
 
 		/**
@@ -65,7 +67,9 @@ namespace encoder {
 			core::TypePtr alpha = pair->getTypeParameter(0);
 			core::TypePtr beta = pair->getTypeParameter(1);
 			core::TypePtr pairType = builder.functionType(toVector(alpha, beta), pair);
-			return builder.literal(pairType, "pair");
+			auto ret =  builder.literal(pairType, "pair");
+			lang::markAsBuiltIn(ret);
+			return ret;
 		}
 
 	}

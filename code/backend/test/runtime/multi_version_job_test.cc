@@ -67,7 +67,8 @@ namespace runtime {
 				decl ref<int<4>> a;
 				spawn lambda ()=> { a = 3; };
 				spawn pick([
-					lambda ()=> { a = 3; },
+					//lambda ()=> { a = 3; }, // FIXME
+					lambda ()=> { a = 3*2; },
 					lambda ()=> { a = 1+2; },
 					lambda ()=> { a = 1*3; }
 				]);

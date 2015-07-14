@@ -114,10 +114,6 @@ TYPE(Bool, "bool")
 LITERAL(True,  "true",  "bool")
 LITERAL(False, "false", "bool")
 
-TYPE(Alpha, "'a")
-TYPE(TypeLiteralTypeGen, "type<'a>")
-TYPE(RefAlpha, "ref<'a>")
-
 TYPE(VarList, "var_list")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------

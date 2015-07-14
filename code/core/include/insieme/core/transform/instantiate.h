@@ -37,10 +37,20 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/utils/pointer.h"
 
 namespace insieme {
 namespace core {
 namespace transform {
+
+namespace detail {
+	enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
+
+	static auto skipNone = [&](const NodePtr& node) { return false; };
+
+	NodePtr instantiateInternal(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip, 
+		detail::InstantiationOption opt);
+}
 
 /**
  * A transformation which instantiates VariableIntTypeParams wherever possible
@@ -49,8 +59,11 @@ namespace transform {
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible VariableIntTypeParmas instantiated
  */
-NodePtr instantiateIntTypeParams(const NodePtr& root,
-    std::function<bool(const NodePtr& node)> skip = [&](const NodePtr& node) { return false; });
+template<typename T>
+core::Pointer<T> instantiateIntTypeParams(const core::Pointer<T>& root,
+		std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::INT_TYPE_PARAMS));
+}
 
 /**
  * A transformation which instantiates TypeVariables wherever possible
@@ -59,8 +72,11 @@ NodePtr instantiateIntTypeParams(const NodePtr& root,
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible TypeVariables instantiated
  */
-NodePtr instantiateTypeVariables(const NodePtr& root,
-    std::function<bool(const NodePtr& node)> skip = [&](const NodePtr& node) { return false; });
+template<typename T>
+core::Pointer<T> instantiateTypeVariables(const core::Pointer<T>& root,
+		std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::TYPE_VARIABLES));
+}
 
 /**
  * A transformation which instantiates all sources of genericity in types
@@ -69,8 +85,11 @@ NodePtr instantiateTypeVariables(const NodePtr& root,
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible types instantiated
  */
-NodePtr instantiateTypes(const NodePtr& root,
-    std::function<bool(const NodePtr& node)> skip = [&](const NodePtr& node) { return false; });
+template<typename T>
+core::Pointer<T> instantiateTypes(const core::Pointer<T>& root,
+		std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::BOTH));
+}
 
 } // end namespace transform
 } // end namespace core

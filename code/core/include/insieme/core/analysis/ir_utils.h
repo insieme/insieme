@@ -173,7 +173,7 @@ static inline bool hasRefType(const ExpressionPtr& expr) {
 }
 
 static inline TypePtr getReferencedType(const RefTypePtr& type) {
-    if (!type) return NULL;
+    if (!type) assert_fail() << "Cannot get the referenced type of a non ref type.";
 	return type->getElementType();
 }
 

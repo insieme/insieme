@@ -44,6 +44,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/ir_class_info.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
@@ -257,7 +259,7 @@ namespace backend {
                 if (stop) {
                     return true;
                 }
-                if (!base.isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) {
+                if (!core::lang::isBuiltIn(call.as<core::CallExprPtr>()->getFunctionExpr())) {
                     stop = true;
                 }
 				// check whether it is an assignment
@@ -478,41 +480,40 @@ namespace backend {
 	}
 
 	core::NodePtr RecursiveLambdaInstantiator::process(const Converter& converter, const core::NodePtr& code) {
-		// the recursive type instantiator does the magic.
-		// this pass has been implemented as part of the core manipulation utils
-		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
-			// only consider lambdas
-			if (code->getNodeType() != core::NT_LambdaExpr) return code;
-            // get the lambda and check if it contains recursive types
-			core::LambdaExprPtr lambda = code.as<core::LambdaExprPtr>();
-            bool containsRecType = false;
-            visitDepthFirstOnce(code, [&](const core::TypePtr& type) {
-                    if(type.isa<core::RecTypePtr>()) containsRecType=true;
-            });
-            //if we have recurisve types in the lambda we must not use
-            //the instantiator, because it will iterate to infinity.
-            //The name "recurisve lambda instantiator" is used, because
-            //the instantiator is recursive and not the lambda itself!!
-            //FIXME: support for recurisve types in the instantiator
-            if(containsRecType) {
-                return lambda;
-            }
-			// use core library utility to fix types
-			lambda = core::transform::instantiateTypes(lambda, [&](const core::NodePtr& node) {
-                // only check expressions, this check is applied to all subelements
-                if(!node.isa<core::ExpressionPtr>())
-                    return false;
-                const core::ExpressionPtr& expr = node.as<core::ExpressionPtr>();
-                // skip builtins and sizeof literals
-                if(converter.getNodeManager().getLangBasic().isBuiltIn(expr) ||
-                   converter.getFunctionManager().isBuiltIn(expr)) {
-                    return true;
-                }
-                // do not skip any other nodes
-                return false;
-            }).as<core::LambdaExprPtr>();
-			return lambda;
-		}).map(code);
+		auto elem = core::IRBuilder(converter.getNodeManager()).typeVariable("elem");
+		LOG(DEBUG) << "PRE ============ elem? " << core::analysis::contains(code, elem) << "\n"; 
+		LOG(DEBUG) << dumpColor(code) << "\n";
+		LOG(DEBUG) << "PRE DETAIL ============\n"; 
+		LOG(DEBUG) << dumpDetailColored(code) << "\n";
+
+		auto isLangOrOpBuiltin = [&](const core::NodePtr& node) {
+			return core::lang::isBuiltIn(node) || converter.getFunctionManager().isBuiltIn(node);
+		};
+		auto ret = core::transform::instantiateTypes(code, isLangOrOpBuiltin);
+
+		visitDepthFirstOnce(code, [&](const core::TypePtr& t) {
+			if(core::hasMetaInfo(t)) {
+				auto meta = core::getMetaInfo(t);
+				auto metaEnc = core::encoder::toIR(t->getNodeManager(), meta);
+				auto pre = metaEnc;
+				LOG(DEBUG) << "META INFO PRE: elem? " 
+					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
+					<< "META INFO PRE TEXT:\n" << dumpText(metaEnc) << "\n";
+				metaEnc = core::transform::instantiateTypes(metaEnc, isLangOrOpBuiltin);
+				LOG(DEBUG) << "META INFO POST: elem? " 
+					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
+					<< "META INFO POST TEXT:\n" << dumpText(metaEnc) << "\n";
+				LOG(DEBUG) << "META INFO POST=PRE? " << (*metaEnc == *pre) << "\n";
+				core::setMetaInfo(t, core::encoder::toValue<core::ClassMetaInfo>(metaEnc));
+			}
+		}, true, true);
+
+
+		LOG(DEBUG) << "RET ============ elem? " << core::analysis::contains(ret, elem) << "\n";
+		LOG(DEBUG) << dumpColor(ret) << "\n";
+		LOG(DEBUG) << "RET DETAIL ============\n"; 
+		LOG(DEBUG) << dumpDetailColored(ret) << "\n";
+		return ret;
 	}
 
 } // end namespace backend
