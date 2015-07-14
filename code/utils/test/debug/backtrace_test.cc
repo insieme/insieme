@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/utils/debug/backtrace.h"
+#include "insieme/utils/assert.h"
 
 using std::string;
 
@@ -44,12 +45,20 @@ string c() { return insieme::utils::debug::getBacktraceString(); }
 string b() { return c(); }
 string a() { return b(); }
 
+void HelloAssert() {
+	assert_fail() << "ZOMG";
+}
+
 #ifdef __GNUC__
 
 TEST(Backtrace, Simple) {
 	EXPECT_TRUE(a().find("1: c") != std::string::npos);
 	EXPECT_TRUE(a().find("2: b") != std::string::npos);
 	EXPECT_TRUE(a().find("3: a") != std::string::npos);
+}
+
+TEST(Backtrace, Assertion) {
+	ASSERT_DEATH_IF_SUPPORTED(HelloAssert(), "2: HelloAssert");
 }
 
 #else

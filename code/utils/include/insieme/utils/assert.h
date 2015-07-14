@@ -45,6 +45,8 @@
 
 #include <iostream>
 
+#include "insieme/utils/debug/backtrace.h"
+
 #ifdef assert
 #undef assert
 #endif
@@ -75,8 +77,16 @@
 
 				struct LazyAssertion {
 					bool value;
-					LazyAssertion(bool value) : value(value) {}
-					~LazyAssertion() { if(!value){ std::cerr << "\n"; abort();} }
+					LazyAssertion(bool value) : value(value) { 
+						if(!value) { 
+							std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString();
+						} 
+					}
+					~LazyAssertion() { 
+						if(!value) { 
+							std::cerr << "\n"; abort();
+						} 
+					}
 					operator bool() const { return !value; }
 				};
 
