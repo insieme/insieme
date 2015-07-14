@@ -22,7 +22,6 @@ BARVINOK := ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= 
 LLVM 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
 BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
 CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
-GTEST 	:= ${PREFIX}/gtest-$(shell ${AWK_CMD} gtest_install.sh | cut -d= -f2 )
 LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
 CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
 SHARK 	:= ${PREFIX}/shark-$(shell ${AWK_CMD} shark_install.sh | cut -d= -f2 )
@@ -126,12 +125,6 @@ ${CMAKE}: cmake_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cmake_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## GTEST
-${GTEST}: gtest_install.sh ${GCC} ${CMAKE}
-	@echo "#### INSTALL GTEST ${GTEST} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh gtest_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## LUAJIT
 ${LUAJIT}: luajit_install.sh ${GCC}
 	@echo "#### INSTALL LUAJIT ${LUAJIT} ####"
@@ -212,6 +205,6 @@ ${FLEX}: flex_install.sh ${GCC}
 
 
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
-		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
+		 ${CMAKE} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
 		 ${PYTHON} ${RUBY} ${PAPI} ${CCACHE} ${NINJA} ${XERCES} \
 		 ${BISON} ${FLEX} ${HWLOC}
