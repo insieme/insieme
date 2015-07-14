@@ -49,7 +49,7 @@ void HelloAssert() {
 	assert_fail() << "ZOMG";
 }
 
-#if defined(__GNUC__) && !defined(__clang__)
+#if INS_BACKTRACE_AVAILABLE
 
 TEST(Backtrace, Simple) {
 	EXPECT_TRUE(a().find("1: c") != std::string::npos);

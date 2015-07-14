@@ -38,6 +38,8 @@
 
 #include <string>
 
+#define INS_BACKTRACE_AVAILABLE (defined(__GNUC__) && !defined(__clang__) && !defined(INS_REL_WITH_DBG))
+
 namespace insieme {
 namespace utils {
 namespace debug {

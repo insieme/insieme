@@ -44,7 +44,7 @@ namespace insieme {
 namespace utils {
 namespace debug {
 
-#if defined(__GNUC__) && !defined(__clang__)
+#if INS_BACKTRACE_AVAILABLE
 
 #include <execinfo.h>
 #include <cxxabi.h>
