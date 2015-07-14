@@ -20,11 +20,13 @@ add_library(insieme_utils ${LINKING_TYPE} ${insieme_utils_srcs} ${insieme_utils_
 target_include_directories(insieme_utils PUBLIC include)
 
 # lookup Boost library
-insieme_find_package(NAME Boost COMPONENTS filesystem system) 
+insieme_find_package(NAME Boost COMPONENTS filesystem system regex) 
 target_include_directories(insieme_utils SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 # add boost_filesystem library
 target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 target_link_libraries( insieme_utils ${Boost_SYSTEM_LIBRARY})
+# add boost_regex library
+target_link_libraries(insieme_utils ${Boost_REGEX_LIBRARY})
 
 # lookup LuaJIT library
 insieme_find_package(NAME LUAJIT)
