@@ -499,7 +499,7 @@ namespace backend {
 				LOG(DEBUG) << "META INFO PRE: elem? " 
 					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
 					<< "META INFO PRE TEXT:\n" << dumpText(metaEnc) << "\n";
-				metaEnc = core::transform::instantiateTypes(metaEnc, isLangOrOpBuiltin).as<core::ExpressionPtr>();
+				metaEnc = core::transform::instantiateTypes(metaEnc, isLangOrOpBuiltin);
 				LOG(DEBUG) << "META INFO POST: elem? " 
 					<< core::analysis::contains(metaEnc, elem) << "\n" << dumpColor(metaEnc) 
 					<< "META INFO POST TEXT:\n" << dumpText(metaEnc) << "\n";

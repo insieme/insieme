@@ -377,7 +377,7 @@ TEST(TypeInstantiation, ReturnTypeSimple) {
 
 	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-	EXPECT_EQ(build.parseType("int<4>"), instantiated.as<CallExprPtr>()->getType());
+	EXPECT_EQ(build.parseType("int<4>"), instantiated->getType());
 }
 
 TEST(TypeInstantiation, ReturnTypeMultiple) {
@@ -400,7 +400,7 @@ TEST(TypeInstantiation, ReturnTypeMultiple) {
 
 	//std::cout << "Pretty uninstantiated: \n" << dumpColor(expr) << "\n";
 	//std::cout << "Pretty instantiation : \n" << dumpColor(instantiated) << "\n";
-	EXPECT_EQ(build.parseType("int<8>"), instantiated.as<CallExprPtr>()->getType());
+	EXPECT_EQ(build.parseType("int<8>"), instantiated->getType());
 }
 
 TEST(TypeInstantiation, BindExpr) {

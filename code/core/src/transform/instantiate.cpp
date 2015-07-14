@@ -55,11 +55,8 @@ namespace {
 	typedef std::pair<NodeMap,bool> InstContext;
 
 	class TypeInstantiator : public NodeMapping<InstContext> {
-	public:
-		enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
-
 	private:
-		InstantiationOption opt;
+		detail::InstantiationOption opt;
 		std::function<bool(const NodePtr& node)> skip;
 
 		template<template <typename> class Ptr, class T, typename Result = Ptr<T>>
@@ -133,7 +130,7 @@ namespace {
 		}
 
 	public:
-		TypeInstantiator(InstantiationOption opt, std::function<bool(const NodePtr& node)>
+		TypeInstantiator(detail::InstantiationOption opt, std::function<bool(const NodePtr& node)>
 			skip = [](const NodePtr& node){ return false; } ) : opt(opt), skip(skip) { }
 
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, InstContext& context) override {
@@ -158,10 +155,10 @@ namespace {
 				core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(nodeMan, call);
 				NodeMap nodeMap;
 				if(map) {
-					if(opt == InstantiationOption::TYPE_VARIABLES || opt == InstantiationOption::BOTH) {
+					if(opt == detail::InstantiationOption::TYPE_VARIABLES || opt == detail::InstantiationOption::BOTH) {
 						nodeMap.insertAll(map->getMapping());
 					}
-					if(opt == InstantiationOption::INT_TYPE_PARAMS || opt == InstantiationOption::BOTH) {
+					if(opt == detail::InstantiationOption::INT_TYPE_PARAMS || opt == detail::InstantiationOption::BOTH) {
 						nodeMap.insertAll(map->getIntTypeParamMapping());
 					}
 				}
@@ -227,22 +224,13 @@ namespace {
 	};
 }
 
-NodePtr instantiateIntTypeParams(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
-	TypeInstantiator inst(TypeInstantiator::InstantiationOption::INT_TYPE_PARAMS, skip);
-	InstContext emtpy = { {}, false };
-	return inst.map(root, emtpy);
-}
-
-NodePtr instantiateTypeVariables(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
-	TypeInstantiator inst(TypeInstantiator::InstantiationOption::TYPE_VARIABLES, skip);
-	InstContext emtpy = { {}, false };
-	return inst.map(root, emtpy);
-}
-
-NodePtr instantiateTypes(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip) {
-	TypeInstantiator inst(TypeInstantiator::InstantiationOption::BOTH, skip);
-	InstContext emtpy = { {}, false };
-	return inst.map(root, emtpy);
+namespace detail {
+	NodePtr instantiateInternal(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip, 
+	                            detail::InstantiationOption opt) {
+		TypeInstantiator inst(opt, skip);
+		InstContext emtpy = { {}, false };
+		return inst.map(root, emtpy);
+	}
 }
 
 } // end namespace transform
