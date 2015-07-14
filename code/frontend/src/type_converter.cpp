@@ -478,14 +478,6 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 		mid++;
 	}
 
-    //we have to avoid empty structs, cannot be initalized with bracket initalization
-	if(!mid) {
-        core::TypePtr&& fieldType = builder.getLangBasic().getBool();
-        core::StringValuePtr id = builder.stringValue("__insieme_bool_dummy");
-		structElements.push_back(builder.namedType(id, fieldType));
-	}
-
-
 	// build a struct or union IR type
 	retTy = handleTagType(def, structElements);
 

@@ -117,9 +117,6 @@ protected:
 		return getFunctionArguments(callExpr, funcTy);
 	}
 
-	core::ExpressionPtr fixType(const core::ExpressionPtr& expr, const core::TypePtr& targetType);
-
-
 	template<class ClangExprTy>
 	ExpressionList getFunctionArguments(ClangExprTy* callExpr, const core::FunctionTypePtr& funcTy) {
 		ExpressionList args;
@@ -167,6 +164,8 @@ public:
 	{  }
 
 	virtual ~ExprConverter() { }
+
+	core::ExpressionPtr fixType(const core::ExpressionPtr& expr, const core::TypePtr& targetType);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
