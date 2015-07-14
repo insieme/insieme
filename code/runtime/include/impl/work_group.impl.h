@@ -98,7 +98,15 @@ void irt_wg_end(irt_work_group* wg) {
 
 static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
-	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1, uint32) == wg->local_member_count) {
+	/*
+	 * Note: We have to store the current value of wg->local_member_count in a local member here,
+	 * in order to avoid a race condition. If we do not store the value here and multiple threads
+	 * increment the ended_member_count concurrently, the last one might actually already be
+	 * done with cleaning up the work group until some other thread tries to read the
+	 * local_member_count field of a work group which no longer exists and thus cause a segfault.
+	 */
+	uint32 member_count = wg->local_member_count;
+	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1, uint32) == member_count) {
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
 		irt_wg_end(wg);
 	}
@@ -109,6 +117,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
 	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1, uint32);
 	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1, uint32);
+	IRT_ASSERT(group_num == 0, IRT_ERR_INTERNAL, "Some more changes required for a WI to be a member of multiple WGs");
 	wi->wg_memberships[group_num].wg_id = wg->id;
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;

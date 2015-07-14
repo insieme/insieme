@@ -60,7 +60,7 @@ namespace insieme {
 namespace utils {
 namespace log {
 
-#define LOG_DEFAULT DEBUG
+#define LOG_DEFAULT INFO
 #define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
 
 namespace io = boost::iostreams;
@@ -168,7 +168,7 @@ static inline Level getLevelFromEnv() {
 /**
  * Prints the level at which the log was taken.
  */
-template <const Level L=DEBUG>
+template <const Level L=INFO>
 struct LevelSpec {
 	static void format(std::ostream& out, const Ctx& ctx) {
 		out << loggingLevelToStr(L);
@@ -371,4 +371,3 @@ using namespace insieme::utils::log;
 #define VLOG_IS_ON(VerbLevel)	(VerbLevel <= Logger::get().verbosity())
 
 #define LOG_STREAM(LEVEL) 		(Logger::get().getStream<MAKE_FORMAT(LEVEL)>(LEVEL, MAKE_CONTEXT).logStream)
-

@@ -79,7 +79,6 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 		//IRT_DEBUG("WI_RE\n");
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
-		ret->wg_memberships = NULL;
 		//IRT_DEBUG("WI_FU\n");
 	}
 	return ret;
@@ -98,7 +97,6 @@ static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
 }
 
 static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
-	// TODO make threadsafe
 	wi->wg_memberships = (irt_wi_wg_membership*)malloc(sizeof(irt_wi_wg_membership)*IRT_MAX_WORK_GROUPS);
 }
 
