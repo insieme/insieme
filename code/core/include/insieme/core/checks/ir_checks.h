@@ -441,7 +441,8 @@ namespace checks {
 		 * Obtains direct access to one of the contained messages.
 		 */
 		const Message& operator[](std::size_t index) const {
-			assert(0 <= index && index < size());
+			assert_le(0, index);
+			assert_lt(index, size());
 			if (index<errors.size()) {
 				return errors[index];
 			}
