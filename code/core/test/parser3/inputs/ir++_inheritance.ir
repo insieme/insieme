@@ -48,4 +48,5 @@ int main() {
 	print("y = %d\n", *(c.as(B).y));
 	print("z = %d\n", *c.z);
 	
+	return 0;
 }
