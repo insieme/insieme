@@ -246,6 +246,27 @@ TEST(MissingReturnStmtCheck, WhileError) {
 	EXPECT_EQ(toString(checkResult[0]), "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
 }
 
+TEST(MissingReturnStmtCheck, Throw) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint {
+			throw 5;
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_TRUE(checkResult.empty());
+	EXPECT_EQ(toString(checkResult), "[]");
+}
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
