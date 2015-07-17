@@ -39,14 +39,11 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/semantic_checks.h"
 #include "insieme/utils/logging.h"
+#include "insieme/core/printer/error_printer.h"
 
 namespace insieme {
 namespace core {
 namespace checks {
-
-bool containsMSG(const MessageList& list, const Message& msg) {
-	return contains(list.getAll(), msg);
-}
 
 TEST(ScalarArrayIndexRangeCheck, Basic) {
 	NodeManager manager;
@@ -110,6 +107,144 @@ TEST(ScalarArrayIndexRangeCheck, Basic) {
 	}
 }
 
+TEST(MissingReturnStmtCheck, UnitLambda) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> unit { 
+			decl ref<uint<8>> i = var(0u);
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_TRUE(checkResult.empty());
+}
+
+TEST(MissingReturnStmtCheck, SimpleError) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint { 
+			decl ref<uint<8>> i = var(0u);
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+	
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_EQ(checkResult.size(), 1);
+	EXPECT_EQ(toString(checkResult[0]), "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+}
+
+TEST(MissingReturnStmtCheck, IfCorrect) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint { 
+			decl bool a = var(true);
+			if(a) {
+				return 1u;
+			} else {
+				return 2u;
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_TRUE(checkResult.empty());
+	EXPECT_EQ(toString(checkResult), "[]");
+}
+
+TEST(MissingReturnStmtCheck, IfError) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint { 
+			decl bool a = var(true);
+			if(a) {
+				return 1u;
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_EQ(checkResult.size(), 1);
+	EXPECT_EQ(toString(checkResult[0]), "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+}
+
+TEST(MissingReturnStmtCheck, WhileCorrect) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint {
+			decl bool a = var(true);			
+			while(true) {
+				if(a) return 1u;
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_TRUE(checkResult.empty());
+	EXPECT_EQ(toString(checkResult), "[]");
+}
+
+TEST(MissingReturnStmtCheck, WhileError) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda (bool b) -> uint {
+			decl bool a = var(true);			
+			while(b) {
+				if(a) return 1u;
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_EQ(checkResult.size(), 1);
+	EXPECT_EQ(toString(checkResult[0]), "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+}
 
 } // end namespace checks
 } // end namespace core

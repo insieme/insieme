@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,6 +40,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -58,9 +59,6 @@ namespace {
 		return retval;
 	}
 }
-
-#define CAST(TargetType, value) \
-	static_pointer_cast<const TargetType>(value)
 
 OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddress& curcall) {
 	OptionalMessageList res;
@@ -161,23 +159,91 @@ OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddre
 	auto& mgr = curfor->getNodeManager();
 	IRBuilder builder(mgr);
 
-    core::visitDepthFirstPrunable (curfor->getBody(), [&] (const core::NodeAddress& cur) -> bool{
-                if(cur.isa<core::BreakStmtAddress>())
-	                add(res, Message(cur,
-	    	            EC_SEMANTIC_FREE_BREAK_INSIDE_FOR_LOOP,
-	    	            format("Free break statements are not allowed inside for loops. Consider while loop instead."),
-		                Message::ERROR));
+    core::visitDepthFirstPrunable(curfor->getBody(), [&](const core::NodeAddress& cur) -> bool {
+        if(cur.isa<core::BreakStmtAddress>()) {
+	        add(res, Message(cur,
+	    	    EC_SEMANTIC_FREE_BREAK_INSIDE_FOR_LOOP,
+	    	    format("Free break statements are not allowed inside for loops. Consider while loop instead."),
+		        Message::ERROR));
+		}
 
-				if (cur.isa<core::LambdaExprAddress>() || cur.isa<core::ForStmtAddress>() || cur.isa<core::WhileStmtAddress>() || cur.isa<core::SwitchStmtAddress>())
-					return true;
-				else 
-                    return false;
-                    });
+		if(cur.isa<core::LambdaExprAddress>() || cur.isa<core::ForStmtAddress>() 
+			|| cur.isa<core::WhileStmtAddress>() || cur.isa<core::SwitchStmtAddress>()) {
+			return true;
+		} else {
+            return false;
+		}
+    });
 
     return res;
 }
 
-#undef CAST
+namespace {
+	class ReturnStmtCheckVisitor : public IRVisitor<bool, Pointer, bool> {
+
+		bool visitReturnStmt(const ReturnStmtPtr&, bool) {
+			LOG(DEBUG) << "Visit return!\n";
+			return true;
+		}
+
+		bool visitIfStmt(const IfStmtPtr& ifst, bool inInfiniteLoop) {
+			LOG(DEBUG) << "Visit if ---- \n" << dumpColor(ifst) << "\n-----";
+			bool ifSide = visit(ifst->getThenBody(), false);
+			bool elseSide = visit(ifst->getElseBody(), false);
+			return inInfiniteLoop ? (ifSide || elseSide) : (ifSide && elseSide);
+		}
+
+		bool visitCompoundStmt(const CompoundStmtPtr& comp, bool inInfiniteLoop) {
+			LOG(DEBUG) << "Visit compound ---- \n" << dumpColor(comp) << "\n-----";
+			auto elems = comp->getStatements();
+			if(elems.empty()) return false;
+			for(auto i = elems.cend()-1; i != elems.cbegin(); --i) {
+				bool r = visit(*i, inInfiniteLoop);
+				if(r) return true;
+			}
+			return visit(elems.front(), inInfiniteLoop);
+		}
+
+		bool visitWhileStmt(const WhileStmtPtr& whileStmt, bool) {
+			LOG(DEBUG) << "Visit while ---- \n" << dumpColor(whileStmt) << "\n-----";
+			auto cond = whileStmt->getCondition();
+			bool infiniteLoop = false;
+			try {
+				auto constraint = arithmetic::toConstraint(cond);
+				infiniteLoop = constraint.isValid();
+			} catch(arithmetic::NotAConstraintException) { /* not a constraint, not our problem */ }
+			LOG(DEBUG) << " --> infinite? " << infiniteLoop;
+			return visit(whileStmt->getBody(), infiniteLoop);
+		}
+	};
+}
+
+OptionalMessageList MissingReturnStmtCheck::visitLambdaExpr(const LambdaExprAddress& lambdaExpr) {
+	OptionalMessageList res;
+
+	auto& nodeMan = lambdaExpr->getNodeManager();
+	auto& basic = nodeMan.getLangBasic();
+
+	// check non-unit return types
+	if(!basic.isUnit(lambdaExpr->getFunctionType()->getReturnType())) {
+		// skip constructors and destructors
+		const auto kind = lambdaExpr->getFunctionType()->getKind();
+		if(kind != FK_CONSTRUCTOR && kind != FK_DESTRUCTOR) {
+			LOG(DEBUG) << " --> engaging check\n";
+			ReturnStmtCheckVisitor checker;
+			if(!checker.visit(lambdaExpr->getBody(), false)) {
+				LOG(DEBUG) << "MissingReturnStmtCheck failed for: \n" << dumpColor(lambdaExpr);
+				VLOG(1) << " -> Text dump:\n" << dumpText(lambdaExpr); 
+				add(res, Message(lambdaExpr,
+					EC_SEMANTIC_MISSING_RETURN_STMT,
+					format("Not all control paths of non-unit lambdaExpr return a value."),
+					Message::ERROR));
+			}
+		}
+	}
+
+	return res;
+}
 
 } // end namespace check
 } // end namespace core
