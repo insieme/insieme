@@ -381,7 +381,7 @@ namespace runtime {
 
 	struct WorkItemVariantCode {
 
-		string entryName;
+		c_ast::FunctionPtr impl;
 
 		unsigned metaInfoEntryIndex;
 
@@ -389,12 +389,12 @@ namespace runtime {
 		 * Creates a new entry to the implementation table referencing the names
 		 * of the functions describing the properties of the work item.
 		 *
-		 * @param name the name of the function implementing this work item variant
+		 * @param impl the function implementing this work item variant
 		 * @param effortName the name of the function implementing the effort estimation function. If the
 		 * 			name is empty, no such function is present.
 		 */
-		WorkItemVariantCode(const string& name, unsigned metaInfoEntryIndex = 0)
-			: entryName(name), metaInfoEntryIndex(metaInfoEntryIndex) { }
+		WorkItemVariantCode(const c_ast::FunctionPtr& impl, unsigned metaInfoEntryIndex = 0)
+			: impl(impl), metaInfoEntryIndex(metaInfoEntryIndex) { }
 	};
 
 	struct WorkItemImplCode {
@@ -463,18 +463,21 @@ namespace runtime {
 		vector<WorkItemVariantCode> variants;
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
+			// get the implementation function
+			c_ast::FunctionPtr impl = funManager.getInfo(cur.getImplementation()).function;
+
 			// get id of this variation
 			unsigned var_id = variants.size();
 
 			// update implementation name
 			string implName = format("insieme_wi_%d_var_%d_impl", id, var_id);
-			funManager.rename(cur.getImplementation(), implName);
+			impl->name->name = implName;
 
 			// register meta info
 			unsigned info_id = MetaInfoTable::get(converter)->registerMetaInfoFor(cur.getImplementation());
 
 			// add to variant to lists of variants
-			variants.push_back(WorkItemVariantCode(implName, info_id));
+			variants.push_back(WorkItemVariantCode(impl, info_id));
 		});
 
 		// add implementation to list of implementations
@@ -499,7 +502,7 @@ namespace runtime {
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
 			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
-				out << "    { &" << variant.entryName << ", ";
+				out << "    { &" << variant.impl->name->name << ", ";
 
 				// data and channel requirements
 				out << "0, NULL, 0, NULL, ";

@@ -167,10 +167,6 @@ namespace backend {
 		return *(store->resolve(bind));
 	}
 
-	void FunctionManager::rename(const core::LambdaExprPtr& lambda, const string& name) {
-		(store->resolve(lambda))->function->name->name = name;
-	}
-
 	bool FunctionManager::isBuiltIn(const core::NodePtr& op) const {
 		if(op->getNodeCategory() != core::NC_Expression) return false;
 		return operatorTable.find(op.as<core::ExpressionPtr>()) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
