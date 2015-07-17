@@ -7,6 +7,7 @@
 
 class Obj{
 	Obj& operator=(const Obj&){
+		return *this;
 	}
 
 	int val;

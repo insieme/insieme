@@ -4,7 +4,7 @@
 int N = 10;
 int i;
 
-int func(int k) {
+void func(int k) {
 
 	for(k; k<10; k++) {
 		printf("1a: k=%d\n", k);

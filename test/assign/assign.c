@@ -3,6 +3,7 @@
 
 int f(int b){
 	printf("call\n");
+	return 0;
 }
 
 
