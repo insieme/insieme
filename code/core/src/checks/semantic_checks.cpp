@@ -181,30 +181,24 @@ OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddre
 namespace {
 	class ReturnStmtCheckVisitor : public IRVisitor<bool, Pointer, bool> {
 
-		bool visitReturnStmt(const ReturnStmtPtr&, bool) {
+		bool visitReturnStmt(const ReturnStmtPtr&, bool) override {
 			LOG(DEBUG) << "Visit return!\n";
 			return true;
 		}
 
-		bool visitIfStmt(const IfStmtPtr& ifst, bool inInfiniteLoop) {
+		bool visitThrowStmt(const ThrowStmtPtr&, bool) override {
+			LOG(DEBUG) << "Visit throw!\n";
+			return true;
+		}
+
+		bool visitIfStmt(const IfStmtPtr& ifst, bool inInfiniteLoop) override {
 			LOG(DEBUG) << "Visit if ---- \n" << dumpColor(ifst) << "\n-----";
 			bool ifSide = visit(ifst->getThenBody(), false);
 			bool elseSide = visit(ifst->getElseBody(), false);
 			return inInfiniteLoop ? (ifSide || elseSide) : (ifSide && elseSide);
 		}
 
-		bool visitCompoundStmt(const CompoundStmtPtr& comp, bool inInfiniteLoop) {
-			LOG(DEBUG) << "Visit compound ---- \n" << dumpColor(comp) << "\n-----";
-			auto elems = comp->getStatements();
-			if(elems.empty()) return false;
-			for(auto i = elems.cend()-1; i != elems.cbegin(); --i) {
-				bool r = visit(*i, inInfiniteLoop);
-				if(r) return true;
-			}
-			return visit(elems.front(), inInfiniteLoop);
-		}
-
-		bool visitWhileStmt(const WhileStmtPtr& whileStmt, bool) {
+		bool visitWhileStmt(const WhileStmtPtr& whileStmt, bool) override {
 			LOG(DEBUG) << "Visit while ---- \n" << dumpColor(whileStmt) << "\n-----";
 			auto cond = whileStmt->getCondition();
 			bool infiniteLoop = false;
@@ -214,6 +208,17 @@ namespace {
 			} catch(arithmetic::NotAConstraintException) { /* not a constraint, not our problem */ }
 			LOG(DEBUG) << " --> infinite? " << infiniteLoop;
 			return visit(whileStmt->getBody(), infiniteLoop);
+		}
+
+		bool visitCompoundStmt(const CompoundStmtPtr& comp, bool inInfiniteLoop) override {
+			LOG(DEBUG) << "Visit compound ---- \n" << dumpColor(comp) << "\n-----";
+			auto elems = comp->getStatements();
+			if(elems.empty()) return false;
+			for(auto i = elems.cend()-1; i != elems.cbegin(); --i) {
+				bool r = visit(*i, inInfiniteLoop);
+				if(r) return true;
+			}
+			return visit(elems.front(), inInfiniteLoop);
 		}
 	};
 }
