@@ -56,10 +56,10 @@ set(GTEST_VERSION 1.7.0)
 set(BOOST_VERSION 1.50.0)
 
 #BISON - used in core
-set(BISON_VERSION 3.0.4)
+set(BISON_VERSION 3.0.0)
 
 #FLEX - used in core
-set(FLEX_VERSION 2.5.39)
+set(FLEX_VERSION 2.5.35)
 
 #HWLOC - used everywhere except for runtime...
 set(HWLOC_VERSION 1.10.1)
