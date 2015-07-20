@@ -175,8 +175,8 @@ insieme::core::TypePtr Cpp11Extension::VisitAutoType(const clang::AutoType* auto
  */
 insieme::core::TypePtr Cpp11Extension::VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) {
 	insieme::core::TypePtr retTy;
-	assert_true(declTy->getUnderlyingExpr());
-	retTy = convFact.convertExpr(declTy->getUnderlyingExpr ())->getType();
+	assert_true(declTy->getUnderlyingType().getTypePtr());
+	retTy = convFact.convertType(declTy->getUnderlyingType());
 	return retTy;
 }
 
