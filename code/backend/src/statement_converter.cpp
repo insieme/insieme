@@ -356,9 +356,7 @@ namespace backend {
 			if(!stp.size()) {
 				auto cmgr = context.getConverter().getCNodeManager();
 				auto zero = cmgr->create("0");
-				auto r = c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
-				std::cout << "~~~~: " << r << std::endl;
-				return r;
+				return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
 			}
 		}
 
