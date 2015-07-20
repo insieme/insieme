@@ -3,7 +3,7 @@
  * there is work in process to suport it, 
  * lets wait until 2016 and then we can use the $#%& ambigous grammar again
  */
-%require "3.0.4"
+%require "3.0.0"
 %defines
 %define parser_class_name {inspire_parser}
 %define api.namespace {insieme::core::parser3::detail}

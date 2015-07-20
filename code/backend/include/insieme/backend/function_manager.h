@@ -103,8 +103,6 @@ namespace backend {
 
 		const boost::optional<string> getHeaderFor(const core::LiteralPtr& function) const;
 
-		void rename(const core::LambdaExprPtr& lambda, const string& name);
-
 		bool isBuiltIn(const core::NodePtr& op) const;
 
 		// ------------------------- Management ---------------------

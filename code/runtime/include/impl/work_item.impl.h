@@ -393,6 +393,9 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 	irt_wi_event_register_destroy(wi->id);
 
+	// free the WG membership array which may have been allocated
+	if(wi->wg_memberships != NULL) free(wi->wg_memberships);
+
 	/* NOTE:
 	 * The triggering of events just at the end of the finalization and _after_
 	 * the decrementing of parent_num_active_children enables us to change the

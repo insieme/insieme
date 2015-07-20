@@ -2,6 +2,12 @@
 # This file sets up some general variables and include paths for the build environment common to both runtime and compiler
 #
 
+SET( CMAKE_CXX_FLAGS_DEBUG "-DINS_DEBUG" CACHE STRING
+    "Flags used by the C++ compiler during Debug builds."
+    FORCE )
+SET( CMAKE_C_FLAGS_DEBUG "-DINS_DEBUG" CACHE STRING
+    "Flags used by the C++ compiler during Debug builds."
+    FORCE )
 SET( CMAKE_CXX_FLAGS_RELWITHASSERTS "-O3 -DINS_REL_WITH_DBG" CACHE STRING
     "Flags used by the C++ compiler during Release with Asserts builds."
     FORCE )
