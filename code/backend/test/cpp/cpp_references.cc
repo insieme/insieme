@@ -80,6 +80,7 @@ namespace backend {
 				"	"
 				"	g(a);"
 				"	g(cpp2ir(b));"
+				"	return 0;"
 				"}",
 				symbols
 		);
@@ -152,6 +153,7 @@ namespace backend {
 				"	"
 				"	g(a);"
 				"	g(cpp2ir(b));"
+				"	return 0;"
 				"}",
 				symbols
 		);

@@ -71,6 +71,7 @@ namespace backend {
 					
 					print("%d\n", m->id(12));
 					print("%d\n", m->sum(12,14));
+					return 0;
 				}
 		)");
 
@@ -142,6 +143,7 @@ namespace backend {
 					c->p();
 					c->set(14);
 					c->p();
+					return 0;
 				}
 				)"
 		);
@@ -213,6 +215,8 @@ namespace backend {
 					c.as(B).y = 2;
 
 					c.z = 3;
+
+					return 0;
 				}
 				)"
 		);
