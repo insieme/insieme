@@ -243,6 +243,13 @@ core::ExpressionPtr Converter::ExprConverter::fixType(const core::ExpressionPtr&
 	// if it is already fitting => done
 	if (*targetType == *type) return expr;
 
+	// if we want to wrap a plain function type
+	// into a cpp ref we have to wrap it first
+	// into a var
+	if(core::analysis::isAnyCppRef(targetType) && type.isa<core::FunctionTypePtr>()) {
+		res = builder.refVar(res);
+	}
+
 	// if is a CPP ref, do not cast, do a transformation
 	if (core::analysis::isCppRef(targetType)) {
 		res =  builder.callExpr (targetType, mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), res);

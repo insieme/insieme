@@ -141,7 +141,15 @@ namespace addons {
 
 			res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
+			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({
+				if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefVar())){
+					auto innerCall = ARG(0).as<core::CallExprPtr>()->getArgument(0);
+					if(innerCall->getType().isa<core::FunctionTypePtr>()) {
+						return CONVERT_EXPR(innerCall);
+					}
+				}
+				return c_ast::deref(CONVERT_ARG(0));
+			});
 			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({
 
 				// the conversion from a value to a constcpp is implicit in C++
