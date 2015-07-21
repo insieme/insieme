@@ -433,4 +433,6 @@ static int clrspctojp2(jas_clrspc_t clrspc)
 		abort();
 		break;
 	}
+    // avoid insieme missing_return_stmt semantic error
+    return 0;
 }

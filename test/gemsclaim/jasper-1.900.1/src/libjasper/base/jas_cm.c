@@ -1067,6 +1067,8 @@ static int icctoclrspc(int iccclrspc, int refflag)
 			break;
 		}
 	}
+    // avoid insieme missing_return_stmt semantic error
+    return 0;
 }
 
 static int mono(jas_iccprof_t *iccprof, int op, jas_cmpxformseq_t **retpxformseq)
@@ -1276,6 +1278,8 @@ int jas_clrspc_numchans(int clrspc)
 		abort();
 		break;
 	}
+    // avoid insieme missing_return_stmt semantic error
+    return 0;
 }
 
 jas_iccprof_t *jas_iccprof_createfromcmprof(jas_cmprof_t *prof)
