@@ -59,8 +59,6 @@ namespace measure {
 	using namespace core;
 
 	TEST(Measuring, MeasureExecutionTime) {
-		Logger::setLevel(WARNING);
-
 		// create a small example code fragment
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -87,8 +85,6 @@ namespace measure {
 
 
 	TEST(Measuring, MeasureExecutionTimePFor) {
-		Logger::setLevel(WARNING);
-
 		// create a small example code fragment
 		NodeManager manager;
 		auto& basic = manager.getLangBasic();
@@ -175,8 +171,6 @@ namespace measure {
 //		FIXME: this code produces a division by 0 (see sum / i ) 
 //		any kind of hack i tried ended up in deadlock/infinite loop 
 //			this is related with measures, tests and runtime...
-
-		Logger::setLevel(WARNING);
 
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -288,8 +282,6 @@ namespace measure {
 	}
 
 	TEST(Measuring, MultipleExitPoints) {
-		Logger::setLevel(WARNING);
-
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -316,8 +308,6 @@ namespace measure {
 	}
 
 	TEST(Measuring, Measure) {
-		Logger::setLevel(WARNING);
-
 		// create a small example code fragment
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -353,8 +343,6 @@ namespace measure {
 	}
 
 // 	TEST(Measuring, MeasureRemote) {
-// 		Logger::setLevel(WARNING);
-// 
 // 		// test whether a remote session to the local host can be created
 // 		if (system("ssh localhost pwd > /dev/null")) {
 // 			std::cout << "Skipped remote test!\n";
@@ -397,8 +385,6 @@ namespace measure {
 // 	}
 
 //	TEST(Measuring, MeasureParallel) {
-//		Logger::setLevel(WARNING);
-//
 //		// create a small example code fragment
 //		NodeManager manager;
 //		IRBuilder builder(manager);
@@ -455,8 +441,6 @@ namespace measure {
 //	}
 
 	TEST(Measuring, MeasureMultipleRegionsMultipleMetrics) {
-		Logger::setLevel(WARNING);
-
 		// create a small example code fragment
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -549,8 +533,6 @@ namespace measure {
 
 
 	TEST(Measuring, PapiCounterPartitioning) {
-		Logger::setLevel(WARNING);
-
 		// create a small example code fragment
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -610,8 +592,6 @@ namespace measure {
 //	DISABLED DUE TO REQUIRED USER PRIVILEGES
 //
 //	TEST(Measuring, MeasureRemoteSGE) {
-//		Logger::setLevel(WARNING);
-//
 //		// create a small example code fragment
 //		NodeManager manager;
 //		IRBuilder builder(manager);
@@ -638,8 +618,6 @@ namespace measure {
 //	}
 //
 //	TEST(Measuring, MeasureRemotePBS) {
-//		Logger::setLevel(WARNING);
-//
 //		// create a small example code fragment
 //		NodeManager manager;
 //		IRBuilder builder(manager);

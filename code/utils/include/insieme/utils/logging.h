@@ -294,10 +294,7 @@ public:
 	 * effect on the underlying logger, the same logger is always returned.
 	 */
 	static Logger& get(std::ostream& out = std::cout) {
-		const Level& level = getLevelFromEnv();
-		unsigned short verbosity = getVerbosityFromEnv();
-		boost::regex filter = getFilterFromEnv();
-		static Logger logger(out, level, verbosity, filter);
+		static Logger logger(out, getLevelFromEnv(), getVerbosityFromEnv(), getFilterFromEnv());
 		return logger;
 	}
 	

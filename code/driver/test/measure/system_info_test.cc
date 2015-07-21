@@ -47,8 +47,6 @@ namespace measure {
 	using namespace std;
 
 	TEST(SystemInfo, HardwareSpecs) {
-		Logger::setLevel(WARNING);
-
 		SystemInfo sysInfo;
 
 		ASSERT_TRUE(sysInfo.isValid());
