@@ -111,10 +111,7 @@
 	 */
 	int main(int argc, char** argv) {
 		core::NodeManager manager;
-
-		// set up logger
-		Logger::get(cerr, loggingLevelFromStr("ERROR"));
-
+		
 		cout << " --- Insieme Code Feature Extractor ---- \n";
 
 		// process handle command line arguments

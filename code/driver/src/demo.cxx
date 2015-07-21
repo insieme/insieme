@@ -66,10 +66,6 @@ namespace cmd = insieme::driver::cmd;
 
 
 int main(int argc, char** argv) {
-	// filter logging messages
-	Logger::setLevel(ERROR);
-
-
 	// Step 1: parse input parameters
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.

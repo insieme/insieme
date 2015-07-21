@@ -53,9 +53,6 @@ using namespace insieme::analysis::polyhedral;
 using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
-
-	Logger::get(std::cerr, DEBUG);
-
 	using namespace insieme::core;
 	using namespace insieme::core::pattern;
 	using namespace insieme::analysis;

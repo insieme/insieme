@@ -158,8 +158,6 @@ public:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 
     std::string include = "-I" CLANG_SRC_DIR "inputs";

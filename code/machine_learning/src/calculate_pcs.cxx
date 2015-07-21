@@ -109,7 +109,6 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("exclude-cid,e",		bpo::value<std::vector<std::string>>(),	"cids to exclude from the principal components calculation")
 			("filter-cid,f",		bpo::value<std::vector<std::string>>(),	"cids to use to calculate the principal components")
 			("combine,c",													"if set, static and dynamic features will be combined to form pca features")
-			("log-level,L",     	bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 			("output,o",			bpo::value<std::string>(),				"File where to write the output. Optional, default: std::out")
 	;
 
@@ -133,12 +132,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 
 	CmdOptions res;
 	res.valid = true;
-
-	// log level
-	if (map.count("log-level")) {
-		Logger::get(std::cerr, loggingLevelFromStr(map["log-level"].as<std::string>()));
-	}
-
+	
 	// database path
 	if (map.count("database-file")) {
 		res.databaseFile = map["database-file"].as<std::string>();

@@ -476,7 +476,6 @@ using insieme::core::pattern::anyList;
 
 
 	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
-		Logger::get(std::cerr, ERROR, 0);
 		// Semantic check on code
 		//LOG(INFO) << "Errors Before OCL host preprocess: " << core::checks::check(code, core::checks::getFullCheck());
 		//LOG(DEBUG) << "Code before Host Preprocessing: " << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL);

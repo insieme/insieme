@@ -76,9 +76,6 @@ namespace ia = insieme::annotations;
 
 
 TEST(TypeConversion, HandleBuildinType) {
-
-	Logger::get(std::cerr, INFO);
-
 	NodeManager manager;
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 
@@ -160,8 +157,6 @@ TEST(TypeConversion, HandleBuildinType) {
 	EXPECT_EQ(InsiemeTypeDesc, toString(*convType)); }
 
 TEST(TypeConversion, PointerToType) {
-	Logger::get(std::cerr, INFO);
-
 	NodeManager manager;
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 
@@ -262,8 +257,6 @@ TEST(TypeConversion, PointerToType) {
 	EXPECT_EQ(InsiemeTypeDesc, toString(*convType)); }
 
 TEST(TypeConversion, References) {
-	Logger::get(std::cerr, INFO);
-
 	NodeManager manager;
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 
@@ -350,8 +343,6 @@ TEST(TypeConversion, References) {
 
 
 TEST(TypeConversion, CombinedTypes) {
-	Logger::get(std::cerr, INFO);
-
 	NodeManager manager;
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 	Converter convFactory( manager, tu);
@@ -431,9 +422,6 @@ TEST(TypeConversion, CombinedTypes) {
 }
 
 TEST(TypeConversion, HandleRecursiveStructType) {
-
-	Logger::get(std::cerr, INFO);
-
 	NodeManager manager;
 	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
 	Converter convFactory( manager, tu);
@@ -486,8 +474,6 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 
 TEST(TypeConversion, FileTest) {
-	Logger::get(std::cerr, INFO, 2);
-
 	NodeManager manager;
 	const std::string filename = CLANG_SRC_DIR "/inputs/types.c";
 	std::vector<std::string> argv = { "compiler", filename };

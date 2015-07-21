@@ -130,7 +130,6 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 			("calculate-error,e",											"flag to calculate the error of the entire dataset")
 			("svm,v",				bpo::value<int>(),						"flag use a svm instead of a neural network. 0 for MultiClassSVM, 1 for EpsilonSVM")
 			("output,o",			bpo::value<std::string>(),				"File where to write the output. Optional, default: std::out")
-			("log-level,L",     	bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 	;
 
 	// define positional options (all options not being named)
@@ -153,12 +152,7 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 
 	CmdOptions res;
 	res.valid = true;
-
-	// log level
-	if (map.count("log-level")) {
-		Logger::get(std::cerr, loggingLevelFromStr(map["log-level"].as<std::string>()));
-	}
-
+	
 	// model path
 	if (map.count("model-path")) {
 		res.modelPath = map["model-path"].as<std::string>();

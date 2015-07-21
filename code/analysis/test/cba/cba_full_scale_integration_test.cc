@@ -126,8 +126,6 @@ namespace cba {
 
 
 	vector<string> getInputFiles() {
-		Logger::setLevel(ERROR);
-
 		vector<string> res;
 
 		namespace idi = insieme::driver::integration;

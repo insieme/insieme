@@ -82,10 +82,8 @@ OPTION("intercept", 			intercept,					std::vector<std::string>, 			std::vector<s
 OPTION("isystem", 				systemIncludePaths, 		std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"additional system include search path(s)")
 OPTION("library-file,l", 		libraryFiles,				std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"linker flag(s)/file(s)")
 OPTION("library-path,L", 		libraryPaths,				std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"library search path(s)")
-OPTION("log-level",				logLevel,					std::string,						"ERROR", 							"log level: DEBUG|INFO|WARN|ERROR|FATAL")
 OPTION("dump-kernel",			dumpOclKernel,				frontend::path,						"a.cl", 							"dump OpenCL kernel")
 OPTION("optimization,O", 		optimization, 				std::string,						std::string(),						"optimization flag")
-OPTION("verbose,v",				verbosity,					int,								0, 									"set log verbosity")
 
 #undef FLAG
 #undef PARAMETER

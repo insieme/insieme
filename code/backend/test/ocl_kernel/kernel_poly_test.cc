@@ -67,7 +67,6 @@ using namespace insieme::utils::log;
 
 TEST(KernelPoly, RangeTest) {
 	NodeManager manager;
-	Logger::get(std::cerr, INFO);
 
 	// Frontend PATH
 	std::string includeA = "-I" CLANG_SRC_DIR;

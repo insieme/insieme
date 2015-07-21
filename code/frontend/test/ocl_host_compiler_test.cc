@@ -90,8 +90,6 @@ void checkKernel(core::NodePtr program, const core::NodeManager& manager) {
 }
 
 void runOclTest(const std::string inputFile) {
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 
 	// create and customize conversion job
@@ -162,8 +160,6 @@ TEST(OclHostCompilerTest, HelloHostStructTest) {
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
-	Logger::get(std::cerr, ERROR);
-
 	core::NodeManager manager;
 
 	// create and customize conversion job

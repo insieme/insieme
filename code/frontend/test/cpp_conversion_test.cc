@@ -95,8 +95,6 @@ std::string getPrettyPrinted(const NodePtr& node) {
 
 TEST(CppConversion, FileTest) {
 
-	Logger::get(std::cerr, DEBUG, 0);
-
 	NodeManager manager;
 
 	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/cpp.cpp");

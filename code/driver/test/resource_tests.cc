@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -98,7 +98,6 @@ namespace {
 
 
 TEST(SpeedTest, GetStatus) {
-	Logger::setLevel(ERROR);
 	core::NodeManager manager;
 
 	// load test case
@@ -122,7 +121,6 @@ TEST(SpeedTest, GetStatus) {
 
 // define the test case pattern
 TEST(SpeedTest, IRCopy) {
-	Logger::setLevel(ERROR);
 	core::NodeManager manager;
 
 	// load test case
@@ -145,7 +143,6 @@ TEST(SpeedTest, IRCopy) {
 
 // define the test case pattern
 TEST(SpeedTest, VisitAllPtr) {
-	Logger::setLevel(ERROR);
 	core::NodeManager manager;
 	
 	// load test case
@@ -168,7 +165,6 @@ TEST(SpeedTest, VisitAllPtr) {
 
 // define the test case pattern
 TEST(SpeedTest, VisitOncePtr) {
-	Logger::setLevel(ERROR);
 	core::NodeManager manager;
 
 	// load test case
@@ -191,7 +187,6 @@ TEST(SpeedTest, VisitOncePtr) {
 
 // define the test case pattern
 TEST(IRQualityTest, HashCollisions) {
-	Logger::setLevel(ERROR);
 	core::NodeManager manager;
 
 	// load test case

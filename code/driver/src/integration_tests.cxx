@@ -197,10 +197,7 @@ void printSummary(const int totalTests, const int okCount, const int omittedCoun
 
 
 int main(int argc, char** argv) {
-	//TODO custom root config file
-
-	Logger::setLevel(WARNING);
-
+	// TODO custom root config file
 	// set OMP/IRT environment variables if not already set
 	setenv("IRT_NUM_WORKERS", "3", 0);
 	setenv("OMP_NUM_THREADS", "3", 0);

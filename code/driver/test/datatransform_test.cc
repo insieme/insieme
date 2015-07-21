@@ -57,8 +57,6 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(DatatransformTest, SimplePragma) {
-	Logger::get(std::cerr, INFO);
-
 	core::NodeManager manager;
 
 	std::string srcDir = SRC_ROOT_DIR "driver/test/inputs/datatransform.c";

@@ -84,8 +84,6 @@
 	 * The Insieme Inspire Parser
 	 */
 	int main(int argc, char** argv) {
-		Logger::setLevel(ERROR);
-
 		cout << " --- Insieme Inspire Parser, Version 0.0..01beta ---- \n";
 
 		CmdOptions options = parseCommandLine(argc, argv);

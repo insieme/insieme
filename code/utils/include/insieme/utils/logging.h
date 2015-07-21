@@ -57,8 +57,9 @@ namespace insieme {
 namespace utils {
 namespace log {
 
-#define LOG_DEFAULT INFO
+#define LOG_DEFAULT ERROR
 #define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
+#define LOG_VERBOSITY_ENV "INSIEME_LOG_VERBOSITY"
 #define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
 
 namespace io = boost::iostreams;
@@ -160,7 +161,15 @@ static inline Level getLevelFromEnv() {
 	if(lvl != nullptr) {
 		return loggingLevelFromStr(lvl);
 	}
-	return INFO;
+	return LOG_DEFAULT;
+}
+
+static inline unsigned short getVerbosityFromEnv() {
+	auto verb = getenv(LOG_VERBOSITY_ENV);
+	if(verb != nullptr) {
+		return atoi(verb);
+	}
+	return 0;
 }
 
 static inline boost::regex getFilterFromEnv() {
@@ -174,7 +183,7 @@ static inline boost::regex getFilterFromEnv() {
 /**
  * Prints the level at which the log was taken.
  */
-template <const Level L=INFO>
+template <const Level L=DEBUG>
 struct LevelSpec {
 	static void format(std::ostream& out, const Ctx& ctx) {
 		out << loggingLevelToStr(L);
@@ -284,20 +293,15 @@ public:
 	 * Sequent calls to this method with different input parameters has no
 	 * effect on the underlying logger, the same logger is always returned.
 	 */
-	static Logger& get(std::ostream& out = std::cout, const Level& level = getLevelFromEnv(), 
-		               unsigned short verbosity = 0, boost::regex filter = getFilterFromEnv()) {
+	static Logger& get(std::ostream& out = std::cout) {
+		const Level& level = getLevelFromEnv();
+		unsigned short verbosity = getVerbosityFromEnv();
+		boost::regex filter = getFilterFromEnv();
 		static Logger logger(out, level, verbosity, filter);
 		return logger;
 	}
-
-	/**
-	 * Updates the global logging level to the given value.
-	 */
-	static void setLevel(Level level, short verbosity = 0) {
-		get().m_level = level; get().m_verbosity = verbosity;
-	}
-
-	// Level getters/setters
+	
+	// getters
 	const Level& level() const { return m_level; }
 	const unsigned short& verbosity() const { return m_verbosity; }
 

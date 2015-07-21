@@ -78,9 +78,6 @@ LambdaExprPtr getEntryPoint(const core::ProgramPtr& prog, const std::string& ent
 }
 
 TEST(OMPx, SimpleRegion) {
-
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 
@@ -142,9 +139,6 @@ void dumpObjectiveMetaInfo(insieme::annotations::ompp_objective_info info) {
 }
 
 TEST(OMPx, Objective) {
-
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 
@@ -209,9 +203,6 @@ TEST(OMPx, Objective) {
 }
 
 TEST(OMPx, Target) {
-
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 
@@ -231,9 +222,6 @@ TEST(OMPx, Target) {
 }
 
 TEST(OMPx, Param) {
-
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
     auto& basic = manager.getLangBasic();
@@ -304,9 +292,6 @@ TEST(OMPx, Param) {
 }
 
 TEST(OMPx, FirstLocal) {
-
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 

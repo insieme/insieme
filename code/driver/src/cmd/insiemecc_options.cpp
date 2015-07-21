@@ -107,8 +107,8 @@ namespace cmd {
 
 		OptionParser::operator Options() {
 			// -- parsing -------------------------------------------
-                        // remove the first entry: this should be some string like "insiemecc"
-                        argv.erase(argv.begin());
+			// remove the first entry: this should be some string like "insiemecc"
+			argv.erase(argv.begin());
 
 			// define positional options (all options not being named)
 			bpo::positional_options_description pos;

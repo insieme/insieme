@@ -106,9 +106,6 @@ std::string getPrettyPrinted(const NodePtr& node) {
 
 
 TEST(StmtConversion, FileTest) {
-
-	Logger::get(std::cerr, DEBUG, 0);
-
 	NodeManager manager;
 	const std::string filename = CLANG_SRC_DIR "/inputs/stmt.c";
 	std::vector<std::string> argv = { "compiler", filename };

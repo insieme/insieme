@@ -63,8 +63,6 @@ namespace fe = insieme::frontend;
 
 //TEST(TypeConversion, HandleBuildinType) {
 //
-//	Logger::get(std::cerr, DEBUG, 2);
-//
 //	NodeManager manager;
 //	fe::Program prog(manager);
 //
@@ -386,8 +384,6 @@ TEST(TypeConversion, HandleFunctionType) {
 
 
 TEST(TypeConversion, FileTest) {
-	Logger::get(std::cerr, FATAL, 2);
-
 // 	NodeManager manager;
 // 	fe::Program prog(manager);
 // 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cxx_types.cpp" );

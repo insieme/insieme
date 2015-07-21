@@ -61,7 +61,6 @@ using namespace insieme;
 namespace af = analysis::features;
 
 TEST(OclFeaturesTest, StaticFeaturesTest) {
-	Logger::get(std::cerr, INFO, 0);
 	core::NodeManager manager;
 
 	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/hello.cl" << "' to IR...";

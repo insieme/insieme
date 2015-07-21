@@ -57,8 +57,6 @@ namespace p = insieme::core::pattern;
 using namespace insieme::driver;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
-	Logger::get(std::cerr, ERROR, 0);
-
 	core::NodeManager manager;
 
 	// create and customize conversion job

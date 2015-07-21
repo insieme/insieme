@@ -384,7 +384,6 @@ TEST_F(MlTest, CreateDb) {
 }
 
 TEST_F(MlTest, SvmTrain) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 	RBFKernel kernel(1.0);
 
@@ -431,7 +430,6 @@ TEST_F(MlTest, SvmTrain) {
 }
 
 TEST_F(MlTest, MultiSvmTrain) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	RBFKernel kernel(1.0);
@@ -477,7 +475,6 @@ TEST_F(MlTest, MultiSvmTrain) {
 }
 
 TEST_F(MlTest, EpsilonSvmTrain) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	RBFKernel kernel(1.0);
@@ -524,7 +521,6 @@ TEST_F(MlTest, EpsilonSvmTrain) {
 
 
 TEST_F(MlTest, FfNetTrain) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	// Create a connection matrix with 3 inputs, 5 output
@@ -578,7 +574,6 @@ TEST_F(MlTest, FfNetTrain) {
 }
 
 TEST_F(MlTest, FfNetBinaryCompareTrain) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	// Create a connection matrix with 2 inputs, 1 output
@@ -643,7 +638,6 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 }
 
 TEST_F(MlTest, LoadModel) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	// declare Machine
@@ -692,7 +686,6 @@ TEST_F(MlTest, LoadModel) {
 }
 
 TEST_F(MlTest, PCAseparate) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	size_t nIn = 3;
@@ -711,7 +704,6 @@ TEST_F(MlTest, PCAseparate) {
 }
 
 TEST_F(MlTest, PCAcombined) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	// extract two pcs
@@ -758,7 +750,6 @@ TEST_F(MlTest, PCAcombined) {
 
 
 TEST_F(MlTest, FuzzyTrain) {
-	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	// Create a connection matrix with 3 inputs, 5 output

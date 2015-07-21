@@ -97,8 +97,6 @@ TEST(IWIRTest, XmlToDom) {
 */
 
 TEST(IWIRTest, ReadIWIR_Atomic1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/atomicTest1.xml";
 
 	NodeManager mgr;
@@ -108,8 +106,6 @@ TEST(IWIRTest, ReadIWIR_Atomic1) {
 }
 
 TEST(IWIRTest, ReadIWIR_Atomic2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/atomicTest2.xml";
 
 	NodeManager mgr;
@@ -119,8 +115,6 @@ TEST(IWIRTest, ReadIWIR_Atomic2) {
 }
 
 TEST(IWIRTest, ReadIWIR_If1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/ifTest1.xml";
 
 	NodeManager mgr;
@@ -130,8 +124,6 @@ TEST(IWIRTest, ReadIWIR_If1) {
 }
 
 TEST(IWIRTest, ReadIWIR_If2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/ifTest2.xml";
 
 	NodeManager mgr;
@@ -141,8 +133,6 @@ TEST(IWIRTest, ReadIWIR_If2) {
 }
 
 TEST(IWIRTest, ReadIWIR_If3) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/ifTest3.xml";
 
 	NodeManager mgr;
@@ -152,8 +142,6 @@ TEST(IWIRTest, ReadIWIR_If3) {
 }
 
 TEST(IWIRTest, ReadIWIR_If4) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/ifTest4.xml";
 
 	NodeManager mgr;
@@ -163,8 +151,6 @@ TEST(IWIRTest, ReadIWIR_If4) {
 }
 
 TEST(IWIRTest, ReadIWIR_If5) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/ifTest5.xml";
 
 	NodeManager mgr;
@@ -174,8 +160,6 @@ TEST(IWIRTest, ReadIWIR_If5) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest1.xml";
 
 	NodeManager mgr;
@@ -185,8 +169,6 @@ TEST(IWIRTest, ReadIWIR_BS1) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest2.xml";
 
 	NodeManager mgr;
@@ -196,8 +178,6 @@ TEST(IWIRTest, ReadIWIR_BS2) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS3) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest3.xml";
 
 	NodeManager mgr;
@@ -207,8 +187,6 @@ TEST(IWIRTest, ReadIWIR_BS3) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS4) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest4.xml";
 
 	NodeManager mgr;
@@ -218,8 +196,6 @@ TEST(IWIRTest, ReadIWIR_BS4) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS5) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest5.xml";
 
 	NodeManager mgr;
@@ -229,8 +205,6 @@ TEST(IWIRTest, ReadIWIR_BS5) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS6) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest6.xml";
 
 	NodeManager mgr;
@@ -240,8 +214,6 @@ TEST(IWIRTest, ReadIWIR_BS6) {
 }
 
 TEST(IWIRTest, ReadIWIR_BS7) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/blockScopeTest7.xml";
 
 	NodeManager mgr;
@@ -251,8 +223,6 @@ TEST(IWIRTest, ReadIWIR_BS7) {
 }
 
 TEST(IWIRTest, ReadIWIR_While1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/whileTest1.xml";
 
 	NodeManager mgr;
@@ -262,8 +232,6 @@ TEST(IWIRTest, ReadIWIR_While1) {
 }
 
 TEST(IWIRTest, ReadIWIR_While2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/whileTest2.xml";
 
 	NodeManager mgr;
@@ -273,9 +241,6 @@ TEST(IWIRTest, ReadIWIR_While2) {
 }
 
 TEST(IWIRTest, ReadIWIR_While3) {
-
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/whileTest3.xml";
 
 	NodeManager mgr;
@@ -285,8 +250,6 @@ TEST(IWIRTest, ReadIWIR_While3) {
 }
 
 TEST(IWIRTest, ReadIWIR_For1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest1.xml";
 
 	NodeManager mgr;
@@ -296,8 +259,6 @@ TEST(IWIRTest, ReadIWIR_For1) {
 }
 
 TEST(IWIRTest, ReadIWIR_For2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest2.xml";
 
 	NodeManager mgr;
@@ -307,8 +268,6 @@ TEST(IWIRTest, ReadIWIR_For2) {
 }
 
 TEST(IWIRTest, ReadIWIR_For3) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest3.xml";
 
 	NodeManager mgr;
@@ -318,8 +277,6 @@ TEST(IWIRTest, ReadIWIR_For3) {
 }
 
 TEST(IWIRTest, ReadIWIR_For4) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest4.xml";
 
 	NodeManager mgr;
@@ -329,8 +286,6 @@ TEST(IWIRTest, ReadIWIR_For4) {
 }
 
 TEST(IWIRTest, ReadIWIR_For5) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest5.xml";
 
 	NodeManager mgr;
@@ -340,8 +295,6 @@ TEST(IWIRTest, ReadIWIR_For5) {
 }
 
 TEST(IWIRTest, ReadIWIR_For6) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest6.xml";
 
 	NodeManager mgr;
@@ -351,8 +304,6 @@ TEST(IWIRTest, ReadIWIR_For6) {
 }
 
 TEST(IWIRTest, ReadIWIR_For7) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest7.xml";
 
 	NodeManager mgr;
@@ -362,8 +313,6 @@ TEST(IWIRTest, ReadIWIR_For7) {
 }
 
 TEST(IWIRTest, ReadIWIR_For8) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forTest8.xml";
 
 	NodeManager mgr;
@@ -373,8 +322,6 @@ TEST(IWIRTest, ReadIWIR_For8) {
 }
 
 TEST(IWIRTest, ReadIWIR_ForEach1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forEachTest1.xml";
 
 	NodeManager mgr;
@@ -384,8 +331,6 @@ TEST(IWIRTest, ReadIWIR_ForEach1) {
 }
 
 TEST(IWIRTest, ReadIWIR_ForEach2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forEachTest2.xml";
 
 	NodeManager mgr;
@@ -395,8 +340,6 @@ TEST(IWIRTest, ReadIWIR_ForEach2) {
 }
 
 TEST(IWIRTest, ReadIWIR_ForEach3) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/forEachTest3.xml";
 
 	NodeManager mgr;
@@ -406,8 +349,6 @@ TEST(IWIRTest, ReadIWIR_ForEach3) {
 }
 
 TEST(IWIRTest, ReadIWIR_ParallelForEach1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/parallelForEachTest1.xml";
 
 	NodeManager mgr;
@@ -418,8 +359,6 @@ TEST(IWIRTest, ReadIWIR_ParallelForEach1) {
 
 
 TEST(IWIRTest, ReadIWIR_ParallelFor1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/parallelForTest1.xml";
 
 	NodeManager mgr;
@@ -429,8 +368,6 @@ TEST(IWIRTest, ReadIWIR_ParallelFor1) {
 }
 
 TEST(IWIRTest, ReadIWIR_ParallelFor2) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/parallelForTest2.xml";
 
 	NodeManager mgr;
@@ -440,8 +377,6 @@ TEST(IWIRTest, ReadIWIR_ParallelFor2) {
 }
 
 TEST(IWIRTest, ReadIWIR_ImplicitLinkCasts) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/implicitLinkCasts.xml";
 
 	NodeManager mgr;
@@ -451,8 +386,6 @@ TEST(IWIRTest, ReadIWIR_ImplicitLinkCasts) {
 }
 
 TEST(IWIRTest, ReadIWIR_Wien2K) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/wien2k.xml";
 
 	NodeManager mgr;
@@ -462,8 +395,6 @@ TEST(IWIRTest, ReadIWIR_Wien2K) {
 }
 
 TEST(IWIRTest, ReadIWIR_SubWF1) {
-	Logger::get(std::cerr, INFO, 1);
-	
 	auto iwirInput = IWIR_TEST_DIR + "input/subWFTest1.xml";
 
 	NodeManager mgr;

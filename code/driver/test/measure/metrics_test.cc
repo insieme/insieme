@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -59,8 +59,6 @@ namespace measure {
 	using namespace core;
 
 	TEST(Measuring, Metrics) {
-		Logger::setLevel(WARNING);
-
 		// play a little using units
 		auto time = Metric::CPU_TIME;
 
@@ -75,8 +73,6 @@ namespace measure {
 	}
 
 	TEST(Measuring, MetricsDependencies) {
-		Logger::setLevel(WARNING);
-
 		// test some parameter without dependency
 		EXPECT_TRUE(Metric::PAPI_L1_DCM->getDependencies().empty());
 
@@ -89,8 +85,6 @@ namespace measure {
 
 
 	TEST(Measuring, MetricsDependencyClosure) {
-		Logger::setLevel(WARNING);
-
 		// the set of dependencies to compare with
 		std::set<MetricPtr> dep;
 

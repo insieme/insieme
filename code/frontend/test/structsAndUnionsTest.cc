@@ -58,8 +58,6 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(StructsAndUnionTest, Cinput) {
-	Logger::get(std::cerr, INFO, 0);
-
 	core::NodeManager manager;
 
 	// create and customize conversion job

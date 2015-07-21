@@ -50,8 +50,6 @@ namespace iwir {
 namespace condition_ast {
 
 TEST(ConditionTest, Parsing) {
-	Logger::get(std::cerr, INFO, 1);
-
 	auto inputs = std::list<std::string>( {
 				"true",
 				"True",
@@ -108,8 +106,6 @@ TEST(ConditionTest, Parsing) {
 }
 
 TEST(ConditionTest, InvalidParsing) {
-	Logger::get(std::cerr, INFO, 1);
-
 	//TODO needs better invalid input detection
 	
 	auto inputs = std::list<std::string>( {

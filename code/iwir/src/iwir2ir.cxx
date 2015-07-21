@@ -56,8 +56,6 @@ int main(int argc, char** argv) {
 
 	if (!options.valid) return (options.help)?0:1;
 
-	Logger::get(std::cerr, DEBUG, verbosity);
-
 	core::NodeManager mgr;
 	std::string iwirFile = options.inFile;
 	

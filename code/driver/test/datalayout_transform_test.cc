@@ -58,7 +58,6 @@
 using namespace insieme;
 
 TEST(DatalayoutTransformTest, OclTest) {
-	Logger::get(std::cerr, INFO, 0);
 	core::NodeManager manager;
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_ROOT_DIR) << "transform/test/datalayout/inputs/sparsevec.c" << "' to IR...";

@@ -394,8 +394,6 @@ int main(int argc, char** argv) {
     std::vector<std::string> arguments(argv, argv + argc);
     cmd::Options options = cmd::Options::parse(arguments);
 
- 	Logger::get(std::cerr, loggingLevelFromStr(options.settings.logLevel), options.settings.verbosity);
-
 	// if options are invalid, exit non-zero
 	if(!options.valid)
 		return 1;

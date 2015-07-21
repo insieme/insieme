@@ -76,9 +76,6 @@ namespace {
 }
 
 int main(int argc, char** argv) {
-
-	Logger::setLevel(WARNING);
-
 	// parse parameters
 	tf::Options options = parseCommandLine(argc, argv);
 

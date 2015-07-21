@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,8 +46,6 @@ namespace driver {
 namespace measure {
 
 	TEST(Measuring, Prefix) {
-		Logger::setLevel(ERROR);
-
 		// check prefixes
 		Prefix one;
 		EXPECT_EQ("", toString(one));
@@ -77,8 +75,6 @@ namespace measure {
 	}
 
 	TEST(Measuring, Units) {
-		Logger::setLevel(ERROR);
-
 		// play a little using units
 		EXPECT_EQ("m", toString(m));
 		EXPECT_EQ("kg^2", toString(kg^2));
@@ -110,8 +106,6 @@ namespace measure {
 
 
 	TEST(Measuring, Quantities) {
-		Logger::setLevel(ERROR);
-
 		// play a little using units
 		auto a = 1 * m;		// should be 1 meter
 		auto b = 1.5 * m;	// another distance
@@ -167,9 +161,6 @@ namespace measure {
 	}
 
 	TEST(Measuring, QuantityValue) {
-		Logger::setLevel(ERROR);
-
-
 		auto a = 150 * m;
 		EXPECT_TRUE(a.isInteger());
 		EXPECT_EQ(m, a.getUnit());
@@ -186,8 +177,6 @@ namespace measure {
 	}
 
 	TEST(Measuring, ArithmeticOps) {
-		Logger::setLevel(ERROR);
-
 		auto a = 150 * m;
 		auto b = 200 * m;
 		auto c = 20 * (milli * s);
