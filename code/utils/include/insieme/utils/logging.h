@@ -57,7 +57,7 @@ namespace insieme {
 namespace utils {
 namespace log {
 
-#define LOG_DEFAULT DEBUG
+#define LOG_DEFAULT INFO
 #define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
 #define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
 
@@ -174,7 +174,7 @@ static inline boost::regex getFilterFromEnv() {
 /**
  * Prints the level at which the log was taken.
  */
-template <const Level L=DEBUG>
+template <const Level L=INFO>
 struct LevelSpec {
 	static void format(std::ostream& out, const Ctx& ctx) {
 		out << loggingLevelToStr(L);
