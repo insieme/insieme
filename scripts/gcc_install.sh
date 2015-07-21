@@ -5,7 +5,7 @@
 ##                                 GCC
 ########################################################################
 
-VERSION=4.7.3
+VERSION=4.8.3
 PACKAGE=gcc-$VERSION
 FILE=gcc-$VERSION.tar.bz2
 
