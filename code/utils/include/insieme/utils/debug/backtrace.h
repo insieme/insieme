@@ -34,46 +34,21 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
+#include <string>
+
+#define INS_BACKTRACE_AVAILABLE (defined(INS_DEBUG) && defined(__GNUC__) && !defined(__clang__))
+
+namespace insieme {
+namespace utils {
+namespace debug {
+
 /**
- * A simple test case covering some arithmetic.
+ * Returns a textual representation of the current backtrace, if supported in the current compilation environment.
  */
+std::string getBacktraceString();
 
-#include "cba.h"
-
-typedef struct {
-	int x;
-	int y;
-} point;
-
-
-int main(int argc, char** argv) {
-
-	// simple stuff
-	point a = { 10, 12 };
-	point* b = &a;
-
-	cba_expect_eq_int(a.x, 10);
-	cba_expect_eq_int(a.y, 12);
-	cba_expect_eq_int(b->x, 10);
-	cba_expect_eq_int(b->y, 12);
-
-
-	a.x = a.x + a.y * 2;
-
-	cba_expect_eq_int(a.x, 34);
-	cba_expect_eq_int(a.y, 12);
-
-	cba_expect_eq_int(b->x, 34);
-	cba_expect_eq_int(b->y, 12);
-
-
-	b->y = argc;
-
-	cba_expect_eq_int(a.x, 34);
-	cba_expect_eq_int(a.y, argc);
-
-	cba_expect_eq_int(b->x, 34);
-	cba_expect_eq_int(b->y, argc);
-
-	return 0;
+}
+}
 }

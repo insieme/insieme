@@ -67,7 +67,7 @@ namespace runtime {
 				decl ref<int<4>> a;
 				spawn lambda ()=> { a = 3; };
 				spawn pick([
-					//lambda ()=> { a = 3; }, // FIXME
+					lambda ()=> { a = 3; },
 					lambda ()=> { a = 3*2; },
 					lambda ()=> { a = 1+2; },
 					lambda ()=> { a = 1*3; }
@@ -85,8 +85,8 @@ namespace runtime {
 		auto targetCode = RuntimeBackend::getDefault()->convert(code);
 
 		// print results if interested
-		//std::cout << core::printer::PrettyPrinter(code) << "\n";
-		//std::cout << *targetCode << "\n";
+		// std::cout << core::printer::PrettyPrinter(code) << "\n";
+		// std::cout << *targetCode << "\n";
 
 		auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
 		compiler.addFlag("-Werror");

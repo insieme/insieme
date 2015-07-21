@@ -37,17 +37,14 @@
 #pragma once
 
 #include <iostream>
-
-#include <boost/iostreams/stream.hpp>
-
-#include <boost/date_time/posix_time/posix_time.hpp>
-
-#include <boost/any.hpp>
-
 #include <mutex>
 #include <thread>
-
 #include <stdexcept>
+
+#include <boost/iostreams/stream.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/any.hpp>
+#include <boost/regex.hpp>
 
 #ifdef __GNUC__
 #include <signal.h>
@@ -60,8 +57,9 @@ namespace insieme {
 namespace utils {
 namespace log {
 
-#define LOG_DEFAULT DEBUG
+#define LOG_DEFAULT INFO
 #define LOG_LEVEL_ENV "INSIEME_LOG_LEVEL"
+#define LOG_FILTER_ENV "INSIEME_LOG_FILTER"
 
 namespace io = boost::iostreams;
 
@@ -165,10 +163,18 @@ static inline Level getLevelFromEnv() {
 	return INFO;
 }
 
+static inline boost::regex getFilterFromEnv() {
+	auto filter = getenv(LOG_FILTER_ENV);
+	if(filter != nullptr) {
+		return boost::regex(filter);
+	}
+	return boost::regex(".*");
+}
+
 /**
  * Prints the level at which the log was taken.
  */
-template <const Level L=DEBUG>
+template <const Level L=INFO>
 struct LevelSpec {
 	static void format(std::ostream& out, const Ctx& ctx) {
 		out << loggingLevelToStr(L);
@@ -203,7 +209,7 @@ struct LineSpec {
 };
 
 /**
- * The formater takes several specifiers, in any order and compose them
+ * The formatter takes several specifiers, in any order and compose them
  * printing the values to the log stream, a specifier could be one of the
  * previous classes or a formatter itself. The values are separated by a
  * separator character.
@@ -238,32 +244,6 @@ struct Formatter<Separator, Head, Tail...> {
 	}
 };
 
-inline void handler(int sig) {
-
-	int j, nptrs;
-#define SIZE 100
-	void *buffer[100];
-    char **strings;
-
-	nptrs = backtrace(buffer, SIZE);
-    fprintf(stderr, "backtrace() returned %d addresses\n", nptrs);
-
-	/* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
-       would produce similar output to the following: */
-
-	strings = backtrace_symbols(buffer, nptrs);
-    if (strings == NULL) {
-        perror("backtrace_symbols");
-        exit(EXIT_FAILURE);
-    }
-
-	for (j = 0; j < nptrs; j++)
-		fprintf(stderr, "%s\n", strings[j]);
-
-	free(strings);
-	exit(1);
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							LOGGER
 //-----------------------------------------------------------
@@ -275,32 +255,28 @@ inline void handler(int sig) {
 class Logger {
 	// null logger is used to dump logs which do not match the
 	// current level.
-	io::stream<io::null_sink> 	m_null_logger;
+	io::stream<io::null_sink> m_null_logger;
 	// mutex which is shared among all the instances of writer,
 	// guarantee that different threads writing into the logger
 	// do not overlap
-	std::recursive_mutex		mutex;
+	std::recursive_mutex mutex;
 
 	// reference to the output stream
-	std::ostream&				out;
-	Level 						m_level;
-	unsigned short				m_verbosity;
+	std::ostream& out;
 
-	Logger(std::ostream& out, const Level& level, unsigned short verbosity) :
+	Level m_level;
+	unsigned short m_verbosity;
+	boost::regex filter;
+
+	Logger(std::ostream& out, const Level& level, unsigned short verbosity, boost::regex filter) :
 		m_null_logger(io::null_sink()),
 		out(out),
 		m_level(level),
-		m_verbosity(verbosity)
-	{ 
-#ifdef __GNUC__
-		/* Register an handler for segmentation faults */
- 		// signal(SIGSEGV, handler); 
-#endif
-	}
+		m_verbosity(verbosity),
+		filter(filter)
+	{ }
 
 public:
-
-
 	/**
 	 * Returns a reference to the current logger. The first time the method is
 	 * called, the logger is initialized with the values provided as arguments.
@@ -308,8 +284,9 @@ public:
 	 * Sequent calls to this method with different input parameters has no
 	 * effect on the underlying logger, the same logger is always returned.
 	 */
-	static Logger& get(std::ostream& out = std::cout, const Level& level = getLevelFromEnv(), unsigned short verbosity = 0) {
-		static Logger logger(out, level, verbosity);
+	static Logger& get(std::ostream& out = std::cout, const Level& level = getLevelFromEnv(), 
+		               unsigned short verbosity = 0, boost::regex filter = getFilterFromEnv()) {
+		static Logger logger(out, level, verbosity, filter);
 		return logger;
 	}
 
@@ -335,7 +312,7 @@ public:
 	}
 
 	/**
-	 * Returns the stream which match the level @level.
+	 * Returns the stream which matches the level @level.
 	 */
 	template <class Formatter>
 	Writer getStream(const Level& level, const Ctx& ctx) {
@@ -346,7 +323,13 @@ public:
 		}
 		return Writer( m_null_logger, mutex );
 	}
-
+	
+	/**
+	 * Returns whether the current logging filter includes @fullFnName.
+	 */
+	bool isIncludedInFilter(const char* fullFnName) {
+		return boost::regex_search(fullFnName, filter);
+	}
 };
 
 
@@ -360,15 +343,15 @@ using namespace insieme::utils::log;
 #define MAKE_CONTEXT			Ctx({ boost::any((const char*)__FILE__) })
 
 // Creates the object used to format the output of the logger.
-#define MAKE_FORMAT(LEVEL) 		Formatter<' ', LevelSpec<LEVEL>, Formatter<':', FileNameSpec<0>, LineSpec<__LINE__>>>
+#define MAKE_FORMAT(LEVEL) Formatter<' ', LevelSpec<LEVEL>, Formatter<':', FileNameSpec<0>, LineSpec<__LINE__>>>
 
-#define LOG( LEVEL ) 			if(Logger::get().level() > LEVEL) ; \
-								else (Logger::get().getActiveStream<MAKE_FORMAT(LEVEL)>( MAKE_CONTEXT ).logStream << "] ")
+#define LOG(LEVEL) if(Logger::get().level() > LEVEL || !Logger::get().isIncludedInFilter(__PRETTY_FUNCTION__)) ; \
+                   else (Logger::get().getActiveStream<MAKE_FORMAT(LEVEL)>( MAKE_CONTEXT ).logStream << "] ")
 
-#define VLOG(VerbLevel)			if(VerbLevel > Logger::get().verbosity()) ; \
-							 	else (Logger::get().getActiveStream<MAKE_FORMAT(DEBUG)>( MAKE_CONTEXT ).logStream << "] ")
+#define VLOG(VerbLevel) if(VerbLevel > Logger::get().verbosity() || !Logger::get().isIncludedInFilter(__PRETTY_FUNCTION__)) ; \
+                        else (Logger::get().getActiveStream<MAKE_FORMAT(DEBUG)>( MAKE_CONTEXT ).logStream << "] ")
 
-#define VLOG_IS_ON(VerbLevel)	(VerbLevel <= Logger::get().verbosity())
+#define VLOG_IS_ON(VerbLevel) (VerbLevel <= Logger::get().verbosity())
 
-#define LOG_STREAM(LEVEL) 		(Logger::get().getStream<MAKE_FORMAT(LEVEL)>(LEVEL, MAKE_CONTEXT).logStream)
+#define LOG_STREAM(LEVEL) (Logger::get().getStream<MAKE_FORMAT(LEVEL)>(LEVEL, MAKE_CONTEXT).logStream)
 

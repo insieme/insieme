@@ -336,9 +336,9 @@ namespace parser3{
     
     TEST(IR_Parser3, Program) {
         NodeManager nm;
-        EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { 1+1; }"));
-        EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (int a, int b) { 1+1; }"));
-        EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { f(1); }"));
+        EXPECT_TRUE(test_program(nm, "int<4> main (int<4> a, int<4> b)  { return 1+1; }"));
+        EXPECT_TRUE(test_program(nm, "let int = int<4>; int main (int a, int b) { return 1+1; }"));
+        EXPECT_TRUE(test_program(nm, "let int = int<4>; let f = lambda (int a) ->int { return a; }; int main (int a, int b) { return f(1); }"));
         EXPECT_TRUE(test_program(nm, 
                 "let int = int<4> ; "
                 "let h = lambda ((int)->int f)->int { return f(5); } ; "
@@ -347,13 +347,13 @@ namespace parser3{
                 "        h(f);"
                 "        f(4);"
                 "        g(f(4));"
-                "        h(g);"
+                "        return h(g);"
                 "    },"
                 "    lambda (int a)->int {"
                 "        h(f);"
                 "        f(g(4));"
                 "        g(4);"
-                "        h(g);"
+                "        return h(g);"
                 "    };"
                 "unit main() { f(1); }"
         ));

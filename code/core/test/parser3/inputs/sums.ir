@@ -19,7 +19,7 @@ unit main() {
 	print("Sum: %d\n", ptr(100));
 
 	// using lambda
-	decl auto lsum = lambda (int n)->int { sum(n); };
+	decl auto lsum = lambda (int n)->int { return sum(n); };
 	print("Sum: %d\n", lsum(100));
 
 	// compute it inline
@@ -29,5 +29,4 @@ unit main() {
 	}
 
 	print("Sum: %d\n", *sum);
-
 }

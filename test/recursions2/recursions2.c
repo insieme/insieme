@@ -25,8 +25,9 @@ int one  (int a, int b){
 int recursion2 (int *v, int size){
 	if (size > 0){
 		printf("%d=%d\n",v[size-1], one(10,v[size-1]));
-		recursion2(v, size-1);
+		return recursion2(v, size-1);
 	}
+	return 0;
 }
 
 unsigned fac(unsigned x) {

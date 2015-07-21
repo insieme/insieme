@@ -72,6 +72,7 @@ int main() {
 	bla(x);
 	alb(x,y);
 	foo(y,x,z);
+	return 0;
 }
 )"
 );

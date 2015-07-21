@@ -117,7 +117,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
 	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1, uint32);
 	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1, uint32);
-	IRT_ASSERT(group_num == 0, IRT_ERR_INTERNAL, "Some more changes required for a WI to be a member of multiple WGs");
+	IRT_ASSERT(group_num < IRT_MAX_WORK_GROUPS, IRT_ERR_INTERNAL, "Some more changes required for a WI to be a member of multiple WGs");
 	wi->wg_memberships[group_num].wg_id = wg->id;
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;

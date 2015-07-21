@@ -34,7 +34,7 @@ struct C {
 	int m;
 	C(int x=0):m(x) { } // std::cout << "C()" << std::endl; }
 	C(const C& o) : m(o.m) { } // std::cout << "C(const C&)" << std::endl; }
-	C& operator= (C o) { } // m=o.m; std::cout << "operator=(C)" << std::endl; return *this; }
+	C& operator= (C o) { return *this; } // m=o.m; std::cout << "operator=(C)" << std::endl; return *this; }
 };
 
 //DTOR -- results in expr-with-cleanups
@@ -43,7 +43,7 @@ struct S {
 	int m;
 	S(int x=0):m(x) { }//std::cout << "S()" << std::endl; }
 	S(const S& o) : m(o.m) {} // std::cout << "S(const S&)" << std::endl; }
-	S& operator= (S o) { } // m=o.m; std::cout << "operator=(S)" << std::endl; return *this; }
+	S& operator= (S o) { return *this; } // m=o.m; std::cout << "operator=(S)" << std::endl; return *this; }
 	~S() { } // std::cout << "~S()" << std::endl; }
 };
 

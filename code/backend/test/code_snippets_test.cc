@@ -479,6 +479,7 @@ TEST(FunctionCall, GenericFunctionsWithLazy) {
     			if(c(*a)) {
     				a = v();
     			}
+				return a;
     		};
     		
     		decl ref<int<4>> a = var(1);

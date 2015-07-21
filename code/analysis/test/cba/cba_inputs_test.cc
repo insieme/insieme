@@ -47,6 +47,8 @@
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/annotations/source_location.h"
+#include "insieme/core/printer/error_printer.h"
+
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/analysis/cba/cba.h"
@@ -115,7 +117,7 @@ namespace cba {
 
 		// running semantic checks
 		auto res = core::checks::check(prog);
-		EXPECT_TRUE(res.empty()) << res;
+		EXPECT_TRUE(res.empty()) << res << "\n------\n" << printer::dumpErrors(res);
 
 		// run CBA analysis
 		int testCount = 0;

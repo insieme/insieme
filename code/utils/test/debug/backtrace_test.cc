@@ -34,46 +34,38 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#include <gtest/gtest.h>
 
-#include "cba.h"
+#include "insieme/utils/debug/backtrace.h"
+#include "insieme/utils/assert.h"
 
-typedef struct {
-	int x;
-	int y;
-} point;
+using std::string;
 
+string c() { return insieme::utils::debug::getBacktraceString(); }
+string b() { return c(); }
+string a() { return b(); }
 
-int main(int argc, char** argv) {
-
-	// simple stuff
-	point a = { 10, 12 };
-	point* b = &a;
-
-	cba_expect_eq_int(a.x, 10);
-	cba_expect_eq_int(a.y, 12);
-	cba_expect_eq_int(b->x, 10);
-	cba_expect_eq_int(b->y, 12);
-
-
-	a.x = a.x + a.y * 2;
-
-	cba_expect_eq_int(a.x, 34);
-	cba_expect_eq_int(a.y, 12);
-
-	cba_expect_eq_int(b->x, 34);
-	cba_expect_eq_int(b->y, 12);
-
-
-	b->y = argc;
-
-	cba_expect_eq_int(a.x, 34);
-	cba_expect_eq_int(a.y, argc);
-
-	cba_expect_eq_int(b->x, 34);
-	cba_expect_eq_int(b->y, argc);
-
-	return 0;
+void HelloAssert() {
+	assert_fail() << "ZOMG";
 }
+
+#if INS_BACKTRACE_AVAILABLE
+
+TEST(Backtrace, Simple) {
+	EXPECT_TRUE(a().find("1: c") != std::string::npos);
+	EXPECT_TRUE(a().find("2: b") != std::string::npos);
+	EXPECT_TRUE(a().find("3: a") != std::string::npos);
+}
+
+TEST(Backtrace, Assertion) {
+	ASSERT_DEATH_IF_SUPPORTED(HelloAssert(), "2: HelloAssert");
+}
+
+#else
+
+TEST(Backtrace, Unavailable) {
+	// check for compilation and not crashing
+	a();
+}
+
+#endif

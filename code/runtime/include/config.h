@@ -136,7 +136,7 @@
 #define IRT_MAX_WORKERS 2048
 #endif
 #ifndef IRT_MAX_WORK_GROUPS
-#define IRT_MAX_WORK_GROUPS 4
+#define IRT_MAX_WORK_GROUPS 1
 #endif
 
 // gemsclaim simulator

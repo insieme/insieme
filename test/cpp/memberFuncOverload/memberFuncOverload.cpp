@@ -7,10 +7,11 @@ public:
 
 	int f(){
 		printf("f\n");
-
+		return 0;
 	}
 	int f(int v){
 		printf("f2 %d\n", v);
+		return 0;
 	}
 
 	void g(){

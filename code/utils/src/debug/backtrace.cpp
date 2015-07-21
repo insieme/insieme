@@ -34,46 +34,69 @@
  * regarding third party software licenses.
  */
 
-/**
- * A simple test case covering some arithmetic.
- */
+#include "insieme/utils/debug/backtrace.h"
 
-#include "cba.h"
+#include <sstream>
 
-typedef struct {
-	int x;
-	int y;
-} point;
+#include "insieme/utils/string_utils.h"
 
+namespace insieme {
+namespace utils {
+namespace debug {
 
-int main(int argc, char** argv) {
+#if INS_BACKTRACE_AVAILABLE
 
-	// simple stuff
-	point a = { 10, 12 };
-	point* b = &a;
+#include <execinfo.h>
+#include <cxxabi.h>
 
-	cba_expect_eq_int(a.x, 10);
-	cba_expect_eq_int(a.y, 12);
-	cba_expect_eq_int(b->x, 10);
-	cba_expect_eq_int(b->y, 12);
+// http://mykospark.net/2009/09/runtime-backtrace-in-c-with-name-demangling/
+std::string	demangle(const char* symbol) {
+	size_t size;
+	int status;
+	char temp[128];
+	char* demangled;
+	//first, try to demangle a c++ name
+	if (1 == sscanf(symbol, "%*[^(]%*[^_]%127[^)+]", temp)) {
+		if (NULL != (demangled = abi::__cxa_demangle(temp, NULL, &size, &status))) {
+			std::string result(demangled);
+			free(demangled);
+			return result;
+		}
+	}
+	//if that didn't work, try to get a regular c symbol
+	if (1 == sscanf(symbol, "%127s", temp)) {
+		return temp;
+	}
 
+	//if all else fails, just return the symbol
+	return symbol;
+}
 
-	a.x = a.x + a.y * 2;
+std::string getBacktraceString() {
+	const static int MAX_FRAMES = 4096;
+	void** buffer = new void*[MAX_FRAMES];
+	int numTraced = backtrace(buffer, MAX_FRAMES);
+	char** symbols = backtrace_symbols(buffer, numTraced); 
 
-	cba_expect_eq_int(a.x, 34);
-	cba_expect_eq_int(a.y, 12);
+	std::stringstream ss;
 
-	cba_expect_eq_int(b->x, 34);
-	cba_expect_eq_int(b->y, 12);
+	for(int i=numTraced-1; i>0; --i) {
+		ss << format("%4d: %s\n", i, demangle(symbols[i]));
+	}
 
+	free(symbols); // malloc'ed by backtrace_symbols()
 
-	b->y = argc;
+	return ss.str();
+}
 
-	cba_expect_eq_int(a.x, 34);
-	cba_expect_eq_int(a.y, argc);
+#else 
 
-	cba_expect_eq_int(b->x, 34);
-	cba_expect_eq_int(b->y, argc);
+std::string getBacktraceString() {
+	return "Backtrace not supported on this compiler\n";
+}
 
-	return 0;
+#endif
+
+}
+}
 }

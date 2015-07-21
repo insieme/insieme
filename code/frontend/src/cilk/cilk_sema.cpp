@@ -112,6 +112,8 @@ namespace cilk {
 
 					// sync => sneak in an extra merge all
 					if (cur->hasAttachedValue<CilkSyncMarker>()) {
+						// remove marker if present
+						cur = stripMarker(cur);
 						changed = true;
 						newStmts.push_back(core::IRBuilder(manager).mergeAll());
 					}

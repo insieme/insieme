@@ -12,7 +12,7 @@ class A {
             return R();
         }
         */
-        int mF() { }
+        int mF() { return 0; }
 };
 
 class B {

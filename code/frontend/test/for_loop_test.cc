@@ -176,7 +176,7 @@ namespace frontend {
 
 		Source src(
 				R"(
-					int main() {
+					void main() {
 						for(unsigned long i=10; i>0; i--);
 					}
 				)"
@@ -194,7 +194,7 @@ namespace frontend {
 
 		Source src(
 				R"(
-					int main() {
+					void main() {
 						for(double d=0;d<0; d++) {}
 					}
 				)"
@@ -217,7 +217,7 @@ namespace frontend {
 
 					#pragma omp threadprivate (x)
 
-					int main() {
+					void main() {
 
 						float sum = 0;
 

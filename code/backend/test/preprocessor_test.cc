@@ -70,7 +70,7 @@ TEST(Preprocessor, GlobalElimination) {
 				decl ref<gstruct> v1 = new(A);
 				v1.a;
 				composite_member_access(*v1, lit("a" : identifier), lit(vector<int<4>,20>));
-				lambda (ref<gstruct> v2) -> int<4> {
+				lambda (ref<gstruct> v2) -> unit {
 					v2.a;
 					composite_member_access(*v2, lit("a" : identifier), lit(vector<int<4>,20>));
 				} (v1);

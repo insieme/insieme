@@ -55,4 +55,6 @@ int main(int argc, char** argv) {
 	cba_expect_eq_int(b, 5);
 	cba_expect_eq_int(c, 7);
 	cba_expect_eq_int(a+b, 7);
+	
+	return 0;
 }

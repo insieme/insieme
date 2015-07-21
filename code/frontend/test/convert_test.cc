@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -93,7 +93,7 @@ namespace frontend {
 		EXPECT_PRED2(containsSubString, res, "(counter := 10);");
 		// split up this assertions because the local static
 		// variables have some random suffix
-		EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp1132_21, 3.0);");
+		EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp1122_21, 3.0);");
 
 
 	}
@@ -246,6 +246,7 @@ namespace frontend {
 
 					int main(int argc, char* argv[]) {
 						A a;
+						return 0;
 					}
 
 				)",

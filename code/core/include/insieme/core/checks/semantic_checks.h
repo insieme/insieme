@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,11 +56,15 @@ SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
  */
 SIMPLE_CHECK(Undefined, CallExpr, false);
 
-
 /**
  * This check verifies that there are no free break statements inside for loops. 
  */
 SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
+
+/**
+ * This check verifies that functions with non-unit return type return something on every code path. 
+ */
+SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
 
 #undef SIMPLE_CHECK
 

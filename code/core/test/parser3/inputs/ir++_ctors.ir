@@ -12,7 +12,7 @@ let B = struct : A {
 let ctorA1 = lambda ctor A::() { this.x = 0; };
 let ctorA2 = lambda ctor A::(int x) { this.x = x; };
 
-int main() {
+unit main() {
 
 	// create a stack based A
 	decl ref<A> a1 = ctorA1(var(undefined(A)));

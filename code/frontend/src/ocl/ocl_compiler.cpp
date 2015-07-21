@@ -207,7 +207,8 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
         break;
     }
 
-    stmts.push_back(swtch);
+	stmts.push_back(swtch);
+	stmts.push_back(builder.returnStmt(builder.uintLit(0)));
 
     // set the argument for the get__id function
     return builder.callExpr(BASIC.getUInt8(), builder.lambdaExpr(BASIC.getUInt8(), builder.compoundStmt(stmts),  args.first), args.second);
