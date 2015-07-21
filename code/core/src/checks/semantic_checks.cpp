@@ -193,9 +193,22 @@ namespace {
 
 		bool visitIfStmt(const IfStmtPtr& ifst, bool inInfiniteLoop) override {
 			LOG(DEBUG) << "Visit if ---- \n" << dumpColor(ifst) << "\n-----";
-			bool ifSide = visit(ifst->getThenBody(), false);
-			bool elseSide = visit(ifst->getElseBody(), false);
+			bool ifSide = visit(ifst->getThenBody(), inInfiniteLoop);
+			bool elseSide = visit(ifst->getElseBody(), inInfiniteLoop);
 			return inInfiniteLoop ? (ifSide || elseSide) : (ifSide && elseSide);
+		}
+
+		bool visitSwitchStmt(const SwitchStmtPtr& switchst, bool inInfiniteLoop) override {
+			LOG(DEBUG) << "Visit switch ---- \n" << dumpColor(switchst) << "\n-----";
+			bool ok = true;
+			auto cases = switchst->getCases();
+			for(auto switchcase : cases) {
+				bool caseOk = visit(switchcase->getBody(), inInfiniteLoop);
+				ok = inInfiniteLoop ? (ok || caseOk) : (ok && caseOk);
+			}
+			bool defaultOk = visit(switchst->getDefaultCase(), inInfiniteLoop);
+			ok = inInfiniteLoop ? (ok || defaultOk) : (ok && defaultOk);
+			return ok;
 		}
 
 		bool visitWhileStmt(const WhileStmtPtr& whileStmt, bool) override {

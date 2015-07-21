@@ -267,7 +267,111 @@ TEST(MissingReturnStmtCheck, Throw) {
 	EXPECT_EQ(toString(checkResult), "[]");
 }
 
+TEST(MissingReturnStmtCheck, SwitchCorrect) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint {
+			decl int<4> a;			
+			switch(a) {
+			case 0: return 5;
+			case 1: return 10;
+			default: throw "Ugh";
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_TRUE(checkResult.empty());
+	EXPECT_EQ(toString(checkResult), "[]");
+}
+
+TEST(MissingReturnStmtCheck, SwitchError) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint {
+			decl int<4> a;			
+			switch(a) {
+			case 0: return 5;
+			case 1: 10;
+			default: throw "Ugh";
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_EQ(checkResult.size(), 1);
+	EXPECT_EQ(toString(checkResult[0]), "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+}
+
+TEST(MissingReturnStmtCheck, SwitchErrorDefaultMissing) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint {
+			decl int<4> a;			
+			switch(a) {
+			case 0: return 5;
+			case 1: return 10;
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_EQ(checkResult.size(), 1);
+	EXPECT_EQ(toString(checkResult[0]), "ERROR:   [00045] - SEMANTIC / MISSING_RETURN_STMT @ (0-0) - MSG: Not all control paths of non-unit lambdaExpr return a value.");
+}
+
+TEST(MissingReturnStmtCheck, SwitchCorrectInLoop) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto stmt = builder.parseStmt(R"1N5P1RE(
+	{
+		let uint = uint<8>;
+		lambda () -> uint {
+			decl int<4> a;
+			while(true) {
+				switch(a) {
+				case 0: return 5;
+				case 1: 10;
+				default: "Ugh";
+				}
+			}
+		};
+	}
+	)1N5P1RE");
+	EXPECT_TRUE(stmt) << "parsing error";
+
+	CheckPtr missingReturnStmtCheck = makeRecursive(make_check<MissingReturnStmtCheck>());
+
+	auto checkResult = check(stmt, missingReturnStmtCheck);
+	EXPECT_TRUE(checkResult.empty());
+	EXPECT_EQ(toString(checkResult), "[]");
+}
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
-
