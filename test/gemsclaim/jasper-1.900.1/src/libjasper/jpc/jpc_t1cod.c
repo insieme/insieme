@@ -157,6 +157,8 @@ if (qmfbid == JPC_COX_INS) {
 		}
 	}
 	abort();
+    // avoid insieme missing_return_stmt semantic error
+    return 0;
 }
 
 /******************************************************************************\
