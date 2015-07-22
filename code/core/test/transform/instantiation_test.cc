@@ -578,8 +578,11 @@ TEST(InRecFunc, Simple) {
 
     //dumpColor(addresses[0].getRootNode());
 
+	#ifndef NDEBUG
 	ASSERT_DEATH_IF_SUPPORTED(instantiateTypes(addresses[0].getRootNode()), 
 		"not yet implemented for mutually recursive functions");
+	#endif
+
 	//auto result = instantiateTypes(addresses[0].getRootNode());
 		
 	//auto newAddr = addresses[0].switchRoot(result);
