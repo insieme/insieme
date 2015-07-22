@@ -144,7 +144,7 @@ namespace{
 
 		res.mockrun = map.count("mock");
 		res.no_clean=map.count("no-clean");
-		res.color=!map.count("nocolor");
+		res.color=!map.count("no-color");
 		res.panic_mode = map.count("panic");
 		res.num_threads = map["worker"].as<int>();
 		res.num_repetitions = map["repeat"].as<int>();
