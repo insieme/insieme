@@ -96,7 +96,7 @@ namespace{
 			("step,s",             bpo::value<string>(),                    "the test step to be applied")
 			("repeat,r",           bpo::value<int>()->default_value(1),     "the number of times the tests shell be repeated")
 			("no-clean",           "keep all output files")
-			("nocolor",            "no highlighting of output")
+			("no-color",           "no highlighting of output")
 			("preprocessing",      "perform all pre-processing steps")
 			("postprocessing",     "perform all post-processing steps")
 		;
