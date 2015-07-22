@@ -524,7 +524,6 @@ TEST(TypeInstantiation, NestedLambda) {
 	EXPECT_FALSE(core::analysis::contains(instantiated, build.parseType("'b")));
 }
 
-// ********** The following tests should be enabled / completed once instantiation of recursive functions is supported
 
 TEST(Recursion, Simple) {
 	NodeManager mgr;
@@ -553,7 +552,9 @@ TEST(Recursion, Simple) {
 	EXPECT_EQ(build.parseType("(int<4>)->unit"), add0res->getVariable()->getType());
 }
 
-/*
+// ********** The following tests should be enabled / completed once instantiation 
+// ********** of mutually recursive functions is supported
+
 TEST(InRecFunc, Simple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -575,13 +576,15 @@ TEST(InRecFunc, Simple) {
 
 	EXPECT_EQ(addresses.size(), 1);
 
-    dumpColor(addresses[0].getRootNode());
+    //dumpColor(addresses[0].getRootNode());
 
-	auto result = instantiateTypes(addresses[0].getRootNode());
+	ASSERT_DEATH_IF_SUPPORTED(instantiateTypes(addresses[0].getRootNode()), 
+		"not yet implemented for mutually recursive functions");
+	//auto result = instantiateTypes(addresses[0].getRootNode());
 		
-	auto newAddr = addresses[0].switchRoot(result);
-	EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
-}*/
+	//auto newAddr = addresses[0].switchRoot(result);
+	//EXPECT_EQ(builder.parseType("int<4>"), newAddr.getAddressedNode().as<ExpressionPtr>()->getType());
+}
 
 /*
 TEST(InRecFunc, ExpressionArgument) {
