@@ -410,10 +410,10 @@ TEST(TypeInstantiation, BindExpr) {
 	auto expr = build.parseExpr(R"(
 		lambda ('a x) -> unit {
 			decl ref<'a> b;
-//			lambda () => {
-//				decl auto y = b;
-//				return y;
-//			};
+			lambda () => {
+				decl auto y = b;
+				return y;
+			};
 		}(5)
 	)");
 
@@ -526,31 +526,32 @@ TEST(TypeInstantiation, NestedLambda) {
 
 // ********** The following tests should be enabled / completed once instantiation of recursive functions is supported
 
-/*
 TEST(Recursion, Simple) {
 	NodeManager mgr;
-	IRBuilder builder(mgr);
+	IRBuilder build(mgr);
 
-	auto code = builder.parseStmt(R"raw(
+	auto addresses = build.parseAddressesStatement(R"raw(
 	{
 		let x = lambda ('a a)->unit {
-			x(a);
+			$x$(a); // address 1
 		};
-		x(5);
+		$x$(5); // address 0
 	}
 	)raw");
 
-	EXPECT_TRUE(code);
+	EXPECT_EQ(addresses.size(), 2);
 
-
+	auto code = addresses[0].getRootNode();
 	auto result = instantiateTypes(code);
 
-	std::cout << "Garbage in :\n" << dumpColor(code) << "\n";
-	std::cout << "Garbage out:\n" << dumpColor(result) << "\n";
+	EXPECT_TRUE(core::analysis::contains(code, build.parseType("'a")));
+	EXPECT_FALSE(core::analysis::contains(result, build.parseType("'a")));
 
-	std::cout << "Text in :\n" << dumpText(code) << "\n";
-	std::cout << "Text out:\n" << dumpText(result) << "\n";
-} */
+	auto add0res = addresses[0].switchRoot(result).getAddressedNode().as<LambdaExprPtr>();
+	auto add1res = addresses[1].switchRoot(result);
+	EXPECT_EQ(add0res->getVariable(), add1res);
+	EXPECT_EQ(build.parseType("(int<4>)->unit"), add0res->getVariable()->getType());
+}
 
 /*
 TEST(InRecFunc, Simple) {

@@ -81,7 +81,7 @@ namespace {
 			auto replacedBody = funExp->getBody();
 			// only apply replacement to body of lambdas which we are not supposed to skip
 			if(!skip(funExp)) {
-				replacedBody = core::transform::replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter);
+				replacedBody = replaceAllGen(nodeMan, funExp->getBody(), nodeMap, limiter);
 			}
 			// tricky: we apply the same mapping recursively on the *new* body
 			InstContext newContext = {nodeMap, skip(funExp)};
@@ -94,7 +94,7 @@ namespace {
 				// constructors and destructors can not be automatically typed!
 				if(funType->getKind() != FK_CONSTRUCTOR && funType->getKind() != FK_DESTRUCTOR) {
 					newReturnType = analysis::autoReturnType(nodeMan, newBody);
-					newReturnType = core::transform::replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
+					newReturnType = replaceAllGen(nodeMan, newReturnType, nodeMap, limiter);
 				}
 			}
 			LOG(DEBUG) << "body: " << *funExp->getBody() << "\n";
@@ -103,13 +103,13 @@ namespace {
 			LOG(DEBUG) << "NewReturnType: " << *newReturnType << "\n";
 
 			// now we can generate the substitution
-			auto replacedFunType = core::transform::replaceAllGen(nodeMan, funType, nodeMap, limiter);
+			auto replacedFunType = replaceAllGen(nodeMan, funType, nodeMap, limiter);
 			auto newFunType = 
 				builder.functionType(replacedFunType->getParameterTypes(), newReturnType, replacedFunType->getKind());
 
 			// and our new parameters
 			auto newParamList = ::transform(funExp->getLambda()->getParameterList(), [&](const VariablePtr& t) {
-				return core::transform::replaceAllGen(nodeMan, t, nodeMap, limiter);
+				return replaceAllGen(nodeMan, t, nodeMap, limiter);
 			});
 
 			// finally, build the new lambda 
@@ -117,7 +117,20 @@ namespace {
 			if(newFunType != funType) {
 				// function type changed due to instantiation, we need to build a new one
 				newLambda = builder.lambdaExpr(newFunType, newParamList, newBody);
-				assert_false(funExp->isRecursive()) << "Instantiation of recursive functions not supported yet.";
+				if(funExp->isRecursive()) {
+					assert_eq(funExp->getDefinition()->getDefinitions().size(), 1) 
+						<< "Instantiation not yet implemented for mutually recursive functions";
+					auto instantiatedOldRecVar = replaceAllGen(nodeMan, funExp->getVariable(), nodeMap, limiter);
+					auto newRecVar = newLambda->getVariable();
+					auto newerBody = replaceAllGen(nodeMan, newBody, {{instantiatedOldRecVar, newRecVar}});
+					LOG(DEBUG) << "Recursive fun instantiation";
+					LOG(DEBUG) << " -- instantiatedOldRecVar:" << *instantiatedOldRecVar;
+					LOG(DEBUG) << " -- newRecVar:" << *newRecVar;
+					LOG(DEBUG) << " -- newBody:\n" << dumpDetailColored(newBody);
+					LOG(DEBUG) << " -- newerBody:\n" << dumpDetailColored(newerBody);
+					auto oldBodyAddr = LambdaExprAddress(newLambda)->getBody();
+					newLambda = replaceAddress(nodeMan, oldBodyAddr, newerBody).getRootNode().as<LambdaExprPtr>();
+				}
 			} else {
 				// function type is unchanged, we just need to replace the body (prevent breaking rec lambdas)
 				auto oldBodyAddr = LambdaExprAddress(funExp)->getBody();
