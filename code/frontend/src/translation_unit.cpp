@@ -168,6 +168,10 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 		// errors are always fatal
 		throw ClangParsingError(mFileName);
 	}
+
+	if(setup.hasOption(ConversionSetup::DumpClangAST)) {
+		getASTContext().getTranslationUnitDecl()->dumpColor();
+	}
 }
 
 TranslationUnit::PragmaIterator TranslationUnit::pragmas_begin() const {

@@ -60,7 +60,8 @@ FLAG("show-stats",				showStatistics, 			"computes statistics regarding the comp
 FLAG("use-pm",					usePM,						"perform code transformations using the Polyhedral Model")
 FLAG("version", 				version, 					"print version string")
 FLAG("win-cross-compile", 		winCrossCompile,			"set cross compilation for a Windows target")
-FLAG("fnodefaultextensions", 	noDefaultExtensions,	    "Disables all frontend extensions that are enabled by default.")
+FLAG("print-clang-ast", 		printClangAST,				"print the clang AST")
+FLAG("fnodefaultextensions", 	noDefaultExtensions,	    "disables all frontend extensions that are enabled by default")
 
 PARAMETER("backend",				backend,					std::string,						"runtime", 							"backend selection")
 PARAMETER("outfile,o", 				outFile, 					frontend::path, 					"a.out", 							"output file")
