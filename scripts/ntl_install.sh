@@ -13,7 +13,7 @@ fi
 
 rm -Rf $PREFIX/ntl-$VERSION
 echo "#### Downloading ntl library ####"
-wget -nc http://shoup.net/ntl/ntl-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/ntl-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

@@ -17,7 +17,7 @@ if [ -d $PREFIX/gtest-$VERSION ]; then
 fi
 
 echo "#### Downloading Google Test library ####"
-wget -nc http://googletest.googlecode.com/files/gtest-$VERSION.zip
+wget -nc http://www.insieme-compiler.org/ext_libs/gtest-$VERSION.zip
 
 RET=$?
 if [ $RET -ne 0 ]; then

@@ -14,9 +14,11 @@ fi
 
 rm -Rf $PREFIX/ninja-$VERSION
 echo "#### Downloading Ninja ####"
-git clone git://github.com/martine/ninja.git ninja-$VERSION
+wget -nc http://www.insieme-compiler.org/ext_libs/ninja-${VERSION}.tar.gz
+
+tar -xf ninja-${VERSION}.tar.gz
+rm -f ninja-${VERSION}.tar.gz
 cd ninja-$VERSION
-git checkout tags/v$VERSION
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/ntl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 export PATH=$PREFIX/python-latest/bin:$PATH

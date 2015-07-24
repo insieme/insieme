@@ -17,7 +17,7 @@ fi
 
 rm -Rf $PREFIX/luajit-$VERSION
 echo "#### Downloading LuaJIT library ####"
-wget http://luajit.org/download/LuaJIT-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/LuaJIT-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

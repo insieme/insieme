@@ -2,7 +2,6 @@
 . ./environment.setup
 
 VERSION=5.4.0
-SUBVERSION=
 
 ##########################################################################
 ## 								Papi
@@ -15,7 +14,7 @@ fi
 
 rm -Rf $PREFIX/papi-$VERSION
 echo "#### Downloading Papi Library ####" 
-wget -nc http://icl.cs.utk.edu/projects/papi/downloads/papi-$VERSION$SUBVERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/papi-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

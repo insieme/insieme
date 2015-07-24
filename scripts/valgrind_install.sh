@@ -12,7 +12,7 @@ LDFLAGS="-O3 -mtune=native -fPIC"
 rm -Rf $PREFIX/valgrind-$VERSION
 
 echo "#### Downloading Valgrind ####"
-wget http://valgrind.org/downloads/valgrind-$VERSION.tar.bz2
+wget -nc http://www.insieme-compiler.org/ext_libs/valgrind-$VERSION.tar.bz2
 
 RET=$?
 if [ $RET -ne 0 ]; then

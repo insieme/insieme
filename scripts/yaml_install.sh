@@ -11,7 +11,7 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 rm -Rf $PREFIX/libyaml-$VERSION
 echo "#### Downloading Yaml ####"
-wget http://pyyaml.org/download/libyaml/yaml-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/yaml-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

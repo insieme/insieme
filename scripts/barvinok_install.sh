@@ -16,11 +16,12 @@ fi
 
 rm -Rf $PREFIX/barvinok-$VERSION
 echo "#### Downloading Barvinok library ####"
-git clone git://repo.or.cz/barvinok.git barvinok-$VERSION
+wget -nc http://www.insieme-compiler.org/ext_libs/barvinok-${VERSION}.tar.gz
+
+tar -xzf barvinok-${VERSION}.tar.gz
+rm barvinok-${VERSION}.tar.gz
+
 cd barvinok-$VERSION
-git checkout tags/barvinok-$VERSION
-git submodule init
-git submodule update
 ./autogen.sh
 
 #export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/ntl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 

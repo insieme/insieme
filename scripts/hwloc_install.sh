@@ -18,7 +18,7 @@ fi
 
 rm -Rf $PREFIX/hwloc-$VERSION
 echo "#### Downloading HWLOC ####"
-wget -nc http://www.open-mpi.org/software/hwloc/v$VER/downloads/hwloc-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/hwloc-$VERSION.tar.gz
 
 # Check for failure
 RET=$?

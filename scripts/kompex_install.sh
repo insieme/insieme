@@ -13,7 +13,7 @@ if [ -d $PREFIX/kompex-$VERSION ]; then
 fi
 
 echo "#### Downloading KOMPEX library ####"
-wget -nc http://sqlitewrapper.kompex-online.com/counter/download.php?dl=KompexSQLiteWrapper-Source_$VERSION.tar.gz --output-document=KompexSQLiteWrapper-Source_$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/KompexSQLiteWrapper-Source_$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

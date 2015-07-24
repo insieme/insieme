@@ -18,7 +18,7 @@ CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 
 echo "#### Downloading ppl library ####"
-wget -nc http://bugseng.com/products/ppl/download/ftp/releases/$VERSION/$FILE
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then

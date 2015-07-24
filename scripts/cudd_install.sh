@@ -14,7 +14,7 @@ fi
 
 rm -Rf $PREFIX/cudd-$VERSION
 echo "#### Downloading CUDD library ####"
-wget -nc ftp://vlsi.colorado.edu/pub/cudd-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/cudd-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

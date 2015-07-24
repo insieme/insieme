@@ -5,9 +5,9 @@
 ##                                 GCC
 ########################################################################
 
-VERSION=4.8.3
+VERSION=4.8.5 #4.9.3, 5.1.0, 5.2.0
 PACKAGE=gcc-$VERSION
-FILE=gcc-$VERSION.tar.bz2
+FILE=gcc-$VERSION.tar.gz
 
 if [ -n "$NEW_CXX" ]
 then
@@ -19,7 +19,7 @@ then
 fi
 
 echo "#### Downloading GCC ####"
-wget -nc http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/$FILE
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then

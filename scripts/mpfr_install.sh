@@ -15,8 +15,7 @@ if [ -d $PREFIX/mpfr-$VERSION ]; then
 fi
 
 echo "#### Downloading MPFR library ####"
-#wget -nc http://www.mpfr.org/mpfr-current/$FILE
-wget -nc http://www.mpfr.org/mpfr-3.1.1/mpfr-3.1.1.tar.bz2
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then

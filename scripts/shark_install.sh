@@ -14,7 +14,7 @@ fi
 
 rm -Rf $PREFIX/shark-$VERSION
 echo "#### Downloading SHARK library ####"
-wget http://sourceforge.net/projects/shark-project/files/Shark%20Core/Shark%20$VERSION/shark-$VERSION.zip/download -O shark-$VERSION.zip
+wget -nc http://www.insieme-compiler.org/ext_libs/shark-$VERSION.zip
 
 RET=$?
 if [ $RET -ne 0 ]; then

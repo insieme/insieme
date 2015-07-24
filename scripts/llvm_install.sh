@@ -25,7 +25,7 @@ CURRENT=`pwd`
 echo "*****************************************"
 echo "* Downloading current LLVM distribution *"
 echo "*****************************************"
-wget -nc http://llvm.org/releases/$VERSION/llvm-$VERSION.src.tar.gz 
+wget -nc http://www.insieme-compiler.org/ext_libs/llvm-$VERSION.src.tar.gz 
 
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -39,7 +39,7 @@ echo "******************************************"
 echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 
-wget -nc http://llvm.org/releases/$VERSION/clang-$VERSION.src.tar.gz 
+wget -nc http://www.insieme-compiler.org/ext_libs/clang-$VERSION.src.tar.gz 
 
 RET=$?
 if [ $RET -ne 0 ]; then
