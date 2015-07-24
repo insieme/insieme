@@ -206,6 +206,7 @@ namespace cmd {
 			res.job.setOption(fe::ConversionJob::NoWarnings, res.settings.noWarnings);
 			res.job.setOption(fe::ConversionJob::WinCrossCompile, res.settings.winCrossCompile);
 			res.job.setOption(fe::ConversionJob::NoDefaultExtensions, res.settings.noDefaultExtensions);
+			res.job.setOption(fe::ConversionJob::DumpClangAST, res.settings.printClangAST);
 
 			// check for libraries and add LD_LIBRARY_PATH entries to lib search path
 			std::vector<frontend::path> ldpath;

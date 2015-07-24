@@ -84,7 +84,8 @@ namespace frontend {
 			TAG_MPI			= 1<<2,
 			ProgressBar		= 1<<3,
 			NoWarnings		= 1<<4,
-			NoDefaultExtensions = 1<<5
+			NoDefaultExtensions = 1<<5,
+			DumpClangAST	= 1<<6,
 		};
 
 		/**
