@@ -55,7 +55,7 @@ namespace compiler {
 
 	Compiler Compiler::getDefaultC99Compiler() {
 
-		const char *envVar = std::getenv("CC");
+		const char *envVar = std::getenv("INSIEME_C_COMPILER");
 		if (envVar == nullptr) {
 			envVar = "gcc";
 		}
@@ -68,9 +68,9 @@ namespace compiler {
 
 	Compiler Compiler::getDefaultCppCompiler() {
 
-		const char *envVar = std::getenv("CC");
+		const char *envVar = std::getenv("INSIEME_CXX_COMPILER");
 		if (envVar == nullptr) {
-			envVar = "gcc";
+			envVar = "g++";
 		}
 
 		Compiler res(envVar);
@@ -180,8 +180,12 @@ namespace compiler {
 	 * @ return vector with the include paths
 	 */
 	const vector<string> getDefaultCIncludePaths() {
-		string cmd = "echo | gcc -v -xc -E - 2>&1";
-		return getDefaultIncludePaths(cmd);
+		auto compiler = Compiler::getDefaultC99Compiler();
+		std::stringstream ss;
+		ss << "echo | ";
+		ss << compiler.getExecutable();
+		ss << " -v -xc -E - 2>&1";
+		return getDefaultIncludePaths(ss.str());
 	}
 
 	/**
@@ -189,8 +193,12 @@ namespace compiler {
 	 * @ return vector with the include paths
 	 */
 	const vector<string> getDefaultCppIncludePaths() {
-		string cmd = "echo | g++ -v -xc++ -E - 2>&1";
-		return getDefaultIncludePaths(cmd);
+		auto compiler = Compiler::getDefaultCppCompiler();
+		std::stringstream ss;
+		ss << "echo | ";
+		ss << compiler.getExecutable();
+		ss << " -v -xc++ -E - 2>&1";
+		return getDefaultIncludePaths(ss.str());
 	}
 
 	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
