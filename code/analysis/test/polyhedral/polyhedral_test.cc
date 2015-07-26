@@ -923,7 +923,7 @@ TEST(Transformations, Interchange) {
 	
 	EXPECT_EQ( "for(int<4> v7 = 0 .. int_add(100, 1) : 1) {"
 				 "for(int<4> v8 = 0 .. int_add(100, 1) : 1) {"
-				 	"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp._lement(dp_root, v2), type<'elem>);}}(v4, v7), v8)));"
+				 	"ref_assign(v3, ref_deref(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(rec v0.{v0=fun(ref<array<'elem,1>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v4, v7), v8)));"
 				  "};"
 			   "}", toString(*ir));
 
