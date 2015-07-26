@@ -14,7 +14,7 @@ fi
 
 rm -Rf $PREFIX/libtool-$VERSION
 echo "#### Downloading libtool library ####"
-wget -nc http://ftpmirror.gnu.org/libtool/libtool-$VERSION.tar.gz 
+wget -nc http://www.insieme-compiler.org/ext_libs/libtool-$VERSION.tar.gz 
 
 RET=$?
 if [ $RET -ne 0 ]; then

@@ -16,7 +16,7 @@ fi
 
 rm -Rf $PREFIX/boost-$VERSION
 echo "#### Downloading Boost library ####"
-wget -nc http://downloads.sourceforge.net/project/boost/boost/$VERSION/boost_$VERSION_FILENAME.tar.bz2
+wget -nc http://www.insieme-compiler.org/ext_libs/boost_$VERSION_FILENAME.tar.bz2
 
 RET=$?
 if [ $RET -ne 0 ]; then

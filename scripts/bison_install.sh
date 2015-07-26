@@ -16,7 +16,7 @@ if [ -d $PREFIX/bison-$VERSION ]; then
 fi
 
 echo "#### Downloading BISON library ####"
-wget -nc http://ftp.gnu.org/gnu/bison/bison-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/bison-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

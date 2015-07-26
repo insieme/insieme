@@ -11,7 +11,7 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 rm -Rf $PREFIX/python-$VERSION
 echo "#### Downloading Python ####"
-wget http://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz
+wget -nc http://www.insieme-compiler.org/ext_libs/Python-$VERSION.tgz
 
 RET=$?
 if [ $RET -ne 0 ]; then

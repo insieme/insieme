@@ -12,7 +12,7 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 rm -Rf $PREFIX/mpich2-$VERSION
 echo "#### Downloading Mpich2 ####"
-wget -nc http://www.mcs.anl.gov/research/projects/mpich2/downloads/tarballs/$VERSION/mpich2-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/mpich2-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

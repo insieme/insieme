@@ -8,7 +8,7 @@ VERSION=5.22.5
 
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
-wget http://icps.u-strasbg.fr/polylib/polylib_src/polylib-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/polylib-$VERSION.tar.gz
 tar -xf polylib-$VERSION.tar.gz
 cd polylib-$VERSION
 

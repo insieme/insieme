@@ -13,7 +13,7 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 rm -Rf $PREFIX/openmpi-$VERSION
 echo "#### Downloading Openmpi ####"
-wget -nc http://www.open-mpi.org/software/ompi/v$VER/downloads/openmpi-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/openmpi-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

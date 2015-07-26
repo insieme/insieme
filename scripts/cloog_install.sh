@@ -16,7 +16,7 @@ fi
 
 rm -Rf $PREFIX/cloog-$VERSION
 echo "#### Downloading Cloog library ####"
-wget -nc http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION.tar.gz -O cloog-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/cloog-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

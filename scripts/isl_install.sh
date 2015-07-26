@@ -16,9 +16,12 @@ fi
 
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
-git clone git://repo.or.cz/isl.git isl-$VERSION
+wget -nc http://www.insieme-compiler.org/ext_libs/isl-${VERSION}.tar.gz
+
+tar -xf isl-${VERSION}.tar.gz
+rm -f isl-${VERSION}.tar.gz
+
 cd isl-$VERSION
-git checkout tags/isl-$VERSION
 ./autogen.sh
 
 echo "#### Building isl library ####"

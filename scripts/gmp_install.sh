@@ -16,7 +16,7 @@ if [ -d $PREFIX/gmp-$VERSION ]; then
 fi
 
 echo "#### Downloading GMP library ####"
-wget -nc ftp://ftp.gmplib.org/pub/gmp-$VERSION/$FILE
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then
