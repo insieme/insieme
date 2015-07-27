@@ -137,7 +137,6 @@ class TaskMultiversioner {
 			//CompoundStmtPtr inlined = core::transform::inlineMultiReturn(nodeMan, simplified);
 			//VLOG(1) << "INLINED: \n" << printer::PrettyPrinter(inlined, printer::PrettyPrinter::NO_LET_BINDINGS) << "\n";
 			//return inlined;
-
 		}).map(lamDef);
 
 		// pattern-based prototype
@@ -239,9 +238,9 @@ class TaskMultiversioner {
 		vector<LambdaDefinitionPtr> lambdaDefOptionsList;
 		lambdaDefOptionsList.push_back(lamDef);
 		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 2))));
-      	lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 4))));
+		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 4))));
 		lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lambdaDefOptionsList.back(), false));
-		
+
 		// replace recursive jobs in lambdas with pick from available options, generating new bindings
 		vector<LambdaBindingPtr> newBindings;
 		// replace in originals
