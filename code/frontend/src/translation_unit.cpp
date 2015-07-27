@@ -170,7 +170,23 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 	}
 
 	if(setup.hasOption(ConversionSetup::DumpClangAST)) {
-		getASTContext().getTranslationUnitDecl()->dumpColor();
+		const std::string filter = setup.getClangASTDumpFilter();
+		auto tuDecl = getASTContext().getTranslationUnitDecl();
+		//if nothing defined print the while context
+		if(filter.empty()) {
+			tuDecl->dumpColor();
+		} else {
+			//else filter out the right function decls
+			auto declCtx = clang::TranslationUnitDecl::castToDeclContext(tuDecl);
+			// iterate through the declarations inside and print (maybe)
+			for(auto it=declCtx->decls_begin(); it!=declCtx->decls_end(); ++it) {
+				if(const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(*it)) {
+					if(boost::regex_match(funDecl->getNameAsString(), boost::regex(filter))) {
+						funDecl->dumpColor();
+					}
+				}
+			}
+		}
 	}
 }
 

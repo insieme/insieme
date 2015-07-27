@@ -124,6 +124,11 @@ namespace frontend {
 		map<string,string> definitions;
 
 		/**
+		 * A regex to filter the clang AST dump.
+		 */
+		std::string clangASTDumpFilter;
+
+		/**
 		 * A list of string representing the regular expression to be intercepted
 		 * by default "std::.*" and "__gnu_cxx::.*" are intercepted
 		 */
@@ -139,11 +144,11 @@ namespace frontend {
 		 */
 		string crossCompilationSystemHeadersDir;
 
-	        /**
-	         * A list of optimization flags (-f flags) that need to be used at least in the
-	         * backend compiler
-	         */
-	        set<string> fflags;
+		/**
+		 * A list of optimization flags (-f flags) that need to be used at least in the
+		 * backend compiler
+		 */
+		set<string> fflags;
 
 		/**
 		 * Additional flags - a bitwise boolean combination of Options (see Option)
@@ -215,6 +220,20 @@ namespace frontend {
 		 */
 		const map<string,string>& getDefinitions() const {
 			return definitions;
+		}
+
+		/**
+		 * Obtains a reference to the clang AST dump filter regex.
+		 */
+		const std::string& getClangASTDumpFilter() const {
+			return clangASTDumpFilter;
+		}
+
+		/**
+		 * Set the clang AST dump filter regex.
+		 */
+		void setClangASTDumpFilter(const std::string& filter) {
+			clangASTDumpFilter = filter;
 		}
 
 		/**

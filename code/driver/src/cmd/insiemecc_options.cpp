@@ -245,6 +245,11 @@ namespace cmd {
 				res.job.setDefinition(def);
 			}
 
+			// set clang AST dump filter regex
+			if(!res.settings.clangASTDumpFilter.empty()) {
+				res.job.setClangASTDumpFilter(res.settings.clangASTDumpFilter);
+			}
+
 			// insert
 			const std::string std = res.settings.standard.back();
 			if(res.settings.standard.size()>1) {
