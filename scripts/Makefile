@@ -29,13 +29,11 @@ KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
 XERCES 	:= ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
 BISON 	:= ${PREFIX}/bison-$(shell ${AWK_CMD} bison_install.sh | cut -d= -f2 )
 FLEX 	:= ${PREFIX}/flex-$(shell ${AWK_CMD} flex_install.sh | cut -d= -f2 )
-PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
 CCACHE	:= ${PREFIX}/ccache-$(shell ${AWK_CMD} ccache_install.sh | cut -d= -f2 )
 HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
-NINJA := ${PREFIX}/ninja-$(shell ${AWK_CMD} ninja_install.sh | cut -d= -f2 )
 
 all: INSIEME
 
@@ -149,12 +147,6 @@ ${KOMPEX}: kompex_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh kompex_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## PYTHON
-${PYTHON}: python_install.sh ${GCC}
-	@echo "#### INSTALL PYTHON ${PYTHON} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh python_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## RUBY
 ${RUBY}: ruby_install.sh ${GCC}
 	@echo "#### INSTALL RUBY ${RUBY} ####"
@@ -179,12 +171,6 @@ ${HWLOC}: hwloc_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh hwloc_install.sh
 	@echo "@@@@ Done! @@@@"
 
-## NINJA
-${NINJA}: ninja_install.sh ${PYTHON}
-	@echo "#### INSTALL NINJA ${NINJA} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ninja_install.sh
-	@echo "@@@@ Done! @@@@"
-
 ## XERCES
 ${XERCES}: xerces_install.sh ${GCC}
 	@echo "#### INSTALL XERCES ${XERCES} ####"
@@ -204,7 +190,7 @@ ${FLEX}: flex_install.sh ${GCC}
 	@echo "@@@@ Done! @@@@"
 
 
-INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
+INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
 		 ${CMAKE} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
-		 ${PYTHON} ${RUBY} ${PAPI} ${CCACHE} ${NINJA} ${XERCES} \
+		 ${RUBY} ${PAPI} ${CCACHE} ${XERCES} \
 		 ${BISON} ${FLEX} ${HWLOC}
