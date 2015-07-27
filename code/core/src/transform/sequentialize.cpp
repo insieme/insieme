@@ -236,7 +236,10 @@ namespace transform {
 					}
 
 					if (!lb.isOne()) {
-						throw NotSequentializableException("Parallel Job requires more than one thread!");
+						if (ExpressionPtr pfor = tryToPFor(job)) {
+							return map(pfor);
+						}
+						throw NotSequentializableException("Job requires more than one thread!");
 					}
 
 				} catch (const arithmetic::NotAFormulaException& nfe) {
@@ -252,7 +255,9 @@ namespace transform {
 				//	- return bind expression
 
 				// reduce level in get-thread-group-size by 1, replace expressions representing 0
+				LOG(DEBUG) << "Branch pre-lowerThreadIDs:\n" << dumpColor(branch);
 				branch = lowerThreadIDs(branch);
+				LOG(DEBUG) << "Branch post-lowerThreadIDs:\n" << dumpColor(branch);
 
 				return branch;
 			}
@@ -261,22 +266,7 @@ namespace transform {
 
 				// start with current statement
 				StatementPtr stmt = curStmt;
-
-				// try conversion into a pfor
-				if (stmt->getNodeType() == NT_JobExpr) {
-
-					// check whether job could be converted into a pfor
-					auto job = stmt.as<JobExprPtr>();
-
-					// should not be converted into a pfor if its lower range is 1 (it is a simple task)
-					auto lowerBound = analysis::getArgument(job->getThreadNumRange(), 0);
-					if (!lowerBound.isa<LiteralPtr>() || lowerBound.as<LiteralPtr>()->getStringValue() != "1") {
-						if (ExpressionPtr pfor = tryToPFor(job)) {
-							return map(pfor);
-						}
-					}
-				}
-
+				
 				// start by resolve stmt recursively
 				stmt = stmt->substitute(manager, *this);
 
@@ -306,7 +296,10 @@ namespace transform {
 	}
 
 	NodePtr sequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps) {
-		return Sequentializer(manager, removeSyncOps).map(lowerThreadIDs(stmt));
+		LOG(DEBUG) << "Sequentialize input:\n" << dumpColor(stmt);
+		auto ret = Sequentializer(manager, removeSyncOps).map(lowerThreadIDs(stmt));
+		LOG(DEBUG) << "Sequentialize output:\n" << dumpColor(ret);
+		return ret;
 	}
 
 	NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps) {
