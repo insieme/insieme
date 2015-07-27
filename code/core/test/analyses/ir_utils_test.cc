@@ -163,10 +163,10 @@ namespace analysis {
 		// normalize
 //		code = builder.normalize(code);
 
-		std::cout << "\n";
-		std::cout << *code << "\n";
-		std::cout << *builder.normalize(code) << "\n";
-		std::cout << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+		//std::cout << "\n";
+		//std::cout << *code << "\n";
+		//std::cout << *builder.normalize(code) << "\n";
+		//std::cout << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
 
 		// get list of free variables
 		auto freeVars = analysis::getFreeVariables(code);
@@ -647,6 +647,63 @@ namespace analysis {
 		EXPECT_PRED2(notReadOnly, callB, varC);
 		EXPECT_PRED2(notReadOnly, callB, varD);
 
+	}
+
+	TEST(IsParallel, Negative) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto prog = builder.parseProgram(R"1N5P1RE(
+			let int = int<4>;
+			let taskfun = lambda (int v) -> unit {
+				if(v == 0) return;
+				taskfun(v-1);
+				mergeAll();
+			};
+			unit main() {
+				taskfun(1);
+			}
+		)1N5P1RE");
+
+		EXPECT_FALSE(isParallel(prog));
+	}
+	TEST(IsParallel, Positive) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto prog = builder.parseProgram(R"1N5P1RE(
+			let int = int<4>;
+			let taskfun = lambda (int v) -> unit {
+				if(v == 0) return;
+				parallel(job([1:1], taskfun(v-1)));
+				mergeAll();
+			};
+			unit main() {
+				taskfun(1);
+			}
+		)1N5P1RE");
+
+		EXPECT_TRUE(isParallel(prog));
+	}
+
+	TEST(CountInstances, Simple) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto prog = builder.parseProgram(R"1N5P1RE(
+			let int = int<4>;
+			let fun = lambda () -> unit {
+				decl int x = 1;
+				decl int y;
+			};
+			unit main() {
+				fun();
+				fun();
+			}
+		)1N5P1RE");
+
+		EXPECT_EQ(countInstances(prog, builder.parseType("int<4>")), 10);
+		EXPECT_EQ(countInstances(prog, builder.intLit(1)), 2);
 	}
 
 } // end namespace analysis

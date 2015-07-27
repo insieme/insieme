@@ -108,6 +108,14 @@ bool isNoOp(const StatementPtr& candidate);
 bool isGeneric(const TypePtr& type);
 
 /**
+ * Determines whether the given node contains parallel code (that is, calls to "parallel").
+ *
+ * @param node the node to be checked
+ * @return true if it contains parallel code, false otherwise
+ */
+bool isParallel(const NodePtr& node);
+
+/**
  * A universal utility extracting a list of element types from any given
  * type (e.g. parameter types of an abstract type, element types of a
  * reference, channel, array or vector type, ...)
@@ -441,6 +449,15 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
  * @return true if found, false otherwise
  */
 bool contains(const NodePtr& code, const NodePtr& element);
+
+/**
+ * Counts the number of occurrences of instances of the given element in the given code fragment.
+ *
+ * @param code the IR structure to be inspected
+ * @param element the element to be searched
+ * @return number of instances of element
+ */
+unsigned countInstances(const NodePtr& code, const NodePtr& element);
 
 /**
  * Tests if the variable is ever assigned or used by reference, if so, is not considered a read only

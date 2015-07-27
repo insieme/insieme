@@ -255,6 +255,12 @@ bool isGeneric(const TypePtr& type) {
 
 // ------------------------------------ End :: isGeneric ----------------------------
 
+bool isParallel(const NodePtr& node) {
+	return visitDepthFirstOnceInterruptible(node, [](const CallExprPtr& call) {
+		return call->getNodeManager().getLangBasic().isParallel(call->getFunctionExpr());
+	});
+}
+
 TypeList getElementTypes(const TypePtr& type) {
 	TypeList res;
 	visitDepthFirstPrunable(type, [&](const TypePtr& cur)->bool {
@@ -848,7 +854,23 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
 bool contains(const NodePtr& code, const NodePtr& element) {
 	assert_true(element) << "Element to be searched must not be empty!";
 	bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
-	return code && makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<bool>::type& rec)->bool { return *cur == *element || any(cur->getChildList(), rec); }, checkTypes)(code);
+	return code && makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<bool>::type& rec)->bool { 
+		return *cur == *element || any(cur->getChildList(), rec); 
+	}, checkTypes)(code);
+}
+
+unsigned countInstances(const NodePtr& code, const NodePtr& element) {
+	assert_true(element) << "Element to be searched must not be empty!";
+	bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
+	return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<unsigned>::type& rec)->unsigned {
+		if(*cur == *element) return 1;
+		auto children = cur->getChildList();
+		unsigned ret = 0;
+		for(const auto& c : children) {
+			ret += rec(c);
+		}
+		return ret;
+	}, checkTypes)(code) : 0;
 }
 
 
