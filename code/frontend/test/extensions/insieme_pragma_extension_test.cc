@@ -520,10 +520,9 @@ TEST(InsiemePragmaTest, checkInterchange) {
 	Source src(
 			R"(int main() {
 					int array[10][10];
-					int i, j;
 					#pragma insieme interchange (0,1)
-					for( i = 0; i < 10; ++i) {
-						for( j = 10; j < 20; ++j) {
+					for(int i = 0; i < 10; ++i) {
+						for(int j = 10; j < 20; ++j) {
 							array[i][j] = 0;
 						}
 					}
@@ -541,10 +540,10 @@ TEST(InsiemePragmaTest, checkInterchange) {
 	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
 	// expect swapped lower loop boundaries
 	TreePattern pattern =
-			irp::forStmt(icp::any, at("10"), at("20"), at("1"),
-					irp::forStmt(icp::any, at("0"), at("10"), at("1"),
+			irp::forStmt(icp::any, at("10"), icp::any, at("1"),
+					irp::forStmt(icp::any, at("0"), icp::any, at("1"),
 							irp::assignment()));
-dumpPretty(program);
+
 	auto res = irp::collectAll(pattern, program, false);
 	ASSERT_EQ(1, res.size());
 	EXPECT_TRUE(res.front());

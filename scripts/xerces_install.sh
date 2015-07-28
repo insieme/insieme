@@ -7,10 +7,16 @@ VERSION=3.1.2
 ##		xerces
 ########################################################################
 
+if [ -d $PREFIX/xerces-$VERSION ]; then
+  echo "XERCES version $VERSION already installed"
+  exit 0
+fi
+
+
 
 rm -Rf $PREFIX/xerces-$VERSION
 echo "#### Downloading Xerces library ####"
-wget http://www.eu.apache.org/dist//xerces/c/3/sources/xerces-c-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/xerces-c-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then

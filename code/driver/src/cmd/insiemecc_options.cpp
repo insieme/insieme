@@ -161,6 +161,12 @@ namespace cmd {
 				return res;
 			}
 
+			if(res.settings.dumpVersion) {
+				std::cout << INSIEME_VERSION << "\n";
+				res.gracefulExit = true;
+				return res;
+			}
+
 			// check whether version was requested
 			if(res.settings.version) {
 				std::cout << "This is the Insieme (tm) compiler version: " << INSIEME_VERSION << "\n" <<
@@ -237,6 +243,11 @@ namespace cmd {
 			// preprocessor directives
 			for(auto def : res.settings.definitions) {
 				res.job.setDefinition(def);
+			}
+
+			// set clang AST dump filter regex
+			if(!res.settings.clangASTDumpFilter.empty()) {
+				res.job.setClangASTDumpFilter(res.settings.clangASTDumpFilter);
 			}
 
 			// insert

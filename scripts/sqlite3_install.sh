@@ -8,7 +8,7 @@ VERSION=3071100
 
 rm -Rf $PREFIX/sqlite-$VERSION
 echo "#### Downloading Sqlite library ####"
-wget http://www.sqlite.org/sqlite-autoconf-$VERSION.tar.gz
+wget -nc http://www.insieme-compiler.org/ext_libs/sqlite-autoconf-$VERSION.tar.gz
 tar -xzf sqlite-autoconf-$VERSION.tar.gz
 cd sqlite-autoconf-$VERSION/
 

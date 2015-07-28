@@ -57,7 +57,8 @@ FLAG("no-warnings", 			noWarnings, 				"inhibit all warnings")
 FLAG("progress", 				progress, 					"show progress bar for frontend conversion process")
 FLAG("show-stats",				showStatistics, 			"computes statistics regarding the composition of the IR")
 FLAG("use-pm",					usePM,						"perform code transformations using the Polyhedral Model")
-FLAG("version", 				version, 					"print version string")
+FLAG("version,v", 				version, 					"print full version string")
+FLAG("dumpversion", 				dumpVersion, 					"print minimal version string")
 FLAG("win-cross-compile", 		winCrossCompile,			"set cross compilation for a Windows target")
 FLAG("print-clang-ast", 		printClangAST,				"print the clang AST")
 FLAG("fnodefaultextensions", 	noDefaultExtensions,	    "disables all frontend extensions that are enabled by default")
@@ -87,6 +88,7 @@ OPTION("library-file,l", 		libraryFiles,				std::vector<frontend::path>, 		std::
 OPTION("library-path,L", 		libraryPaths,				std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"library search path(s)")
 OPTION("dump-kernel",			dumpOclKernel,				frontend::path,						"a.cl", 							"dump OpenCL kernel")
 OPTION("optimization,O", 		optimization, 				std::string,						std::string(),						"optimization flag")
+OPTION("print-clang-ast-filter",	clangASTDumpFilter,			std::string, 						std::string(),						"set a regular expression to filter the clang AST dump.")
 
 #undef FLAG
 #undef PARAMETER

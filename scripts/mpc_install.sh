@@ -15,7 +15,7 @@ if [ -d $PREFIX/mpc-$VERSION ]; then
 fi
 
 echo "#### Downloading MPC library ####"
-wget -nc http://www.multiprecision.org/mpc/download/$FILE
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then

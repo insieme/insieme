@@ -230,7 +230,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [&](const core::checks::Message& cur) {
-		LOG(INFO) << cur;
+		LOG(ERROR) << cur;
 		core::NodeAddress address = cur.getOrigin();
 		stringstream ss;
 		unsigned contextSize = 1;
@@ -244,9 +244,9 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 			ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
 
 		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
-//		LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
-		LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
-		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+//		LOG(ERROR) << "\t Source-Node-Type: " << address->getNodeType();
+		LOG(ERROR) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
+		LOG(ERROR) << "\t Context: " << ss.str() << std::endl;
 
 		// find enclosing function
 		auto fun = address;
@@ -254,9 +254,9 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 			fun = fun.getParentAddress();
 		}
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
-			LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
-															   PrettyPrinter::JUST_OUTERMOST_SCOPE |
-															   PrettyPrinter::PRINT_CASTS) << std::endl;
+			LOG(ERROR) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
+					PrettyPrinter::JUST_OUTERMOST_SCOPE |
+					PrettyPrinter::PRINT_CASTS) << std::endl;
 		}
 
 //		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
@@ -322,8 +322,8 @@ const core::ProgramPtr SCoPTransformation(const core::ProgramPtr& program, const
 	// check whether OpenCL processing has been requested by the user
 	auto oclChecker = [&]() -> bool {
 	    for(auto extPtr : options.job.getExtensions()) {
-            if(dynamic_cast<insieme::frontend::extensions::OclHostExtension*>(extPtr.get()))
-                return true;
+	        if(dynamic_cast<insieme::frontend::extensions::OclHostExtension*>(extPtr.get()))
+	            return true;
 	    }
 	    return false;
 	};
@@ -381,12 +381,13 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 	if(options.backendHint == cmd::BackendEnum::Sequential)
 		return be::sequential::SequentialBackend::getDefault();
 
-    auto gemsclaimChecker = [&]() -> bool {
-	    for(auto extPtr : options.job.getExtensions()) {
-            if(dynamic_cast<insieme::frontend::extensions::GemsclaimExtension*>(extPtr.get()))
-                return true;
-	    }
-	    return false;
+	auto gemsclaimChecker = [&]() -> bool {
+		for(auto extPtr : options.job.getExtensions()) {
+			if(dynamic_cast<insieme::frontend::extensions::GemsclaimExtension*>(extPtr.get())) {
+				return true;
+			}
+		}
+		return false;
 	};
 	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, gemsclaimChecker());
 }
@@ -394,8 +395,8 @@ insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const c
 int main(int argc, char** argv) {
 
 	// Step 1: parse input parameters
-    std::vector<std::string> arguments(argv, argv + argc);
-    cmd::Options options = cmd::Options::parse(arguments);
+	std::vector<std::string> arguments(argv, argv + argc);
+	cmd::Options options = cmd::Options::parse(arguments);
 
 	// if options are invalid, exit non-zero
 	if(!options.valid)
@@ -438,7 +439,7 @@ int main(int argc, char** argv) {
 	// update input files
 	options.job.setFiles(inputs);
 
-    // Step 3: load input code
+	// Step 3: load input code
 	co::NodeManager mgr;
 
 	// load libraries
@@ -468,29 +469,29 @@ int main(int argc, char** argv) {
 	std::cout << "Extracting executable ...\n";
 
 	// convert src file to target code
-    auto program = options.job.execute(mgr);
+	    auto program = options.job.execute(mgr);
 
-    core::checks::MessageList errors;
-    if(options.settings.checkSema || options.settings.checkSemaOnly) {
-    	int retval = checkSema(program, errors);
-    	if(options.settings.checkSemaOnly)
-    		return retval;
-    }
+	core::checks::MessageList errors;
+	if(options.settings.checkSema || options.settings.checkSemaOnly) {
+		int retval = checkSema(program, errors);
+		if(options.settings.checkSemaOnly)
+			return retval;
+	}
 
-    if(!options.settings.dumpCFG.empty())
-    	dumpCFG(program, options.settings.dumpCFG.string());
+	if(!options.settings.dumpCFG.empty())
+		dumpCFG(program, options.settings.dumpCFG.string());
 
-    if(options.settings.showStatistics)
-    	showStatistics(program);
+	if(options.settings.showStatistics)
+		showStatistics(program);
 
-    if(options.settings.benchmarkCore)
-    	benchmarkCore(program);
+	if(options.settings.benchmarkCore)
+		benchmarkCore(program);
 
-    if(options.settings.markScop)
-    	markSCoPs(program);
+	if(options.settings.markScop)
+		markSCoPs(program);
 
-    if(options.settings.usePM)
-    	SCoPTransformation(program, options);
+	if(options.settings.usePM)
+		SCoPTransformation(program, options);
 
 	if(options.settings.taskGranularityTuning)
 		program = insieme::transform::tasks::applyTaskOptimization(program);
@@ -538,8 +539,8 @@ int main(int argc, char** argv) {
 		default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	}
 
-    //add needed library flags
-    for(auto cur : extLibs) {
+	//add needed library flags
+	for(auto cur : extLibs) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3,libname.find(".")-3));
@@ -550,28 +551,28 @@ int main(int argc, char** argv) {
 		compiler.addIncludeDir(cur.string());
 	}
 
-    //add the given optimization flags (-f flags)
-    for(auto cur : options.job.getFFlags()) {
-        compiler.addFlag(cur);
-    }
+	//add the given optimization flags (-f flags)
+	for(auto cur : options.job.getFFlags()) {
+	    compiler.addFlag(cur);
+	}
 
-    //add definitions
-    for(auto cur : options.job.getDefinitions()) {
-        compiler.addFlag(std::string("-D" + cur.first));
-    }
+	//add definitions
+	for(auto cur : options.job.getDefinitions()) {
+	    compiler.addFlag(std::string("-D" + cur.first));
+	}
 
-    //if an optimization flag is set (e.g. -O3)
-    //set this flag in the backend compiler
-    if(!options.settings.optimization.empty())
-        compiler.addFlag("-O" + options.settings.optimization);
-    if (options.settings.debug)
-        compiler.addFlag("-g3");
+	//if an optimization flag is set (e.g. -O3)
+	//set this flag in the backend compiler
+	if(!options.settings.optimization.empty())
+	    compiler.addFlag("-O" + options.settings.optimization);
+	if (options.settings.debug)
+	    compiler.addFlag("-g3");
 
-    //check if the c++11 standard was set when calling insieme
-    //if yes, use the same standard in the backend compiler
-    if(options.job.isCxx()) {
-        compiler.addFlag("-std=c++0x");
-    }
+	//check if the c++11 standard was set when calling insieme
+	//if yes, use the same standard in the backend compiler
+	if(options.job.isCxx()) {
+	    compiler.addFlag("-std=c++0x");
+	}
 
 	return !cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 }

@@ -16,7 +16,7 @@ if [ -d $PREFIX/flex-$VERSION ]; then
 fi
 
 echo "#### Downloading flex library ####"
-wget -nc http://downloads.sourceforge.net/project/flex/$FILE
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then

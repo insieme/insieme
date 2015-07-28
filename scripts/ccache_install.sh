@@ -17,7 +17,7 @@ fi
 
 rm -Rf $PREFIX/ccache-$VERSION
 echo "#### Downloading CCache ####"
-wget -nc http://samba.org/ftp/ccache/ccache-$VERSION.tar.bz2
+wget -nc http://www.insieme-compiler.org/ext_libs/ccache-$VERSION.tar.bz2
 
 if [ $RET -ne 0 ]; then
 	exit $RET

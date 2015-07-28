@@ -94,8 +94,8 @@ TEST(Transform, InterchangeManual) {
 	scop[0].getSchedule().set( newSched );
 
 	NodePtr newIR = analysis::normalize(scop.toIR(mgr));
-	EXPECT_EQ( "for(int<4> v0 = 5 .. 25 : 1) {"
-					"for(int<4> v2 = 10 .. 50 : 1) {"
+	EXPECT_EQ( "for(int<4> v0 = 5 .. int_add(24, 1) : 1) {"
+					"for(int<4> v2 = 10 .. int_add(49, 1) : 1) {"
 						"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v2, v0));"
 					"};"
 				"}", toString(*newIR));
@@ -136,11 +136,7 @@ TEST(Transform, InterchangeAuto) {
 	LoopInterchange li(0, 1);
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 	
-	EXPECT_EQ( "for(int<4> v0 = 5 .. 25 : 1) {"
-					"for(int<4> v2 = 10 .. 50 : 1) {"
-						"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v2, v0));"
-					"};"
-				"}", toString(*newIR));
+	EXPECT_EQ( "for(int<4> v0 = 5 .. int_add(24, 1) : 1) {for(int<4> v2 = 10 .. int_add(49, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v2, v0));};}", toString(*newIR));
 
 	checkSCoPCorrectness(newIR);
 }
@@ -172,11 +168,11 @@ TEST(Transform, InterchangeAuto2) {
 	
 	EXPECT_EQ( 
 		"{"
-			"for(int<4> v0 = 10 .. 50 : 1) {"
+			"for(int<4> v0 = 10 .. int_add(49, 1) : 1) {"
 				"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v0);"
 			"}; "
-			"for(int<4> v2 = 5 .. 25 : 1) {"
-				"for(int<4> v3 = 10 .. 50 : 1) {"
+			"for(int<4> v2 = 5 .. int_add(24, 1) : 1) {"
+				"for(int<4> v3 = 10 .. int_add(49, 1) : 1) {"
 					"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v2));"
 				"};"
 			"};"
@@ -211,16 +207,7 @@ TEST(Transform, StripMiningAuto) {
 	LoopStripMining li(1, 7);
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( 
-
-		"for(int<4> v0 = 10 .. 50 : 1) {"
-			"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v0); "
-			"for(int<4> v2 = 5 .. 25 : 7) {"
-				"for(int<4> v3 = v2 .. int_add(select(int_add(v2, 6), 24, int_lt), 1) : 1) {"
-					"rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v3));"
-				"};"
-			"};"
-		"}", toString(*newIR));
+	EXPECT_EQ("for(int<4> v0 = 10 .. int_add(49, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v0); for(int<4> v2 = 5 .. int_add(24, 1) : 7) {for(int<4> v3 = v2 .. int_add(select(int_add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v3));};};}", toString(*newIR));
 
 	checkSCoPCorrectness(newIR);
 }
@@ -255,7 +242,7 @@ TEST(Transform, LoopFusionAuto) {
 	LoopFusion lf( {0,1} );
 	NodePtr newIR = analysis::normalize(lf.apply(NodeAddress(stmt)));
 
-	EXPECT_EQ("{for(int<4> v0 = 5 .. 10 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v0);}; for(int<4> v2 = 10 .. 25 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v2); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v2);}; for(int<4> v3 = 25 .. 50 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v3);};}" , toString(*newIR) );
+	EXPECT_EQ("{for(int<4> v0 = 5 .. int_add(9, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v0);}; for(int<4> v2 = 10 .. int_add(24, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v2); rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v2);}; for(int<4> v3 = 25 .. int_add(49, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, v3);};}" , toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -291,7 +278,7 @@ TEST(Transform, TilingManual) {
 	LoopInterchange li(1,2);
 	newIR = analysis::normalize(li.apply(NodeAddress(newIR)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. 50 : 7) {for(int<4> v2 = 5 .. 25 : 7) {for(int<4> v3 = v0 .. int_add(select(int_add(v0, 6), 49, int_lt), 1) : 1) {for(int<4> v4 = v2 .. int_add(select(int_add(v2, 6), 24, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int_add(49, 1) : 7) {for(int<4> v2 = 5 .. int_add(24, 1) : 7) {for(int<4> v3 = v0 .. int_add(select(int_add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int_lt), 1) : 1) {for(int<4> v4 = v2 .. int_add(select(int_add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};};}", toString(*newIR));
 
 	checkSCoPCorrectness(newIR);
 }
@@ -323,7 +310,7 @@ TEST(Transform, TilingAuto) {
 	LoopTiling li({7,7});
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. 50 : 7) {for(int<4> v2 = 5 .. 25 : 7) {for(int<4> v3 = v0 .. int_add(select(int_add(v0, 6), 49, int_lt), 1) : 1) {for(int<4> v4 = v2 .. int_add(select(int_add(v2, 6), 24, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int_add(49, 1) : 7) {for(int<4> v2 = 5 .. int_add(24, 1) : 7) {for(int<4> v3 = v0 .. int_add(select(int_add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int_lt), 1) : 1) {for(int<4> v4 = v2 .. int_add(select(int_add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};};}", toString(*newIR));
 
 	checkSCoPCorrectness(newIR);
 }
@@ -355,7 +342,7 @@ TEST(Transform, TilingAuto2) {
 	LoopTiling li({ 7,6,3 });
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)).getAddressedNode());
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. 50 : 7) {for(int<4> v2 = 3 .. 25 : 6) {for(int<4> v3 = 2 .. 100 : 3) {for(int<4> v4 = v0 .. int_add(select(int_add(v0, 6), 49, int_lt), 1) : 1) {for(int<4> v5 = v2 .. int_add(select(int_add(v2, 5), 24, int_lt), 1) : 1) {for(int<4> v6 = v3 .. int_add(select(int_add(v3, 2), 99, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v4, v5));};};};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int_add(49, 1) : 7) {for(int<4> v2 = 3 .. int_add(24, 1) : 6) {for(int<4> v3 = 2 .. int_add(99, 1) : 3) {for(int<4> v4 = v0 .. int_add(select(int_add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int_lt), 1) : 1) {for(int<4> v5 = v2 .. int_add(select(int_add(cast<int<4>>(v2), cast<int<4>>(5)), 24, int_lt), 1) : 1) {for(int<4> v6 = v3 .. int_add(select(int_add(cast<int<4>>(v3), cast<int<4>>(2)), 99, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v4, v5));};};};};};}", toString(*newIR));
 
 	checkSCoPCorrectness(newIR);
 }
@@ -385,7 +372,7 @@ TEST(Transform, TilingAuto21) {
 	LoopTiling li({ 5,5 }, {0,0});
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-EXPECT_EQ( "for(int<4> v0 = 10 .. 50 : 1) {for(int<4> v2 = 3 .. 25 : 5) {for(int<4> v3 = 2 .. 100 : 5) {for(int<4> v4 = v2 .. int_add(select(int_add(v2, 4), 24, int_lt), 1) : 1) {for(int<4> v5 = v3 .. int_add(select(int_add(v3, 4), 99, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v4));};};};};}", toString(*newIR) );
+EXPECT_EQ( "for(int<4> v0 = 10 .. int_add(49, 1) : 1) {for(int<4> v2 = 3 .. int_add(24, 1) : 5) {for(int<4> v3 = 2 .. int_add(99, 1) : 5) {for(int<4> v4 = v2 .. int_add(select(int_add(cast<int<4>>(v2), cast<int<4>>(4)), 24, int_lt), 1) : 1) {for(int<4> v5 = v3 .. int_add(select(int_add(cast<int<4>>(v3), cast<int<4>>(4)), 99, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v4));};};};};}", toString(*newIR));
 
 	checkSCoPCorrectness(newIR);
 }
@@ -417,7 +404,7 @@ TEST(Transform, TilingAuto3) {
 	LoopTiling li({7,6,8});
 	NodePtr newIR = analysis::normalize(li.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. 50 : 7) {for(int<4> v2 = 1 .. 25 : 6) {for(int<4> v3 = v0 .. 100 : 1) {for(int<4> v4 = int_add(v3, cast<int<4>>(int_mul(-8, cast<int<4>>(cloog_floor(int_add(int_mul(-1, v0), v3), 8))))) .. int_add(select(int_add(v0, 6), select(v3, 49, int_lt), int_lt), 1) : 8) {if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_le(v0, v4), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_ge(v1, int_add(cast<int<4>>(v2), cast<int<4>>(-7)));}}(v0, v4)})) {for(int<4> v5 = v2 .. int_add(v2, 6) : 1) {for(int<4> v6 = v3 .. int_add(select(int_add(v3, 7), 99, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v4, v5));};};} else {};};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int_add(49, 1) : 7) {for(int<4> v2 = 1 .. int_add(24, 1) : 6) {for(int<4> v3 = v0 .. int_add(99, 1) : 1) {for(int<4> v4 = int_add(cast<int<4>>(v3), cast<int<4>>(int_mul(cast<int<4>>(-8), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v0))), cast<int<4>>(v3)), 8))))) .. int_add(select(int_add(cast<int<4>>(v0), cast<int<4>>(6)), select(v3, 49, int_lt), int_lt), 1) : 8) {if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_le(v0, v4), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int_ge(v1, int_add(cast<int<4>>(v2), cast<int<4>>(-7)));}}(v0, v4)})) {for(int<4> v5 = v2 .. int_add(int_add(cast<int<4>>(v2), cast<int<4>>(5)), 1) : 1) {for(int<4> v6 = v3 .. int_add(select(int_add(cast<int<4>>(v3), cast<int<4>>(7)), 99, int_lt), 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v4, v5));};};} else {};};};};}", toString(*newIR));
 
 	// checkSCoPCorrectness(newIR);
 }
@@ -447,7 +434,7 @@ TEST(Transform, LoopStamping) {
 	LoopStamping ls( 7, { 0,0 } );
 	NodePtr newIR = analysis::normalize(ls.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "{for(int<4> v0 = 0 .. 30 : 1) {for(int<4> v2 = 0 .. 28 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v2));};}; for(int<4> v3 = 0 .. 30 : 1) {for(int<4> v4 = 28 .. 30 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 0 .. int_add(29, 1) : 1) {for(int<4> v2 = 0 .. int_add(27, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v2));};}; for(int<4> v3 = 0 .. int_add(29, 1) : 1) {for(int<4> v4 = 28 .. int_add(29, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 
@@ -479,7 +466,7 @@ TEST(Transform, LoopStamping2) {
 	LoopStamping ls( 7 , { 0 } );
 	NodePtr newIR = analysis::normalize(ls.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "{for(int<4> v0 = 3 .. 24 : 1) {for(int<4> v2 = 3 .. 30 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v2));};}; for(int<4> v3 = 24 .. 30 : 1) {for(int<4> v4 = 3 .. 30 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 3 .. int_add(23, 1) : 1) {for(int<4> v2 = 3 .. int_add(29, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v2));};}; for(int<4> v3 = 24 .. int_add(29, 1) : 1) {for(int<4> v4 = 3 .. int_add(29, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v3, v4));};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 
@@ -514,7 +501,7 @@ TEST(Transform, LoopStamping3) {
 	LoopStamping ls( 7, { 0 } );
 	NodePtr newIR = builder.normalize(ls.apply(NodeAddress(forStmt)).getAddressedNode());
 
-	EXPECT_EQ( "if(int_ge(v2, 11)) {for(int<4> v0 = 10 .. int_add(int_add(cast<int<4>>(int_mul(-7, cast<int<4>>(cloog_floor(int_add(int_mul(-1, v2), 2), 7)))), -5), 1) : 1) {for(int<4> v3 = 1 .. 25 : 1) {for(int<4> v4 = 1 .. 100 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v3));};};}; for(int<4> v5 = int_add(cast<int<4>>(int_mul(-7, cast<int<4>>(cloog_floor(int_add(int_mul(-1, v2), 2), 7)))), -4) .. v2 : 1) {for(int<4> v6 = 1 .. 25 : 1) {for(int<4> v7 = 1 .. 100 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v5, v6));};};};} else {}", toString(*newIR) );
+	EXPECT_EQ( "if(int_ge(v2, 11)) {for(int<4> v0 = 10 .. int_add(int_add(cast<int<4>>(int_mul(cast<int<4>>(-7), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v3 = 1 .. int_add(24, 1) : 1) {for(int<4> v4 = 1 .. int_add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v3));};};}; for(int<4> v5 = int_add(cast<int<4>>(int_mul(cast<int<4>>(-7), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int_add(int_add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v6 = 1 .. int_add(24, 1) : 1) {for(int<4> v7 = 1 .. int_add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v5, v6));};};};} else {}", toString(*newIR));
 
 	//checkSCoPCorrectness(newIR);
 }
@@ -547,7 +534,7 @@ TEST(Transform, LoopStamping4) {
 	LoopStamping ls( 7, { 0 } );
 	NodePtr newIR = analysis::normalize(ls.apply(NodeAddress(forStmt)));
 
-	EXPECT_EQ( "if(int_ge(v2, 11)) {for(int<4> v0 = 10 .. int_add(select(int_add(cast<int<4>>(int_mul(-7, cast<int<4>>(cloog_floor(int_add(int_mul(-1, v2), 2), 7)))), -5), 99, int_lt), 1) : 1) {for(int<4> v3 = 1 .. 25 : 1) {for(int<4> v4 = v0 .. 100 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v3));};};}; for(int<4> v5 = int_add(cast<int<4>>(int_mul(-7, cast<int<4>>(cloog_floor(int_add(int_mul(-1, v2), 2), 7)))), -4) .. int_add(select(int_sub(v2, 1), 99, int_lt), 1) : 1) {for(int<4> v6 = 1 .. 25 : 1) {for(int<4> v7 = v5 .. 100 : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v5, v6));};};};} else {}", toString(*newIR) );
+	EXPECT_EQ( "if(int_ge(v2, 11)) {for(int<4> v0 = 10 .. int_add(select(int_add(cast<int<4>>(int_mul(cast<int<4>>(-7), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int_lt), 1) : 1) {for(int<4> v3 = 1 .. int_add(24, 1) : 1) {for(int<4> v4 = v0 .. int_add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v0, v3));};};}; for(int<4> v5 = int_add(cast<int<4>>(int_mul(cast<int<4>>(-7), cast<int<4>>(cloog_floor(int_add(cast<int<4>>(int_mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int_add(select(int_add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int_lt), 1) : 1) {for(int<4> v6 = 1 .. int_add(24, 1) : 1) {for(int<4> v7 = v5 .. int_add(99, 1) : 1) {rec v0.{v0=fun(ref<vector<'elem,#l>> v1, uint<8> v2) {return ref_narrow(v1, dp_element(dp_root, v2), type<'elem>);}}(v1, uint_add(v5, v6));};};};} else {}", toString(*newIR));
 
 	// checkSCoPCorrectness(8,newIR);
 

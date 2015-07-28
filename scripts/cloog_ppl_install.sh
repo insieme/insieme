@@ -11,7 +11,7 @@ FILE=$PACKAGE.tar.gz
 
 rm -Rf $PREFIX/cloog-ppl-$VERSION
 echo "#### Downloading Cloog library ####"
-wget -nc ftp://gcc.gnu.org/pub/gcc/infrastructure/$FILE
+wget -nc http://www.insieme-compiler.org/ext_libs/$FILE
 
 rm -Rf $PACKAGE
 tar -xf $FILE
