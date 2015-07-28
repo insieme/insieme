@@ -52,6 +52,16 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 	 */
 	std::map <const clang::Decl*, const clang::LambdaExpr*> lambdaMap;
 
+	/**
+	 * Lambdas that should be converted into function pointers
+	 * must not be converted into struct types that contain
+	 * a parentheses operator overloading. Simple lambdas are
+	 * stored and in case of a function pointer conversion we
+	 * use the plain function instead of a struct.
+	 */
+	std::map <const clang::CXXRecordDecl*, core::ExpressionPtr> simpleLambdaReplacementMap;
+
+
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 stmts
 
@@ -111,14 +121,28 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 	}
 
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
+		if(const clang::CXXMemberCallExpr* memberExpr = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
+			if(const clang::CXXConversionDecl* cd = llvm::dyn_cast<clang::CXXConversionDecl>(memberExpr->getMethodDecl())) {
+				//check if the conversion decl belongs to a lambda
+				if(cd->getParent()->isLambda()) {
+					//convert the lambda and check if we find the
+					//declaration in the simple lambda map afterwards
+					convFact.convertExpr(memberExpr->getCallee());
+					auto fit = simpleLambdaReplacementMap.find(cd->getParent());
+					if(fit != simpleLambdaReplacementMap.end()) {
+						return convFact.getIRBuilder().refVar(fit->second);
+					}
+				}
+			}
+		}
 		if (const clang::LambdaExpr* lambda =  llvm::dyn_cast<clang::LambdaExpr>(expr))
 			return VisitLambdaExpr(lambda, convFact);
 		if (const clang::CXXNullPtrLiteralExpr* nullExpr =  llvm::dyn_cast<clang::CXXNullPtrLiteralExpr>(expr))
 			return VisitCXXNullPtrLiteralExpr(nullExpr, convFact);
 		if(const clang::SizeOfPackExpr* sope = llvm::dyn_cast<clang::SizeOfPackExpr>(expr))
 			return VisitSizeOfPackExpr(sope, convFact);
-	        if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr))
-        		return VisitInitListExpr(initList, convFact);
+		if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr))
+			return VisitInitListExpr(initList, convFact);
 		return nullptr;
 	}
 

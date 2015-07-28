@@ -51,6 +51,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/extensions/cpp11_extension.h"
+#include "insieme/frontend/utils/name_manager.h"
 
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
@@ -86,8 +87,8 @@ insieme::core::ExpressionPtr Cpp11Extension::VisitCXXNullPtrLiteralExpr	(const c
  *  			Cxx11 lambda expression
  */
 insieme::core::ExpressionPtr Cpp11Extension::VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) {
-	//auto builder = convFact.getIRBuilder();
 	auto& mgr = convFact.getNodeManager();
+	auto builder = convFact.getIRBuilder();
 	insieme::core::ExpressionPtr retIr;
 
 	// convert the enclosing class
@@ -102,16 +103,33 @@ insieme::core::ExpressionPtr Cpp11Extension::VisitLambdaExpr (const clang::Lambd
 		captures.push_back(convFact.convertExpr(*captureIt));
 	}
 
-
-
 	core::ExpressionPtr symb = convFact.getCallableExpression(lambdaExpr->getCallOperator ());
+
+	// is it a simple lambda without any captures?
+	// if so, lets create a trivial function.
+	// the function will be used whenever we want to
+	// use a function pointer instead of the lambda.
+	if(captures.empty()) {
+		auto returnType = symb->getType().as<core::FunctionTypePtr>()->getReturnType();
+		core::ExpressionPtr fun =	builder.createCallExprFromBody(
+						convFact.convertStmt(lambdaExpr->getBody()),
+						returnType
+					);
+		core::LambdaExprPtr lambda = fun.as<core::CallExprPtr>()->getFunctionExpr().as<core::LambdaExprPtr>();
+		auto symbol = builder.literal(
+			utils::buildNameForFunction(lambdaExpr->getCallOperator()),
+			lambda->getType()
+		);
+		convFact.getIRTranslationUnit().addFunction(symbol, lambda);
+		simpleLambdaReplacementMap.insert({lambdaExpr->getLambdaClass(), symbol});
+	}
+
 	frontend_assert(symb.isa<core::LiteralPtr>()) << "no literal?";
 	lambdaMap.insert({lambdaExpr->getCallOperator(), lambdaExpr});
 
 
 	insieme::core::ExpressionPtr init = insieme::core::encoder::toIR<ExpressionList, core::encoder::DirectExprListConverter>(mgr, captures);
 	return retIr = convFact.getInitExpr (lambdaClassIR, init);
-;
 }
 
 

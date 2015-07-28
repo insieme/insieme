@@ -172,7 +172,7 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 	if(setup.hasOption(ConversionSetup::DumpClangAST)) {
 		const std::string filter = setup.getClangASTDumpFilter();
 		auto tuDecl = getASTContext().getTranslationUnitDecl();
-		//if nothing defined print the while context
+		//if nothing defined print the whole context
 		if(filter.empty()) {
 			tuDecl->dumpColor();
 		} else {
