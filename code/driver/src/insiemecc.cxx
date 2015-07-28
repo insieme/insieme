@@ -227,7 +227,7 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [&](const core::checks::Message& cur) {
-		LOG(INFO) << cur;
+		LOG(ERROR) << cur;
 		core::NodeAddress address = cur.getOrigin();
 		stringstream ss;
 		unsigned contextSize = 1;
@@ -241,9 +241,9 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 			ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
 
 		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
-//		LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
-		LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
-		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+//		LOG(ERROR) << "\t Source-Node-Type: " << address->getNodeType();
+		LOG(ERROR) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
+		LOG(ERROR) << "\t Context: " << ss.str() << std::endl;
 
 		// find enclosing function
 		auto fun = address;
@@ -251,9 +251,9 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 			fun = fun.getParentAddress();
 		}
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
-			LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
-															   PrettyPrinter::JUST_OUTERMOST_SCOPE |
-															   PrettyPrinter::PRINT_CASTS) << std::endl;
+			LOG(ERROR) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
+					PrettyPrinter::JUST_OUTERMOST_SCOPE |
+					PrettyPrinter::PRINT_CASTS) << std::endl;
 		}
 
 //		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
