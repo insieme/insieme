@@ -55,22 +55,24 @@
 #include "insieme/analysis/cfg.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/scopregion.h"
+
+#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/timer.h"
+#include "insieme/utils/version.h"
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/extensions/ocl_host_extension.h"
 #include "insieme/frontend/extensions/gemsclaim_extension.h"
-#include "insieme/transform/polyhedral/scoppar.h"
-#include "insieme/transform/polyhedral/scopvisitor.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
+
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/object_file_utils.h"
 
@@ -83,8 +85,9 @@
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/utils/timer.h"
-#include "insieme/utils/version.h"
+#include "insieme/transform/tasks/granularity_tuning.h"
+#include "insieme/transform/polyhedral/scoppar.h"
+#include "insieme/transform/polyhedral/scopvisitor.h"
 
 using namespace std;
 using namespace insieme;
@@ -488,6 +491,9 @@ int main(int argc, char** argv) {
 
     if(options.settings.usePM)
     	SCoPTransformation(program, options);
+
+	if(options.settings.taskGranularityTuning)
+		program = insieme::transform::tasks::applyTaskOptimization(program);
 
 	// dump IR code
 	if(!options.settings.dumpIR.empty()) {

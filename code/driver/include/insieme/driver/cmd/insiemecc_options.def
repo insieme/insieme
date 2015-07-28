@@ -51,7 +51,6 @@ FLAG("check-sema-only", 		checkSemaOnly,				"run semantic checks on the generate
 FLAG("check-sema", 				checkSema,					"run semantic checks on the generated IR")
 FLAG("compile,c", 				compileOnly, 				"compilation only")
 FLAG("debug-information,g", 	debug, 						"produce debug information")
-FLAG("estimate-effort", 		estimateEffort,				"enables generation of the effort estimation function")
 FLAG("help,h", 					help, 						"produce help message")
 FLAG("mark-scop",				markScop,					"mark SCoPs (Static COntrol Parts) in the IR (analysis only")
 FLAG("no-warnings", 			noWarnings, 				"inhibit all warnings")
@@ -62,6 +61,9 @@ FLAG("version", 				version, 					"print version string")
 FLAG("win-cross-compile", 		winCrossCompile,			"set cross compilation for a Windows target")
 FLAG("print-clang-ast", 		printClangAST,				"print the clang AST")
 FLAG("fnodefaultextensions", 	noDefaultExtensions,	    "disables all frontend extensions that are enabled by default")
+
+FLAG("estimate-effort", 		estimateEffort,				"enables generation of the effort estimation function")
+FLAG("task-granularity-tuning", taskGranularityTuning,		"enables multiverisoning of parallel tasks")
 
 PARAMETER("backend",				backend,					std::string,						"runtime", 							"backend selection")
 PARAMETER("outfile,o", 				outFile, 					frontend::path, 					"a.out", 							"output file")
