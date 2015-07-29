@@ -185,6 +185,14 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 		core::TypePtr resultTy = builder.vectorType(elementTy, builder.concreteIntTypeParam(halfVecSize));
 		if(refTy) resultTy = builder.refType(resultTy);
 
+		// special case for two element vectors: they return a scalar
+		if(halfVecSize == 1) {
+			if(accessor == "lo" || accessor == "odd")
+				return builder.arrayRefElem(base, builder.uintLit(0u));
+			else
+				return builder.arrayRefElem(base, builder.uintLit(1u));
+		}
+
 		if(accessor == "hi" || accessor == "lo") {
 			// start at 0 for lo, vecSize/2 for hi
 			core::LiteralPtr start = accessor == "lo" ? builder.getIntParamLiteral(0) : newVecSize;
@@ -198,13 +206,9 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 		if(accessor == "even" || accessor == "odd" ) {
 			unsigned odd = accessor == "odd" ? 1 : 0;
 
-			if(refTy) {
-				assert_fail() << "Vector functions 'even' and 'odd' are not supported as l-values";
-			}
-
 			// non-ref type
 			core::ExpressionList indices;
-			for(unsigned i = 0; i < 4; ++i) {
+			for(unsigned i = 0; i < halfVecSize; ++i) {
 				indices.push_back(builder.uintLit(i*2 + odd));
 			}
 
@@ -251,12 +255,12 @@ insieme::core::ExpressionPtr OclKernelExtension::Visit(const clang::Expr* expr, 
 
 				args.push_back(builder.uintLit(pos));
 			}
-			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
+			return builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args));
 		} else {
 			for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
-				args.push_back(builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
+				args.push_back(builder.uintLit(*I == 'w' ? 3u : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
 			}
-			return (retIr = builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args)) );
+			return builder.vectorPermute(convFact.tryDeref(base), builder.vectorExpr(args));
 		}
 
 	} else {

@@ -44,6 +44,18 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+bool isRefArrayType(const TypePtr& type);
+bool isArrayType(const TypePtr& type);
+TypePtr getArrayElementType(const TypePtr& ptr);
+RefTypePtr getRefArrayElementType(const TypePtr& ptr);
+
+// ------------------ VECTOR checks --------------------------------
+
+bool isVectorType(const TypePtr& type);
+TypePtr getVectorElementType(const TypePtr& ptr);
+bool isRefVectorType(const TypePtr& ptr);
+TypePtr getRefVectorElementType(const TypePtr& ptr);
+
 /**
  * Gets all nodes of the given type in node which are free.
  * A node is free if it is not enclosed by any node of the types listed in pruneNodes.

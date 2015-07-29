@@ -46,6 +46,8 @@ namespace datalayout {
 class ParSecSoa : public ParSecTransform<DatalayoutTransformer> {
 	VariableMap<std::map<core::StringValuePtr, core::VariablePtr>> fieldReplacements;
 
+	virtual core::NodeMap generateTypeReplacements(const core::TypePtr& oldStructType, const core::TypePtr& newStructType);
+
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) {return oldType;}
 
 	virtual core::ExpressionPtr updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,

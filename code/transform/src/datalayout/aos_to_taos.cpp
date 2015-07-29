@@ -75,14 +75,14 @@ AosToTaos::AosToTaos(core::NodePtr& toTransform, CandidateFinder candidateFinder
 void AosToTaos::transform() {
 	IRBuilder builder(mgr);
 
-	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
+  const NodeAddress toTransAddr(toTransform);
+	std::vector<std::pair<ExprAddressSet, StructTypePtr>> toReplaceLists = createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(mgr.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
 
-	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
-		StructTypePtr oldStructType = toReplaceList.second.as<ArrayTypePtr>()->getElementType().as<StructTypePtr>();
+	for(std::pair<ExprAddressSet, StructTypePtr> toReplaceList : toReplaceLists) {
+		StructTypePtr oldStructType = toReplaceList.second;
 
 		StructTypePtr newStructType = createNewType(oldStructType);
 		ExprAddressMap varReplacements;
@@ -94,8 +94,7 @@ void AosToTaos::transform() {
 			oldVar = oldVar.switchRoot(toTransform);
 
 			TypePtr newType = core::transform::replaceAll(mgr, oldVar->getType(), toReplaceList.second,
-					builder.arrayType(newStructType)).as<TypePtr>();
-
+					newStructType).as<TypePtr>();
 
 			// check if local or global variable
 			LiteralPtr globalVar = oldVar.isa<LiteralPtr>();
@@ -185,22 +184,26 @@ ExpressionPtr AosToTaos::updateAccess(const ExpressionPtr& oldAccess, const std:
 		const StringValuePtr& fieldName) {
 	// replace accesses to old variable with accesses to field in new variable
 	IRBuilder builder(mgr);
+
 	ExpressionMap localReplacement;
 	localReplacement[varInInit.first] = fieldName ?
 			builder.accessMember(varInInit.second.as<ExpressionPtr>(), fieldName) : varInInit.second.as<ExpressionPtr>();
 
-	core::pattern::TreePattern arrayAccess = pattern::aT(pirp::arrayRefElem1D(pattern::any, var("idx", pattern::any)));
-	pattern::MatchOpt match = arrayAccess.matchPointer(oldAccess);
+	ExpressionAddress replacedMemberAccess(core::transform::fixTypesGen(mgr, oldAccess, localReplacement, true));
+
+	core::pattern::TreePattern arrayAccess = pattern::aT(pirp::arrayRefElem1D(pattern::any, var("idx", pattern::any)) |
+			                                             pirp::arrayView(pattern::any, var("idx", pattern::any)));
+	pattern::AddressMatchOpt match = arrayAccess.matchAddress(replacedMemberAccess);
 
 	if(match) {
 		// replace index expression with one divided by tilesize
-		// it has to be devidable, otherwise it won't produce correct code
+		// it has to be dividable, otherwise it won't produce correct code
 		// TODO add check
-		ExpressionPtr idxExpr = match.get()["idx"].getValue().as<ExpressionPtr>();
-		localReplacement[idxExpr] = builder.div(idxExpr, genericTileSizeExpr);
-	}
+		ExpressionAddress idxExpr = match.get()["idx"].getValue().as<ExpressionAddress>();
 
-	return core::transform::fixTypesGen(mgr, oldAccess, localReplacement, true);
+		return core::transform::replaceNode(mgr, idxExpr, builder.div(idxExpr, genericTileSizeExpr)).as<ExpressionPtr>();
+	}
+	return replacedMemberAccess.getAddressedNode();
 }
 
 StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, const DeclarationStmtAddress& decl, const StatementPtr& newVar,
@@ -214,12 +217,15 @@ StatementList AosToTaos::generateNewDecl(const ExprAddressMap& varReplacements, 
 
 	NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, newStructType);
 //	inInitReplacementsInCaseOfNovarInInit[oldStructType] = newStructType;
+
 	// divide initialization size by tilesize
 	if(nElems) inInitReplacementsInCaseOfNovarInInit[nElems] = builder.div(nElems, genericTileSizeExpr);
 
+
+//std::cout << "old init: " << dumpPretty(decl->getInitialization()) << std::endl;
 	allDecls.push_back(builder.declarationStmt(newVar.as<VariablePtr>(), updateInit(varReplacements, decl->getInitialization(),
 		inInitReplacementsInCaseOfNovarInInit)));
-
+//std::cout << "new init: " << dumpPretty(allDecls.back().as<DeclarationStmtPtr>()->getInitialization()) << std::endl;
 	return allDecls;
 }
 

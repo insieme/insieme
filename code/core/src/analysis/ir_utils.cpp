@@ -57,6 +57,58 @@ namespace analysis {
 
 using std::map;
 
+// ------------------ REF ARRAY checks --------------------------------
+
+bool isRefArrayType(const TypePtr& type) {
+	if(RefTypePtr refTy = type.isa<RefTypePtr>()) {
+		return (refTy->getElementType()->getNodeType() == NT_ArrayType);
+	}
+	return false;
+}
+
+bool isArrayType(const TypePtr& type) {
+	return (type->getNodeType() == NT_ArrayType);
+}
+
+TypePtr getArrayElementType(const TypePtr& ptr){
+	assert_true(ptr->getNodeType() == NT_ArrayType) << "no ref to array with";
+	return ptr.as<ArrayTypePtr>()->getElementType();
+}
+
+RefTypePtr getRefArrayElementType(const TypePtr& ptr){
+	assert_true(ptr->getNodeType() == NT_RefType) << "no ref to play with";
+	IRBuilder builder(ptr->getNodeManager());
+	return builder.refType(getArrayElementType(ptr.as<RefTypePtr>()->getElementType()));
+}
+
+// ------------------ VECTOR checks --------------------------------
+
+bool isVectorType(const TypePtr& type) {
+	return (type->getNodeType() == NT_VectorType);
+}
+
+TypePtr getVectorElementType(const TypePtr& ptr) {
+	assert_true(isVectorType(ptr)) << *ptr << " is not a VectorType";
+	return ptr.as<VectorTypePtr>()->getElementType();
+}
+
+bool isRefVectorType(const TypePtr& ptr) {
+	if(RefTypePtr refTy = ptr.isa<RefTypePtr>())
+		return isVectorType(ptr);
+
+	return false;
+}
+
+TypePtr getRefVectorElementType(const TypePtr& ptr) {
+	RefTypePtr refTy = ptr.isa<RefTypePtr>();
+	assert_true(refTy) << *ptr << " is not a RefVectorType";
+
+	VectorTypePtr vecTy = refTy->getElementType().isa<VectorTypePtr>();
+	assert_true(vecTy) << *ptr << " is not a RefVectorType";
+
+	return vecTy->getElementType();
+}
+
 NodeList getFreeNodes(
 	const NodePtr& node, NodeType controlStmt,	const vector<NodeType>& pruneNodes) {
 

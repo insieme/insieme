@@ -340,8 +340,8 @@ core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionN
 
 	// If the return type is of type vector or array we need to add a reference
 	// so that the semantics of C argument passing is mantained
-	if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
-		retTy = builder.refType(retTy);
+//	if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
+//		retTy = builder.refType(retTy);
 
 	frontend_assert(retTy) << "Function has no return type!\n";
 

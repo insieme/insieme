@@ -44,6 +44,11 @@ float4 subfunction(float4 a) {
 	//return (float4)(b, get_local_id(1), a.w, a.y); // TODO: Handle builtin in subfunction
 }
 
+int4 getInt4() {
+	int4 a;
+	return a;
+}
+
 #pragma insieme mark
 __kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor, short2 vector){
 #pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
@@ -51,6 +56,14 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
 	if(get_global_id(0) > 7) return;
+
+	vector = vector;
+	short s2 = vector.x;
+	vector.y = s2;
+
+	short scalar = vector.odd;
+	vector.odd = scalar;
+	int2 iojre = getInt4().even;
 
 	__local float ll[4];
 	ll[get_local_id(0)] = dst[get_global_id(0)].z;
@@ -64,13 +77,15 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	float4 a = cos((float4)(l[3]));
 	float4* b = (float4*)src;
 	int4 n = (int4)3;
-	int4 m = -(~n);// = (n & ~(a > b[0])) | n;
+	int4 m = (n & ~(a > b[0])) || n;
+	n.even = iojre;
+	m.lo = iojre;
 	b = (float4*)src ;
 	float f = 7.0f;
 	float4 ret = subfunction(a);
 	float4 c = native_divide(a, b[3]);
 	short t[4]; 
-	short* x = t + 7lu;
+	short* x = t + 7l;
 
 	char4 d = convert_char4(a);
 	a = convert_float4(d);
@@ -78,6 +93,10 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	float16 sixteen;
 	ulong ao = 7;
 	ao = atom_or(&ao, factor);
+
+	float8 eight = sixteen.hi;
+	eight = sixteen.odd;
+	sixteen.lo = eight;
 
 #pragma insieme iterations 7
 	for(int i = 0; i < factor; ++i)

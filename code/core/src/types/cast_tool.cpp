@@ -686,7 +686,7 @@ namespace {
 				}
 
 				// converting from a vector of a type to a vector of another type, this is not possible
-				assert_fail() << "Converting from vector<'a> to vector<'b>"; 
+				assert_fail() << "Converting from " << *vecArgTy << " to " << vecTrgTy;
 			}
 
 

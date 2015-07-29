@@ -154,10 +154,10 @@ ExpressionPtr expressionContainsMarshallingCandidate(const VariableMap<T>& candi
 	return ExpressionPtr();
 }
 
-ExprAddressArrayTypeMap findAllSuited(const NodeAddress& toTransform) {
-	ExprAddressArrayTypeMap structs;
+ExprAddressStructTypeMap findAllSuited(const NodeAddress& toTransform) {
+	ExprAddressStructTypeMap structs;
 
-	pattern::TreePattern structType = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
+	pattern::TreePattern structType = pirp::refType(pattern::aT(var("structType", /*pirp::arrayType(pirp::refType(*/pirp::structType(*pattern::any))));
 
 	pattern::TreePattern structVar = var("structVar", pirp::variable(structType));
 	pattern::TreePattern structVarDecl = pirp::declarationStmt(structVar, var("init", pattern::any));
@@ -175,7 +175,7 @@ ExprAddressArrayTypeMap findAllSuited(const NodeAddress& toTransform) {
 
 		ExpressionAddress structVar = (match >> nm["structVar"].getValue()).as<ExpressionAddress>();
 		TypePtr varType = structVar->getType();
-		ArrayTypePtr structType = nm["structType"].getValue().as<RefTypePtr>().getElementType().as<ArrayTypePtr>(); // TODO make that prettier
+		StructTypePtr structType = nm["structType"].getValue().as<StructTypePtr>(); // TODO make that prettier
 //std::cout << "\nadding " << structVar << " " << *structVar << std::endl;
 
 		if(tupleType.match(varType)) {
@@ -194,8 +194,8 @@ ExprAddressArrayTypeMap findAllSuited(const NodeAddress& toTransform) {
 	return structs;
 }
 
-ExprAddressArrayTypeMap findPragma(const NodeAddress& toTransform) {
-	ExprAddressArrayTypeMap structs;
+ExprAddressStructTypeMap findPragma(const NodeAddress& toTransform) {
+	ExprAddressStructTypeMap structs;
 
 	pattern::TreePattern structTypePattern = pirp::refType(pattern::aT(var("structType", pirp::refType(pirp::arrayType(pirp::structType(*pattern::any))))));
 	core::visitDepthFirst(toTransform, [&](const core::DeclarationStmtAddress& decl) {
@@ -209,7 +209,8 @@ ExprAddressArrayTypeMap findPragma(const NodeAddress& toTransform) {
 				pattern::MatchOpt match = structTypePattern.matchPointer(varType);
 				assert_true(match) << "Pragma-marked variable does not have valid struct type";
 
-				ArrayTypePtr structType = match.get()["structType"].getValue().as<RefTypePtr>()->getElementType().as<ArrayTypePtr>(); // TODO make me pretty
+				StructTypePtr structType = match.get()["structType"].getValue().as<RefTypePtr>()->
+						getElementType().as<ArrayTypePtr>()->getElementType().as<StructTypePtr>(); // TODO make me pretty
 
 				// we are already at a declaration in any case
 				structs[structVar] = structType;
@@ -222,27 +223,29 @@ ExprAddressArrayTypeMap findPragma(const NodeAddress& toTransform) {
 
 void DatalayoutTransformer::addToReplacements(std::map<core::NodeAddress, core::NodePtr>& replacements, const core::NodeAddress& toReplace,
 		const core::NodePtr& replacement) {
-	assert(*toTransform == *toReplace.getRootNode()); // make sure the correct base address is used
+	assert_true(*toTransform == *toReplace.getRootNode()) << "trying to add a replacement with wrong root"; // make sure the correct base address is used
+
 	replacements[toReplace] = replacement;
 }
 
 DatalayoutTransformer::DatalayoutTransformer(core::NodePtr& toTransform, CandidateFinder candidateFinder)
 		: mgr(toTransform->getNodeManager()), toTransform(toTransform), candidateFinder(candidateFinder) {}
 
-void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, ArrayTypePtr>& transformRoot, ExprAddressSet& toReplaceList,
+
+void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, StructTypePtr>& transformRoot, ExprAddressSet& toReplaceList,
 		const NodeAddress& toTransform) {
 
-	ArrayTypePtr structType = transformRoot.second;
+	StructTypePtr structType = transformRoot.second;
 	visitDepthFirst(toTransform, [&](const StatementAddress& stmt) {
 		if(const CallExprAddress call = stmt.isa<CallExprAddress>()) {
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 				ExpressionAddress lhs = removeMemLocationCreators(call[0]);
 				ExpressionAddress rhs = removeMemLocationCreators(call[1]);
 				ExpressionAddress lhsVar = getDeclaration(extractNonTupleVariable(lhs));
-				if(!(lhsVar && isRefStruct(lhsVar, structType))) // lhs is not based on a variable
+				if(!(lhsVar && isRefArrayStruct(lhsVar, structType))) // lhs is not based on a variable
 					return;
 				ExpressionAddress rhsVar = getDeclaration(extractNonTupleVariable(rhs));
-				if(!rhsVar || !isRefStruct(rhsVar, structType)) // rhs is not based on a variable
+				if(!rhsVar || !isRefArrayStruct(rhsVar, structType)) // rhs is not based on a variable
 					return;
 
 				if(toReplaceList.find(lhsVar) != toReplaceList.end()) { // lhsVar is already selected for replacement
@@ -275,7 +278,7 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 						return;
 
 					VariableAddress param = pair.second;
-					if(!isRefStruct(param, structType))
+					if(!isRefArrayStruct(param, structType))
 						return;
 
 					if(toReplaceList.find(argVar) != toReplaceList.end()) {
@@ -288,13 +291,13 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 		if(const DeclarationStmtAddress decl = stmt.isa<DeclarationStmtAddress>()) {
 			ExpressionAddress init = removeMemLocationCreators(decl->getInitialization());
 			VariableAddress var = decl->getVariable();
-
 			ExpressionAddress initVar = getDeclaration(extractNonTupleVariable(init));
+
 			if(!initVar)
 				return;
 
 			if(toReplaceList.find(initVar) != toReplaceList.end()) { // the initialization is already selected for replacement
-					if(isRefStruct(init, structType)) {
+					if(isRefArrayStruct(init, structType)) {
 						toReplaceList.insert(var);
 						return;
 					}
@@ -306,7 +309,7 @@ void DatalayoutTransformer::collectVariables(const std::pair<ExpressionAddress, 
 //	std::cout << "from " << addr << "  " << *addr << std::endl;
 }
 
-NodeMap DatalayoutTransformer::generateTypeReplacements(TypePtr oldStructType, TypePtr newStructType) {
+NodeMap DatalayoutTransformer::generateTypeReplacements(const TypePtr& oldStructType, const TypePtr& newStructType) {
 	NodeMap tyReplace;
 	tyReplace[(oldStructType)] = newStructType;
 
@@ -346,11 +349,12 @@ ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplace
 	return core::transform::replaceAll(mgr, init, backupReplacements, core::transform::globalReplacement).as<ExpressionPtr>();
 }
 
-std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> DatalayoutTransformer::createCandidateLists(const core::NodeAddress& toTransform) {
-	ExprAddressArrayTypeMap structs = findCandidates(toTransform);
-	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists;
 
-	for(std::pair<ExpressionAddress, ArrayTypePtr> candidate : structs) {
+std::vector<std::pair<ExprAddressSet, StructTypePtr>> DatalayoutTransformer::createCandidateLists(const core::NodeAddress& toTransform) {
+	ExprAddressStructTypeMap structs = findCandidates(toTransform);
+	std::vector<std::pair<ExprAddressSet, StructTypePtr>> toReplaceLists;
+
+	for(std::pair<ExpressionAddress, StructTypePtr> candidate : structs) {
 		ExprAddressSet toReplaceList;
 		toReplaceList.insert(candidate.first);
 //std::cout << "inserted " << candidate.first << " " << *candidate.first << std::endl;
@@ -376,18 +380,18 @@ std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> DatalayoutTransformer::crea
 	return toReplaceLists;
 }
 
-ExprAddressArrayTypeMap DatalayoutTransformer::findCandidates(const NodeAddress& toTransform) {
+
+ExprAddressStructTypeMap DatalayoutTransformer::findCandidates(const NodeAddress& toTransform) {
 	return candidateFinder(toTransform);
 }
 
-
-std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> DatalayoutTransformer::mergeLists(std::vector<std::pair<ExprAddressSet,
-		ArrayTypePtr>>& toReplaceLists) {
-	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> newLists;
-	for(std::pair<ExprAddressSet, ArrayTypePtr>& toReplaceList : toReplaceLists) {
+std::vector<std::pair<ExprAddressSet, StructTypePtr>> DatalayoutTransformer::mergeLists(std::vector<std::pair<ExprAddressSet,
+		StructTypePtr>>& toReplaceLists) {
+	std::vector<std::pair<ExprAddressSet, StructTypePtr>> newLists;
+	for(std::pair<ExprAddressSet, StructTypePtr>& toReplaceList : toReplaceLists) {
 		bool addToOld = false;
 		// merge lists of same type
-		for(std::pair<ExprAddressSet, ArrayTypePtr>& newList : newLists) {
+		for(std::pair<ExprAddressSet, StructTypePtr>& newList : newLists) {
 			if(toReplaceList.second == newList.second) {
 				for(ExpressionAddress toInsert : toReplaceList.first)
 					newList.first.insert(toInsert);
@@ -402,8 +406,12 @@ std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> DatalayoutTransformer::merg
 	return newLists;
 }
 
+
 void DatalayoutTransformer::addNewDecls(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const StructTypePtr& oldStructType,
 		const NodeAddress& toTransform, const pattern::TreePattern& allocPattern, std::map<StatementPtr, ExpressionPtr>& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+
+//for(auto vr : varReplacements)
+//	std::cout << *vr.first << std::endl;
 	visitDepthFirst(toTransform, [&](const DeclarationStmtAddress& decl) {
 		const VariableAddress& oldVar = decl->getVariable();
 
@@ -442,6 +450,7 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 		visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
 
 			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+
 				if(oldVar == getDeclaration(call[0])) {
 					// check if the assignment does an allocation and try to extract the number of elements in that case
 					pattern::MatchOpt match = allocPattern.matchPointer(call[1]);
@@ -456,7 +465,6 @@ void DatalayoutTransformer::replaceAssignments(const ExprAddressMap& varReplacem
 					CompoundStmtPtr cmpAssigns = builder.compoundStmt(allAssigns);
 					cmpAssigns.addAnnotation<RemoveMeAnnotation>();
 					addToReplacements(replacements, call, cmpAssigns);
-	//				newStuff = core::transform::insertAfter(mgr, call, allAssigns);
 				}
 			}
 		});
@@ -481,6 +489,7 @@ ExpressionPtr DatalayoutTransformer::determineNumberOfElements(const StatementPt
 
 std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType,
 		const NodeAddress& toTransform, std::map<StatementPtr, ExpressionPtr>& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+
 	IRBuilder builder(mgr);
 	std::vector<StatementAddress> marshalled;
 
@@ -495,10 +504,11 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 				pattern::any, *pattern::any << assignToStruct << *pattern::any);
 
 		pattern::TreePattern externalAosCall = pirp::callExpr(pirp::literal(pattern::any, pattern::any), *pattern::any <<
-				var("oldVarCandidate", pirp::exprOfType(pattern::aT(/*pirp::refType*/(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
-//				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
-//				pattern::aT(pattern::atom(oldVar))
-				<< *pattern::any);
+				var("oldVarCandidate", pirp::exprOfType(
+						pattern::aT(/*pirp::refType*/(pirp::refType(pirp::arrayType(pirp::structType(*pattern::any)))))))
+		//				pattern::node(*pattern::any << pattern::single(pattern::atom(oldVar)))
+		//				pattern::aT(pattern::atom(oldVar))
+						<< *pattern::any);
 		pattern::TreePattern oldVarPattern = pattern::aT(pattern::var("oldVar", pattern::atom(oldVar)));
 
 	//	for(std::pair<ExpressionPtr, std::pair<VariablePtr, StructTypePtr>> oldToNew : newMemberAccesses) {
@@ -563,6 +573,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addMarshalling(const ExprAd
 
 std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType,
 		const NodeAddress& toTransform, const std::vector<StatementAddress>& beginV, std::map<StatementPtr, ExpressionPtr>& nElems, std::map<NodeAddress, NodePtr>& replacements) {
+
 	IRBuilder builder(mgr);
 	std::vector<StatementAddress> unmarshallingPoints;
 	StatementAddress begin = beginV.empty() ? StatementAddress() : beginV.front();
@@ -646,6 +657,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const Expr
 
 void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const NodeAddress& toTransform,
 		const std::vector<StatementAddress>& begin, const std::vector<StatementAddress>& end, std::map<NodeAddress, NodePtr>& replacements) {
+
 	IRBuilder builder(mgr);
 
 	for(std::pair<ExpressionAddress, StatementPtr> vr : varReplacements) {
@@ -659,8 +671,6 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 		pattern::TreePattern structArrayElementAccess = pirp::arrayRefElem1D(structAccessWithOptionalDeref, var("index", pattern::any));
 		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(structArrayElementAccess,
 				pattern::var("member", pattern::any)));
-//pattern::TreePattern structMemberAccess1 =  pattern::var("call", pirp::compositeRefElem(pirp::arrayRefElem1D(pirp::refDeref(
-//		pattern::var("structAccess", pattern::aT(pattern::atom(oldVar)))), var("index", pattern::any)), pattern::var("member", pattern::any)));
 
 		pattern::TreePattern assignArrayAccess = declOrAssignment(pattern::var("target", pattern::any), pattern::var("arrayAccess", structArrayElementAccess));
 		pattern::TreePattern structAccess = pattern::var("call", pirp::refDeref(pirp::arrayRefElem1D(optionalDeref(pattern::var("structAccess",
@@ -772,12 +782,12 @@ void DatalayoutTransformer::addNewDel(const ExprAddressMap& varReplacements, con
 	}
 }
 
-TypePtr DatalayoutTransformer::generateNewTupleType(const TypePtr& oldTupleVarType, const StructTypePtr& newStructType, const TypePtr& oldStructType) {
+TypePtr DatalayoutTransformer::generateNewTupleType(const TypePtr& oldTupleVarType, const StructTypePtr& newStructType, const StructTypePtr& oldStructType) {
 	NodeMap tyReplace = generateTypeReplacements(oldStructType, newStructType);
 	return core::transform::replaceAllGen(mgr, oldTupleVarType, tyReplace);
 }
 
-void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::TypePtr& oldStructType,
+void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType, const core::StructTypePtr& oldStructType,
 		const NodeAddress& toTransform,	std::map<NodeAddress, NodePtr>& replacements) {
 	IRBuilder builder(mgr);
 	ExprAddressMap tupleVars;
@@ -854,6 +864,30 @@ void DatalayoutTransformer::updateTuples(ExprAddressMap& varReplacements, const 
 
 	}
 
+	for(std::pair<ExpressionAddress, StatementPtr> vr : tupleVars) {
+		const ExpressionAddress& oldVar = vr.first;
+		const StatementPtr& newVar = vr.second;
+
+		visitDepthFirst(toTransform, [&](const CallExprAddress& call) {
+
+			if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+
+				if(oldVar == getDeclaration(call[0])) {
+					NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, newStructType);
+
+					ExpressionPtr lhs = core::transform::fixTypesGen(mgr, call[0].getAddressedNode(),
+							oldVar.getAddressedNode(), newVar.as<ExpressionPtr>(), true);
+					ExpressionPtr rhs = updateInit(tupleVars, call[1], inInitReplacementsInCaseOfNovarInInit);
+
+					ExpressionPtr newCall = builder.assign(lhs, rhs);
+
+					addToReplacements(replacements, call, newCall);
+				}
+			}
+		});
+	}
+
+
 	//replace all occurrences of the selected tuples
 	for(std::pair<ExpressionAddress, StatementPtr> vr : tupleVars) {
 
@@ -914,13 +948,16 @@ void DatalayoutTransformer::updateCopyDeclarations(ExprAddressMap& varReplacemen
 			VariablePtr var = match["influencedVar"].getValue().as<VariablePtr>();
 
 			TypePtr oldType = var->getType();
-			TypePtr newType = core::transform::replaceAllGen(mgr, oldType, oldStructType, newStructType, core::transform::globalReplacement);
+			TypePtr newType = generateNewTupleType(oldType, newStructType, oldStructType);
 
 			if(oldType == newType) // check if the type depends on the transformation
 				return;
 			VariablePtr updatedVar = builder.variable(newType);
 
 			DeclarationStmtPtr updatedDecl = builder.declarationStmt(updatedVar, decl->getInitialization());
+
+//std::cout << "New decl: " << newType << std::endl;
+//dumpPretty(updatedDecl);
 
 			addToReplacements(replacements, decl, updatedDecl);
 		});
@@ -951,30 +988,8 @@ void DatalayoutTransformer::doReplacements(const ExprAddressMap& kernelVarReplac
 //		toTransform = core::transform::replaceAll(mgr, replacements);
 	}
 
-//	toTransform = core::transform::fixInterfaces(mgr, toTransform);
-//visitDepthFirst(toTransform, [](const NodePtr& node) {
-//	std::cout << "\nNODE: " << node << "---------------\n";
-//	dumpPretty(node);
-//	std::cout << "++++++++++++++++++++++++++++++\n";
-//});
-
 	// perform all the replacements. Also replace all variables inside kernels
 	StuffReplacer sr(kernelVarReplacements, replacements);
-
-//	auto mapper = core::transform::makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) -> NodePtr {
-//		auto replaceMe = replacements.find(prevAddress);
-//		if(replaceMe != replacements.end())
-//			return replaceMe->second;
-//
-//		if(ExpressionAddress expr = prevAddress.isa<ExpressionAddress>()) {
-//			auto replaceMe = kernelVarReplacements.find(getDeclaration(expr));
-//			if(replaceMe != kernelVarReplacements.end())
-//				if(replaceMe->second.isa<ExpressionPtr>()) // do not replace Expressions with Statements
-//					return replaceMe->second;
-//		}
-//
-//		return builtPtr;
-//	});
 
 	toTransform = sr.mapFromRoot(toTransform);
 
@@ -1032,6 +1047,8 @@ std::map<int, ExpressionPtr> VariableAdder::searchInArgumentList(const std::vect
 
 ExpressionPtr VariableAdder::updateArgument(const ExpressionAddress& oldArg) {
 	ExpressionPtr newArg;
+
+//std::cout << "looking for " << *oldArg << std::endl;
 	pattern::AddressMatchOpt match = (varWithOptionalDeref | pirp::arrayView(varWithOptionalDeref)).matchAddress(oldArg);
 //std::cout << *getDeclaration(oldArg) << std::endl;
 	if(match) {

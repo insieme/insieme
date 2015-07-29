@@ -261,11 +261,15 @@ TypePtr removeRef(TypePtr refTy) {
 	return refTy;
 }
 
-TypePtr removeRefArray(TypePtr refTy) {
-	if(RefTypePtr r = refTy.isa<RefTypePtr>())
-		if(ArrayTypePtr a = r->getElementType().isa<ArrayTypePtr>())
-			return a->getElementType();
-	return refTy;
+TypePtr removeArrayRef(TypePtr arTy) {
+	if(core::analysis::isArrayType(arTy)) {
+		ArrayTypePtr a = arTy.as<ArrayTypePtr>();
+		if(RefTypePtr r = a->getElementType().isa<RefTypePtr>()) {
+assert_fail() << "unexpected";
+			return r->getElementType();
+		}
+	}
+	return arTy;
 }
 
 TypePtr getBaseType(TypePtr type, StringValuePtr field) {
@@ -273,7 +277,8 @@ TypePtr getBaseType(TypePtr type, StringValuePtr field) {
 		return getBaseType(ref->getElementType(), field);
 	}
 
-	if(ArrayTypePtr arr = type.isa<ArrayTypePtr>()) {
+	if(core::analysis::isArrayType(type)) {
+		ArrayTypePtr arr = type.as<ArrayTypePtr>();
 		return getBaseType(arr->getElementType(), field);
 	}
 
@@ -289,65 +294,59 @@ ExpressionPtr valueAccess(ExpressionPtr thing, ExpressionPtr index, StringValueP
 	NodeManager& mgr = thing->getNodeManager();
 	IRBuilder builder(mgr);
 
-	if(RefTypePtr ref = thing->getType().isa<RefTypePtr>()) {
-		if(ref->getElementType().isa<ArrayTypePtr>()) {
-			if(!index)
-				return thing;
+	return builder.deref(refAccess(thing, index, field, vecIndex));
 
-			return valueAccess(builder.deref(builder.arrayRefElem(thing, index)), index, field, vecIndex);
-		}
-
-		if(ref->getElementType().isa<VectorTypePtr>()) {
-			if(!vecIndex)
-				return thing;
-
-			return valueAccess(builder.deref(builder.arrayRefElem(thing, vecIndex)), index, field, vecIndex);
-		}
-
-		return valueAccess(builder.deref(thing), index, field, vecIndex);
-	}
-
-	if(thing->getType().isa<ArrayTypePtr>()) {
-		if(!index)
-			return thing;
-
-		return valueAccess(builder.arraySubscript(thing, index), index, field, vecIndex);
-	}
-
-	if(thing->getType().isa<VectorTypePtr>()) {
-		if(!vecIndex)
-			return thing;
-
-		return valueAccess(builder.arraySubscript(thing, vecIndex), index, field, vecIndex);
-	}
-
-	if(thing->getType().isa<StructTypePtr>()) {
-		if(!field)
-			return thing;
-
-		return valueAccess(builder.accessMember(thing, field), index, field, vecIndex);
-	}
-
-	return thing;
+//	if(RefTypePtr ref = thing->getType().isa<RefTypePtr>()) {
+//		if(ref->getElementType().isa<ArrayTypePtr>()) {
+//			if(!index)
+//				return thing;
+//
+//			return valueAccess(builder.deref(builder.arrayRefElem(thing, index)), index, field, vecIndex);
+//		}
+//
+//		if(ref->getElementType().isa<VectorTypePtr>()) {
+//			if(!vecIndex)
+//				return thing;
+//
+//			return valueAccess(builder.deref(builder.arrayRefElem(thing, vecIndex)), index, field, vecIndex);
+//		}
+//
+//		return valueAccess(builder.deref(thing), index, field, vecIndex);
+//	}
+//
+//	if(thing->getType().isa<ArrayTypePtr>()) {
+//		if(!index)
+//			return thing;
+//
+//		return valueAccess(builder.arraySubscript(thing, index), index, field, vecIndex);
+//	}
+//
+//	if(thing->getType().isa<VectorTypePtr>()) {
+//		if(!vecIndex)
+//			return thing;
+//
+//		return valueAccess(builder.arraySubscript(thing, vecIndex), index, field, vecIndex);
+//	}
+//
+//	if(thing->getType().isa<StructTypePtr>()) {
+//		if(!field)
+//			return thing;
+//
+//		return valueAccess(builder.accessMember(thing, field), index, field, vecIndex);
+//	}
+//
+//	return thing;
 }
 
 ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr field, ExpressionPtr vecIndex) {
 	NodeManager& mgr = thing->getNodeManager();
 	IRBuilder builder(mgr);
-
 	if(RefTypePtr ref = thing->getType().isa<RefTypePtr>()) {
 
 		if(builder.getLangBasic().isPrimitive(ref->getElementType()))
 			return thing;
 
-		if(ref->getElementType().isa<ArrayTypePtr>()) {
-			if(!index)
-				return thing;
-
-			return refAccess(builder.arrayRefElem(thing, index), index, field, vecIndex);
-		}
-
-		if(ref->getElementType().isa<VectorTypePtr>()) {
+		if(core::analysis::isVectorType(ref->getElementType())) {
 			if(!vecIndex)
 				return thing;
 
@@ -359,6 +358,13 @@ ExpressionPtr refAccess(ExpressionPtr thing, ExpressionPtr index, StringValuePtr
 				return thing;
 
 			return refAccess(builder.refMember(thing, field), index, field, vecIndex);
+		}
+
+		if(core::analysis::isArrayType(ref->getElementType())) {
+			if(!index)
+				return thing;
+
+			return refAccess(builder.arrayRefElem(thing, index), index, field, vecIndex);
 		}
 
 		return refAccess(builder.deref(thing), index, field, vecIndex);
@@ -469,17 +475,16 @@ ExpressionAddress removeMemLocationCreators(const ExpressionAddress& expr) {
 }
 
 
-bool isRefStruct(ExpressionPtr expr, TypePtr structType) {
+bool isRefArrayStruct(ExpressionPtr expr, TypePtr structType) {
 	TypePtr type = expr->getType();
 
-	if(RefTypePtr refType = type.isa<RefTypePtr>()) {
-		IRBuilder builder(expr->getNodeManager());
-		pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
+	if(!core::analysis::isRefArrayType(type))
+		return false;
 
-		return containsStructType.match(refType->getElementType());
-	}
+	TypePtr elemTy = core::analysis::getRefArrayElementType(type);
+	pattern::TreePattern containsStructType = pattern::aT(pattern::atom(structType));
 
-	return false;
+	return containsStructType.match(elemTy);
 }
 
 bool containsType(const TypePtr& contains, const TypePtr type) {

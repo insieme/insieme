@@ -117,9 +117,8 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 		if(paramFound && argFound) {
 			// add new arguments and parameters to the lists
 
-//		std::cout << "toll\n";
 			for(StatementPtr arg : argToReplace->second.as<CompoundStmtPtr>()) {
-//		std::cout << "ARG: " << *arg << std::endl;
+//std::cout << "ARG: " << *arg.as<ExpressionPtr>()->getType() << " " << *arg << std::endl;
 				newArg.push_back(arg.as<ExpressionPtr>());
 			}
 			for(StatementPtr param : paramToReplace->second.as<CompoundStmtPtr>()) {
@@ -165,6 +164,7 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 					paramTys.push_back(param->getType());
 
 					ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
+
 					ExpressionPtr argRef = builder.accessMember(builder.arrayRefElem(accessTuple, arrayIndex), newType->getName());
 
 					if(argRef->getType() != builder.refType(param->getType())) // add ref_reinterpret if necessary
@@ -174,6 +174,7 @@ bool AosArgumentUnfolder::updateArgumentAndParam(const ExpressionAddress& oldArg
 				});
 			} else {
 				ExpressionPtr accessTuple = builder.accessComponent(newVar, tupleIndex);
+
 				newArg.push_back(builder.deref(builder.arrayRefElem(accessTuple, arrayIndex)));
 				newParam.push_back(oldParam);
 				paramTys.push_back(oldParam->getType());

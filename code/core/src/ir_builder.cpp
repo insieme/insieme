@@ -1568,17 +1568,26 @@ CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
 }
 
 CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {
-	const VectorTypePtr dataType = dynamic_pointer_cast<const VectorType>(dataVec->getType());
+	const RefTypePtr refTy = dataVec->getType().isa<RefTypePtr>();
+
+	const VectorTypePtr dataType = refTy ? refTy->getElementType().as<VectorTypePtr>() : dataVec->getType().as<VectorTypePtr>();
 	assert_true(dataType) << "First argument of vector.permute must be a vector";
 
 	const auto& basic = manager.getLangBasic();
 	const VectorTypePtr permuteType = dynamic_pointer_cast<const VectorType>(permutationVec->getType());
-	assert_true(permuteType) << "Secont argument of vector.permute must be a vector";
-	assert_true(types::isSubTypeOf(permuteType->getElementType(), basic.getUIntInf())) << "The stecond argument of vector.permute must be of type vector<uint<#a>,#m>";
+	assert_true(permuteType) << "Second argument of vector.permute must be a vector";
+	assert_true(types::isSubTypeOf(permuteType->getElementType(), basic.getUIntInf())) << "The second argument of vector.permute must be of type vector<uint<#a>,#m>";
 
-	const TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
+	TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
+	ExpressionPtr fun;
+	if(refTy) {
+		retTy = refType(retTy);
+		fun = basic.getVectorRefPermute();
+	} else {
+		fun = basic.getVectorPermute();
+	}
 
-	return callExpr(retTy, basic.getVectorPermute(), dataVec, permutationVec);
+	return callExpr(retTy, fun, dataVec, permutationVec);
 }
 
 } // namespace core

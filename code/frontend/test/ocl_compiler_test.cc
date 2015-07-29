@@ -80,10 +80,15 @@ public:
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
     	core::FunctionTypePtr funTy = func.getFunctionType();
 
+    	if(core::lang::isBuiltIn(func))
+    		return;
+
     	// check if return type is an ocl vector, and if yes, if it is returned by value
     	if(core::RefTypePtr retTy = dynamic_pointer_cast<const core::RefType>(funTy.getReturnType())) {
-    		if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(retTy.getElementType()))
+    		if(core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(retTy.getElementType())) {
+
     			assert_fail() << "returns vector";
+    		}
     	}
 
 

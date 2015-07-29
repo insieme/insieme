@@ -72,7 +72,7 @@ core::ExpressionAddress removeRefVar(core::ExpressionAddress refVar);
 
 core::TypePtr removeRef(core::TypePtr refTy);
 
-core::TypePtr removeRefArray(core::TypePtr refTy);
+core::TypePtr removeArrayRef(core::TypePtr refTy);
 
 core::TypePtr getBaseType(core::TypePtr type, core::StringValuePtr field = core::StringValuePtr());
 
@@ -98,7 +98,7 @@ core::ExpressionAddress removeMemLocationCreators(const core::ExpressionAddress&
 /*
  * Returns true if the type of expr is of ref type and contains structType
  */
-bool isRefStruct(core::ExpressionPtr expr, core::TypePtr structType);
+bool isRefArrayStruct(core::ExpressionPtr expr, core::TypePtr structType);
 
 /*
  * Returns true if contains contains type

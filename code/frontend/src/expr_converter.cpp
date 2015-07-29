@@ -1042,7 +1042,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	}
 
 	// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
-	if ( baseOp == clang::BO_LAnd || baseOp == clang::BO_LOr ) {
+	// Vector operations are handled in basic.cpp
+	if ( (baseOp == clang::BO_LAnd || baseOp == clang::BO_LOr) && exprTy->getNodeType() != core::NT_VectorType ) {
 		lhs = core::types::castToBool(lhs);
 		rhs = core::types::castToBool(rhs);
 
@@ -1064,8 +1065,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			 binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType())
 			) {
 
-			lhs = core::types::smartCast(lhs, exprTy);
-			rhs = core::types::smartCast(rhs, exprTy);
+//			lhs = core::types::smartCast(lhs, exprTy);
+//			rhs = core::types::smartCast(rhs, exprTy);
 
 			// generate a ocl_vector - scalar operation
 			opFunc = gen.getOperator(lhs->getType(), op);

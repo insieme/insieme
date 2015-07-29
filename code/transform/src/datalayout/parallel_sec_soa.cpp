@@ -52,6 +52,15 @@ namespace datalayout {
 using namespace core;
 namespace pirp = pattern::irp;
 
+core::NodeMap ParSecSoa::generateTypeReplacements(const core::TypePtr& oldStructType, const core::TypePtr& newStructType) {
+	IRBuilder builder(mgr);
+	NodeMap tyReplace;
+	tyReplace[builder.refType(builder.arrayType(oldStructType))] = newStructType;
+	tyReplace[builder.refType(builder.arrayType(oldStructType), RK_SOURCE)] = newStructType; // TODO that for src types?
+
+	return tyReplace;
+}
+
 ExpressionPtr ParSecSoa::updateInit(const ExprAddressMap& varReplacements, core::ExpressionAddress init, core::NodeMap& backupReplacements,
 		core::StringValuePtr fieldName) {
 	// check for marshalled variables in init expression
@@ -114,7 +123,7 @@ StatementList ParSecSoa::generateNewAssigns(const ExprAddressMap& varReplacement
 
 	unsigned i = 0;
 	for(NamedTypePtr memberType : newStructType->getElements()) {
-		NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, removeRefArray(memberType->getType()));
+		NodeMap inInitReplacementsInCaseOfNovarInInit = generateTypeReplacements(oldStructType, memberType->getType());
 //		inInitReplacementsInCaseOfNovarInInit[oldStructType] = removeRefArray(memberType->getType());
 
 		allAssigns.push_back(builder.assign(newVars[i++].as<ExpressionPtr>(),
@@ -173,7 +182,7 @@ void ParSecSoa::transform() {
 	IRBuilder builder(m);
 	NodeAddress tta(toTransform);
 
-	std::vector<std::pair<ExprAddressSet, ArrayTypePtr>> toReplaceLists = createCandidateLists(tta);
+	std::vector<std::pair<ExprAddressSet, StructTypePtr>> toReplaceLists = createCandidateLists(tta);
 
 	pattern::TreePattern allocPattern = pattern::aT(pirp::refNew(pirp::callExpr(m.getLangBasic().getArrayCreate1D(),
 			pattern::any << var("nElems", pattern::any))));
@@ -181,7 +190,7 @@ void ParSecSoa::transform() {
 
 	pattern::TreePattern refTypePattern = pattern::aT(var("toBeReplaced", pirp::refType(pirp::arrayType(pattern::atom(oldStructType)))));
 
-	for(std::pair<ExprAddressSet, ArrayTypePtr> toReplaceList : toReplaceLists) {
+	for(std::pair<ExprAddressSet, StructTypePtr> toReplaceList : toReplaceLists) {
 		std::map<StatementPtr, ExpressionPtr> nElems;
 
 		std::vector<NamedTypePtr> newStructElemsTypes = newStructType->getElements();
@@ -261,6 +270,7 @@ void ParSecSoa::transform() {
 			replacements[r.first] = r.second;
 		}
 	}
+
 }
 
 } // datalayout

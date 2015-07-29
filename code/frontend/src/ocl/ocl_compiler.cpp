@@ -1013,9 +1013,9 @@ public:
 //						std::cout << elem << "\nDatarange : " << *datarange << std::endl << std::endl;
 						if(elem->getNodeType() == core::NT_CompoundStmt) {
 							datarange = elem->getAnnotation(annotations::DataRangeAnnotation::KEY);
-							oldBody = dynamic_pointer_cast<const core::CompoundStmt>(elem);
-							// annotation will be added to the kernel function later
-							oldBody->remAnnotation(annotations::DataRangeAnnotation::KEY);
+//							oldBody = dynamic_pointer_cast<const core::CompoundStmt>(elem);
+//							// annotation will be added to the kernel function later
+//							oldBody->remAnnotation(annotations::DataRangeAnnotation::KEY);
 							return;
 						}
 					}
