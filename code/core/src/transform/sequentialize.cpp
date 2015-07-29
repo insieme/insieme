@@ -225,21 +225,16 @@ namespace transform {
 					// check lower boundary
 					arithmetic::Formula f = arithmetic::toFormula(lowerBound);
 
-					if (!f.isConstant()) {
-						throw NotSequentializableException("Lower bound of job expression is not constant!");
-					}
-
-					auto lb = f.getConstantValue();
-					if (lb.isZero()) {
-						// job can be completely eliminated => return empty function
-						return builder.lambdaExpr(basic.getUnit(), builder.getNoOp(), VariableList());
-					}
-
-					if (!lb.isOne()) {
+					if (!f.isConstant() || !f.getConstantValue().isOne()) {
 						if (ExpressionPtr pfor = tryToPFor(job)) {
 							return map(pfor);
 						}
 						throw NotSequentializableException("Job requires more than one thread!");
+					}
+
+					if (f.getConstantValue().isZero()) {
+						// job can be completely eliminated => return empty function
+						return builder.lambdaExpr(basic.getUnit(), builder.getNoOp(), VariableList());
 					}
 
 				} catch (const arithmetic::NotAFormulaException& nfe) {
