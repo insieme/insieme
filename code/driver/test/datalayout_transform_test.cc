@@ -87,8 +87,8 @@ TEST(DatalayoutTransformTest, OclTest) {
 	auto errors = core::checks::check(prog);
 	EXPECT_EQ(errors.size(), 0u) << core::printer::dumpErrors(errors);
 
-	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
-	auto converted = backend->convert(prog);
+//	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+//	auto converted = backend->convert(prog);
 
 	//if (errors.size() == 0) {
 
