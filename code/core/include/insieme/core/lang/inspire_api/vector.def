@@ -64,7 +64,7 @@ DERIVED(VectorPointwise,		"vector_pointwise",
 	" lambda (('elem1, 'elem2) => 'res op) -> (vector<'elem1,#l>, vector<'elem2,#l>) => vector<'res, #l> {"
 	"     return lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2) =>      "
 	"                     lambda (vector<'elem1,#l> v1, vector<'elem2,#l> v2, ('elem1, 'elem2) => 'res op) -> vector<'res,#l> {"
-	"         decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));"
+	"         decl ref<vector<'res,#l>> res = var(vector_init_undefined(type('res), param(#l) ));"
 	"         for(uint<8> i = 0u .. to_uint(param(#l)) ) { res[i] = op(v1[i], v2[i]); }"
 	"         return *res;"
 	"     }(v1, v2, op);"
@@ -73,7 +73,7 @@ DERIVED(VectorPointwise,		"vector_pointwise",
 DERIVED(VectorPointwiseUnary,		"vector_pointwise_unary",
 	" lambda (('elem) -> 'res op) -> (vector<'elem,#l>) => vector<'res, #l> {"
 	"     return lambda (vector<'elem,#l> v) => lambda (vector<'elem,#l> v, ('elem) -> 'res op) -> vector<'res,#l> {"
-	"         decl ref<vector<'res,#l>> res = var(undefined(vector<'res,#l>));"
+	"         decl ref<vector<'res,#l>> res = var(vector_init_undefined(type('res), param(#l) ));"
 	"         for(uint<8> i = 0u .. to_uint(param(#l)) ) { res[i] = op(v[i]); }"
 	"         return *res;"
 	"     }(v, op);"

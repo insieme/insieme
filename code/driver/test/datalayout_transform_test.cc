@@ -56,6 +56,7 @@
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/backend/ocl_host/host_backend.h"
 
 using namespace insieme;
 
@@ -76,9 +77,9 @@ TEST(DatalayoutTransformTest, OclTest) {
 	LOG(INFO) << "Done.";
 
 	core::NodePtr prog = program->getElement(0);
-
-	transform::datalayout::AosToSoa ats(prog);
-	ats.transform();
+//
+//	transform::datalayout::AosToSoa ats(prog);
+//	ats.transform();
 
 	dumpColor(prog);
 	std::cout << " ================================ " << std::endl;
@@ -86,23 +87,31 @@ TEST(DatalayoutTransformTest, OclTest) {
 	auto errors = core::checks::check(prog);
 	EXPECT_EQ(errors.size(), 0u) << core::printer::dumpErrors(errors);
 
+	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+	auto converted = backend->convert(prog);
 
-	if (errors.size() == 0) {
+	//if (errors.size() == 0) {
 
-		std::fstream fs;
-	  	fs.open ("test.irbin", std::fstream::out);
-		core::dump::binary::dumpIR(fs, prog);
-	}
+	//	std::fstream fs;
+	//  	fs.open ("test.irbin", std::fstream::out);
+	//	core::dump::binary::dumpIR(fs, prog);
+	//}
 }
 
 TEST(DatalayoutTransformTest, backend){
 
-	std::fstream fs;
-	fs.open ("test.irbin", std::fstream::in);
-	ASSERT_TRUE(fs.is_open()) << "previous test failed? no program to convert in BE"; 
+//	std::fstream fs;
+//	fs.open ("test.irbin", std::fstream::in);
+//	ASSERT_TRUE(fs.is_open()) << "previous test failed? no program to convert in BE"; 
+//
+//	core::NodeManager mgr;
+//	auto prog = core::dump::binary::loadIR(fs, mgr);
+//
+//	dumpColor(prog);
+//	std::cout << "=============================" << std::endl;
+//	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+//	auto converted = backend->convert(prog);
+//
+//	std::cout << "=============================\n" << *converted << std::endl;
 
-	core::NodeManager mgr;
-	auto prog = core::dump::binary::loadIR(fs, mgr);
-
-	dumpColor(prog);
 }

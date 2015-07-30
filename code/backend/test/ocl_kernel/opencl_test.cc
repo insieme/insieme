@@ -176,3 +176,7 @@ TEST(ocl_hostKernel, matmul) {
 	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_read_buffer", 1);
 	EXPECT_PRED3(containsNTimesSubString, code, "irt_ocl_release_buffer", 3);
 }
+
+TEST(ocl_hostKernel, localMem) {
+	//TODO: code with local mem in kernel
+}

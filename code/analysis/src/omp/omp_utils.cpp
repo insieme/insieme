@@ -93,7 +93,8 @@ namespace omp {
             return false;
         });
     
-        return !hasGroupOperations(job) && (max.isa<core::LiteralPtr>() && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u);
+        return !hasGroupOperations(job) && (max.isa<core::LiteralPtr>() && 
+				job.getNodeManager().getLangBasic().isScalarType(max->getType()) && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u);
     }
 
 } // end omp namespace
