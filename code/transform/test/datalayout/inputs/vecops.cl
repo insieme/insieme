@@ -15,27 +15,29 @@ __kernel __attribute__((reqd_work_group_size (localRange,1,1))) void sparsedot1_
     py += groupIdx*(x+1);
 
     dtype tmp = 0;
-//
-//    // Reduce multiple elements per thread
-////    for(unsigned int k = 0, k < 1000; ++k);
-//    for (unsigned int i = localIdx; i < x; i += groupSize)
-//    {
-//        int yIdx = i <= pyLength[groupIdx] ? i : pyLength[groupIdx]-1;
-//
-//        int step = px[i].index > py[yIdx].index ? 1 : -1;
-////        int step = (px[i].index > py[yIdx].index) * 2 - 1;
-////printf("i %f, j %d\n", px[i].value, py[pyLength[groupIdx]-1].value);
-//
-//        for(int j = i; j >= 0 && j < pyLength[groupIdx] && px[i].index * step >= py[j].index * step; j += step)
-//        {
-//           if(px[i].index == py[j].index)
-//            {
-//                tmp += py[j].value * px[i].value;
-//            }
-//        }
-////printf("\tworked\n");
-//    }
-//
+
+    // Reduce multiple elements per thread
+//    for(unsigned int k = 0, k < 1000; ++k);
+    for (unsigned int i = localIdx; i < x; i += groupSize)
+    {
+        int yIdx = i <= pyLength[groupIdx] ? i : pyLength[groupIdx]-1;
+
+        int step = px[i].index > py[yIdx].index ? 1 : -1;
+//        int step = (px[i].index > py[yIdx].index) * 2 - 1;
+//printf("i %f, j %d\n", px[i].value, py[pyLength[groupIdx]-1].value);
+
+        for(int j = i; j >= 0 && j < pyLength[groupIdx] ; j += step)
+        {
+        	if(px[i].index * step < py[j].index * step)
+        		break;
+        	if(px[i].index == py[j].index)
+            {
+                tmp += py[j].value * px[i].value;
+            }
+        }
+//printf("\tworked\n");
+    }
+
 
 /*working for dense vectors
     for (size_t i = localIdx; i < x; i += groupSize)

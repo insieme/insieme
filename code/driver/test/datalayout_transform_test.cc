@@ -77,9 +77,9 @@ TEST(DatalayoutTransformTest, OclTest) {
 	LOG(INFO) << "Done.";
 
 	core::NodePtr prog = program->getElement(0);
-//
-//	transform::datalayout::AosToSoa ats(prog);
-//	ats.transform();
+
+	transform::datalayout::AosToSoa ats(prog);
+	ats.transform();
 
 	dumpColor(prog);
 	std::cout << " ================================ " << std::endl;
@@ -87,8 +87,8 @@ TEST(DatalayoutTransformTest, OclTest) {
 	auto errors = core::checks::check(prog);
 	EXPECT_EQ(errors.size(), 0u) << core::printer::dumpErrors(errors);
 
-	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
-	auto converted = backend->convert(prog);
+//	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+//	auto converted = backend->convert(prog);
 
 	//if (errors.size() == 0) {
 
