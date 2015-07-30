@@ -173,7 +173,6 @@ core::ExpressionPtr ParSecSoa::generateNewAccesses(const ExpressionAddress& oldV
 	ExpressionPtr newStructAccess = core::transform::fixTypes(mgr, structAccess,
 			oldVar, fieldReplacements[oldVar][member], false).as<ExpressionPtr>();
 	ExpressionPtr replacement = refAccess(newStructAccess, index, StringValuePtr());
-
 	return replacement;
 }
 
@@ -254,7 +253,7 @@ void ParSecSoa::transform() {
 		replaceAssignments(varReplacements, newStructType, oldStructType, tta, pattern::TreePattern(), nElems, replacements);
 //std::cout << "\n\n-----------------------------------------------------------------------------\n\n";
 		//replace array accesses
-		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements);
+		replaceAccesses(varReplacements, newStructType, tta, begin, end, replacements, true);
 
 		std::map<core::NodeAddress, core::NodePtr> copy;
 		for(std::pair<core::NodeAddress, core::NodePtr> r : replacements) {

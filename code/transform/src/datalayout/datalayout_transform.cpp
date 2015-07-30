@@ -655,7 +655,7 @@ std::vector<StatementAddress> DatalayoutTransformer::addUnmarshalling(const Expr
 }
 
 void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacements, const StructTypePtr& newStructType, const NodeAddress& toTransform,
-		const std::vector<StatementAddress>& begin, const std::vector<StatementAddress>& end, std::map<NodeAddress, NodePtr>& replacements) {
+		const std::vector<StatementAddress>& begin, const std::vector<StatementAddress>& end, std::map<NodeAddress, NodePtr>& replacements, bool flag) {
 
 	IRBuilder builder(mgr);
 
@@ -668,8 +668,11 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 		pattern::TreePattern structAccessWithOptionalDeref = pattern::var("structAccess", optionalDeref(pattern::aT(
 				pattern::var("oldVar", pattern::atom(oldVar)))));
 		pattern::TreePattern structArrayElementAccess = pirp::arrayRefElem1D(structAccessWithOptionalDeref, var("index", pattern::any));
-		pattern::TreePattern structMemberAccess =  pattern::var("call", pirp::compositeRefElem(structArrayElementAccess,
+		pattern::TreePattern structMemberRefAccess =  pattern::var("call", pirp::compositeRefElem(structArrayElementAccess,
 				pattern::var("member", pattern::any)));
+		pattern::TreePattern structMemberValueAccess = pattern::var("valueCall", pirp::compositeMemberAccess(pirp::refDeref(structArrayElementAccess),
+				pattern::var("member", pattern::any)));
+		pattern::TreePattern structMemberAccess = structMemberRefAccess |  structMemberValueAccess;
 
 		pattern::TreePattern assignArrayAccess = declOrAssignment(pattern::var("target", pattern::any), pattern::var("arrayAccess", structArrayElementAccess));
 		pattern::TreePattern structAccess = pattern::var("call", pirp::refDeref(pirp::arrayRefElem1D(optionalDeref(pattern::var("structAccess",
@@ -695,15 +698,25 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 				pattern::AddressMatchOpt match = structMemberAccess.matchAddress(node);
 				if(match) {
 					ExpressionAddress matchedOldVar = match.get()["oldVar"].getValue().as<ExpressionAddress>();
+
 					if(!compareVariables(oldVar, matchedOldVar))
 						return false;
-//std::cout << "\nCall: ";
-//dumpPretty(node);
+
+//if(match.get().isVarBound("valueCall")) {
+//	std::cout << "\nCall: ";
+//	dumpPretty(node);
+//	abort();
+//}
+
 					StringValuePtr member = builder.stringValue(match.get()["member"].getValue().as<LiteralPtr>()->getStringValue());
 					ExpressionPtr index = match.get()["index"].getValue().as<ExpressionPtr>();
 					ExpressionPtr structAccess = match.get()["structAccess"].getValue().as<ExpressionPtr>();
 					ExpressionPtr replacement = generateNewAccesses(oldVar, newVar, member, index, structAccess);
 
+
+				if(match.get().isVarBound("valueCall")) {// value access to structs should not happen and are translated to ref accesses
+					replacement = builder.deref(replacement); // therefore a deref has to be wrapped around outside
+				}
 					addToReplacements(replacements, node, replacement);
 					return true;
 				}
@@ -724,9 +737,10 @@ void DatalayoutTransformer::replaceAccesses(const ExprAddressMap& varReplacement
 				if(match.get().isVarBound("decl"))
 					addToReplacements(replacements, match.get().getRoot(), builder.declarationStmt(match.get()["target"].getValue().as<VariablePtr>(),
 							builder.refVar(inplaceUnmarshalled)));
-				if(match.get().isVarBound("assignment"))
+				if(match.get().isVarBound("assignment")) {
 					addToReplacements(replacements, match.get().getRoot(),
 							builder.assign(match.get()["target"].getValue().as<ExpressionPtr>(), inplaceUnmarshalled));
+				}
 			}
 
 //			pattern::AddressMatchOpt match = (structAccess | structArrayElementAccess).matchAddress(node);
