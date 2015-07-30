@@ -521,9 +521,9 @@ TEST(DataLayout, Tuple) {
 				f = array_view(a, 42);
 				decl ref<real<4>> scalar = var(*((*d)[55].float));
 				for(int<4> i = 0 .. 99 : 1) {
-					scalar = *(a[i].float);
-					scalar = *((*d)[i].float);
+					scalar = (*a[i]).float;
 					scalar = *(a1[i].float);
+					scalar = (*(*d)[i]).float;
 				}
 
 //				decl ref<array<twoElem, 1>> e; 	not supported

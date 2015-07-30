@@ -134,7 +134,7 @@ protected:
 			const core::ExpressionPtr& index, const core::ExpressionPtr& structAccess) =0;
 	void replaceAccesses(const ExprAddressMap& varReplacements, const core::StructTypePtr& newStructType,
 			const core::NodeAddress& toTransform, const std::vector<core::StatementAddress>& begin, const std::vector<core::StatementAddress>& end,
-			std::map<core::NodeAddress,	core::NodePtr>& replacements);
+			std::map<core::NodeAddress,	core::NodePtr>& replacements, bool flag = false);
 	virtual core::ExpressionPtr generateByValueAccesses(const core::ExpressionPtr& oldVar, const core::StatementPtr& newVar,
 			const core::StructTypePtr& newStructType, const core::ExpressionPtr& index, const core::ExpressionPtr& oldStructAccess) =0;
 	void updateScalarStructAccesses(core::NodePtr& toTransform);

@@ -90,9 +90,21 @@ namespace ocl_kernel {
 		}
 
 		core::JobExprPtr getGlobalJob(const core::LambdaExprPtr& kernel) {
-			core::StatementPtr body = kernel->getLambda()->getBody();
+			core::CompoundStmtPtr body = kernel->getBody().as<core::CompoundStmtPtr>();
+
+			//the first parallel call inside the body should be starting the global range of the OpenCL work item grid
+			core::StatementPtr parallelCall;
+			for(const auto& stmt : body) {
+				if(core::analysis::isCallOf(stmt, kernel.getNodeManager().getLangBasic().getParallel())){
+					parallelCall = stmt;
+					break;
+				}
+			}
+
+			assert_true(parallelCall) << " No parallel call to the global job found";
 			core::StatementPtr expr = static_pointer_cast<const core::CompoundStmt>(body)->getStatements()[1];
-			return static_pointer_cast<const core::JobExpr>(core::analysis::getArgument(expr, 0));
+
+			return static_pointer_cast<const core::JobExpr>(core::analysis::getArgument(parallelCall, 0));
 		}
 
 		/**
@@ -486,6 +498,10 @@ namespace {
 
 					// if this is a call to the kernel ...
 					if (core::analysis::isCallOf(fun, extensions.kernelWrapper)) {
+
+std::cout << "call: " << dumpOneLine(call) << std::endl;
+std::cout << "funTy: " << fun->getType() << std::endl;
+
 						// ... drop final two arguments
 						const core::ExpressionList& args = call->getArguments();
 						assert_ge(args.size(), 2) << "Call should have 2 or more arguments";
