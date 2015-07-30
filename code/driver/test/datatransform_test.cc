@@ -39,6 +39,7 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/error_printer.h"
 
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/transform/datalayout/aos_to_soa.h"
@@ -103,5 +104,7 @@ TEST(DatatransformTest, SimplePragma) {
 	});
 
 	auto errors = semantic.getErrors();
-	EXPECT_EQ(0u, errors.size()) ;
+	EXPECT_EQ(0u, errors.size()) << core::printer::dumpErrors(semantic);
+
+
 }

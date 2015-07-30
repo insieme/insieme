@@ -45,6 +45,7 @@
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/error_printer.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -54,6 +55,7 @@
 #include "insieme/transform/datalayout/aos_to_soa.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
+#include "insieme/core/dump/binary_dump.h"
 
 using namespace insieme;
 
@@ -75,20 +77,32 @@ TEST(DatalayoutTransformTest, OclTest) {
 
 	core::NodePtr prog = program->getElement(0);
 
-//	transform::datalayout::AosToSoa ats(prog);
-//	ats.transform();
+	transform::datalayout::AosToSoa ats(prog);
+	ats.transform();
 
-//	dumpPretty(prog);
+	dumpColor(prog);
+	std::cout << " ================================ " << std::endl;
 
-	auto errors = core::checks::check(prog).getAll();
-
-	EXPECT_EQ(errors.size(), 0u);
-
-	std::sort(errors.begin(), errors.end());
-
-	for_each(errors, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-	});
+	auto errors = core::checks::check(prog);
+	EXPECT_EQ(errors.size(), 0u) << core::printer::dumpErrors(errors);
 
 
+	if (errors.size() == 0) {
+
+		std::fstream fs;
+	  	fs.open ("test.irbin", std::fstream::out);
+		core::dump::binary::dumpIR(fs, prog);
+	}
+}
+
+TEST(DatalayoutTransformTest, backend){
+
+	std::fstream fs;
+	fs.open ("test.irbin", std::fstream::in);
+	ASSERT_TRUE(fs.is_open()) << "previous test failed? no program to convert in BE"; 
+
+	core::NodeManager mgr;
+	auto prog = core::dump::binary::loadIR(fs, mgr);
+
+	dumpColor(prog);
 }

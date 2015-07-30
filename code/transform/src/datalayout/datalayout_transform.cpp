@@ -350,9 +350,9 @@ ExpressionPtr DatalayoutTransformer::updateInit(const ExprAddressMap& varReplace
 }
 
 
-std::vector<std::pair<ExprAddressSet, StructTypePtr>> DatalayoutTransformer::createCandidateLists(const core::NodeAddress& toTransform) {
+CandidateList DatalayoutTransformer::createCandidateLists(const core::NodeAddress& toTransform) {
 	ExprAddressStructTypeMap structs = findCandidates(toTransform);
-	std::vector<std::pair<ExprAddressSet, StructTypePtr>> toReplaceLists;
+	CandidateList toReplaceLists;
 
 	for(std::pair<ExpressionAddress, StructTypePtr> candidate : structs) {
 		ExprAddressSet toReplaceList;
@@ -385,9 +385,8 @@ ExprAddressStructTypeMap DatalayoutTransformer::findCandidates(const NodeAddress
 	return candidateFinder(toTransform);
 }
 
-std::vector<std::pair<ExprAddressSet, StructTypePtr>> DatalayoutTransformer::mergeLists(std::vector<std::pair<ExprAddressSet,
-		StructTypePtr>>& toReplaceLists) {
-	std::vector<std::pair<ExprAddressSet, StructTypePtr>> newLists;
+CandidateList DatalayoutTransformer::mergeLists(std::vector<std::pair<ExprAddressSet, StructTypePtr>>& toReplaceLists) {
+	CandidateList newLists;
 	for(std::pair<ExprAddressSet, StructTypePtr>& toReplaceList : toReplaceLists) {
 		bool addToOld = false;
 		// merge lists of same type

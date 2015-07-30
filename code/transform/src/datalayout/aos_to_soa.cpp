@@ -53,15 +53,14 @@ namespace ia = insieme::analysis;
 
 namespace {
 
-StatementPtr aosToSoaAllocTypeUpdate(const StatementPtr& stmt) {
-	pattern::TreePattern oldStructTypePattern = pattern::aT(
-			pattern::var("structType", pirp::arrayType( pirp::refType( pirp::structType(*pattern::any)))));
-	pattern::TreePattern newStructTypePattern = pattern::aT(
-			pattern::var("structType", pirp::structType(*pattern::any)));
+	StatementPtr aosToSoaAllocTypeUpdate(const StatementPtr& stmt) {
+		pattern::TreePattern oldStructTypePattern = pattern::aT(
+				pattern::var("structType", pirp::arrayType( pirp::refType( pirp::structType(*pattern::any)))));
+		pattern::TreePattern newStructTypePattern = pattern::aT(
+				pattern::var("structType", pirp::structType(*pattern::any)));
 
-	return allocTypeUpdate(stmt, oldStructTypePattern, newStructTypePattern);
-}
-
+		return allocTypeUpdate(stmt, oldStructTypePattern, newStructTypePattern);
+	}
 }
 
 AosToSoa::AosToSoa(core::NodePtr& toTransform, CandidateFinder candidateFinder) :
@@ -73,7 +72,7 @@ void AosToSoa::transform() {
 	IRBuilder builder(mgr);
 
 	const NodeAddress toTransAddr(toTransform);
-	std::vector<std::pair<ExprAddressSet, StructTypePtr>> toReplaceLists =
+	CandidateList toReplaceLists =
 			createCandidateLists(toTransAddr);
 
 	pattern::TreePattern allocPattern = pattern::aT(
@@ -84,6 +83,7 @@ void AosToSoa::transform() {
 		StructTypePtr oldStructType =  toReplaceList.second;
 //				toReplaceList.second.as<GenericTypePtr>()->getTypeParameter(0).as<RefTypePtr>()->getElementType().as<StructTypePtr>();
 
+
 		StructTypePtr newStructType = createNewType(oldStructType);
 
 		ExprAddressMap varReplacements;
@@ -93,6 +93,8 @@ void AosToSoa::transform() {
 				var("toBeReplaced", (pattern::atom(oldStructType))));
 
 		for (ExpressionAddress oldVar : toReplaceList.first) {
+
+
 			// update root for in case it has been modified in a previous iteration
 			oldVar = oldVar.switchRoot(toTransform);
 

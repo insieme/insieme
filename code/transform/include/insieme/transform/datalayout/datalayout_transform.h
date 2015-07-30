@@ -68,6 +68,9 @@ typedef VariableMap<core::StatementPtr> ExprAddressMap;
 //typedef std::set<core::ExpressionAddress> ExprAddressSet;
 typedef std::function<ExprAddressStructTypeMap(const core::NodeAddress& toTransform)> CandidateFinder;
 
+typedef std::pair<ExprAddressSet, core::StructTypePtr> candidate;
+typedef std::vector<std::pair<ExprAddressSet, core::StructTypePtr>> CandidateList;
+
 ExprAddressStructTypeMap findAllSuited(const core::NodeAddress& toTransform);
 ExprAddressStructTypeMap findPragma(const core::NodeAddress& toTransform);
 
@@ -84,8 +87,8 @@ protected:
 	void collectVariables(const std::pair<core::ExpressionAddress, core::StructTypePtr>& transformRoot,
 			ExprAddressSet& toReplaceList, const core::NodeAddress& toTransform);
 	
-	std::vector<std::pair<ExprAddressSet, core::StructTypePtr>> createCandidateLists(const core::NodeAddress& toTransform);
-	std::vector<std::pair<ExprAddressSet, core::StructTypePtr>> mergeLists(std::vector<std::pair<ExprAddressSet, core::StructTypePtr>>& toReplaceLists);
+	CandidateList createCandidateLists(const core::NodeAddress& toTransform);
+	CandidateList mergeLists(CandidateList& toReplaceLists);
 	virtual core::StructTypePtr createNewType(core::StructTypePtr oldType) =0;
 	virtual core::NodeMap generateTypeReplacements(const core::TypePtr& oldStructType, const core::TypePtr& newStructType);
 
