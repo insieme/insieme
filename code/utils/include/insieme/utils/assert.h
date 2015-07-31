@@ -80,7 +80,7 @@
 					LazyAssertion(bool value) : value(value) { 
 						if(!value) { 
 							// totally useless piece of unrequested shit
-						//	std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString();
+							std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString();
 						} 
 					}
 					~LazyAssertion() { 
