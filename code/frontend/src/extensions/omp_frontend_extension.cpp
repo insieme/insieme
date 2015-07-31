@@ -647,7 +647,7 @@ namespace {
     OmpFrontendExtension::OmpFrontendExtension() : flagActivated(false) {
 
         //Add the required header and macro definitions
-        kidnappedHeaders.push_back(CLANG_SRC_DIR "../include/insieme/frontend/omp/input/");
+        kidnappedHeaders.push_back(FRONTEND_TEST_DIR "../include/insieme/frontend/omp/input/");
         macros.insert(std::make_pair("_OPENMP", ""));
 
                 // Add a handler for #pragma omp region [clause[[,] clause] ...] new-line

@@ -39,36 +39,31 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/frontend/convert.h"
-#include "insieme/utils/config.h"
 #include "insieme/frontend/omp/omp_annotation.h"
-
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
+#include "insieme/utils/config.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/annotations/naming.h"
 
-#include "insieme/frontend/extensions/cpp11_extension.h"
-#include "insieme/frontend/extensions/interceptor_extension.h"
-#include "insieme/frontend/extensions/variadic_arguments_extension.h"
+#include "insieme/frontend/extensions/anonymous_rename_extension.h"
 #include "insieme/frontend/extensions/asm_extension.h"
+#include "insieme/frontend/extensions/builtin_function_extension.h"
+#include "insieme/frontend/extensions/cilk_extension.h"
+#include "insieme/frontend/extensions/cpp11_extension.h"
 #include "insieme/frontend/extensions/cpp_refs_extension.h"
 #include "insieme/frontend/extensions/frontend_cleanup_extension.h"
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/frontend/extensions/ocl_kernel_extension.h"
-#include "insieme/frontend/extensions/semantic_check_extension.h"
-#include "insieme/frontend/extensions/builtin_function_extension.h"
-#include "insieme/frontend/extensions/gemsclaim_extension.h"
-#include "insieme/frontend/extensions/crosscompilation_extension.h"
-#include "insieme/frontend/extensions/omp_frontend_extension.h"
-#include "insieme/frontend/extensions/significance_frontend_extension.h"
-#include "insieme/frontend/extensions/instrumentation_region_extension.h"
-#include "insieme/frontend/extensions/anonymous_rename_extension.h"
-#include "insieme/frontend/extensions/cilk_extension.h"
-#include "insieme/frontend/extensions/test_pragma_extension.h"
 #include "insieme/frontend/extensions/insieme_pragma_extension.h"
+#include "insieme/frontend/extensions/instrumentation_region_extension.h"
+#include "insieme/frontend/extensions/interceptor_extension.h"
+#include "insieme/frontend/extensions/omp_frontend_extension.h"
+#include "insieme/frontend/extensions/semantic_check_extension.h"
+#include "insieme/frontend/extensions/significance_frontend_extension.h"
+#include "insieme/frontend/extensions/test_pragma_extension.h"
+#include "insieme/frontend/extensions/variadic_arguments_extension.h"
 
 namespace insieme {
 namespace frontend {
@@ -228,9 +223,9 @@ namespace frontend {
 		//interceptor wants to be first
         registerFrontendExtension<extensions::InterceptorExtension>(options);
 
-        registerFrontendExtension<extensions::VariadicArgumentsExtension>(options);
-        registerFrontendExtension<extensions::ASMExtension>(options);
-        registerFrontendExtension<extensions::CppRefsCleanupExtension>(options);
+		registerFrontendExtension<extensions::VariadicArgumentsExtension>(options);
+		registerFrontendExtension<extensions::ASMExtension>(options);
+		registerFrontendExtension<extensions::CppRefsCleanupExtension>(options);
 		registerFrontendExtension<extensions::BuiltinFunctionExtension>(options);
 		registerFrontendExtension<extensions::InstrumentationRegionExtension>(options);
 		registerFrontendExtension<extensions::TestPragmaExtension>(options);
@@ -238,11 +233,6 @@ namespace frontend {
 		registerFrontendExtension<extensions::OmpFrontendExtension>(options);
 		registerFrontendExtension<extensions::SignificanceFrontendExtension>(options);
         registerFrontendExtension<extensions::CilkFrontendExtension>(options);
-        registerFrontendExtension<extensions::GemsclaimExtension>(options);
-        registerFrontendExtension<extensions::CrossCompilationExtension>(options);
-        registerFrontendExtension<extensions::OclHostExtension>(options);
-        registerFrontendExtension<extensions::IclHostExtension>(options);
-        registerFrontendExtension<extensions::OclKernelExtension>(options);
         registerFrontendExtension<extensions::Cpp11Extension>(options);
 
 		//FE cleanup wants to be second-last 

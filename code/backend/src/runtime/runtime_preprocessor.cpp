@@ -36,9 +36,13 @@
 
 #include "insieme/backend/runtime/runtime_preprocessor.h"
 
+#include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
+
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -47,19 +51,8 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ir_class_info.h"
 #include "insieme/core/lang/instrumentation_extension.h"
-
-#include "insieme/backend/runtime/runtime_extensions.h"
-#include "insieme/backend/runtime/runtime_entities.h"
-
-#include "insieme/backend/ocl_host/host_extensions.h"
-
-#include "insieme/analysis/features/code_features.h"
-#include "insieme/analysis/features/code_feature_catalog.h"
-#include "insieme/analysis/polyhedral/scopregion.h"
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/omp/omp_utils.h"
+#include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/annotations/meta_info/meta_infos.h"
 #include "insieme/annotations/omp/omp_annotations.h"
@@ -69,9 +62,67 @@ namespace backend {
 namespace runtime {
 
 	using namespace insieme::core::pattern;
+	using namespace insieme::core;
 
 	namespace {
 
+		bool hasGroupOperations(const JobExprPtr& job) {
+			if (!job) return false;
+
+			const core::lang::BasicGenerator& basic = job->getNodeManager().getLangBasic();
+
+			bool hasGroupOps = false;
+			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& cur) -> bool {
+				if (cur->getNodeType() == core::NT_CallExpr) {
+					const auto& c = cur.as<core::CallExprPtr>();
+					const auto& f = core::analysis::stripAttributes(c->getFunctionExpr());
+
+					if (basic.isGetThreadGroup(f) || basic.isGetGroupSize(f) || basic.isGetThreadId(f) || basic.isPFor(f) || basic.isRedistribute(f))
+						hasGroupOps = true;
+
+					// Prune on Parallel
+					if (basic.isParallel(f) && !c->hasAnnotation(insieme::annotations::omp::RegionAnnotation::KEY))
+						return true;
+					else
+						return false;
+				}
+
+				return false;
+			});
+
+			return hasGroupOps;
+		}
+
+		bool isTask(const JobExprPtr& job) {
+			// make a null-check
+			if (!job) return false;
+
+			core::IRBuilder builder(job->getNodeManager());
+
+			// range(1-inf)
+			if (job->getThreadNumRange().as<core::CallExprPtr>()->getArguments().size() == 1)
+				return false;
+
+			// skipping casts
+			core::ExpressionPtr max = job->getThreadNumRange().as<core::CallExprPtr>()->getArgument(1);
+			core::visitDepthFirstPrunable(max, [&](const core::NodePtr& cur) -> bool {
+				if (cur.isa<core::LiteralPtr>()) {
+					max = cur.as<core::LiteralPtr>();
+					return true;
+				}
+
+				return false;
+			});
+
+			return !hasGroupOperations(job) && (max.isa<core::LiteralPtr>() && max.as<core::LiteralPtr>()->getValueAs<unsigned>() == 1u);
+		}
+
+		/**
+		* Tests whether the given job expression is a task (only processed by a single thread) or not.
+		*/
+		inline bool isTask(const insieme::core::NodePtr& job) {
+			return isTask(job.isa<insieme::core::JobExprPtr>());
+		}
 
 		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& workItemImpl) {
 			core::IRBuilder builder(manager);
@@ -89,7 +140,7 @@ namespace runtime {
 
 			// create new lambda expression wrapping the entry point
 			assert_eq(entry->getType()->getNodeType(), core::NT_FunctionType) << "Only functions can be entry points!";
-			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
+			core::FunctionTypePtr entryType = entry->getType().as<FunctionTypePtr>();
 			assert_true(entryType->isPlain()) << "Only plain functions can be entry points!";
 
 
@@ -308,20 +359,20 @@ namespace runtime {
 			return res;
 		}
 
-        core::StatementPtr wrapWithInstrumentationRegion(core::NodeManager& manager, const core::ExpressionPtr& expr, const core::StatementPtr& stmt) {
-            if(expr->hasAttachedValue<annotations::ompp_objective_info>()) {
+		core::StatementPtr wrapWithInstrumentationRegion(core::NodeManager& manager, const core::ExpressionPtr& expr, const core::StatementPtr& stmt) {
+			if(expr->hasAttachedValue<annotations::ompp_objective_info>()) {
 				core::IRBuilder builder(manager);
 				const auto& instExt = manager.getLangExtension<core::lang::InstrumentationExtension>();
-		        core::StatementList stmtList;
-                unsigned region_id = expr->getAttachedValue<annotations::ompp_objective_info>().region_id;
-                stmtList.push_back(builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(region_id)));
-                stmtList.push_back(stmt);
-                stmtList.push_back(builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(region_id)));
-                return builder.compoundStmt(stmtList);
-            }
-            else
-                return stmt;
-        }
+				core::StatementList stmtList;
+				unsigned region_id = expr->getAttachedValue<annotations::ompp_objective_info>().region_id;
+				stmtList.push_back(builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(region_id)));
+				stmtList.push_back(stmt);
+				stmtList.push_back(builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(region_id)));
+				return builder.compoundStmt(stmtList);
+			} else {
+				return stmt;
+			}
+		}
 			
 		// migrate meta-infos from anywhere in subtree to job
 		void collectSubMetaInfos(core::NodeManager& manager, core::NodePtr job) {
@@ -329,23 +380,24 @@ namespace runtime {
 			auto rootMetas = annotations::getMetaInfos(job);
 			core::visitDepthFirstPrunable(job, [&](const core::NodePtr& npr) -> bool {
 				// skip root node of sub-tree
-				if(npr == job)
-					return false;
+				if(npr == job) return false;
 				// prune for subtrees which generate their own WI description
 				if(core::analysis::isCallOf(npr, basic.getParallel()) 
-					|| core::analysis::isCallOf(npr, basic.getPFor())	
-					|| npr.isa<core::JobExprPtr>())
+						|| core::analysis::isCallOf(npr, basic.getPFor())	
+						|| npr.isa<core::JobExprPtr>()) {
 					return true;
+				}
 				// prune for subtrees which already generated their WI
-				if(npr.isa<core::ExpressionPtr>() &&
-							(  core::encoder::is_encoding_of<WorkItemVariant>()(npr.as<core::ExpressionPtr>())
-							|| core::encoder::is_encoding_of<WorkItemImpl>()(npr.as<core::ExpressionPtr>())))
+				if(npr.isa<core::ExpressionPtr>() 
+						&& (  core::encoder::is_encoding_of<WorkItemVariant>()(npr.as<core::ExpressionPtr>())
+							|| core::encoder::is_encoding_of<WorkItemImpl>()(npr.as<core::ExpressionPtr>()))) {
 					return true;
+				}
 				// get metainfo
 				auto metas = annotations::getMetaInfos(npr);
 				if(metas.empty()) return false;
 				// check if duplicate metainfo 
-				assert(all(rootMetas, [&](const annotations::AnnotationMap::value_type& v) { return metas.count(v.first) == 0; } ) && "Duplicate Meta Information");
+				assert(::all(rootMetas, [&](const annotations::AnnotationMap::value_type& v) { return metas.count(v.first) == 0; } ) && "Duplicate Meta Information");
 				// move metainfo
 				annotations::moveMetaInfos(npr, job);
 				return false;
@@ -460,7 +512,7 @@ namespace runtime {
 			const Extensions& ext;
 			core::IRBuilder builder;
 			bool includeEffortEstimation;
-
+			
 		public:
 
 			WorkItemIntroducer(core::NodeManager& manager, bool includeEffortEstimation)
@@ -506,7 +558,7 @@ namespace runtime {
 						    return builder.callExpr(builder.refType(ext.workItemType), ext.region, job);
 
                         // handle task
-                        if(analysis::omp::isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
+                        if(isTask(ptr.as<core::CallExprPtr>()->getArgument(0)))
 						    return builder.callExpr(builder.refType(ext.workItemType), ext.task, job);
 
 						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
@@ -588,94 +640,6 @@ namespace runtime {
 //				irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 			}
 
-			bool isOpencl(const core::StatementPtr& stmt) {
-				auto kernelCall = stmt->getNodeManager().getLangExtension<ocl_host::Extensions>().callKernel;
-				return core::visitDepthFirstOnceInterruptible(stmt, [&](const core::LiteralPtr& cur)->bool { return cur == kernelCall; });
-			}
-
-			uint64_t estimateEffort(const core::StatementPtr& stmt) {
-				// static references to the features used for the extraction
-				static const analysis::features::FeaturePtr numOpsFtr
-						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_real");
-				static const analysis::features::FeaturePtr numMemAccessFtr
-						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_IO_NUM_any_read/write_OPs_real");
-
-				assert_true(numOpsFtr) << "Missing required feature support!";
-				assert_true(numMemAccessFtr) << "Missing required feature support!";
-
-				// extract values
-				uint64_t numOps = (uint64_t)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
-				uint64_t numMemAccess = (uint64_t)analysis::features::getValue<double>(numMemAccessFtr->extractFrom(stmt));
-
-				// combine values
-				return numOps + 3*numMemAccess;
-			}
-
-			core::LambdaExprPtr getLoopEffortEstimationFunction(const core::ExpressionPtr& loopFun) {
-
-				core::LambdaExprPtr effort;
-
-				// create artificial boundaries
-				core::TypePtr iterType = basic.getInt4();
-				core::VariablePtr lowerBound = builder.variable(iterType);
-				core::VariablePtr upperBound = builder.variable(iterType);
-				core::ExpressionPtr one = builder.literal("1", iterType);
-
-				// create loop to base estimation up-on
-				core::CallExprPtr estimatorForLoop = builder.callExpr(basic.getUnit(), loopFun, lowerBound, upperBound, one);
-
-				// check whether it is a SCoP
-				auto scop = analysis::polyhedral::scop::ScopRegion::toScop(estimatorForLoop);
-
-				// check whether current node is the root of a SCoP
-				std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
-				if (!scop) {
-					// => not a scop, no way of estimating effort ... yet
-					std::cout << "~~~~~~~~~~~~~~ NOT a scop\n";
-					return effort;
-				}
-				std::cout << "~~~~~~~~~~~~~~ IS a scop\n";
-
-
-				// compute total effort function
-				core::arithmetic::Piecewise total;
-				for_each(*scop, [&](const analysis::polyhedral::StmtPtr& cur) {
-
-					// obtain cardinality of the current statement
-					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->iterdomain);
-
-					// fix parameters (except the boundary parameters)
-					core::arithmetic::ValueReplacementMap replacements;
-					for_each(cardinality.extractValues(), [&](const core::arithmetic::Value& cur) {
-						if (cur != lowerBound && cur != upperBound) {
-							replacements[cur] = 100;
-						}
-					});
-
-					// fix parameters ...
-					cardinality = cardinality.replace(replacements);
-
-					// scale cardinality by weight of current stmt
-					cardinality *= core::arithmetic::Piecewise(
-							core::arithmetic::Formula(
-									estimateEffort(cur->getAddr().getAddressedNode())
-							)
-					);
-
-					// sum up cardinality
-					total += cardinality;
-				});
-
-				// convert into IR
-				core::ExpressionPtr formula = core::arithmetic::toIR(manager, total);
-
-				// wrap into lambda
-				return builder.lambdaExpr(builder.getLangBasic().getUInt8(),
-						builder.returnStmt(formula),
-						toVector(lowerBound, upperBound)
-				);
-			}
-
 			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
 				// ------------- build captured data -------------
 
@@ -737,27 +701,8 @@ namespace runtime {
 				core::StatementPtr inlinedLoop = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
 
 				// build for loop
-				resBody.push_back(inlinedLoop);
-				
+				resBody.push_back(inlinedLoop);				
 				core::LambdaExprPtr entryPoint = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
-
-
-				// ------------- try build up function estimating loop range effort -------------
-
-				if(includeEffortEstimation) {
-					// attach effort estimation
-					insieme::annotations::effort_estimation_info effort;
-					effort.estimation_function = getLoopEffortEstimationFunction(body);
-					effort.fallback_estimate = estimateEffort(body);
-					entryPoint.attachValue(effort);
-				}
-
-				// also attach OpenCL flag
-				{
-					insieme::annotations::opencl_info opencl;
-					opencl.opencl = isOpencl(entryPoint);
-					entryPoint.attachValue(opencl);
-				}
 
 				// ------------- finish process -------------
 

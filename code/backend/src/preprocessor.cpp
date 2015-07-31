@@ -46,7 +46,6 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/ir_class_info.h"
-
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/static_vars.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -57,7 +56,6 @@
 #include "insieme/core/transform/instantiate.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/transform/ir_cleanup.h"
 
 #include "insieme/utils/logging.h"
 
@@ -460,11 +458,6 @@ namespace backend {
 	core::NodePtr MakeVectorArrayCastsExplicit::process(const Converter& converter, const core::NodePtr& code) {
 		// the converter does the magic
 		return VectorToArrayConverter(converter.getNodeManager()).map(code);
-	}
-
-	core::NodePtr RedundancyElimination::process(const Converter& converter, const core::NodePtr& code) {
-		// this pass has been implemented as part of the core manipulation utils
-		return transform::eliminateRedundantAssignments(code);
 	}
 
 	core::NodePtr CorrectRecVariableUsage::process(const Converter& converter, const core::NodePtr& code) {

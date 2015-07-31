@@ -66,10 +66,10 @@ TEST(Cilk, Pragmas) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/hello.cilk", "-fcilk" };
     cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", options.job);
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/hello.cilk", options.job);
 
 	const auto& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
@@ -156,7 +156,7 @@ TEST(Cilk, Sema) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/hello.cilk", "-fcilk" };
     cmd::Options options = cmd::Options::parse(args);
 
 	// check proper encoding of cilk primitives

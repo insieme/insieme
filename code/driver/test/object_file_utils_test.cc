@@ -52,7 +52,7 @@ namespace driver {
 	TEST(ObjectFile, HelloWorldTest) {
 		core::NodeManager mgr;
 
-		fe::ConversionJob job(DRIVER_SRC_DIR "/hello_world.c");
+		fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
 		auto unit = job.toIRTranslationUnit(mgr);
 
 		// save tu to temporary file
@@ -66,7 +66,7 @@ namespace driver {
 		EXPECT_TRUE(isInsiemeLib(file));
 
 		// this one should fail ..
-		EXPECT_FALSE(isInsiemeLib(DRIVER_SRC_DIR "/hello_world.c"));
+		EXPECT_FALSE(isInsiemeLib(DRIVER_TEST_DIR "/inputs/hello_world.c"));
 
 		// reload translation unit
 		core::NodeManager mgr2;

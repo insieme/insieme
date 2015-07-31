@@ -37,4 +37,8 @@
 /**
  * Just defines a nicer alternative to the attribute syntax.
  */
+#ifdef GNUC
 #define __unused __attribute__((unused))
+#else
+#define __unused
+#endif

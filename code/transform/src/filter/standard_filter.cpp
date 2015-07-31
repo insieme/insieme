@@ -36,10 +36,8 @@
 
 #include "insieme/transform/filter/standard_filter.h"
 
-#include "insieme/analysis/polyhedral/scopregion.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
-
 #include "insieme/core/pattern/ir_pattern.h"
 
 #include "insieme/utils/value_wrapper.h"
@@ -123,13 +121,6 @@ namespace filter {
 		name << "InnermostLevel(" << level << ")";
 		return TargetFilter(name.str(), [=](const core::NodePtr& root) { return innermostFor(root, level); });
 	}
-
-/** Returns polyhedral::scop::mark as a filter. So, if you just need SCoP detection without the filter ability,
-	just run analysis::polyhedral::scop::mark itself. */
-	TargetFilter outermostSCoPs() {
-		return TargetFilter("outermost SCoP", &analysis::polyhedral::scop::mark);
-	}
-
 
 	namespace {
 

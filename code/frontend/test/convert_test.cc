@@ -56,7 +56,7 @@ namespace frontend {
 //
 //		ConversionSetup setup;
 //		setup.setStandard(ConversionSetup::Cxx03);
-//		auto tu = convert(mgr, CLANG_SRC_DIR "/inputs/conversion_test.cpp", setup);
+//		auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/conversion_test.cpp", setup);
 //
 //	//	std::cout << tu << "\n";
 //		EXPECT_FALSE(tu.getFunctions().empty());
@@ -72,7 +72,7 @@ namespace frontend {
 
 		ConversionSetup setup;
 		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, CLANG_SRC_DIR "/inputs/conversion_test.cpp", setup);
+		auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/conversion_test.cpp", setup);
 
 //		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());
@@ -101,7 +101,7 @@ namespace frontend {
 	TEST(Converter, Globals) {
 		core::NodeManager mgr;
 
-		auto tu = convert(mgr, CLANG_SRC_DIR "/inputs/globals.c");
+		auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/globals.c");
 
 //		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());

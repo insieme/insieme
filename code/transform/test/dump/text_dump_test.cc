@@ -41,7 +41,6 @@
 #include "insieme/transform/primitives.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/rulebased/transformations.h"
-#include "insieme/transform/polyhedral/transformations.h"
 
 #include "insieme/transform/filter/standard_filter.h"
 
@@ -77,72 +76,6 @@ TEST(TextDump, SimpleStoreLoad) {
 
 	EXPECT_EQ(*transform, *restored);
 
-}
-
-TEST(TextDump, ComplexStoreLoad) {
-
-	// create a (simple) transformation
-	TransformationPtr transform = makePipeline(
-			polyhedral::makeLoopTiling({15,20}),
-			makeForAll(
-					filter::outermostSCoPs(),
-					makeTry( polyhedral::makeLoopInterchange(1,3))
-			)
-	);
-
-	// save transformation within stream
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-	// dump IR using a text format
-	dumpTransformation(buffer, transform);
-
-	// restore the transformation
-	const Catalog& catalog = getStandardCatalog();
-
-	TransformationPtr restored = loadTransformation(buffer, catalog);
-
-	EXPECT_EQ(*transform, *restored);
-
-}
-
-
-TEST(TextDump, ListStoreLoad) {
-
-	vector<TransformationPtr> transformations = toVector(
-		makePipeline(
-				polyhedral::makeLoopTiling({15,20}),
-				makeForAll(
-						filter::outermostSCoPs(),
-						makeTry( polyhedral::makeLoopInterchange(1,3))
-				)
-		),
-		makeNoOp(),
-		makePipeline(
-				makeForAll(
-						filter::innermostLoops(2),
-						makeTry( polyhedral::makeLoopInterchange(1,3))
-				),
-				polyhedral::makeLoopTiling({15,20})
-		)
-	);
-
-	// save transformation within stream
-	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-	// dump IR using a text format
-	dumpTransformations(buffer, transformations);
-
-//	std::cout << "Encoded transformations: \n" << buffer.str() << "\n";
-
-	// restore the transformation
-	const Catalog& catalog = getStandardCatalog();
-
-	vector<TransformationPtr> restored = loadTransformations(buffer, catalog);
-
-	EXPECT_EQ(transformations.size(), restored.size());
-	for(unsigned i = 0; i<transformations.size(); i++) {
-		EXPECT_EQ(*transformations[i], *restored[i]);
-	}
 }
 
 TEST(TextDump, EmptyListStoreLoad) {

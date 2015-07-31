@@ -36,13 +36,11 @@
 
 #include "insieme/frontend/stmt_converter.h"
 
-#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/utils/container_utils.h"
@@ -52,8 +50,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/types/cast_tool.h"
-
-#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/core/transform/node_replacer.h"
 

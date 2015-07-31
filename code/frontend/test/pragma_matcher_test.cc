@@ -93,7 +93,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/pragmas.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/pragmas.c";
 	std::vector<std::string> args = { "compiler", filename };
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
@@ -275,7 +275,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 	// we experienced some issues related to finding the position of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/pragma2.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/pragma2.c";
 	std::vector<std::string> args = { "compiler", filename };
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
@@ -355,7 +355,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/omp_parallel.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/omp_parallel.c";
 	std::vector<std::string> args = { "compiler", filename, "-fopenmp" };
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
@@ -489,7 +489,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/omp_for.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/omp_for.c";
 	std::vector<std::string> args = { "compiler", filename, "-fopenmp" };
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
@@ -630,7 +630,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 TEST(PragmaMatcherTest, RecursiveFunctions) {
 
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/rec.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/rec.c";
 	std::vector<std::string> args = { "compiler", filename};
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();

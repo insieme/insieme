@@ -77,7 +77,7 @@ namespace ia = insieme::annotations;
 
 TEST(TypeConversion, HandleBuildinType) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -158,7 +158,7 @@ TEST(TypeConversion, HandleBuildinType) {
 
 TEST(TypeConversion, PointerToType) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
 
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
@@ -258,7 +258,7 @@ TEST(TypeConversion, PointerToType) {
 
 TEST(TypeConversion, References) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
 
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
@@ -344,7 +344,7 @@ TEST(TypeConversion, References) {
 
 TEST(TypeConversion, CombinedTypes) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
 	Converter convFactory( manager, tu);
 
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
@@ -423,7 +423,7 @@ TEST(TypeConversion, CombinedTypes) {
 
 TEST(TypeConversion, HandleRecursiveStructType) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
 	Converter convFactory( manager, tu);
 
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
@@ -475,7 +475,7 @@ TEST(TypeConversion, HandleRecursiveStructType) {
 
 TEST(TypeConversion, FileTest) {
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/types.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/types.c";
 	std::vector<std::string> argv = { "compiler", filename };
 	cmd::Options options = cmd::Options::parse(argv);
 	options.job.frontendExtensionInit();

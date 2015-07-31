@@ -59,7 +59,6 @@ namespace dump {
 			res.insert(std::make_pair("innermost_loops", 		filter::innermostLoops()));
 			res.insert(std::make_pair("2nd_innermost_loops", 	filter::innermostLoops(2)));
 			res.insert(std::make_pair("3rd_innermost_loops", 	filter::innermostLoops(3)));
-			res.insert(std::make_pair("outermost_scops", 		filter::outermostSCoPs()));
 
 			return res;
 		}

@@ -22,7 +22,6 @@ target_link_libraries(insieme_backend insieme_core)
 target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_annotations)
 target_link_libraries(insieme_backend insieme_transform)
-target_link_libraries(insieme_backend insieme_analysis)
 
 #target for backend unit_tests
 set(ut_prefix  ut_be )
@@ -46,7 +45,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_transform)
-	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_backend)
 	
 	if(${case_name} STREQUAL ut_be_opencl_test OR

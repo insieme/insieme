@@ -97,7 +97,7 @@ TEST(CppConversion, FileTest) {
 
 	NodeManager manager;
 
-	fe::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/cpp.cpp");
+	fe::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/cpp.cpp");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 

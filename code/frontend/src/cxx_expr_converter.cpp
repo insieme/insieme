@@ -43,30 +43,22 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#include "clang/AST/StmtVisitor.h"
+#include <clang/AST/StmtVisitor.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/CXXInheritance.h>
-
 #include <clang/Basic/FileManager.h>
 #pragma GCC diagnostic pop
-
-
-#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/temporaries_lookup.h"
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
-
 #include "insieme/frontend/utils/debug.h"
-
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -75,7 +67,6 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
-
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -83,7 +74,6 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/types/cast_tool.h"
-
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/annotations/source_location.h"
 

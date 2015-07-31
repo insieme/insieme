@@ -85,18 +85,18 @@ public:
 
         if(N==0) {
             macros.insert(std::make_pair<std::string,std::string>("A","char *rule_one = \"MOOSI_FOR_PRESIDENT\""));
-            injectedHeaders.push_back("injectedHeader.h");
+            injectedHeaders.push_back("injected_header.h");
         }
         if(N==1) {
             macros.insert(std::make_pair<std::string,std::string>("A",""));
-            kidnappedHeaders.push_back(CLANG_SRC_DIR "/inputs/kidnapped");
+            kidnappedHeaders.push_back(FRONTEND_TEST_DIR "/inputs/kidnapped");
         }
         if(N==2) {
             using namespace insieme::frontend::pragma;
             using namespace insieme::core;
 
             macros.insert(std::make_pair<std::string,std::string>("A",""));
-            injectedHeaders.push_back("injectedHeader.h");
+            injectedHeaders.push_back("injected_header.h");
 
             auto var_list = tok::var["v"] >> *(~tok::comma >> tok::var["v"]);
 
@@ -212,7 +212,7 @@ using namespace insieme::driver;
 TEST(ClangStage, Initialization) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/main.c", "--fnodefaultextensions" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/main.c", "--fnodefaultextensions" };
 
     cmd::Options options = cmd::Options::parse(args);
     //explicitly add extension without flag! - needs frontendExtensionInit call
@@ -231,7 +231,7 @@ TEST(ClangStage, Initialization) {
 TEST(ClangStage, Conversion) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/simple.c", "--fnodefaultextensions" };
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<ClangTestExtension>();
@@ -259,7 +259,7 @@ TEST(ClangStage, Conversion) {
 TEST(PreClangStage, Macros) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/simple.c", "--fnodefaultextensions" };
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<ClangTestExtension>();
@@ -281,7 +281,7 @@ TEST(PreClangStage, Macros) {
 TEST(PreClangStage, HeaderInjection) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "--fnodefaultextensions" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/simple.c", "--fnodefaultextensions" };
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<ClangTestExtension>();
@@ -305,7 +305,7 @@ TEST(PreClangStage, HeaderInjection) {
 TEST(PreClangStage, HeaderKidnapping) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "-fstate1" , "--fnodefaultextensions"};
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/simple.c", "-fstate1" , "--fnodefaultextensions"};
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<ClangTestExtension>();
@@ -328,7 +328,7 @@ TEST(PreClangStage, HeaderKidnapping) {
 TEST(PostClangStage, IRVisit) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c" , "--fnodefaultextensions"};
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/simple.c" , "--fnodefaultextensions"};
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<ClangTestExtension>();
@@ -354,7 +354,7 @@ TEST(PostClangStage, IRVisit) {
 TEST(PragmaHandlerTest, PragmaTest) {
     //initialization
     insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/simple.c", "-fstate2" , "--fnodefaultextensions" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/simple.c", "-fstate2" , "--fnodefaultextensions" };
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<ClangTestExtension>();
@@ -433,7 +433,7 @@ struct DeclVistors : public insieme::frontend::extensions::FrontendExtension {
 TEST(DeclsStage, MatchVisits) {
 	//initialization
 	insieme::core::NodeManager mgr;
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/decls.cpp", "--fnodefaultextensions" };
+    std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/decls.cpp", "--fnodefaultextensions" };
 
     cmd::Options options = cmd::Options::parse(args);
     options.job.registerFrontendExtension<DeclVistors>();

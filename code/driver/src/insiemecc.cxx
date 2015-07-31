@@ -34,30 +34,14 @@
  * regarding third party software licenses.
  */
 
-/**
- * Within this file a small, simple example of a compiler driver utilizing
- * the insieme compiler infrastructure is presented.
- *
- * This file is intended to provides a template for implementing new compiler
- * applications utilizing the Insieme compiler and runtime infrastructure.
- */
-
 // Minimum size of the context string reported by the error checker
 // (context will be extended when smaller)
 #define MIN_CONTEXT 40
-
 #define TEXT_WIDTH 120
 
 #include <string>
 
 #include <boost/algorithm/string.hpp>
-
-#include "insieme/analysis/cfg.h"
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/scopregion.h"
-
-#include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -65,13 +49,9 @@
 #include "insieme/utils/version.h"
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/extensions/ocl_host_extension.h"
-#include "insieme/frontend/extensions/gemsclaim_extension.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
-#include "insieme/backend/ocl_host/host_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_backend.h"
 
 #include "insieme/driver/cmd/insiemecc_options.h"
 #include "insieme/driver/object_file_utils.h"
@@ -86,8 +66,6 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/transform/tasks/granularity_tuning.h"
-#include "insieme/transform/polyhedral/scoppar.h"
-#include "insieme/transform/polyhedral/scopvisitor.h"
 
 using namespace std;
 using namespace insieme;
@@ -194,25 +172,6 @@ void benchmarkCore(const core::NodePtr& program) {
 	closeBox();
 }
 
-//****************************************************************************************
-//            DUMP CFG: build the CFG of the program and dumps it into a file
-//****************************************************************************************
-void dumpCFG(const NodePtr& program, const std::string& outFile) {
-	using namespace insieme::analysis;
-	if(outFile.empty()) { return; }
-
-	utils::Timer timer();
-	CFGPtr graph = utils::measureTimeFor<CFGPtr, INFO>("Build.CFG", [&]() {
-		return CFG::buildCFG<OneStmtPerBasicBlock>(program);
-	});
-
-	utils::measureTimeFor<INFO>( "Visit.CFG", [&]() {
-			std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
-			dotFile << *graph;
-		}
-	);
-}
-
 //***************************************************************************************
 // 					SEMA: Performs semantic checks on the IR
 //***************************************************************************************
@@ -273,123 +232,14 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 }
 
 //***************************************************************************************
-//		Polyhedral Model Extraction: Start analysis for SCoPs and prints out stats
-//***************************************************************************************
-void markSCoPs(core::ProgramPtr& program) {
-	using namespace insieme::analysis::polyhedral::scop;
-
-	// find SCoPs in our current program
-	std::vector<core::NodeAddress> scoplist = utils::measureTimeFor<std::vector<core::NodeAddress>, INFO>("IR.SCoP.Analysis ",
-		[&]() -> std::vector<core::NodeAddress> { return mark(program); });
-
-	size_t numStmtsInScops = 0, loopNests = 0, maxLoopNest = 0;
-
-	// loop over all SCoP annotations we have discovered
-	std::for_each(scoplist.begin(), scoplist.end(),	[&](std::list<core::NodeAddress>::value_type& cur){
-		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
-
-		// only print SCoPs which contain statement, at the user's request
-		if(reg.getScop().size() == 0)
-			return;
-
-		std::cout << reg.getScop();
-
-		// count number of statements covered by SCoPs
-		numStmtsInScops += reg.getScop().size();
-
-		// count maximum and average loop nesting level
-		size_t loopNest = reg.getScop().nestingLevel();
-		if(loopNest > maxLoopNest)
-			maxLoopNest=loopNest;
-		loopNests += loopNest;
-	});
-
-//	LOG(INFO) << std::setfill(' ') << std::endl
-//			  << "SCoP Analysis" << std::endl
-//			  << "\t# of SCoPs: " << sl.size() << std::endl
-//			  << "\t# of stmts within SCoPs: " << numStmtsInScops << std::endl
-//			  << "\tavg stmts per SCoP: " << std::setprecision(2) << (double)numStmtsInScops/sl.size() << std::endl
-//			  << "\tavg loop nests per SCoP: " << std::setprecision(2) << (double)loopNests/sl.size() << std::endl
-//			  << "\tmax loop nests per SCoP: " << maxLoopNest << std::endl;
-}
-
-//***************************************************************************************
-//		Polyhedral Model Transformation: schedule relevant transformations
-//***************************************************************************************
-const core::ProgramPtr SCoPTransformation(const core::ProgramPtr& program, const cmd::Options& options) {
-	int ocltransform = 0;
-
-	// check whether OpenCL processing has been requested by the user
-	auto oclChecker = [&]() -> bool {
-	    for(auto extPtr : options.job.getExtensions()) {
-	        if(dynamic_cast<insieme::frontend::extensions::OclHostExtension*>(extPtr.get()))
-	            return true;
-	    }
-	    return false;
-	};
-	if (options.backendHint == cmd::BackendEnum::OpenCL || oclChecker()) {
-		if ((options.backendHint == cmd::BackendEnum::OpenCL) ^ (oclChecker()))
-			std::cerr << "Specify both the --opencl and --backend ocl options for OpenCL semantics!" << std::endl <<
-						 "Not doing polyhedral OpenCL transformation." << std::endl;
-		else {
-			ocltransform=1;
-			LOG(DEBUG) << "We will be using the backend: " << options.backendHint << "\n";
-		}
-	}
-
-	// OCL transformations will - for now - happen on the old PM implementation; otherwise we choose the new one
-	if (ocltransform) {
-		std::vector<core::NodeAddress> scoplist=insieme::analysis::polyhedral::scop::mark(program);
-		scoplist.clear(); // we do not use the scoplist right now, but we may want to refer to it later
-		return insieme::transform::polyhedral::SCoPPar(program).apply();
-	} else {
-		auto polyreptn=insieme::transform::polyhedral::novel::ProgramSCoP(ProgramAddress(program));
-		polyreptn.debug();
-		// do some transformation here
-		return polyreptn.IR().getAddressedNode();
-	}
-}
-
-//***************************************************************************************
 //									Backend selection
 //***************************************************************************************
 insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
-
-	if(options.backendHint == cmd::BackendEnum::OpenCL) {
-		// use the OCL kernel backend if a KernelFctAnnotation can be found in the program,
-		// otherwise use the OCL host backend
-		bool host = [&]() {
-			const auto& ep = program->getEntryPoints();
-			for (auto& e : ep) {
-				if(e->hasAnnotation(insieme::annotations::ocl::BaseAnnotation::KEY)) {
-					auto annotations = e->getAnnotation(insieme::annotations::ocl::BaseAnnotation::KEY);
-					for(const auto& ann : annotations->getAnnotationList())
-						if(!dynamic_pointer_cast<insieme::annotations::ocl::KernelFctAnnotation>(ann))
-							return true;
-				} else
-					return true;
-			}
-			return false;
-		}();
-
-		if(host)
-			return be::ocl_host::OCLHostBackend::getDefault(options.settings.dumpOclKernel.string());
-		else
-			return be::ocl_kernel::OCLKernelBackend::getDefault(options.settings.dumpOclKernel.string());
-	}
-
+	
 	if(options.backendHint == cmd::BackendEnum::Sequential)
 		return be::sequential::SequentialBackend::getDefault();
 
-	auto gemsclaimChecker = [&]() -> bool {
-		for(auto extPtr : options.job.getExtensions()) {
-			if(dynamic_cast<insieme::frontend::extensions::GemsclaimExtension*>(extPtr.get())) {
-				return true;
-			}
-		}
-		return false;
-	};
-	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, gemsclaimChecker());
+	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, false);
 }
 
 int main(int argc, char** argv) {
@@ -478,20 +328,11 @@ int main(int argc, char** argv) {
 			return retval;
 	}
 
-	if(!options.settings.dumpCFG.empty())
-		dumpCFG(program, options.settings.dumpCFG.string());
-
 	if(options.settings.showStatistics)
 		showStatistics(program);
 
 	if(options.settings.benchmarkCore)
 		benchmarkCore(program);
-
-	if(options.settings.markScop)
-		markSCoPs(program);
-
-	if(options.settings.usePM)
-		SCoPTransformation(program, options);
 
 	if(options.settings.taskGranularityTuning)
 		program = insieme::transform::tasks::applyTaskOptimization(program);
@@ -519,7 +360,6 @@ int main(int argc, char** argv) {
 		if(!options.settings.dumpTRGOnly.empty())
 			return 0;
 	}
-
 
 	// Step 4: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual

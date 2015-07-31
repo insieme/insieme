@@ -36,8 +36,6 @@
 
 #include "insieme/frontend/expr_converter.h"
 
-#include "insieme/annotations/ocl/ocl_annotations.h"
-
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/clang_cast.h"
@@ -45,9 +43,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/memalloc.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
-
 #include "insieme/frontend/analysis/expr_analysis.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -62,18 +58,16 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
-
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/encoder/lists.h"
-
 #include "insieme/core/types/cast_tool.h"
-
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
+
 #include "insieme/annotations/c/include.h"
 
 #include <iconv.h>
@@ -630,7 +624,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUN
     core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(nullExpr, retIr);
 	frontend_assert(type->getNodeType() != core::NT_ArrayType) <<"C pointer type must of type array<'a,1>\n";
-	return (retIr = builder.refReinterpret(BASIC.getRefNull(), type));
+	return (retIr = builder.refReinterpret(mgr.getLangBasic().getRefNull(), type));
 }
 
 core::ExpressionPtr Converter::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {

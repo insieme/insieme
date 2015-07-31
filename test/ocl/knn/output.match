@@ -1,1 +1,0 @@
-awk '/^Result check: \w+/{ print $3 }'

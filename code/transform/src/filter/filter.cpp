@@ -37,8 +37,6 @@
 #include "insieme/transform/filter/filter.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/analysis/polyhedral/scopregion.h"
-
 namespace insieme {
 namespace transform {
 namespace filter {

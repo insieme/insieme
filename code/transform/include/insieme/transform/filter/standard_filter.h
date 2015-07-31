@@ -57,12 +57,6 @@ namespace filter {
 	TargetFilter innermostLoops(unsigned level = 1);
 
 	/**
-	 * A filter selecting all outermost SCoPs of a program fragment.
-	 */
-	TargetFilter outermostSCoPs();
-
-
-	/**
 	 * A filter picking the loop with the given index. Indices are defined
 	 * in a hierarchical way according to the code structure.
 	 */

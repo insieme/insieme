@@ -106,7 +106,7 @@ namespace measure {
 		res = res && nfs::create_directories(buildDir);
 
 		// copy local source to target machine (runtime is header only)
-		res = res && nfs::copy(nfs::NetworkPath(DRIVER_SRC_DIR "../../runtime/include"), buildDir / "include" );
+		res = res && nfs::copy(nfs::NetworkPath(DRIVER_TEST_DIR "../../runtime/include"), buildDir / "include" );
 
 		// copy source file
 		vector<string> inputFiles;

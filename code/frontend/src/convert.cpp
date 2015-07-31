@@ -42,9 +42,6 @@
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_converter.h"
-
-#include "insieme/frontend/omp/omp_annotation.h"
-
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/name_manager.h"
 #include "insieme/frontend/utils/error_report.h"
@@ -54,26 +51,24 @@
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/analysis/prunable_decl_visitor.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/set_utils.h"
-
 #include "insieme/utils/timer.h"
 #include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
-
 #include "insieme/utils/progress_bar.h"
 
 #include "insieme/core/ir_program.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/cast_tool.h"
-
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/simd_vector.h"
@@ -86,15 +81,12 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/encoder/lists.h"
-#include "insieme/core/ir_class_info.h"
-
 
 #include "insieme/core/annotations/naming.h"
 #include "insieme/core/annotations/source_location.h"
 
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/extern_c.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/include.h"
 
 // for the console output, move somewhere

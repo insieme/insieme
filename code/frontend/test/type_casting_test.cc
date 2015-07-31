@@ -64,7 +64,7 @@ namespace ia = insieme::annotations;
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/casts.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/casts.c";
 	std::vector<std::string> argv = { "compiler", filename };
     cmd::Options options = cmd::Options::parse(argv);
     options.job.frontendExtensionInit();

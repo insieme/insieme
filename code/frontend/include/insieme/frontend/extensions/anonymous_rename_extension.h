@@ -37,6 +37,9 @@
 #pragma once
 
 #include "insieme/frontend/extensions/frontend_extension.h"
+
+#include "insieme/frontend/utils/name_manager.h"
+
 #include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {

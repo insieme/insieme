@@ -138,7 +138,7 @@ TEST(Interception, SimpleInterception) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
-	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
     std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03", interception };
     cmd::Options options = cmd::Options::parse(argv);
@@ -193,7 +193,7 @@ TEST(Interception, SimpleFunction1) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
-	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
     std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03" };
     cmd::Options option = cmd::Options::parse(argv);
 
@@ -228,7 +228,7 @@ TEST(Interception, SimpleFunction2) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
-	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
     std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
     cmd::Options option = cmd::Options::parse(argv);
@@ -280,7 +280,7 @@ TEST(Interception, Types) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
-	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
     std::vector<std::string> argv = { "compiler",  fileName.string(), include, "--std=c++03" };
     cmd::Options option = cmd::Options::parse(argv);
 
@@ -354,7 +354,7 @@ TEST(Interception, TypesIntercepted) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
-	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
     std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
     cmd::Options option = cmd::Options::parse(argv);
@@ -420,7 +420,7 @@ TEST(Interception, AttachedHeader) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const boost::filesystem::path& fileName = src;
-	std::string include = "-I" CLANG_SRC_DIR "inputs/interceptor/";
+	std::string include = "-I" FRONTEND_TEST_DIR "inputs/interceptor/";
 	std::string interception = "--intercept=ns::.*";
     std::vector<std::string> argv = { "compiler",  fileName.string(), include, interception, "--std=c++03" };
     cmd::Options option = cmd::Options::parse(argv);

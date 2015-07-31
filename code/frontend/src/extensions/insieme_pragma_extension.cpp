@@ -41,7 +41,6 @@
 
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/loop_annotations.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/transform.h"
 
 #include "insieme/core/annotations/naming.h"
@@ -60,7 +59,6 @@
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/functions/transformations.h"
-#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 #include "insieme/transform/transformation.h"
 
@@ -177,68 +175,7 @@ namespace {
 					return nodes;
 				})
 		));
-
-		// OpenCL kernel files
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "kernelFile",
-				string_literal["arg"] >> pragma::tok::eod,
-				[](const pragma::MatchObject& object, core::NodeList nodes) {
-					assert_eq(1, object.getStrings("arg").size()) && "Insieme KernelFile pragma cannot have more than one argument!";
-					ia::ocl::KernelFileAnnotation kernelFile(object.getStrings("arg").front());
-					core::NodeAnnotationPtr annot = std::make_shared<ia::ocl::KernelFileAnnotation>(kernelFile);
-					auto& callExprPtr = dynamic_pointer_cast<const CallExprPtr>(nodes.front());
-					assert_true(callExprPtr) << "Insieme KernelFile pragma must be attached to a valid assignment CallExpression!";
-					auto& arguments = callExprPtr->getArguments();
-					assert_eq(arguments.size(), 2) << "Insieme KernelFile pragma must be attached to a valid assignment CallExpression with exactly 2 arguments!";
-					arguments[1].addAnnotation(annot);
-
-					return nodes;
-				})
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "datarange",
-				range_list["ranges"] >> pragma::tok::eod,
-				[](const pragma::MatchObject& object, core::NodeList nodes) {
-					const auto& exprs = object.getExprs("ranges");
-					const auto& vars = object.getVars("ranges");
-					assert_eq(exprs.size(), vars.size() * 2) << "Mismatching number of variables and expressions in insieme datarange pragma handling";
-
-					ia::DataRangeAnnotation dataRanges;
-					auto exprIt = exprs.cbegin();
-					for(const auto& e : vars) {
-						assert(exprIt != exprs.cend() && "Not enough range parameters for insieme datarange pragma!");
-						core::VariablePtr var = static_pointer_cast<core::VariablePtr>(e);
-						core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(*exprIt++);
-						core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(*exprIt++);
-						dataRanges.addRange(ia::Range(var, lowerBound, upperBound));
-					}
-
-					core::NodeAnnotationPtr annot = std::make_shared<ia::DataRangeAnnotation>((dataRanges));
-					nodes.front().addAnnotation(annot);
-
-					return nodes;
-				})
-		));
-
-		// data transformations
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "data_transform",
-				string_literal["arg"] >> pragma::tok::eod,
-				[] (const pragma::MatchObject& object, core::NodeList nodes) {
-
-					assert_eq(1, object.getStrings("arg").size()) << "Insieme DataTransform pragma must have exactly one argument";
-					std::string datalayout = object.getStrings("arg").front();
-
-					const unsigned tilesize = insieme::utils::numeric_cast<unsigned>(datalayout.substr(1u, datalayout.size()-2u));
-
-					ia::DataTransformAnnotation dataTransform(tilesize);
-					core::NodeAnnotationPtr annot = std::make_shared<ia::DataTransformAnnotation>(dataTransform);
-					nodes.front().addAnnotation(annot);
-					return nodes;
-				})
-		));
-
+		
 		// feature estimation
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "iterations",
@@ -251,68 +188,6 @@ namespace {
 					return nodes;
 				})
 		));
-
-		// loop transformations
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "strip",
-				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_STRIP))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "interchange",
-				l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_INTERCHANGE))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "tile",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_TILE))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "unroll",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_UNROLL))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "fuse",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_FUSE))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "split",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_SPLIT))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "stamp",
-				l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_STAMP))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "reschedule",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_RESCHEDULE))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "parallelize",
-				l_paren >> tok::numeric_constant["values"] >>r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::LOOP_PARALLELIZE))
-		));
-
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
-				PragmaHandler("insieme", "rstrip",
-				l_paren >> tok::numeric_constant["values"] >> r_paren >> pragma::tok::eod,
-				getTransformLambda(ia::TransformationHint::REGION_STRIP))
-		));
-
 
 		pragmaHandlers.push_back(std::make_shared<PragmaHandler>(
 				PragmaHandler("insieme", "fun_unroll",
@@ -339,74 +214,6 @@ namespace {
 					for_each(trans->getAnnotationList(), [&](const HintPtr& hint) {
 						const ValueVect& values = hint->getValues();
 						switch (hint->getType()) {
-							case ia::TransformationHint::LOOP_INTERCHANGE: {
-								LOG(INFO) << "Applying Loop Interchange (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								assert_eq(values.size(), 2) << "Loop Interchange requires two integer arguments!";
-
-								tr.push_back(polyhedral::makeLoopInterchange(values[0], values[1]));
-								break;
-							}
-							case ia::TransformationHint::LOOP_STRIP: {
-								LOG(INFO) << "Applying Loop Strip Mining (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								assert_eq(values.size(), 2) << "Loop Strip Mining requires two integer arguments!";
-
-								tr.push_back(polyhedral::makeLoopStripMining(values[0], values[1]));
-								break;
-							}
-							case ia::TransformationHint::LOOP_TILE: {
-								LOG(INFO) << "Applying Loop Tiling (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								tr.push_back(polyhedral::makeLoopTiling(values));
-								break;
-							}
-							case ia::TransformationHint::LOOP_UNROLL: {
-								LOG(INFO) << "Applying Loop Unroll (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								assert_eq(values.size(), 1) << "Loop Unrolling requires a single integer argument";
-
-								tr.push_back(rulebased::makeLoopUnrolling(values.front()));
-								break;
-							}
-							case ia::TransformationHint::LOOP_FUSE: {
-								LOG(INFO) << "Applying Loop Fusion (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								tr.push_back(polyhedral::makeLoopFusion(values));
-								break;
-							}
-							case ia::TransformationHint::LOOP_SPLIT: {
-								LOG(INFO) << "Applying Loop Fission (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								tr.push_back(polyhedral::makeLoopFission(values));
-								break;
-							}
-							case ia::TransformationHint::LOOP_STAMP: {
-								LOG(INFO) << "Applying Loop Stamping (" << values[0] << ",{" << toString(values) << "}) transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								tr.push_back(polyhedral::makeLoopStamping(values[0], std::vector<unsigned>(values.begin()+1,values.end())));
-								break;
-							}
-							case ia::TransformationHint::LOOP_RESCHEDULE: {
-								LOG(INFO) << "Applying Loop Reschedule transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								tr.push_back(std::make_shared<polyhedral::LoopReschedule>());
-								break;
-							}
-							case ia::TransformationHint::LOOP_PARALLELIZE: {
-								LOG(INFO) << "Applying Loop Parallelization transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								tr.push_back(std::make_shared<polyhedral::LoopParallelize>());
-								break;
-							}
-							case ia::TransformationHint::REGION_STRIP: {
-								LOG(INFO) << "Applying Region Strip (" << toString(values) << ") transformation hint at location: [" << getStartLocation(cur) << "]";
-
-								assert_eq(values.size(), 1) << "Region Strip requires a single integer argument";
-
-								tr.push_back(polyhedral::makeRegionStripMining(values.front()));
-								break;
-							}
 							case ia::TransformationHint::REC_FUN_UNROLL: {
 								LOG(INFO) << "Unrolling recursive function according to transformation hint at location: [" << getStartLocation(cur) << "]";
 

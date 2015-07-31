@@ -113,7 +113,7 @@ std::string removeSymbols(std::string& s) {
 /* we build a complete name for the class,
  * qualified name does not have the specific types of the spetialization
  */
-std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm){
+std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType& type, const clang::SourceManager& sm) {
 
 	if(decl->getNameAsString().empty()){
 		return createNameForAnnon("_anonRecord", decl, sm);

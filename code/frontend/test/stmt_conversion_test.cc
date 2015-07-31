@@ -107,7 +107,7 @@ std::string getPrettyPrinted(const NodePtr& node) {
 
 TEST(StmtConversion, FileTest) {
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/stmt.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/stmt.c";
 	std::vector<std::string> argv = { "compiler", filename };
 	cmd::Options options = cmd::Options::parse(argv);
 	options.job.frontendExtensionInit();

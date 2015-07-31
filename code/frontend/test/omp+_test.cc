@@ -82,13 +82,13 @@ TEST(OMPx, SimpleRegion) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
-    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = FRONTEND_TEST_DIR "inputs/omp+_region.c";
+    std::string include = "-I" FRONTEND_TEST_DIR "inputs";
     std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
     std::cout << options.job.getExtensions().size() << std::endl;
-	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(FRONTEND_TEST_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
 	std::cout << options.job.getExtensions().size() << std::endl;
@@ -143,12 +143,12 @@ TEST(OMPx, Objective) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
-    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = FRONTEND_TEST_DIR "inputs/omp+_region.c";
+    std::string include = "-I" FRONTEND_TEST_DIR "inputs";
     std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
     std::cout << options.job.getExtensions().size() << std::endl;
-	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(FRONTEND_TEST_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
@@ -207,12 +207,12 @@ TEST(OMPx, Target) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
-    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = FRONTEND_TEST_DIR "inputs/omp+_region.c";
+    std::string include = "-I" FRONTEND_TEST_DIR "inputs";
     std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
-	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(FRONTEND_TEST_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
@@ -227,12 +227,12 @@ TEST(OMPx, Param) {
     auto& basic = manager.getLangBasic();
 
 	// C source code compilation
-    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
-    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = FRONTEND_TEST_DIR "inputs/omp+_region.c";
+    std::string include = "-I" FRONTEND_TEST_DIR "inputs";
     std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
-	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(FRONTEND_TEST_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);
@@ -296,12 +296,12 @@ TEST(OMPx, FirstLocal) {
 	core::IRBuilder builder(manager);
 
 	// C source code compilation
-    std::string fileName = CLANG_SRC_DIR "inputs/omp+_region.c";
-    std::string include = "-I" CLANG_SRC_DIR "inputs";
+    std::string fileName = FRONTEND_TEST_DIR "inputs/omp+_region.c";
+    std::string include = "-I" FRONTEND_TEST_DIR "inputs";
     std::vector<std::string> argv = { "compiler",  fileName, include, "-fopenmp"};
     cmd::Options options = cmd::Options::parse(argv);
 
-	LOG(INFO) << "Converting input program '" << std::string(CLANG_SRC_DIR) << "inputs/omp+_region.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(FRONTEND_TEST_DIR) << "inputs/omp+_region.c" << "' to IR...";
 
 	core::ProgramPtr prog = options.job.execute(manager, false);
 	ASSERT_TRUE(prog);

@@ -53,7 +53,7 @@ namespace frontend {
 
 	std::vector<std::string> listSources(){
 		namespace fs = boost::filesystem;
-		fs::path someDir(CLANG_SRC_DIR "/inputs/sniplets");
+		fs::path someDir(FRONTEND_TEST_DIR "/inputs/sniplets");
 		fs::directory_iterator end_iter;
 
 		std::vector<std::string> result;

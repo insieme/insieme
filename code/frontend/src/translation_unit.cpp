@@ -45,22 +45,20 @@
 #include <clang/Serialization/ASTWriter.h>
 #pragma GCC diagnostic pop
 
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/DeclGroup.h>
+
+#include <clang/Analysis/CFG.h>
+
+#include <clang/Parse/Parser.h>
+#include <clang/Parse/ParseAST.h>
+
+#include <clang/Sema/Sema.h>
+#include <clang/Sema/SemaConsumer.h>
+#include <clang/Sema/ExternalSemaSource.h>
+
 #include "insieme/frontend/pragma/handler.h"
-
-#include "insieme/frontend/ocl/ocl_compiler.h"
-
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DeclGroup.h"
-
-#include "clang/Analysis/CFG.h"
-
-#include "clang/Parse/Parser.h"
-#include "clang/Parse/ParseAST.h"
-
-#include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaConsumer.h"
-#include "clang/Sema/ExternalSemaSource.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"

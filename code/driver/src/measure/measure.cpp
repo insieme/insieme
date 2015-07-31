@@ -43,15 +43,14 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "insieme/analysis/region/for_selector.h"
-#include "insieme/analysis/region/pfor_selector.h"
-
 #include "insieme/utils/config.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/region/for_selector.h"
+#include "insieme/core/analysis/region/pfor_selector.h"
 #include "insieme/core/lang/instrumentation_extension.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -1154,8 +1153,8 @@ namespace measure {
 		utils::compiler::Compiler compiler = compilerSetup;
 
 		// add flags required by the runtime
-		compiler.addFlag("-I " DRIVER_SRC_DIR "../../runtime/include");
-		compiler.addFlag("-I " DRIVER_SRC_DIR "../../common/include");
+		compiler.addFlag("-I " DRIVER_TEST_DIR "../../runtime/include");
+		compiler.addFlag("-I " DRIVER_TEST_DIR "../../common/include");
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
