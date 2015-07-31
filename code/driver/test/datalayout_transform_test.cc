@@ -77,9 +77,9 @@ TEST(DatalayoutTransformTest, OclTest) {
 	LOG(INFO) << "Done.";
 
 	core::NodePtr prog = program->getElement(0);
-//
-//	transform::datalayout::AosToSoa ats(prog);
-//	ats.transform();
+
+	transform::datalayout::AosToSoa ats(prog);
+	ats.transform();
 
 	dumpColor(prog);
 	std::cout << " ================================ " << std::endl;
