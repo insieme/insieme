@@ -176,42 +176,6 @@ namespace insieme {
 namespace frontend {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-//     Extended AST Unit
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-ExtASTUnit::~ExtASTUnit() {
-    if(ast_unit)
-        delete ast_unit;
-}
-
-void ExtASTUnit::createASTUnit(clang::DiagnosticsEngine* diag, const clang::FileSystemOptions& opts) {
-    char filename[] = "/tmp/ast.XXXXXX";
-    int fd = mkstemp(filename);
-    write(fd, ast.c_str(), ast.size());
-    close(fd);
-    //create astunit
-    ast_unit = clang::ASTUnit::LoadFromASTFile(filename, diag, opts);
-    unlink(filename);
-};
-
-clang::ASTUnit * ExtASTUnit::getASTUnit() const {
-    return ast_unit;
-}
-
-void ExtASTUnit::save(const std::string& filename) const {
-    std::ofstream ofs(filename);
-    boost::archive::text_oarchive oa(ofs);
-    oa << ast;
-    oa << info;
-};
-
-void ExtASTUnit::load(const std::string& filename) {
-    std::ifstream file(filename);
-    boost::archive::text_iarchive ia(file);
-    ia >> ast;
-    ia >> info;
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
 //     COMPILER
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -219,7 +183,6 @@ struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	TargetOptions* TO;
 	bool m_isCXX;
-    ExtASTUnit ast_unit;
 	ClangCompilerImpl() : clang(), TO(new TargetOptions()), m_isCXX(false) {}
 };
 
@@ -383,15 +346,10 @@ Preprocessor& 		ClangCompiler::getPreprocessor()  const { return pimpl->clang.ge
 DiagnosticsEngine& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 		ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
 TargetInfo& 		ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
-ExtASTUnit*         ClangCompiler::getASTUnit()       const { return &(pimpl->ast_unit); }
 bool				ClangCompiler::isCXX()			  const { return pimpl->m_isCXX; }
 
 ClangCompiler::~ClangCompiler() {
-    //Source file has to be ended only if no clang::ASTUnit was created. In the
-    //case of an available clang::ASTUnit the destructor of clang::ASTUnit will
-    //end the source file and free the memory.
-    if(!pimpl->ast_unit.getASTUnit())
-        pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
+	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
 	delete pimpl;
 	//sema object of pimpl will be deleted by the InsiemeSema pimpl
 }
