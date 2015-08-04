@@ -34,16 +34,6 @@
  * regarding third party software licenses.
  */
 
-//#define __STDC_LIMIT_MACROS
-//#define __STDC_CONSTANT_MACROS
-//
-//#pragma GCC diagnostic push
-//#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-//#include "clang/AST/Decl.h"
-//#include <clang/AST/Stmt.h>
-//#include <clang/AST/Type.h>
-//#include <clang/AST/Decl.h>
-//#pragma GCC diagnostic pop
 #include "insieme/frontend/clang.h"
 
 #include <gtest/gtest.h>
@@ -224,10 +214,10 @@ private:
 
 					//check number of arguments --> Variadic arguments are represented as extra
 					//argument in IR!
-					EXPECT_EQ(funcProtoType->getNumArgs() + 1, parameterTypes.size());
+					EXPECT_EQ(funcProtoType->getNumParams() + 1, parameterTypes.size());
 				} else {
 					//check number of arguments
-					EXPECT_EQ(funcProtoType->getNumArgs(), parameterTypes.size());
+					EXPECT_EQ(funcProtoType->getNumParams(), parameterTypes.size());
 				}
 
 
@@ -246,7 +236,7 @@ private:
 				}
 
 				//check single "void" arg is removed
-				if(funcProtoType->getNumArgs() == 1 && funcProtoType->getArgType(0).getTypePtr()->isVoidType()) {
+				if(funcProtoType->getNumParams() == 1 && funcProtoType->getParamType(0).getTypePtr()->isVoidType()) {
 					EXPECT_EQ(parameterTypes.size(), 0);
 				}
 

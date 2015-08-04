@@ -42,8 +42,9 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include <clang/AST/StmtVisitor.h>
-	#include <clang/Basic/FileManager.h>
+#include <clang/AST/StmtVisitor.h>
+#include <clang/Basic/FileManager.h>
+#include <clang/AST/ExprCXX.h>
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/convert.h"
@@ -402,14 +403,14 @@ public:
 	core::ExpressionPtr VisitExprWithCleanups			(const clang::ExprWithCleanups* cleanupExpr);
 	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
 	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
-        core::ExpressionPtr VisitCXXDefaultInitExpr         (const clang::CXXDefaultInitExpr* initExpr);
+	core::ExpressionPtr VisitCXXDefaultInitExpr         (const clang::CXXDefaultInitExpr* initExpr);
 	core::ExpressionPtr VisitSubstNonTypeTemplateParmExpr (const clang::SubstNonTypeTemplateParmExpr* substExpr);
 
 	core::ExpressionPtr VisitUnaryOperator 				(const clang::UnaryOperator* unaryOp);
 
 	core::ExpressionPtr VisitBinPtrMemD					(const clang::BinaryOperator* binPtrMemDexpr);
 	core::ExpressionPtr VisitBinPtrMemI					(const clang::BinaryOperator* binPtrMemIexpr);
-	core::ExpressionPtr VisitBinaryTypeTraitExpr		(const clang::BinaryTypeTraitExpr* binTypeTraitExpr);
+	core::ExpressionPtr VisitTypeTraitExpr				(const clang::TypeTraitExpr* typeTraitExpr);
 	core::ExpressionPtr VisitSizeOfPackExpr				(const clang::SizeOfPackExpr* expr);
 
 

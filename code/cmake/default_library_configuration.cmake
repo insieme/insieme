@@ -11,7 +11,7 @@
 ####
 
 #LLVM/CLANG
-set(LLVM_VERSION 3.4)
+set(LLVM_VERSION 3.6.2)
 
 #XERCES  - used by: xml
 set(XERCES_VERSION 3.1.2)

@@ -168,7 +168,7 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
     /*
     if(funcDecl->isTemplateInstantiation() && !funcDecl->isOverloadedOperator()) {
 		std::string functionname = funcDecl->getNameAsString();
-        std::string returnType = funcDecl->getResultType().getAsString();
+        std::string returnType = funcDecl->getReturnType().getAsString();
         functionname.append(returnType);
 
 		if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
@@ -276,7 +276,7 @@ std::string buildNameForFunction(const clang::FunctionDecl* funcDecl){
 		}
 
 		if(funcDecl->isTemplateInstantiation()) {
-			std::string returnType = funcDecl->getResultType().getAsString();
+			std::string returnType = funcDecl->getReturnType().getAsString();
 			name.append(returnType);
 		}
 	}

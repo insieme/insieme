@@ -35,8 +35,9 @@
  */
 
 #include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/error_report.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
@@ -271,7 +272,7 @@ void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Pars
 		err++;
 	} while(err < errStack.stackSize());
 
-	pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, ss.str()));
+	frontend::utils::clangPreprocessorDiag(pp, errLoc, DiagnosticsEngine::Error, ss.str());
 }
 
 // ------------------------------------ node ---------------------------
@@ -400,7 +401,7 @@ bool kwd::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, 
 	return false;
 }
 std::string TokenToStr(clang::tok::TokenKind token) {
-	const char *name = clang::tok::getTokenSimpleSpelling(token);
+	const char *name = clang::tok::getPunctuatorSpelling(token);
 	if(name)
 		return std::string(name);
 	else
@@ -446,7 +447,7 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 	switch (tok) {
 	case clang::tok::numeric_constant:
 		mmap[map_str].push_back(ValueUnionPtr(
-			new ValueUnion(A.ActOnNumericConstant(token).takeAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context))
+			new ValueUnion(A.ActOnNumericConstant(token).getAs<IntegerLiteral>(), &static_cast<clang::Sema&>(A).Context))
 		);
 		break;
 	case clang::tok::identifier: {

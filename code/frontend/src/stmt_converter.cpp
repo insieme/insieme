@@ -41,6 +41,7 @@
 #include "insieme/frontend/utils/clang_cast.h"
 #include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/utils/stmt_wrapper.h"
+#include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/utils/container_utils.h"
@@ -345,13 +346,11 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( whileStmt );
 
-		if (!convFact.getConversionSetup().hasOption(ConversionSetup::NoWarnings)){
+		if(!convFact.getConversionSetup().hasOption(ConversionSetup::NoWarnings)) {
 			std::cerr << std::endl;
 			clang::Preprocessor& pp = convFact.getPreprocessor();
-			pp.Diag(forStmt->getLocStart(),
-					pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
-							std::string("For loop converted into while loop, cause: ") + e.what() )
-			);
+			utils::clangPreprocessorDiag(pp, forStmt->getLocStart(), DiagnosticsEngine::Warning,
+				std::string("For loop converted into while loop, cause: ") + e.what());
 		}
 	}
 

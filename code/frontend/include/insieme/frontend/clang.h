@@ -46,23 +46,38 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+#include <clang/Frontend/ASTUnit.h>
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/CompilerInvocation.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
 
-	#include <clang/AST/ASTConsumer.h>
-	#include <clang/AST/ASTContext.h>
-	#include <clang/AST/CXXInheritance.h>
-	#include <clang/AST/Decl.h>
-	#include <clang/AST/DeclVisitor.h>
-	#include <clang/AST/Expr.h>
-	#include <clang/AST/RecursiveASTVisitor.h>
-	#include <clang/AST/StmtVisitor.h>
-	#include <clang/AST/TemplateBase.h>
-	#include <clang/AST/TypeVisitor.h>
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/CXXInheritance.h>
+#include <clang/AST/Decl.h>
+#include <clang/AST/DeclVisitor.h>
+#include <clang/AST/Expr.h>
+#include <clang/AST/RecursiveASTVisitor.h>
+#include <clang/AST/StmtVisitor.h>
+#include <clang/AST/TemplateBase.h>
+#include <clang/AST/TypeVisitor.h>
 
-	#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/Version.h>
+#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/FileManager.h>
+#include <clang/Basic/SourceManager.h>
+#include <clang/Basic/TargetInfo.h>
 
-	#include <clang/Lex/Token.h>
+#include <clang/Lex/Token.h>
+#include <clang/Lex/Preprocessor.h>
 
-	#include <clang/Sema/Ownership.h>
-	#include <clang/Sema/Sema.h>
+#include <clang/Sema/Ownership.h>
+#include <clang/Sema/Sema.h>
 
+#include <clang/Parse/Parser.h>
+
+#include <llvm/Support/raw_os_ostream.h>
+#include <clang/Frontend/Utils.h>
+#include <clang/Lex/HeaderSearch.h>
 #pragma GCC diagnostic pop

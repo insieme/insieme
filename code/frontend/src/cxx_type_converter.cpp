@@ -292,7 +292,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const 
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( substTy, retTy );
 
-//		VLOG(2) << "resultType: " << funcTy->getResultType().getTypePtr()->getTypeClassName();
+//		VLOG(2) << "resultType: " << funcTy->getReturnType().getTypePtr()->getTypeClassName();
 //		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 //			[ this ] (const QualType& currArgType) {
 //				VLOG(2) << "argType: " << currArgType.getTypePtr()->getTypeClassName();

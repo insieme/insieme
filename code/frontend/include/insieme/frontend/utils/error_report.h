@@ -53,6 +53,8 @@ namespace utils {
 
 typedef clang::DiagnosticsEngine::Level DiagnosticLevel;
 
+void clangPreprocessorDiag(clang::Preprocessor &pp, const clang::SourceLocation& loc, const DiagnosticLevel& level, const std::string& s);
+
 void compilerMessage(const DiagnosticLevel& 		level, 
 					 const clang::SourceLocation& 	loc, 
 					 const std::string&		 		msg, 

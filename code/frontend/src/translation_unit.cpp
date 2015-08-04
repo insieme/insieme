@@ -78,7 +78,8 @@ namespace {
 ///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSema& sema) {
 
-	Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
+	Parser *_P = new Parser(comp.getPreprocessor(), sema, false);
+	Parser& P = *_P;// (comp.getPreprocessor(), sema, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();
 
 	ParserProxy::init(&P);
@@ -109,7 +110,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSem
 					clang::CFG::BuildOptions bo;
 					bo.AddInitializers = true;
 					bo.AddImplicitDtors = true;
-					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
+					auto cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
 					assert_true(cfg);
 					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
 					cfg->dump(comp.getPreprocessor().getLangOpts(), true);

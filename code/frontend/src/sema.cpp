@@ -347,7 +347,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			matched.push_back(P);
 
 			// transfer the ownership of the statement
-			clang::CompoundStmt* oldStmt = ret.takeAs<clang::CompoundStmt>();
+			clang::CompoundStmt* oldStmt = ret.getAs<clang::CompoundStmt>();
 			oldStmt->setStmts(Context, NULL, 0);
 			ret = newCS;
 			CS = newCS;

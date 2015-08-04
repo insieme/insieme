@@ -277,7 +277,7 @@ core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionProtoType* funcTy) {
 
-	core::TypePtr&& retTy = convert( funcTy->getResultType() );
+	core::TypePtr&& retTy = convert( funcTy->getReturnType() );
 	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	frontend_assert(retTy) <<  "Function has no return type!\n";
@@ -287,7 +287,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
 		// exceptions are OpenCL vectors and gcc-vectors
 		// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-		if(!funcTy->getResultType()->getUnqualifiedDesugaredType()->isVectorType())
+		if(!funcTy->getReturnType()->getUnqualifiedDesugaredType()->isVectorType())
 		{
 			retTy = builder.refType(retTy);
 		}
@@ -296,7 +296,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 	frontend_assert(retTy ) <<  "Function has no return type!\n";
 
 	core::TypeList argTypes;
-	std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
+	std::for_each(funcTy->param_type_begin(), funcTy->param_type_end(),
 		[ &argTypes, this ] (const QualType& currArgType) {
 
 
@@ -335,7 +335,7 @@ core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionPro
 // available about its arguments.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
-	core::TypePtr&& retTy = convert( funcTy->getResultType());
+	core::TypePtr&& retTy = convert(funcTy->getReturnType());
 	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	// If the return type is of type vector or array we need to add a reference

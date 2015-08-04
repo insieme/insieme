@@ -34,51 +34,16 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/compiler.h"
+
 #include <iostream>
 
-// don't move the ASTUnit.h include otherwise compile will fail because of __unused
-// defines which are needed by LLVM
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#include <clang/Frontend/ASTUnit.h>
+#include <boost/filesystem.hpp>
 
-#include <clang/Frontend/CompilerInstance.h>
-#include <clang/Frontend/CompilerInvocation.h>
-#include <clang/Frontend/TextDiagnosticPrinter.h>
-
-#include <clang/Basic/Version.h>
-#include <clang/Basic/Diagnostic.h>
-#include <clang/Basic/FileManager.h>
-#include <clang/Basic/SourceManager.h>
-#include <clang/Basic/TargetInfo.h>
-
-//#include <llvm/LLVMContext.h>
-#include <llvm/ADT/IntrusiveRefCntPtr.h>
-
-#include <llvm/Support/Host.h>
-
-#include <llvm/Config/config.h>
-
-#include <clang/Lex/Preprocessor.h>
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/ASTConsumer.h>
-#include <clang/AST/DeclGroup.h>
-
-#include <clang/Parse/Parser.h>
-
-//FIXME: debug
-#include <llvm/Support/raw_os_ostream.h>
-#include <clang/Frontend/Utils.h>
-#include <clang/Lex/HeaderSearch.h>
-#pragma GCC diagnostic pop
-
-#include "insieme/frontend/compiler.h"
-#include "insieme/utils/config.h"
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/sema.h"
 
+#include "insieme/utils/config.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 
@@ -95,8 +60,8 @@ ParserProxy* ParserProxy::currParser = NULL;
 clang::Expr* ParserProxy::ParseExpression(clang::Preprocessor& PP) {
 	PP.Lex(mParser->Tok);
 
-	Parser::ExprResult ownedResult = mParser->ParseExpression();
-	Expr* result = ownedResult.takeAs<Expr> ();
+	ExprResult ownedResult = mParser->ParseExpression();
+	Expr* result = ownedResult.getAs<Expr>();
 	return result;
 }
 
@@ -181,7 +146,7 @@ namespace frontend {
 
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
-	TargetOptions* TO;
+	std::shared_ptr<TargetOptions> TO;
 	bool m_isCXX;
 	ClangCompilerImpl() : clang(), TO(new TargetOptions()), m_isCXX(false) {}
 };
@@ -237,7 +202,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
     // ADD INJECTED HEADERS
     for (auto extension : config.getExtensions()) {
         for(auto header : extension->getInjectedHeaderList()) {
-            this->pimpl->clang.getPreprocessorOpts().Includes.push_back(header);
+			string hp = header;
+			// if the header path is relative, build an absolute one dependent on the source file location
+			if(boost::filesystem::path(hp).is_relative()) hp = boost::filesystem::absolute(header, file.parent_path()).string();
+            this->pimpl->clang.getPreprocessorOpts().Includes.push_back(hp);
         }
     }
 
@@ -309,7 +277,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		LO.CPlusPlus = 0;
 	}
 
-
 	for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
 		pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System,  false, false);
 	}
@@ -318,7 +285,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 	}
 
 	// Do this AFTER setting preprocessor options
-	pimpl->clang.createPreprocessor();
+	pimpl->clang.createPreprocessor(clang::TranslationUnitKind::TU_Complete);
 	pimpl->clang.createASTContext();
 
 	//FIXME why is this needed?
@@ -333,7 +300,9 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		std::cerr << " file: " << file.string() << " does not exist" << std::endl;
 		throw  ClangParsingError(file);
 	}
-	pimpl->clang.getSourceManager().createMainFileID(fileID);
+
+	pimpl->clang.getSourceManager().setMainFileID(pimpl->clang.getSourceManager().createFileID(fileID, SourceLocation(), SrcMgr::C_User));
+
 	pimpl->clang.getDiagnosticClient().BeginSourceFile(
 										pimpl->clang.getLangOpts(),
 										&pimpl->clang.getPreprocessor());
