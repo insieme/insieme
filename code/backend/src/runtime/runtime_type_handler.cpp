@@ -49,71 +49,71 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-	namespace {
+namespace {
 
-		const TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
-			// make sure it is only invoked using LW data items
-			assert_true(DataItem::isLWDataItemType(type)) << "Only works on LW Data Items!";
+const TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
+	// make sure it is only invoked using LW data items
+	assert_true(DataItem::isLWDataItemType(type)) << "Only works on LW Data Items!";
+	
+	// get underlying tuple type
+	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(
+	                                   static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0]);
+	                                   
+	// convert to data item to tuple used within runtime
+	core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
+	
+	// obtain type information from base struct => use the same type
+	return &converter.getTypeManager().getTypeInfo(fullTuple);
+}
 
-			// get underlying tuple type
-			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(
-					static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0]);
 
-			// convert to data item to tuple used within runtime
-			core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
+const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-			// obtain type information from base struct => use the same type
-			return &converter.getTypeManager().getTypeInfo(fullTuple);
-		}
-
-
-		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
-
-			const Extensions& extensions = converter.getNodeManager().getLangExtension<Extensions>();
-
-			if (*extensions.contextType == *type) {
-				// use runtime definition of the context
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_context", "irt_all_impls.h");
-			}
-
-			if (*extensions.workItemType == *type) {
-				// use runtime definition of the work item type
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_item", "irt_all_impls.h");
-			}
-
-			if (*extensions.typeID == *type) {
-				// use runtime definition of the id
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_type_id", "irt_all_impls.h");
-			}
-
-			if (DataItem::isLWDataItemType(type)) {
-				// create a substitution struct - the same struct + the type id
-				return getLWDataItemStruct(converter, type);
-			}
-
-			// handle jobs
-			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
-
-			// check for job types ...
-			if(basic.isJob(type)) {
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_parallel_job", "ir_interface.h");
-			}
-
-			if(basic.isThreadGroup(type)) {
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group", "ir_interface.h");
-			}
-
-			if(basic.isLock(type)) {
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock", "irt_lock.h");
-			}
-
-			// it is not a special runtime type => let somebody else try
-			return 0;
-		}
-
+	const Extensions& extensions = converter.getNodeManager().getLangExtension<Extensions>();
+	
+	if(*extensions.contextType == *type) {
+		// use runtime definition of the context
+		return type_info_utils::createInfo(converter.getFragmentManager(), "irt_context", "irt_all_impls.h");
 	}
+	
+	if(*extensions.workItemType == *type) {
+		// use runtime definition of the work item type
+		return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_item", "irt_all_impls.h");
+	}
+	
+	if(*extensions.typeID == *type) {
+		// use runtime definition of the id
+		return type_info_utils::createInfo(converter.getFragmentManager(), "irt_type_id", "irt_all_impls.h");
+	}
+	
+	if(DataItem::isLWDataItemType(type)) {
+		// create a substitution struct - the same struct + the type id
+		return getLWDataItemStruct(converter, type);
+	}
+	
+	// handle jobs
+	const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
+	
+	// check for job types ...
+	if(basic.isJob(type)) {
+		return type_info_utils::createInfo(converter.getFragmentManager(), "irt_parallel_job", "ir_interface.h");
+	}
+	
+	if(basic.isThreadGroup(type)) {
+		return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group", "ir_interface.h");
+	}
+	
+	if(basic.isLock(type)) {
+		return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock", "irt_lock.h");
+	}
+	
+	// it is not a special runtime type => let somebody else try
+	return 0;
+}
 
-	TypeHandler RuntimeTypeHandler = &handleType;
+}
+
+TypeHandler RuntimeTypeHandler = &handleType;
 
 } // end namespace ocl_standalone
 } // end namespace backend

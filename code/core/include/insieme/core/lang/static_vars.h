@@ -43,67 +43,67 @@ namespace core {
 namespace lang {
 
 
-	class StaticVariableExtension : public core::lang::Extension {
+class StaticVariableExtension : public core::lang::Extension {
 
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
+	/**
+	 * Allow the node manager to create instances of this class.
+	 */
+	friend class core::NodeManager;
+	
+	/**
+	 * Creates a new instance based on the given node manager.
+	 */
+	StaticVariableExtension(core::NodeManager& manager)
+		: core::lang::Extension(manager) {}
+		
+public:
 
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		StaticVariableExtension(core::NodeManager& manager)
-				: core::lang::Extension(manager) {}
-
-	public:
-
-		bool isStaticType(const TypePtr& type) const;
-
-		TypePtr wrapStaticType(const TypePtr& type) const;
-
-		TypePtr unwrapStaticType(const TypePtr& type) const;
-
-		/**
-		 * A function ..
-		 */
-		LANG_EXT_DERIVED(CreateStatic,
-				"let type = struct __static_var { bool initialized; 'a value; }; "
-				""
-				"lambda (ref<type> res)->unit { "
-				"	res.initialized = false;"
-				"}"
-		);
-
-		/**
-		 * An alternative version for a variable being initialized by a constant value.
-		 */
-		LANG_EXT_DERIVED(InitStaticConst,
-				"let type = struct __static_var { bool initialized; 'a value; }; "
-				""
-				"lambda (ref<type> v, 'a value)->ref<'a> { "
-				"	if (*(v.initialized)) return v.value;"
-				"	v.initialized = true;"
-				"	v.value = value;"
-				"	return v.value;"
-				"}"
-		);
-
-		/**
-		 * A function ..
-		 */
-		LANG_EXT_DERIVED(InitStaticLazy,
-				"let type = struct __static_var { bool initialized; 'a value; }; "
-				""
-				"lambda (ref<type> v, ()=>'a value)->ref<'a> { "
-				"	if (*(v.initialized)) return v.value;"
-				"	v.initialized = true;"
-				"	v.value = value();"
-				"	return v.value;"
-				"}"
-		);
-
-	};
+	bool isStaticType(const TypePtr& type) const;
+	
+	TypePtr wrapStaticType(const TypePtr& type) const;
+	
+	TypePtr unwrapStaticType(const TypePtr& type) const;
+	
+	/**
+	 * A function ..
+	 */
+	LANG_EXT_DERIVED(CreateStatic,
+	                 "let type = struct __static_var { bool initialized; 'a value; }; "
+	                 ""
+	                 "lambda (ref<type> res)->unit { "
+	                 "	res.initialized = false;"
+	                 "}"
+	                );
+	                
+	/**
+	 * An alternative version for a variable being initialized by a constant value.
+	 */
+	LANG_EXT_DERIVED(InitStaticConst,
+	                 "let type = struct __static_var { bool initialized; 'a value; }; "
+	                 ""
+	                 "lambda (ref<type> v, 'a value)->ref<'a> { "
+	                 "	if (*(v.initialized)) return v.value;"
+	                 "	v.initialized = true;"
+	                 "	v.value = value;"
+	                 "	return v.value;"
+	                 "}"
+	                );
+	                
+	/**
+	 * A function ..
+	 */
+	LANG_EXT_DERIVED(InitStaticLazy,
+	                 "let type = struct __static_var { bool initialized; 'a value; }; "
+	                 ""
+	                 "lambda (ref<type> v, ()=>'a value)->ref<'a> { "
+	                 "	if (*(v.initialized)) return v.value;"
+	                 "	v.initialized = true;"
+	                 "	v.value = value();"
+	                 "	return v.value;"
+	                 "}"
+	                );
+	                
+};
 
 
 } // end namespace lang

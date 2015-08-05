@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,10 +43,10 @@ uint64 irt_g_opt_min_effort = 1000000ull;
 
 void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_context *context) {
 	//const uint64 EST_RANGE = 1000000;
-
+	
 	//for(uint32 i=0; i < context->impl_table_size; ++i) {
 	//	irt_wi_implementation_variant *variant = &context->impl_table[i].variants[0];
-
+	
 	//	// check if effort estimator available
 	//	if(variant->effort_estimator != NULL) {
 	//		// check if flat profile
@@ -58,9 +58,9 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_
 	//			if(j>0 && effort != last_effort) flat = false;
 	//			last_effort = effort;
 	//		}
-
+	
 	//		variant->rt_data.flat_profile = flat;
-
+	
 	//		// if not flat profile, calculate ideal distribution
 	//		if(!flat) {
 	//			uint64 total_effort = variant->effort_estimator(0, EST_RANGE);
@@ -88,16 +88,16 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(irt_
 	//			}
 	//		}
 	//	}
-
+	
 	//	// calculate a good chunk size based on per-iteration effort
 	//	uint64 effort = variant->features.effort;
 	//	uint64 chunk = irt_g_opt_min_effort/MAX(effort, 1);
 	//	chunk = MAX(chunk, 1);
 	//	variant->rt_data.chunk_size = chunk;
-
+	
 	//	variant->rt_data.tested = false;
 	//	variant->rt_data.force_dyn = false;
-
+	
 	//	// print info
 	//	//if(variant->effort_estimator != NULL) {
 	//	//	printf("flat profile: % 5s\n", variant->rt_data.flat_profile ? "true" : "false");
@@ -122,7 +122,9 @@ static inline double get_cur_external_load() {
 		return load;
 	}
 	load = get_load_external();
-	if(load>1.0) load = 0.0;
+	if(load>1.0) {
+		load = 0.0;
+	}
 	//printf("measure %lf\n", load);
 	last_ticks = irt_time_ticks();
 	return load;
@@ -131,7 +133,7 @@ static inline double get_cur_external_load() {
 void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi_implementation* impl, irt_work_item_range range, irt_work_group* group) {
 	//uint32 ncpus = group->local_member_count;
 	//irt_wi_implementation_variant *variant = &impl->variants[0];
-
+	
 	//// if we have an effort estimator
 	//if(variant->effort_estimator) {
 	//	// check if worth parallelizing
@@ -140,7 +142,7 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi
 	//		//printf("Haha tiny! % 3d\n", impl_id);
 	//		return;
 	//	}
-
+	
 	//	//check for external load
 	//	double load = get_cur_external_load();
 	//	if(load>0.03 || variant->rt_data.force_dyn) {
@@ -154,7 +156,7 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi
 	//		//printf("Haha load! % 3d l: %lf\n", impl_id, load);
 	//		return;
 	//	}
-
+	
 	//	// check if flat profile
 	//	if(variant->rt_data.flat_profile) {
 	//		irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_default);
@@ -180,7 +182,7 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(irt_wi
 	//		//printf("Haha tiny 2! % 3d\n", impl_id);
 	//		return;
 	//	}
-
+	
 	//	// use dynamic distribution with educated chunk size estimation
 	//	irt_loop_sched_policy dynamic_policy;
 	//	dynamic_policy.type = IRT_DYNAMIC_CHUNKED;
@@ -207,7 +209,7 @@ void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_w
 #else
 
 void irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(irt_wi_implementation_id impl_id,
-		irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
+        irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
 	//if(sched_data->policy.type == IRT_STATIC) {
 	//	irt_wi_implementation_variant *variant = &irt_context_get_current()->impl_table[impl_id].variants[0];
 	//	if(!variant->rt_data.tested) {

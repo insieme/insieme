@@ -43,7 +43,7 @@ namespace transform {
 namespace tasks {
 
 /**
- * Takes all (mutually) recursive parallel tasks in the given program, 
+ * Takes all (mutually) recursive parallel tasks in the given program,
  * and multiversions them to feature unrolled and fully sequentialized variants.
  */
 core::ProgramPtr applyTaskOptimization(const core::ProgramPtr& program);

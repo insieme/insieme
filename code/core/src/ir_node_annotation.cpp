@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,17 +41,17 @@
 namespace insieme {
 namespace core {
 
-	void NodeAnnotation::clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const {
-		copy->addAnnotation(ptr);
-	};
+void NodeAnnotation::clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const {
+	copy->addAnnotation(ptr);
+};
 
-	namespace value_annotation {
+namespace value_annotation {
 
-		void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target) {
-			target->addAnnotation(annotation);
-		}
+void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target) {
+	target->addAnnotation(annotation);
+}
 
-	} // end namespace value_annotation
+} // end namespace value_annotation
 
 } // end namespace core
 } // end namespace insieme

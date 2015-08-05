@@ -43,7 +43,7 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include <clang/AST/TypeVisitor.h>
+#include <clang/AST/TypeVisitor.h>
 #pragma GCC diagnostic pop
 
 namespace insieme {
@@ -68,14 +68,14 @@ protected:
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
-
+	
 	std::map<clang::QualType, core::TypePtr> anonimousNamedTypes;
-
+	
 public:
 	TypeConverter(Converter& fact);
-
+	
 	virtual ~TypeConverter() { }
-
+	
 	DECLARE_TYPE_VISIT(TypeConverter, BuiltinType)
 	DECLARE_TYPE_VISIT(TypeConverter, ComplexType)
 	DECLARE_TYPE_VISIT(TypeConverter, ConstantArrayType)
@@ -92,20 +92,20 @@ public:
 	DECLARE_TYPE_VISIT(TypeConverter, ParenType)
 	DECLARE_TYPE_VISIT(TypeConverter, PointerType)
 	DECLARE_TYPE_VISIT(TypeConverter, DecayedType)
-    DECLARE_TYPE_VISIT(TypeConverter, AtomicType)
-
+	DECLARE_TYPE_VISIT(TypeConverter, AtomicType)
+	
 	// main entry point
 	core::TypePtr convert(const clang::QualType& type);
-
+	
 protected:
 
 	virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;
-
+	
 	virtual void postConvertionAction(const clang::QualType& src, const core::TypePtr& res) { };
-
+	
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
-
-    core::TypePtr convertImpl(const clang::QualType& type);
+	
+	core::TypePtr convertImpl(const clang::QualType& type);
 };
 
 
@@ -116,15 +116,14 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Converter::CTypeConverter:
 	public Converter::TypeConverter,
-	public clang::TypeVisitor<Converter::CTypeConverter, core::TypePtr>
-{
-
+	public clang::TypeVisitor<Converter::CTypeConverter, core::TypePtr> {
+	
 public:
 	CTypeConverter(Converter& fact)
 		: TypeConverter(fact) { }
-
+		
 	virtual ~CTypeConverter() {}
-
+	
 	CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ComplexType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ConstantArrayType)
@@ -141,8 +140,8 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, DecayedType)
-    CALL_BASE_TYPE_VISIT(TypeConverter, AtomicType)
-
+	CALL_BASE_TYPE_VISIT(TypeConverter, AtomicType)
+	
 protected:
 
 	// main entry point
@@ -157,16 +156,16 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Converter::CXXTypeConverter :
 	public Converter::TypeConverter,
-	public clang::TypeVisitor<Converter::CXXTypeConverter, core::TypePtr>{
-
+	public clang::TypeVisitor<Converter::CXXTypeConverter, core::TypePtr> {
+	
 public:
 	CXXTypeConverter(Converter& fact)
 		: TypeConverter(fact) {}
-
+		
 	virtual ~CXXTypeConverter() {};
-
-	vector<clang::RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX );
-
+	
+	vector<clang::RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX);
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  COMMON TYPES
 	CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
@@ -183,8 +182,8 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, DecayedType)
-    CALL_BASE_TYPE_VISIT(TypeConverter, AtomicType)
-
+	CALL_BASE_TYPE_VISIT(TypeConverter, AtomicType)
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  C++ specific types
 	core::TypePtr VisitPointerType(const clang::PointerType* ptrTy);
@@ -197,9 +196,9 @@ public:
 	core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
 	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
 //	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
-    //core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
-    core::TypePtr VisitMemberPointerType(const clang::MemberPointerType* memPointerTy);
-
+	//core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
+	core::TypePtr VisitMemberPointerType(const clang::MemberPointerType* memPointerTy);
+	
 protected:
 
 	// main entry point

@@ -50,49 +50,49 @@ namespace insieme {
 namespace core {
 namespace annotations {
 
-	using std::string;
+using std::string;
 
-	/**
-	 * Checks whether a name is attached to the given node.
-	 *
-	 * @param node the node to be tested
-	 * @return true if a name is attached, false otherwise
-	 */
-	bool hasAttachedError(const NodePtr& node);
+/**
+ * Checks whether a name is attached to the given node.
+ *
+ * @param node the node to be tested
+ * @return true if a name is attached, false otherwise
+ */
+bool hasAttachedError(const NodePtr& node);
 
-	/**
-	 * Obtains a reference to the error message attached to the given node. If
-	 * no messsage has been attached the result is undefined (an assertion
-	 * in debug mode).
-	 *
-	 * @param node the node to obtain the attached message from
-	 * @return the error message to be attached to the node
-	 */
-	const string& getAttachedError(const NodePtr& node);
+/**
+ * Obtains a reference to the error message attached to the given node. If
+ * no messsage has been attached the result is undefined (an assertion
+ * in debug mode).
+ *
+ * @param node the node to obtain the attached message from
+ * @return the error message to be attached to the node
+ */
+const string& getAttachedError(const NodePtr& node);
 
-	/**
-	 * Updates the error attached to the given node.
-	 *
-	 * @param node the node to attach a name to
-	 * @param msg the error message to be attached to the node
-	 */
-	void attachError(const NodePtr& node, const string& msg);
+/**
+ * Updates the error attached to the given node.
+ *
+ * @param node the node to attach a name to
+ * @param msg the error message to be attached to the node
+ */
+void attachError(const NodePtr& node, const string& msg);
 
 
-	/**
-	 * Updates the error message  attached to the given node
-	 * and returns the given node.
-	 *
-	 * @param node the node to attach a name to
-	 * @param msg the error message to be attached to the node
-	 * @return the given node
-	 */
-	 template<typename T>
-     const T& attachErrorWithReturn(const T& node, const string& msg) {
-	    const core::NodePtr& cur = node;
-        attachError(cur, msg);
-        return node;
-	 }
+/**
+ * Updates the error message  attached to the given node
+ * and returns the given node.
+ *
+ * @param node the node to attach a name to
+ * @param msg the error message to be attached to the node
+ * @return the given node
+ */
+template<typename T>
+const T& attachErrorWithReturn(const T& node, const string& msg) {
+	const core::NodePtr& cur = node;
+	attachError(cur, msg);
+	return node;
+}
 
 } // end namespace annotations
 } // end namespace core

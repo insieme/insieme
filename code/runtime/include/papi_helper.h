@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,28 +42,28 @@
  *
  * General instructions on how to use PAPI with the runtime instrumentation system:
  *
- * This file provides helper functions for the PAPI interface. The PAPI events 
- * to be instrumented can be supplied via an environment variable named 
+ * This file provides helper functions for the PAPI interface. The PAPI events
+ * to be instrumented can be supplied via an environment variable named
  * IRT_INST_PAPI_EVENTS, separated via colons, e.g.
  * IRT_INST_PAPI_EVENTS="PAPI_TOT_CYC:PAPI_L2_TCM:PAPI_BR_MSP".
  *
- * To find out what events are present on a specific machine and what their names 
- * are, navigate to the PAPI installation directory and execute "./bin/papi_avail -a". 
- * This will give you hardware information including the maximum number of counters 
- * that can be measured in parallel, as well as all preset events that can be counted. 
+ * To find out what events are present on a specific machine and what their names
+ * are, navigate to the PAPI installation directory and execute "./bin/papi_avail -a".
+ * This will give you hardware information including the maximum number of counters
+ * that can be measured in parallel, as well as all preset events that can be counted.
  * Use the preset names like PAPI_TOT_CYC for the environment variable.
  *
- * Since not all events can be measured in arbitrary combinations, one should check 
- * first whether a chosen combination is possible. For this, execute 
- * "./bin/papi_event_chooser PRESET <papi_event> ...", e.g. 
- * "./bin/papi_event_chooser PRESET PAPI_TOT_CYC PAPI_L2_TCM". The program will tell 
- * you either what preset events can still be added or which event of your list cannot 
+ * Since not all events can be measured in arbitrary combinations, one should check
+ * first whether a chosen combination is possible. For this, execute
+ * "./bin/papi_event_chooser PRESET <papi_event> ...", e.g.
+ * "./bin/papi_event_chooser PRESET PAPI_TOT_CYC PAPI_L2_TCM". The program will tell
+ * you either what preset events can still be added or which event of your list cannot
  * be counted with another already contained in your list.
  *
  */
 
 #ifdef IRT_USE_PAPI
-	#include "papi.h"
+#include "papi.h"
 #endif
 
 #define IRT_INST_PAPI_MAX_COUNTERS 16

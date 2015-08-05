@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,201 +45,201 @@ namespace insieme {
 namespace transform {
 namespace rulebased {
 
-	/**
-	 * A class realizing a transformation based on a set of transformation rules.
-	 * The list of rules is scanned until one of the rules is matching. The transformed
-	 * code will then be returned. If no rule is matching, no transformation will
-	 * be applied.
-	 */
-	class RuleBasedTransformation : public Transformation {
-
-		/**
-		 * The set of rules to be tested.
-		 */
-		vector<core::pattern::Rule> rules;
-
-	public:
-
-		/**
-		 * A constructor allowing to specify an arbitrary number of rules.
-		 *
-		 * @param type the type of the derived transformation
-		 * @param param the parameters specifying details of this transformation
-		 * @param rules the set of rules to be used by the resulting transformation
-		 */
-		template<typename ... Rules>
-		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const Rules& ... rules)
-			: Transformation(type, param), rules(toVector<core::pattern::Rule>(rules...)) {}
-
-		/**
-		 * A constructor accepting a list of rules.
-		 *
-		 * @param type the type of the derived transformation
-		 * @param param the parameters specifying details of this transformation
-		 * @param rules the set of rules to be used by the resulting transformation
-		 */
-		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<core::pattern::Rule>& rules);
-
-		/**
-		 * Implements the actual transformation by scanning through the internally
-		 * stored list of rules.
-		 *
-		 * @param target the node to be transformed
-		 */
-		virtual core::NodeAddress apply(const core::NodeAddress& target) const;
-
-		/**
-		 * Obtains a reference to the internally used rules.
-		 */
-		const vector<core::pattern::Rule>& getRules() const {
-			return rules;
-		}
-	};
+/**
+ * A class realizing a transformation based on a set of transformation rules.
+ * The list of rules is scanned until one of the rules is matching. The transformed
+ * code will then be returned. If no rule is matching, no transformation will
+ * be applied.
+ */
+class RuleBasedTransformation : public Transformation {
 
 	/**
-	 * A simple example transformation based on rules. This transformation is eliminating
-	 * superfluous brackets / compound statement nodes.
+	 * The set of rules to be tested.
 	 */
-	struct CompoundElimination : public RuleBasedTransformation {
-
-		CompoundElimination(const parameter::Value& value);
-
-		/**
-		 * Prints a readable representation of this transformation to the given output stream
-		 * using the given indent.
-		 */
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "CompoundElimination";
-		}
-
-	};
-
-	TRANSFORMATION_TYPE(
-		CompoundElimination,
-		"Eliminates superfluous compound statements.",
-		parameter::no_parameters()
-	);
-
-
-	// -- Loop Unrolling --
-
-	struct LoopUnrolling : public RuleBasedTransformation {
-
-		LoopUnrolling(const parameter::Value& params);
-
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Loop Unrolling " << parameter::getValue<unsigned>(getParameters());
-		}
-	};
+	vector<core::pattern::Rule> rules;
+	
+public:
 
 	/**
-	 * Factory for the loop unrolling transformation, full version
+	 * A constructor allowing to specify an arbitrary number of rules.
+	 *
+	 * @param type the type of the derived transformation
+	 * @param param the parameters specifying details of this transformation
+	 * @param rules the set of rules to be used by the resulting transformation
 	 */
-	TRANSFORMATION_TYPE(
-		LoopUnrolling,
-		"Implementation of the loop unrolling transformation based on the pattern matcher.",
-		parameter::atom<unsigned>("The unrolling factor to be used.")
-	);
-
-
+	template<typename ... Rules>
+	RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const Rules& ... rules)
+		: Transformation(type, param), rules(toVector<core::pattern::Rule>(rules...)) {}
+		
 	/**
-	 * Utility method to create a loop unrolling transformation which when applied to a loop
-	 * is unrolling the body for the given number of times.
+	 * A constructor accepting a list of rules.
+	 *
+	 * @param type the type of the derived transformation
+	 * @param param the parameters specifying details of this transformation
+	 * @param rules the set of rules to be used by the resulting transformation
 	 */
-	TransformationPtr makeLoopUnrolling(size_t factor);
-
-
-	// -- Total Loop Unrolling --
-
+	RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<core::pattern::Rule>& rules);
+	
 	/**
-	 * Total loop unrolling tries to replace a loop with a fixed number of iterations with
-	 * the corresponding unrolled program code.
+	 * Implements the actual transformation by scanning through the internally
+	 * stored list of rules.
+	 *
+	 * @param target the node to be transformed
 	 */
-	struct TotalLoopUnrolling : public RuleBasedTransformation {
-
-		TotalLoopUnrolling(const parameter::Value& params = parameter::emptyValue);
-
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Total Loop Unrolling";
-		}
-	};
-
+	virtual core::NodeAddress apply(const core::NodeAddress& target) const;
+	
 	/**
-	 * Factory for the loop unrolling transformation, full version
+	 * Obtains a reference to the internally used rules.
 	 */
-	TRANSFORMATION_TYPE(
-		TotalLoopUnrolling,
-		"Implementation of the total loop unrolling transformation.",
-		parameter::no_parameters()
-	);
+	const vector<core::pattern::Rule>& getRules() const {
+		return rules;
+	}
+};
 
+/**
+ * A simple example transformation based on rules. This transformation is eliminating
+ * superfluous brackets / compound statement nodes.
+ */
+struct CompoundElimination : public RuleBasedTransformation {
+
+	CompoundElimination(const parameter::Value& value);
+	
 	/**
-	 * Utility method to create a total loop unrolling transformation instance.
+	 * Prints a readable representation of this transformation to the given output stream
+	 * using the given indent.
 	 */
-	TransformationPtr makeTotalLoopUnrolling();
+	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "CompoundElimination";
+	}
+	
+};
+
+TRANSFORMATION_TYPE(
+    CompoundElimination,
+    "Eliminates superfluous compound statements.",
+    parameter::no_parameters()
+);
+
+
+// -- Loop Unrolling --
+
+struct LoopUnrolling : public RuleBasedTransformation {
+
+	LoopUnrolling(const parameter::Value& params);
+	
+	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "Loop Unrolling " << parameter::getValue<unsigned>(getParameters());
+	}
+};
+
+/**
+ * Factory for the loop unrolling transformation, full version
+ */
+TRANSFORMATION_TYPE(
+    LoopUnrolling,
+    "Implementation of the loop unrolling transformation based on the pattern matcher.",
+    parameter::atom<unsigned>("The unrolling factor to be used.")
+);
+
+
+/**
+ * Utility method to create a loop unrolling transformation which when applied to a loop
+ * is unrolling the body for the given number of times.
+ */
+TransformationPtr makeLoopUnrolling(size_t factor);
+
+
+// -- Total Loop Unrolling --
+
+/**
+ * Total loop unrolling tries to replace a loop with a fixed number of iterations with
+ * the corresponding unrolled program code.
+ */
+struct TotalLoopUnrolling : public RuleBasedTransformation {
+
+	TotalLoopUnrolling(const parameter::Value& params = parameter::emptyValue);
+	
+	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "Total Loop Unrolling";
+	}
+};
+
+/**
+ * Factory for the loop unrolling transformation, full version
+ */
+TRANSFORMATION_TYPE(
+    TotalLoopUnrolling,
+    "Implementation of the total loop unrolling transformation.",
+    parameter::no_parameters()
+);
+
+/**
+ * Utility method to create a total loop unrolling transformation instance.
+ */
+TransformationPtr makeTotalLoopUnrolling();
 
 
 
-	// -- Simple Loop Tiling --
+// -- Simple Loop Tiling --
 
-	/**
-	 * A simple non-checked implementation of loop tiling.
-	 */
-	struct SimpleLoopTiling2D : public RuleBasedTransformation {
+/**
+ * A simple non-checked implementation of loop tiling.
+ */
+struct SimpleLoopTiling2D : public RuleBasedTransformation {
 
-		SimpleLoopTiling2D(const parameter::Value& params);
+	SimpleLoopTiling2D(const parameter::Value& params);
+	
+	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "Simple Loop Tiling 2D(" << getParameters() << ")";
+	}
+};
 
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Simple Loop Tiling 2D(" << getParameters() << ")";
-		}
-	};
+/**
+ * Factory for the simple loop tiling transformation.
+ */
+TRANSFORMATION_TYPE(
+    SimpleLoopTiling2D,
+    "Implementation of loop tiling using rules. Unlike the polyhedral implementation, this one is not checking for dependencies.",
+    parameter::tuple(
+        parameter::atom<unsigned>("Tilesize A"),
+        parameter::atom<unsigned>("Tilesize B")
+    )
+);
 
-	/**
-	 * Factory for the simple loop tiling transformation.
-	 */
-	TRANSFORMATION_TYPE(
-		SimpleLoopTiling2D,
-		"Implementation of loop tiling using rules. Unlike the polyhedral implementation, this one is not checking for dependencies.",
-		parameter::tuple(
-				parameter::atom<unsigned>("Tilesize A"),
-				parameter::atom<unsigned>("Tilesize B")
-		)
-	);
+/**
+ * Utility method to create a simple 2D loop tiling transformation.
+ */
+TransformationPtr makeSimpleLoopTiling2D(unsigned tsA, unsigned tsB);
 
-	/**
-	 * Utility method to create a simple 2D loop tiling transformation.
-	 */
-	TransformationPtr makeSimpleLoopTiling2D(unsigned tsA, unsigned tsB);
+/**
+ * A simple non-checked implementation of loop tiling.
+ */
+struct SimpleLoopTiling3D : public RuleBasedTransformation {
 
-	/**
-	 * A simple non-checked implementation of loop tiling.
-	 */
-	struct SimpleLoopTiling3D : public RuleBasedTransformation {
+	SimpleLoopTiling3D(const parameter::Value& params);
+	
+	virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "Simple Loop Tiling 3D(" << getParameters() << ")";
+	}
+};
 
-		SimpleLoopTiling3D(const parameter::Value& params);
+/**
+ * Factory for the simple loop tiling transformation.
+ */
+TRANSFORMATION_TYPE(
+    SimpleLoopTiling3D,
+    "Implementation of loop tiling using rules. Unlike the polyhedral implementation, this one is not checking for dependencies.",
+    parameter::tuple(
+        parameter::atom<unsigned>("Tilesize A"),
+        parameter::atom<unsigned>("Tilesize B"),
+        parameter::atom<unsigned>("Tilesize C")
+    )
+);
 
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Simple Loop Tiling 3D(" << getParameters() << ")";
-		}
-	};
-
-	/**
-	 * Factory for the simple loop tiling transformation.
-	 */
-	TRANSFORMATION_TYPE(
-		SimpleLoopTiling3D,
-		"Implementation of loop tiling using rules. Unlike the polyhedral implementation, this one is not checking for dependencies.",
-		parameter::tuple(
-				parameter::atom<unsigned>("Tilesize A"),
-				parameter::atom<unsigned>("Tilesize B"),
-				parameter::atom<unsigned>("Tilesize C")
-		)
-	);
-
-	/**
-	 * Utility method to create a simple 3D loop tiling transformation.
-	 */
-	TransformationPtr makeSimpleLoopTiling3D(unsigned tsA, unsigned tsB, unsigned tsC);
+/**
+ * Utility method to create a simple 3D loop tiling transformation.
+ */
+TransformationPtr makeSimpleLoopTiling3D(unsigned tsA, unsigned tsB, unsigned tsC);
 
 
 
@@ -360,7 +360,7 @@ namespace rulebased {
 //	};
 
 
-	//	struct LoopUnrollingComplete: public RuleBasedTransformation {
+//	struct LoopUnrollingComplete: public RuleBasedTransformation {
 //		   LoopUnrollingComplete(): RuleBasedTransformation(pattern::Rule(
 //			// ------------------------------------------------------------
 //			// for[V.L:lit.U:lit.S:lit.BODY]

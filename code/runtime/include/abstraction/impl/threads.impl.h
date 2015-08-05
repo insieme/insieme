@@ -39,9 +39,9 @@
 #define __GUARD_ABSTRACTION_IMPL_THREADS_IMPL_H
 
 #if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-	#include "threads.win.impl.h"
+#include "threads.win.impl.h"
 #else
-	#include "threads.unix.impl.h"
+#include "threads.unix.impl.h"
 #endif
 
 void irt_cond_bundle_init(irt_cond_bundle* b) {

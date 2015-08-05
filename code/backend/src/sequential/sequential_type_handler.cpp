@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,25 +45,25 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-	namespace {
+namespace {
 
-		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-			// handle jobs
-			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
-
-			// handle lock types
-			if(basic.isLock(type)) {
-				return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h");
-			}
-
-			// it is not a special runtime type => let somebody else try
-			return 0;
-		}
-
+	// handle jobs
+	const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
+	
+	// handle lock types
+	if(basic.isLock(type)) {
+		return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h");
 	}
+	
+	// it is not a special runtime type => let somebody else try
+	return 0;
+}
 
-	TypeHandler SequentialTypeHandler = &handleType;
+}
+
+TypeHandler SequentialTypeHandler = &handleType;
 
 } // end namespace ocl_standalone
 } // end namespace backend

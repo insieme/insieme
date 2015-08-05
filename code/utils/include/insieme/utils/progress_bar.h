@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,85 +46,98 @@ namespace insieme {
 namespace utils {
 
 
-	class ProgressBar : public Printable {
+class ProgressBar : public Printable {
 
-		// the label of the progress bar
-		std::string label;
+	// the label of the progress bar
+	std::string label;
+	
+	// the current progress state
+	unsigned cur;
+	
+	// the total progress
+	unsigned max;
+	
+	// the width in characters of the progress bar
+	unsigned width;
+	
+	// whether progress increments should be automatically printed
+	bool autoPrint;
+	
+	// the stream to print to
+	std::ostream& out;
+	
+	mutable unsigned lastPrintedState;
+	
+public:
 
-		// the current progress state
-		unsigned cur;
-
-		// the total progress
-		unsigned max;
-
-		// the width in characters of the progress bar
-		unsigned width;
-
-		// whether progress increments should be automatically printed
-		bool autoPrint;
-
-		// the stream to print to
-		std::ostream& out;
-
-		mutable unsigned lastPrintedState;
-
-	public:
-
-		ProgressBar(const std::string& label = "", unsigned max = 100, unsigned cur = 0, unsigned width = 60, std::ostream& out = std::cout, bool autoPrint = true)
-			: label(label), cur(cur), max(max), width(width), autoPrint(autoPrint), out(out), lastPrintedState(width+1) { }
-
-		void inc(unsigned value = 1) {
-			cur+=value;
-			if (autoPrint) print();
+	ProgressBar(const std::string& label = "", unsigned max = 100, unsigned cur = 0, unsigned width = 60, std::ostream& out = std::cout, bool autoPrint = true)
+		: label(label), cur(cur), max(max), width(width), autoPrint(autoPrint), out(out), lastPrintedState(width+1) { }
+		
+	void inc(unsigned value = 1) {
+		cur+=value;
+		if(autoPrint) {
+			print();
 		}
-
-		std::ostream& printTo(std::ostream& out) const {
-
-			unsigned a = getProgressBarState();
-
-			// print label
-			out << label;
-			if (!label.empty()) out << " ";
-
-			// print progress part
-			unsigned i;
-			out << "[";
-			for (i = 0; i< a; i++) out << "=";
-			if (a != width) { out  << ">"; i++; }
-			for (; i< width; i++) out << " ";
-			out << "] ";
-
-			// print status summary
-			out << format("%6.2f", (100.f*((float)cur/(float)max))) << "\% of " << max << " ";
-
-			// done
-			return out << std::flush;
+	}
+	
+	std::ostream& printTo(std::ostream& out) const {
+	
+		unsigned a = getProgressBarState();
+		
+		// print label
+		out << label;
+		if(!label.empty()) {
+			out << " ";
 		}
-
-	private:
-
-		unsigned getProgressBarState() const {
-			unsigned res = ((float)cur/ (float)max) * ((float)width);
-			return (res <= width) ? res : width;
+		
+		// print progress part
+		unsigned i;
+		out << "[";
+		for(i = 0; i< a; i++) {
+			out << "=";
 		}
-
-		void print() const {
-
-			auto state = getProgressBarState();
-
-			// skip re-print if nothing has changed
-			if (state == lastPrintedState) return;
-			lastPrintedState = state;
-
-			// clear old state
-			out << "\r";
-
-			// print bar
-			printTo(out);
-
+		if(a != width) {
+			out  << ">";
+			i++;
 		}
+		for(; i< width; i++) {
+			out << " ";
+		}
+		out << "] ";
+		
+		// print status summary
+		out << format("%6.2f", (100.f*((float)cur/(float)max))) << "\% of " << max << " ";
+		
+		// done
+		return out << std::flush;
+	}
+	
+private:
 
-	};
+	unsigned getProgressBarState() const {
+		unsigned res = ((float)cur/ (float)max) * ((float)width);
+		return (res <= width) ? res : width;
+	}
+	
+	void print() const {
+	
+		auto state = getProgressBarState();
+		
+		// skip re-print if nothing has changed
+		if(state == lastPrintedState) {
+			return;
+		}
+		lastPrintedState = state;
+		
+		// clear old state
+		out << "\r";
+		
+		// print bar
+		printTo(out);
+		
+	}
+	
+};
 //
 //
 ///**

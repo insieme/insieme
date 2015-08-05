@@ -40,24 +40,27 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-AsmStmtWrapper fromIr(const core::ExpressionPtr& expr){
+AsmStmtWrapper fromIr(const core::ExpressionPtr& expr) {
 	AsmStmtWrapper wrap("");
-	typedef decltype (std::make_tuple(wrap._volatile, wrap.asmString, wrap.outputs, wrap.inputs, wrap.clobbers)) tuple_type;
+	typedef decltype(std::make_tuple(wrap._volatile, wrap.asmString, wrap.outputs, wrap.inputs, wrap.clobbers)) tuple_type;
 	tuple_type tmp = core::encoder::toValue<tuple_type> (expr);
-
+	
 	wrap._volatile = std::get<0>(tmp);
 	wrap.asmString = std::get<1>(tmp);
-
-	for (auto& cur : std::get<2>(tmp))
+	
+	for(auto& cur : std::get<2>(tmp)) {
 		wrap.addOutput(cur.first, cur.second);
-	for (auto& cur : std::get<3>(tmp))
+	}
+	for(auto& cur : std::get<3>(tmp)) {
 		wrap.addInput(cur.first, cur.second);
-	for (auto& cur : std::get<4>(tmp))
+	}
+	for(auto& cur : std::get<4>(tmp)) {
 		wrap.addClobber(cur);
+	}
 	return wrap;
 }
 
-core::ExpressionPtr toIR(core::NodeManager& mgr,const AsmStmtWrapper& wrap){
+core::ExpressionPtr toIR(core::NodeManager& mgr,const AsmStmtWrapper& wrap) {
 	core::ExpressionPtr expr = core::encoder::toIR(mgr, std::make_tuple(wrap._volatile, wrap.asmString, wrap.outputs, wrap.inputs, wrap.clobbers));
 	core::IRBuilder build(mgr);
 	return build.callExpr(mgr.getLangExtension<AsmStmtExtension>().getAsmStmt(), expr);

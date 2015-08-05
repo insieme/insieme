@@ -43,7 +43,9 @@
 #include "irt_library.hxx"
 
 int RecParCount(int n) {
-	if(n == 0) return 1;
+	if(n == 0) {
+		return 1;
+	}
 	int ret = 0;
 	irt::parallel(n, [&ret,n] {
 		ret = RecParCount(n-1)+1;
@@ -53,8 +55,7 @@ int RecParCount(int n) {
 }
 
 TEST(AsteroideaStacks, Nested) {
-	EXPECT_IN_TIME(100*1000, 
-	{
+	EXPECT_IN_TIME(100*1000, {
 		irt::init(2);
 		irt::run([]() {
 			std::cout << RecParCount(7) << std::endl;

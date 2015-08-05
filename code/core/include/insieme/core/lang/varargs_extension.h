@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,29 +42,29 @@ namespace insieme {
 namespace core {
 namespace lang {
 
+/**
+ */
+class VarArgsExtension : public core::lang::Extension {
+
 	/**
+	 * Allow the node manager to create instances of this class.
 	 */
-	class VarArgsExtension : public core::lang::Extension {
+	friend class core::NodeManager;
+	
+	/**
+	 * Creates a new instance based on the given node manager.
+	 */
+	VarArgsExtension(core::NodeManager& manager)
+		: core::lang::Extension(manager) {}
+		
+		
+public:
 
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		VarArgsExtension(core::NodeManager& manager)
-				: core::lang::Extension(manager) {}
-
-
-	public:
-
-        LANG_EXT_TYPE(Valist, "va_list");
-
-        LANG_EXT_LITERAL(Vaarg, "va_arg", "(va_list, type<'a>) -> 'a");
-        LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
-	};
+	LANG_EXT_TYPE(Valist, "va_list");
+	
+	LANG_EXT_LITERAL(Vaarg, "va_arg", "(va_list, type<'a>) -> 'a");
+	LANG_EXT_LITERAL(Vastart, "va_start", "(ref<va_list>, var_list) -> unit");
+};
 }
 }
 }

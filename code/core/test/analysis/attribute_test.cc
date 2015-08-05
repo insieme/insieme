@@ -51,51 +51,51 @@ TEST(Attributes, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	auto& ext = manager.getLangExtension<AttributeExtension>();
-
-
+	
+	
 	AttributePtr a1 = ext.getUnordered();
 	AttributePtr a2 = builder.literal("attr2", ext.getAttributeType());
 	AttributePtr a3 = builder.literal("attr3", ext.getAttributeType());
-
+	
 	ExpressionPtr expr = builder.intLit(1);
 	ExpressionPtr tmp;
-
+	
 	AttributeSet set;
 	EXPECT_EQ(set, getAttributes(expr));
 	EXPECT_EQ(set, getAttributes(tmp));
-
+	
 	EXPECT_FALSE(hasAttribute(tmp, a1));
 	EXPECT_FALSE(hasAttribute(tmp, a2));
 	EXPECT_FALSE(hasAttribute(tmp, a3));
-
-
+	
+	
 	// add an attribute
 	set.insert(a1);
 	tmp = addAttribute(expr, a1);
 	EXPECT_EQ(set, getAttributes(tmp));
 	EXPECT_EQ("attr(1, cons(unordered, empty(type<attribute>)))", toString(*tmp));
-
+	
 	// add another attribute
 	set.insert(a2);
 	tmp = addAttribute(tmp, a2);
 	EXPECT_EQ(set, getAttributes(tmp));
-
+	
 	// check has-attribute
 	EXPECT_TRUE(hasAttribute(tmp, a1));
 	EXPECT_TRUE(hasAttribute(tmp, a2));
 	EXPECT_FALSE(hasAttribute(tmp, a3));
-
-
+	
+	
 	// check remove attribute
 	set.erase(a2);
 	tmp = remAttribute(tmp, a2);
 	EXPECT_EQ(set, getAttributes(tmp));
-
+	
 	// check has-attribute
 	EXPECT_TRUE(hasAttribute(tmp, a1));
 	EXPECT_FALSE(hasAttribute(tmp, a2));
 	EXPECT_FALSE(hasAttribute(tmp, a3));
-
+	
 }
 
 } // end namespace analysis

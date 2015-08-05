@@ -7,13 +7,13 @@ using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////
 //
-void checkResult(vector<int>& v){
+void checkResult(vector<int>& v) {
 	vector<int>::iterator it;
-	for (it = v.begin()+1; it != v.end(); it ++){
+	for(it = v.begin()+1; it != v.end(); it ++) {
 	}
 }
 
-int main (){
+int main() {
 	vector<int> v;
 	checkResult(v);
 }

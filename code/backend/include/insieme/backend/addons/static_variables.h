@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,17 +49,17 @@ namespace backend {
 namespace addons {
 
 
+/**
+ * An Add-On realizing support for C/C++ based static variables.
+ */
+struct StaticVariables : public AddOn {
+
 	/**
-	 * An Add-On realizing support for C/C++ based static variables.
+	 * Installs this Add-On within the given converter.
 	 */
-	struct StaticVariables : public AddOn {
-
-		/**
-		 * Installs this Add-On within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const;
-
-	};
+	virtual void installOn(Converter& converter) const;
+	
+};
 
 
 } // end namespace addons

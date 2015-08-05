@@ -65,7 +65,7 @@ bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
 
 	//LOG(INFO) << "Is after RANGE(" << Line(SR, sm).first << ", " << Line(SR, sm).second << ")";
 	//LOG(INFO) << "Is after RANGE(" << Line(SL, sm) << ")";
-
+	
 	return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 }
 
@@ -75,7 +75,7 @@ bool isAfterRange(SourceRange SR, SourceLocation SL, clang::SourceManager const&
 }
 
 void EraseMatchedPragmas(PendingPragmaList& pending, PragmaList& matched) {
-	for ( PragmaList::iterator I = matched.begin(), E = matched.end(); I != E; ++I ) {
+	for(PragmaList::iterator I = matched.begin(), E = matched.end(); I != E; ++I) {
 		std::list<PragmaPtr>::iterator it = std::find(pending.begin(), pending.end(), *I);
 		assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas");
 		pending.erase(it);
@@ -89,31 +89,42 @@ class PragmaFilter {
 	SourceRange bounds;
 	SourceManager const& sm;
 	PendingPragmaList::reverse_iterator I, E;
-
+	
 	void inc(bool first) {
-		while ( first && I != E && isAfterRange(bounds, (*I)->getStartLocation(), sm) )
+		while(first && I != E && isAfterRange(bounds, (*I)->getStartLocation(), sm)) {
 			++I;
-
-		if (!first)	++I;
+		}
+		
+		if(!first)	{
+			++I;
+		}
 	}
-
+	
 public:
 	PragmaFilter(SourceRange const& bounds, SourceManager const& sm, PendingPragmaList& pragma_list) :
-		bounds(bounds), sm(sm), I(pragma_list.rbegin()), E(pragma_list.rend()) { inc(true); }
-
-	void operator++() {	inc(false); }
-
+		bounds(bounds), sm(sm), I(pragma_list.rbegin()), E(pragma_list.rend()) {
+		inc(true);
+	}
+	
+	void operator++() {
+		inc(false);
+	}
+	
 	PragmaPtr operator*() const {
-		if ( I == E ) return PragmaPtr();
-
-		if ( isInsideRange(bounds, (*I)->getStartLocation(), sm)) {
+		if(I == E) {
+			return PragmaPtr();
+		}
+		
+		if(isInsideRange(bounds, (*I)->getStartLocation(), sm)) {
 			return *I;
 		}
-
+		
 		return PragmaPtr();
 	}
-
-	bool operator!=(PragmaFilter const& other) const { return I == other.I; }
+	
+	bool operator!=(PragmaFilter const& other) const {
+		return I == other.I;
+	}
 };
 
 } // End empty namespace
@@ -124,24 +135,24 @@ namespace frontend {
 struct InsiemeSema::InsiemeSemaImpl {
 	PragmaList& pragma_list;
 	PendingPragmaList pending_pragma;
-
+	
 	InsiemeSemaImpl(PragmaList& pragma_list) :	pragma_list(pragma_list) {	}
 };
 
 InsiemeSema::InsiemeSema(
-		PragmaList& 					pragma_list,
-		clang::Preprocessor& 			pp,
-		clang::ASTContext& 				ctx,
-		clang::ASTConsumer&             ast_consumer,
-		bool 							CompleteTranslationUnit,
-		clang::CodeCompleteConsumer* 	CompletionConsumer)
-:
+    PragmaList& 					pragma_list,
+    clang::Preprocessor& 			pp,
+    clang::ASTContext& 				ctx,
+    clang::ASTConsumer&             ast_consumer,
+    bool 							CompleteTranslationUnit,
+    clang::CodeCompleteConsumer* 	CompletionConsumer)
+	:
 	clang::Sema(pp, ctx, ast_consumer, clang::TU_Complete, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
 	isInsideFunctionDef(false) { }
-
+	
 InsiemeSema::~InsiemeSema() {
-    delete pimpl;
+	delete pimpl;
 }
 
 /*
@@ -149,19 +160,19 @@ InsiemeSema::~InsiemeSema() {
  * character will be in the input stream so no termination condition is needed.
  */
 const char* strbchr(const char* pos, const char* begin, char c) {
-	while ( pos != begin && *pos != c ) {
+	while(pos != begin && *pos != c) {
 		pos--;
 	}
 	return pos;
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
-												 llvm::ArrayRef<clang::Stmt*> 	Elts, bool isStmtExpr){
-
+        llvm::ArrayRef<clang::Stmt*> 	Elts, bool isStmtExpr) {
+        
 	// we parse the original code segment, within the original locations
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 	clang::CompoundStmt* CS = cast<clang::CompoundStmt>(ret.get());
-
+	
 //	std::cout << "{InsiemeSema}: ActOnCompoundStmt()\n";
 //	std::cout << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
 //	std::cout << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
@@ -177,8 +188,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	///
 	/// We solve the problem by searching for the bracket in the input stream and overwrite
 	/// the value of L (which contains the wrong location) with the correct value.
-
-
+	
+	
 	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
@@ -186,10 +197,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
 		const char *strData = buffer.begin() + locInfo.second;
 		char const* lBracePos = strbchr(strData, buffer.begin(), '{');
-
+		
 		// We know the location of the left bracket, we overwrite the value of L with the correct location
 		// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
-		if((((leftBracketLoc.getRawEncoding() & ~MacroIDBit)+(lBracePos - strData)) & MacroIDBit)==0){
+		if((((leftBracketLoc.getRawEncoding() & ~MacroIDBit)+(lBracePos - strData)) & MacroIDBit)==0) {
 			L = leftBracketLoc.getLocWithOffset(lBracePos - strData);
 		}
 	}
@@ -200,13 +211,13 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
 		const char *strData = buffer.begin() + locInfo.second;
 		char const* rBracePos = strbchr(strData, buffer.begin(), '}');
-
+		
 		// We know the location of the right bracket, we overwrite the value of R with the correct location
-		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0){
+		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0) {
 			R = rightBracketLoc.getLocWithOffset(rBracePos - strData);
 		}
 	}
-
+	
 //	std::cout << "corrected LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
 //	std::cout << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
@@ -222,136 +233,138 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	//
 	PragmaList matched;
 	SourceRange SR(L,R);
-
+	
 	// for each of the pragmas in the range between brackets
-	for ( PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter ) {
+	for(PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter) {
 		PragmaPtr P = *filter;
 		// iterate throug statements of the compound in reverse order
-
+		
 		unsigned int pragmaStart = utils::Line(P->getStartLocation(), SourceMgr);
 		unsigned int pragmaEnd	 = utils::Line(P->getEndLocation(),   SourceMgr);
-
+		
 //		std::cout << "Match Pragma: " << pragmaStart  << " , " << pragmaEnd << std::endl;
 
 		bool found =false;
 		// problem with first pragma, compound start is delayed until fist usable line (first stmt)
-		if (CS->size()>0){
-			for (clang::CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
-
+		if(CS->size()>0) {
+			for(clang::CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it) {
+			
 				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
 //				(*it)->dump();
 //				std::cout << "lastEnd: " << lastEnd << std::endl;
 //				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
 
-				if ( (pragmaEnd <= stmtStart)){
+				if((pragmaEnd <= stmtStart)) {
 					// ACHTUNG: if the node is a nullStmt, and is not at the end of the compound (in
 					// which case is most probably ours) we can not trust it. semantics wont change,
 					// we move one more. (BUG: nullStmt followed by pragmas, the source begin is
 					// postponed until next stmt) this makes pragmas to be attached to a previous
 					// stmt
-					if (!llvm::isa<clang::NullStmt>(*it)){
-
-/*
-                        Stmt** stmts = new Stmt*[CS->size()];
-
-                        CompoundStmt* newCS =
-                                new (Context) CompoundStmt(Context, stmts, CS->size(), CS->getSourceRange().getBegin(),
-                                        CS->getSourceRange().getEnd()
-                                    );
-
-                        //create Attributed Stmt, attach AnnotateAttr and set it as new statement of the CS
-                        std::vector<const clang::Attr *> annotationListVec;
-                        //if statement is an attributed statement add the prev list of annotations
-                        if(llvm::isa<clang::AttributedStmt>(*it)) {
-                            llvm::ArrayRef<const clang::Attr *> annotationList = ((clang::AttributedStmt *)(*it))->getAttrs();
-                            for(llvm::ArrayRef<const clang::Attr *>::iterator ia=annotationList.begin(); ia != annotationList.end(); ++ia) {
-                                annotationListVec.push_back(*ia);
-                            }
-                        }
-                        //check what kind of pragma is handled
-                        if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
-
-                            //omp pragma has to be handled
-                            //pragma type and matchmap has to be stored
-                            //annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, P->getType()).clone(Context));
-                            std::ostringstream str;
-                            str << "[" << P->getType();
-                            for (const MatchMap::value_type& curr : ompPragma->getMap()){
-                                str << "[" << curr.first;
-                                str << "[" << join(",", curr.second,
-                                    [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
-                                str << "]";
-                            }
-                            str << "]";
-                            annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, str.str()).clone(Context));
-                            //set new stmt. if stmt is already an AttributedStmt take the subStmt
-                            if(llvm::isa<clang::AttributedStmt>(*it)) {
-                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr *>(annotationListVec), ((clang::AttributedStmt *) *it)->getSubStmt());
-                            } else {
-                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr *>(annotationListVec), *it);
-                            }
-                        }
-                        CompoundStmt::body_iterator next = std::copy(CS->body_begin(), it, newCS->body_begin());
-                        std::copy(it, CS->body_end(), next);
-                        //std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-*/
+					if(!llvm::isa<clang::NullStmt>(*it)) {
+					
+						/*
+						                        Stmt** stmts = new Stmt*[CS->size()];
+						
+						                        CompoundStmt* newCS =
+						                                new (Context) CompoundStmt(Context, stmts, CS->size(), CS->getSourceRange().getBegin(),
+						                                        CS->getSourceRange().getEnd()
+						                                    );
+						
+						                        //create Attributed Stmt, attach AnnotateAttr and set it as new statement of the CS
+						                        std::vector<const clang::Attr *> annotationListVec;
+						                        //if statement is an attributed statement add the prev list of annotations
+						                        if(llvm::isa<clang::AttributedStmt>(*it)) {
+						                            llvm::ArrayRef<const clang::Attr *> annotationList = ((clang::AttributedStmt *)(*it))->getAttrs();
+						                            for(llvm::ArrayRef<const clang::Attr *>::iterator ia=annotationList.begin(); ia != annotationList.end(); ++ia) {
+						                                annotationListVec.push_back(*ia);
+						                            }
+						                        }
+						                        //check what kind of pragma is handled
+						                        if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
+						
+						                            //omp pragma has to be handled
+						                            //pragma type and matchmap has to be stored
+						                            //annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, P->getType()).clone(Context));
+						                            std::ostringstream str;
+						                            str << "[" << P->getType();
+						                            for (const MatchMap::value_type& curr : ompPragma->getMap()){
+						                                str << "[" << curr.first;
+						                                str << "[" << join(",", curr.second,
+						                                    [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
+						                                str << "]";
+						                            }
+						                            str << "]";
+						                            annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, str.str()).clone(Context));
+						                            //set new stmt. if stmt is already an AttributedStmt take the subStmt
+						                            if(llvm::isa<clang::AttributedStmt>(*it)) {
+						                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr *>(annotationListVec), ((clang::AttributedStmt *) *it)->getSubStmt());
+						                            } else {
+						                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr *>(annotationListVec), *it);
+						                            }
+						                        }
+						                        CompoundStmt::body_iterator next = std::copy(CS->body_begin(), it, newCS->body_begin());
+						                        std::copy(it, CS->body_end(), next);
+						                        //std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
+						*/
 						// this pragma is attached to the current stmt
 						P->setStatement(*it);
 						matched.push_back(P);
-
+						
 //						std::cout << " ## attached\n" << std::endl;
 						found =true;
 						break;
 					}
 				}
-
+				
 			}
 		}
-		if(!found && pragmaStart <= utils::Line(R, SourceMgr)){
+		if(!found && pragmaStart <= utils::Line(R, SourceMgr)) {
 			// this is a de-attached pragma (barrier i.e.) at the end of the compound
 			// we need to create a fake NullStmt ( ; ) to attach this
 			Stmt** stmts = new Stmt*[CS->size() + 1];
-
+			
 			ArrayRef<clang::Stmt*> stmtList(stmts, CS->size()+1);
-
+			
 			clang::CompoundStmt* newCS =
-					new (Context) clang::CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(),
-							CS->getSourceRange().getEnd()
-						);
-
+			    new(Context) clang::CompoundStmt(Context, stmtList, CS->getSourceRange().getBegin(),
+			                                     CS->getSourceRange().getEnd()
+			                                    );
+			                                    
 			std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-			std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-/*
-            //create annotation
-            std::ostringstream str;
-
-            if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
-                str << "[" << P->getType();
-                for (const MatchMap::value_type& curr : ompPragma->getMap()){
-                    str << "[" << curr.first;
-                    str << "[" << join(",", curr.second,
-                        [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
-                    str << "]";
-                }
-                str << "]";
-            }
-            clang::AnnotateAttr annotation(SourceLocation(), Context, str.str());
-			clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context) NullStmt(SourceLocation()));
-			newCS->setLastStmt( stmt );
-*/
-			newCS->setLastStmt(new (Context) NullStmt(SourceLocation()));
-
-            //TODO: This is the oldschool pragma matcher. Each pragma contains a pointer to the attached stmt.
-            //In the new mechanism pragmas are stored inside of the attributed statement.
-			P->setStatement( *newCS->body_rbegin() );
+			std::for_each(CS->body_begin(), CS->body_end(), [&](Stmt*& curr) {
+				this->Context.Deallocate(curr);
+			});
+			/*
+			            //create annotation
+			            std::ostringstream str;
+			
+			            if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
+			                str << "[" << P->getType();
+			                for (const MatchMap::value_type& curr : ompPragma->getMap()){
+			                    str << "[" << curr.first;
+			                    str << "[" << join(",", curr.second,
+			                        [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
+			                    str << "]";
+			                }
+			                str << "]";
+			            }
+			            clang::AnnotateAttr annotation(SourceLocation(), Context, str.str());
+						clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context) NullStmt(SourceLocation()));
+						newCS->setLastStmt( stmt );
+			*/
+			newCS->setLastStmt(new(Context) NullStmt(SourceLocation()));
+			
+			//TODO: This is the oldschool pragma matcher. Each pragma contains a pointer to the attached stmt.
+			//In the new mechanism pragmas are stored inside of the attributed statement.
+			P->setStatement(*newCS->body_rbegin());
 			matched.push_back(P);
-
+			
 			// transfer the ownership of the statement
 			clang::CompoundStmt* oldStmt = ret.getAs<clang::CompoundStmt>();
 			oldStmt->setStmts(Context, NULL, 0);
 			ret = newCS;
 			CS = newCS;
-
+			
 			// destroy the old compound stmt
 			Context.Deallocate(oldStmt);
 			delete[] stmts;
@@ -362,15 +375,15 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
-
+	
 	return std::move(ret);
 }
 
 void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm,
-							PragmaList& matched) {
-	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
+                            PragmaList& matched) {
+	for(PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter) {
 		PragmaPtr&& P = *filter;
-
+		
 		P->setStatement(S);
 		matched.push_back(P);
 	}
@@ -378,48 +391,48 @@ void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, co
 
 clang::StmtResult
 InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar,
-		clang::Stmt* ThenVal, clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
+                         clang::Stmt* ThenVal, clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
 	// VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret =
-			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
-
-	clang::IfStmt* ifStmt = static_cast<clang::IfStmt*>( ret.get() );
+	    Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
+	    
+	clang::IfStmt* ifStmt = static_cast<clang::IfStmt*>(ret.get());
 	PragmaList matched;
-
+	
 	matchStmt(ifStmt->getThen(), SourceRange(IfLoc, IfLoc), SourceMgr, matched);
 	// is there any pragmas to be associated with the 'then' statement of this if?
-	if ( !isa<clang::CompoundStmt> (ifStmt->getThen()) ) {
+	if(!isa<clang::CompoundStmt> (ifStmt->getThen())) {
 		// if there is no compound stmt, check the then part
 		matchStmt(ifStmt->getThen(), SourceRange(IfLoc, ThenVal->getLocEnd()), SourceMgr, matched);
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();
-
+	
 	// is there any pragmas to be associated with the 'else' statement of this if?
-	if ( ifStmt->getElse() && !isa<clang::CompoundStmt> (ifStmt->getElse()) ) {
+	if(ifStmt->getElse() && !isa<clang::CompoundStmt> (ifStmt->getElse())) {
 		matchStmt(ifStmt->getElse(), SourceRange(ElseLoc, ifStmt->getSourceRange().getEnd()), SourceMgr, matched);
 	}
-
+	
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	return std::move(ret);
 }
 
 clang::StmtResult
 InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
-		clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third,
-		clang::SourceLocation RParenLoc, clang::Stmt* Body) {
+                          clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third,
+                          clang::SourceLocation RParenLoc, clang::Stmt* Body) {
 	// VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret =
-		Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));
-
+	    Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));
+	    
 	clang::ForStmt* forStmt = (clang::ForStmt*) ret.get();
 	PragmaList matched;
-	if ( !isa<clang::CompoundStmt> (forStmt->getBody()) ) {
+	if(!isa<clang::CompoundStmt> (forStmt->getBody())) {
 		matchStmt(forStmt->getBody(), forStmt->getSourceRange(), SourceMgr, matched);
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();
-
+	
 	return std::move(ret);
 }
 
@@ -437,26 +450,28 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 	// VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
 	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, std::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
-
+	
 	FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
-
+	
 //	std::cout << "\nfunc in: " ;
 //	FD->getSourceRange().getBegin().dump(SourceMgr);
 //	std::cout << std::endl;
 
-	if (!FD) { return ret; }
-
+	if(!FD) {
+		return ret;
+	}
+	
 	PragmaList matched;
 	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
-
-	while ( I != E && isAfterRange(FD->getSourceRange(), (*I)->getStartLocation(), SourceMgr) ) {
+	
+	while(I != E && isAfterRange(FD->getSourceRange(), (*I)->getStartLocation(), SourceMgr)) {
 		++I;
 	}
-
-	while ( I != E ) {
+	
+	while(I != E) {
 		unsigned int pragmaEnd	 = utils::Line((*I)->getEndLocation(),   SourceMgr);
 		unsigned int declBegin	 = utils::Line(ret->getSourceRange().getBegin(),   SourceMgr);
-
+		
 //		std::cout << "pragma ends: " <<pragmaEnd << std::endl;
 //		std::cout << "Decl begins: " <<declBegin << std::endl;
 
@@ -468,7 +483,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	isInsideFunctionDef = false;
-
+	
 	return ret;
 }
 
@@ -503,12 +518,12 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 
 clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D) {
 	// VLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
-
+	
 	clang::Decl* ret = Sema::ActOnDeclarator(S, D);
-	if ( isInsideFunctionDef ) {
+	if(isInsideFunctionDef) {
 		return ret;
 	}
-
+	
 //	std::cout << utils::Line(ret->getSourceRange().getBegin(), SourceMgr) << ":" <<
 //				  utils::Column(ret->getSourceRange().getBegin(), SourceMgr) << ", " <<
 //	  			  utils::Line(ret->getSourceRange().getEnd(), SourceMgr) << ":" <<
@@ -516,33 +531,33 @@ clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D)
 
 	PragmaList matched;
 	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
-
-	while ( I != E && isAfterRange(ret->getSourceRange(), (*I)->getStartLocation(), SourceMgr) ) {
+	
+	while(I != E && isAfterRange(ret->getSourceRange(), (*I)->getStartLocation(), SourceMgr)) {
 		++I;
 	}
-
-	while ( I != E ) {
+	
+	while(I != E) {
 		(*I)->setDecl(ret);
 		matched.push_back(*I);
 		++I;
 	}
-
+	
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	return ret;
 }
 
 void InsiemeSema::ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc) {
 	// VLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
-
+	
 	Sema::ActOnTagFinishDefinition(S, TagDecl, RBraceLoc);
 	PragmaList matched;
 	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();
-
-	while ( I != E && isAfterRange(TagDecl->getSourceRange(), (*I)->getStartLocation(), SourceMgr) ) {
+	
+	while(I != E && isAfterRange(TagDecl->getSourceRange(), (*I)->getStartLocation(), SourceMgr)) {
 		++I;
 	}
-
-	while ( I != E ) {
+	
+	while(I != E) {
 		(*I)->setDecl(TagDecl);
 		matched.push_back(*I);
 		++I;

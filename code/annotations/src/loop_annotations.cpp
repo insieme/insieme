@@ -77,18 +77,18 @@ size_t LoopAnnotation::getValue(const core::NodePtr& node) {
 
 namespace {
 
-	ANNOTATION_CONVERTER(LoopAnnotation)
+ANNOTATION_CONVERTER(LoopAnnotation)
 
-		core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<LoopAnnotation>(annotation) && "Only supports the conversion of Loop Annotations!");
-			return core::encoder::toIR<size_t>(manager, static_pointer_cast<LoopAnnotation>(annotation)->getIterations());
-		};
+core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
+	assert(dynamic_pointer_cast<LoopAnnotation>(annotation) && "Only supports the conversion of Loop Annotations!");
+	return core::encoder::toIR<size_t>(manager, static_pointer_cast<LoopAnnotation>(annotation)->getIterations());
+};
 
-		core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
-			assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
-			return std::make_shared<LoopAnnotation>(core::encoder::toValue<size_t>(node));
-		};
-	};
+core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
+	assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
+	return std::make_shared<LoopAnnotation>(core::encoder::toValue<size_t>(node));
+};
+};
 
 }
 
@@ -97,10 +97,10 @@ namespace {
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot) {
-		out << "LoopAnnotation:\n";
-		out << "Iterations: " << lAnnot.getIterations() << std::endl;
-		return out;
-	}
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot) {
+	out << "LoopAnnotation:\n";
+	out << "Iterations: " << lAnnot.getIterations() << std::endl;
+	return out;
+}
 
 } // end namespace std

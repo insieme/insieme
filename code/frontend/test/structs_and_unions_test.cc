@@ -56,36 +56,36 @@ using namespace insieme::utils::log;
 
 TEST(StructsAndUnionTest, Cinput) {
 	core::NodeManager manager;
-
+	
 	// create and customize conversion job
 	fe::ConversionJob job(FRONTEND_TEST_DIR "inputs/structs_and_unions.c");
-
+	
 	std::string srcDir = FRONTEND_TEST_DIR "inputs/hello_host.c";
-
+	
 	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
 	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
-
+	
 	EXPECT_EQ(&program->getNodeManager(), &manager);
 	EXPECT_TRUE(manager.contains(program));
-
+	
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-
+	
 	LOG(INFO) << "Printing the IR: " << pp;
-
+	
 	auto semantic = core::checks::check(program);
 	auto warnings = semantic.getWarnings();
 	std::sort(warnings.begin(), warnings.end());
 	for_each(warnings, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 	});
-
+	
 	auto errors = semantic.getErrors();
 	EXPECT_EQ(0u, errors.size()) ;
-
+	
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
 		std::cout << cur << std::endl;
 	});
-
+	
 }

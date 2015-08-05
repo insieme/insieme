@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,62 +47,70 @@ namespace core {
 namespace analysis {
 namespace region {
 
-	namespace {
+namespace {
 
-		/**
-		 * The actual calculator computing the size of regions.
-		 */
-		class SizeCalculator {
+/**
+ * The actual calculator computing the size of regions.
+ */
+class SizeCalculator {
 
-			utils::cache::PointerCache<core::NodePtr, unsigned> cache;
+	utils::cache::PointerCache<core::NodePtr, unsigned> cache;
+	
+public:
 
-		public:
-
-			SizeCalculator() : cache(fun(*this, &SizeCalculator::calcRegionSize)) {}
-
-			unsigned estimateSize(const core::NodePtr& node) {
-				if(node->getNodeCategory() == core::NC_Type) return 0;
-				return cache.get(node);
-			}
-
-		private:
-
-			unsigned calcRegionSize(const core::NodePtr& node) {
-				if(node->getNodeCategory() == core::NC_Type) return 0;
-
-				// estimate size
-				unsigned size = 1;
-				for_each(node->getChildList(), [&](const core::NodePtr& child) {
-					size += estimateSize(child);
-				});
-
-				// multiply with number of iterations (loops count twice)
-				unsigned mul = 1;
-				auto t = node->getNodeType();
-				auto& b = node->getNodeManager().getLangBasic();
-				if (t == core::NT_ForStmt || t == core::NT_WhileStmt) mul = 2;
-				if (core::analysis::isCallOf(node, b.getPFor())) mul = 2;
-
-				return size * mul;
-			}
-		};
-
+	SizeCalculator() : cache(fun(*this, &SizeCalculator::calcRegionSize)) {}
+	
+	unsigned estimateSize(const core::NodePtr& node) {
+		if(node->getNodeCategory() == core::NC_Type) {
+			return 0;
+		}
+		return cache.get(node);
 	}
+	
+private:
 
-	RegionList SizeBasedRegionSelector::getRegions(const core::NodePtr& node) const {
-		RegionList regions;
-
-		SizeCalculator calculator;
-		visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
-			unsigned size = calculator.estimateSize(comp.getAddressedNode());
-			if(minSize < size && size < maxSize) {
-				regions.push_back(comp);
-				return true;
-			}
-			return false;
+	unsigned calcRegionSize(const core::NodePtr& node) {
+		if(node->getNodeCategory() == core::NC_Type) {
+			return 0;
+		}
+		
+		// estimate size
+		unsigned size = 1;
+		for_each(node->getChildList(), [&](const core::NodePtr& child) {
+			size += estimateSize(child);
 		});
-		return regions;
+		
+		// multiply with number of iterations (loops count twice)
+		unsigned mul = 1;
+		auto t = node->getNodeType();
+		auto& b = node->getNodeManager().getLangBasic();
+		if(t == core::NT_ForStmt || t == core::NT_WhileStmt) {
+			mul = 2;
+		}
+		if(core::analysis::isCallOf(node, b.getPFor())) {
+			mul = 2;
+		}
+		
+		return size * mul;
 	}
+};
+
+}
+
+RegionList SizeBasedRegionSelector::getRegions(const core::NodePtr& node) const {
+	RegionList regions;
+	
+	SizeCalculator calculator;
+	visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
+		unsigned size = calculator.estimateSize(comp.getAddressedNode());
+		if(minSize < size && size < maxSize) {
+			regions.push_back(comp);
+			return true;
+		}
+		return false;
+	});
+	return regions;
+}
 
 } // end namespace region
 } // end namespace analysis

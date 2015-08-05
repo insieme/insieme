@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,23 +39,23 @@
 namespace insieme {
 namespace utils {
 
-	/**
-	 * Some general math utilitiy functions.
-	 */
+/**
+ * Some general math utilitiy functions.
+ */
 
 
-	// saturation add
-	template<typename T>
-	T saturating_add(T a, T b) {
-		const T max = std::numeric_limits<T>::max();
-		return (a > max - b) ? max : a + b;
-	}
+// saturation add
+template<typename T>
+T saturating_add(T a, T b) {
+	const T max = std::numeric_limits<T>::max();
+	return (a > max - b) ? max : a + b;
+}
 
-	// saturation sub
-	template<typename T>
-	T saturating_sub(T a, T b) {
-		return (a < b) ? 0 : a - b;
-	}
+// saturation sub
+template<typename T>
+T saturating_sub(T a, T b) {
+	return (a < b) ? 0 : a - b;
+}
 
 } // end utils
 } // end insieme

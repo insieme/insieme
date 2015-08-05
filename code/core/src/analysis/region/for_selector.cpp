@@ -45,22 +45,22 @@ namespace core {
 namespace analysis {
 namespace region {
 
-	RegionList ForSelector::getRegions(const core::NodePtr& node) const {
+RegionList ForSelector::getRegions(const core::NodePtr& node) const {
 
-		RegionList res;
-
-		core::visitDepthFirst(core::NodeAddress(node), [&](const core::StatementAddress& cur)->bool {
-			if (cur.getAddressedNode()->getNodeType() != core::NT_ForStmt) {
-				return false;
-			}
-
-			res.push_back(cur);
-
-			return true;
-		}, false);
-
-		return res;
-	}
+	RegionList res;
+	
+	core::visitDepthFirst(core::NodeAddress(node), [&](const core::StatementAddress& cur)->bool {
+		if(cur.getAddressedNode()->getNodeType() != core::NT_ForStmt) {
+			return false;
+		}
+		
+		res.push_back(cur);
+		
+		return true;
+	}, false);
+	
+	return res;
+}
 
 } // end namespace region
 } // end namespace analysis

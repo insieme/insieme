@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,17 +46,26 @@ typedef int64_t irt_range_int;
 
 typedef union {
 	irt_range_int s[1];
-	struct { irt_range_int x; };
+	struct {
+		irt_range_int x;
+	};
 } irt_range_point_1d;
 
 typedef union {
 	irt_range_int s[2];
-	struct { irt_range_int x; irt_range_int y; };
+	struct {
+		irt_range_int x;
+		irt_range_int y;
+	};
 } irt_range_point_2d;
 
 typedef union {
 	irt_range_int s[3];
-	struct { irt_range_int x; irt_range_int y; irt_range_int z; };
+	struct {
+		irt_range_int x;
+		irt_range_int y;
+		irt_range_int z;
+	};
 } irt_range_point_3d;
 
 
@@ -105,13 +114,19 @@ inline bool irt_range_point_3d_eq(irt_range_point_3d a, irt_range_point_3d b) {
 // ---- Addition -------
 
 inline irt_range_point_1d irt_range_point_1d_add(irt_range_point_1d a, irt_range_point_1d b) {
-	return (irt_range_point_1d){a.x + b.x};
+	return (irt_range_point_1d) {
+		a.x + b.x
+	};
 }
 inline irt_range_point_2d irt_range_point_2d_add(irt_range_point_2d a, irt_range_point_2d b) {
-	return (irt_range_point_2d){a.x + b.x, a.y + b.y};
+	return (irt_range_point_2d) {
+		a.x + b.x, a.y + b.y
+	};
 }
 inline irt_range_point_3d irt_range_point_3d_add(irt_range_point_3d a, irt_range_point_3d b) {
-	return (irt_range_point_3d){a.x + b.x, a.y + b.y, a.z + b.z};
+	return (irt_range_point_3d) {
+		a.x + b.x, a.y + b.y, a.z + b.z
+	};
 }
 
 

@@ -60,12 +60,16 @@ class TestPragmaExtension : public FrontendExtension {
 	std::string expected;
 	// holds a number of dummy arguments used for pragma parsing and location testing
 	std::vector<std::string> dummyArguments;
-
+	
 public:
 	TestPragmaExtension();
-	std::string getExpected() const { return expected; }
-	std::vector<std::string> getDummyArguments() const { return dummyArguments; }
-
+	std::string getExpected() const {
+		return expected;
+	}
+	std::vector<std::string> getDummyArguments() const {
+		return dummyArguments;
+	}
+	
 };
 
 } // extensions

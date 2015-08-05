@@ -76,14 +76,14 @@ extern "C" {
 TEST(SetDopTest, MMul) {
 	irt::init(MAX_PARA);
 	irt::run([]() {
-		
+	
 		for(int i=0; i<N; i++) {
 			for(int j=0; j<N; j++) {
 				A[i][j] = i*j;
 				B[i][j] = (i==j)?1:0;
 			}
 		}
-
+		
 		uint32 expected = 0;
 		auto workload = [&]() {
 			EXPECT_EQ(expected, irt::group_size());
@@ -91,24 +91,24 @@ TEST(SetDopTest, MMul) {
 				for(int j=0; j<N; j++) {
 					for(int k=0; k<N; k++) {
 						C[i][j] += A[i][k] * B[k][j];
-					}			
+					}
 				}
 			});
 			EXPECT_EQ(expected, irt::group_size());
 		};
-
+		
 		irt_scheduling_set_dop(MAX_PARA);
 		expected = MAX_PARA;
 		irt::merge(irt::parallel(workload));
-
+		
 		irt_scheduling_set_dop(MAX_PARA/2);
 		expected = MAX_PARA/2;
 		irt::merge(irt::parallel(workload));
-
+		
 		irt_scheduling_set_dop(MAX_PARA/4);
 		expected = MAX_PARA/4;
 		irt::merge(irt::parallel(workload));
-
+		
 		irt_scheduling_set_dop(MAX_PARA);
 		expected = MAX_PARA;
 		irt::merge(irt::parallel(workload));
@@ -138,8 +138,8 @@ TEST(SetDopTest, External) {
 	for(int i = 0; i<N; ++i) {
 		irt::init(MAX_PARA);
 		volatile bool run = true;
-		auto f = std::async(std::launch::async, [&run] { 
-			while(run) { 
+		auto f = std::async(std::launch::async, [&run] {
+			while(run) {
 				irt_scheduling_set_dop(rand()%MAX_PARA + 1);
 				irt_busy_nanosleep(50 * 1000);
 			};
@@ -147,7 +147,9 @@ TEST(SetDopTest, External) {
 		});
 		irt::run([]() {
 			double sum = 0;
-			for(int i=0; i<N; ++i) sum += sin(rand()%10/10.0);
+			for(int i=0; i<N; ++i) {
+				sum += sin(rand()%10/10.0);
+			}
 			printf("", sum);
 		});
 		run = false;

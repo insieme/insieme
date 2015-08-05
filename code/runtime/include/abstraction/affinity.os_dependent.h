@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,15 +45,15 @@
 #include "abstraction/threads.h"
 
 #ifdef _WIN32
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
+#include <io.h>
+#include <Windows.h>
+typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
 #elif defined(_GEMS_SIM)
-	// TODO: must still find a proper type
-	typedef int irt_native_cpu_set;
+// TODO: must still find a proper type
+typedef int irt_native_cpu_set;
 #else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
+#include <unistd.h>
+typedef cpu_set_t irt_native_cpu_set;
 #endif
 
 

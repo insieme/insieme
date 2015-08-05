@@ -29,20 +29,20 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <stdio.h>
 
 int main() {
-    //check for macro definition
-    A;
-    //check for injected headers
-    int x = magicFunction();
-    #pragma te loop x num_threads(x*2)
-    #pragma te scheduling auto
-    return 0;
-    #pragma te barrier
+	//check for macro definition
+	A;
+	//check for injected headers
+	int x = magicFunction();
+#pragma te loop x num_threads(x*2)
+#pragma te scheduling auto
+	return 0;
+#pragma te barrier
 }

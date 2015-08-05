@@ -1,20 +1,20 @@
 
-class o{
-	public:
+class o {
+public:
 	int a();
 	int b();
-
+	
 };
 
-int o::a(){
+int o::a() {
 	return b();
 }
 
-int o::b(){
+int o::b() {
 	return a();
 }
 
-int main (){
+int main() {
 	o c;
 	c.a();
 }

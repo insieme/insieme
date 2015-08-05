@@ -10,6 +10,7 @@ build*/
 *.swp
 *.so
 *.so.*
+*.orig
 /nbproject/private/
 create*.sh
 worker_event_log.*

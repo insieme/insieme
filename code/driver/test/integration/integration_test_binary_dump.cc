@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -60,47 +60,47 @@
 
 namespace insieme {
 
-	using namespace driver::integration;
+using namespace driver::integration;
 
-	// ---------------------------------- Check the binary dump -------------------------------------
+// ---------------------------------- Check the binary dump -------------------------------------
 
-	// the type definition (specifying the parameter type)
-	class BinaryDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+// the type definition (specifying the parameter type)
+class BinaryDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
 
-	// define the test case pattern
-	TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
-		core::NodeManager managerA;
-
-		// obtain test case
-		IntegrationTestCase testCase = GetParam();
-
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
+// define the test case pattern
+TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
+	core::NodeManager managerA;
 	
-		// load the code using the frontend
-		core::ProgramPtr code = testCase.load(managerA);
+	// obtain test case
+	IntegrationTestCase testCase = GetParam();
+	
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
+	
+	// load the code using the frontend
+	core::ProgramPtr code = testCase.load(managerA);
+	
+	// create a in-memory stream
+	std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+	
+	// dump IR using a binary format
+	core::dump::binary::dumpIR(buffer, code);
+	
+	// reload IR using a different node manager
+	core::NodeManager managerB;
+	core::NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
+	
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored);
+	
+	buffer.seekg(0); // reset stream
+	
+	core::NodePtr restored2 = core::dump::binary::loadIR(buffer, managerA);
+	EXPECT_EQ(code, restored2);
+	
+}
 
-		// create a in-memory stream
-		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
-
-		// dump IR using a binary format
-		core::dump::binary::dumpIR(buffer, code);
-
-		// reload IR using a different node manager
-		core::NodeManager managerB;
-		core::NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
-
-		EXPECT_NE(code, restored);
-		EXPECT_EQ(*code, *restored);
-
-		buffer.seekg(0); // reset stream
-
-		core::NodePtr restored2 = core::dump::binary::loadIR(buffer, managerA);
-		EXPECT_EQ(code, restored2);
-
-	}
-
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(BinaryDumpIntegrationCheck, BinaryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(BinaryDumpIntegrationCheck, BinaryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }

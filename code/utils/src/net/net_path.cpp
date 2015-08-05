@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,100 +46,110 @@ namespace insieme {
 namespace utils {
 namespace net {
 
-	namespace bfs = boost::filesystem;
+namespace bfs = boost::filesystem;
 
-	int runCommand(const std::string& cmd) {
-		LOG(DEBUG) << "Running " << cmd << "\n";
-		return system((cmd + "> /dev/null").c_str());
+int runCommand(const std::string& cmd) {
+	LOG(DEBUG) << "Running " << cmd << "\n";
+	return system((cmd + "> /dev/null").c_str());
 //		return system(cmd.c_str());
+}
+
+NetworkPath::NetworkPath(const bfs::path& path)
+	: hostname(""), username(""), path(path) {}
+	
+NetworkPath::NetworkPath(const string& hostname, const bfs::path& path)
+	: hostname(hostname), username(""), path(path) {}
+	
+NetworkPath::NetworkPath(const string& hostname, const string& username, const bfs::path& path)
+	: hostname(hostname), username(username), path(path) {}
+	
+string NetworkPath::getUserHostnamePrefix() const {
+	if(isLocal()) {
+		return "";
 	}
-
-	NetworkPath::NetworkPath(const bfs::path& path)
-		: hostname(""), username(""), path(path) {}
-
-	NetworkPath::NetworkPath(const string& hostname, const bfs::path& path)
-		: hostname(hostname), username(""), path(path) {}
-
-	NetworkPath::NetworkPath(const string& hostname, const string& username, const bfs::path& path)
-		: hostname(hostname), username(username), path(path) {}
-
-	string NetworkPath::getUserHostnamePrefix() const {
-		if (isLocal()) {
-			return "";
-		}
-		std::stringstream res;
-		if (!username.empty()) {
-			res << username << "@";
-		}
-		res << hostname;
-		return res.str();
+	std::stringstream res;
+	if(!username.empty()) {
+		res << username << "@";
 	}
+	res << hostname;
+	return res.str();
+}
 
-	NetworkPath NetworkPath::parent_path() const {
-		return NetworkPath(hostname, username, path.parent_path());
+NetworkPath NetworkPath::parent_path() const {
+	return NetworkPath(hostname, username, path.parent_path());
+}
+
+bool NetworkPath::operator==(const NetworkPath& other) const {
+	return hostname==other.hostname && username==other.username && path==other.path;
+}
+
+NetworkPath& NetworkPath::operator/=(const bfs::path& ext) {
+	path = path / ext;
+	return *this;
+}
+
+NetworkPath NetworkPath::operator/(const bfs::path& ext) const {
+	NetworkPath res = *this;
+	res /= ext;
+	return res;
+}
+
+std::ostream& NetworkPath::printTo(std::ostream& out) const {
+	if(!username.empty()) {
+		return out << username << "@" << hostname << ":" << path.string();
 	}
-
-	bool NetworkPath::operator==(const NetworkPath& other) const {
-		return hostname==other.hostname && username==other.username && path==other.path;
+	if(!hostname.empty()) {
+		return out << hostname << ":" << path.string();
 	}
+	return out << path.string();
+}
 
-	NetworkPath& NetworkPath::operator/=(const bfs::path& ext) {
-		path = path / ext;
-		return *this;
+
+bool exists(const NetworkPath& path) {
+	if(path.isLocal()) {
+		return bfs::exists(path.path);
 	}
+	
+	// check remotely using an ssh connection
+	return runCommand("ssh " + path.getUserHostnamePrefix() + " test -e " + toString(path.path)) == 0;
+}
 
-	NetworkPath NetworkPath::operator/(const bfs::path& ext) const {
-		NetworkPath res = *this;
-		res /= ext;
-		return res;
+bool is_directory(const NetworkPath& path) {
+	if(path.isLocal()) {
+		return bfs::is_directory(path.path);
 	}
+	return runCommand("ssh " + path.getUserHostnamePrefix() + " test -d " + toString(path.path)) == 0;
+}
 
-	std::ostream& NetworkPath::printTo(std::ostream& out) const {
-		if (!username.empty()) {
-			return out << username << "@" << hostname << ":" << path.string();
-		}
-		if (!hostname.empty()) {
-			return out << hostname << ":" << path.string();
-		}
-		return out << path.string();
+bool create_directories(const NetworkPath& path) {
+	if(path.isLocal()) {
+		return bfs::create_directories(path.path);
 	}
+	string dir = toString(path.path);
+	return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test ! -e " + dir + " && mkdir -p " + dir + "\"") == 0;
+}
 
-
-	bool exists(const NetworkPath& path) {
-		if (path.isLocal()) return bfs::exists(path.path);
-
-		// check remotely using an ssh connection
-		return runCommand("ssh " + path.getUserHostnamePrefix() + " test -e " + toString(path.path)) == 0;
+bool remove(const NetworkPath& path) {
+	if(path.isLocal()) {
+		return bfs::remove(path.path);
 	}
+	string file = toString(path.path);
+	return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test -f " + file + " && rm " + file + "\"") == 0;
+}
 
-	bool is_directory(const NetworkPath& path) {
-		if (path.isLocal()) return bfs::is_directory(path.path);
-		return runCommand("ssh " + path.getUserHostnamePrefix() + " test -d " + toString(path.path)) == 0;
+bool remove_all(const NetworkPath& path) {
+	if(path.isLocal()) {
+		return bfs::remove_all(path.path);
 	}
+	string dir = toString(path.path);
+	return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test -e " + dir + " && rm -rf " + dir + "\"") == 0;
+}
 
-	bool create_directories(const NetworkPath& path) {
-		if (path.isLocal()) return bfs::create_directories(path.path);
-		string dir = toString(path.path);
-		return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test ! -e " + dir + " && mkdir -p " + dir + "\"") == 0;
-	}
-
-	bool remove(const NetworkPath& path) {
-		if (path.isLocal()) return bfs::remove(path.path);
-		string file = toString(path.path);
-		return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test -f " + file + " && rm " + file + "\"") == 0;
-	}
-
-	bool remove_all(const NetworkPath& path) {
-		if (path.isLocal()) return bfs::remove_all(path.path);
-		string dir = toString(path.path);
-		return runCommand("ssh " + path.getUserHostnamePrefix() + " \"test -e " + dir + " && rm -rf " + dir + "\"") == 0;
-	}
-
-	bool copy(const NetworkPath& src, const NetworkPath& trg) {
-		string srcFile = toString(src);
-		string trgFile = toString(trg);
-		return runCommand("scp -r -p " + srcFile + " " + trgFile) == 0;
-	}
+bool copy(const NetworkPath& src, const NetworkPath& trg) {
+	string srcFile = toString(src);
+	string trgFile = toString(trg);
+	return runCommand("scp -r -p " + srcFile + " " + trgFile) == 0;
+}
 
 } // end namespace net
 } // end namespace utils

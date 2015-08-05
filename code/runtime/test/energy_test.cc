@@ -84,24 +84,24 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 	uint32 sockets = irt_hw_get_num_sockets();
 	uint32 length = 0;
 	uint32 frequencies[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
-
+	
 	// assumes that all cores support the same frequencies
 	irt_cpu_freq_get_available_frequencies_core(0, frequencies, &length);
-
-	if (length == 0) {
+	
+	if(length == 0) {
 		printf("warning, query for available frequencies was not successful, trying only with min and max\n");
 		frequencies[0] = _irt_cpu_freq_get_uncached(0, "cpuinfo_min_freq");
 		frequencies[1] = _irt_cpu_freq_get_uncached(0, "cpuinfo_max_freq");
 		length = 2;
 	}
-
+	
 	// make sure there are at least two frequency settings available
 	ASSERT_GT(length, 1);
 	EXPECT_GT(frequencies[0], 0);
 	EXPECT_GE(frequencies[1], frequencies[0]);
-
+	
 	uint32 total_num_logical_cpus = irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket() * irt_hw_get_num_threads_per_core();
-
+	
 	// try each frequency once
 	for(uint32 freq_id = 0; freq_id < length; ++freq_id) {
 		uint32 all_core_frequencies_min[total_num_logical_cpus];
@@ -130,7 +130,8 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 						EXPECT_EQ(_irt_cpu_freq_get_cached(sibling, SCALING_MIN_FREQ), frequency);
 						EXPECT_EQ(_irt_cpu_freq_get_cached(sibling, SCALING_MAX_FREQ), frequency);
 					}
-				} else {
+				}
+				else {
 					EXPECT_EQ(_irt_cpu_freq_get_uncached(core_id, "scaling_min_freq"), all_core_frequencies_min[core_id]);
 					EXPECT_EQ(_irt_cpu_freq_get_uncached(core_id, "scaling_max_freq"), all_core_frequencies_max[core_id]);
 					EXPECT_EQ(_irt_cpu_freq_get_cached(core_id, SCALING_MIN_FREQ), all_core_frequencies_min[core_id]);
@@ -158,46 +159,47 @@ void insieme_wi_startup_implementation_dvfs(irt_work_item* wi) {
 void insieme_wi_startup_implementation_rapl(irt_work_item* wi) {
 
 	// check if capabilities are required (kernel versions 3.7 and olders that have the CAP_SYS_RAWIO security fix)
-
+	
 	struct stat info = { 0 };
 	int32 retval = stat("/dev/cpu/0/msr", &info);
 	ASSERT_EQ(retval, 0); // check whether file is present (and we have execute permissions on the parent directory)
 	ASSERT_NE(info.st_mode & S_IROTH, 0); // check whether file has o+r permission (assuming that it is owned by root:root)
-
+	
 	int32 file = _irt_open_msr(0);
-
+	
 	// if this fails although the file was present and permissions were set correctly, we are working on a system
 	// where the CAP_SYS_RAWIO capability is necessary (i.e. Linux kernels 3.7 and newer)
 	ASSERT_NE(file, -1); // check if file could be opened
 	_irt_close_msr(file);
-
+	
 	irt_affinity_policy policy = { IRT_AFFINITY_FIXED, 0 };
-
+	
 	// try each socket once
 	for(uint32 socketid = 0; socketid < irt_hw_get_num_sockets(); ++socketid) {
-
+	
 		uint32 workerid = 0;
-
+		
 		// init affinity map to 0
-		for(uint32 coreid = 0; coreid < IRT_MAX_WORKERS; ++coreid)
+		for(uint32 coreid = 0; coreid < IRT_MAX_WORKERS; ++coreid) {
 			policy.fixed_map[coreid] = 0;
-
+		}
+		
 		// set affinity map to use all cores of the current socket
 		for(uint32 coreid = socketid * irt_hw_get_num_cores_per_socket(); coreid < (socketid+1) * irt_hw_get_num_cores_per_socket(); ++coreid) {
 			policy.fixed_map[workerid++] = coreid;
 			//printf("%d\n", policy.fixed_map[coreid]);
 		}
-
+		
 		// set afinity
 		irt_set_global_affinity_policy(policy);
-
+		
 		rapl_energy_data data, data2;
 		
 		// take a reading, sleep for 100 ms and take another reading
 		irt_get_energy_consumption(&data);
 		irt_nanosleep(1e8);
 		irt_get_energy_consumption(&data2);
-
+		
 		// check rapl readings
 		EXPECT_LT(0.001, data2.package - data.package);
 		EXPECT_LT(data2.package - data.package, 100);

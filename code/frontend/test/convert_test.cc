@@ -48,9 +48,9 @@
 namespace insieme {
 namespace frontend {
 
-	// FIXME:  DEACTIVATED
-	//   checks in the translation unit migth not have all the complete types
-	//   the therefore generic types aliasing declaration, will not be equivalent
+// FIXME:  DEACTIVATED
+//   checks in the translation unit migth not have all the complete types
+//   the therefore generic types aliasing declaration, will not be equivalent
 //	TEST(Converter, ConverToTranslationUnit) {
 //		core::NodeManager mgr;
 //
@@ -67,101 +67,101 @@ namespace frontend {
 //		}
 //	}
 
-	TEST(Converter, ConvertToProgram) {
-		core::NodeManager mgr;
-
-		ConversionSetup setup;
-		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/conversion_test.cpp", setup);
-
+TEST(Converter, ConvertToProgram) {
+	core::NodeManager mgr;
+	
+	ConversionSetup setup;
+	setup.setStandard(ConversionSetup::Cxx03);
+	auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/conversion_test.cpp", setup);
+	
 //		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-
+	EXPECT_FALSE(tu.getFunctions().empty());
+	
 //		std::cout << "\n\n----------------------------------------------------------------------\n\n";
 
-		auto program = tu::toProgram(mgr, tu);
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-
-		string res = toString(core::printer::PrettyPrinter(program));
-
-
-		// this test makes no sense, functions might have whatever names if the resolver is changed
+	auto program = tu::toProgram(mgr, tu);
+	EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+	
+	string res = toString(core::printer::PrettyPrinter(program));
+	
+	
+	// this test makes no sense, functions might have whatever names if the resolver is changed
 //		EXPECT_PRED2(containsSubString, res, "let fun003 = recFun v37 {");		// even header
 //		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v38 {");		// odd header
 
-		// check global variable setup
-		EXPECT_PRED2(containsSubString, res, "(counter := 10);");
-		// split up this assertions because the local static
-		// variables have some random suffix
-		EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp1122_21, 3.0);");
+	// check global variable setup
+	EXPECT_PRED2(containsSubString, res, "(counter := 10);");
+	// split up this assertions because the local static
+	// variables have some random suffix
+	EXPECT_PRED2(containsSubString, res, "frontend_test__inputs_conversion_test_cpp1122_21, 3.0);");
+	
+	
+}
 
-
-	}
-
-	TEST(Converter, Globals) {
-		core::NodeManager mgr;
-
-		auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/globals.c");
-
+TEST(Converter, Globals) {
+	core::NodeManager mgr;
+	
+	auto tu = convert(mgr, FRONTEND_TEST_DIR "/inputs/globals.c");
+	
 //		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-		EXPECT_FALSE(tu.getGlobals().empty());
+	EXPECT_FALSE(tu.getFunctions().empty());
+	EXPECT_FALSE(tu.getGlobals().empty());
+	
+	EXPECT_EQ(tu.getGlobals().size(), 4);   // 4 globals, no one cares for the poor extern and static one
+	
+}
 
-		EXPECT_EQ( tu.getGlobals().size(), 4);  // 4 globals, no one cares for the poor extern and static one
+TEST(Converter, ConversionSetup) {
 
-	}
+	ConversionSetup setup;
+	
+	// check Auto
+	setup.setStandard(ConversionSetup::Auto);
+	
+	EXPECT_TRUE(setup.isCxx("test.cpp"));
+	EXPECT_TRUE(setup.isCxx("test/test.cpp"));
+	EXPECT_TRUE(setup.isCxx("test.cc"));
+	EXPECT_TRUE(setup.isCxx("test.cxx"));
+	EXPECT_TRUE(setup.isCxx("test.C"));
+	
+	EXPECT_FALSE(setup.isCxx("test"));
+	EXPECT_FALSE(setup.isCxx("test.c"));
+	EXPECT_FALSE(setup.isCxx("test/test.a"));
+	
+	
+	// check C99
+	setup.setStandard(ConversionSetup::C99);
+	
+	EXPECT_FALSE(setup.isCxx("test.cpp"));
+	EXPECT_FALSE(setup.isCxx("test/test.cpp"));
+	EXPECT_FALSE(setup.isCxx("test.cc"));
+	EXPECT_FALSE(setup.isCxx("test.cxx"));
+	EXPECT_FALSE(setup.isCxx("test.C"));
+	
+	EXPECT_FALSE(setup.isCxx("test"));
+	EXPECT_FALSE(setup.isCxx("test.c"));
+	EXPECT_FALSE(setup.isCxx("test/test.a"));
+	
+	// check Cxx03
+	setup.setStandard(ConversionSetup::Cxx03);
+	
+	EXPECT_TRUE(setup.isCxx("test.cpp"));
+	EXPECT_TRUE(setup.isCxx("test/test.cpp"));
+	EXPECT_TRUE(setup.isCxx("test.cc"));
+	EXPECT_TRUE(setup.isCxx("test.cxx"));
+	EXPECT_TRUE(setup.isCxx("test.C"));
+	
+	EXPECT_TRUE(setup.isCxx("test"));
+	EXPECT_TRUE(setup.isCxx("test.c"));
+	EXPECT_TRUE(setup.isCxx("test/test.a"));
+	
+}
 
-	TEST(Converter, ConversionSetup) {
+TEST(Converter, EvenOdd) {
 
-		ConversionSetup setup;
-
-		// check Auto
-		setup.setStandard(ConversionSetup::Auto);
-
-		EXPECT_TRUE(setup.isCxx("test.cpp"));
-		EXPECT_TRUE(setup.isCxx("test/test.cpp"));
-		EXPECT_TRUE(setup.isCxx("test.cc"));
-		EXPECT_TRUE(setup.isCxx("test.cxx"));
-		EXPECT_TRUE(setup.isCxx("test.C"));
-
-		EXPECT_FALSE(setup.isCxx("test"));
-		EXPECT_FALSE(setup.isCxx("test.c"));
-		EXPECT_FALSE(setup.isCxx("test/test.a"));
-
-
-		// check C99
-		setup.setStandard(ConversionSetup::C99);
-
-		EXPECT_FALSE(setup.isCxx("test.cpp"));
-		EXPECT_FALSE(setup.isCxx("test/test.cpp"));
-		EXPECT_FALSE(setup.isCxx("test.cc"));
-		EXPECT_FALSE(setup.isCxx("test.cxx"));
-		EXPECT_FALSE(setup.isCxx("test.C"));
-
-		EXPECT_FALSE(setup.isCxx("test"));
-		EXPECT_FALSE(setup.isCxx("test.c"));
-		EXPECT_FALSE(setup.isCxx("test/test.a"));
-
-		// check Cxx03
-		setup.setStandard(ConversionSetup::Cxx03);
-
-		EXPECT_TRUE(setup.isCxx("test.cpp"));
-		EXPECT_TRUE(setup.isCxx("test/test.cpp"));
-		EXPECT_TRUE(setup.isCxx("test.cc"));
-		EXPECT_TRUE(setup.isCxx("test.cxx"));
-		EXPECT_TRUE(setup.isCxx("test.C"));
-
-		EXPECT_TRUE(setup.isCxx("test"));
-		EXPECT_TRUE(setup.isCxx("test.c"));
-		EXPECT_TRUE(setup.isCxx("test/test.a"));
-
-	}
-
-	TEST(Converter, EvenOdd) {
-
-		// create a temporary source file
-		Source file(
-				R"(
+	// create a temporary source file
+	Source file(
+	    R"(
 					#define bool int
 
 					#define true 1
@@ -186,49 +186,52 @@ namespace frontend {
 					}
 
 				)"
-		);
-
-		// check the resulting translation unit
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-		auto irtu = ConversionJob(file).toIRTranslationUnit(manager);
+	);
+	
+	// check the resulting translation unit
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	auto irtu = ConversionJob(file).toIRTranslationUnit(manager);
 //		std::cout << irtu << "\n";
 
-		// there should be 3 function symbols
-		EXPECT_EQ(3u, irtu.getFunctions().size());
-
-		auto print = [&](const core::NodePtr& node) {
-			return toString(core::printer::PrettyPrinter(builder.normalize(node), core::printer::PrettyPrinter::PRINT_SINGLE_LINE | core::printer::PrettyPrinter::NO_LET_BINDINGS));
-		};
-
-		// among them, even and odd
-		auto evenLit = builder.parseExpr("lit(\"even\":(uint<4>)->int<4>)").as<core::LiteralPtr>();
-		auto oddLit = builder.parseExpr("lit(\"odd\":(uint<4>)->int<4>)").as<core::LiteralPtr>();
-		ASSERT_TRUE(irtu[evenLit]);
-		ASSERT_TRUE(irtu[oddLit]);
-
-		// check their definition
-		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (((v1==0u))?1:odd((v1-1u)));}", print(irtu[evenLit]));
-		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (((v1==0u))?0:even((v1-1u)));}", print(irtu[oddLit]));
-
-		// check resolved version
-		auto even = irtu.resolve(evenLit);
-		EXPECT_EQ("recFun v0 {v1 = fun(uint<4> v2) -> int<4> {return (((v2==0u))?0:v0((v2-1u)));};v0 = fun(uint<4> v5) -> int<4> {return (((v5==0u))?1:v1((v5-1u)));};}", print(even));
-
-		auto odd = irtu.resolve(oddLit);
-		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (((v1==0u))?0:v4((v1-1u)));};v4 = fun(uint<4> v5) -> int<4> {return (((v5==0u))?1:v0((v5-1u)));};}", print(odd));
-
-		auto program = tu::toProgram(manager, irtu);
+	// there should be 3 function symbols
+	EXPECT_EQ(3u, irtu.getFunctions().size());
+	
+	auto print = [&](const core::NodePtr& node) {
+		return toString(core::printer::PrettyPrinter(builder.normalize(node),
+		                core::printer::PrettyPrinter::PRINT_SINGLE_LINE | core::printer::PrettyPrinter::NO_LET_BINDINGS));
+	};
+	
+	// among them, even and odd
+	auto evenLit = builder.parseExpr("lit(\"even\":(uint<4>)->int<4>)").as<core::LiteralPtr>();
+	auto oddLit = builder.parseExpr("lit(\"odd\":(uint<4>)->int<4>)").as<core::LiteralPtr>();
+	ASSERT_TRUE(irtu[evenLit]);
+	ASSERT_TRUE(irtu[oddLit]);
+	
+	// check their definition
+	EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (((v1==0u))?1:odd((v1-1u)));}", print(irtu[evenLit]));
+	EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (((v1==0u))?0:even((v1-1u)));}", print(irtu[oddLit]));
+	
+	// check resolved version
+	auto even = irtu.resolve(evenLit);
+	EXPECT_EQ("recFun v0 {v1 = fun(uint<4> v2) -> int<4> {return (((v2==0u))?0:v0((v2-1u)));};v0 = fun(uint<4> v5) -> int<4> {return (((v5==0u))?1:v1((v5-1u)));};}",
+	          print(even));
+	          
+	auto odd = irtu.resolve(oddLit);
+	EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (((v1==0u))?0:v4((v1-1u)));};v4 = fun(uint<4> v5) -> int<4> {return (((v5==0u))?1:v0((v5-1u)));};}",
+	          print(odd));
+	          
+	auto program = tu::toProgram(manager, irtu);
 //		dump(program);
 
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-	}
+	EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+}
 
-	TEST(Converter, MutualRecursiveClasses) {
+TEST(Converter, MutualRecursiveClasses) {
 
-		// create a temporary source file
-		Source file(
-				R"(
+	// create a temporary source file
+	Source file(
+	    R"(
 
 					struct A;
 					struct B;
@@ -250,23 +253,23 @@ namespace frontend {
 					}
 
 				)",
-				CPP
-		);
-
-		// check the resulting translation unit
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-		auto irtu = ConversionJob(file).toIRTranslationUnit(manager);
+	    CPP
+	);
+	
+	// check the resulting translation unit
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	auto irtu = ConversionJob(file).toIRTranslationUnit(manager);
 //		std::cout << irtu << "\n";
 
-		// just test whether this works
-		irtu.resolve(builder.genericType("A"));
-
-		auto program = tu::toProgram(manager, irtu);
-
+	// just test whether this works
+	irtu.resolve(builder.genericType("A"));
+	
+	auto program = tu::toProgram(manager, irtu);
+	
 //		dumpPretty(program);
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-	}
+	EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+}
 
 } // end frontend
 } // end insieme

@@ -46,228 +46,228 @@ namespace core {
 namespace types {
 
 
-	TEST(typecast, literals) {
+TEST(typecast, literals) {
+
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+	std::vector<TypePtr> types;
 	
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-		std::vector<TypePtr> types;
-
-		types.push_back(basic.getInt1());
-		types.push_back(basic.getInt2());
-		types.push_back(basic.getInt4());
-		types.push_back(basic.getInt8());
-		types.push_back(basic.getInt16());
-
-		types.push_back(basic.getReal4());
-		types.push_back(basic.getReal8());
-
-		types.push_back(basic.getUInt1());
-		types.push_back(basic.getUInt2());
-		types.push_back(basic.getUInt4());
-		types.push_back(basic.getUInt8());
-		types.push_back(basic.getUInt16());
-
-		for (auto type_a : types){
-			for (auto type_b : types){
-				auto lit = builder.literal(type_a, "8");
-				
-				EXPECT_EQ(lit.getType(), type_a);
-				EXPECT_EQ(smartCast(lit, type_b).getType(), type_b);
-			}
-		}	
-	}
-
-	template <typename T>
-	std::string toString(const T& val){
-		std::stringstream ss;
-		ss << val;
-		return ss.str();
-	}
-
-
-	TEST(typecast, limitsMax) {
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-		std::vector< std::pair<TypePtr,std::string> > types;
-
-		types.push_back({basic.getInt1(),  toString(INT8_MAX)});
-		types.push_back({basic.getInt2(),  toString(INT16_MAX)});
-		types.push_back({basic.getInt4(),  toString(INT32_MAX)});
-		types.push_back({basic.getInt8(),  toString(INT64_MAX)});
-		types.push_back({basic.getInt16(), toString(INT64_MAX)});
-
-		types.push_back({basic.getReal4(), toString(1)});
-		types.push_back({basic.getReal8(), toString(1)});
-
-		types.push_back({basic.getUInt1(), toString(UINT8_MAX)});
-		types.push_back({basic.getUInt2(), toString(UINT16_MAX)});
-		types.push_back({basic.getUInt4(), toString(UINT32_MAX)});
-		types.push_back({basic.getUInt8(), toString(UINT64_MAX)});
-		types.push_back({basic.getUInt16(), toString(UINT64_MAX)});
-
-		for (auto type_a : types){
-			for (auto type_b : types){
-				auto lit = builder.literal(type_a.first, type_a.second);
-				
-				EXPECT_EQ(lit.getType(), type_a.first);
-
-				auto x = smartCast(lit, type_b.first);
-				std::cout << lit << " -> " << x << std::endl;
-				EXPECT_EQ(x.getType(), type_b.first);
-			}
-		}	
-	}
-
-
-	TEST(TypeCast, value) {
+	types.push_back(basic.getInt1());
+	types.push_back(basic.getInt2());
+	types.push_back(basic.getInt4());
+	types.push_back(basic.getInt8());
+	types.push_back(basic.getInt16());
 	
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-
-		std::vector<TypePtr> types;
-
-		types.push_back(basic.getInt1());
-		types.push_back(basic.getInt2());
-		types.push_back(basic.getInt4());
-		types.push_back(basic.getInt8());
-		types.push_back(basic.getInt16());
-
-		types.push_back(basic.getReal4());
-		types.push_back(basic.getReal8());
-
-		types.push_back(basic.getUInt1());
-		types.push_back(basic.getUInt2());
-		types.push_back(basic.getUInt4());
-		types.push_back(basic.getUInt8());
-		types.push_back(basic.getUInt16());
-
-		for (auto type_a : types){
-			for (auto type_b : types){
-				auto var = builder.variable(builder.refType(type_a));
-				auto expr= builder.deref(var);
-				
-				EXPECT_EQ(expr.getType(), type_a);
-				EXPECT_EQ(smartCast(expr, type_b).getType(), type_b);
-			}
+	types.push_back(basic.getReal4());
+	types.push_back(basic.getReal8());
+	
+	types.push_back(basic.getUInt1());
+	types.push_back(basic.getUInt2());
+	types.push_back(basic.getUInt4());
+	types.push_back(basic.getUInt8());
+	types.push_back(basic.getUInt16());
+	
+	for(auto type_a : types) {
+		for(auto type_b : types) {
+			auto lit = builder.literal(type_a, "8");
+			
+			EXPECT_EQ(lit.getType(), type_a);
+			EXPECT_EQ(smartCast(lit, type_b).getType(), type_b);
 		}
 	}
-		
-	TEST(TypeCast, toBool) {
+}
 
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
+template <typename T>
+std::string toString(const T& val) {
+	std::stringstream ss;
+	ss << val;
+	return ss.str();
+}
 
-		std::vector<TypePtr> types;
 
-		types.push_back(basic.getInt1());
-		types.push_back(basic.getInt2());
-		types.push_back(basic.getInt4());
-		types.push_back(basic.getInt8());
-		types.push_back(basic.getInt16());
+TEST(typecast, limitsMax) {
 
-		types.push_back(basic.getReal4());
-		types.push_back(basic.getReal8());
-
-		types.push_back(basic.getUInt1());
-		types.push_back(basic.getUInt2());
-		types.push_back(basic.getUInt4());
-		types.push_back(basic.getUInt8());
-		types.push_back(basic.getUInt16());
-
-		// cast ptr to bool
-		types.push_back(builder.refType(builder.arrayType(types[0])));
-
-		// cast function to bool
-		types.push_back(builder.functionType( types, types[0]));
-
-		for (auto type : types){
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+	std::vector<std::pair<TypePtr,std::string>> types;
 	
-			auto var = builder.variable(builder.refType(type));
+	types.push_back({basic.getInt1(),  toString(INT8_MAX)});
+	types.push_back({basic.getInt2(),  toString(INT16_MAX)});
+	types.push_back({basic.getInt4(),  toString(INT32_MAX)});
+	types.push_back({basic.getInt8(),  toString(INT64_MAX)});
+	types.push_back({basic.getInt16(), toString(INT64_MAX)});
+	
+	types.push_back({basic.getReal4(), toString(1)});
+	types.push_back({basic.getReal8(), toString(1)});
+	
+	types.push_back({basic.getUInt1(), toString(UINT8_MAX)});
+	types.push_back({basic.getUInt2(), toString(UINT16_MAX)});
+	types.push_back({basic.getUInt4(), toString(UINT32_MAX)});
+	types.push_back({basic.getUInt8(), toString(UINT64_MAX)});
+	types.push_back({basic.getUInt16(), toString(UINT64_MAX)});
+	
+	for(auto type_a : types) {
+		for(auto type_b : types) {
+			auto lit = builder.literal(type_a.first, type_a.second);
+			
+			EXPECT_EQ(lit.getType(), type_a.first);
+			
+			auto x = smartCast(lit, type_b.first);
+			std::cout << lit << " -> " << x << std::endl;
+			EXPECT_EQ(x.getType(), type_b.first);
+		}
+	}
+}
+
+
+TEST(TypeCast, value) {
+
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+	
+	std::vector<TypePtr> types;
+	
+	types.push_back(basic.getInt1());
+	types.push_back(basic.getInt2());
+	types.push_back(basic.getInt4());
+	types.push_back(basic.getInt8());
+	types.push_back(basic.getInt16());
+	
+	types.push_back(basic.getReal4());
+	types.push_back(basic.getReal8());
+	
+	types.push_back(basic.getUInt1());
+	types.push_back(basic.getUInt2());
+	types.push_back(basic.getUInt4());
+	types.push_back(basic.getUInt8());
+	types.push_back(basic.getUInt16());
+	
+	for(auto type_a : types) {
+		for(auto type_b : types) {
+			auto var = builder.variable(builder.refType(type_a));
 			auto expr= builder.deref(var);
-			EXPECT_EQ(castToBool(expr).getType(), basic.getBool());
+			
+			EXPECT_EQ(expr.getType(), type_a);
+			EXPECT_EQ(smartCast(expr, type_b).getType(), type_b);
 		}
 	}
+}
 
-	TEST(TypeCast, scalartoarray) {
+TEST(TypeCast, toBool) {
 
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-
-		std::vector<TypePtr> types;
-
-		types.push_back(basic.getInt1());
-		types.push_back(basic.getInt2());
-		types.push_back(basic.getInt4());
-		types.push_back(basic.getInt8());
-		types.push_back(basic.getInt16());
-
-		types.push_back(basic.getReal4());
-		types.push_back(basic.getReal8());
-
-		types.push_back(basic.getUInt1());
-		types.push_back(basic.getUInt2());
-		types.push_back(basic.getUInt4());
-		types.push_back(basic.getUInt8());
-		types.push_back(basic.getUInt16());
-
-		for (auto type : types){
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 	
-			auto ptr_type = builder.refType(builder.arrayType(type));
-			auto var = builder.variable(builder.refType(type));
-
-			EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
-		}
+	std::vector<TypePtr> types;
+	
+	types.push_back(basic.getInt1());
+	types.push_back(basic.getInt2());
+	types.push_back(basic.getInt4());
+	types.push_back(basic.getInt8());
+	types.push_back(basic.getInt16());
+	
+	types.push_back(basic.getReal4());
+	types.push_back(basic.getReal8());
+	
+	types.push_back(basic.getUInt1());
+	types.push_back(basic.getUInt2());
+	types.push_back(basic.getUInt4());
+	types.push_back(basic.getUInt8());
+	types.push_back(basic.getUInt16());
+	
+	// cast ptr to bool
+	types.push_back(builder.refType(builder.arrayType(types[0])));
+	
+	// cast function to bool
+	types.push_back(builder.functionType(types, types[0]));
+	
+	for(auto type : types) {
+	
+		auto var = builder.variable(builder.refType(type));
+		auto expr= builder.deref(var);
+		EXPECT_EQ(castToBool(expr).getType(), basic.getBool());
 	}
+}
+
+TEST(TypeCast, scalartoarray) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 	
-	TEST(TypeCast, vectorToArray) {
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		const lang::BasicGenerator& basic = manager.getLangBasic();
-
-		std::vector<TypePtr> types;
-
-		types.push_back(basic.getInt1());
-		types.push_back(basic.getInt2());
-		types.push_back(basic.getInt4());
-		types.push_back(basic.getInt8());
-		types.push_back(basic.getInt16());
-
-		types.push_back(basic.getReal4());
-		types.push_back(basic.getReal8());
-
-		types.push_back(basic.getUInt1());
-		types.push_back(basic.getUInt2());
-		types.push_back(basic.getUInt4());
-		types.push_back(basic.getUInt8());
-		types.push_back(basic.getUInt16());
-
-
-		core::NamedCompositeType::Entries structElements;
-		structElements.push_back(builder.namedType(builder.stringValue("m1"), types[1]));
-		structElements.push_back(builder.namedType(builder.stringValue("m2"), types[0]));
-		types.push_back( builder.structType( builder.stringValue("myStruct"), structElements ));
-		types.push_back( builder.unionType( builder.stringValue("myUnion"), structElements ));
+	std::vector<TypePtr> types;
+	
+	types.push_back(basic.getInt1());
+	types.push_back(basic.getInt2());
+	types.push_back(basic.getInt4());
+	types.push_back(basic.getInt8());
+	types.push_back(basic.getInt16());
+	
+	types.push_back(basic.getReal4());
+	types.push_back(basic.getReal8());
+	
+	types.push_back(basic.getUInt1());
+	types.push_back(basic.getUInt2());
+	types.push_back(basic.getUInt4());
+	types.push_back(basic.getUInt8());
+	types.push_back(basic.getUInt16());
+	
+	for(auto type : types) {
+	
+		auto ptr_type = builder.refType(builder.arrayType(type));
+		auto var = builder.variable(builder.refType(type));
 		
-
-		for (auto type : types){
-	
-			auto ptr_type = builder.refType(builder.arrayType(type));
-			core::IntTypeParamPtr numElem = ConcreteIntTypeParam::get(manager, 4);
-			auto vectType = builder.refType(builder.vectorType(type, numElem));
-			auto var = builder.variable(vectType);
-
-			EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
-		}
+		EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
 	}
+}
+
+TEST(TypeCast, vectorToArray) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+	
+	std::vector<TypePtr> types;
+	
+	types.push_back(basic.getInt1());
+	types.push_back(basic.getInt2());
+	types.push_back(basic.getInt4());
+	types.push_back(basic.getInt8());
+	types.push_back(basic.getInt16());
+	
+	types.push_back(basic.getReal4());
+	types.push_back(basic.getReal8());
+	
+	types.push_back(basic.getUInt1());
+	types.push_back(basic.getUInt2());
+	types.push_back(basic.getUInt4());
+	types.push_back(basic.getUInt8());
+	types.push_back(basic.getUInt16());
+	
+	
+	core::NamedCompositeType::Entries structElements;
+	structElements.push_back(builder.namedType(builder.stringValue("m1"), types[1]));
+	structElements.push_back(builder.namedType(builder.stringValue("m2"), types[0]));
+	types.push_back(builder.structType(builder.stringValue("myStruct"), structElements));
+	types.push_back(builder.unionType(builder.stringValue("myUnion"), structElements));
+	
+	
+	for(auto type : types) {
+	
+		auto ptr_type = builder.refType(builder.arrayType(type));
+		core::IntTypeParamPtr numElem = ConcreteIntTypeParam::get(manager, 4);
+		auto vectType = builder.refType(builder.vectorType(type, numElem));
+		auto var = builder.variable(vectType);
+		
+		EXPECT_EQ(smartCast(var, ptr_type).getType(), ptr_type);
+	}
+}
 } // types
 } // core
 } // insieme

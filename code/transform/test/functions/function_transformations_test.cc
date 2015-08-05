@@ -49,82 +49,82 @@ namespace transform {
 namespace functions {
 
 
-	TEST(RecFunUnrolling, Factory) {
+TEST(RecFunUnrolling, Factory) {
 
-		// ---- test invalid construction parameters ---------
+	// ---- test invalid construction parameters ---------
+	
+	EXPECT_THROW(
+	    RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(0u)),
+	    InvalidParametersException
+	);
+	
+	EXPECT_THROW(
+	    RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(1u)),
+	    InvalidParametersException
+	);
+	
+	EXPECT_THROW(
+	    RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2)),
+	    InvalidParametersException
+	);
+	
+	// and a valid one
+	EXPECT_NO_THROW(
+	    RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2u))
+	);
+	
+}
 
-		EXPECT_THROW(
-				RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(0u)),
-				InvalidParametersException
-		);
+TEST(RecFunUnrolling, Basic) {
 
-		EXPECT_THROW(
-				RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(1u)),
-				InvalidParametersException
-		);
-
-		EXPECT_THROW(
-				RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2)),
-				InvalidParametersException
-		);
-
-		// and a valid one
-		EXPECT_NO_THROW(
-				RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2u))
-		);
-
-	}
-
-	TEST(RecFunUnrolling, Basic) {
-
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a recursive function
-		auto lambda = builder.parseExpr(
-				"let f = lambda (int<4> x)->int<4> {"
-				"	if (x==0) return 0;"
-				"	if (x==1) return 1;"
-				"	return f(x-1) + f(x-2);"
-				"}; f"
-		).as<core::LambdaExprPtr>();
-
-		ASSERT_TRUE(lambda);
-
-		// create a 2-times unrolling transformation
-		auto trans = RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2u));
-		auto mod = trans->apply(lambda);
-		EXPECT_EQ(builder.normalize(lambda->unroll(2)), builder.normalize(mod));
-		EXPECT_TRUE(core::checks::check(mod).empty()) << core::checks::check(mod);
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	// create a recursive function
+	auto lambda = builder.parseExpr(
+	                  "let f = lambda (int<4> x)->int<4> {"
+	                  "	if (x==0) return 0;"
+	                  "	if (x==1) return 1;"
+	                  "	return f(x-1) + f(x-2);"
+	                  "}; f"
+	              ).as<core::LambdaExprPtr>();
+	              
+	ASSERT_TRUE(lambda);
+	
+	// create a 2-times unrolling transformation
+	auto trans = RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2u));
+	auto mod = trans->apply(lambda);
+	EXPECT_EQ(builder.normalize(lambda->unroll(2)), builder.normalize(mod));
+	EXPECT_TRUE(core::checks::check(mod).empty()) << core::checks::check(mod);
+	
+	
+	trans = RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(4u));
+	mod = trans->apply(lambda);
+	EXPECT_EQ(builder.normalize(lambda->unroll(4)), builder.normalize(mod));
+	EXPECT_TRUE(core::checks::check(mod).empty()) << core::checks::check(mod);
+}
 
 
-		trans = RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(4u));
-		mod = trans->apply(lambda);
-		EXPECT_EQ(builder.normalize(lambda->unroll(4)), builder.normalize(mod));
-		EXPECT_TRUE(core::checks::check(mod).empty()) << core::checks::check(mod);
-	}
+TEST(RecFunUnrolling, SingleLine) {
 
-
-	TEST(RecFunUnrolling, SingleLine) {
-
-			core::NodeManager manager;
-			core::IRBuilder builder(manager);
-
-			// create a recursive function
-			auto lambda = builder.parseExpr(
-					"let f = lambda(int<4> x)->int<4> {"
-					"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
-					"}; f"
-			).as<core::LambdaExprPtr>();
-
-			ASSERT_TRUE(lambda);
-
-			// create a 2-times unrolling transformation
-			auto trans = RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2u));
-
-			auto mod = trans->apply(lambda);
-			EXPECT_TRUE(core::checks::check(mod).empty()) << core::checks::check(mod);
-		}
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	// create a recursive function
+	auto lambda = builder.parseExpr(
+	                  "let f = lambda(int<4> x)->int<4> {"
+	                  "	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
+	                  "}; f"
+	              ).as<core::LambdaExprPtr>();
+	              
+	ASSERT_TRUE(lambda);
+	
+	// create a 2-times unrolling transformation
+	auto trans = RecursiveFunctionUnrollingType().buildTransformation(parameter::makeValue(2u));
+	
+	auto mod = trans->apply(lambda);
+	EXPECT_TRUE(core::checks::check(mod).empty()) << core::checks::check(mod);
+}
 
 } // end namespace functions
 } // end namespace transform

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,39 +43,39 @@ namespace core {
 namespace analysis {
 namespace region {
 
+/**
+ * This region selector is picking regions based on a estimated computation
+ * cost model.
+ */
+class SizeBasedRegionSelector : public RegionSelector {
+
 	/**
-	 * This region selector is picking regions based on a estimated computation
-	 * cost model.
+	 * The lower limit for the cost of a code fragment to be classified
+	 * as a region.
 	 */
-	class SizeBasedRegionSelector : public RegionSelector {
+	unsigned minSize;
+	
+	/**
+	 * The upper bound for the estimated costs a code fragment can have
+	 * to be classified as a region.
+	 */
+	unsigned maxSize;
+	
+public:
 
-		/**
-		 * The lower limit for the cost of a code fragment to be classified
-		 * as a region.
-		 */
-		unsigned minSize;
-
-		/**
-		 * The upper bound for the estimated costs a code fragment can have
-		 * to be classified as a region.
-		 */
-		unsigned maxSize;
-
-	public:
-
-		/**
-		 * Creates a new selector identifying regions having a estimated execution
-		 * cost within the given boundaries.
-		 */
-		SizeBasedRegionSelector(unsigned minSize, unsigned maxSize)
-			: minSize(minSize), maxSize(maxSize) {}
-
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
-
-	};
+	/**
+	 * Creates a new selector identifying regions having a estimated execution
+	 * cost within the given boundaries.
+	 */
+	SizeBasedRegionSelector(unsigned minSize, unsigned maxSize)
+		: minSize(minSize), maxSize(maxSize) {}
+		
+	/**
+	 * Selects all regions within the given code fragment.
+	 */
+	virtual RegionList getRegions(const core::NodePtr& code) const;
+	
+};
 
 } // end namespace region
 } // end namespace analysis

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,9 +41,9 @@
 #include "declarations.h"
 
 #ifdef _GEMS_SIM
-	#undef IRT_LOGGING
+#undef IRT_LOGGING
 #elif !defined(IRT_LOGGING)
-	#define IRT_LOGGING 1
+#define IRT_LOGGING 1
 #endif
 
 void irt_log_init();

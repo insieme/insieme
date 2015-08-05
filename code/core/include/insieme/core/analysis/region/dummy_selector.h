@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,25 +49,25 @@ namespace core {
 namespace analysis {
 namespace region {
 
-	/**
-	 * A simple region selection implementation picking all top-level compound statements
-	 * to represent regions.
-	 */
-	class DummyRegionSelector : public RegionSelector {
-	public:
+/**
+ * A simple region selection implementation picking all top-level compound statements
+ * to represent regions.
+ */
+class DummyRegionSelector : public RegionSelector {
+public:
 
-		/**
-		 * Simply obtains all top-level compound statements.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& node) const {
-			RegionList regions;
-			visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
-				regions.push_back(comp);
-				return true;
-			});
-			return regions;
-		}
-	};
+	/**
+	 * Simply obtains all top-level compound statements.
+	 */
+	virtual RegionList getRegions(const core::NodePtr& node) const {
+		RegionList regions;
+		visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
+			regions.push_back(comp);
+			return true;
+		});
+		return regions;
+	}
+};
 
 } // end namespace region
 } // end namespace analysis

@@ -101,11 +101,11 @@ void insieme_cleanup_context(irt_context* context) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_work_item_range fullrange_wi = {0, WI_RANGE, 1};
-
+	
 	uint64 start_time = irt_time_ms();
-
+	
 	irt_work_group *wg1 = irt_wg_create(), *wg2 = irt_wg_create();
-
+	
 	insieme_wi_test_params test_params = { 1, wg1, wg2, 0, 0 };
 	irt_work_item **test_wis = (irt_work_item **)malloc(NUM_WIS*sizeof(irt_work_item*));
 	for(int i=0; i<NUM_WIS; ++i) {
@@ -125,30 +125,34 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	//}
 	irt_wg_join(wg1->id);
 	ERR("Z5 ---");
-
+	
 	uint64 end_time = irt_time_ms();
-
+	
 	printf("======================\n= manual irt test barrier done\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	printf("======================\n");
-
+	
 	free(test_wis);
 }
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
 	insieme_wi_test_params *params = (insieme_wi_test_params*)wi->parameters;
 	irt_atomic_add_and_fetch(&(params->val1), irt_wi_range_get_size(&wi->range), uint64);
-
+	
 	ERR("A1");
 	irt_wg_barrier(params->wg1);
 	ERR("A2");
-	if(params->val1 != NUM_WIS*WI_RANGE) printf("Barrier error!\n");
+	if(params->val1 != NUM_WIS*WI_RANGE) {
+		printf("Barrier error!\n");
+	}
 	ERR("A3");
 	irt_atomic_add_and_fetch(&(params->val2), irt_wi_range_get_size(&wi->range), uint64);
 	ERR("A4");
 	irt_wg_barrier(params->wg1);
 	ERR("A5");
-	if(params->val2 != NUM_WIS*WI_RANGE) printf("Barrier error!\n");
+	if(params->val2 != NUM_WIS*WI_RANGE) {
+		printf("Barrier error!\n");
+	}
 	ERR("A6");
 }
 

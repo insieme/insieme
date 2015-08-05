@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -57,38 +57,37 @@ struct timespec {
 #endif
 
 /* implementation of nanosleep for windows, which is has a resolution of 1ms at best */
-int nanosleep(const struct timespec *rqtp, struct timespec *rmtp){
+int nanosleep(const struct timespec *rqtp, struct timespec *rmtp) {
 	// there is nothing which is much more accurate than Sleep, see: http://stackoverflow.com/questions/7827062/is-there-a-windows-equivalent-of-nanosleep
 	Sleep(rqtp->tv_sec*1000 + rqtp->tv_nsec*0.000001);
 	return 0;
 }
 
-int clock_gettime(int X, struct timespec *ts) 
-{ 
+int clock_gettime(int X, struct timespec *ts) {
 	IRT_ASSERT(X == CLOCK_REALTIME, IRT_ERR_INVALIDARGUMENT, "clock_getttime for windows only allows CLOCK_REALTIME");
-
-    LARGE_INTEGER counter; 
-    double nseconds; 
-    static double incrementsPerNanoSec;
-    static int initialized = 0; 
- 
+	
+	LARGE_INTEGER counter;
+	double nseconds;
+	static double incrementsPerNanoSec;
+	static int initialized = 0;
+	
 	// QueryPerformanceFrequency should only be called once, since it never changes
-    if (!initialized) { 
-        LARGE_INTEGER performanceFrequency; 
-        initialized = 1;
-        QueryPerformanceFrequency(&performanceFrequency); // this gives a quote how many times per second the high performance counter is incremented
-        incrementsPerNanoSec = (double)performanceFrequency.QuadPart / 1e9; 
-    }
-
+	if(!initialized) {
+		LARGE_INTEGER performanceFrequency;
+		initialized = 1;
+		QueryPerformanceFrequency(&performanceFrequency); // this gives a quote how many times per second the high performance counter is incremented
+		incrementsPerNanoSec = (double)performanceFrequency.QuadPart / 1e9;
+	}
+	
 	// get counter value
-    QueryPerformanceCounter(&counter);
- 
-    nseconds = (double)counter.QuadPart / incrementsPerNanoSec; 
-    counter.QuadPart = nseconds; 
-    ts->tv_sec = counter.QuadPart / 1e9; 
-    ts->tv_nsec = counter.QuadPart % 1000000000;
-    return (0);
-} 
+	QueryPerformanceCounter(&counter);
+	
+	nseconds = (double)counter.QuadPart / incrementsPerNanoSec;
+	counter.QuadPart = nseconds;
+	ts->tv_sec = counter.QuadPart / 1e9;
+	ts->tv_nsec = counter.QuadPart % 1000000000;
+	return (0);
+}
 
 
 #endif // ifndef __GUARD_INCLUDE_WIN32_TIME_H

@@ -61,9 +61,9 @@ namespace insieme {
 namespace frontend {
 
 namespace pragma {
-	class Pragma;
-	typedef std::shared_ptr<Pragma> PragmaPtr;
-	typedef std::vector<PragmaPtr> PragmaList;
+class Pragma;
+typedef std::shared_ptr<Pragma> PragmaPtr;
+typedef std::vector<PragmaPtr> PragmaList;
 }
 
 // ------------------------------------ TranslationUnit ---------------------------
@@ -78,18 +78,18 @@ class TranslationUnit: public boost::noncopyable {
 	const ConversionSetup	setup;
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
-
+	
 	//needed for for setting up the clang-compiler
 	clang::ASTConsumer emptyCons;
-    insieme::frontend::InsiemeSema mSema;
-
+	insieme::frontend::InsiemeSema mSema;
+	
 	//FIXME: needed for what? maybe for ParserProxy
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
-
+	
 public:
 	TranslationUnit(insieme::core::NodeManager& mgr, const path& file,  const ConversionSetup& setup = ConversionSetup());
-
+	
 	class PragmaIterator : public std::iterator<std::input_iterator_tag,insieme::frontend::pragma::PragmaPtr> {
 	public:
 		typedef std::function<bool (const pragma::Pragma&)> FilteringFunc;
@@ -97,51 +97,78 @@ public:
 	private:
 		insieme::frontend::pragma::PragmaList::const_iterator pragmaIt, pragmaItEnd;
 		FilteringFunc filteringFunc;
-
+		
 		// creates end iter
 		PragmaIterator(const pragma_iter& end) : pragmaIt(end), pragmaItEnd(end) { }
 		PragmaIterator(const pragma::PragmaList& list, const FilteringFunc& filteringFunc)
 			: pragmaIt(list.begin()), pragmaItEnd(list.end()), filteringFunc(filteringFunc) { }
-
+			
 		void inc();
-
+		
 		friend class TranslationUnit;
 	public:
 		bool operator!=(const PragmaIterator& iter) const;
-		bool operator==(const PragmaIterator& iter) const { return !(*this != iter); }
+		bool operator==(const PragmaIterator& iter) const {
+			return !(*this != iter);
+		}
 		pragma::PragmaPtr operator*() const;
-		PragmaIterator& operator++() { inc(); return *this; }
+		PragmaIterator& operator++() {
+			inc();
+			return *this;
+		}
 	};
-
+	
 	/**
 	 * Returns the list of registered pragmas across the translation units
 	 */
 	PragmaIterator pragmas_begin() const;
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
-
+	
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
-	const pragma::PragmaList& getPragmaList() const { return mPragmaList; }
-
-	const ClangCompiler& getCompiler() const { return mClang; }
-
-	const path& getFileName() const { return mFileName; }
-	const string getJustFileName() const { return mFileName.filename().string(); }
+	const pragma::PragmaList& getPragmaList() const {
+		return mPragmaList;
+	}
 	
-	bool isCxx() const { return getCompiler().isCXX(); }
-
+	const ClangCompiler& getCompiler() const {
+		return mClang;
+	}
+	
+	const path& getFileName() const {
+		return mFileName;
+	}
+	const string getJustFileName() const {
+		return mFileName.filename().string();
+	}
+	
+	bool isCxx() const {
+		return getCompiler().isCXX();
+	}
+	
 	// getters
-	clang::Preprocessor& getPreprocessor() { return getCompiler().getPreprocessor(); }
-	const clang::Preprocessor& getPreprocessor() const { return getCompiler().getPreprocessor(); }
-
-	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
-	const clang::ASTContext& getASTContext() const { return getCompiler().getASTContext(); }
-
-	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
-	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
-
+	clang::Preprocessor& getPreprocessor() {
+		return getCompiler().getPreprocessor();
+	}
+	const clang::Preprocessor& getPreprocessor() const {
+		return getCompiler().getPreprocessor();
+	}
+	
+	clang::ASTContext& getASTContext() {
+		return getCompiler().getASTContext();
+	}
+	const clang::ASTContext& getASTContext() const {
+		return getCompiler().getASTContext();
+	}
+	
+	clang::DiagnosticsEngine& getDiagnostic() {
+		return getCompiler().getDiagnostics();
+	}
+	const clang::DiagnosticsEngine& getDiagnostic() const {
+		return getCompiler().getDiagnostics();
+	}
+	
 };
 
 } // end frontend namespace

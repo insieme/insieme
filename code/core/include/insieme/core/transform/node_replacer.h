@@ -64,9 +64,11 @@ enum class ReplaceAction { Process, Skip, Prune, Interrupt };
 
 typedef std::function<ReplaceAction(const NodePtr&)> ReplaceLimiter;
 
-const static ReplaceLimiter globalReplacement = [](const NodePtr& cur) { return ReplaceAction::Process; };
-const static ReplaceLimiter localReplacement = [](const NodePtr& cur) { 
-	return cur.isa<LambdaExprPtr>() ? ReplaceAction::Prune : ReplaceAction::Process; 
+const static ReplaceLimiter globalReplacement = [](const NodePtr& cur) {
+	return ReplaceAction::Process;
+};
+const static ReplaceLimiter localReplacement = [](const NodePtr& cur) {
+	return cur.isa<LambdaExprPtr>() ? ReplaceAction::Prune : ReplaceAction::Process;
 };
 
 
@@ -80,9 +82,9 @@ const static ReplaceLimiter localReplacement = [](const NodePtr& cur) {
  * @param limiter customizes the scope of the replacement
  * @return the modified version of the root node
  */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, 
-				   const NodePtr& replacement, const ReplaceLimiter limiter = localReplacement);
-
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace,
+                   const NodePtr& replacement, const ReplaceLimiter limiter = localReplacement);
+                   
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
  * The replacements are provided via a map.
@@ -93,16 +95,16 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toRepla
  * @param limiter customizes the scope of the replacement
  * @return the modified version of the root node
  */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, 
-				   const ReplaceLimiter limiter = localReplacement);
-
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements,
+                   const ReplaceLimiter limiter = localReplacement);
+                   
 /**
  * A generic wrapper for the function provided above. This operation returns the same kind of node
  * pointer is getting passed as an argument.
  */
 template<typename T>
 core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
-        const NodeMap& replacements, const ReplaceLimiter limiter = localReplacement) {
+                               const NodeMap& replacements, const ReplaceLimiter limiter = localReplacement) {
 	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limiter));
 }
 
@@ -112,7 +114,7 @@ core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
  */
 template<typename T>
 core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root,
-		const NodePtr& toReplace, const NodePtr& replacement, const ReplaceLimiter limiter = localReplacement) {
+                               const NodePtr& toReplace, const NodePtr& replacement, const ReplaceLimiter limiter = localReplacement) {
 	return static_pointer_cast<T>(replaceAll(mgr, root, toReplace, replacement, limiter));
 }
 
@@ -136,24 +138,24 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
  * @param replacements the map mapping variables to their replacements
  */
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
-		const VariableMap& replacements);
-
+                    const VariableMap& replacements);
+                    
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
-		const VarExprMap& replacements);
-
+                    const VarExprMap& replacements);
+                    
 /**
  * A generic wrapper for the function provided above. This operation returns the same kind of node
  * pointer is getting passed as an argument.
  */
 template<typename T>
 core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
-		const VariableMap& replacements) {
+                                const VariableMap& replacements) {
 	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
 }
 
 template<typename T>
 core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
-		const VarExprMap& replacements) {
+                                const VarExprMap& replacements) {
 	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
 }
 
@@ -184,11 +186,11 @@ TypeHandler getVarInitUpdater(NodeManager& manager);
  * @param declInitReplacements a map from Variables present in replacements to expressions, which should be used as init expressions of the corresponding variable
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const insieme::utils::map::PointerMap<ExpressionPtr, ExpressionPtr>& replacements, bool limitScope = true,
-		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
-		const TypeHandler& typeHandler = id<StatementPtr>(),
-		const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>());
-
+                             const insieme::utils::map::PointerMap<ExpressionPtr, ExpressionPtr>& replacements, bool limitScope = true,
+                             const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
+                             const TypeHandler& typeHandler = id<StatementPtr>(),
+                             const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>());
+                             
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
  * variables are passed to functions accepting different types, a new version of the function accepting
@@ -204,24 +206,24 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const ExpressionMap& replacements, bool limitScope = true,
-		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
-		const TypeHandler& typeHandler = id<StatementPtr>(),
-		const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
+        const ExpressionMap& replacements, bool limitScope = true,
+        const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
+        const TypeHandler& typeHandler = id<StatementPtr>(),
+        const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
 	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, recoveryHandler, typeHandler, declInitReplacements));
 }
 
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const VariableMap& replacements, bool limitScope = true,
-		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
-		const TypeHandler& typeHandler = id<StatementPtr>(),
-		const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
+        const VariableMap& replacements, bool limitScope = true,
+        const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
+        const TypeHandler& typeHandler = id<StatementPtr>(),
+        const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& declInitReplacements = insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>()) {
 	ExpressionMap em;
 	for_each(replacements, [&](std::pair<VariablePtr, VariablePtr> rep) {
 		em[rep.first] = rep.second;
 	});
-
+	
 	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, em, limitScope, recoveryHandler, typeHandler, declInitReplacements));
 }
 
@@ -238,8 +240,8 @@ Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
 NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacements, bool limitScope,
-		const TypeHandler& typeHandler = id<StatementPtr>() );
-
+                 const TypeHandler& typeHandler = id<StatementPtr>());
+                 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
  * variables are passed to functions accepting different types, a new version of the function accepting
@@ -254,8 +256,8 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root, const ExpressionMap& replacemen
  * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
 NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
-		const TypeHandler& typeHandler = id<StatementPtr>() );
-
+                 const TypeHandler& typeHandler = id<StatementPtr>());
+                 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
  * variables are passed to functions accepting different types, a new version of the function accepting
@@ -270,7 +272,7 @@ NodePtr fixTypes(NodeManager& mgr, NodePtr root,  const ExpressionPtr& toReplace
  */
 template<typename T>
 Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const ExpressionMap& replacements, bool limitScope,
-		const TypeHandler& typeHandler = id<StatementPtr>()) {
+                             const TypeHandler& typeHandler = id<StatementPtr>()) {
 	return static_pointer_cast<const T>(fixTypes(mgr, root, replacements, limitScope, typeHandler));
 }
 
@@ -289,7 +291,7 @@ Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, cons
  */
 template<typename T>
 Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, const ExpressionPtr& toReplace, const ExpressionPtr& replacement, bool limitScope,
-		const TypeHandler& typeHandler = id<StatementPtr>()) {
+                             const TypeHandler& typeHandler = id<StatementPtr>()) {
 	ExpressionMap replacements;
 	replacements[toReplace] = replacement;
 	return fixTypesGen(mgr, root, replacements, limitScope, typeHandler);

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,32 +43,32 @@ namespace core {
 namespace analysis {
 namespace region {
 
+/**
+ * This region selector is picking outermost parallel for loop bodies. This
+ * selector is only focusing on the work-sharing pfor construct, not potentially
+ * parallel for loops.
+ */
+class PForBodySelector : public RegionSelector {
+
+public:
+
 	/**
-	 * This region selector is picking outermost parallel for loop bodies. This
-	 * selector is only focusing on the work-sharing pfor construct, not potentially
-	 * parallel for loops.
+	 * Selects all regions within the given code fragment.
 	 */
-	class PForBodySelector : public RegionSelector {
+	virtual RegionList getRegions(const core::NodePtr& code) const;
+	
+};
 
-	public:
+class PForSelector : public RegionSelector {
 
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
+public:
 
-	};
-
-	class PForSelector : public RegionSelector {
-
-	public:
-
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
-
-	};
+	/**
+	 * Selects all regions within the given code fragment.
+	 */
+	virtual RegionList getRegions(const core::NodePtr& code) const;
+	
+};
 
 } // end namespace region
 } // end namespace analysis

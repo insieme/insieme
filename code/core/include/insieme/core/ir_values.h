@@ -41,45 +41,45 @@
 namespace insieme {
 namespace core {
 
-	template<typename D,template<typename T> class P>
-	struct ValueAccessor : public NodeAccessor<D,P> {
-
-		/**
-		 * Obtains a reference to the value represented by this node if
-		 * it is representing a value. This method is overloading the version
-		 * within the NodeAccessor - thereby increasing visibility.
-		 *
-		 * @return a reference to the internally maintained value
-		 */
-		const NodeValue& getValue() const {
-			// forward call to protected parent method
-			return NodeAccessor<D,P>::getNodeValue();
-		}
-
-	};
+template<typename D,template<typename T> class P>
+struct ValueAccessor : public NodeAccessor<D,P> {
 
 	/**
-	 * A node forming a common base type for all value nodes.
+	 * Obtains a reference to the value represented by this node if
+	 * it is representing a value. This method is overloading the version
+	 * within the NodeAccessor - thereby increasing visibility.
+	 *
+	 * @return a reference to the internally maintained value
 	 */
-	class Value : public Node {
+	const NodeValue& getValue() const {
+		// forward call to protected parent method
+		return NodeAccessor<D,P>::getNodeValue();
+	}
+	
+};
 
-	protected:
+/**
+ * A node forming a common base type for all value nodes.
+ */
+class Value : public Node {
 
-		/**
-		 * A constructor limiting subclasses to a value-node construction.
-		 *
-		 * @param type the type of the resulting node
-		 * @param value the value to be represented
-		 */
-		Value(const NodeType type, const NodeValue& value) : Node(type, value) {}
-
-	};
-
+protected:
 
 	/**
-	 * A macro defining value nodes based on a name and the type of value to be presented.
+	 * A constructor limiting subclasses to a value-node construction.
+	 *
+	 * @param type the type of the resulting node
+	 * @param value the value to be represented
 	 */
-	#define VALUE_NODE(NAME,TYPE) \
+	Value(const NodeType type, const NodeValue& value) : Node(type, value) {}
+	
+};
+
+
+/**
+ * A macro defining value nodes based on a name and the type of value to be presented.
+ */
+#define VALUE_NODE(NAME,TYPE) \
 		\
 		template<typename D,template<typename T> class P> \
 		struct NAME ## ValueAccessor : public ValueAccessor<D,P> { \
@@ -117,34 +117,34 @@ namespace core {
 			} \
 		};
 
-	/**
-	 * The BoolValue node represents a single, boolean value.
-	 */
-	VALUE_NODE(Bool, bool);
+/**
+ * The BoolValue node represents a single, boolean value.
+ */
+VALUE_NODE(Bool, bool);
 
-	/**
-	 * The CharValue node represents a character value within the IR structure.
-	 */
-	VALUE_NODE(Char, char);
+/**
+ * The CharValue node represents a character value within the IR structure.
+ */
+VALUE_NODE(Char, char);
 
-	/**
-	 * The IntValue node represents an integer value within the IR structure.
-	 */
-	VALUE_NODE(Int, int);
+/**
+ * The IntValue node represents an integer value within the IR structure.
+ */
+VALUE_NODE(Int, int);
 
-	/**
-	 * The UIntValue node representing an unsigned integer value within the IR structure.
-	 */
-	VALUE_NODE(UInt, unsigned);
+/**
+ * The UIntValue node representing an unsigned integer value within the IR structure.
+ */
+VALUE_NODE(UInt, unsigned);
 
-	/**
-	 * The StringValue node represents a string value e.g. naming a type or an identifer within
-	 * the IR structure.
-	 */
-	VALUE_NODE(String, string);
+/**
+ * The StringValue node represents a string value e.g. naming a type or an identifer within
+ * the IR structure.
+ */
+VALUE_NODE(String, string);
 
 
-	#undef VALUE_NODE
+#undef VALUE_NODE
 
 } // end namespace core
 } // end namespace insieme

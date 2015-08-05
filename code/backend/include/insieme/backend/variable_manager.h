@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,39 +44,39 @@
 namespace insieme {
 namespace backend {
 
-	class Converter;
-	struct TypeInfo;
+class Converter;
+struct TypeInfo;
 
-	struct VariableInfo {
+struct VariableInfo {
 
-		enum MemoryLocation {
-			NONE,		/* < the variable is not a reference type */
-			DIRECT, 	/* < the variable represents the corresponding memory cell directly (e.g. a local variable) */
-			INDIRECT 	/* < the variable is a pointer to the actually represented memory cell */
-		};
-
-		const TypeInfo* typeInfo;
-		c_ast::VariablePtr var;
-		MemoryLocation location;
-
+	enum MemoryLocation {
+		NONE,		/* < the variable is not a reference type */
+		DIRECT, 	/* < the variable represents the corresponding memory cell directly (e.g. a local variable) */
+		INDIRECT 	/* < the variable is a pointer to the actually represented memory cell */
 	};
+	
+	const TypeInfo* typeInfo;
+	c_ast::VariablePtr var;
+	MemoryLocation location;
+	
+};
 
-	class VariableManager {
+class VariableManager {
 
-		utils::map::PointerMap<core::VariablePtr, VariableInfo> infos;
+	utils::map::PointerMap<core::VariablePtr, VariableInfo> infos;
+	
+public:
 
-	public:
-
-		VariableManager() : infos() {};
-
-		const VariableInfo& getInfo(const core::VariablePtr& var) const;
-
-		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
-
-		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location, const TypeInfo& typeInfo);
-
-		void remInfo(const core::VariablePtr& var);
-	};
+	VariableManager() : infos() {};
+	
+	const VariableInfo& getInfo(const core::VariablePtr& var) const;
+	
+	const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
+	
+	const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location, const TypeInfo& typeInfo);
+	
+	void remInfo(const core::VariablePtr& var);
+};
 
 } // end namespace backend
 } // end namespace insieme

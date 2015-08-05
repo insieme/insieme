@@ -38,13 +38,13 @@
 int simpleRegion() {
 
 	int a = 0, n = 0;
-
+	
 	/*We need target clause because region directive without clauses is ignored*/
 	#pragma omp region target(accelerator)
 	{
 		int x = 3;
 	}
-
+	
 	return 0;
 }
 
@@ -52,22 +52,22 @@ int simpleRegion() {
 int objective() {
 
 	int a = 0, n = 0;
-
+	
 	#pragma omp region objective(0.1*E+0.3*P+0.6*T+0*Q)
 	{
 		int x = 3;
 	}
-
+	
 	#pragma omp task objective(:E<10)
 	{
 		int x = 4;
 	}
-
+	
 	#pragma omp parallel objective(0.1*E+0.2*P+0.7*T+0*Q:T<3;P>22)
 	{
 		int x = 5;
 	}
-
+	
 	return 0;
 }
 
@@ -75,18 +75,18 @@ int objective() {
 int param() {
 
 	int a = 0, n = 0;
-    int A[3];
-
-	#pragma omp region param(a, range(0:10:2)) 
+	int A[3];
+	
+	#pragma omp region param(a, range(0:10:2))
 	{
 		int x = a;
 	}
-
-    #pragma omp parallel param(a, enum(A:3)) 
+	
+	#pragma omp parallel param(a, enum(A:3))
 	{
 		int x = a;
 	}
-
+	
 	return 0;
 }
 
@@ -94,18 +94,18 @@ int param() {
 int target() {
 
 	int a = 0, n = 0;
-    int A[3];
-
-	#pragma omp region target(accelerator) 
+	int A[3];
+	
+	#pragma omp region target(accelerator)
 	{
 		int x = a;
 	}
-
-    #pragma omp parallel target(accelerator: 0,1 ... 8: 12)
+	
+	#pragma omp parallel target(accelerator: 0,1 ... 8: 12)
 	{
 		int x = a;
 	}
-
+	
 	return 0;
 }
 
@@ -113,11 +113,11 @@ int target() {
 int firstLocal() {
 
 	int a = 5;
-
+	
 	#pragma omp region firstlocal(a)
 	{
 		int x = a + 3;
 	}
-
+	
 	return 0;
 }

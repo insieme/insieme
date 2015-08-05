@@ -43,19 +43,19 @@ namespace core {
 namespace analysis {
 namespace region {
 
+/**
+ * This region selector is picking all for loops.
+ */
+class ForSelector : public RegionSelector {
+
+public:
+
 	/**
-	 * This region selector is picking all for loops.
+	 * Selects all regions within the given code fragment.
 	 */
-	class ForSelector : public RegionSelector {
-
-	public:
-
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
-
-	};
+	virtual RegionList getRegions(const core::NodePtr& code) const;
+	
+};
 
 } // end namespace region
 } // end namespace analysis

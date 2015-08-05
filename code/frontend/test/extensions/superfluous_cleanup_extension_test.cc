@@ -54,9 +54,9 @@ using namespace driver;
 TEST(SuperfluousCleanup, Simple) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-				R"(
+	                               R"(
 				int<4> main() {
 					decl ref<int<4>> i = ref_var(0);
 					decl ref<int<4>> j = ref_var(4);
@@ -70,27 +70,29 @@ TEST(SuperfluousCleanup, Simple) {
 					return j;
 				}
 				)"
-			);
-
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
 	auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
 	//dumpPretty(lambdaExp);
 	//dumpPretty(cleaned);
-
+	
 	// check if superfluous decl got removed
 	int declCount = 0;
-	visitDepthFirstOnce(cleaned, [&](const DeclarationStmtPtr& d) { declCount++;});
+	visitDepthFirstOnce(cleaned, [&](const DeclarationStmtPtr& d) {
+		declCount++;
+	});
 	EXPECT_EQ(declCount, 3);
 }
 
 TEST(SuperfluousCleanup, EnclosingLoops) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-		R"(
+	                               R"(
 		int<4> main() {
 			decl ref<int<4>> i = ref_var(0);
 			decl ref<int<4>> j = ref_var(4);
@@ -103,15 +105,15 @@ TEST(SuperfluousCleanup, EnclosingLoops) {
 			return j;
 		}
 		)"
-	);
-
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	auto lambdaExp = program->getEntryPoints()[0].as<LambdaExprPtr>();
 	auto cleaned = extensions::cleanup::removeObviouslySuperfluousCode(lambdaExp);
 	//dumpPretty(lambdaExp);
 	//dumpPretty(cleaned);
-
+	
 	// check if we didn't remove anything we shouldn't have
 	EXPECT_EQ(*lambdaExp, *cleaned);
 }
@@ -119,13 +121,13 @@ TEST(SuperfluousCleanup, EnclosingLoops) {
 TEST(SuperfluousCleanup, MMul) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	fs::path tmpFile;
 	{
-
+	
 // create a temporary source file
-Source file(
-R"(
+		Source file(
+		    R"(
 #include <stdio.h>
 #define N 1000
 #define M N

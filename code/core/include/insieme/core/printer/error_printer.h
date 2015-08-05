@@ -48,12 +48,12 @@ namespace insieme {
 namespace core {
 namespace printer {
 
-	/**
-	 * utility to print errors attached to node addresses
-	 * NOTE: this utility makes use of the assumption that a semanticaly invalid node will be invalid
-	 * no mather where it is, therefore will highlight all nodes no mather what the address was.
-	 */
-	IRDump dumpErrors(const core::checks::MessageList&, std::ostream& out = std::cout);
+/**
+ * utility to print errors attached to node addresses
+ * NOTE: this utility makes use of the assumption that a semanticaly invalid node will be invalid
+ * no mather where it is, therefore will highlight all nodes no mather what the address was.
+ */
+IRDump dumpErrors(const core::checks::MessageList&, std::ostream& out = std::cout);
 
 } // printer
 } // core

@@ -72,39 +72,39 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-	SequentialBackendPtr SequentialBackend::getDefault() {
-		auto res = std::make_shared<SequentialBackend>();
-		res->addAddOn<addons::CppReferences>();
-		res->addAddOn<addons::CppMembAddon>();
-		res->addAddOn<addons::ComplexType>();
-		res->addAddOn<addons::EnumTypes>();
-		res->addAddOn<addons::LongLongType>();
-		res->addAddOn<addons::SIMDVector>();
-		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
-		res->addAddOn<addons::StaticVariables>();
-		return res;
-	}
+SequentialBackendPtr SequentialBackend::getDefault() {
+	auto res = std::make_shared<SequentialBackend>();
+	res->addAddOn<addons::CppReferences>();
+	res->addAddOn<addons::CppMembAddon>();
+	res->addAddOn<addons::ComplexType>();
+	res->addAddOn<addons::EnumTypes>();
+	res->addAddOn<addons::LongLongType>();
+	res->addAddOn<addons::SIMDVector>();
+	res->addAddOn<addons::AsmStmt>();
+	res->addAddOn<addons::VarArgs>();
+	res->addAddOn<addons::StaticVariables>();
+	return res;
+}
 
-	Converter SequentialBackend::buildConverter(core::NodeManager& manager) const {
+Converter SequentialBackend::buildConverter(core::NodeManager& manager) const {
 
-		// create and set up the converter
-		Converter converter(manager, "SequentialBackend", getConfiguration());
-
-		// set up pre-processing
-		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<Sequentializer>(),
-				getBasicPreProcessorSequence()
-		);
-		converter.setPreProcessor(preprocessor);
-
-		// update type manager
-		TypeManager& typeManager = converter.getTypeManager();
-		typeManager.addTypeHandler(SequentialTypeHandler);
-
-		// done
-		return converter;
-	}
+	// create and set up the converter
+	Converter converter(manager, "SequentialBackend", getConfiguration());
+	
+	// set up pre-processing
+	PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
+	                                    makePreProcessor<Sequentializer>(),
+	                                    getBasicPreProcessorSequence()
+	                                );
+	converter.setPreProcessor(preprocessor);
+	
+	// update type manager
+	TypeManager& typeManager = converter.getTypeManager();
+	typeManager.addTypeHandler(SequentialTypeHandler);
+	
+	// done
+	return converter;
+}
 
 } // end namespace sequential
 } // end namespace backend

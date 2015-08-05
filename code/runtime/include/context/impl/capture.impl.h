@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -63,12 +63,12 @@
 
 
 #ifdef RECORD
-	#include "context/impl/record.impl.h"
+#include "context/impl/record.impl.h"
 #endif
 
 
 #ifdef RESTORE
-	#include "context/impl/restore.impl.h"
+#include "context/impl/restore.impl.h"
 #endif
 
 

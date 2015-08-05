@@ -46,8 +46,8 @@ extern int printf(char *, ...);
 int main(int argc, char* argv[]) {
 	int x = 10;
 	int y = 10;
-
+	
 	printf("res: %d\n", x + y * x + y);
-
+	
 	return 0;
 }

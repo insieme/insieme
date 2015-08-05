@@ -79,10 +79,10 @@ NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Mani
 
 	// get and manipulate statement list
 	vector<StatementPtr> list = target.getAddressedNode()->getStatements();
-
+	
 	// apply manipulation
 	manipulator(list);
-
+	
 	// create and apply replacement
 	CompoundStmtPtr replacement = CompoundStmt::get(manager, list);
 	return replaceNode(manager, target, replacement);
@@ -91,7 +91,7 @@ NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Mani
 
 NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, unsigned index) {
 	// use generic manipulation function
-	return manipulate(manager, target, [index, &statement](vector<StatementPtr>& list){
+	return manipulate(manager, target, [index, &statement](vector<StatementPtr>& list) {
 		// limit index and insert element
 		unsigned pos = min((unsigned)(list.size()), index);
 		list.insert(list.begin() + pos, statement);
@@ -100,7 +100,7 @@ NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const St
 
 NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index) {
 	// use generic manipulation function
-	return manipulate(manager, target, [index, &statements](vector<StatementPtr>& list){
+	return manipulate(manager, target, [index, &statements](vector<StatementPtr>& list) {
 		// limit index and insert element
 		unsigned pos = min((unsigned)(list.size()), index);
 		list.insert(list.begin() + pos, statements.cbegin(), statements.cend());
@@ -118,7 +118,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 	if(auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress())) {
 		return insert(manager, compoundParent, statement, target.getIndex());
 	}
-
+	
 	IRBuilder build(manager);
 	auto newCompound = build.compoundStmt(statement, target.getAddressedNode());
 	return replaceNode(manager, target, newCompound);
@@ -130,7 +130,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 	if(auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress())) {
 		return insert(manager, compoundParent, statements, target.getIndex());
 	}
-
+	
 	IRBuilder build(manager);
 	StatementList allStatements;
 	allStatements.insert(allStatements.begin(), statements.cbegin(), statements.cend());
@@ -143,7 +143,8 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
 		return insert(manager, compoundParent, statement, target.getIndex()+1);
-	} else {
+	}
+	else {
 		IRBuilder build(manager);
 		auto newCompound = build.compoundStmt(target.getAddressedNode(), statement);
 		return replaceNode(manager, target, newCompound);
@@ -154,7 +155,8 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
 		return insert(manager, compoundParent, statements, target.getIndex()+1);
-	} else {
+	}
+	else {
 		IRBuilder build(manager);
 		StatementList allStatements;
 		allStatements.push_back(target.getAddressedNode());
@@ -167,7 +169,7 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 
 NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index) {
 	// use generic manipulation function
-	return manipulate(manager, target, [index](vector<StatementPtr>& list){
+	return manipulate(manager, target, [index](vector<StatementPtr>& list) {
 		// remove element
 		assert_lt(index, list.size()) << "Index out of range!";
 		list.erase(list.begin() + index);
@@ -178,40 +180,42 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 
 	assert_false(stmts.empty()) << "List of statements to be removed must not be empty!";
-
+	
 	NodePtr res = stmts[0].getRootNode();
-
+	
 	// check whether the stmt list is not empty and all addresses have the same root.
 	assert_false(stmts.empty()) << "Statements must not be empty!";
-	assert(all(stmts, [&](const StatementAddress& cur) { return cur.getRootNode() == res; }));
-
+	assert(all(stmts, [&](const StatementAddress& cur) {
+		return cur.getRootNode() == res;
+	}));
+	
 	// create a sorted list of statements
 	vector<StatementAddress> list = stmts;
 	std::sort(list.begin(), list.end());
-
+	
 	// remove statements in reverse order (this does not effect earlier addresses)
 	for_each(list.rbegin(), list.rend(), [&](StatementAddress cur) {
-
+	
 		// skip marker expressions (yes, they are used!!)
 		while(cur.getParentAddress()->getNodeType() == NT_MarkerExpr) {
 			cur = static_address_cast<StatementAddress>(cur.getParentAddress());
 		}
-
+		
 		assert_eq(cur.getParentAddress()->getNodeType(), NT_CompoundStmt) << "Every stmt should be inside a compound stmt!";
-
+		
 		// update root of current stmt
 		cur = cur.switchRoot(res);
-
+		
 		// remove current statement
 		res = remove(manager, static_address_cast<CompoundStmtAddress>(cur.getParentAddress()), cur.getIndex());
 	});
-
+	
 	return res;
 }
 
 NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement) {
 	// use generic manipulation function
-	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list){
+	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list) {
 		// remove element
 		assert_lt(index, list.size()) << "Index out of range!";
 		list[index] = replacement;
@@ -220,7 +224,7 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 
 NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementList& replacements) {
 	// use generic manipulation function
-	return manipulate(manager, target, [index, &replacements](vector<StatementPtr>& list){
+	return manipulate(manager, target, [index, &replacements](vector<StatementPtr>& list) {
 		// remove element
 		assert_lt(index, list.size()) << "Index out of range!";
 		list.erase(list.begin() + index);
@@ -231,19 +235,19 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, int displacement) {
 
 	// shortcut for no offset
-	if (displacement == 0) {
+	if(displacement == 0) {
 		return target.getRootNode();
 	}
-
+	
 	// use generic manipulation function
-	return manipulate(manager, target, [index, displacement](vector<StatementPtr>& list){
+	return manipulate(manager, target, [index, displacement](vector<StatementPtr>& list) {
 		// check index
 		assert_lt(index, list.size()) << "Index out of range!";
-
+		
 		// limit displacement
 		int newPos = index + displacement;
 		newPos = max(min((int)(list.size()-1), newPos), 0);
-
+		
 		StatementPtr element = list[index];
 		list.erase(list.begin() + index);
 		list.insert(list.begin() + newPos, element);
@@ -252,174 +256,178 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 
 namespace {
 
-	class InlineSubstituter : public SimpleNodeMapping {
+class InlineSubstituter : public SimpleNodeMapping {
 
-		bool successful;
+	bool successful;
+	
+	um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+	us::PointerSet<VariablePtr> replacedOnce;
+	
+public:
 
-		um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
-		us::PointerSet<VariablePtr> replacedOnce;
-
-	public:
-
-		InlineSubstituter(um::PointerMap<VariablePtr, ExpressionPtr>& replacements)
-			: successful(true), replacements(replacements) { }
-
-		const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-			if (!successful) {
-				return ptr;
-			}
-
-			if (ptr->getNodeType() != NT_Variable) {
-				if (ptr->getNodeType() == NT_LambdaExpr) {
-					// entering new scope => ignore this
-					return ptr;
-				}
-				return ptr->substitute(ptr->getNodeManager(), *this);
-			}
-
-			const VariablePtr& var = ptr.as<VariablePtr>();
-
-			// check whether variable has been already encountered
-			if (replacedOnce.find(var) != replacedOnce.end()) {
-				// variable may only be replaced once!
-				successful = false;
-				return ptr;
-			}
-
-			auto pos = replacements.find(var);
-			if (pos != replacements.end()) {
-				ExpressionPtr res = pos->second;
-
-				// to ensure a single evaluation!
-				if (!core::analysis::isSideEffectFree(res)) {
-					replacedOnce.insert(var);
-				}
-				return res;
-			}
-
-			// no modification required
+	InlineSubstituter(um::PointerMap<VariablePtr, ExpressionPtr>& replacements)
+		: successful(true), replacements(replacements) { }
+		
+	const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+		if(!successful) {
 			return ptr;
 		}
-
-		bool wasSuccessful() const {
-			return successful;
-		}
-	};
-
-
-
-
-	ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
-
-		// extract bind and call expression
-		assert_eq(call->getFunctionExpr()->getNodeType(), NT_BindExpr) << "Illegal argument!";
-		BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
-
-		// process call recursively
-		CallExprPtr innerCall = bind->getCall();
-		ExpressionPtr inlined = tryInlineToExpr(manager, innerCall);
-
-		// check for matching argument number
-		auto parameter = bind->getParameters();
-		auto arguments = call->getArguments();
-		if (parameter.size() != arguments.size()) {
-			return call;
-		}
-
-		// substituted call arguments with bind parameters
-		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
-
-		replacements.insert(
-				make_paired_iterator(parameter.begin(), arguments.begin()),
-				make_paired_iterator(parameter.end(), arguments.end())
-		);
-
-		// substitute variables within body
-		InlineSubstituter substituter(replacements);
-		ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, inlined));
-
-		// check result
-		if (!substituter.wasSuccessful()) {
-			return call;
-		}
-		return res;
-	}
-
-	ExpressionPtr tryInlineToExprInternal(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
-
-		// Step 1 - get capture init and lambda expression
-		ExpressionPtr target = call->getFunctionExpr();
-		LambdaExprPtr lambda;
-
-		// check for built-ins
-		if (!inlineDerivedBuiltIns && core::lang::isDerived(target)) {
-			return call;
-		}
-
-		// check for bind expression ...
-		if (target->getNodeType() == NT_BindExpr) {
-			return tryInlineBindToExpr(manager, call);
-		}
-
-		// check for lambda ...
-		if (target->getNodeType() == NT_LambdaExpr) {
-			lambda = static_pointer_cast<const LambdaExpr>(target);
-		} else {
-			// no in-lining possible
-			return call;
-		}
-
-		// if recursive => inlining not possible
-		if (lambda->isRecursive()) {
-			return call;
-		}
-
-		// Step 2 - check body => has to be a return statement
-		StatementPtr bodyStmt = lambda->getLambda()->getBody();
-
-		while (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
-			const auto& stmts = compound->getStatements();
-			if (stmts.size() == 1) {
-				bodyStmt = stmts[0];
-			} else {
-				// no in-lining possible (to many statements)
-				return call;
+		
+		if(ptr->getNodeType() != NT_Variable) {
+			if(ptr->getNodeType() == NT_LambdaExpr) {
+				// entering new scope => ignore this
+				return ptr;
 			}
+			return ptr->substitute(ptr->getNodeManager(), *this);
 		}
-
-		// check for expression
-		ExpressionPtr body;
-		if (ReturnStmtPtr returnStmt = dynamic_pointer_cast<const ReturnStmt>(bodyStmt)) {
-			body = returnStmt->getReturnExpr();
-		} else if (bodyStmt->getNodeCategory() == core::NC_Expression){
-			// single expression => can also be inlined
-			body = static_pointer_cast<const core::Expression>(bodyStmt);
-		} else {
-			// no in-lining possible (not a simple expression)
-			return call;
+		
+		const VariablePtr& var = ptr.as<VariablePtr>();
+		
+		// check whether variable has been already encountered
+		if(replacedOnce.find(var) != replacedOnce.end()) {
+			// variable may only be replaced once!
+			successful = false;
+			return ptr;
 		}
-
-		// Step 3 - collect variables replacements
-		const ParametersPtr& paramList = lambda->getParameterList();
-
-		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
-
-		// add call parameters
-		int index = 0;
-		::for_each(call->getArguments(), [&](const ExpressionPtr& cur) {
-			replacements.insert(std::make_pair(paramList[index++], cur));
-		});
-
-		// Step 4 - substitute variables within body
-		InlineSubstituter substituter(replacements);
-		ExpressionPtr res = substituter.mapElement(0, body).as<ExpressionPtr>();
-
-		// check result
-		if (substituter.wasSuccessful()) {
+		
+		auto pos = replacements.find(var);
+		if(pos != replacements.end()) {
+			ExpressionPtr res = pos->second;
+			
+			// to ensure a single evaluation!
+			if(!core::analysis::isSideEffectFree(res)) {
+				replacedOnce.insert(var);
+			}
 			return res;
 		}
+		
+		// no modification required
+		return ptr;
+	}
+	
+	bool wasSuccessful() const {
+		return successful;
+	}
+};
+
+
+
+
+ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
+
+	// extract bind and call expression
+	assert_eq(call->getFunctionExpr()->getNodeType(), NT_BindExpr) << "Illegal argument!";
+	BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
+	
+	// process call recursively
+	CallExprPtr innerCall = bind->getCall();
+	ExpressionPtr inlined = tryInlineToExpr(manager, innerCall);
+	
+	// check for matching argument number
+	auto parameter = bind->getParameters();
+	auto arguments = call->getArguments();
+	if(parameter.size() != arguments.size()) {
 		return call;
 	}
+	
+	// substituted call arguments with bind parameters
+	um::PointerMap<VariablePtr, ExpressionPtr> replacements;
+	
+	replacements.insert(
+	    make_paired_iterator(parameter.begin(), arguments.begin()),
+	    make_paired_iterator(parameter.end(), arguments.end())
+	);
+	
+	// substitute variables within body
+	InlineSubstituter substituter(replacements);
+	ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, inlined));
+	
+	// check result
+	if(!substituter.wasSuccessful()) {
+		return call;
+	}
+	return res;
+}
+
+ExpressionPtr tryInlineToExprInternal(NodeManager& manager, const CallExprPtr& call, bool inlineDerivedBuiltIns) {
+
+	// Step 1 - get capture init and lambda expression
+	ExpressionPtr target = call->getFunctionExpr();
+	LambdaExprPtr lambda;
+	
+	// check for built-ins
+	if(!inlineDerivedBuiltIns && core::lang::isDerived(target)) {
+		return call;
+	}
+	
+	// check for bind expression ...
+	if(target->getNodeType() == NT_BindExpr) {
+		return tryInlineBindToExpr(manager, call);
+	}
+	
+	// check for lambda ...
+	if(target->getNodeType() == NT_LambdaExpr) {
+		lambda = static_pointer_cast<const LambdaExpr>(target);
+	}
+	else {
+		// no in-lining possible
+		return call;
+	}
+	
+	// if recursive => inlining not possible
+	if(lambda->isRecursive()) {
+		return call;
+	}
+	
+	// Step 2 - check body => has to be a return statement
+	StatementPtr bodyStmt = lambda->getLambda()->getBody();
+	
+	while(CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
+		const auto& stmts = compound->getStatements();
+		if(stmts.size() == 1) {
+			bodyStmt = stmts[0];
+		}
+		else {
+			// no in-lining possible (to many statements)
+			return call;
+		}
+	}
+	
+	// check for expression
+	ExpressionPtr body;
+	if(ReturnStmtPtr returnStmt = dynamic_pointer_cast<const ReturnStmt>(bodyStmt)) {
+		body = returnStmt->getReturnExpr();
+	}
+	else if(bodyStmt->getNodeCategory() == core::NC_Expression) {
+		// single expression => can also be inlined
+		body = static_pointer_cast<const core::Expression>(bodyStmt);
+	}
+	else {
+		// no in-lining possible (not a simple expression)
+		return call;
+	}
+	
+	// Step 3 - collect variables replacements
+	const ParametersPtr& paramList = lambda->getParameterList();
+	
+	um::PointerMap<VariablePtr, ExpressionPtr> replacements;
+	
+	// add call parameters
+	int index = 0;
+	::for_each(call->getArguments(), [&](const ExpressionPtr& cur) {
+		replacements.insert(std::make_pair(paramList[index++], cur));
+	});
+	
+	// Step 4 - substitute variables within body
+	InlineSubstituter substituter(replacements);
+	ExpressionPtr res = substituter.mapElement(0, body).as<ExpressionPtr>();
+	
+	// check result
+	if(substituter.wasSuccessful()) {
+		return res;
+	}
+	return call;
+}
 
 }
 
@@ -432,7 +440,9 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call, boo
 		ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>(), inlineDerivedBuiltIns);
 		successful = (*tmp != *res);
 		res = tmp;
-		if (sigleStep) return res;
+		if(sigleStep) {
+			return res;
+		}
 	}
 	return res;
 }
@@ -441,63 +451,64 @@ StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr, 
 
 	// first use expression inlining
 	ExpressionPtr res = tryInlineToExpr(manager, callExpr, inlineDerivedBuiltIns);
-	if (res->getNodeType() != NT_CallExpr) {
+	if(res->getNodeType() != NT_CallExpr) {
 		return res;		// no more processing necessary
 	}
-
+	
 	// call has to be a call to a lambda
 	CallExprPtr call = static_pointer_cast<CallExprPtr>(res);
-	if (call->getFunctionExpr()->getNodeType() != NT_LambdaExpr) {
+	if(call->getFunctionExpr()->getNodeType() != NT_LambdaExpr) {
 		return call;	// only known functions can be inlined
 	}
-
+	
 	LambdaExprPtr fun = static_pointer_cast<LambdaExprPtr>(call->getFunctionExpr());
-	if (fun->isRecursive() || !isOutlineAble(fun->getBody())) {
+	if(fun->isRecursive() || !isOutlineAble(fun->getBody())) {
 		return call;	// recursive functions and free return / break / continue can not be supported
 	}
-
+	
 	// do not touch derived built-ins if not explicitly requested
-	if (!inlineDerivedBuiltIns && core::lang::isDerived(fun)) {
+	if(!inlineDerivedBuiltIns && core::lang::isDerived(fun)) {
 		return call;
 	}
-
+	
 	// --- ok, some inline has to be done --
-
+	
 	IRBuilder builder(manager);
-
+	
 	// create substitution
 	vector<StatementPtr> stmts;
 	VariableMap varMap;
-
+	
 	// instantiate very variable within the parameter list with a fresh name
 	const auto& params = fun->getParameterList().getElements();
 	const auto& args = call->getArguments();
-
+	
 	assert_eq(params.size(), args.size()) << "Arguments do not fit parameters!!";
-
+	
 	for(std::size_t i =0; i<params.size(); i++) {
-
+	
 		VariablePtr localVar;
-		if (args[i]->getNodeType() == NT_Variable) {
+		if(args[i]->getNodeType() == NT_Variable) {
 			// passing a pure variable => use variable everywhere
 			localVar = static_pointer_cast<VariablePtr>(args[i]);
-		} else {
+		}
+		else {
 			// temporary value is passed => create temporary variable
 			localVar = builder.variable(args[i]->getType());
-
+			
 			// copy value of parameter into a local variable
 			stmts.push_back(builder.declarationStmt(localVar, args[i]));
 		}
-
+		
 		// add to replacement map
 		varMap[params[i]] = localVar;
 	}
-
+	
 	// add body of function to resulting inlined code
 	for_each(fun->getBody()->getStatements(), [&](const core::StatementPtr& cur) {
 		stmts.push_back(replaceVarsGen(manager, cur, varMap));
 	});
-
+	
 	// return compound stmt containing the entire stmt sequence
 	return builder.compoundStmt(stmts);
 }
@@ -505,132 +516,136 @@ StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr, 
 
 namespace {
 
-	class ParameterFixer : public core::transform::CachedNodeMapping {
+class ParameterFixer : public core::transform::CachedNodeMapping {
 
-		NodeManager& manager;
-		const VariablePtr var;
-		const ExpressionPtr replacement;
+	NodeManager& manager;
+	const VariablePtr var;
+	const ExpressionPtr replacement;
+	
+public:
 
-	public:
-
-		ParameterFixer(NodeManager& manager, const VariablePtr& var, const ExpressionPtr& replacement)
-			: manager(manager), var(var), replacement(replacement) {}
-
-		LambdaExprPtr fixLambda(const LambdaExprPtr& original, const ExpressionList& args, ExpressionList& newArgs) {
-
-			// start based on same lambda
-			LambdaExprPtr lambda = original;
-
-			// replace one parameter after another (back to front)
-			std::size_t size = args.size();
-			for (int i = size-1; i>=0; i--) {
-				// check if it is the variable
-
-				// try to fix the parameter for called function
-				if (*args[i] == *var) {
-					LambdaExprPtr newLambda = tryFixParameter(manager, lambda, i, replacement);
-					if (*newLambda != *lambda) {
-						// => nice, it worked!
-						lambda = newLambda;
-						continue;
-					}
+	ParameterFixer(NodeManager& manager, const VariablePtr& var, const ExpressionPtr& replacement)
+		: manager(manager), var(var), replacement(replacement) {}
+		
+	LambdaExprPtr fixLambda(const LambdaExprPtr& original, const ExpressionList& args, ExpressionList& newArgs) {
+	
+		// start based on same lambda
+		LambdaExprPtr lambda = original;
+		
+		// replace one parameter after another (back to front)
+		std::size_t size = args.size();
+		for(int i = size-1; i>=0; i--) {
+			// check if it is the variable
+			
+			// try to fix the parameter for called function
+			if(*args[i] == *var) {
+				LambdaExprPtr newLambda = tryFixParameter(manager, lambda, i, replacement);
+				if(*newLambda != *lambda) {
+					// => nice, it worked!
+					lambda = newLambda;
+					continue;
 				}
-
-				// exchange argument
-				ExpressionPtr newArg = this->map(args[i]);
-				newArgs.insert(newArgs.begin(), newArg);
 			}
-
-			// restore annotations
-			utils::migrateAnnotations(original, lambda);
-			utils::migrateAnnotations(original->getLambda(), lambda->getLambda());
-
-			// return modified lambda
-			return lambda;
+			
+			// exchange argument
+			ExpressionPtr newArg = this->map(args[i]);
+			newArgs.insert(newArgs.begin(), newArg);
 		}
-
-		const NodePtr resolveElement(const NodePtr& ptr) {
-			// check for replacement
-			if (*ptr == *var) {
-				return replacement;
-			}
-
-			// cut off types and stop if already unsuccessful
-			if (ptr->getNodeCategory() == NC_Type) {
-				return ptr;
-			}
-
-			// handle call expressions
-			if (ptr->getNodeType() == NT_CallExpr) {
-				CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
-				if (::contains(call->getArguments(), var)) {
-
-					const auto& args = call->getArguments();
-					ExpressionList newArgs;
-
-					bool resolved = false;
-
-					// Push value through to sub-call ...
-					ExpressionPtr fun = call->getFunctionExpr();
-					if (fun->getNodeType() == NT_LambdaExpr) {
-
-						// exchange function by fixing parameters within the lambda
-						fun = fixLambda(fun.as<LambdaExprPtr>(), args, newArgs);
-						resolved = true;
-
+		
+		// restore annotations
+		utils::migrateAnnotations(original, lambda);
+		utils::migrateAnnotations(original->getLambda(), lambda->getLambda());
+		
+		// return modified lambda
+		return lambda;
+	}
+	
+	const NodePtr resolveElement(const NodePtr& ptr) {
+		// check for replacement
+		if(*ptr == *var) {
+			return replacement;
+		}
+		
+		// cut off types and stop if already unsuccessful
+		if(ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+		
+		// handle call expressions
+		if(ptr->getNodeType() == NT_CallExpr) {
+			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
+			if(::contains(call->getArguments(), var)) {
+			
+				const auto& args = call->getArguments();
+				ExpressionList newArgs;
+				
+				bool resolved = false;
+				
+				// Push value through to sub-call ...
+				ExpressionPtr fun = call->getFunctionExpr();
+				if(fun->getNodeType() == NT_LambdaExpr) {
+				
+					// exchange function by fixing parameters within the lambda
+					fun = fixLambda(fun.as<LambdaExprPtr>(), args, newArgs);
+					resolved = true;
+					
 					// check whether it is a known literal
-					} else if (analysis::isCallOf(fun, manager.getLangBasic().getPick())) {
-						assert_eq(fun->getType()->getNodeType(), NT_FunctionType);
-
-						// get list encapsulated options
-						CallExprPtr pickCall = fun.as<CallExprPtr>();
-						auto variants = encoder::toValue<vector<ExpressionPtr>>(pickCall->getArgument(0));
-
-						if (all(variants, [](const ExpressionPtr& cur) { return cur->getNodeType() == NT_LambdaExpr; })) {
-
-							// fix all lambdas offered to the pick
-							for_each(variants, [&](ExpressionPtr& cur) {
-								newArgs.clear(); // only update arguments once
-								cur = fixLambda(cur.as<LambdaExprPtr>(), args, newArgs);
-							});
-
-							// replace function by customized pick call
-							fun = IRBuilder(manager).pickVariant(variants);
-							resolved = true;
-						}
-					} else {
-						// process function definition
-						fun = map(fun);
-					}
-
-					if (!resolved) {
-						// cannot be pushed through ... just substitute within arguments and done
-						::transform(args, std::back_inserter(newArgs), [&](const ExpressionPtr& cur)->const ExpressionPtr {
-							if (*cur == *var) {
-								return replacement;
-							}
-							return this->map(cur);
-						});
-
-					}
-
-					// create new call
-					return CallExpr::get(manager, call->getType(), fun, newArgs);
 				}
+				else if(analysis::isCallOf(fun, manager.getLangBasic().getPick())) {
+					assert_eq(fun->getType()->getNodeType(), NT_FunctionType);
+					
+					// get list encapsulated options
+					CallExprPtr pickCall = fun.as<CallExprPtr>();
+					auto variants = encoder::toValue<vector<ExpressionPtr>>(pickCall->getArgument(0));
+					
+					if(all(variants, [](const ExpressionPtr& cur) {
+					return cur->getNodeType() == NT_LambdaExpr;
+					})) {
+					
+						// fix all lambdas offered to the pick
+						for_each(variants, [&](ExpressionPtr& cur) {
+							newArgs.clear(); // only update arguments once
+							cur = fixLambda(cur.as<LambdaExprPtr>(), args, newArgs);
+						});
+						
+						// replace function by customized pick call
+						fun = IRBuilder(manager).pickVariant(variants);
+						resolved = true;
+					}
+				}
+				else {
+					// process function definition
+					fun = map(fun);
+				}
+				
+				if(!resolved) {
+					// cannot be pushed through ... just substitute within arguments and done
+					::transform(args, std::back_inserter(newArgs), [&](const ExpressionPtr& cur)->const ExpressionPtr {
+						if(*cur == *var) {
+							return replacement;
+						}
+						return this->map(cur);
+					});
+					
+				}
+				
+				// create new call
+				return CallExpr::get(manager, call->getType(), fun, newArgs);
 			}
-
-			// handle lambda expressions ...
-			if (ptr->getNodeType() == NT_LambdaExpr) {
-				// .. end of replacement scope
-				return ptr;
-			}
-
-			// else: process recursively
-			return ptr->substitute(manager, *this);
-
 		}
-
-	};
+		
+		// handle lambda expressions ...
+		if(ptr->getNodeType() == NT_LambdaExpr) {
+			// .. end of replacement scope
+			return ptr;
+		}
+		
+		// else: process recursively
+		return ptr->substitute(manager, *this);
+		
+	}
+	
+};
 
 
 
@@ -693,62 +708,66 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 //	}
 
 	// do not touch derived operator definitions
-	if (lang::isDerived(lambda)) return lambda;
-
+	if(lang::isDerived(lambda)) {
+		return lambda;
+	}
+	
 	// check parameters
 	const FunctionTypePtr& funType = lambda->getFunctionType();
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert_lt(index, paramTypes.size()) << "Index out of bound - no such parameter!";
-
+	
 	assert_true(types::isSubTypeOf(value->getType(), paramTypes[index])) << "Cannot substitute non-compatible value for specified parameter.";
-
+	
 	// make sure replacement value does not have any free variables except it is a variable itself (used for fixing recursive variables)
 	assert_true((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty())) << "Replacement value must not have free variables!";
-
+	
 	// conduct replacement
-
+	
 	const VariablePtr& param = lambda->getParameterList()[index];
 	ParameterFixer fixer(manager, param, value);
 	CompoundStmtPtr body = fixer.map(lambda->getBody());
-
+	
 	// create new function type
 	paramTypes.erase(paramTypes.begin() + index);
 	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), funType->getKind());
-
+	
 	// create new recursive variable
 	auto newRecVar = Variable::get(manager, newFunType, lambda->getVariable()->getId());
-
+	
 	// handle recursive functions
-	if (lambda->isRecursive()) {
-
+	if(lambda->isRecursive()) {
+	
 		if(lambda->getDefinition().size() > 1u) {
 			assert_fail() << "Propagating parameters across mutual recursive functions not supported yet!";
 			return lambda; // not supported yet
 		}
-
+		
 		// collect all recursive calls (addresses to support a faster replacement later on)
 		VariablePtr recVar = lambda->getVariable();
 		vector<CallExprAddress> calls;
-		visitDepthFirst(NodeAddress(body), [&](const CallExprAddress& call){
-			if (call.as<CallExprPtr>()->getFunctionExpr() == recVar) calls.push_back(call);
+		visitDepthFirst(NodeAddress(body), [&](const CallExprAddress& call) {
+			if(call.as<CallExprPtr>()->getFunctionExpr() == recVar) {
+				calls.push_back(call);
+			}
 		});
-
+		
 		// check whether parameter is propagated
 		bool isPropagated = all(calls, [&](const CallExprPtr& call)->bool {
 			// check whether value is propagated along the recursion
 			assert_lt(index, call->getArguments().size()) << "Invalid recursive call!";
 			return call->getArgument(index) == value;
 		});
-
+		
 		// value is not propagated along recursion
-		if (!isPropagated) {
+		if(!isPropagated) {
 			// peel recursion once and use non-recursive parameter fixer
 			return tryFixParameter(manager, lambda->peel(), index, value);
 		}
-
+		
 		// update recursive variable
-
-
+		
+		
 		// update recursive calls within body
 		IRBuilder builder(manager);
 		std::map<NodeAddress, NodePtr> replacements;
@@ -756,25 +775,25 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 			// eliminate argument from call
 			ExpressionList newArgs = cur.as<CallExprPtr>()->getArguments();
 			newArgs.erase(newArgs.begin() + index);
-
-
+			
+			
 			// build and register updated call
 			CallExprPtr newCall = builder.callExpr(cur->getType(), newRecVar, newArgs);
 			replacements.insert({cur, newCall});
 		}
-
+		
 		// update body
 		if(!replacements.empty()) {
 			body = replaceAll(manager, replacements).as<CompoundStmtPtr>();
 		}
 	}
-
-
-
+	
+	
+	
 	// create new parameter list
 	vector<VariablePtr> params = lambda->getParameterList()->getParameters();
 	params.erase(params.begin() + index);
-
+	
 	// build resulting lambda (preserving recursive variable ID)
 	auto binding = LambdaBinding::get(manager, newRecVar, Lambda::get(manager, newFunType, params, body));
 	auto def = LambdaDefinition::get(manager, toVector(binding));
@@ -790,94 +809,94 @@ NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr
 CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, unsigned index) {
 
 	// ---------------- Pre-Conditions --------------------
-
+	
 	// check whether indexed parameter is in-deed a bind
 	assert_lt(index, call->getArguments().size()) << "Invalid argument index!";
 	assert_eq(call->getArgument(index)->getNodeType(), NT_BindExpr) << "Specified argument is not a bind!";
-
+	
 	// check whether function is in-deed a lambda
 	assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr) << "Function has to be a lambda!";
-
+	
 	// so far it is only supported for non-recursive implementations
 	assert(!call->getFunctionExpr().as<LambdaExprPtr>()->isRecursive() && "Not implemented for recursive functions!");
-
+	
 	// ----------------------------------------------------
-
+	
 	IRBuilder builder(manager);
-
+	
 	// get all free variables within the body of the lambda (those must not be used for new variables)
 	LambdaExprPtr lambda = call->getFunctionExpr().as<LambdaExprPtr>();
 	auto allVars = analysis::getAllVariables(lambda);
-
+	
 	// also consider variables within the bind node to be moved inside
 	auto bindVars = analysis::getAllVariables(call->getArgument(index));
 	allVars.insert(bindVars.begin(), bindVars.end());
-
+	
 	// get next free variable ID
 	unsigned next_index = 0;
 	for(const auto& cur : allVars) {
 		next_index = std::max(next_index, cur->getId());
 	}
 	next_index++;
-
+	
 	// compute a map of free variables to
 	vector<ExpressionPtr> newArgs;
 	vector<VariablePtr> newParams;
 	vector<ExpressionPtr> newBindCallArgs;
-
+	
 	// iterate through bound expressions => filter constants and others
 	BindExprPtr bind = call->getArgument(index).as<BindExprPtr>();
 	const VariableList bindParams = bind->getParameters().getParameters();
 	CallExprPtr callWithinBind = bind->getCall();
 	for(const ExpressionPtr& cur : callWithinBind->getArguments()) {
-
+	
 		// bind-parameters are just forwarded
-		if (cur->getNodeType() == NT_Variable && contains(bindParams, cur.as<VariablePtr>())) {
+		if(cur->getNodeType() == NT_Variable && contains(bindParams, cur.as<VariablePtr>())) {
 			newBindCallArgs.push_back(cur);
 			continue;
 		}
-
+		
 		// this is a bound expression
 		//  => if it is a constant it stays
-		if (analysis::getFreeVariables(cur).empty()) {
+		if(analysis::getFreeVariables(cur).empty()) {
 			newBindCallArgs.push_back(cur);
 			continue;
 		}
-
+		
 		//  => otherwise it is evaluated and forwarded as a parameter
 		VariablePtr newParam = builder.variable(cur->getType(), next_index++);
 		newBindCallArgs.push_back(newParam);
-
+		
 		// add new parameter to list of parameters to be added to the lambda
 		newParams.push_back(newParam);
-
+		
 		// add new argument to be passed by the call
 		newArgs.push_back(cur);
 	}
-
+	
 	// --- build up result ---
-
+	
 	// build new bind with modified call expression
 	auto newBind = BindExpr::get(manager, bind->getType().as<FunctionTypePtr>(), bind->getParameters(),
-			CallExpr::get(manager, callWithinBind->getType(), callWithinBind->getFunctionExpr(), newBindCallArgs)
-	);
-
+	                             CallExpr::get(manager, callWithinBind->getType(), callWithinBind->getFunctionExpr(), newBindCallArgs)
+	                            );
+	                            
 	// fix parameter within body of lambda
 	auto newBody = fixVariable(manager, lambda->getBody(), lambda->getParameterList()[index], newBind);
-
+	
 	// fix parameter list of lambda
 	VariableList newLambdaParams = lambda->getParameterList()->getParameters();
 	newLambdaParams.erase(newLambdaParams.begin() + index); // remove parameter accepting bind
 	newLambdaParams.insert(newLambdaParams.begin() + index, newParams.begin(), newParams.end()); // inject new parameters
-
+	
 	// build new lambda
 	auto newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), newBody, newLambdaParams);
-
+	
 	// assemble new argument list
 	ExpressionList newArgumentList = call->getArguments();
 	newArgumentList.erase(newArgumentList.begin() + index); // drop bind argument
 	newArgumentList.insert(newArgumentList.begin() + index, newArgs.begin(), newArgs.end()); // inject new arguments
-
+	
 	// finally build new call expression
 	return builder.callExpr(call->getType(), newLambda, newArgumentList);
 }
@@ -909,7 +928,7 @@ bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
 			return false;
 		}
 	}
-
+	
 	// search for "bound" break or continue statements
 	vector<NodeType> pruneStmts;
 	pruneStmts.push_back(NT_ForStmt);
@@ -917,7 +936,7 @@ bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
 	bool hasFreeBreakOrContinue = hasFreeControlStatement(stmt, NT_ContinueStmt, pruneStmts);
 	pruneStmts.push_back(NT_SwitchStmt);
 	hasFreeBreakOrContinue = hasFreeBreakOrContinue || hasFreeControlStatement(stmt, NT_BreakStmt, pruneStmts);
-
+	
 	return !hasFreeBreakOrContinue;
 }
 
@@ -925,14 +944,14 @@ bool isOutlineAble(const StatementPtr& stmt, bool allowReturns) {
 CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt, bool allowReturns) {
 	// check whether it is allowed
 	assert_true(isOutlineAble(stmt, allowReturns))
-		<< "Cannot outline given code - it contains 'free' return, break or continue stmts.";
-
+	        << "Cannot outline given code - it contains 'free' return, break or continue stmts.";
+	        
 	// Obtain list of free variables
 	VariableList free = analysis::getFreeVariables(manager.get(stmt));
-
+	
 	// sort to obtain stable results
 	std::sort(free.begin(), free.end(), compare_target<VariablePtr>());
-
+	
 	// rename free variables within body using restricted scope
 	IRBuilder builder(manager);
 	um::PointerMap<VariablePtr, VariablePtr> replacements;
@@ -943,13 +962,13 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt, bool allowRe
 		parameter.push_back(var);
 	});
 	StatementPtr body = replaceVarsGen(manager, stmt, replacements);
-
+	
 	// determine return type if necessary
 	auto retType = manager.getLangBasic().getUnit();
 	if(allowReturns) {
 		retType = analysis::autoReturnType(manager, builder.compoundStmt(body));
 	}
-
+	
 	// create lambda accepting all free variables as arguments
 	LambdaExprPtr lambda = builder.lambdaExpr(retType, body, parameter);
 	
@@ -961,10 +980,10 @@ CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {
 
 	// Obtain list of free variables
 	VariableList free = analysis::getFreeVariables(expr);
-
+	
 	// sort to obtain stable results
 	std::sort(free.begin(), free.end(), compare_target<VariablePtr>());
-
+	
 	// rename free variables within body using restricted scope
 	IRBuilder builder(manager);
 	um::PointerMap<VariablePtr, VariablePtr> replacements;
@@ -975,10 +994,10 @@ CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {
 		parameter.push_back(var);
 	});
 	ExpressionPtr body = replaceVarsGen(manager, expr, replacements);
-
+	
 	// create lambda accepting all free variables as arguments
 	LambdaExprPtr lambda = builder.lambdaExpr(body->getType(), builder.returnStmt(body), parameter);
-
+	
 	// create call to this lambda
 	return builder.callExpr(body->getType(), lambda, convertList<Expression>(free));
 }
@@ -988,10 +1007,10 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool eva
 	// check type of lazy expression
 	core::FunctionTypePtr funType = dynamic_pointer_cast<const core::FunctionType>(lazy->getType());
 	assert_true(funType) << "Illegal lazy type!";
-
+	
 	// form call expression
 	core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
-
+	
 	// evaluated call by inlining it
 	return core::transform::tryInlineToExpr(manager, call, evalDerivedOps);
 }
@@ -999,20 +1018,20 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool eva
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root) {
 
 	// if it is already extracted, skip operation
-	if (root->getNodeType() == NT_BindExpr) {
+	if(root->getNodeType() == NT_BindExpr) {
 		return root.as<BindExprPtr>();
 	}
-
+	
 	// use standard outlining utility
 	return extractLambda(manager, root, toVector<VariablePtr>());
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments) {
 	IRBuilder build(manager);
-
+	
 	// outline statement
 	CallExprPtr outlined = outline(manager, root);
-
+	
 	// create new parameter list
 	VariableList params;
 	um::PointerMap<VariablePtr, VariablePtr> replacements;
@@ -1021,45 +1040,45 @@ BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const 
 		replacements[cur] = newVar;
 		params.push_back(newVar);
 	});
-
+	
 	// update parameter list within call
 	outlined = replaceVarsGen(manager, outlined, replacements);
-
+	
 	// create bind expression exposing requested arguments
 	return build.bindExpr(params, outlined);
 }
 
 LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize) {
-	
-	auto body = root->getBody();
 
+	auto body = root->getBody();
+	
 	IRBuilder build(manager);
 	um::PointerMap<NodePtr, NodePtr> replacements;
-
+	
 	for_each(varsToPrivatize, [&](VariablePtr p) {
 		auto var = build.variable(p->getType());
 		replacements[p] = var;
 	});
 	auto newBody = replaceAll(manager, body, replacements);
-
+	
 	return dynamic_pointer_cast<const LambdaExpr>(newBody);
 }
 
 LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const types::SubstitutionOpt& substitution) {
 
 	// check for early exit
-	if (!substitution || substitution->empty()) {
+	if(!substitution || substitution->empty()) {
 		return lambda;
 	}
-
+	
 	assert_false(lambda->isRecursive()) << "I owe you the support for recursive functions!";
-
+	
 	// update type
 	const FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(substitution->applyTo(lambda->getType()));
-
+	
 	// update body
 	CompoundStmtPtr body = static_pointer_cast<CompoundStmtPtr>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
-
+	
 	// update parameters
 	VariableList params;
 	VariableMap paramMap;
@@ -1070,10 +1089,10 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 		params.push_back(newVar);
 		paramMap[var] = newVar;
 	}
-
+	
 	// update variables in body
 	body = transform::replaceVarsGen(manager, body, paramMap);
-
+	
 	// construct result
 	return LambdaExpr::get(manager, funType, params, body);
 }
@@ -1082,179 +1101,187 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	//if(!prog->isMain()) {
 	//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
 	//}
-
+	
 	LambdaExprPtr lambda = prog[0].as<LambdaExprPtr>(); //dynamic_pointer_cast<const LambdaExpr>(prog->getElement(0));
 	auto compound = lambda->getBody();
 	auto addr = CompoundStmtAddress::find(compound, prog);
 	IRBuilder build(manager);
-
+	
 	// generate type list from initialization expression list in "globals"
-	NamedTypeList entries = ::transform(globals, [&](const NamedValuePtr& val) { 
+	NamedTypeList entries = ::transform(globals, [&](const NamedValuePtr& val) {
 		auto type = val->getValue()->getType();
-		return build.namedType(val->getName(), type); 
+		return build.namedType(val->getName(), type);
 	});
-
+	
 	auto structType = build.refType(build.structType(entries));
 	// TODO: fix backend problem with this
 	auto declStmt = build.declarationStmt(structType, /*build.refVar(build.undefined(structType))*/build.refVar(build.structExpr(globals)));
-
+	
 	// update program
 	int location = 0;
-	if(addr->getStatement(location)->getNodeType() == NT_DeclarationStmt) ++location;
+	if(addr->getStatement(location)->getNodeType() == NT_DeclarationStmt) {
+		++location;
+	}
 	auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, location));
 	utils::migrateAnnotations(prog, newProg);
 	prog = newProg;
-
+	
 	// migrate annotations on body
 	lambda = prog[0].as<LambdaExprPtr>();
 	compound = lambda->getBody();
 	utils::migrateAnnotations(addr.getAddressedNode(), compound);
-
+	
 	return declStmt;
 }
 
 
 namespace {
 
-	namespace detail {
+namespace detail {
 
-		/**
-		 * Adds a new parameter to the given lambda - if the parameter is colliding with a free variable
-		 * within the given lambda a alternative variable of the same type will be created to replace the
-		 * handed in parameter.
-		 */
-		LambdaExprPtr addNewParameter(const LambdaExprPtr& lambda, VariablePtr& param) {
-			assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!";
-
-			IRBuilder builder(lambda.getNodeManager());
-
-			// find name for new parameter
-			auto variablesInScope = core::analysis::getAllVariablesInScope(lambda->getLambda());
-
-			VariablePtr newVar = param;
-			while(contains(variablesInScope, newVar, [](const VariablePtr& a, const VariablePtr& b) { return a->getId() == b->getId(); })) {
-				newVar = builder.variable(newVar->getType());
-			}
-
-			// update propagated variable
-			param = newVar;
-
-			// add new parameter and return new lambda
-			VariableList params = lambda->getParameterList().getParameters();
-			params.push_back(newVar);
-			return builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), lambda->getBody(), params);
-		}
-
+/**
+ * Adds a new parameter to the given lambda - if the parameter is colliding with a free variable
+ * within the given lambda a alternative variable of the same type will be created to replace the
+ * handed in parameter.
+ */
+LambdaExprPtr addNewParameter(const LambdaExprPtr& lambda, VariablePtr& param) {
+	assert_false(lambda->isRecursive()) << "Recursive functions not supported yet!";
+	
+	IRBuilder builder(lambda.getNodeManager());
+	
+	// find name for new parameter
+	auto variablesInScope = core::analysis::getAllVariablesInScope(lambda->getLambda());
+	
+	VariablePtr newVar = param;
+	while(contains(variablesInScope, newVar, [](const VariablePtr& a, const VariablePtr& b) {
+	return a->getId() == b->getId();
+	})) {
+		newVar = builder.variable(newVar->getType());
 	}
+	
+	// update propagated variable
+	param = newVar;
+	
+	// add new parameter and return new lambda
+	VariableList params = lambda->getParameterList().getParameters();
+	params.push_back(newVar);
+	return builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), lambda->getBody(), params);
+}
+
+}
 
 
-	/**
-	 * Pushes the given variable from the root-node context of target to the target node by passing it
-	 * to every lambda encountered along this path. In the variable has to be renamed since the same id is
-	 * already present (types will not be considered to increase readability) the parameter var will be updated.
-	 * After the call var will reference the name of the variable as it is named in the context of the target.
-	 */
-	NodeAddress makeAvailable(NodeManager& manager, const NodeAddress& target, VariablePtr& var) {
+/**
+ * Pushes the given variable from the root-node context of target to the target node by passing it
+ * to every lambda encountered along this path. In the variable has to be renamed since the same id is
+ * already present (types will not be considered to increase readability) the parameter var will be updated.
+ * After the call var will reference the name of the variable as it is named in the context of the target.
+ */
+NodeAddress makeAvailable(NodeManager& manager, const NodeAddress& target, VariablePtr& var) {
 
-		// we are at the root node, no modification is necessary
-		if (target.isRoot()) return target;
-
-		// process recursively first (bring the variable to the current scope
-		NodeAddress parent = makeAvailable(manager, target.getParentAddress(), var);
-		NodeAddress res = parent.getAddressOfChild(target.getIndex());
-
-		// handle standard calls to lambdas
-		if (parent.isa<CallExprPtr>() && parent.as<CallExprAddress>()->getFunctionExpr() == res) {
-
-			// if this is a call to a lambda => add parameter (if not already there)
-			if (parent.getNodeType() == NT_CallExpr) {
-				CallExprPtr call = parent.as<CallExprPtr>();
-				if (*call->getFunctionExpr() == *target) {
-					// we are following the function call => add a parameter
-					if (!contains(call.getArguments(), var)) {
-
-						IRBuilder builder(manager);
-						ExpressionList newArgs = call.getArguments();
-						newArgs.push_back(var);
-
-						// build new call (function is fixed within recursive step one level up)
-						CallExprPtr newCall = builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
-						res = replaceAddress(manager, parent, newCall).getAddressOfChild(target.getIndex());
-					}
+	// we are at the root node, no modification is necessary
+	if(target.isRoot()) {
+		return target;
+	}
+	
+	// process recursively first (bring the variable to the current scope
+	NodeAddress parent = makeAvailable(manager, target.getParentAddress(), var);
+	NodeAddress res = parent.getAddressOfChild(target.getIndex());
+	
+	// handle standard calls to lambdas
+	if(parent.isa<CallExprPtr>() && parent.as<CallExprAddress>()->getFunctionExpr() == res) {
+	
+		// if this is a call to a lambda => add parameter (if not already there)
+		if(parent.getNodeType() == NT_CallExpr) {
+			CallExprPtr call = parent.as<CallExprPtr>();
+			if(*call->getFunctionExpr() == *target) {
+				// we are following the function call => add a parameter
+				if(!contains(call.getArguments(), var)) {
+				
+					IRBuilder builder(manager);
+					ExpressionList newArgs = call.getArguments();
+					newArgs.push_back(var);
+					
+					// build new call (function is fixed within recursive step one level up)
+					CallExprPtr newCall = builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
+					res = replaceAddress(manager, parent, newCall).getAddressOfChild(target.getIndex());
 				}
 			}
-
-			// if we are crossing a lambda, check whether new parameter needs to be accepted
-			if (res.getNodeType() == NT_LambdaExpr) {
-				assert_eq(res.getParentNode()->getNodeType(), NT_CallExpr) << "Parent of lambda needs to be a call!";
-				assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
-
-				LambdaExprPtr lambda = res.as<LambdaExprPtr>();
-				CallExprPtr call = res.getParentNode().as<CallExprPtr>();
-
-				// check whether a new argument needs to be added
-				if (call->getArguments().size() != lambda->getParameterList().size()) {
-
-					// add new parameter to lambda
-					LambdaExprPtr newLambda = detail::addNewParameter(lambda, var);
-					res = replaceAddress(manager, res, newLambda);
-
-				} else {
-
-					// update variable when it is already passed as an argument
-					auto args = call->getArguments();
-					for(int i = args.size() - 1; i>0; i--) {
-						if (args[i] == var) {
-							var = lambda->getParameterList()[i];
-							break;
-						}
-					}
-
-				}
+		}
+		
+		// if we are crossing a lambda, check whether new parameter needs to be accepted
+		if(res.getNodeType() == NT_LambdaExpr) {
+			assert_eq(res.getParentNode()->getNodeType(), NT_CallExpr) << "Parent of lambda needs to be a call!";
+			assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
+			
+			LambdaExprPtr lambda = res.as<LambdaExprPtr>();
+			CallExprPtr call = res.getParentNode().as<CallExprPtr>();
+			
+			// check whether a new argument needs to be added
+			if(call->getArguments().size() != lambda->getParameterList().size()) {
+			
+				// add new parameter to lambda
+				LambdaExprPtr newLambda = detail::addNewParameter(lambda, var);
+				res = replaceAddress(manager, res, newLambda);
+				
 			}
-
+			else {
+			
+				// update variable when it is already passed as an argument
+				auto args = call->getArguments();
+				for(int i = args.size() - 1; i>0; i--) {
+					if(args[i] == var) {
+						var = lambda->getParameterList()[i];
+						break;
+					}
+				}
+				
+			}
+		}
+		
 		// otherwise: if the result is a lambda expression but the parent is not a function call it => capture local variable
-		} else if (auto lambda = res.isa<LambdaExprAddress>()) {
-
-			// in this case we have something like
-			//   bool.and(..., fun, ...)
-			// where fun is the next step. We need to capture the local variable and forward it to fun by
-			//   bool.and(..., (<args>)=>fun(<args>,var), ...)
-
-			// extend lambda by an extra parameter (and update variable to be pushed)
-			VariablePtr innerVar = var;
-			LambdaExprPtr newLambda = detail::addNewParameter(lambda, innerVar);
-
-			// build bind expression
-			IRBuilder builder(lambda->getNodeManager());
-
-			// - new list of arguments
-			ExpressionList newArgs;
-			for(const auto& cur : lambda->getParameterList()) {
-				newArgs.push_back(cur);
-			}
-			newArgs.push_back(var);
-
-			// - new function type
-			auto funTypeIn  = lambda->getFunctionType();
-			auto funTypeOut = builder.functionType(funTypeIn->getParameterTypes(), funTypeIn->getReturnType(), FK_CLOSURE);
-
-			// - actual bind
-			auto bind = builder.bindExpr(funTypeOut, lambda->getParameterList().as<ParametersPtr>(),
-					builder.callExpr(newLambda, newArgs)
-			);
-
-			// build address to result for next step
-			res = replaceAddress(manager, res, bind);
-			res = res.as<BindExprAddress>()->getCall()->getFunctionExpr();
-
-			// update propagated variable
-			var = innerVar;
-		}
-
-		// for all others: just return result
-		return res;
 	}
+	else if(auto lambda = res.isa<LambdaExprAddress>()) {
+	
+		// in this case we have something like
+		//   bool.and(..., fun, ...)
+		// where fun is the next step. We need to capture the local variable and forward it to fun by
+		//   bool.and(..., (<args>)=>fun(<args>,var), ...)
+		
+		// extend lambda by an extra parameter (and update variable to be pushed)
+		VariablePtr innerVar = var;
+		LambdaExprPtr newLambda = detail::addNewParameter(lambda, innerVar);
+		
+		// build bind expression
+		IRBuilder builder(lambda->getNodeManager());
+		
+		// - new list of arguments
+		ExpressionList newArgs;
+		for(const auto& cur : lambda->getParameterList()) {
+			newArgs.push_back(cur);
+		}
+		newArgs.push_back(var);
+		
+		// - new function type
+		auto funTypeIn  = lambda->getFunctionType();
+		auto funTypeOut = builder.functionType(funTypeIn->getParameterTypes(), funTypeIn->getReturnType(), FK_CLOSURE);
+		
+		// - actual bind
+		auto bind = builder.bindExpr(funTypeOut, lambda->getParameterList().as<ParametersPtr>(),
+		                             builder.callExpr(newLambda, newArgs)
+		                            );
+		                            
+		// build address to result for next step
+		res = replaceAddress(manager, res, bind);
+		res = res.as<BindExprAddress>()->getCall()->getFunctionExpr();
+		
+		// update propagated variable
+		var = innerVar;
+	}
+	
+	// for all others: just return result
+	return res;
+}
 
 }
 
@@ -1267,19 +1294,19 @@ VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, 
 vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var) {
 
 	// check whether there is something to do
-	if (targets.empty()) {
+	if(targets.empty()) {
 		return vector<VariableAddress>();
 	}
-
+	
 	// special handling for a single step
-	if (targets.size() == 1u) {
+	if(targets.size() == 1u) {
 		return toVector(pushInto(manager, targets[0], var));
 	}
-
+	
 	// implant variables in reverse order of addresses (avoid invalid addresses in case targets are nested)
 	vector<ExpressionAddress> sorted = targets;
 	std::sort(sorted.rbegin(), sorted.rend());
-
+	
 	// implant variables - one by one
 	NodePtr curRoot = targets[0].getRootNode();
 	vector<VariableAddress> res;
@@ -1287,12 +1314,12 @@ vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAd
 		res.push_back(pushInto(manager, cur.switchRoot(curRoot), var));
 		curRoot = res.back().getRootNode();
 	}
-
+	
 	// update all root nodes
 	for(auto& cur : res) {
 		cur = cur.switchRoot(curRoot);
 	}
-
+	
 	// done
 	return res;
 }
@@ -1304,17 +1331,17 @@ NodePtr pushInto(NodeManager& manager, const map<ExpressionAddress, VariablePtr>
 	assert(all(elements, [&](const pair<ExpressionAddress, VariablePtr>& cur)->bool {
 		return cur.first.getRootNode() == elements.begin()->first.getRootNode();
 	}));
-
-
+	
+	
 	// apply push-in operation iteratively
 	NodePtr root = elements.begin()->first.getRootNode();
 	for(auto it = elements.rbegin(); it != elements.rend(); ++it) {
 		const pair<ExpressionAddress, VariablePtr>& cur = *it;
-
+		
 		ExpressionAddress addr = cur.first.switchRoot(root);
 		root = pushInto(manager, addr, cur.second).getRootNode();
 	}
-
+	
 	// done
 	return root;
 }
@@ -1324,8 +1351,10 @@ NodePtr pushInto(NodeManager& manager, const map<ExpressionAddress, VariablePtr>
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda) {
 
 	// short-cut for non-recursive functions
-	if (!lambda->isRecursive()) return manager.get(lambda);
-
+	if(!lambda->isRecursive()) {
+		return manager.get(lambda);
+	}
+	
 	LambdaDefinitionPtr defs = lambda->getDefinition();
 	LambdaDefinitionPtr res = defs;
 	for(auto def : defs->getDefinitions()) {
@@ -1333,113 +1362,113 @@ LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const La
 		res = fixVariable(manager, res, var, var).as<LambdaDefinitionPtr>();
 	}
 	return IRBuilder(manager).lambdaExpr(lambda->getVariable(), res);
-
+	
 }
 
 namespace {
 
-	StatementPtr convertJobToPforBody(const StatementPtr& body, const VariablePtr& id, const VariablePtr& size) {
+StatementPtr convertJobToPforBody(const StatementPtr& body, const VariablePtr& id, const VariablePtr& size) {
 
-		// - reduce the ID within every getThreadID and getThreadNum call by 1
-		// - if ID was 0, replace it by a constant
-		// - replace constant by pushing in the variables
-
-		// reduce the getThreadID values
-		IRBuilder builder(body->getNodeManager());
-		const LiteralPtr idConstant = builder.literal(id->getType(), "____TEMPORARY_PFOR_BODY_ID");
-		const LiteralPtr sizeConstant = builder.literal(id->getType(), "____TEMPORARY_PFOR_BODY_SIZE");
-
-		StatementPtr res = makeCachedLambdaMapper([&](const NodePtr& cur)->NodePtr{
-			if (cur->getNodeType() != NT_CallExpr) return cur;
-
-			// some preparation
-			NodeManager& mgr = cur->getNodeManager();
-			auto& basic = mgr.getLangBasic();
-			IRBuilder builder(mgr);
-			auto call = cur.as<CallExprPtr>();
-
-			// a function reducing the level expression by 1
-			auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
-				auto formula = arithmetic::toFormula(level);
-				assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
-				if (formula.isZero()) return ExpressionPtr();
-				return arithmetic::toIR(level->getNodeManager(), formula-1);
-			};
-
-			// handle getThreadID
-			if (analysis::isCallOf(call, basic.getGetThreadId())) {
-				if (ExpressionPtr newLevel = decLevel(call[0])) {
-					return builder.getThreadId(newLevel);
-				}
-				return idConstant;
-			}
-
-			// handle group size
-			if (analysis::isCallOf(call,basic.getGetGroupSize())) {
-				if (ExpressionPtr newLevel = decLevel(call[0])) {
-					return builder.getThreadGroupSize(newLevel);
-				}
-				return sizeConstant;
-			}
-
-			return cur;
-		}).map(body);
-
-		// collect all references to the constants ...
-		set<NodeAddress> idConstants;
-		set<NodeAddress> sizeConstants;
-		visitDepthFirstPrunable(NodeAddress(res), [&](const NodeAddress& cur)->bool {
-			if (cur->getNodeCategory() == NC_Type) return true;
-			if (*cur == *idConstant) idConstants.insert(cur);
-			if (*cur == *sizeConstant) sizeConstants.insert(cur);
-			return false;
-		});
-
-		// start replacement
-		NodeManager& manager = body->getNodeManager();
-		for (auto it = idConstants.rbegin(); it != idConstants.rend(); ++it) {
-			res = pushInto(manager, it->switchRoot(res).as<ExpressionAddress>(), id).getRootNode().as<StatementPtr>();
-		}
-		for (auto it = sizeConstants.rbegin(); it != sizeConstants.rend(); ++it) {
-			res = pushInto(manager, it->switchRoot(res).as<ExpressionAddress>(), size).getRootNode().as<StatementPtr>();
-		}
-
-		// done
-		return res;
-	}
-
-
-	ExpressionPtr jobToPforBody(const ExpressionPtr& jobBody, const VariablePtr& numIterations) {
-		NodeManager& mgr = jobBody->getNodeManager();
+	// - reduce the ID within every getThreadID and getThreadNum call by 1
+	// - if ID was 0, replace it by a constant
+	// - replace constant by pushing in the variables
+	
+	// reduce the getThreadID values
+	IRBuilder builder(body->getNodeManager());
+	const LiteralPtr idConstant = builder.literal(id->getType(), "____TEMPORARY_PFOR_BODY_ID");
+	const LiteralPtr sizeConstant = builder.literal(id->getType(), "____TEMPORARY_PFOR_BODY_SIZE");
+	
+	StatementPtr res = makeCachedLambdaMapper([&](const NodePtr& cur)->NodePtr{
+		if(cur->getNodeType() != NT_CallExpr) return cur;
+		
+		// some preparation
+		NodeManager& mgr = cur->getNodeManager();
+		auto& basic = mgr.getLangBasic();
 		IRBuilder builder(mgr);
-
-		/**
-		 * build something similar to:
-		 * 		(a,b,c)=> for (i = a .. b : c ) { f(i); }
-		 * where f is derived from the job body
-		 */
-
-		TypePtr iterType = mgr.getLangBasic().getUInt8();
-		VariablePtr i = builder.variable(iterType);
-		VariablePtr a = builder.variable(iterType);
-		VariablePtr b = builder.variable(iterType);
-		VariablePtr c = builder.variable(iterType);
-
-
-		// replace getThreadID(0) / getThreadNum(0) => iterator / limit, reduce others by 1
-
-		// start extracting body by evaluating the job-body
-		StatementPtr body = evalLazy(mgr, jobBody);
-
-		// replace getThreadID / getThreadNum by iterator / limit
-		body = convertJobToPforBody(body, i, numIterations);
-
-		// build resulting loop
-		ForStmtPtr loop = builder.forStmt(i, a, b, c, body);
-
-		// build bind and the rest
-		return extractLambda(mgr, loop, {a,b,c});
+		auto call = cur.as<CallExprPtr>();
+		
+		// a function reducing the level expression by 1
+		auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
+			auto formula = arithmetic::toFormula(level);
+			assert_true(formula.isConstant()) << "Accessing thread-group using non-constant level index not supported!";
+			if(formula.isZero()) return ExpressionPtr();
+			return arithmetic::toIR(level->getNodeManager(), formula-1);
+		};
+		
+		// handle getThreadID
+		if(analysis::isCallOf(call, basic.getGetThreadId())) {
+			if(ExpressionPtr newLevel = decLevel(call[0])) {
+				return builder.getThreadId(newLevel);
+			}
+			return idConstant;
+		}
+		
+		// handle group size
+		if(analysis::isCallOf(call,basic.getGetGroupSize())) {
+			if(ExpressionPtr newLevel = decLevel(call[0])) {
+				return builder.getThreadGroupSize(newLevel);
+			}
+			return sizeConstant;
+		}
+		
+		return cur;
+	}).map(body);
+	
+	// collect all references to the constants ...
+	set<NodeAddress> idConstants;
+	set<NodeAddress> sizeConstants;
+	visitDepthFirstPrunable(NodeAddress(res), [&](const NodeAddress& cur)->bool {
+		if(cur->getNodeCategory() == NC_Type) return true;
+		if(*cur == *idConstant) idConstants.insert(cur);
+		if(*cur == *sizeConstant) sizeConstants.insert(cur);
+		return false;
+	});
+	
+	// start replacement
+	NodeManager& manager = body->getNodeManager();
+	for(auto it = idConstants.rbegin(); it != idConstants.rend(); ++it) {
+		res = pushInto(manager, it->switchRoot(res).as<ExpressionAddress>(), id).getRootNode().as<StatementPtr>();
 	}
+	for(auto it = sizeConstants.rbegin(); it != sizeConstants.rend(); ++it) {
+		res = pushInto(manager, it->switchRoot(res).as<ExpressionAddress>(), size).getRootNode().as<StatementPtr>();
+	}
+	
+	// done
+	return res;
+}
+
+
+ExpressionPtr jobToPforBody(const ExpressionPtr& jobBody, const VariablePtr& numIterations) {
+	NodeManager& mgr = jobBody->getNodeManager();
+	IRBuilder builder(mgr);
+	
+	/**
+	 * build something similar to:
+	 * 		(a,b,c)=> for (i = a .. b : c ) { f(i); }
+	 * where f is derived from the job body
+	 */
+	
+	TypePtr iterType = mgr.getLangBasic().getUInt8();
+	VariablePtr i = builder.variable(iterType);
+	VariablePtr a = builder.variable(iterType);
+	VariablePtr b = builder.variable(iterType);
+	VariablePtr c = builder.variable(iterType);
+	
+	
+	// replace getThreadID(0) / getThreadNum(0) => iterator / limit, reduce others by 1
+	
+	// start extracting body by evaluating the job-body
+	StatementPtr body = evalLazy(mgr, jobBody);
+	
+	// replace getThreadID / getThreadNum by iterator / limit
+	body = convertJobToPforBody(body, i, numIterations);
+	
+	// build resulting loop
+	ForStmtPtr loop = builder.forStmt(i, a, b, c, body);
+	
+	// build bind and the rest
+	return extractLambda(mgr, loop, {a,b,c});
+}
 
 
 }
@@ -1447,10 +1476,12 @@ namespace {
 ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	static const ExpressionPtr fail;
 	NodeManager& mgr = job.getNodeManager();
-
+	
 	// also, there must not be a re-distribute call => can not be supported
-	if (analysis::contains(job->getBody(), mgr.getLangBasic().getRedistribute())) return fail;
-
+	if(analysis::contains(job->getBody(), mgr.getLangBasic().getRedistribute())) {
+		return fail;
+	}
+	
 	/**
 	 * Converts a job of the format
 	 *
@@ -1466,41 +1497,41 @@ ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	 *
 	 * 	where f' is the a modified version of f
 	 */
-
+	
 	// prepare utilities
 	IRBuilder builder(mgr);
-
+	
 	StatementList stmts;
-
+	
 	// create pfor-call
 	{
 		auto range = job->getThreadNumRange();
 		auto lowerBound = analysis::getArgument(range, 0);
 		auto iterType = lowerBound->getType();
-
+		
 		// build up range
 		ExpressionPtr start = builder.getZero(lowerBound->getType());
 		ExpressionPtr step  = builder.literal(iterType, "1");
-
+		
 		// create iterator variable
 		VariablePtr threadID = builder.variable(start->getType());
-
+		
 		// create limit for iteration (into extra variable)
 		DeclarationStmtPtr limitDecl = builder.declarationStmt(lowerBound);
 		VariablePtr end = limitDecl->getVariable();
-
+		
 		stmts.push_back(limitDecl);
-
+		
 		// get job body
 		ExpressionPtr jobBody = job->getBody();
-
+		
 		// create and add pfor call
 		stmts.push_back(builder.pfor(jobToPforBody(jobBody, end), start, end, step));
 	}
-
+	
 	// finish by adding the barrier
 	stmts.push_back(builder.barrier());
-
+	
 	// build resulting function
 	return extractLambda(mgr, builder.compoundStmt(stmts));
 }

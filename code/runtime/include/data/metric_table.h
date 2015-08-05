@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,9 +47,9 @@
  * during compile time).
  */
 enum {
-	#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name ## _INDEX,
-	#include "metric.def"
-	#undef METRIC
+#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name ## _INDEX,
+#include "metric.def"
+#undef METRIC
 };
 
 
@@ -65,9 +65,9 @@ enum {
  * A list of all atomic metric pointers.
  */
 const irt_metric* g_all_atomic_metrics[] = {
-	#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name,
-	#include "metric.def"
-	#undef METRIC
+#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name,
+#include "metric.def"
+#undef METRIC
 };
 
 /**
@@ -77,7 +77,7 @@ const uint16 g_num_atomic_metrics = 0
 #define METRIC(id, name, type, res, desc) +1
 #include "metric.def"
 #undef METRIC
-;
+                                    ;
 
 /**
  * The metric table listing all atomic metrics supported within the system.
@@ -85,9 +85,9 @@ const uint16 g_num_atomic_metrics = 0
  * entries within this table.
  */
 const irt_atomic_metric_info g_atomic_metric_table[] = {
-	#define METRIC(id, name, type, res, desc) { id, type, res, desc },
-	#include "metric.def"
-	#undef METRIC
+#define METRIC(id, name, type, res, desc) { id, type, res, desc },
+#include "metric.def"
+#undef METRIC
 };
 
 

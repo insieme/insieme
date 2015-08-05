@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,10 +41,10 @@
 namespace insieme {
 namespace backend {
 
-	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
+const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
 
-	IRExtensions::IRExtensions(core::NodeManager& manager) :
-			core::lang::Extension(manager) { }
-
+IRExtensions::IRExtensions(core::NodeManager& manager) :
+	core::lang::Extension(manager) { }
+	
 } // end namespace simple_backend
 } // end namespace insieme

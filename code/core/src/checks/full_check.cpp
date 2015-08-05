@@ -46,65 +46,65 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-	namespace {
+namespace {
 
-		CheckPtr buildFullCheck() {
+CheckPtr buildFullCheck() {
 
-			std::vector<CheckPtr> checks;
-			checks.push_back(make_check<KeywordCheck>());
-			checks.push_back(make_check<FunctionKindCheck>());
-			checks.push_back(make_check<ParentCheck>());
-			checks.push_back(make_check<ClassInfoCheck>());
-			checks.push_back(make_check<CallExprTypeCheck>());
-			checks.push_back(make_check<FunctionTypeCheck>());
-			checks.push_back(make_check<BindExprTypeCheck>());
-			checks.push_back(make_check<ExternalFunctionTypeCheck>());
-			checks.push_back(make_check<ReturnTypeCheck>());
-			checks.push_back(make_check<LambdaTypeCheck>());
-			checks.push_back(make_check<DeclarationStmtTypeCheck>());
-			checks.push_back(make_check<IfConditionTypeCheck>());
-			checks.push_back(make_check<ForStmtTypeCheck>());
-			checks.push_back(make_check<WhileConditionTypeCheck>());
-			checks.push_back(make_check<SwitchExpressionTypeCheck>());
-			checks.push_back(make_check<StructExprTypeCheck>());
-			checks.push_back(make_check<MemberAccessElementTypeCheck>());
-			checks.push_back(make_check<ComponentAccessTypeCheck>());
-			checks.push_back(make_check<BuiltInLiteralCheck>());
-			checks.push_back(make_check<RefCastCheck>());
-			checks.push_back(make_check<CastCheck>());
-			checks.push_back(make_check<GenericZeroCheck>());
-			checks.push_back(make_check<ArrayTypeCheck>());
-			checks.push_back(make_check<GenericOpsCheck>());
+	std::vector<CheckPtr> checks;
+	checks.push_back(make_check<KeywordCheck>());
+	checks.push_back(make_check<FunctionKindCheck>());
+	checks.push_back(make_check<ParentCheck>());
+	checks.push_back(make_check<ClassInfoCheck>());
+	checks.push_back(make_check<CallExprTypeCheck>());
+	checks.push_back(make_check<FunctionTypeCheck>());
+	checks.push_back(make_check<BindExprTypeCheck>());
+	checks.push_back(make_check<ExternalFunctionTypeCheck>());
+	checks.push_back(make_check<ReturnTypeCheck>());
+	checks.push_back(make_check<LambdaTypeCheck>());
+	checks.push_back(make_check<DeclarationStmtTypeCheck>());
+	checks.push_back(make_check<IfConditionTypeCheck>());
+	checks.push_back(make_check<ForStmtTypeCheck>());
+	checks.push_back(make_check<WhileConditionTypeCheck>());
+	checks.push_back(make_check<SwitchExpressionTypeCheck>());
+	checks.push_back(make_check<StructExprTypeCheck>());
+	checks.push_back(make_check<MemberAccessElementTypeCheck>());
+	checks.push_back(make_check<ComponentAccessTypeCheck>());
+	checks.push_back(make_check<BuiltInLiteralCheck>());
+	checks.push_back(make_check<RefCastCheck>());
+	checks.push_back(make_check<CastCheck>());
+	checks.push_back(make_check<GenericZeroCheck>());
+	checks.push_back(make_check<ArrayTypeCheck>());
+	checks.push_back(make_check<GenericOpsCheck>());
+	
+	checks.push_back(make_check<UndeclaredVariableCheck>());
+	
+	checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
+	//checks.push_back(make_check<UndefinedCheck>());
+	checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
+	checks.push_back(make_check<MissingReturnStmtCheck>());
+	
+	checks.push_back(make_check<NarrowCheck>());
+	checks.push_back(make_check<ExpandCheck>());
+	
+	checks.push_back(make_check<LiteralFormatCheck>());
+	
+	// assemble the IR check list
+	CheckPtr recursive = makeVisitOnce(combine(checks));
+	
+	return combine(
+	           toVector<CheckPtr>(
+	               recursive
+	           )
+	       );
+}
 
-			checks.push_back(make_check<UndeclaredVariableCheck>());
+}
 
-			checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
-			//checks.push_back(make_check<UndefinedCheck>());
-			checks.push_back(make_check<FreeBreakInsideForLoopCheck>());
-			checks.push_back(make_check<MissingReturnStmtCheck>());
-
-			checks.push_back(make_check<NarrowCheck>());
-			checks.push_back(make_check<ExpandCheck>());
-
-			checks.push_back(make_check<LiteralFormatCheck>());
-
-			// assemble the IR check list
-			CheckPtr recursive = makeVisitOnce(combine(checks));
-
-			return combine(
-					toVector<CheckPtr>(
-						recursive
-					)
-			);
-		}
-
-	}
-
-	CheckPtr getFullCheck() {
-		// share common check-instance (initialization is thread save in C++11)
-		static const CheckPtr fullChecks = buildFullCheck();
-		return fullChecks;
-	}
+CheckPtr getFullCheck() {
+	// share common check-instance (initialization is thread save in C++11)
+	static const CheckPtr fullChecks = buildFullCheck();
+	return fullChecks;
+}
 
 } // end namespace check
 } // end namespace core

@@ -56,7 +56,7 @@ class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMa
 public:
 	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
 	const core::NodePtr resolveElement(const core::NodePtr& element);
-
+	
 };
 
 }

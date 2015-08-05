@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -58,16 +58,16 @@ TEST(Program, HelloWorld) {
 
 	NodeManager manager;
 	IRBuilder build(manager);
-
+	
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
 	TypePtr unitType = build.getLangBasic().getUnit();
 	TypePtr printfType = build.functionType(toVector(stringType, varArgType), unitType);
-
+	
 	auto printfDefinition = build.literal(printfType, "printf");
-
+	
 	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
-
+	
 	ExpressionPtr intLiteral = build.literal(build.getLangBasic().getIntGen(), "4");
 	auto invocation = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral));
 	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, VariableList(), invocation);
@@ -77,16 +77,16 @@ TEST(Program, HelloWorld) {
 	auto invocation2 = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral2));
 	auto mainBody2 = build.lambdaExpr(voidNullaryFunctionType, VariableList(), invocation2);
 	auto mainDefinition2 = build.lambdaExpr(voidNullaryFunctionType, VariableList(), mainBody2);
-
+	
 	ProgramPtr pro = build.program(toVector<ExpressionPtr>(mainDefinition));
 	ProgramPtr pro2 = build.program(toVector<ExpressionPtr>(mainDefinition2));
-
+	
 	EXPECT_NE(pro, pro2);
 	EXPECT_NE(*pro, *pro2);
 	EXPECT_NE((*pro).hash(), (*pro2).hash());
-
+	
 	cout << pro;
-
+	
 	basicNodeTests(pro, toVector<NodePtr>(mainDefinition));
 	basicNodeTests(pro2, toVector<NodePtr>(mainDefinition2));
 }
@@ -95,44 +95,44 @@ TEST(Program, ProgramData) {
 
 	// create local manager
 	NodeManager manager;
-
+	
 	// start with empty program
 	NodeManager programManager;
 	ProgramPtr program = Program::get(programManager);
-
+	
 	// check some basic properties
-	EXPECT_EQ ( 0u, manager.size() );
-	EXPECT_EQ ( 1u, programManager.size() );
-
-	EXPECT_TRUE (program->getEntryPoints().empty());
-
+	EXPECT_EQ(0u, manager.size());
+	EXPECT_EQ(1u, programManager.size());
+	
+	EXPECT_TRUE(program->getEntryPoints().empty());
+	
 	TypePtr typeInt = GenericType::get(manager, "int");
 	TypePtr typeDouble = GenericType::get(manager, "double");
-
+	
 	// ------------- Entry Points ------------
 	ExpressionPtr entryA = Variable::get(manager, typeInt, 1);
 	ExpressionPtr entryB = Variable::get(manager, typeInt, 2);
 	ExpressionPtr entryC = Variable::get(manager, typeDouble, 3);
-
+	
 	program = Program::addEntryPoint(programManager, program, entryA);
-	EXPECT_NE (entryA , *program->getEntryPoints().begin());
-	EXPECT_EQ (toVector<ExpressionPtr>(programManager.get(entryA)), program->getEntryPoints());
-
+	EXPECT_NE(entryA , *program->getEntryPoints().begin());
+	EXPECT_EQ(toVector<ExpressionPtr>(programManager.get(entryA)), program->getEntryPoints());
+	
 	ExpressionList entrySet;
 	entrySet.push_back(entryA);
 	entrySet.push_back(entryB);
 	entrySet.push_back(entryC);
-
+	
 	program = Program::addEntryPoints(programManager, program, entrySet);
-	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
-
+	EXPECT_EQ((std::size_t)3, program->getEntryPoints().size());
+	
 	const ExpressionList& points = program->getEntryPoints();
 	std::for_each(points.cbegin(), points.cend(),
-		[&manager, &programManager](const ExpressionPtr& cur) {
-			EXPECT_FALSE( manager.addressesLocal(cur) );
-			EXPECT_TRUE( programManager.addressesLocal(cur) );
+	[&manager, &programManager](const ExpressionPtr& cur) {
+		EXPECT_FALSE(manager.addressesLocal(cur));
+		EXPECT_TRUE(programManager.addressesLocal(cur));
 	});
-
+	
 	// print resulting program
 	cout << *program << endl;
 }

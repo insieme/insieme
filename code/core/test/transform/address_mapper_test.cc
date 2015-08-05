@@ -52,20 +52,20 @@ namespace transform {
 TEST(AddressMapper, Simplest) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-
+	
 	auto addresses = builder.parseAddressesStatement(
-			"5 + $4$;"
-	);
-
+	                     "5 + $4$;"
+	                 );
+	                 
 	EXPECT_EQ(addresses.size(), 1);
-
+	
 	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) -> NodePtr {
 		if(addresses[0] == prevAddress) {
 			return builder.intLit(31337).as<NodePtr>();
 		}
 		return builtPtr;
 	});
-
+	
 	auto result = mapper.mapFromRoot(addresses[0].getRootNode());
 	EXPECT_EQ(result, builder.parseExpr("5+31337"));
 }
@@ -73,7 +73,7 @@ TEST(AddressMapper, Simplest) {
 TEST(AddressMapper, Simple) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-
+	
 	auto addresses = builder.parseAddressesStatement(R"raw(
 		{		
 			let int = int<4>;
@@ -84,17 +84,17 @@ TEST(AddressMapper, Simple) {
 	)raw");
 
 	EXPECT_EQ(addresses.size(), 2);
-
+	
 	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddress) -> NodePtr {
 		if(addresses[0] == prevAddress) {
 			return builder.intLit(31337).as<NodePtr>();
-		} 
+		}
 		if(addresses[1] == prevAddress) {
 			return builder.intLit(42).as<NodePtr>();
 		}
 		return builtPtr;
 	});
-
+	
 	auto result = mapper.mapFromRoot(addresses[0].getRootNode());
 	EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("var(31337+42)")));
 	EXPECT_TRUE(core::analysis::contains(result, builder.parseExpr("var(2)")));
@@ -104,7 +104,7 @@ TEST(AddressMapper, Nested) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	auto& basic = builder.getLangBasic();
-
+	
 	auto addresses = builder.parseAddressesStatement(R"raw(
 	{		
 		let int = int<4>;
@@ -119,13 +119,13 @@ TEST(AddressMapper, Nested) {
 	const auto callAddr = addresses[0];
 	const auto funAddr = addresses[1];
 	const auto exprAddr = addresses[2];
-
+	
 	// what we do here is add a new variable to the lambda, its call, and use it in the body
 	auto varToAdd = builder.variable(basic.getInt4(), 10042);
 	auto mapper = makeLambdaAddressMapping([&](const NodePtr& builtPtr, const NodeAddress& prevAddr) -> NodePtr {
 		if(prevAddr == exprAddr) {
 			return builder.sub(builtPtr.as<ExpressionPtr>(), varToAdd);
-		} 
+		}
 		if(prevAddr == funAddr) {
 			auto curFun = builtPtr.as<LambdaExprPtr>();
 			auto newFunType = builder.functionType(toVector(basic.getInt4(), basic.getInt4(), basic.getInt4()), curFun->getFunctionType()->getReturnType());
@@ -139,10 +139,10 @@ TEST(AddressMapper, Nested) {
 		}
 		return builtPtr;
 	});
-
+	
 	auto result = builder.normalize(mapper.mapFromRoot(addresses[0].getRootNode()));
 	EXPECT_EQ(result->toString(),
-		R"raw({rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {ref<int<4>> v4 = int_sub(int_add(int_mul(v1, v2), v1), v3); return ref_deref(v4);}}(4, 2, 31337);})raw");
+	          R"raw({rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {ref<int<4>> v4 = int_sub(int_add(int_mul(v1, v2), v1), v3); return ref_deref(v4);}}(4, 2, 31337);})raw");
 }
 
 } // end namespace transform

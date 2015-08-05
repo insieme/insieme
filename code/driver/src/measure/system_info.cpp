@@ -55,7 +55,7 @@ int SystemInfo::obtainSystemInformation() const {
 	auto testCode = insieme::driver::integration::loadIntegrationTest(manager, "hello_world", false);
 	assert_true(testCode) << "SystemInfo dummy code invalid!";
 	auto target = backend->convert(testCode);
-
+	
 	auto tempCompiler = compiler;
 	for(const auto& e : backendCompilerDefs) {
 		string temp = "-D" + string(e.first) + "=" + string(e.second);
@@ -64,33 +64,39 @@ int SystemInfo::obtainSystemInformation() const {
 	tempCompiler.addFlag("-I " PAPI_HOME "/include");
 	tempCompiler.addFlag("-L " PAPI_HOME "/lib/");
 	tempCompiler.addFlag("-Wl,-rpath," PAPI_HOME "/lib -lpapi");
-
+	
 	auto binary = utils::compiler::compileToBinary(*target, tempCompiler);
-
+	
 	const string workDir = ".";
-
+	
 	const int ret = executor->run(binary, env, workDir);
 	boost::filesystem::remove(binary);
-
-	if(ret != 0) return ret;
-
+	
+	if(ret != 0) {
+		return ret;
+	}
+	
 	const string reportFile = workDir + "/insieme_runtime.report";
-
-	if(!boost::filesystem::exists(reportFile)) return -1;
-
+	
+	if(!boost::filesystem::exists(reportFile)) {
+		return -1;
+	}
+	
 	std::ifstream in(reportFile);
-	if(!in.is_open()) return -2;
-
+	if(!in.is_open()) {
+		return -2;
+	}
+	
 	data = string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-
+	
 	in.close();
 	boost::filesystem::remove(reportFile);
-
+	
 	if(data.empty()) {
 		LOG(ERROR) << "Error while trying to obtain system information, result was empty\n";
 		return -3;
 	}
-
+	
 	return 0;
 }
 
@@ -133,12 +139,12 @@ string SystemInfo::queryGenericStringSingle(const string& regex) const {
 
 vector<string> SystemInfo::queryGenericString(const string& regexString) const {
 	vector<string> retval;
-
+	
 	boost::regex regex(regexString.c_str());
 	boost::match_results<string::const_iterator> matches;
-
+	
 	string::const_iterator start = data.begin();
-
+	
 	while(boost::regex_search(start, data.cend(), matches, regex)) {
 		// save all capturing groups
 		for(unsigned i = 1; i < matches.size(); ++i) {
@@ -147,12 +153,12 @@ vector<string> SystemInfo::queryGenericString(const string& regexString) const {
 		// move iterator
 		start = matches[0].second;
 	}
-
+	
 	/**
 	 * TODO:
 	 * systeminfo inheritance, implement a base class and move the current content to autotuning systeminfo subclass
 	 */
-
+	
 	return retval;
 }
 

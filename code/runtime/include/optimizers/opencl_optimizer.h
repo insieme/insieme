@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,14 +45,16 @@ void irt_get_split_values() {
 		char *tok = strtok(split_str, ", ");
 		unsigned i = 0;
 		while(tok != NULL) {
-		  irt_g_ocl_shares_policy.param.shares[i++] = atof(tok);
-		  tok = strtok(NULL, ", ");
+			irt_g_ocl_shares_policy.param.shares[i++] = atof(tok);
+			tok = strtok(NULL, ", ");
 		}
-		if(i != irt_g_worker_count)
+		if(i != irt_g_worker_count) {
 			IRT_WARN("Splitting values specified, but not for all devices.\n %d splitting values\n %d devices", i, irt_g_worker_count);
-	} else {
+		}
+	}
+	else {
 		float split_value = 1.0/irt_g_worker_count;
-		for(unsigned i = 0; i < irt_g_worker_count; ++i){
+		for(unsigned i = 0; i < irt_g_worker_count; ++i) {
 			irt_g_ocl_shares_policy.param.shares[i] = split_value;
 		}
 	}

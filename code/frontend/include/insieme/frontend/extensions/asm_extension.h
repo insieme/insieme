@@ -48,8 +48,8 @@ using namespace insieme;
 
 class ASMExtension : public insieme::frontend::extensions::FrontendExtension {
 
-	public:
-    virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
+public:
+	virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) ;
 };
 
 } // extensions

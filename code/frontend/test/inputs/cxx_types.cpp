@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,48 +38,48 @@
 
 // builtin types
 void basic_type_test() {
-	#pragma test "ref<int<4>> v1 = ref.var(1)"
+#pragma test "ref<int<4>> v1 = ref.var(1)"
 	int a = 1;
-
-	#pragma test "ref<int<8>> v1 = ref.var(0)"
+	
+#pragma test "ref<int<8>> v1 = ref.var(0)"
 	long b;
-
-	#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(0xFFFF))"
+	
+#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(0xFFFF))"
 	short c = 0xFFFF;
-
-	#pragma test "ref<char> v1 = ref.var('a')"
+	
+#pragma test "ref<char> v1 = ref.var('a')"
 	char d = 'a';
-
-	#pragma test "ref<anyRef> v1 = ref.var(null)"
+	
+#pragma test "ref<anyRef> v1 = ref.var(null)"
 	void* e;
-
-	#pragma test "ref<real<4>> v1 = ref.var(0.00f)"
+	
+#pragma test "ref<real<4>> v1 = ref.var(0.00f)"
 	float f = 0.00f;
-
-	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
+	
+#pragma test "ref<real<8>> v1 = ref.var(0.0)"
 	double g;
 	
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var(undefined(vector<real<4>,3>))"
+#pragma test "ref<vector<real<4>,3>> v1 = ref.var(undefined(vector<real<4>,3>))"
 	float v[3];
-
-    #pragma test "ref<vector<vector<int<4>,2>,3>> v1 = ref.var(undefined(vector<vector<int<4>,2>,3>))"
+	
+#pragma test "ref<vector<vector<int<4>,2>,3>> v1 = ref.var(undefined(vector<vector<int<4>,2>,3>))"
 	int vv[3][2];
-
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({cast<real<4>>(0),cast<real<4>>(0),cast<real<4>>(0)})"
+	
+#pragma test "ref<vector<real<4>,3>> v1 = ref.var({cast<real<4>>(0),cast<real<4>>(0),cast<real<4>>(0)})"
 	float vvv[3] = { 0, 0, 0 };
-
-	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({vector.init.uniform(cast<real<4>>(0), 1),vector.init.uniform(cast<real<4>>(0), 1)})"
+	
+#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({vector.init.uniform(cast<real<4>>(0), 1),vector.init.uniform(cast<real<4>>(0), 1)})"
 	float vvvv[][1] = { {0}, {0} };
-
-	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"
+	
+#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"
 	int* b1 = 0;
-
-	#pragma test "ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v1 = ref.var(get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
+	
+#pragma test "ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v1 = ref.var(get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
 	int*** c1 = 0;
-
-	#pragma test "ref.assign(v1, get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
-	c1 = 0; 
-
+	
+#pragma test "ref.assign(v1, get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
+	c1 = 0;
+	
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
 	//char str[10] = "Hello Mum";
 }
@@ -97,11 +97,11 @@ struct Person {
 void test_func() {
 
 	//FIXME: C++ struct calls implicitly default ctor
- 	#pragma test \
+#pragma test \
 	"{ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(undefined(struct<height:int<4>,age:int<4>>)); rec v3.{v3=fun(ref<struct<height:int<4>,age:int<4>>> v2) {{}; return v2;}}(v1);}"
 	struct Person p;
-
-	#pragma test \
+	
+#pragma test \
 	"ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(struct{height=178, age=28})"
 	struct Person p2 = {178, 28};
 }
@@ -180,7 +180,7 @@ void* malloc(int);
 
 void mem_alloc() {
 
-	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>)))))"
+#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>)))))"
 	//FIXME: C++ needs explicit cast? void* -> int*
 	int* a = (int*) malloc(4);
 	//FIXME: free??? not found...
@@ -188,31 +188,35 @@ void mem_alloc() {
 }
 
 
-enum E{ ON, OFF=10 };
+enum E { ON, OFF=10 };
 
 void test_enum() {
-	#pragma test "ref<int<4>> v1 = ref.var(0)"
+#pragma test "ref<int<4>> v1 = ref.var(0)"
 	enum E a = ON;
-	#pragma test "ref<int<4>> v1 = ref.var(10)"
+#pragma test "ref<int<4>> v1 = ref.var(10)"
 	enum E b = OFF;
 }
 
-int add(int a, int b) { return a+b; }
-int sub(int a, int b) { return a-b; }
+int add(int a, int b) {
+	return a+b;
+}
+int sub(int a, int b) {
+	return a-b;
+}
 
 void fun_ptr() {
 
 	// test declaration, assignment and call of function pointers
-
-	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
+	
+#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
 	int(* f)(int,int) = &add;
-
-	#pragma test "ref.assign(v4, rec v3.{v3=fun(int<4> v1, int<4> v2) {return int.sub(v1, v2);}})"
+	
+#pragma test "ref.assign(v4, rec v3.{v3=fun(int<4> v1, int<4> v2) {return int.sub(v1, v2);}})"
 	f = &sub;
-
-	#pragma test "ref.deref(v1)(3, 4)"
+	
+#pragma test "ref.deref(v1)(3, 4)"
 	f(3,4);
-
+	
 }
 
 // Class type tests

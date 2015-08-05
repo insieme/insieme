@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,11 +39,11 @@
 namespace insieme {
 namespace backend {
 
-	// TODO: think about renaming it to form a work item manager
+// TODO: think about renaming it to form a work item manager
 
-	class ParallelManager {
+class ParallelManager {
 
-	};
+};
 
 
 } // end namespace backend

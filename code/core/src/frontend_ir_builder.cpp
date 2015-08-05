@@ -55,12 +55,12 @@ ExpressionPtr FrontendIRBuilder::getPureVirtual(const FunctionTypePtr& type) con
 ExpressionPtr FrontendIRBuilder::toCppRef(const ExpressionPtr& ref) const {
 	assert(ref && ref->getType()->getNodeType() == NT_RefType);
 	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
-
+	
 	// avoid multiple nesting of wrapping / unwrapping
-	if (core::analysis::isCallOf(ref, ext.getRefCppToIR())) {
+	if(core::analysis::isCallOf(ref, ext.getRefCppToIR())) {
 		return ref.as<CallExprPtr>()[0];	// strip of previous call
 	}
-
+	
 	// use converter function all
 	return callExpr(core::analysis::getCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToCpp(), ref);
 }
@@ -68,75 +68,75 @@ ExpressionPtr FrontendIRBuilder::toCppRef(const ExpressionPtr& ref) const {
 ExpressionPtr FrontendIRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
 	assert(ref && ref->getType()->getNodeType() == NT_RefType);
 	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
-
+	
 	// avoid multiple nesting of wrapping / unwrapping
-	if (core::analysis::isCallOf(ref, ext.getRefConstCppToIR())) {
+	if(core::analysis::isCallOf(ref, ext.getRefConstCppToIR())) {
 		return ref.as<CallExprPtr>()[0];	// strip of previous call
 	}
-
+	
 	return callExpr(core::analysis::getConstCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstCpp(), ref);
 }
 
 ExpressionPtr FrontendIRBuilder::toConstRValCppRef(const ExpressionPtr& ref) const {
 	assert(ref && ref->getType()->getNodeType() == NT_RefType);
 	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
-
+	
 	// avoid multiple nesting of wrapping / unwrapping
-	if (core::analysis::isCallOf(ref, ext.getRefConstRValCppToIR())) {
+	if(core::analysis::isCallOf(ref, ext.getRefConstRValCppToIR())) {
 		return ref.as<CallExprPtr>()[0];	// strip of previous call
 	}
-
+	
 	return callExpr(core::analysis::getConstRValCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstRValCpp(), ref);
 }
 
 ExpressionPtr FrontendIRBuilder::toIRRef(const ExpressionPtr& ref) const {
 	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
 	assert(ref && (analysis::isAnyCppRef(ref->getType())));
-
+	
 	// see whether this is a value which has just been wrapped
-	if (analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
+	if(analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
 		return ref.as<CallExprPtr>()[0];		// strip of nested wrapper
 	}
-
+	
 	// check whether it is a non-const reference
-	if (analysis::isCppRef(ref->getType())) {
+	if(analysis::isCppRef(ref->getType())) {
 		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefCppToIR(), ref);
 	}
 	// check whether it is a const reference
-	if (analysis::isConstCppRef(ref->getType())) {
+	if(analysis::isConstCppRef(ref->getType())) {
 		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstCppToIR(), ref);
 	}
 	// check whether it is a rval reference
-	if (analysis::isRValCppRef(ref->getType())) {
+	if(analysis::isRValCppRef(ref->getType())) {
 		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefRValCppToIR(), ref);
 	}
 	// check whether it is a rval reference
-	if (analysis::isConstRValCppRef(ref->getType())) {
+	if(analysis::isConstRValCppRef(ref->getType())) {
 		return callExpr(refType(analysis::getCppRefElementType(ref->getType()), RK_SOURCE), ext.getRefConstRValCppToIR(), ref);
 	}
 	assert_fail() << "failed to convert C++ reference to IR reference";
-    return ref;
+	return ref;
 }
 
 
 
-ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const{
+ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const {
 	const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-
+	
 	assert(staticVariable.getType().isa<RefTypePtr>());
 	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
-
-	if (constant){
+	
+	if(constant) {
 		return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
 	}
-	else{
+	else {
 		return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
 	}
 }
 
 StatementPtr FrontendIRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
 	const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-
+	
 	return callExpr(ext.getCreateStatic(), staticVariable);
 }
 

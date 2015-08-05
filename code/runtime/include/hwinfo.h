@@ -39,8 +39,8 @@
 #define __GUARD_HWINFO_H
 
 #ifndef _GEMS_SIM
-	#include <unistd.h>
-	#include <string.h>
+#include <unistd.h>
+#include <string.h>
 #endif
 
 #ifdef IRT_USE_PAPI
@@ -78,15 +78,17 @@ static irt_hw_info __irt_g_cached_hw_info;
 //static uint32 __irt_g_cached_numa_nodes_count = 0;
 
 uint32 irt_hw_get_num_cpus() {
-	if(__irt_g_cached_hw_info.cpus!=0) return __irt_g_cached_hw_info.cpus;
+	if(__irt_g_cached_hw_info.cpus!=0) {
+		return __irt_g_cached_hw_info.cpus;
+	}
 	uint32 ret = 1;
 #ifdef _SC_NPROCESSORS_ONLN
 	// Linux
 	ret = sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(_WIN32)
 	// Windows
-	SYSTEM_INFO sysinfo; 
-	GetSystemInfo( &sysinfo ); 
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
 	ret = sysinfo.dwNumberOfProcessors;
 #elif defined(_SC_NPROC_ONLN)
 	// Irix
@@ -95,7 +97,9 @@ uint32 irt_hw_get_num_cpus() {
 	// HPUX
 	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
 #endif
-	if(ret<1) ret = 1;
+	if(ret<1) {
+		ret = 1;
+	}
 	__irt_g_cached_hw_info.cpus = ret;
 	return ret;
 }
@@ -114,74 +118,84 @@ void _irt_hw_info_shutdown() {
 int32 _irt_hw_info_init() {
 #ifdef IRT_USE_PAPI
 	irt_papi_init();
-
+	
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
-
+	
 	if(hwinfo == NULL) {
 		IRT_WARN("hwinfo: Error trying to get hardware information from PAPI!\n");
 		return -1;
 	}
-
-	if(hwinfo->threads > 0)
+	
+	if(hwinfo->threads > 0) {
 		__irt_g_cached_hw_info.threads_per_core = hwinfo->threads;
-	if(hwinfo->cores > 0)
+	}
+	if(hwinfo->cores > 0) {
 		__irt_g_cached_hw_info.cores_per_socket = hwinfo->cores;
-	if(hwinfo->sockets > 0)
+	}
+	if(hwinfo->sockets > 0) {
 		__irt_g_cached_hw_info.sockets = hwinfo->sockets;
-	if(hwinfo->nnodes > 0)
+	}
+	if(hwinfo->nnodes > 0) {
 		__irt_g_cached_hw_info.numa_nodes = hwinfo->nnodes;
-	if(hwinfo->cpu_max_mhz > 0)
+	}
+	if(hwinfo->cpu_max_mhz > 0) {
 		__irt_g_cached_hw_info.cpu_max_mhz = hwinfo->cpu_max_mhz;
-	if(hwinfo->cpu_min_mhz > 0)
+	}
+	if(hwinfo->cpu_min_mhz > 0) {
 		__irt_g_cached_hw_info.cpu_min_mhz = hwinfo->cpu_min_mhz;
-
+	}
+	
 	__irt_g_cached_hw_info.cpuid.family = hwinfo->cpuid_family;
 	__irt_g_cached_hw_info.cpuid.model = hwinfo->cpuid_model;
 	__irt_g_cached_hw_info.cpuid.stepping = hwinfo->cpuid_stepping;
-
+	
 	strncpy(__irt_g_cached_hw_info.model_string, hwinfo->model_string, IRT_HW_MAX_STRING_LENGTH);
 	strncpy(__irt_g_cached_hw_info.vendor_string, hwinfo->vendor_string, IRT_HW_MAX_STRING_LENGTH);
-
+	
 #else
 	IRT_DEBUG("hwinfo: papi not available, reporting dummy values")
 #endif
-
+	
 	return 0;
 }
 
 uint32 irt_hw_get_num_threads_per_core() {
-	if(__irt_g_cached_hw_info.threads_per_core == 0)
+	if(__irt_g_cached_hw_info.threads_per_core == 0) {
 		_irt_hw_info_init();
-
+	}
+	
 	IRT_ASSERT(__irt_g_cached_hw_info.threads_per_core != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-
+	
 	return __irt_g_cached_hw_info.threads_per_core;
 }
 
 uint32 irt_hw_get_num_cores_per_socket() {
-	if(__irt_g_cached_hw_info.cores_per_socket == 0)
+	if(__irt_g_cached_hw_info.cores_per_socket == 0) {
 		_irt_hw_info_init();
-
+	}
+	
 	IRT_ASSERT(__irt_g_cached_hw_info.cores_per_socket != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-
+	
 	return __irt_g_cached_hw_info.cores_per_socket;
 }
 
 uint32 irt_hw_get_num_sockets() {
-	if(__irt_g_cached_hw_info.sockets == 0)
+	if(__irt_g_cached_hw_info.sockets == 0) {
 		_irt_hw_info_init();
-
+	}
+	
 	IRT_ASSERT(__irt_g_cached_hw_info.sockets != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-
+	
 	return __irt_g_cached_hw_info.sockets;
 }
 
 uint32 irt_hw_get_num_numa_nodes() {
-	if(__irt_g_cached_hw_info.numa_nodes == 0)
+	if(__irt_g_cached_hw_info.numa_nodes == 0) {
 		_irt_hw_info_init();
-
+	}
+	
 	IRT_ASSERT(__irt_g_cached_hw_info.numa_nodes != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-
+	
 	return __irt_g_cached_hw_info.numa_nodes;
 }
 
@@ -191,25 +205,29 @@ uint32 irt_hw_get_sibling_hyperthread(uint32 coreid) {
 	if(num_threads_per_core > 1) {
 		uint32 cores_total = irt_hw_get_num_sockets() * irt_hw_get_num_cores_per_socket();
 		return (coreid + cores_total)%(cores_total*num_threads_per_core);
-	} else
+	}
+	else {
 		return coreid;
+	}
 }
 
 uint32 irt_hw_get_cpu_max_mhz() {
-	if(__irt_g_cached_hw_info.cpu_max_mhz == 0)
+	if(__irt_g_cached_hw_info.cpu_max_mhz == 0) {
 		_irt_hw_info_init();
-
+	}
+	
 	IRT_ASSERT(__irt_g_cached_hw_info.cpu_max_mhz != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-
+	
 	return __irt_g_cached_hw_info.cpu_max_mhz;
 }
 
 uint32 irt_hw_get_cpu_min_mhz() {
-	if(__irt_g_cached_hw_info.cpu_min_mhz == 0)
+	if(__irt_g_cached_hw_info.cpu_min_mhz == 0) {
 		_irt_hw_info_init();
-
+	}
+	
 	IRT_ASSERT(__irt_g_cached_hw_info.cpu_min_mhz != 0, IRT_ERR_HW_INFO, "Hardware information only available when runtime compiled with PAPI!")
-
+	
 	return __irt_g_cached_hw_info.cpu_min_mhz;
 }
 
@@ -218,20 +236,23 @@ bool irt_hw_get_hyperthreading_enabled() {
 }
 
 irt_hw_cpuid_info irt_hw_get_cpuid_info() {
-	if(__irt_g_cached_hw_info.cpuid.family == 0)
+	if(__irt_g_cached_hw_info.cpuid.family == 0) {
 		_irt_hw_info_init();
+	}
 	return __irt_g_cached_hw_info.cpuid;
 }
 
 char* irt_hw_get_vendor_string() {
-	if(strlen(__irt_g_cached_hw_info.vendor_string) == 0)
+	if(strlen(__irt_g_cached_hw_info.vendor_string) == 0) {
 		_irt_hw_info_init();
+	}
 	return __irt_g_cached_hw_info.vendor_string;
 }
 
 char* irt_hw_get_model_string() {
-	if(strlen(__irt_g_cached_hw_info.model_string) == 0)
+	if(strlen(__irt_g_cached_hw_info.model_string) == 0) {
 		_irt_hw_info_init();
+	}
 	return __irt_g_cached_hw_info.model_string;
 }
 
@@ -243,35 +264,42 @@ void irt_hw_dump_info(FILE* fd) {
 	fprintf(fd, "  System type:\n");
 	fprintf(fd, "    CPU vendor: %s\n", __irt_g_cached_hw_info.vendor_string);
 	fprintf(fd, "    CPU model: %s\n", __irt_g_cached_hw_info.model_string);
-	fprintf(fd, "    CPU cpuid: family: %u, model: %u, stepping: %u\n", irt_hw_get_cpuid_info().family, irt_hw_get_cpuid_info().model, irt_hw_get_cpuid_info().stepping);
+	fprintf(fd, "    CPU cpuid: family: %u, model: %u, stepping: %u\n", irt_hw_get_cpuid_info().family, irt_hw_get_cpuid_info().model,
+	        irt_hw_get_cpuid_info().stepping);
 	fprintf(fd, "  CPU hierarchy:\n");
 	fprintf(fd, "    Number of numa nodes:\t\t%4u\n", irt_hw_get_num_numa_nodes());
 	fprintf(fd, "    Number of sockets: \t\t\t%4u\n", irt_hw_get_num_sockets());
 	fprintf(fd, "    Number of cores per socket: \t%4u\n", irt_hw_get_num_cores_per_socket());
 	fprintf(fd, "    Number of HW threads per core: \t%4u\n", irt_hw_get_num_threads_per_core());
-
+	
 	const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
-
+	
 	fprintf(fd, "  Cache hierarchy: %u levels\n", hwinfo->mem_hierarchy.levels);
 	for(int32 i = 0; i < hwinfo->mem_hierarchy.levels; ++i) {
 		uint32 number_of_memories = 0;
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j)
-			if(hwinfo->mem_hierarchy.level[i].cache[j].type != PAPI_MH_TYPE_EMPTY)
+			if(hwinfo->mem_hierarchy.level[i].cache[j].type != PAPI_MH_TYPE_EMPTY) {
 				number_of_memories++;
+			}
 		fprintf(fd, "    Level %u: number of entities: %u \n", i, number_of_memories);
-
+		
 		for(uint32 j = 0; j < PAPI_MH_MAX_LEVELS; ++j) {
-			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_EMPTY)
+			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_EMPTY) {
 				continue;
+			}
 			fprintf(fd, "      Type:");
-			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_INST)
+			if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_INST) {
 				fprintf(fd, "%16s", "instruction");
-			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_DATA)
+			}
+			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_DATA) {
 				fprintf(fd, "%16s", "data");
-			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_UNIFIED)
+			}
+			else if(hwinfo->mem_hierarchy.level[i].cache[j].type == PAPI_MH_TYPE_UNIFIED) {
 				fprintf(fd, "%16s", "unified");
-			else
+			}
+			else {
 				fprintf(fd, "%16s", "unknown");
+			}
 			fprintf(fd, ", size: %10u KB, ", hwinfo->mem_hierarchy.level[i].cache[j].size);
 			fprintf(fd, "(line size: %4u B, ", hwinfo->mem_hierarchy.level[i].cache[j].line_size);
 			fprintf(fd, "lines: %8u, ", hwinfo->mem_hierarchy.level[i].cache[j].num_lines);

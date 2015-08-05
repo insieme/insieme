@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,41 +41,41 @@
 namespace insieme {
 namespace transform {
 
+/**
+ * A performance enhancer for the transformations caching the result of transformations. This
+ * utility may be used by transformation connectors internally to improve the performance of
+ * code transformations.
+ */
+class CachedTransformation : public Transformation {
+
 	/**
-	 * A performance enhancer for the transformations caching the result of transformations. This
-	 * utility may be used by transformation connectors internally to improve the performance of
-	 * code transformations.
+	 * The transformation to be wrapped.
 	 */
-	class CachedTransformation : public Transformation {
+	const TransformationPtr transformation;
+	
+	/**
+	 * The transformation cache maintained for storing transformed codes.
+	 */
+	mutable utils::cache::PointerCache<core::NodePtr, core::NodePtr> transformed;
+	
+public:
 
-		/**
-		 * The transformation to be wrapped.
-		 */
-		const TransformationPtr transformation;
-
-		/**
-		 * The transformation cache maintained for storing transformed codes.
-		 */
-		mutable utils::cache::PointerCache<core::NodePtr, core::NodePtr> transformed;
-
-	public:
-
-		/**
-		 * Creates a new instance of this transformation wrapper encapsulating the given transformation.
-		 *
-		 * @param transform the transformation to be wrapped
-		 */
-		CachedTransformation(const TransformationPtr& transform)
-			: transformation(transform), transformed(fun(*transform, &Transformation::apply)) {}
-
-		/**
-		 * Realizes the cached processing of the underlying transformation.
-		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			return transformed.get(target);
-		}
-
-	};
+	/**
+	 * Creates a new instance of this transformation wrapper encapsulating the given transformation.
+	 *
+	 * @param transform the transformation to be wrapped
+	 */
+	CachedTransformation(const TransformationPtr& transform)
+		: transformation(transform), transformed(fun(*transform, &Transformation::apply)) {}
+		
+	/**
+	 * Realizes the cached processing of the underlying transformation.
+	 */
+	virtual core::NodePtr apply(const core::NodePtr& target) const {
+		return transformed.get(target);
+	}
+	
+};
 
 } // end namespace transform
 } // end namespace insieme

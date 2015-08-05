@@ -44,7 +44,7 @@
 
 #include "error_handling.h"
 
-/* Declares a thread-safe deque and the functions to insert, 
+/* Declares a thread-safe deque and the functions to insert,
  * retrieve and delete elements from it.
  * __type__ : struct type to create deque for
  * */
@@ -65,7 +65,7 @@ static inline irt_##__type__* irt_##__type__##_deque_pop_back(irt_##__type__##_d
 static inline irt_##__type__* irt_##__type__##_deque_take_elem(irt_##__type__##_deque* q, irt_##__type__* elem);
 
 
-/* Defines a thread-safe deque and the functions to insert, 
+/* Defines a thread-safe deque and the functions to insert,
  * retrieve and delete elements from it.
  * __type__ : struct type to create deque for
  * __next_name__ : name of the next pointer in the struct

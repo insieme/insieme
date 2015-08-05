@@ -40,7 +40,7 @@
 #define A_SIZE 64
 
 int main() {
-	
+
 	int a[A_SIZE];
 	int b[A_SIZE];
 	int c[A_SIZE];

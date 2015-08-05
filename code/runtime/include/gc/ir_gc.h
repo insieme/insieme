@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,7 +49,9 @@ static inline void* ir_gc_register(std::vector<void*>* list, void* ptr) {
 
 static inline void* ir_gc_filter(std::vector<void*>* list, void* ptr) {
 	for(int i=0; i<list->size(); i++) {
-		if (list->at(i) == ptr) return 0;
+		if(list->at(i) == ptr) {
+			return 0;
+		}
 	}
 	return ptr;
 }

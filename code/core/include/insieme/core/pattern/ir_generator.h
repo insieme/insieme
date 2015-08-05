@@ -50,213 +50,213 @@ namespace core {
 namespace pattern {
 namespace generator {
 namespace irg {
-	using std::make_shared;
+using std::make_shared;
 
-	typedef std::shared_ptr<impl::MatchExpression<ptr_target>> MatchExpressionPtr;
+typedef std::shared_ptr<impl::MatchExpression<ptr_target>> MatchExpressionPtr;
 
-	// -- Some Match Expression helper --------------------------------------
+// -- Some Match Expression helper --------------------------------------
 
-	MatchExpressionPtr range(int start, int end);
-
-
-	// -- Some Special Connectors -------------------------------------------
-
-	inline ListGenerator forEach(const std::string& name, int start, int end, const TreeGenerator& tree) {
-		return generator::forEach(name, range(start, end), tree);
-	}
-
-	inline TreeGenerator stringValue(const string& value) {
-		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
-			core::NodePtr res = core::StringValue::get(match.getRoot().getNodeManager(), value);
-			return MatchValue<ptr_target>(res);
-		}, value));
-	}
-
-	inline TreeGenerator stringValue(const TreeGenerator& tree) {
-		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
-			core::NodePtr res = core::StringValue::get(match.getRoot().getNodeManager(), toString(tree.generate(match)));
-			return MatchValue<ptr_target>(res);
-		}, format("#(%s)", toString(tree))));
-	}
-
-	inline TreeGenerator freshID() {
-		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
-			core::NodeManager& manager = match.getRoot()->getNodeManager();
-			core::NodePtr res = core::UIntValue::get(manager, manager.getFreshID());
-			return MatchValue<ptr_target>(res);
-		}, "freshID()"));
-	}
-
-	// -- IR Specific Constructs --------------------------------------------
-
-	inline TreeGenerator atom(const core::NodePtr& node) {
-		return generator::atom(node);
-	}
-
-	inline TreeGenerator atom(core::NodeManager& manager, const string& code) {
-		return atom( core::IRBuilder(manager).parseExpr(code) );
-	}
-
-	inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty, const ListGenerator& intParams = empty) {
-		return node(core::NT_GenericType, family << single(node(core::NT_Parents, subtypes)) << single(node(core::NT_Types, typeParams)) << single(node(core::NT_IntTypeParams, intParams)));
-	}
-
-	inline TreeGenerator literal(const TreeGenerator& type, const TreeGenerator& value) {
-		return node(core::NT_Literal, single(type) << single(value));
-	}
-
-	inline TreeGenerator literal(const TreeGenerator& type, const core::StringValuePtr& value) {
-		return literal(type, atom(value));
-	}
-
-	inline TreeGenerator literal(const TreeGenerator& type, const string& value) {
-		return literal(type, stringValue(value));
-	}
-
-	inline TreeGenerator literal(const TreeGenerator& type, int value) {
-		return literal(type, stringValue(toString(value)));
-	}
-
-	inline TreeGenerator typeLiteral(const TreeGenerator& type) {
-		return literal(genericType(stringValue("type"), empty, single(type), empty), "type_literal");
-	}
-
-	inline TreeGenerator tupleType(const ListGenerator& pattern) {
-		return node(core::NT_TupleType, pattern);
-	}
-
-	inline TreeGenerator variable(const TreeGenerator& type, const TreeGenerator& id = freshID()) {
-		return node(core::NT_Variable, single(type) << single(id));
-	}
-
-	inline TreeGenerator callExpr(const TreeGenerator& type, const TreeGenerator& function, const ListGenerator& parameters = generator::empty) {
-		return node(core::NT_CallExpr, type << single(function) << parameters);
-	}
-
-	inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const ListGenerator& parameters = generator::empty) {
-		return callExpr(type, atom(function), parameters);
-	}
-
-	inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const TreeGenerator& arg0) {
-		return callExpr(type, atom(function), single(arg0));
-	}
-
-	inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const TreeGenerator& arg0, const TreeGenerator& arg1) {
-		return callExpr(type, atom(function), single(arg0) << single(arg1));
-	}
-
-	inline TreeGenerator bindExpr(const ListGenerator& parameters, const TreeGenerator& call) {
-		return node(core::NT_BindExpr, parameters << single(call));
-	}
-
-	inline TreeGenerator tupleExpr(const ListGenerator& expressions) {
-		return node(core::NT_TupleExpr, expressions);
-	}
-
-	inline TreeGenerator vectorExpr(const ListGenerator& expressions) {
-		return node(core::NT_VectorExpr, expressions);
-	}
-
-	inline TreeGenerator structExpr(const ListGenerator& members) {
-		return node(core::NT_StructExpr, members);
-	}
-
-	inline TreeGenerator unionExpr(const TreeGenerator& memberName, const TreeGenerator& member) {
-		return node(core::NT_UnionExpr, single(memberName) << single(member));
-	}
-
-	inline TreeGenerator markerExpr(const TreeGenerator& subExpression, const TreeGenerator& id) {
-		return node(core::NT_MarkerExpr, single(subExpression) << single(id));
-	}
-
-	inline TreeGenerator lambda(const TreeGenerator& type, const ListGenerator& parameters, const TreeGenerator& body) {
-		return node(core::NT_Lambda, single(type) << single(node(core::NT_Parameters, parameters)) << body);
-	}
-
-	inline TreeGenerator lambdaDefinition(const ListGenerator& definitions) {
-		return node(core::NT_LambdaDefinition, definitions);
-	}
-
-	inline TreeGenerator compoundStmt(const ListGenerator& stmts) {
-		return node(core::NT_CompoundStmt, stmts);
-	}
-	inline TreeGenerator compoundStmt(const TreeGenerator& stmt) {
-		return compoundStmt(single(stmt));
-	}
-
-	inline TreeGenerator declarationStmt(const TreeGenerator& variable, const TreeGenerator& initExpr) {
-		return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
-	}
-
-	inline TreeGenerator ifStmt(const TreeGenerator& condition, const TreeGenerator& thenBody, const TreeGenerator& elseBody){
-		return node(core::NT_IfStmt, single(condition) << thenBody << elseBody);
-	}
+MatchExpressionPtr range(int start, int end);
 
 
-	inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start,
-									  const TreeGenerator& end, const TreeGenerator& step,
-									  const ListGenerator& body )
-		{
-			return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
-										  single(end) << single(step) << compoundStmt(body)
-					   );
-		}
+// -- Some Special Connectors -------------------------------------------
 
-	inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start,
-								  const TreeGenerator& end, const TreeGenerator& step,
-								  const TreeGenerator& body )
-	{
-		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << end << step << compoundStmt(body));
-	}
+inline ListGenerator forEach(const std::string& name, int start, int end, const TreeGenerator& tree) {
+	return generator::forEach(name, range(start, end), tree);
+}
 
-	inline TreeGenerator whileStmt(const TreeGenerator& condition, const TreeGenerator& body){
-		return node(core::NT_WhileStmt, single(condition) << body);
-	}
+inline TreeGenerator stringValue(const string& value) {
+	return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+		core::NodePtr res = core::StringValue::get(match.getRoot().getNodeManager(), value);
+		return MatchValue<ptr_target>(res);
+	}, value));
+}
 
-	inline TreeGenerator switchStmt(const TreeGenerator& expression, const ListGenerator& cases, const TreeGenerator& defaultCase){
-		return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
-	}
+inline TreeGenerator stringValue(const TreeGenerator& tree) {
+	return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+		core::NodePtr res = core::StringValue::get(match.getRoot().getNodeManager(), toString(tree.generate(match)));
+		return MatchValue<ptr_target>(res);
+	}, format("#(%s)", toString(tree))));
+}
 
-	inline TreeGenerator returnStmt(const TreeGenerator& returnExpression){
-		return node(core::NT_ReturnStmt, single(returnExpression));
-	}
+inline TreeGenerator freshID() {
+	return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+		core::NodeManager& manager = match.getRoot()->getNodeManager();
+		core::NodePtr res = core::UIntValue::get(manager, manager.getFreshID());
+		return MatchValue<ptr_target>(res);
+	}, "freshID()"));
+}
 
-	inline TreeGenerator markerStmt(const TreeGenerator& subExpr, const TreeGenerator& id){
-		return node(core::NT_MarkerStmt, single(subExpr) << single(id));
-	}
+// -- IR Specific Constructs --------------------------------------------
 
-	const TreeGenerator continueStmt = node(core::NT_ContinueStmt, empty);
-	const TreeGenerator breakStmt = node(core::NT_BreakStmt, empty);
+inline TreeGenerator atom(const core::NodePtr& node) {
+	return generator::atom(node);
+}
+
+inline TreeGenerator atom(core::NodeManager& manager, const string& code) {
+	return atom(core::IRBuilder(manager).parseExpr(code));
+}
+
+inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty,
+                                 const ListGenerator& intParams = empty) {
+	return node(core::NT_GenericType, family << single(node(core::NT_Parents, subtypes)) << single(node(core::NT_Types,
+	            typeParams)) << single(node(core::NT_IntTypeParams, intParams)));
+}
+
+inline TreeGenerator literal(const TreeGenerator& type, const TreeGenerator& value) {
+	return node(core::NT_Literal, single(type) << single(value));
+}
+
+inline TreeGenerator literal(const TreeGenerator& type, const core::StringValuePtr& value) {
+	return literal(type, atom(value));
+}
+
+inline TreeGenerator literal(const TreeGenerator& type, const string& value) {
+	return literal(type, stringValue(value));
+}
+
+inline TreeGenerator literal(const TreeGenerator& type, int value) {
+	return literal(type, stringValue(toString(value)));
+}
+
+inline TreeGenerator typeLiteral(const TreeGenerator& type) {
+	return literal(genericType(stringValue("type"), empty, single(type), empty), "type_literal");
+}
+
+inline TreeGenerator tupleType(const ListGenerator& pattern) {
+	return node(core::NT_TupleType, pattern);
+}
+
+inline TreeGenerator variable(const TreeGenerator& type, const TreeGenerator& id = freshID()) {
+	return node(core::NT_Variable, single(type) << single(id));
+}
+
+inline TreeGenerator callExpr(const TreeGenerator& type, const TreeGenerator& function, const ListGenerator& parameters = generator::empty) {
+	return node(core::NT_CallExpr, type << single(function) << parameters);
+}
+
+inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const ListGenerator& parameters = generator::empty) {
+	return callExpr(type, atom(function), parameters);
+}
+
+inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const TreeGenerator& arg0) {
+	return callExpr(type, atom(function), single(arg0));
+}
+
+inline TreeGenerator callExpr(const TreeGenerator& type, const NodePtr& function, const TreeGenerator& arg0, const TreeGenerator& arg1) {
+	return callExpr(type, atom(function), single(arg0) << single(arg1));
+}
+
+inline TreeGenerator bindExpr(const ListGenerator& parameters, const TreeGenerator& call) {
+	return node(core::NT_BindExpr, parameters << single(call));
+}
+
+inline TreeGenerator tupleExpr(const ListGenerator& expressions) {
+	return node(core::NT_TupleExpr, expressions);
+}
+
+inline TreeGenerator vectorExpr(const ListGenerator& expressions) {
+	return node(core::NT_VectorExpr, expressions);
+}
+
+inline TreeGenerator structExpr(const ListGenerator& members) {
+	return node(core::NT_StructExpr, members);
+}
+
+inline TreeGenerator unionExpr(const TreeGenerator& memberName, const TreeGenerator& member) {
+	return node(core::NT_UnionExpr, single(memberName) << single(member));
+}
+
+inline TreeGenerator markerExpr(const TreeGenerator& subExpression, const TreeGenerator& id) {
+	return node(core::NT_MarkerExpr, single(subExpression) << single(id));
+}
+
+inline TreeGenerator lambda(const TreeGenerator& type, const ListGenerator& parameters, const TreeGenerator& body) {
+	return node(core::NT_Lambda, single(type) << single(node(core::NT_Parameters, parameters)) << body);
+}
+
+inline TreeGenerator lambdaDefinition(const ListGenerator& definitions) {
+	return node(core::NT_LambdaDefinition, definitions);
+}
+
+inline TreeGenerator compoundStmt(const ListGenerator& stmts) {
+	return node(core::NT_CompoundStmt, stmts);
+}
+inline TreeGenerator compoundStmt(const TreeGenerator& stmt) {
+	return compoundStmt(single(stmt));
+}
+
+inline TreeGenerator declarationStmt(const TreeGenerator& variable, const TreeGenerator& initExpr) {
+	return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
+}
+
+inline TreeGenerator ifStmt(const TreeGenerator& condition, const TreeGenerator& thenBody, const TreeGenerator& elseBody) {
+	return node(core::NT_IfStmt, single(condition) << thenBody << elseBody);
+}
 
 
-	// -- Types ------------------------------------------------------------
+inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start,
+                             const TreeGenerator& end, const TreeGenerator& step,
+                             const ListGenerator& body) {
+	return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
+	            single(end) << single(step) << compoundStmt(body)
+	           );
+}
 
-	inline TreeGenerator int4() {
-		return treeExpr(construct([&](const Match<ptr_target>& match) {
-			core::NodePtr res = match.getRoot()->getNodeManager().getLangBasic().getInt4();
-			return MatchValue<ptr_target>(res);
-		}, "int4"));
-	}
+inline TreeGenerator forStmt(const TreeGenerator& iterator, const TreeGenerator& start,
+                             const TreeGenerator& end, const TreeGenerator& step,
+                             const TreeGenerator& body) {
+	return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << end << step << compoundStmt(body));
+}
+
+inline TreeGenerator whileStmt(const TreeGenerator& condition, const TreeGenerator& body) {
+	return node(core::NT_WhileStmt, single(condition) << body);
+}
+
+inline TreeGenerator switchStmt(const TreeGenerator& expression, const ListGenerator& cases, const TreeGenerator& defaultCase) {
+	return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
+}
+
+inline TreeGenerator returnStmt(const TreeGenerator& returnExpression) {
+	return node(core::NT_ReturnStmt, single(returnExpression));
+}
+
+inline TreeGenerator markerStmt(const TreeGenerator& subExpr, const TreeGenerator& id) {
+	return node(core::NT_MarkerStmt, single(subExpr) << single(id));
+}
+
+const TreeGenerator continueStmt = node(core::NT_ContinueStmt, empty);
+const TreeGenerator breakStmt = node(core::NT_BreakStmt, empty);
 
 
-	// -- Arithmetic Constructs --------------------------------------------
+// -- Types ------------------------------------------------------------
 
-	TreeGenerator add(const TreeGenerator& a, const TreeGenerator& b);
-	TreeGenerator sub(const TreeGenerator& a, const TreeGenerator& b);
+inline TreeGenerator int4() {
+	return treeExpr(construct([&](const Match<ptr_target>& match) {
+		core::NodePtr res = match.getRoot()->getNodeManager().getLangBasic().getInt4();
+		return MatchValue<ptr_target>(res);
+	}, "int4"));
+}
 
-	TreeGenerator mul(const TreeGenerator& a, const TreeGenerator& b);
-	TreeGenerator div(const TreeGenerator& a, const TreeGenerator& b);
 
-	TreeGenerator mod(const TreeGenerator& a, const TreeGenerator& b);
+// -- Arithmetic Constructs --------------------------------------------
 
-	TreeGenerator min(const TreeGenerator& a, const TreeGenerator& b);
-	TreeGenerator max(const TreeGenerator& a, const TreeGenerator& b);
+TreeGenerator add(const TreeGenerator& a, const TreeGenerator& b);
+TreeGenerator sub(const TreeGenerator& a, const TreeGenerator& b);
 
-	/**
-	 * A generator accepting a arithmetic formula being created by the given
-	 * generator and collapsing it if possible.
-	 */
-	TreeGenerator simplify(const TreeGenerator& a);
+TreeGenerator mul(const TreeGenerator& a, const TreeGenerator& b);
+TreeGenerator div(const TreeGenerator& a, const TreeGenerator& b);
+
+TreeGenerator mod(const TreeGenerator& a, const TreeGenerator& b);
+
+TreeGenerator min(const TreeGenerator& a, const TreeGenerator& b);
+TreeGenerator max(const TreeGenerator& a, const TreeGenerator& b);
+
+/**
+ * A generator accepting a arithmetic formula being created by the given
+ * generator and collapsing it if possible.
+ */
+TreeGenerator simplify(const TreeGenerator& a);
 
 
 } // end namespace irg

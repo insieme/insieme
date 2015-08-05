@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,7 +56,7 @@ TEST(Printable, StandardPrinting) {
 
 	Value ten(10);
 	Value twelf(12);
-
+	
 	EXPECT_EQ("10", toString(ten));
 	EXPECT_EQ("12", toString(twelf));
 }

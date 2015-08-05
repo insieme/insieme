@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,30 +43,32 @@
 #include "error_handling.h"
 #include "utils/timing.h"
 
-int clock_gettime(int clk_id, struct timespec *tp)
-{
+int clock_gettime(int clk_id, struct timespec *tp) {
 	unsigned int cur_time;
-
+	
 	IRT_ASSERT(clk_id == CLOCK_REALTIME, IRT_ERR_INVALIDARGUMENT, "clock_getttime for gemsclaim only allows CLOCK_REALTIME");
-
-	if(tp == NULL) return -1;
-
+	
+	if(tp == NULL) {
+		return -1;
+	}
+	
 	cur_time = *(unsigned int*)(0x08000000);
-
+	
 	tp->tv_sec 	= cur_time / 1000000;
 	tp->tv_nsec	= (cur_time - tp->tv_sec) * 1000;
-
+	
 	return 0;
 }
 
 // TODO [_GEMS]: missing implementation
-int nanosleep(const struct timespec *req, struct timespec *rem)
-{
-	if(req == NULL) return -1;
-
+int nanosleep(const struct timespec *req, struct timespec *rem) {
+	if(req == NULL) {
+		return -1;
+	}
+	
 	uint64 nano = req->tv_sec * 1000000000ull + req->tv_nsec;
 	irt_busy_nanosleep(nano);
-
+	
 	return 0;
 }
 

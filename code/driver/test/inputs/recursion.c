@@ -61,8 +61,12 @@ bool odd(unsigned x) {
 
 // example - nested recursive function
 unsigned ack(unsigned n, unsigned m) {
-	if (n == 0) return m + 1;
-	if (m == 0) return ack(n-1, 1);
+	if(n == 0) {
+		return m + 1;
+	}
+	if(m == 0) {
+		return ack(n-1, 1);
+	}
 	return ack(n-1, ack(n, m-1));
 }
 

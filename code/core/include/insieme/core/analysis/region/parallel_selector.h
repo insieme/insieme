@@ -43,19 +43,19 @@ namespace core {
 namespace analysis {
 namespace region {
 
+/**
+ * This region selector is picking all parallel constructs.
+ */
+class ParallelSelector : public RegionSelector {
+
+public:
+
 	/**
-	 * This region selector is picking all parallel constructs.
+	 * Selects all regions within the given code fragment.
 	 */
-	class ParallelSelector : public RegionSelector {
-
-	public:
-
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
-
-	};
+	virtual RegionList getRegions(const core::NodePtr& code) const;
+	
+};
 
 } // end namespace region
 } // end namespace analysis

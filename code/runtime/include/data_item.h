@@ -78,7 +78,7 @@ struct _irt_data_item {
 //	irt_pd_table* performance_data;
 // private implementation detail
 	struct _irt_data_item* lookup_table_next;
- };
+};
 
 
 /* ------------------------------ operations ----- */
@@ -87,7 +87,7 @@ struct _irt_data_item {
  **/
 irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges);
 
-/** Creates a data item representing a sub-range of a parent data item. 
+/** Creates a data item representing a sub-range of a parent data item.
  ** Type and dimensions are the same as for the parent.
  **/
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges);

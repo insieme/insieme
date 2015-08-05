@@ -85,7 +85,7 @@ class StmtConversion_FileTest_Test;
 class ParserProxy {
 	static ParserProxy* currParser;
 	clang::Parser* mParser;
-
+	
 	ParserProxy(clang::Parser* parser): mParser(parser) { }
 public:
 
@@ -97,7 +97,7 @@ public:
 		assert_true(parser) << "ParserProxy cannot be initialized with a NULL parser";
 		currParser = new ParserProxy(parser);
 	}
-
+	
 	/**
 	 * the discard method is called when the Parser is no longer valid.
 	 */
@@ -105,7 +105,7 @@ public:
 		delete currParser;
 		currParser = NULL;
 	}
-
+	
 	/**
 	 * Returns the current parser, if not initialized an assertion is thrown.
 	 */
@@ -113,7 +113,7 @@ public:
 		assert_true(currParser) << "Parser proxy not initialized.";
 		return *currParser;
 	}
-
+	
 	/**
 	 * Parse an expression using the clang parser starting from the current token
 	 */
@@ -128,7 +128,9 @@ public:
 	 * Returns the last consumed token without advancing in the input stream
 	 */
 	clang::Token& CurrentToken();
-	clang::Parser* getParser() const { return mParser; }
+	clang::Parser* getParser() const {
+		return mParser;
+	}
 };
 
 namespace insieme {
@@ -152,53 +154,53 @@ class MatchMap;
  */
 class ClangCompiler: boost::noncopyable {
 	struct ClangCompilerImpl;
-
+	
 	ClangCompilerImpl* pimpl;
-
+	
 	const ConversionSetup& config;
-
+	
 public:
 	/**
 	 * Creates a compiler instance from the given conversion job.
 	 */
 	ClangCompiler(const ConversionSetup& config, const path& file);
-
+	
 	/**
 	 * Returns clang's ASTContext
 	 * @return
 	 */
 	clang::ASTContext& getASTContext() const;
-
+	
 	/**
 	 * Returns clang's SourceManager
 	 * @return
 	 */
 	clang::SourceManager& getSourceManager() const;
-
+	
 	/**
 	 * Returns clang's Prepocessor
 	 * @return
 	 */
 	clang::Preprocessor& getPreprocessor() const;
-
+	
 	/**
 	 * Returns clang's Diagnostics
 	 * @return
 	 */
 	clang::DiagnosticsEngine& getDiagnostics() const;
-
+	
 	/**
 	 * Returns clang's TargetInfo
 	 * @return
 	 */
 	clang::TargetInfo& getTargetInfo() const;
-
-    /**
-     * Determines whether the represented translation unit
-     * is based on C or C++.
-     */
+	
+	/**
+	 * Determines whether the represented translation unit
+	 * is based on C or C++.
+	 */
 	bool isCXX() const;
-
+	
 	~ClangCompiler();
 };
 

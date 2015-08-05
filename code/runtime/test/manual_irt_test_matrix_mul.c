@@ -164,15 +164,15 @@ void insieme_init_context(irt_context* context) {
 	context->impl_table_size = 3;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
-	#ifdef USE_OPENCL
+#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
-	#endif
+#endif
 }
 
 void insieme_cleanup_context(irt_context* context) {
-	#ifdef USE_OPENCL
+#ifdef USE_OPENCL
 	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
-	#endif
+#endif
 	// nothing
 	printf("Cleaning up manual IRT test matrix mul\n");
 }
@@ -186,55 +186,59 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_data_item* A = irt_di_create(INSIEME_DOUBLE_T_INDEX, 2, range);
 	irt_data_item* B = irt_di_create(INSIEME_DOUBLE_T_INDEX, 2, range);
 	irt_data_item* C = irt_di_create(INSIEME_DOUBLE_T_INDEX, 2, range);
-
+	
 	// measure the time
 	uint64 start_time = irt_time_ms();
-
+	
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
-	irt_work_item* init_wi = irt_wi_create((irt_work_item_range){0,N,1}, &g_insieme_impl_table[INSIEME_WI_INIT_INDEX], (irt_lw_data_item*)&init_params);
+	irt_work_item* init_wi = irt_wi_create((irt_work_item_range) {
+		0,N,1
+	}, &g_insieme_impl_table[INSIEME_WI_INIT_INDEX], (irt_lw_data_item*)&init_params);
 	irt_work_item_id init_id = init_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), init_wi);
-
+	
 	// wait until finished
 	irt_wi_join(init_id);
-
+	
 	// conduct the multiplication
 	insieme_wi_mul_params mul_params = {INSIEME_WI_MUL_PARAM_T_INDEX, A->id, B->id, C->id};
-	irt_work_item* mul_wi = irt_wi_create((irt_work_item_range){ 0, N, 1 }, &g_insieme_impl_table[INSIEME_WI_MUL_INDEX], (irt_lw_data_item*)&mul_params);
+	irt_work_item* mul_wi = irt_wi_create((irt_work_item_range) {
+		0, N, 1
+	}, &g_insieme_impl_table[INSIEME_WI_MUL_INDEX], (irt_lw_data_item*)&mul_params);
 	irt_work_item_id mul_id = mul_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), mul_wi);
-
+	
 	// wait until finished
 	irt_wi_join(mul_id);
-
+	
 	// stop the time
 	uint64 end_time = irt_time_ms();
-
-
+	
+	
 	// check correctness
-
+	
 	irt_data_range subrange[] = {{0,N,1},{0,N,1}};
 	irt_data_item* itemR = irt_di_create_sub(irt_data_item_table_lookup(C->id), subrange);
 	irt_data_block* blockR = irt_di_acquire(itemR, IRT_DMODE_READ_ONLY);
 	double** R = (double**)blockR->data;
-
+	
 	printf("======================\n= manual irt test matrix multiplication\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
-	for (int i=0; i<N; i++) {
-		for (int j=0; j<N; j++) {
-			if (R[i][j] != i*j) {
+	for(int i=0; i<N; i++) {
+		for(int j=0; j<N; j++) {
+			if(R[i][j] != i*j) {
 				check = false;
 				//printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
 			}
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
-
+	
 	irt_di_free(blockR);
 	irt_di_destroy(itemR);
-
+	
 	// cleanup
 	irt_di_destroy(A);
 	irt_di_destroy(B);
@@ -244,36 +248,36 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
-
+	
 	irt_work_item_range range = wi->range;
 	IRT_DEBUG("MMUL WI Range: ");
 	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
-
+	
 	irt_data_range subrange[] = {{range.begin, range.end, range.step}, {0,N,1}};
 	irt_data_range fullrange[] = {{0,N,1}, {0,N,1}};
-
+	
 	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
 	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
-
+	
 	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockC = irt_di_acquire(itemC, IRT_DMODE_WRITE_FIRST);
-
+	
 	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
-
-	for (uint64 i = range.begin; i < range.end; i+=range.step) {
-		for (uint64 j = 0; j < N; ++j) {
+	
+	for(uint64 i = range.begin; i < range.end; i+=range.step) {
+		for(uint64 j = 0; j < N; ++j) {
 			double sum = 0;
-			for (uint64 k =0; k<N; ++k) {
+			for(uint64 k =0; k<N; ++k) {
 				sum += A[i][k] * B[k][j];
 			}
 			C[i][j] = sum;
 		}
 	}
-
+	
 	irt_di_free(blockA);
 	irt_di_free(blockB);
 	irt_di_free(blockC);
@@ -283,26 +287,26 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 }
 
 void insieme_wi_mul_implementation2(irt_work_item* wi) {
-	#ifdef USE_OPENCL
+#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
-
+	
 	irt_work_item_range range = wi->range;
 	IRT_DEBUG("MMUL WI Range: ");
 	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
-
+	
 	irt_data_range subrange[] = {{range.begin, range.end, range.step}, {0,N,1}};
 	irt_data_range fullrange[] = {{0,N,1}, {0,N,1}};
-
+	
 	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
 	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
-
+	
 	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockC = irt_di_acquire(itemC, IRT_DMODE_WRITE_FIRST);
-
-	double** A = (double**)blockA->data; 
+	
+	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
 	
@@ -312,53 +316,53 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	cl_long wB = (fullrange[1].end-fullrange[1].begin);
 	cl_long hC = (subrange[0].end-subrange[0].begin);
 	cl_long wC = (subrange[1].end-subrange[1].begin);
-
+	
 	unsigned int len_A = hA * wA;
 	unsigned int len_B = hB * wB;
 	unsigned int len_C = hC * wC;
-
+	
 	unsigned int mem_size_A = sizeof(double) * len_A;
 	unsigned int mem_size_B = sizeof(double) * len_B;
 	unsigned int mem_size_C = sizeof(double) * len_C;
-
+	
 	irt_ocl_buffer* buff_A = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_A);
 	irt_ocl_buffer* buff_B = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
 	irt_ocl_buffer* buff_C = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
-
+	
 	irt_ocl_write_buffer(buff_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin][0]);
 	irt_ocl_write_buffer(buff_B, CL_FALSE, 0, mem_size_B, &B[0][0]);
-
+	
 	size_t localWS = 16;
 	float multiplier = hA/(float)localWS;
-	if(multiplier > (int)multiplier){
+	if(multiplier > (int)multiplier) {
 		multiplier += 1;
 	}
 	size_t globalh = (int)multiplier * localWS;
-
+	
 	multiplier = wA/(float)localWS;
-	if(multiplier > (int)multiplier){
+	if(multiplier > (int)multiplier) {
 		multiplier += 1;
 	}
 	size_t globalw = (int)multiplier * localWS;
-
+	
 	size_t szLocalWorkSize[2] = {localWS, localWS};
 	size_t szGlobalWorkSize[2] = {globalh, globalw};
-
-	irt_ocl_rt_run_kernel(	0,
-							2,0,szGlobalWorkSize, szLocalWorkSize,
-							6,	(size_t)0, (void *)buff_A,
-								(size_t)0, (void *)buff_B,
-								(size_t)0, (void *)buff_C,
-								sizeof(cl_long), (void *)&hA,
-								sizeof(cl_long), (void *)&wA,
-								sizeof(cl_long), (void *)&wB);
-
+	
+	irt_ocl_rt_run_kernel(0,
+	                      2,0,szGlobalWorkSize, szLocalWorkSize,
+	                      6,	(size_t)0, (void *)buff_A,
+	                      (size_t)0, (void *)buff_B,
+	                      (size_t)0, (void *)buff_C,
+	                      sizeof(cl_long), (void *)&hA,
+	                      sizeof(cl_long), (void *)&wA,
+	                      sizeof(cl_long), (void *)&wB);
+	                      
 	irt_ocl_read_buffer(buff_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin][0]);
-
+	
 	irt_ocl_release_buffer(buff_A);
 	irt_ocl_release_buffer(buff_B);
 	irt_ocl_release_buffer(buff_C);
-
+	
 #ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
 	irt_ocl_print_events();
 #endif
@@ -368,48 +372,48 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
 	irt_di_destroy(itemC);
-	#endif
+#endif
 }
 
 void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	/*#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
-
+	
 	irt_work_item_range range = wi->range;
 	IRT_DEBUG("MMUL WI Range: ");
 	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
-
+	
 	irt_data_range subrange[] = {{range.begin, range.end, range.step}, {0,N,1}};
 	irt_data_range fullrange[] = {{0,N,1}, {0,N,1}};
-
+	
 	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
 	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
-
+	
 	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockC = irt_di_acquire(itemC, IRT_DMODE_WRITE_FIRST);
-
-	double** A = (double**)blockA->data; 
+	
+	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
-
+	
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
 	cl_long hB = (fullrange[0].end-fullrange[0].begin);
 	cl_long wB = (fullrange[1].end-fullrange[1].begin);
 	cl_long hC = (subrange[0].end-subrange[0].begin);
 	cl_long wC = (subrange[1].end-subrange[1].begin);
-
+	
 	unsigned int len_A = hA * wA;
 	unsigned int len_B = hB * wB;
 	unsigned int len_C = hC * wC;
-
+	
 	unsigned int mem_size_A = sizeof(double) * len_A;
 	unsigned int mem_size_B = sizeof(double) * len_B;
 	unsigned int mem_size_C = sizeof(double) * len_C;
-
+	
 	irt_ocl_buffer* buff_Ad = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_A);
 	irt_ocl_buffer* buff_Bd = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
 	irt_ocl_buffer* buff_Cd = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
@@ -417,7 +421,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_ocl_buffer* buff_Ah = irt_ocl_rt_create_buffer(CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_A);
 	irt_ocl_buffer* buff_Bh = irt_ocl_rt_create_buffer(CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_B);
 	irt_ocl_buffer* buff_Ch = irt_ocl_rt_create_buffer(CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, mem_size_C);
-			
+	
 	double* Data_A = irt_ocl_map_buffer(buff_Ah, CL_TRUE, CL_MAP_WRITE, mem_size_A);
 	double* Data_B = irt_ocl_map_buffer(buff_Bh, CL_TRUE, CL_MAP_WRITE, mem_size_B);
 	
@@ -426,26 +430,26 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	
 	//irt_ocl_write_buffer(buff_Ad, CL_FALSE, mem_size_A, &Data_A[0]);
 	//irt_ocl_write_buffer(buff_Bd, CL_FALSE, mem_size_B, &Data_B[0]);
-
+	
 	irt_ocl_unmap_buffer(buff_Ah, Data_A);
 	irt_ocl_unmap_buffer(buff_Bh, Data_B);
-
+	
 	irt_ocl_copy_buffer(buff_Ah, buff_Ad, mem_size_A);
 	irt_ocl_copy_buffer(buff_Bh, buff_Bd, mem_size_B);
-
+	
 	size_t localWS = 16;
 	float multiplier = hA/(float)localWS;
 	if(multiplier > (int)multiplier){
 		multiplier += 1;
 	}
 	size_t globalh = (int)multiplier * localWS;
-
+	
 	multiplier = wA/(float)localWS;
 	if(multiplier > (int)multiplier){
 		multiplier += 1;
 	}
 	size_t globalw = (int)multiplier * localWS;
-
+	
 	size_t szLocalWorkSize[2] = {localWS, localWS};
 	size_t szGlobalWorkSize[2] = {globalh, globalw};
 	
@@ -457,27 +461,27 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 								sizeof(cl_long), (void *)&hA,
 								sizeof(cl_long), (void *)&wA,
 								sizeof(cl_long), (void *)&wB);
-
+	
 	irt_ocl_copy_buffer(buff_Cd, buff_Ch, mem_size_C);
 	
 	double* Data_C = irt_ocl_map_buffer(buff_Ch, CL_TRUE, CL_MAP_READ, mem_size_C);
-
+	
 	//irt_ocl_read_buffer(buff_Cd, CL_TRUE, mem_size_C, &Data_C[0]);
-
+	
 	memcpy(&C[subrange[0].begin][0], &Data_C[0], mem_size_C);
-
+	
 	irt_ocl_unmap_buffer(buff_Ch, Data_C);
-
+	
 	irt_ocl_release_buffer(buff_Ad);
 	irt_ocl_release_buffer(buff_Bd);
 	irt_ocl_release_buffer(buff_Cd);
 	irt_ocl_release_buffer(buff_Ah);
 	irt_ocl_release_buffer(buff_Bh);
 	irt_ocl_release_buffer(buff_Ch);
-
-#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	
+	#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
 	irt_ocl_print_events();
-#endif
+	#endif
 	
 	irt_di_free(blockA);
 	irt_di_free(blockB);
@@ -493,38 +497,50 @@ void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requiremen
 
 	irt_work_item_range range = wi->range;
 	insieme_wi_mul_params* params = ((insieme_wi_mul_params*)(wi->parameters));
-
+	
 	int i =0;
-
+	
 	// dependency A (just a few rows)
 	// dim = 1
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	requirements[i].range = (irt_data_range) {
+		range.begin, range.end, range.step
+	};
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){0,N,1};
+	requirements[i].range = (irt_data_range) {
+		0,N,1
+	};
 	i++;
-
-
+	
+	
 	// dependency B (all of B)
 	// dim = 1
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){0,N,1};
+	requirements[i].range = (irt_data_range) {
+		0,N,1
+	};
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){0,N,1};
+	requirements[i].range = (irt_data_range) {
+		0,N,1
+	};
 	i++;
-
+	
 	// dependency C (just a few rows)
 	// dim = 1
 	requirements[i].di_id = params->C;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	requirements[i].range = (irt_data_range) {
+		range.begin, range.end, range.step
+	};
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->C;
-	requirements[i].range = (irt_data_range){0,N,1};
+	requirements[i].range = (irt_data_range) {
+		0,N,1
+	};
 	i++;
 }
 
@@ -532,26 +548,26 @@ void insieme_wi_init_implementation(irt_work_item* wi) {
 
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
-
+	
 	irt_work_item_range range = wi->range;
 	irt_data_range subrange[] = {{range.begin, range.end, range.step}, {0,N,1}};
-
+	
 	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), subrange);
-
+	
 	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_WRITE_FIRST);
 	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_WRITE_FIRST);
-
+	
 	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;
-
-	for (uint64 i = range.begin; i < range.end; i+=range.step) {
-		for (uint64 j = 0; j < N; ++j) {
+	
+	for(uint64 i = range.begin; i < range.end; i+=range.step) {
+		for(uint64 j = 0; j < N; ++j) {
 			A[i][j] = i*j;
 			B[i][j] = (i==j)?1:0;
 		}
 	}
-
+	
 	irt_di_free(blockA);
 	irt_di_free(blockB);
 	irt_di_destroy(itemA);
@@ -562,30 +578,38 @@ void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requireme
 
 	irt_work_item_range range = wi->range;
 	insieme_wi_init_params* params = ((insieme_wi_init_params*)(wi->parameters));
-
+	
 	int i =0;
-
+	
 	// dependency A (just a few rows)
 	// dim = 1
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	requirements[i].range = (irt_data_range) {
+		range.begin, range.end, range.step
+	};
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){0,N,1};
+	requirements[i].range = (irt_data_range) {
+		0,N,1
+	};
 	i++;
-
-
+	
+	
 	// dependency B (all of B)
 	// dim = 1
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	requirements[i].range = (irt_data_range) {
+		range.begin, range.end, range.step
+	};
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){0,N,1};
+	requirements[i].range = (irt_data_range) {
+		0,N,1
+	};
 	i++;
-
+	
 }
 
 

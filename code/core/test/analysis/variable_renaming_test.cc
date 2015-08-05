@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -52,7 +52,7 @@ TEST(VariableRenamer, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	auto& basic = manager.getLangBasic();
-
+	
 	VariablePtr p1 = builder.variable(basic.getInt4());
 	VariablePtr q1 = builder.variable(basic.getInt4());
 	LambdaExprPtr lambda = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(builder.intLit(0)), builder.parameters(p1,q1));
@@ -61,26 +61,28 @@ TEST(VariableRenamer, Basic) {
 	CallExprPtr call = builder.callExpr(lambda, p2, builder.castExpr(basic.getInt4(), q2));
 	DeclarationStmtPtr decl2 = builder.declarationStmt(q2, builder.intLit(0));
 	CompoundStmtPtr cmp1 = builder.compoundStmt(decl2, builder.returnStmt(call));
-
+	
 	VariablePtr p3 = builder.variable(builder.refType(basic.getInt4()));
 	LambdaExprPtr lambda2 = builder.lambdaExpr(basic.getInt4(), cmp1, builder.parameters(p2));
 	CallExprPtr call2 = builder.callExpr(lambda2, builder.deref(p3));
 	DeclarationStmtPtr decl = builder.declarationStmt(p3, builder.intLit(0));
-
-
+	
+	
 	CompoundStmtPtr cmp = builder.compoundStmt(toVector<StatementPtr>(decl, call2));
 	std::cout << cmp << std::endl;
-
+	
 	const VariableAddress& p1Addr = core::Address<const core::Variable>::find(p1, cmp);
 	const VariableAddress& q1Addr = core::Address<const core::Variable>::find(q1, cmp);
-
+	
 	utils::map::PointerMap<VariableAddress, VariableAddress> vm = getRenamedVariableMap(toVector<VariableAddress>(p1Addr, q1Addr));
-
+	
 	if(vm[q1Addr] && vm[p1Addr]) {
 		EXPECT_EQ(*q2, *vm[q1Addr]);
 		EXPECT_EQ(*p3, *vm[p1Addr]);
-	} else
+	}
+	else {
 		EXPECT_TRUE(vm[q1Addr] && vm[p1Addr]);
+	}
 }
 
 } // end namespace analysis

@@ -43,54 +43,64 @@ namespace insieme {
 namespace utils {
 namespace constraint {
 
-	// ----------------------------- Basic Variable ------------------------------
+// ----------------------------- Basic Variable ------------------------------
 
-	/**
-	 * A variable is the entity to be constraint by constraints.
-	 */
-	class Variable : public Printable {
+/**
+ * A variable is the entity to be constraint by constraints.
+ */
+class Variable : public Printable {
 
-		int id;
+	int id;
+	
+public:
 
-	public:
+	Variable(int id = -1) : id(id) { };
+	Variable(const Variable& id) : id(id.id) { };
+	
+	int getID() const {
+		return id;
+	}
+	
+	bool operator==(const Variable& other) const {
+		return id == other.id;
+	}
+	bool operator!=(const Variable& other) const {
+		return !(*this == other);
+	}
+	bool operator<(const Variable& other) const {
+		return id < other.id;
+	}
+	
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "v" << id;
+	}
+};
 
-		Variable(int id = -1) : id(id) { };
-		Variable(const Variable& id) : id(id.id) { };
 
-		int getID() const { return id; }
+// --------------------------- Typed Variables ------------------------------
 
-		bool operator==(const Variable& other) const { return id == other.id; }
-		bool operator!=(const Variable& other) const { return !(*this == other); }
-		bool operator<(const Variable& other) const { return id < other.id; }
+/**
+ * A typed variable is a variable with an associated lattice = property space.
+ *
+ * @tparam L ... the lattice defining the domain of this variable
+ */
+template<typename L>
+struct TypedVariable : public Variable {
+	typedef L lattice_type;
+	TypedVariable(int id = -1) : Variable(id) { };
+	TypedVariable(const Variable& id) : Variable(id) { };
+};
 
-		std::ostream& printTo(std::ostream& out) const { return out << "v" << id; }
-	};
-
-
-	// --------------------------- Typed Variables ------------------------------
-
-	/**
-	 * A typed variable is a variable with an associated lattice = property space.
-	 *
-	 * @tparam L ... the lattice defining the domain of this variable
-	 */
-	template<typename L>
-	struct TypedVariable : public Variable {
-		typedef L lattice_type;
-		TypedVariable(int id = -1) : Variable(id) { };
-		TypedVariable(const Variable& id) : Variable(id) { };
-	};
-
-	/**
-	 * A typed variable that is utilizing a set lattice.
-	 *
-	 * @tparam E ... the element type of the set lattice defining the domain of this variable
-	 */
-	template<typename E>
-	struct TypedSetVariable : public TypedVariable<SetLattice<E>> {
-		TypedSetVariable(int id = -1) : TypedVariable<SetLattice<E>>(id) { };
-		TypedSetVariable(const Variable& id) : TypedVariable<SetLattice<E>>(id) { };
-	};
+/**
+ * A typed variable that is utilizing a set lattice.
+ *
+ * @tparam E ... the element type of the set lattice defining the domain of this variable
+ */
+template<typename E>
+struct TypedSetVariable : public TypedVariable<SetLattice<E>> {
+	TypedSetVariable(int id = -1) : TypedVariable<SetLattice<E>>(id) { };
+	TypedSetVariable(const Variable& id) : TypedVariable<SetLattice<E>>(id) { };
+};
 
 } // end namespace constraint
 } // end namespace utils
@@ -98,11 +108,11 @@ namespace constraint {
 
 namespace std {
 
-	template<>
-	struct hash<insieme::utils::constraint::Variable> {
-		size_t operator()(const insieme::utils::constraint::Variable& id) const {
-			return id.getID();
-		}
-	};
+template<>
+struct hash<insieme::utils::constraint::Variable> {
+	size_t operator()(const insieme::utils::constraint::Variable& id) const {
+		return id.getID();
+	}
+};
 
 } // end namespace std

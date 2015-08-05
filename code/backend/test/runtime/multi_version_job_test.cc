@@ -53,16 +53,16 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-	namespace p = insieme::core::pattern;
-	namespace irp = insieme::core::pattern::irp;
+namespace p = insieme::core::pattern;
+namespace irp = insieme::core::pattern::irp;
 
-	TEST(MultiVersionJob, Generation) {
+TEST(MultiVersionJob, Generation) {
 
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a multi-version job
-		auto code = builder.parseProgram(R"(
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	// create a multi-version job
+	auto code = builder.parseProgram(R"(
 			unit main() {
 				decl ref<int<4>> a;
 				spawn lambda ()=> { a = 3; };
@@ -76,37 +76,37 @@ namespace runtime {
 			}
 		)").as<core::ProgramPtr>();
 
-		ASSERT_TRUE(code);
+	ASSERT_TRUE(code);
+	
+	auto res = core::checks::check(code);
+	EXPECT_TRUE(res.empty()) << res;
+	
+	// generate code using the runtime backend
+	auto targetCode = RuntimeBackend::getDefault()->convert(code);
+	
+	// print results if interested
+	// std::cout << core::printer::PrettyPrinter(code) << "\n";
+	// std::cout << *targetCode << "\n";
+	
+	auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
+	compiler.addFlag("-Werror");
+	
+	EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+}
 
-		auto res = core::checks::check(code);
-		EXPECT_TRUE(res.empty()) << res;
+void setMultiversionImplHint(core::NodePtr code, backend::runtime::PickImplementationHint hint) {
+	irp::matchAllPairs(irp::pick(), code, [&](const core::NodePtr& match, p::NodeMatch m) {
+		match.as<core::CallExprPtr>().attachValue(hint);
+	});
+}
 
-		// generate code using the runtime backend
-		auto targetCode = RuntimeBackend::getDefault()->convert(code);
+TEST(MultiVersion, ImplementationHints) {
 
-		// print results if interested
-		// std::cout << core::printer::PrettyPrinter(code) << "\n";
-		// std::cout << *targetCode << "\n";
-
-		auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
-		compiler.addFlag("-Werror");
-
-		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-	}
-
-	void setMultiversionImplHint(core::NodePtr code, backend::runtime::PickImplementationHint hint) {
-		irp::matchAllPairs(irp::pick(), code, [&](const core::NodePtr& match, p::NodeMatch m) {
-			match.as<core::CallExprPtr>().attachValue(hint);
-		});
-	}
-
-	TEST(MultiVersion, ImplementationHints) {
-
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		// create a multi-version job
-		auto code = builder.parseProgram(R"(
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	// create a multi-version job
+	auto code = builder.parseProgram(R"(
 			int<4> main() {
 				decl ref<int<4>> a;
 				pick([
@@ -118,38 +118,38 @@ namespace runtime {
 		}
 		)").as<core::ProgramPtr>();
 
-		ASSERT_TRUE(code);
-
-		auto res = core::checks::check(code);
-		EXPECT_TRUE(res.empty()) << res;
-
-		auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
-		compiler.addFlag("-Werror");
-
-		/////////////////////////////////// Test backend::runtime::PickImplementationHint::CALL
-
-		setMultiversionImplHint(code, backend::runtime::PickImplementationHint::CALL);
-		//dumpDetailColored(code);
-
-		auto targetCode = RuntimeBackend::getDefault()->convert(code);
-		string targetCodeString = toString(*targetCode);
-		//std::cout << "\n===============================================\n\n" << targetCodeString << "\n";
-
-		EXPECT_TRUE(targetCodeString.find("switch") == string::npos);
-		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
-
-		/////////////////////////////////// Test backend::runtime::PickImplementationHint::SWITCH
-
-		setMultiversionImplHint(code, backend::runtime::PickImplementationHint::SWITCH);
-		//dumpDetailColored(code);
-
-		auto targetCodeSwitch = RuntimeBackend::getDefault()->convert(code);
-		string targetCodeSwitchString = toString(*targetCodeSwitch);
-		//std::cout << "\n===============================================\n\n" << targetCodeSwitchString << "\n";
-
-		EXPECT_TRUE(targetCodeSwitchString.find("switch") != string::npos);
-		EXPECT_TRUE(utils::compiler::compile(*targetCodeSwitch, compiler));
-	}
+	ASSERT_TRUE(code);
+	
+	auto res = core::checks::check(code);
+	EXPECT_TRUE(res.empty()) << res;
+	
+	auto compiler = utils::compiler::Compiler::getRuntimeCompiler();
+	compiler.addFlag("-Werror");
+	
+	/////////////////////////////////// Test backend::runtime::PickImplementationHint::CALL
+	
+	setMultiversionImplHint(code, backend::runtime::PickImplementationHint::CALL);
+	//dumpDetailColored(code);
+	
+	auto targetCode = RuntimeBackend::getDefault()->convert(code);
+	string targetCodeString = toString(*targetCode);
+	//std::cout << "\n===============================================\n\n" << targetCodeString << "\n";
+	
+	EXPECT_TRUE(targetCodeString.find("switch") == string::npos);
+	EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	
+	/////////////////////////////////// Test backend::runtime::PickImplementationHint::SWITCH
+	
+	setMultiversionImplHint(code, backend::runtime::PickImplementationHint::SWITCH);
+	//dumpDetailColored(code);
+	
+	auto targetCodeSwitch = RuntimeBackend::getDefault()->convert(code);
+	string targetCodeSwitchString = toString(*targetCodeSwitch);
+	//std::cout << "\n===============================================\n\n" << targetCodeSwitchString << "\n";
+	
+	EXPECT_TRUE(targetCodeSwitchString.find("switch") != string::npos);
+	EXPECT_TRUE(utils::compiler::compile(*targetCodeSwitch, compiler));
+}
 
 } // end namespace runtime
 } // end namespace backend

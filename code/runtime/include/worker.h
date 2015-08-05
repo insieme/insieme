@@ -56,7 +56,7 @@
 IRT_MAKE_ID_TYPE(worker)
 
 typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_SLEEPING, 
+	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_SLEEPING,
 	IRT_WORKER_STATE_DISABLED, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP, IRT_WORKER_STATE_JOINED
 } irt_worker_state;
 
@@ -79,28 +79,28 @@ struct _irt_worker {
 #endif
 	irt_cond_var dop_wait_cond;
 	irt_spinlock shutdown_lock;
-
+	
 	uint32 default_variant;
 	unsigned int rand_seed;
-
+	
 #ifdef IRT_ASTEROIDEA_STACKS
 	irt_work_item* share_stack_wi;
 #endif
-
+	
 #ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
 	clockid_t clockid;
 	double app_time_total;
 	double app_time_last_start;
 	bool app_time_running;
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
-
+	
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;
 #endif
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;
 #endif
-
+	
 	// memory reuse stuff
 	irt_wi_event_register *wi_ev_register_list;
 	irt_wg_event_register *wg_ev_register_list;
@@ -110,9 +110,9 @@ struct _irt_worker {
 
 typedef struct _irt_worker_init_signal {
 	uint32 init_count;
-	#if !defined(_WIN32) || (WINVER >= 0x0600)
-		irt_cond_var init_condvar;
-	#endif
+#if !defined(_WIN32) || (WINVER >= 0x0600)
+	irt_cond_var init_condvar;
+#endif
 	irt_mutex_obj init_mutex;
 } irt_worker_init_signal;
 

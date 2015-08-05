@@ -53,7 +53,7 @@ int main() {
 	struct Kernel kernel6;
 	cl_kernel* kernel7;
 	struct Kernel* kernel8;
-
+	
 	clSetKernelArg(kernel1, 0, sizeof(cl_mem), (void*) &dev_ptr1);
 	clSetKernelArg(kernel2.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
 	clSetKernelArg(kernel3[0], 0, sizeof(cl_mem), (void*) &dev_ptr1);
@@ -62,5 +62,5 @@ int main() {
 	clSetKernelArg(kernel6.fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
 	clSetKernelArg(kernel7[0], 0, sizeof(cl_mem), (void*) &dev_ptr1);
 	clSetKernelArg(kernel8[0].fct, 0, sizeof(cl_mem), (void*) &dev_ptr1);
-
+	
 }

@@ -51,7 +51,7 @@
 namespace insieme {
 namespace frontend {
 namespace omp {
-	
+
 using namespace std;
 using namespace core;
 using namespace utils::log;
@@ -78,12 +78,17 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 				ExpressionPtr initializer;
 				if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
 					initializer = build.undefined(analysis::getReferencedType(lit->getType()));
-				} else assert_fail() << "Unsupported OMP global type";
+				}
+				else {
+					assert_fail() << "Unsupported OMP global type";
+				}
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
 			}
 			// mark upward path from global as well as handle recursions
-			auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) { node->addAnnotation(anno); });
+			auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) {
+				node->addAnnotation(anno);
+			});
 			auto pathMarkerPlus = makeLambdaVisitor([&](const NodeAddress& node) {
 				LambdaExprAddress lam = dynamic_address_cast<LambdaExprAddress>(node);
 				if(lam && !lam->hasAnnotation(GlobalRequiredAnnotation::key) && lam->isRecursive()) {
@@ -103,8 +108,12 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 
 const NodePtr GlobalMapper::mapElement(unsigned index, const NodePtr& ptr) {
 	// only start mapping once global is encountered
-	if(*ptr == *curVar) startedMapping = true;
-	if(!startedMapping) return ptr->substitute(nodeMan, *this);
+	if(*ptr == *curVar) {
+		startedMapping = true;
+	}
+	if(!startedMapping) {
+		return ptr->substitute(nodeMan, *this);
+	}
 	if(ptr->hasAnnotation(GlobalRequiredAnnotation::key)) {
 		//LOG(INFO) << "?????? Mapping 1 T: " << getNodeTypeName(ptr->getNodeType()) << " -- N: " << *ptr;
 		// recursively forward the variable
@@ -128,7 +137,8 @@ const NodePtr GlobalMapper::mapElement(unsigned index, const NodePtr& ptr) {
 			// no changes at this node, but at child nodes
 			return ptr->substitute(nodeMan, *this);
 		}
-	} else {
+	}
+	else {
 		//LOG(INFO) << "?????? Mapping 2 " << ptr;
 		// no changes required
 		return ptr;
@@ -178,12 +188,14 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	// add param
 	VariableList newParams = lambda->getParameterList();
 	newParams.push_back(curVar);
-
+	
 	// build new lambda type
 	TypePtr retType = lambda->getType()->getReturnType();
-	TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v){ return v->getType(); });
+	TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v) {
+		return v->getType();
+	});
 	FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
-
+	
 	// update recursive variable
 	auto recVar = lambdaExpr->getVariable();
 	auto newRecVar = build.variable(lambdaType);
@@ -191,24 +203,25 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 		// TODO: update recursive call, not only function; => arguments are missing!
 		// 		implementing this is easier when general add-parameter function is available
 		newBody = core::transform::replaceAll(
-			build.getNodeManager(), newBody, recVar, newRecVar, core::transform::globalReplacement).as<CompoundStmtPtr>();
+		              build.getNodeManager(), newBody, recVar, newRecVar, core::transform::globalReplacement).as<CompoundStmtPtr>();
 	}
-
+	
 	auto newLambda = build.lambda(lambdaType, newParams, newBody);
-
+	
 	// restore previous global variable
 	curVar = outerVar;
-
+	
 	// build new definition block
 	vector<LambdaBindingPtr> bindings;
 	for(const LambdaBindingPtr& binding : lambdaExpr->getDefinition()) {
-		if (binding->getVariable() == recVar) {
+		if(binding->getVariable() == recVar) {
 			bindings.push_back(build.lambdaBinding(newRecVar, newLambda));
-		} else {
+		}
+		else {
 			bindings.push_back(binding);
 		}
 	}
-
+	
 	// build new lambda (preserve all recursive variables)
 	ret = build.lambdaExpr(newRecVar, build.lambdaDefinition(bindings));
 	//LOG(INFO) << "!!!!!!! Mapped lambda expr " << ret;
@@ -220,7 +233,7 @@ const NodePtr GlobalMapper::mapLiteral(const LiteralPtr& literal) {
 	if(gname.find("global_omp") == 0) {
 		return build.refMember(curVar, gname);
 	}
-
+	
 	return literal;
 }
 

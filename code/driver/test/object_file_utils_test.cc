@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,36 +49,36 @@ namespace fs = boost::filesystem;
 namespace insieme {
 namespace driver {
 
-	TEST(ObjectFile, HelloWorldTest) {
-		core::NodeManager mgr;
-
-		fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
-		auto unit = job.toIRTranslationUnit(mgr);
-
-		// save tu to temporary file
-		auto file = fs::unique_path(fs::temp_directory_path() / "tmp%%%%%%%%.o");
-
-		// save translation unit
-		saveLib(unit, file);
-
-		// check validity
-		EXPECT_TRUE(fs::exists(file));
-		EXPECT_TRUE(isInsiemeLib(file));
-
-		// this one should fail ..
-		EXPECT_FALSE(isInsiemeLib(DRIVER_TEST_DIR "/inputs/hello_world.c"));
-
-		// reload translation unit
-		core::NodeManager mgr2;
-		auto tu = loadLib(mgr2, file);
-
-		EXPECT_EQ(toString(tu), toString(unit));
-
-		// cleanup
-		if (fs::exists(file)) {
-			fs::remove(file);
-		}
+TEST(ObjectFile, HelloWorldTest) {
+	core::NodeManager mgr;
+	
+	fe::ConversionJob job(DRIVER_TEST_DIR "/inputs/hello_world.c");
+	auto unit = job.toIRTranslationUnit(mgr);
+	
+	// save tu to temporary file
+	auto file = fs::unique_path(fs::temp_directory_path() / "tmp%%%%%%%%.o");
+	
+	// save translation unit
+	saveLib(unit, file);
+	
+	// check validity
+	EXPECT_TRUE(fs::exists(file));
+	EXPECT_TRUE(isInsiemeLib(file));
+	
+	// this one should fail ..
+	EXPECT_FALSE(isInsiemeLib(DRIVER_TEST_DIR "/inputs/hello_world.c"));
+	
+	// reload translation unit
+	core::NodeManager mgr2;
+	auto tu = loadLib(mgr2, file);
+	
+	EXPECT_EQ(toString(tu), toString(unit));
+	
+	// cleanup
+	if(fs::exists(file)) {
+		fs::remove(file);
 	}
+}
 
 } // end namespace driver
 } // end namespace insieme

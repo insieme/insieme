@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,8 +38,8 @@
 #define _OMP_H
 
 #ifdef __cplusplus
- extern "C" {
-#endif 
+extern "C" {
+#endif
 
 typedef enum omp_sched_t {
 	omp_sched_static = 1,
@@ -89,15 +89,17 @@ double omp_get_wtime();
 //
 //#define omp_lock_t struct _irt_lock
 //
-//void irt_lock_init(irt_lock* l) {}; 
-//void irt_lock_acquire(irt_lock* l) {}; 
-//void irt_lock_release(irt_lock* l) {}; 
+//void irt_lock_init(irt_lock* l) {};
+//void irt_lock_acquire(irt_lock* l) {};
+//void irt_lock_release(irt_lock* l) {};
 //
 //#define omp_init_lock(_param) irt_lock_init(_param)
 //#define omp_set_lock(_param) irt_lock_acquire(_param)
 //#define omp_unset_lock(_param) irt_lock_release(_param)
 
-typedef struct _omp_lock_t { int insieme_omp_lock_struct_marker; } omp_lock_t;
+typedef struct _omp_lock_t {
+	int insieme_omp_lock_struct_marker;
+} omp_lock_t;
 
 void omp_init_lock(omp_lock_t* lock);
 void omp_set_lock(omp_lock_t* lock);
@@ -105,7 +107,7 @@ void omp_unset_lock(omp_lock_t* lock);
 
 
 #ifdef __cplusplus
- }
-#endif 
+}
+#endif
 
 #endif /* _OMP_H */

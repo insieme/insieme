@@ -1,26 +1,26 @@
 
-class A{
+class A {
 
-	private:
-		int& a;
+private:
+	int& a;
 	
-	public:
+public:
 
-		A(int& v):
-			a(v)
-		{}
-
-		int retValue(){
-			return a;
-		}
+	A(int& v):
+		a(v) {
+	}
+	
+	int retValue() {
+		return a;
+	}
 };
 
 
-int main (){
+int main() {
 
 	int i = 6;
 	A a(i);
-
+	
 	a.retValue();
 	return 0;
 }

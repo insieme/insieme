@@ -68,7 +68,9 @@ class LoopNormalizationError: public std::exception {
 public:
 	LoopNormalizationError(): std::exception() { }
 	LoopNormalizationError(const std::string& cause): std::exception(), cause(cause) { }
-	const char* what() const throw() { return cause.c_str(); }
+	const char* what() const throw() {
+		return cause.c_str();
+	}
 	~LoopNormalizationError() throw() { }
 };
 
@@ -88,7 +90,7 @@ using insieme::frontend::conversion::Converter;
  * Implements the checks to determine loop properties, such as induction variable, increment step and condition
  * normalizes the loop.
  * there is only needed to append the previous generated statements and the post.
- * 		PRE: 
+ * 		PRE:
  * 			...
  * 		FOR LOOP { body }
  * 		POST
@@ -99,67 +101,75 @@ class LoopAnalyzer {
 private:
 
 	Converter& 	convFact;
-
+	
 	insieme::core::VariableList		conditionVars;			// variables used in conditions
-
+	
 	insieme::core::ExpressionPtr	originalInductionExpr;  // old induction expression
 	insieme::core::VariablePtr		inductionVar;  			// New read-only induction var
-
+	
 	insieme::core::ExpressionPtr	newInductionExpr; 		// Expression to use as iterator (normalized)
-
+	
 	insieme::core::ExpressionPtr 	incrExpr;				// increment
 	insieme::core::ExpressionPtr    stepExpr; 				// step of each iteration
-
+	
 	insieme::core::ExpressionPtr    initValue;				// lower boundary for real iteration
 	insieme::core::ExpressionPtr    endValue;				// upper boundary
-
+	
 	insieme::core::StatementList	preStmts;  				// statements that need to be reproduced BEFORE the loop
 	insieme::core::StatementList	postStmts;  			// statements that need to be reproduced AFTER the loop
 	insieme::core::StatementList	firstStmts;				// statements that need to be reproduced at the BEGINNING of loop body
-
+	
 	bool	invertComparisonOp;			// loop up or loop down, not used
 	bool	loopToBoundary;    // whenever to loop until value is equal, or until value is less than
 	bool	whileLessThan;       // if induction variable is compared while less than
 	bool	conditionLeft;       // if induction variable is compared while less than
 	bool	restoreValue;       // if induction variable was defined outside of scope, we need to give it a final value
-
-
+	
+	
 	void findConditionVariables(const clang::ForStmt* forStmt);
 	void findInductionVariable(const clang::ForStmt* forStmt);
 	void handleIncrExpr(const clang::ForStmt* forStmt);
 	void handleCondExpr(const clang::ForStmt* forStmt);
-
+	
 public:
 
 	/**
 	 * generate an analyzer to convert the loop from clang
 	 */
 	LoopAnalyzer(const clang::ForStmt* forStmt, Converter& convFact);
-
+	
 	/**
 	 * retrieve the original induction expression used in the original not normalized loop
 	 */
-	const insieme::core::ExpressionPtr 	getOriginalInductionExpr()  const { return originalInductionExpr; }
+	const insieme::core::ExpressionPtr 	getOriginalInductionExpr()  const {
+		return originalInductionExpr;
+	}
 	/**
 	 * retrieve the current induction expression used in the normalized loop
 	 */
-	const insieme::core::ExpressionPtr 	getInductionExpr() const { return newInductionExpr; }
-
+	const insieme::core::ExpressionPtr 	getInductionExpr() const {
+		return newInductionExpr;
+	}
+	
 	/**
 	 * retrieve the list of previous statements to be inserted BEFORE the loop
 	 */
-	const insieme::core::StatementList& getPreStmts() const { return preStmts;}
-
+	const insieme::core::StatementList& getPreStmts() const {
+		return preStmts;
+	}
+	
 	/**
 	 * retrieve the list of post statements to be inserted AFTER the loop
 	 */
-	const insieme::core::StatementList& getPostStmts() const { return postStmts;}
-
+	const insieme::core::StatementList& getPostStmts() const {
+		return postStmts;
+	}
+	
 	/**
 	 * creates a loop. if possible, normalized... Any for loop should be normalized but we have our
 	 * limitations
 	 */
-	insieme::core::ForStmtPtr  getLoop(const insieme::core::StatementPtr& body) const; 
+	insieme::core::ForStmtPtr  getLoop(const insieme::core::StatementPtr& body) const;
 };
 
 } // End analysis namespace

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,59 +42,59 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	enum TypeCategory {
-		INT, UINT, REAL
-	};
+enum TypeCategory {
+	INT, UINT, REAL
+};
 
-	namespace detail {
+namespace detail {
 
-		template<TypeCategory cat, int b> struct _base_type_map {
-			enum { category = cat, bits = b };
-		};
+template<TypeCategory cat, int b> struct _base_type_map {
+	enum { category = cat, bits = b };
+};
 
-	}
+}
 
-	template<TypeCategory category, int bits> struct type_map;
+template<TypeCategory category, int bits> struct type_map;
 
-	template<> struct type_map<INT, 1> : public detail::_base_type_map<INT, 1> {
-		typedef int8_t value_type;
-	};
+template<> struct type_map<INT, 1> : public detail::_base_type_map<INT, 1> {
+	typedef int8_t value_type;
+};
 
-	template<> struct type_map<INT, 2> : public detail::_base_type_map<INT, 2> {
-		typedef int16_t value_type;
-	};
+template<> struct type_map<INT, 2> : public detail::_base_type_map<INT, 2> {
+	typedef int16_t value_type;
+};
 
-	template<> struct type_map<INT, 4> : public detail::_base_type_map<INT, 4> {
-		typedef int32_t value_type;
-	};
+template<> struct type_map<INT, 4> : public detail::_base_type_map<INT, 4> {
+	typedef int32_t value_type;
+};
 
-	template<> struct type_map<INT, 8> : public detail::_base_type_map<INT, 8> {
-		typedef int64_t value_type;
-	};
+template<> struct type_map<INT, 8> : public detail::_base_type_map<INT, 8> {
+	typedef int64_t value_type;
+};
 
-	template<> struct type_map<UINT, 1> : public detail::_base_type_map<UINT, 1> {
-		typedef uint8_t value_type;
-	};
+template<> struct type_map<UINT, 1> : public detail::_base_type_map<UINT, 1> {
+	typedef uint8_t value_type;
+};
 
-	template<> struct type_map<UINT, 2> : public detail::_base_type_map<UINT, 2> {
-		typedef uint16_t value_type;
-	};
+template<> struct type_map<UINT, 2> : public detail::_base_type_map<UINT, 2> {
+	typedef uint16_t value_type;
+};
 
-	template<> struct type_map<UINT, 4> : public detail::_base_type_map<UINT, 4> {
-		typedef uint32_t value_type;
-	};
+template<> struct type_map<UINT, 4> : public detail::_base_type_map<UINT, 4> {
+	typedef uint32_t value_type;
+};
 
-	template<> struct type_map<UINT, 8> : public detail::_base_type_map<UINT, 8> {
-		typedef uint64_t value_type;
-	};
+template<> struct type_map<UINT, 8> : public detail::_base_type_map<UINT, 8> {
+	typedef uint64_t value_type;
+};
 
-	template<> struct type_map<REAL, 4> : public detail::_base_type_map<REAL, 4> {
-		typedef float value_type;
-	};
+template<> struct type_map<REAL, 4> : public detail::_base_type_map<REAL, 4> {
+	typedef float value_type;
+};
 
-	template<> struct type_map<REAL, 8> : public detail::_base_type_map<REAL, 8> {
-		typedef double value_type;
-	};
+template<> struct type_map<REAL, 8> : public detail::_base_type_map<REAL, 8> {
+	typedef double value_type;
+};
 
 } // end namespace lang
 } // end namespace core

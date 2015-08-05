@@ -56,13 +56,13 @@ namespace backend {
 TEST(Preprocessor, GlobalElimination) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-
+	
 	std::map<string, core::NodePtr> symbols;
 	symbols["A"] = builder.structExpr(toVector<core::NamedValuePtr>(
-			builder.namedValue("a", builder.undefined(builder.parseType("vector<int<4>,20>"))),
-			builder.namedValue("f", builder.undefined(builder.parseType("real<8>")))
-	));
-
+	                                      builder.namedValue("a", builder.undefined(builder.parseType("vector<int<4>,20>"))),
+	                                      builder.namedValue("f", builder.undefined(builder.parseType("real<8>")))
+	                                  ));
+	                                  
 	core::ProgramPtr program = builder.parseProgram(R"(
 			let gstruct = struct { vector<int<4>,20> a; real<8> f; };
 			
@@ -80,18 +80,18 @@ TEST(Preprocessor, GlobalElimination) {
 				return 0;
 			}
             )", symbols
-	);
-
+	                                               );
+	                                               
 	EXPECT_TRUE(program);
-
+	
 	program = core::transform::fixTypesGen(manager, program, core::ExpressionMap(), false);
-
+	
 //	std::cout << "Input: " << core::printer::PrettyPrinter(program) << "\n";
 
 	// check for semantic errors
 	auto errors = core::checks::check(program);
 	EXPECT_EQ(core::checks::MessageList(), errors);
-
+	
 }
 
 

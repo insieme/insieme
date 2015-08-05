@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -111,7 +111,7 @@ std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t
 		} \
 		inline std::ostream& operator<<(std::ostream &os, const enumname &c) { \
 			return os << name(c);\
-		} 
+		}
 
 
 /**
@@ -143,10 +143,11 @@ template <typename T>
 inline const T fromName(const std::string &nam) {
 	T i;
 	for(i = min(i); i < max(i); ++i) {
-		if (nam == name(i))
+		if(nam == name(i)) {
 			return i;
+		}
 	}
-
+	
 	//TODO: exception state: throw exception or use invalid number?
 	return max(i);
 }

@@ -35,7 +35,7 @@
  */
 
 int main() {
-	
+
 	int a = 666;
 	
 	#pragma omp parallel

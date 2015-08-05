@@ -49,17 +49,17 @@ namespace backend {
 namespace addons {
 
 
+/**
+ * An Add-On realizing support for enum types.
+ */
+struct EnumTypes : public AddOn {
+
 	/**
-	 * An Add-On realizing support for enum types.
+	 * Installs this Add-On within the given converter.
 	 */
-	struct EnumTypes : public AddOn {
-
-		/**
-		 * Installs this Add-On within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const;
-
-	};
+	virtual void installOn(Converter& converter) const;
+	
+};
 
 
 } // end namespace addons

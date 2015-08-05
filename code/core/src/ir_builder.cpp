@@ -81,47 +81,51 @@
 namespace insieme {
 namespace core {
 
-	const lang::BasicGenerator& IRBuilder::getLangBasic() const {
-			return manager.getLangBasic();
-	}
+const lang::BasicGenerator& IRBuilder::getLangBasic() const {
+	return manager.getLangBasic();
+}
 
 namespace {
 
-	/**
-	 * Returns the list of variables referenced within an expression.
-	 * This class is used when a code block needs to be transformed into a function
-	 */
-	struct VarRefFinder: public IRVisitor<bool> {
+/**
+ * Returns the list of variables referenced within an expression.
+ * This class is used when a code block needs to be transformed into a function
+ */
+struct VarRefFinder: public IRVisitor<bool> {
 
-	    VarRefFinder() : core::IRVisitor<bool>(false) { }
-
-	    bool visitVariable(const core::VariablePtr& varExpr) {
-	    	usedVars.insert(varExpr);
-	    	return true;
-	    }
-
-	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return true; }
-
-	    bool visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-	        declaredVars.insert( declStmt->getVariable() );
-	        return false;
-	    }
-
-	    bool visitNode(const NodePtr& node) { return false; }
-
-	    utils::set::PointerSet<VariablePtr> declaredVars;
-	    utils::set::PointerSet<VariablePtr> usedVars;
-	};
-
-	std::vector<VariablePtr> getReachingVariables(const core::NodePtr& root) {
-        assert_true(root) << " no root node";
-		VarRefFinder visitor;
-		visitDepthFirstPrunable(root, visitor);
-
-		auto nonDecls = utils::set::difference(visitor.usedVars, visitor.declaredVars);
-
-		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
+	VarRefFinder() : core::IRVisitor<bool>(false) { }
+	
+	bool visitVariable(const core::VariablePtr& varExpr) {
+		usedVars.insert(varExpr);
+		return true;
 	}
+	
+	bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) {
+		return true;
+	}
+	
+	bool visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
+		declaredVars.insert(declStmt->getVariable());
+		return false;
+	}
+	
+	bool visitNode(const NodePtr& node) {
+		return false;
+	}
+	
+	utils::set::PointerSet<VariablePtr> declaredVars;
+	utils::set::PointerSet<VariablePtr> usedVars;
+};
+
+std::vector<VariablePtr> getReachingVariables(const core::NodePtr& root) {
+	assert_true(root) << " no root node";
+	VarRefFinder visitor;
+	visitDepthFirstPrunable(root, visitor);
+	
+	auto nonDecls = utils::set::difference(visitor.usedVars, visitor.declaredVars);
+	
+	return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
+}
 
 }
 
@@ -129,12 +133,12 @@ namespace {
 NodePtr IRBuilder::get(NodeType type, const NodeList& children) const {
 
 	switch(type) {
-	#define CONCRETE(KIND) \
+#define CONCRETE(KIND) \
 		case NT_ ## KIND : return get< NT_## KIND >(children);
-	#include "insieme/core/ir_nodes.def"
-	#undef CONCRETE
+#include "insieme/core/ir_nodes.def"
+#undef CONCRETE
 	}
-
+	
 	assert_fail() << "Unsupported node type added!";
 	return NodePtr();
 }
@@ -207,26 +211,27 @@ bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irTyp
 	// the type used for caching parser results
 	struct ParserCache : public std::map<string, TypePtr> {};
 	typedef std::shared_ptr<ParserCache> ParserCachePtr;
-
+	
 	// lookup result within cache
 	NodePtr cacheNode = manager.get(breakStmt());		// some node that is easy to find :)
-
+	
 	// get reference to cache
-	if (!cacheNode->hasAttachedValue<ParserCachePtr>()) {
+	if(!cacheNode->hasAttachedValue<ParserCachePtr>()) {
 		cacheNode->attachValue(std::make_shared<ParserCache>());
 	}
 	const ParserCachePtr& cache = cacheNode->getAttachedValue<ParserCachePtr>();
-
+	
 	// get cached result or parse
 	TypePtr type;
 	auto pos = cache->find(typeStr);
-	if (pos == cache->end()) {
+	if(pos == cache->end()) {
 		type = parseType(typeStr);
 		cache->insert(std::make_pair(typeStr, type));
-	} else {
+	}
+	else {
 		type = pos->second;
 	}
-
+	
 	// try unify the parsed type and the given type
 	return types::unify(manager, type, irType);
 }
@@ -237,11 +242,15 @@ GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList
 
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
-	return structType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	return structType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) {
+		return namedType(cur.first, cur.second);
+	}));
 }
 
 UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
-	return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) {
+		return namedType(cur.first, cur.second);
+	}));
 }
 
 StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
@@ -253,11 +262,15 @@ StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector
 }
 
 StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
-	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) {
+		return namedType(cur.first, cur.second);
+	}));
 }
 
 StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
-	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) {
+		return namedType(cur.first, cur.second);
+	}));
 }
 
 StructTypePtr IRBuilder::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<NamedTypePtr>& entries) const {
@@ -275,14 +288,15 @@ NamedValuePtr IRBuilder::namedValue(const string& name, const ExpressionPtr& val
 }
 
 ExpressionPtr IRBuilder::readVolatile(const ExpressionPtr& expr) const {
-    assert_true(core::analysis::isVolatileType(expr.getType())) << "volatile read can only be done with volatile type.";
-    return callExpr(getLangBasic().getVolatileRead(), expr);
+	assert_true(core::analysis::isVolatileType(expr.getType())) << "volatile read can only be done with volatile type.";
+	return callExpr(getLangBasic().getVolatileRead(), expr);
 }
 
 ExpressionPtr IRBuilder::makeVolatile(const ExpressionPtr& expr) const {
-    if(core::analysis::isVolatileType(expr.getType()))
-        return expr;
-    return callExpr(getLangBasic().getVolatileMake(), expr);
+	if(core::analysis::isVolatileType(expr.getType())) {
+		return expr;
+	}
+	return callExpr(getLangBasic().getVolatileMake(), expr);
 }
 
 TupleExprPtr IRBuilder::tupleExpr(const vector<ExpressionPtr>& values) const {
@@ -323,7 +337,7 @@ StructExprPtr IRBuilder::structExpr(const vector<NamedValuePtr>& values) const {
 
 
 IfStmtPtr IRBuilder::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
-	if (!elseBody) {
+	if(!elseBody) {
 		return ifStmt(condition, wrapBody(thenBody), getNoOp());
 	}
 	return ifStmt(condition, wrapBody(thenBody), wrapBody(elseBody));
@@ -337,57 +351,58 @@ ForStmtPtr IRBuilder::forStmt(const DeclarationStmtPtr& var, const ExpressionPtr
 	return forStmt(var->getVariable(), var->getInitialization(), end, step, wrapBody(body));
 }
 
-ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const {
+ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step,
+                              const StatementPtr& body) const {
 	return forStmt(var, start, end, step, wrapBody(body));
 }
 
-ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt)
-{
+ExpressionPtr IRBuilder::forStmtFinalValue(const ForStmtPtr& loopStmt) {
 	core::TypePtr iterType =
-						(loopStmt->getIterator()->getType()->getNodeType() == core::NT_RefType) ?
-								core::static_pointer_cast<const core::RefType>(loopStmt->getIterator()->getType())->getElementType() :
-								loopStmt->getIterator()->getType();
+	    (loopStmt->getIterator()->getType()->getNodeType() == core::NT_RefType) ?
+	    core::static_pointer_cast<const core::RefType>(loopStmt->getIterator()->getType())->getElementType() :
+	    loopStmt->getIterator()->getType();
 	core::FunctionTypePtr ceilTy = functionType(
-						toVector<core::TypePtr>(getLangBasic().getDouble()),
-						getLangBasic().getDouble()
-				);
-
+	                                   toVector<core::TypePtr>(getLangBasic().getDouble()),
+	                                   getLangBasic().getDouble()
+	                               );
+	                               
 	core::ExpressionPtr finalVal = add( // start + ceil((end-start)/step) * step
-			loopStmt->getStart(),
-			mul( // ceil((end-start)/step) * step
-				types::smartCast(iterType,// ( cast )
-						callExpr(
-								getLangBasic().getDouble(),
-								literal(ceilTy, "ceil"),// ceil()
-								div(// (end-start)/step
-										types::smartCast(
-												getLangBasic().getDouble(),
-												sub(
-													sub(
-															loopStmt->getEnd(),
-															loopStmt->getStep()
-													),
-													loopStmt->getStart()
-												)// end - start
-										),
-										types::smartCast(getLangBasic().getDouble(), loopStmt->getStep())
-								)
-						)
-				),
-				types::smartCast(loopStmt->getStart()->getType(), loopStmt->getStep())
-			)
-	);
-
+	                                   loopStmt->getStart(),
+	                                   mul( // ceil((end-start)/step) * step
+	                                       types::smartCast(iterType,// ( cast )
+	                                               callExpr(
+	                                                       getLangBasic().getDouble(),
+	                                                       literal(ceilTy, "ceil"),// ceil()
+	                                                       div(// (end-start)/step
+	                                                               types::smartCast(
+	                                                                       getLangBasic().getDouble(),
+	                                                                       sub(
+	                                                                               sub(
+	                                                                                       loopStmt->getEnd(),
+	                                                                                       loopStmt->getStep()
+	                                                                               ),
+	                                                                               loopStmt->getStart()
+	                                                                       )// end - start
+	                                                               ),
+	                                                               types::smartCast(getLangBasic().getDouble(), loopStmt->getStep())
+	                                                       )
+	                                               )
+	                                                       ),
+	                                       types::smartCast(loopStmt->getStart()->getType(), loopStmt->getStep())
+	                                   )
+	                               );
+	                               
 	return finalVal;
 }
 
-SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
+SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases,
+                                    const StatementPtr& defaultCase) const {
 	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
-
+	
 	vector<SwitchCasePtr> caseList = ::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
 		return switchCase(static_pointer_cast<LiteralPtr>(cur.first), wrapBody(cur.second));
 	});
-
+	
 	return switchStmt(switchExpr, switchCases(caseList), defCase);
 }
 
@@ -396,14 +411,14 @@ SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vecto
 }
 
 FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
-	if (funType->isPlain()) {
+	if(funType->isPlain()) {
 		return funType;
 	}
 	return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_PLAIN);
 }
 
 FunctionTypePtr IRBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
-	if (!funType->isPlain()) {
+	if(!funType->isPlain()) {
 		return funType;
 	}
 	return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_CLOSURE);
@@ -416,47 +431,51 @@ LiteralPtr IRBuilder::stringLit(const string& str) const {
 
 namespace {
 
-	template<typename T>
-	bool isInRange(const int val) {
-		return std::numeric_limits<T>::min() <= val && val <= std::numeric_limits<T>::max();
-	}
+template<typename T>
+bool isInRange(const int val) {
+	return std::numeric_limits<T>::min() <= val && val <= std::numeric_limits<T>::max();
+}
 
 }
 
 LiteralPtr IRBuilder::intLit(const int val, bool tight) const {
-	if (!tight) {
+	if(!tight) {
 		return literal(getLangBasic().getInt4(), toString(val));
 	}
-
+	
 	TypePtr type;
-	if (isInRange<int8_t>(val)) {
+	if(isInRange<int8_t>(val)) {
 		type = getLangBasic().getInt1();
-	} else if (isInRange<int16_t>(val)) {
+	}
+	else if(isInRange<int16_t>(val)) {
 		type = getLangBasic().getInt2();
-	} else {
+	}
+	else {
 		type = getLangBasic().getInt4();
 	}
-    return literal(type, toString(val));
+	return literal(type, toString(val));
 }
 
 LiteralPtr IRBuilder::uintLit(const unsigned int val, bool tight) const {
-	if (!tight) {
+	if(!tight) {
 		return literal(getLangBasic().getUInt4(), toString(val));
 	}
-
+	
 	TypePtr type;
-	if (isInRange<uint8_t>(val)) {
+	if(isInRange<uint8_t>(val)) {
 		type = getLangBasic().getUInt1();
-	} else if (isInRange<uint16_t>(val)) {
+	}
+	else if(isInRange<uint16_t>(val)) {
 		type = getLangBasic().getUInt2();
-	} else {
+	}
+	else {
 		type = getLangBasic().getUInt4();
 	}
 	return literal(type, toString(val));
 }
 
 LiteralPtr IRBuilder::integerLit(const int val, bool tight) const {
-	if (val < 0) {
+	if(val < 0) {
 		return intLit(val, tight);
 	}
 	return uintLit((unsigned int)val, tight);
@@ -473,15 +492,15 @@ LiteralPtr IRBuilder::floatLit(const string& value) const {
 LiteralPtr IRBuilder::floatLit(float value) const {
 
 	// special handling for de-normalized values
-	if (std::fpclassify(value) == FP_SUBNORMAL) {
+	if(std::fpclassify(value) == FP_SUBNORMAL) {
 		return floatLit(format("%a", value));
 	}
-
+	
 	std::stringstream out;
 	out << std::scientific
-		<< std::fixed
-		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
-		<< value << "f";
+	    << std::fixed
+	    << std::setprecision(std::numeric_limits<float>::digits10 + 1)
+	    << value << "f";
 	assert_false(out.str().empty()) << "empty string? ";
 	return floatLit(out.str());
 }
@@ -492,15 +511,15 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
 	// special handling for de-normalized values
-	if (std::fpclassify(value) == FP_SUBNORMAL) {
+	if(std::fpclassify(value) == FP_SUBNORMAL) {
 		return floatLit(format("%a", value));
 	}
-
+	
 	std::stringstream out;
 	out << std::scientific
-		<< std::fixed
-		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
-		<< value;
+	    << std::fixed
+	    << std::setprecision(std::numeric_limits<float>::digits10 + 1)
+	    << value;
 	assert_false(out.str().empty()) << "empty string? ";
 	return doubleLit(out.str());
 }
@@ -537,103 +556,103 @@ ExpressionPtr IRBuilder::undefinedLoc(const TypePtr& typ) const {
 core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is an integer ...
-	if (manager.getLangBasic().isInt(type)) {
+	if(manager.getLangBasic().isInt(type)) {
 		return literal(type, "0");
 	}
-
+	
 	// if it is a real ..
-	if (manager.getLangBasic().isReal(type)) {
-		if (manager.getLangBasic().isFloat(type)) {
+	if(manager.getLangBasic().isReal(type)) {
+		if(manager.getLangBasic().isFloat(type)) {
 			return literal(type, "0.0f");
 		}
 		return literal(type, "0.0");
 	}
-
+	
 	// if it is the bool type
 	if(manager.getLangBasic().isBool(type)) {
 		return boolLit(false);
 	}
-
+	
 	// if it is the char type
 	if(manager.getLangBasic().isChar(type)) {
 		return literal(type, "' '");
 	}
-
+	
 	// if it is a lock, keep it undefined
-	if (manager.getLangBasic().isLock(type)) {
+	if(manager.getLangBasic().isLock(type)) {
 		return undefined(type);
 	}
-
+	
 	// if it is a struct ...
-	if (type->getNodeType() == core::NT_StructType) {
-
+	if(type->getNodeType() == core::NT_StructType) {
+	
 		// extract type and resolve members recursively
 		StructTypePtr structType = static_pointer_cast<const StructType>(type);
-
+		
 		vector<NamedValuePtr> members;
 		for_each(structType->getEntries(), [&](const NamedTypePtr& cur) {
 			members.push_back(namedValue(cur->getName(), getZero(cur->getType())));
 		});
-
+		
 		return core::StructExpr::get(manager, structType, namedValues(members));
 	}
-
+	
 	// if it is a union type ...
-	if (type->getNodeType() == core::NT_UnionType) {
+	if(type->getNodeType() == core::NT_UnionType) {
 		UnionTypePtr unionType = type.as<UnionTypePtr>();
-
+		
 		// in case it is a an empty union
-		if (unionType.empty() == 0) {
+		if(unionType.empty() == 0) {
 			return undefined(unionType);
 		}
-
+		
 		// init the first member
 		return unionExpr(unionType, unionType[0]->getName(), getZero(unionType[0]->getType()));
 	}
-
+	
 	// if it is a ref type ...
-	if (type->getNodeType() == core::NT_RefType) {
+	if(type->getNodeType() == core::NT_RefType) {
 		// return NULL for the specific type
 		return refReinterpret(manager.getLangBasic().getRefNull(), type.as<RefTypePtr>()->getElementType());
 	}
-
+	
 	// if it is a function type -- used for function pointers
 	if(type.isa<core::FunctionTypePtr>()) {
 		// return NULL for the specific type
 		return deref(refReinterpret(manager.getLangBasic().getRefNull(), type));
 	}
-
+	
 	// if it is a vector type use init uniform
-	if (type->getNodeType() == core::NT_VectorType) {
+	if(type->getNodeType() == core::NT_VectorType) {
 		VectorTypePtr vectorType = type.as<VectorTypePtr>();
 		return vectorInit(getZero(vectorType->getElementType()), vectorType->getSize());
 	}
-
+	
 	// add support for unit
 	if(manager.getLangBasic().isUnit(type)) {
 		return manager.getLangBasic().getUnitConstant();
 	}
-
+	
 	// FIXME:: this might not be enough, ferdinando fix it!
-	if (type->getNodeType() == core::NT_RecType) {
-		auto tmp = getZero (type.as<core::RecTypePtr>()->unroll());
+	if(type->getNodeType() == core::NT_RecType) {
+		auto tmp = getZero(type.as<core::RecTypePtr>()->unroll());
 		return core::transform::replaceNode(manager, ExpressionAddress(tmp)->getType(), type).as<ExpressionPtr>();
 	}
-
+	
 	// FIXME: this might be a little dangerous, but at least right typed
-	if (type->getNodeType() == core::NT_ArrayType) {
+	if(type->getNodeType() == core::NT_ArrayType) {
 		return (undefined(type));
 	}
-
+	
 	// for all other generic types we return a generic zero value
-	if (type.isa<GenericTypePtr>()) {
+	if(type.isa<GenericTypePtr>()) {
 		return callExpr(type, getLangBasic().getZero(), getTypeLiteral(type));
 	}
-
+	
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert_fail() << "Given type not supported yet!";
-
+	
 	// fall-back => return a literal 0 of the corresponding type
 	return literal(type, "0");
 }
@@ -646,7 +665,9 @@ CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
 }
 
 ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
-	if (subExpr->getType()->getNodeType() != NT_RefType) return subExpr;
+	if(subExpr->getType()->getNodeType() != NT_RefType) {
+		return subExpr;
+	}
 	return deref(subExpr);
 }
 
@@ -670,7 +691,7 @@ CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 	RefTypePtr targetType = dynamic_pointer_cast<const RefType>(target->getType());
 	assert_true(targetType) << "Target of an assignmet must be of type ref<'a>";
-
+	
 	// NOTE: this code is deactivated because is trying to be smarter than you, if you made your homework, there should
 	// be no need to do smart moves, the expression given to assign to is the rightfull ref to writte, and if we are
 	// dealing with an union, it should be already be addressed. if you need it, go ahead to uncoment it, but it wont be easy
@@ -686,48 +707,50 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 	//				std::cout << "name: " << cur << " : " << cur->getType() << std::endl;
 	//				return types::isSubTypeOf(cur->getType(), nrtt);
 	//			});
-
+	
 	//			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
 	//			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
 	//					accessMember(value, pos->getName()));
 	//		}
 	//	}
 	//}
-
+	
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }
 
 ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
 	assert(subExpr->getType().isa<RefTypePtr>());
 	return callExpr(
-		refType(newElementType),
-		manager.getLangBasic().getRefReinterpret(),
-		subExpr,
-		getTypeLiteral(newElementType)
-	);
+	           refType(newElementType),
+	           manager.getLangBasic().getRefReinterpret(),
+	           subExpr,
+	           getTypeLiteral(newElementType)
+	       );
 }
 
 ExpressionPtr IRBuilder::toRef(const ExpressionPtr& srcSinkExpr) const {
 	TypePtr type = srcSinkExpr->getType();
 	assert(type.isa<RefTypePtr>());
-
+	
 	RefTypePtr inType = type.as<RefTypePtr>();
-	if (inType.isReference()) return srcSinkExpr;
-
+	if(inType.isReference()) {
+		return srcSinkExpr;
+	}
+	
 	TypePtr resType = refType(inType->getElementType());
-	if (inType.isSource()) {
+	if(inType.isSource()) {
 		return callExpr(resType, manager.getLangBasic().getSrcToRef(), srcSinkExpr);
 	}
-
+	
 	assert_true(inType.isSink()) << "This should be a sink!";
 	return callExpr(resType, manager.getLangBasic().getSinkToRef(), srcSinkExpr);
 }
 
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
-    // add a vector init expression if subExpr is of vector type
-    ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
-	    scalarToVector(subExpr->getType(), intLit(0)) : types::smartCast(subExpr->getType(), intLit(0));
-
+	// add a vector init expression if subExpr is of vector type
+	ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
+	                       scalarToVector(subExpr->getType(), intLit(0)) : types::smartCast(subExpr->getType(), intLit(0));
+	                       
 	//we have to check if it is a literal. if
 	//it is a literal we need to create a new
 	//literal instead of a call expr
@@ -739,28 +762,39 @@ ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
 		std::string newname = lit->getStringValue();
 		if(newname[0] == '-' || newname[0] == '+') {
 			newname.erase(0, 1);
-		} else {
+		}
+		else {
 			newname.insert(0, "-");
 		}
 		//if we have a unsigned int the type maybe turns into a
 		//signed type. This can only occur with integer types
 		if(getLangBasic().isUnsignedInt(lit->getType())) {
 			TypePtr type;
-			if(getLangBasic().isUInt1(lit->getType())) 		type = getLangBasic().getInt1();
-			else if(getLangBasic().isUInt2(lit->getType())) 	type = getLangBasic().getInt2();
-			else if(getLangBasic().isUInt4(lit->getType())) 	type = getLangBasic().getInt4();
-			else if(getLangBasic().isUInt8(lit->getType())) 	type = getLangBasic().getInt8();
-			else if(getLangBasic().isUInt16(lit->getType()))	type = getLangBasic().getInt16();
+			if(getLangBasic().isUInt1(lit->getType())) {
+				type = getLangBasic().getInt1();
+			}
+			else if(getLangBasic().isUInt2(lit->getType())) {
+				type = getLangBasic().getInt2();
+			}
+			else if(getLangBasic().isUInt4(lit->getType())) {
+				type = getLangBasic().getInt4();
+			}
+			else if(getLangBasic().isUInt8(lit->getType())) {
+				type = getLangBasic().getInt8();
+			}
+			else if(getLangBasic().isUInt16(lit->getType()))	{
+				type = getLangBasic().getInt16();
+			}
 			assert_true(type) << "Cannot find unsigned int type size.";
 			return literal(newname, type);
 		}
 		return literal(newname, lit->getType());
 	}
-
+	
 	return callExpr(
-			subExpr->getType(), manager.getLangBasic().getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
-			elem, subExpr
-		);
+	           subExpr->getType(), manager.getLangBasic().getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
+	           elem, subExpr
+	       );
 }
 
 ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
@@ -771,26 +805,29 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
 	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
-	if(aType)
+	if(aType) {
 		return callExpr(aType->getElementType(), manager.getLangBasic().getArraySubscript1D(), array, index);
+	}
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert_true(vType) << "Tried array subscript operation on non-array expression";
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
 }
 CallExprPtr IRBuilder::arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const {
 	assert_true(analysis::isRefType(array->getType())) << "Tried vector ref elem operation on non-ref expression";
-
+	
 	auto aType = dynamic_pointer_cast<const ArrayType>(analysis::getReferencedType(array->getType()));
-	if(aType)
+	if(aType) {
 		return callExpr(refType(aType->getElementType()), manager.getLangBasic().getArrayRefElem1D(), array, index);
+	}
 	auto vType = dynamic_pointer_cast<const VectorType>(analysis::getReferencedType(array->getType()));
 	assert_true(vType) << "Tried array ref elem operation on non-array-ref expression";
 	return callExpr(refType(vType->getElementType()), manager.getLangBasic().getVectorRefElem(), array, index);
 }
 
 CallExprPtr IRBuilder::arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const {
-	if(analysis::isRefType(array->getType()))
+	if(analysis::isRefType(array->getType())) {
 		return arrayRefElem(array, index);
+	}
 	return arraySubscript(array, index);
 }
 //CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
@@ -834,23 +871,37 @@ CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
 	// FIXME argument order
 	const auto &basic = manager.getLangBasic();
 	assert_true(basic.isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
-
+	
 	const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
 	const auto &lhsDeref = deref(lhs);
 	CallExprPtr rhsCall = dynamic_pointer_cast<CallExprPtr>(rhs);
 	assert_true(rhsCall) << "Unsupported atomic assignment structure";
-
+	
 	ExpressionPtr factor;
-	if(*lhsDeref == *rhsCall->getArgument(0)) factor = rhsCall->getArgument(1);
-	if(*lhsDeref == *rhsCall->getArgument(1)) factor = rhsCall->getArgument(0);
+	if(*lhsDeref == *rhsCall->getArgument(0)) {
+		factor = rhsCall->getArgument(1);
+	}
+	if(*lhsDeref == *rhsCall->getArgument(1)) {
+		factor = rhsCall->getArgument(0);
+	}
 	assert_true(factor) << "LHS not found in RHS of atomic assignment";
-
+	
 	const auto &rhsFun = rhsCall->getFunctionExpr();
-	if(basic.isAddOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndAdd(), lhs, factor);
-	if(basic.isSubOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndSub(), lhs, factor);
-	if(basic.isBitwiseAndOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndAnd(), lhs, factor);
-	if(basic.isBitwiseOrOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndOr(), lhs, factor);
-	if(basic.isBitwiseXorOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndXor(), lhs, factor);
+	if(basic.isAddOp(rhsFun)) {
+		return callExpr(factor->getType(), basic.getAtomicFetchAndAdd(), lhs, factor);
+	}
+	if(basic.isSubOp(rhsFun)) {
+		return callExpr(factor->getType(), basic.getAtomicFetchAndSub(), lhs, factor);
+	}
+	if(basic.isBitwiseAndOp(rhsFun)) {
+		return callExpr(factor->getType(), basic.getAtomicFetchAndAnd(), lhs, factor);
+	}
+	if(basic.isBitwiseOrOp(rhsFun)) {
+		return callExpr(factor->getType(), basic.getAtomicFetchAndOr(), lhs, factor);
+	}
+	if(basic.isBitwiseXorOp(rhsFun)) {
+		return callExpr(factor->getType(), basic.getAtomicFetchAndXor(), lhs, factor);
+	}
 	assert_fail() << "Unsupported atomic operation";
 	return assignment;
 }
@@ -863,74 +914,79 @@ CallExprPtr IRBuilder::atomicConditional(const IfStmtPtr& statement) {
 
 CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	assert_false(variants.empty()) << "Variant list must not be empty!";
-	assert(all(variants, [&](const ExpressionPtr& cur) { return *cur->getType() == *variants[0]->getType(); }) && "All options have to have the same type.");
+	assert(all(variants, [&](const ExpressionPtr& cur) {
+		return *cur->getType() == *variants[0]->getType();
+	}) && "All options have to have the same type.");
 	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
 }
 
-CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max, const ExpressionPtr& qualLB, const ExpressionPtr& qualUB, const ExpressionPtr& qualS) const {
+CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& id, const ExpressionPtr& max, const ExpressionPtr& qualLB, const ExpressionPtr& qualUB,
+                                   const ExpressionPtr& qualS) const {
 	vector<ExpressionPtr> args;
-    args.push_back(id);
-    args.push_back(max);
-    if(!qualLB || !qualUB || !qualS) {
-        args.push_back(intLit(0));
-        args.push_back(intLit(0));
-        args.push_back(intLit(0));
-    }
-    else {
-        args.push_back(qualLB);
-        args.push_back(qualUB);
-        args.push_back(qualS);
-    }
+	args.push_back(id);
+	args.push_back(max);
+	if(!qualLB || !qualUB || !qualS) {
+		args.push_back(intLit(0));
+		args.push_back(intLit(0));
+		args.push_back(intLit(0));
+	}
+	else {
+		args.push_back(qualLB);
+		args.push_back(qualUB);
+		args.push_back(qualS);
+	}
 	return callExpr(manager.getLangBasic().getPickInRange(), args);
 }
 
 
 namespace {
 
-	TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-		// check function expression
-		assert_eq(functionExpr->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
+TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	// check function expression
+	assert_eq(functionExpr->getType()->getNodeType(), NT_FunctionType) << "Function expression is not a function!";
+	
+	// extract function type
+	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(functionExpr->getType());
+	assert_eq(funType->getParameterTypes().size(), arguments.size()) << "Invalid number of arguments!";
+	
+	// deduce return type
+	core::TypeList argumentTypes;
+	::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
+		return cur->getType();
+	});
+	
+	TypePtr res = types::deduceReturnType(funType, argumentTypes, false);
+	
+	assert_ne(TypePtr(), res) << "Unable to deduce return type!";
+	
+	return res;
+}
 
-		// extract function type
-		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(functionExpr->getType());
-		assert_eq(funType->getParameterTypes().size(), arguments.size()) << "Invalid number of arguments!";
-
-		// deduce return type
-		core::TypeList argumentTypes;
-		::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-
-		TypePtr res = types::deduceReturnType(funType, argumentTypes, false);
-
-		assert_ne(TypePtr(), res) << "Unable to deduce return type!";
-
-		return res;
+/**
+ * Checks whether the given result type is matching the type expected when using automatic type inference.
+ */
+inline bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	// check types
+	if(*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
+		// print a warning if they are not matching
+		LOG(WARNING) << "Potentially invalid return type for call specified - function type: "
+		             << toString(*functionExpr->getType())
+		             << ", arguments: " << join(", ", arguments, print<deref<ExpressionPtr>>());
 	}
-
-	/**
-	 * Checks whether the given result type is matching the type expected when using automatic type inference.
-	 */
-	inline bool checkType(const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
-		// check types
-		if (*resultType != *deduceReturnTypeForCall(functionExpr, arguments)) {
-			// print a warning if they are not matching
-			LOG(WARNING) << "Potentially invalid return type for call specified - function type: "
-							<< toString(*functionExpr->getType())
-							<< ", arguments: " << join(", ", arguments, print<deref<ExpressionPtr>>());
-		}
-		return true;
-	}
+	return true;
+}
 
 
-	CallExprPtr createCall(const IRBuilder& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+CallExprPtr createCall(const IRBuilder& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 
-		// check user-specified return type - only when compiled in debug mode
-		// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
-		// TODO: make this check faster
+	// check user-specified return type - only when compiled in debug mode
+	// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
+	// TODO: make this check faster
 //		assert_true(checkType(resultType, functionExpr, arguments)) << "Incorrect user-specified return type!";
 
-		// create calling expression
-		return builder.callExpr(resultType, functionExpr, arguments);
-	}
+	// create calling expression
+	return builder.callExpr(resultType, functionExpr, arguments);
+}
 }
 
 CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
@@ -984,23 +1040,27 @@ JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& rangeLowerBound, const Expres
 
 namespace {
 
-	bool isJobBody(const NodePtr& node) {
-		// it has to be an expression
-		if (node->getNodeCategory() != NC_Expression) return false;
-
-		// the function has to be ()->unit or ()=>unit
-		TypePtr type = node.as<ExpressionPtr>()->getType();
-		if (type->getNodeType() != NT_FunctionType) return false;
-		return type.as<FunctionTypePtr>()->getParameterTypes()->empty();
+bool isJobBody(const NodePtr& node) {
+	// it has to be an expression
+	if(node->getNodeCategory() != NC_Expression) {
+		return false;
 	}
+	
+	// the function has to be ()->unit or ()=>unit
+	TypePtr type = node.as<ExpressionPtr>()->getType();
+	if(type->getNodeType() != NT_FunctionType) {
+		return false;
+	}
+	return type.as<FunctionTypePtr>()->getParameterTypes()->empty();
+}
 
 }
 
 JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
 
 	ExpressionPtr jobBody =
-			(isJobBody(stmt))?stmt.as<ExpressionPtr>():transform::extractLambda(manager, stmt);
-
+	    (isJobBody(stmt))?stmt.as<ExpressionPtr>():transform::extractLambda(manager, stmt);
+	    
 	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads), jobBody);
 }
 
@@ -1041,20 +1101,28 @@ CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min, const Express
 
 
 CallExprPtr IRBuilder::getThreadGroup(ExpressionPtr level) const {
-    if(!level) level = uintLit(0);
-    return callExpr(manager.getLangBasic().getGetThreadGroup(), level);
+	if(!level) {
+		level = uintLit(0);
+	}
+	return callExpr(manager.getLangBasic().getGetThreadGroup(), level);
 }
 CallExprPtr IRBuilder::getThreadGroupSize(ExpressionPtr level) const {
-    if(!level) level = uintLit(0);
-    return callExpr(manager.getLangBasic().getGetGroupSize(), level);
+	if(!level) {
+		level = uintLit(0);
+	}
+	return callExpr(manager.getLangBasic().getGetGroupSize(), level);
 }
 CallExprPtr IRBuilder::getThreadId(ExpressionPtr level) const {
-	if(!level) level = uintLit(0);
+	if(!level) {
+		level = uintLit(0);
+	}
 	return callExpr(manager.getLangBasic().getGetThreadId(), level);
 }
 
 CallExprPtr IRBuilder::barrier(ExpressionPtr threadgroup) const {
-	if(!threadgroup) threadgroup = getThreadGroup();
+	if(!threadgroup) {
+		threadgroup = getThreadGroup();
+	}
 	return callExpr(manager.getLangBasic().getBarrier(), threadgroup);
 }
 
@@ -1063,7 +1131,9 @@ CallExprPtr IRBuilder::mergeAll() const {
 }
 
 CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
-	if(!step) step = uintLit(1);
+	if(!step) {
+		step = uintLit(1);
+	}
 	assert_true(manager.getLangBasic().isInt(start->getType()));
 	assert_true(manager.getLangBasic().isInt(end->getType()));
 	assert_true(manager.getLangBasic().isInt(step->getType()));
@@ -1077,20 +1147,20 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	auto loopEnd = initialFor->getEnd();
 	auto loopStep = initialFor->getStep();
 	auto loopVarType = loopStart->getType();
-
-	while (loopVarType->getNodeType() == NT_RefType) {
+	
+	while(loopVarType->getNodeType() == NT_RefType) {
 		loopVarType = analysis::getReferencedType(loopVarType);
 	}
-
+	
 	// modify body to take iteration variables
 	auto pforLambdaParamStart = variable(loopVarType);
 	auto pforLambdaParamEnd = variable(loopVarType);
 	auto pforLambdaParamStep = variable(loopVarType);
-
+	
 	auto adaptedFor = forStmt(initialFor->getIterator(), pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep, initialFor->getBody());
-
+	
 	BindExprPtr lambda = transform::extractLambda(manager, adaptedFor, toVector(pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep));
-
+	
 	return pfor(lambda, loopStart, loopEnd, loopStep);
 }
 
@@ -1100,57 +1170,60 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 }
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
-    // Find the variables which are used in the body and not declared
+	// Find the variables which are used in the body and not declared
 	std::vector<VariablePtr>&& args = getReachingVariables(body);
-
-    core::TypeList argsType;
-    VariableList params;
-    vector<ExpressionPtr> callArgs;
-
-    vector<pair<ExpressionPtr, ExpressionPtr> > replVariableMap;
-	for(const core::ExpressionPtr& curr : args){
+	
+	core::TypeList argsType;
+	VariableList params;
+	vector<ExpressionPtr> callArgs;
+	
+	vector<pair<ExpressionPtr, ExpressionPtr>> replVariableMap;
+	for(const core::ExpressionPtr& curr : args) {
 		assert_eq(curr->getNodeType(), core::NT_Variable);
-
+		
 		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
 		const core::TypePtr& varType = bodyVar->getType();
-
+		
 		// substitute all value use of variables by a value paramenter, this avoids pointers in the
 		// prototype and interacts better with the materialize read only routine
-		if (varType.isa<RefTypePtr>() && core::analysis::isReadOnly(body, bodyVar)){
-			core::VariablePtr&& parmVar = this->variable( varType.as<RefTypePtr>()->getElementType() );
-			argsType.push_back( parmVar->getType() );
-			params.push_back( parmVar );
+		if(varType.isa<RefTypePtr>() && core::analysis::isReadOnly(body, bodyVar)) {
+			core::VariablePtr&& parmVar = this->variable(varType.as<RefTypePtr>()->getElementType());
+			argsType.push_back(parmVar->getType());
+			params.push_back(parmVar);
 			callArgs.push_back(this->deref(bodyVar));
-			replVariableMap.push_back( std::make_pair(deref(bodyVar), parmVar) );
-			replVariableMap.push_back( std::make_pair(bodyVar, refVar(parmVar)) );
+			replVariableMap.push_back(std::make_pair(deref(bodyVar), parmVar));
+			replVariableMap.push_back(std::make_pair(bodyVar, refVar(parmVar)));
 		}
-		else{
+		else {
 			// we create a new variable to replace the captured variable
-			core::VariablePtr&& parmVar = this->variable( varType );
-			argsType.push_back( varType );
-			params.push_back( parmVar );
+			core::VariablePtr&& parmVar = this->variable(varType);
+			argsType.push_back(varType);
+			params.push_back(parmVar);
 			callArgs.push_back(curr);
-			replVariableMap.push_back( std::make_pair(bodyVar, parmVar) );
+			replVariableMap.push_back(std::make_pair(bodyVar, parmVar));
 		}
 	}
-
+	
 	// Replace the variables in the body with the input parameters which have been created
-    if ( !replVariableMap.empty() ) {
-		for (auto replace : replVariableMap )
-			body = core::transform::replaceAllGen (manager, body, replace.first, replace.second);
+	if(!replVariableMap.empty()) {
+		for(auto replace : replVariableMap) {
+			body = core::transform::replaceAllGen(manager, body, replace.first, replace.second);
+		}
 		//TODO: there is no suitable tool to replace expression by variable
 //    	body = core::static_pointer_cast<const core::Statement>(
 //    			core::transform::replaceVars(manager, body, replVariableMap)
 //    		);
-    }
-
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, FK_PLAIN), params, wrapBody(body) );
-    core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
-
-    if ( !lazy ) 	return callExpr;
-
-    // build the expression body
-    return bindExpr(std::vector<VariablePtr>(), callExpr);
+	}
+	
+	core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType(argsType, retTy, FK_PLAIN), params, wrapBody(body));
+	core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
+	
+	if(!lazy) {
+		return callExpr;
+	}
+	
+	// build the expression body
+	return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
 CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
@@ -1159,19 +1232,20 @@ CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const strin
 
 CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
-	if ( type->getNodeType() == core::NT_RecType ) {
+	if(type->getNodeType() == core::NT_RecType) {
 		type = core::static_pointer_cast<const core::RecType>(type)->unroll(type.getNodeManager());
 	}
-
+	
 	// if it is a ref type, use refMember function
-	if(type->getNodeType() == core::NT_RefType)
+	if(type->getNodeType() == core::NT_RefType) {
 		return refMember(structExpr, member);
-
+	}
+	
 	assert_true((type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_UnionType)) << "Cannot access non-struct type!";
-
+	
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(type);
 	core::TypePtr memberType = structType->getTypeOfMember(member);
-
+	
 	// create access instruction
 	core::ExpressionPtr access = getLangBasic().getCompositeMemberAccess();
 	return callExpr(memberType, access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
@@ -1184,18 +1258,18 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& 
 CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert_eq(type->getNodeType(), core::NT_RefType) << "Cannot deref non ref type";
-
+	
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
-
-	if ( elementType->getNodeType() == core::NT_RecType ) {
+	
+	if(elementType->getNodeType() == core::NT_RecType) {
 		elementType = core::static_pointer_cast<const core::RecType>(elementType)->unroll(elementType.getNodeManager());
 	}
-
+	
 	//assert_true((elementType->getNodeType() == core::NT_StructType || elementType->getNodeType() == core::NT_UnionType)) << "Cannot access non-struct type!";
-
+	
 	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(elementType);
 	core::TypePtr memberType = structType->getTypeOfMember(member);
-
+	
 	// create access instruction
 	core::ExpressionPtr access = getLangBasic().getCompositeRefElem();
 	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
@@ -1208,10 +1282,10 @@ CallExprPtr IRBuilder::refParent(const ExpressionPtr& structExpr, const TypePtr&
 	assert_eq(type->getNodeType(), core::NT_RefType) << "Cannot deref non-ref type";
 	type = type.as<RefTypePtr>()->getElementType();
 	assert_true(type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_GenericType || type->getNodeType() == core::NT_RecType);
-
+	
 	// compute result type
 	core::TypePtr resType = refType(parent);
-
+	
 	// build up access operation
 	auto narrow = getLangBasic().getRefNarrow();
 	auto dataPath = datapath::DataPathBuilder(manager).parent(parent).getPath();
@@ -1226,11 +1300,11 @@ CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr co
 CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert_eq(type->getNodeType(), core::NT_TupleType) << "Cannot access non-tuple type!";
-
+	
 	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(type);
 	assert_lt(component, tupleType->getElementTypes().size()) << "Component out of range!";
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
-
+	
 	// create access instruction
 	core::ExpressionPtr access = getLangBasic().getTupleMemberAccess();
 	core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
@@ -1245,14 +1319,14 @@ CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr compo
 CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert_eq(type->getNodeType(), core::NT_RefType) << "Cannot deref non ref type";
-
+	
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
 	assert_eq(elementType->getNodeType(), core::NT_TupleType) << "Cannot access non-tuple type!";
-
+	
 	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(elementType);
 	assert_lt(component, tupleType->getElementTypes().size()) << "Component out of range!";
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
-
+	
 	// create access instruction
 	core::ExpressionPtr access = getLangBasic().getTupleRefElem();
 	core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
@@ -1279,7 +1353,7 @@ LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const
 	return literal(type, toString(*param));
 }
 
-TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const{
+TypePtr IRBuilder::getTypeLiteralType(const TypePtr& type) const {
 	return genericType("type", toVector(type));
 }
 
@@ -1296,35 +1370,36 @@ LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) co
 	return literal(getLangBasic().getIdentifier(), value);
 }
 
-ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
+ExpressionPtr IRBuilder::scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const {
 
 	// if it is alread a vector => done
-	if (subExpr->getType()->getNodeType() == NT_VectorType) {
+	if(subExpr->getType()->getNodeType() == NT_VectorType) {
 		return subExpr;
 	}
-
+	
 	assert_true(getLangBasic().isScalarType(subExpr->getType())) << "Requested to convert non-scalar to scalar!";
 	assert_eq(type->getNodeType(), NT_VectorType) << "Target type has to be a vector type!";
-
-
+	
+	
 	VectorTypePtr vt = type.as<VectorTypePtr>();
-
+	
 	// Convert casts form scalars to vectors to vector init exrpessions
 	// get vector element type without ref
 	core::TypePtr elementType = vt->getElementType();
 	core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
-			//dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
-
+	//dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
+	
 	core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-		types::smartCast(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
-
+	                          types::smartCast(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+	                          
 	core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
-		(elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
-		getIntTypeParamLiteral(vt->getSize()));
-
+	                                (elementType->getNodeType() == core::NT_RefType
+	                                 && arg->getNodeType() != core::NT_RefType)  ? refVar(arg) : arg,  // if we need a ref type and arg is no ref: add ref
+	                                getIntTypeParamLiteral(vt->getSize()));
+	                                
 	return retExpr;
-
-
+	
+	
 //    // check for casts from salar pointers to vector pointers
 //    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
 ////        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
@@ -1351,12 +1426,12 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 // ------------------------ Operators ---------------------------
 
 namespace {
-	template<typename ... T>
-	TypePtr infereExprTypeInternal(const ExpressionPtr& op, const T& ... operators) {
-		assert_eq(op->getType()->getNodeType(), NT_FunctionType) << "Operation is not a function!";
-		FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
-		return types::tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
-	}
+template<typename ... T>
+TypePtr infereExprTypeInternal(const ExpressionPtr& op, const T& ... operators) {
+	assert_eq(op->getType()->getNodeType(), NT_FunctionType) << "Operation is not a function!";
+	FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
+	return types::tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
+}
 }
 
 TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const {
@@ -1374,54 +1449,55 @@ TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& 
 
 namespace {
 
-	GenericTypePtr toSigned(const IRBuilder& builder, const GenericTypePtr& type) {
-		assert_true(builder.getLangBasic().isScalarType(type)) << "Can not alter non-scalar type to signed!";
-
-		// check whether a modification is required
-		if (builder.getLangBasic().isUnsignedInt(type)) {
-			// alter to signed alternative
-			return builder.genericType("int", TypeList(), toVector(type->getIntTypeParameter()->getElement(0)));
-		}
-		return type;
+GenericTypePtr toSigned(const IRBuilder& builder, const GenericTypePtr& type) {
+	assert_true(builder.getLangBasic().isScalarType(type)) << "Can not alter non-scalar type to signed!";
+	
+	// check whether a modification is required
+	if(builder.getLangBasic().isUnsignedInt(type)) {
+		// alter to signed alternative
+		return builder.genericType("int", TypeList(), toVector(type->getIntTypeParameter()->getElement(0)));
 	}
+	return type;
+}
 }
 
 
 LiteralPtr IRBuilder::minus(const LiteralPtr& lit) const {
 	assert_true(getLangBasic().isScalarType(lit->getType())) << "Can not change sign of non-scalar type!";
-
+	
 	// update type of literal to support unsigned
 	TypePtr type = toSigned(*this, lit->getType().as<GenericTypePtr>());
-
+	
 	// update string value of literal
 	string value = lit->getStringValue();
 	assert_gt(value.size(), 0u);
-	if (value[0] == '-') {
+	if(value[0] == '-') {
 		value = value.substr(1);
-	} else {
+	}
+	else {
 		value = "-" + value;
 	}
-
+	
 	// create resulting literal
 	return literal(value, type);
 }
 
 ExpressionPtr IRBuilder::minus(const ExpressionPtr& a) const {
 	assert_true(getLangBasic().isScalarType(a->getType())) << "Can not change sign of non-scalar type!";
-
+	
 	// check literal type
-	if (a->getNodeType() == NT_Literal) {
+	if(a->getNodeType() == NT_Literal) {
 		return minus(a.as<LiteralPtr>());
 	}
-
+	
 	// update type of literal to support unsigned
 	TypePtr type = toSigned(*this, a->getType().as<GenericTypePtr>());
-
+	
 	ExpressionPtr value = a;
-	if (value->getType() != type) {
+	if(value->getType() != type) {
 		value = types::smartCast(type, value);
 	}
-
+	
 	// return 0 - a
 	return sub(getZero(type), a);
 }
@@ -1444,12 +1520,12 @@ unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 		}
 		return false;
 	});
-
-	if(!visitDepthFirstInterruptible(expr, lambdaVisitor)){
+	
+	if(!visitDepthFirstInterruptible(expr, lambdaVisitor)) {
 		LOG(ERROR) << expr;
 		assert_fail() << "Expression does not contain a literal a number";
 	}
-
+	
 	return idx;
 }
 
@@ -1458,7 +1534,7 @@ unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
  * A utility function wrapping a given statement into a compound statement (if necessary).
  */
 CompoundStmtPtr IRBuilder::wrapBody(const StatementPtr& stmt) const {
-	if (stmt->getNodeType() == NT_CompoundStmt) {
+	if(stmt->getNodeType() == NT_CompoundStmt) {
 		return static_pointer_cast<CompoundStmtPtr>(stmt);
 	}
 	return CompoundStmt::get(stmt->getNodeManager(), stmt);
@@ -1470,13 +1546,13 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 	VariableList list = analysis::getFreeVariables(expr);
 	std::sort(list.begin(), list.end(), compare_target<VariablePtr>());
 	ExpressionPtr res = lambdaExpr(expr->getType(),returnStmt(expr), list);
-
+	
 	// if there are no free variables ...
-	if (list.empty()) {
+	if(list.empty()) {
 		// ... no capturing is necessary
 		return res;
 	}
-
+	
 	// otherwise: bind the free variables
 	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
 }
@@ -1509,11 +1585,11 @@ CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, la
 CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
 	assert_true(funTy) << "The argument of pointwise must be a function";
-
+	
 	TypeList paramTys = funTy->getParameterTypeList();
-
+	
 	assert_true(paramTys.size() <= 2 && paramTys.size() > 0) << "The function for pointwise must take one or two arguments";
-
+	
 //	FunctionTypePtr pointwiseTy; Use automatic type deduction since vector pointwise is not a function type any more and I have no idea how to build the correct tpye
 	ExpressionPtr pointwise;
 	const auto& basic = manager.getLangBasic();
@@ -1521,7 +1597,8 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
 //		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
-	} else { // binary functon
+	}
+	else {   // binary functon
 		TypePtr newParamTy1 = vectorType(paramTys.at(1), variableIntTypeParam('l'));
 		TypePtr newParamTy2 = vectorType(paramTys.at(0), variableIntTypeParam('l'));
 //		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
@@ -1538,55 +1615,57 @@ CallExprPtr IRBuilder::accuracyHigh(const ExpressionPtr& callee) const {
 	assert_true(funTy) << "The argument of accuraccy high must be a function";
 	int nArgs = funTy->getParameterTypeList().size();
 	assert_true(nArgs <= 2 && nArgs > 0) << "The function for accuraccy high must take one or two arguments";
-
+	
 	const auto& basic = manager.getLangBasic();
 	return nArgs == 1 ?
-            callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
-            callExpr(funTy, basic.getAccuracyFastBinary(), callee);
+	       callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
+	       callExpr(funTy, basic.getAccuracyFastBinary(), callee);
 }
 CallExprPtr IRBuilder::accuracyBestEffort(const ExpressionPtr& callee) const {
 	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
 	assert_true(funTy) << "The argument of accuraccy best effort must be a function";
 	int nArgs = funTy->getParameterTypeList().size();
 	assert_true(nArgs <= 2 && nArgs > 0) << "The function for accuraccy best effort must take one or two arguments";
-
+	
 	const auto& basic = manager.getLangBasic();
 	return nArgs == 1 ?
-            callExpr(funTy, basic.getAccuracyBestEffortUnary(), callee) :
-            callExpr(funTy, basic.getAccuracyBestEffortBinary(), callee);
+	       callExpr(funTy, basic.getAccuracyBestEffortUnary(), callee) :
+	       callExpr(funTy, basic.getAccuracyBestEffortBinary(), callee);
 }
 CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
 	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
 	assert_true(funTy) << "The argument of accuraccy fast must be a function";
 	int nArgs = funTy->getParameterTypeList().size();
 	assert_true(nArgs <= 2 && nArgs > 0) << "The function for accuraccy fast must take one or two arguments";
-
+	
 	const auto& basic = manager.getLangBasic();
 	return nArgs == 1 ?
-            callExpr(basic.getAccuracyFastUnary(), callee) :
-            callExpr(basic.getAccuracyFastBinary(), callee);
+	       callExpr(basic.getAccuracyFastUnary(), callee) :
+	       callExpr(basic.getAccuracyFastBinary(), callee);
 }
 
 CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {
 	const RefTypePtr refTy = dataVec->getType().isa<RefTypePtr>();
-
+	
 	const VectorTypePtr dataType = refTy ? refTy->getElementType().as<VectorTypePtr>() : dataVec->getType().as<VectorTypePtr>();
 	assert_true(dataType) << "First argument of vector.permute must be a vector";
-
+	
 	const auto& basic = manager.getLangBasic();
 	const VectorTypePtr permuteType = dynamic_pointer_cast<const VectorType>(permutationVec->getType());
 	assert_true(permuteType) << "Second argument of vector.permute must be a vector";
-	assert_true(types::isSubTypeOf(permuteType->getElementType(), basic.getUIntInf())) << "The second argument of vector.permute must be of type vector<uint<#a>,#m>";
-
+	assert_true(types::isSubTypeOf(permuteType->getElementType(),
+	                               basic.getUIntInf())) << "The second argument of vector.permute must be of type vector<uint<#a>,#m>";
+	                               
 	TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
 	ExpressionPtr fun;
 	if(refTy) {
 		retTy = refType(retTy);
 		fun = basic.getVectorRefPermute();
-	} else {
+	}
+	else {
 		fun = basic.getVectorPermute();
 	}
-
+	
 	return callExpr(retTy, fun, dataVec, permutationVec);
 }
 

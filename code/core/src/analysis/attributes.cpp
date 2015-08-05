@@ -43,105 +43,107 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	namespace {
+namespace {
 
-		/**
-		 * Tests whether the given expression is a valid attribute.
-		 */
-		inline bool isAttribute(const ExpressionPtr& expr) {
-			if (!expr) { return false; }
-			const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
-			return expr->getType() == ext.getAttributeType();
-		}
-
+/**
+ * Tests whether the given expression is a valid attribute.
+ */
+inline bool isAttribute(const ExpressionPtr& expr) {
+	if(!expr) {
+		return false;
 	}
+	const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
+	return expr->getType() == ext.getAttributeType();
+}
 
-	typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
+}
+
+typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
 
 
-	bool hasAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert_true(isAttribute(attribute)) << "Checking for non-attribute!";
+bool hasAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
+	assert_true(isAttribute(attribute)) << "Checking for non-attribute!";
+	
+	// simple "dirty" implementation
+	return getAttributes(expr).contains(attribute);
+}
 
-		// simple "dirty" implementation
-		return getAttributes(expr).contains(attribute);
+ExpressionPtr addAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
+	assert_true(isAttribute(attribute)) << "Cannot add non-attribute!";
+	
+	// simple "dirty" implementation
+	auto attributes = getAttributes(expr);
+	attributes.insert(attribute);
+	return setAttributes(expr, attributes);
+}
+
+ExpressionPtr remAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
+	assert_true(isAttribute(attribute)) << "Cannot remove non-attribute!";
+	
+	// simple "dirty" implementation
+	auto attributes = getAttributes(expr);
+	attributes.erase(attribute);
+	return setAttributes(expr, attributes);
+}
+
+ExpressionPtr stripAttributes(const ExpressionPtr& expr) {
+	if(expr->getNodeType() != NT_CallExpr) {
+		return expr;
 	}
-
-	ExpressionPtr addAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert_true(isAttribute(attribute)) << "Cannot add non-attribute!";
-
-		// simple "dirty" implementation
-		auto attributes = getAttributes(expr);
-		attributes.insert(attribute);
-		return setAttributes(expr, attributes);
+	
+	// convert to call
+	const CallExprPtr& call = expr.as<CallExprPtr>();
+	
+	// strip of attribute wrapper
+	const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
+	if(!ext.isAttr(call->getFunctionExpr())) {
+		// not wrapped => return result
+		return expr;
 	}
+	
+	// no wrapper => return expression
+	return stripAttributes(call->getArgument(0));
+}
 
-	ExpressionPtr remAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
-		assert_true(isAttribute(attribute)) << "Cannot remove non-attribute!";
 
-		// simple "dirty" implementation
-		auto attributes = getAttributes(expr);
-		attributes.erase(attribute);
-		return setAttributes(expr, attributes);
+AttributeSet getAttributes(const ExpressionPtr& expr) {
+	if(!expr || expr->getNodeType() != NT_CallExpr) {
+		return AttributeSet();
 	}
-
-	ExpressionPtr stripAttributes(const ExpressionPtr& expr) {
-		if (expr->getNodeType() != NT_CallExpr) {
-			return expr;
-		}
-
-		// convert to call
-		const CallExprPtr& call = expr.as<CallExprPtr>();
-
-		// strip of attribute wrapper
-		const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
-		if (!ext.isAttr(call->getFunctionExpr())) {
-			// not wrapped => return result
-			return expr;
-		}
-
-		// no wrapper => return expression
-		return stripAttributes(call->getArgument(0));
+	
+	// convert to call
+	const CallExprPtr& call = expr.as<CallExprPtr>();
+	
+	// strip of attribute wrapper
+	const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
+	if(!ext.isAttr(call->getFunctionExpr())) {
+		// not wrapped => return empty set
+		return AttributeSet();
 	}
+	
+	// collect set of attributes from wrapped expression
+	auto res = getAttributes(call->getArgument(0));
+	
+	// add local attributes
+	auto attributes = core::encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call->getArgument(1));
+	res.insert(attributes.begin(), attributes.end());
+	
+	// return united result
+	return res;
+}
 
-
-	AttributeSet getAttributes(const ExpressionPtr& expr) {
-		if (!expr || expr->getNodeType() != NT_CallExpr) {
-			return AttributeSet();
-		}
-
-		// convert to call
-		const CallExprPtr& call = expr.as<CallExprPtr>();
-
-		// strip of attribute wrapper
-		const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
-		if (!ext.isAttr(call->getFunctionExpr())) {
-			// not wrapped => return empty set
-			return AttributeSet();
-		}
-
-		// collect set of attributes from wrapped expression
-		auto res = getAttributes(call->getArgument(0));
-
-		// add local attributes
-		auto attributes = core::encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call->getArgument(1));
-		res.insert(attributes.begin(), attributes.end());
-
-		// return united result
-		return res;
-	}
-
-	ExpressionPtr setAttributes(const ExpressionPtr& expr, const AttributeSet& attributes) {
-		auto& mgr = expr->getNodeManager();
-		const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
-		IRBuilder builder(mgr);
-
-		// build up attribute list
-		std::vector<AttributePtr> list(attributes.begin(), attributes.end());
-		ExpressionPtr attrExpr = core::encoder::toIR<decltype(list), AttributConverter>(mgr, list);
-
-		// build wrapped expression
-		return builder.callExpr(expr->getType(), ext.getAttr(), stripAttributes(expr), attrExpr);
-	}
+ExpressionPtr setAttributes(const ExpressionPtr& expr, const AttributeSet& attributes) {
+	auto& mgr = expr->getNodeManager();
+	const auto& ext = expr->getNodeManager().getLangExtension<AttributeExtension>();
+	IRBuilder builder(mgr);
+	
+	// build up attribute list
+	std::vector<AttributePtr> list(attributes.begin(), attributes.end());
+	ExpressionPtr attrExpr = core::encoder::toIR<decltype(list), AttributConverter>(mgr, list);
+	
+	// build wrapped expression
+	return builder.callExpr(expr->getType(), ext.getAttr(), stripAttributes(expr), attrExpr);
+}
 
 
 } // end namespace analysis

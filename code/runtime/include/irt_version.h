@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,8 +45,8 @@
 
 // The macro defining the insieme version information (determined by the gcc-call)
 #ifndef INSIEME_VERSION
-	// fall-back if not defined by make file
-	#define INSIEME_VERSION "unknown"
+// fall-back if not defined by make file
+#define INSIEME_VERSION "unknown"
 #endif
 
 #define IRT_CODE_VERSION INSIEME_VERSION

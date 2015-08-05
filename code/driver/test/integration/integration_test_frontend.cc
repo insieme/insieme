@@ -55,56 +55,57 @@
 
 namespace insieme {
 
-	using namespace core;
-	using namespace driver::integration;
+using namespace core;
+using namespace driver::integration;
 
-	// ---------------------------------- Check the frontend -------------------------------------
+// ---------------------------------- Check the frontend -------------------------------------
 
-	// the type definition (specifying the parameter type)
-	class FrontendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+// the type definition (specifying the parameter type)
+class FrontendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
 
-	// define the test case pattern
-	TEST_P(FrontendIntegrationTest, SemanticChecks) {
-		core::NodeManager manager;
-
-		// obtain test case
-		driver::integration::IntegrationTestCase testCase = GetParam();
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
-
-		// load the code using the frontend
-		core::ProgramPtr code = testCase.load(manager);
-		// LOG(INFO) << printer::PrettyPrinter(code);
-
-		// run semantic checks on loaded program
-		auto errors = core::checks::check(code).getErrors();
-
-		EXPECT_EQ(static_cast<std::size_t>(0), errors.size());
-		if (!errors.empty()) {
-			for_each(errors, [](const core::checks::Message& cur) {
-				LOG(INFO) << cur;
-				NodeAddress address = cur.getOrigin();
-				std::stringstream ss;
-				unsigned contextSize = 1;
-				do {
-					ss.str("");
-					ss.clear();
-
-					unsigned up = contextSize;
-					if (contextSize > address.getDepth()) {
-						up = address.getDepth();
-					}
-					NodePtr context = address.getParentNode(up);
-					ss << insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
-				} while(ss.str().length() < 50 && contextSize++ < 5);
-				LOG(INFO) << "\t Context: " << ss.str() << std::endl;
-			});
-			// assert_fail();
-		}
-
+// define the test case pattern
+TEST_P(FrontendIntegrationTest, SemanticChecks) {
+	core::NodeManager manager;
+	
+	// obtain test case
+	driver::integration::IntegrationTestCase testCase = GetParam();
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
+	
+	// load the code using the frontend
+	core::ProgramPtr code = testCase.load(manager);
+	// LOG(INFO) << printer::PrettyPrinter(code);
+	
+	// run semantic checks on loaded program
+	auto errors = core::checks::check(code).getErrors();
+	
+	EXPECT_EQ(static_cast<std::size_t>(0), errors.size());
+	if(!errors.empty()) {
+		for_each(errors, [](const core::checks::Message& cur) {
+			LOG(INFO) << cur;
+			NodeAddress address = cur.getOrigin();
+			std::stringstream ss;
+			unsigned contextSize = 1;
+			do {
+				ss.str("");
+				ss.clear();
+				
+				unsigned up = contextSize;
+				if(contextSize > address.getDepth()) {
+					up = address.getDepth();
+				}
+				NodePtr context = address.getParentNode(up);
+				ss << insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+			}
+			while(ss.str().length() < 50 && contextSize++ < 5);
+			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+		});
+		// assert_fail();
 	}
+	
+}
 
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }

@@ -177,8 +177,10 @@ static inline bool isRefType(const RefTypePtr& refType) {
  * @return true if the given type is a reference type, false otherwise
  */
 static inline bool isRefType(const TypePtr& type) {
-    if (!type) return false;
-    return type->getNodeType() == core::NT_RefType;
+	if(!type) {
+		return false;
+	}
+	return type->getNodeType() == core::NT_RefType;
 }
 
 /**
@@ -188,18 +190,24 @@ static inline bool isRefType(const TypePtr& type) {
  * @return true if so, false otherwise
  */
 static inline bool hasRefType(const ExpressionPtr& expr) {
-    if (!expr) return false;
+	if(!expr) {
+		return false;
+	}
 	return isRefType(expr->getType());
 }
 
 static inline TypePtr getReferencedType(const RefTypePtr& type) {
-    if (!type) assert_fail() << "Cannot get the referenced type of a non ref type.";
+	if(!type) {
+		assert_fail() << "Cannot get the referenced type of a non ref type.";
+	}
 	return type->getElementType();
 }
 
 static inline TypePtr getReferencedType(const TypePtr& type) {
-    if (!type) return NULL;
-    return getReferencedType(dynamic_pointer_cast<const RefType>(type));
+	if(!type) {
+		return NULL;
+	}
+	return getReferencedType(dynamic_pointer_cast<const RefType>(type));
 }
 
 // ----------------------------------- Type-Literals ----------------------------
@@ -319,9 +327,13 @@ static inline IntTypeParamPtr getRepresentedTypeParam(const ExpressionPtr& expr)
  * @param the type to test
  * @return whenever is a pointer represented in IR
  */
-static inline bool isPointerType(const TypePtr& ptr){
-	if (!ptr.isa<RefTypePtr>()) return false;
-	if (!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) return false;
+static inline bool isPointerType(const TypePtr& ptr) {
+	if(!ptr.isa<RefTypePtr>()) {
+		return false;
+	}
+	if(!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) {
+		return false;
+	}
 	return true;
 }
 
@@ -429,7 +441,7 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap);
 
 /**
- * Tests whether the given type is a volatile type. In that case 
+ * Tests whether the given type is a volatile type. In that case
  * the type is of the form volatile<'a> where 'a is a concrete type.
  *
  * @param type the type to be tested
@@ -491,7 +503,7 @@ bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
 bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
 
 /**
- * 	Test if the parameter is read or written in the scope, if passed by reference 
+ * 	Test if the parameter is read or written in the scope, if passed by reference
  * 	to any other scope it will be assumed to be non read-only,
  * 	no matters what happens inside of that lambda
  *
@@ -507,7 +519,7 @@ bool isReadOnlyWithinScope(const StatementPtr& context, const VariablePtr& param
  * @param var, the expression to test
  * @return whenever is a static
  */
-bool isStaticVar (const ExpressionPtr& var);
+bool isStaticVar(const ExpressionPtr& var);
 
 /**
  * compare given typePtrs, trying to unroll rectypes

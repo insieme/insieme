@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -132,11 +132,16 @@ ivec(int,8)
 ivec(int,16)
 
 //assuming that long long is 64 bit wide on all architectures
-typedef __attribute__((ext_vector_type(2))) long long long2; typedef __attribute__((ext_vector_type(2))) unsigned long long ulong2;
-typedef __attribute__((ext_vector_type(3))) long long long3; typedef __attribute__((ext_vector_type(3))) unsigned long long ulong3;
-typedef __attribute__((ext_vector_type(4))) long long long4; typedef __attribute__((ext_vector_type(4))) unsigned long long ulong4;
-typedef __attribute__((ext_vector_type(8))) long long long8; typedef __attribute__((ext_vector_type(8))) unsigned long long ulong8;
-typedef __attribute__((ext_vector_type(16))) long long long16; typedef __attribute__((ext_vector_type(16))) unsigned long long ulong16;
+typedef __attribute__((ext_vector_type(2))) long long long2;
+typedef __attribute__((ext_vector_type(2))) unsigned long long ulong2;
+typedef __attribute__((ext_vector_type(3))) long long long3;
+typedef __attribute__((ext_vector_type(3))) unsigned long long ulong3;
+typedef __attribute__((ext_vector_type(4))) long long long4;
+typedef __attribute__((ext_vector_type(4))) unsigned long long ulong4;
+typedef __attribute__((ext_vector_type(8))) long long long8;
+typedef __attribute__((ext_vector_type(8))) unsigned long long ulong8;
+typedef __attribute__((ext_vector_type(16))) long long long16;
+typedef __attribute__((ext_vector_type(16))) unsigned long long ulong16;
 
 fvec(float,2)
 fvec(float,3)
@@ -166,8 +171,11 @@ void barrier(int flags); //TODO change to enum
 // math functions
 #ifdef cl_khr_fp64
 #define dtypefun(fct) double __attribute__((overloadable)) fct(double); double2 __attribute__((overloadable)) fct(double2);
-    double3 __attribute__((overloadable)) fct(double3); double4 __attribute__((overloadable)) fct(double4); \
-    double8 __attribute__((overloadable)) fct(double8); double16 __attribute__((overloadable)) fct(double16);
+double3 __attribute__((overloadable)) fct(double3);
+double4 __attribute__((overloadable)) fct(double4);
+\
+double8 __attribute__((overloadable)) fct(double8);
+double16 __attribute__((overloadable)) fct(double16);
 
 #define dtypefun2(fct) double __attribute__((overloadable)) fct(double, double); double2 __attribute__((overloadable)) fct(double2, double2); \
 	double3 __attribute__((overloadable)) fct(double3, double3); double4 __attribute__((overloadable)) fct(double4, double4); \
@@ -356,21 +364,40 @@ genfuniInt(all)
 
 genfunAll3(bitselect)
 
-float __attribute__((overloadable)) ldexp(float, int); float2 __attribute__((overloadable)) ldexp(float2, int2); \
-    float3 __attribute__((overloadable)) ldexp(float3, int3); float4 __attribute__((overloadable)) ldexp(float4, int4); \
-    float8 __attribute__((overloadable)) ldexp(float8, int8); float16 __attribute__((overloadable)) ldexp(float16, int16);
+float __attribute__((overloadable)) ldexp(float, int);
+float2 __attribute__((overloadable)) ldexp(float2, int2);
+\
+float3 __attribute__((overloadable)) ldexp(float3, int3);
+float4 __attribute__((overloadable)) ldexp(float4, int4);
+\
+float8 __attribute__((overloadable)) ldexp(float8, int8);
+float16 __attribute__((overloadable)) ldexp(float16, int16);
 #ifdef cl_khr_fp64
-double __attribute__((overloadable)) ldexp(double, int); double2 __attribute__((overloadable)) ldexp(double2, int2); \
-    double3 __attribute__((overloadable)) ldexp(double3, int3); double4 __attribute__((overloadable)) ldexp(double4, int4); \
-    double8 __attribute__((overloadable)) ldexp(double8, int8); double16 __attribute__((overloadable)) ldexp(double16, int16);
+double __attribute__((overloadable)) ldexp(double, int);
+double2 __attribute__((overloadable)) ldexp(double2, int2);
+\
+double3 __attribute__((overloadable)) ldexp(double3, int3);
+double4 __attribute__((overloadable)) ldexp(double4, int4);
+\
+double8 __attribute__((overloadable)) ldexp(double8, int8);
+double16 __attribute__((overloadable)) ldexp(double16, int16);
 #endif
 
-float __attribute__((overloadable)) nan(uint); float2 __attribute__((overloadable)) nan(uint2); float3 __attribute__((overloadable)) nan(uint3);
-    float4 __attribute__((overloadable)) nan(uint4); float8 __attribute__((overloadable)) nan(uint8); float16 __attribute__((overloadable)) nan(uint16);
+float __attribute__((overloadable)) nan(uint);
+float2 __attribute__((overloadable)) nan(uint2);
+float3 __attribute__((overloadable)) nan(uint3);
+float4 __attribute__((overloadable)) nan(uint4);
+float8 __attribute__((overloadable)) nan(uint8);
+float16 __attribute__((overloadable)) nan(uint16);
 
-float __attribute__((overloadable)) native_divide(float, float); float2 __attribute__((overloadable)) native_divide(float2, float2); \
-    float3 __attribute__((overloadable)) native_divide(float3, float3); float4 __attribute__((overloadable)) native_divide(float4, float4); \
-    float8 __attribute__((overloadable)) native_divide(float8, float8); float16 __attribute__((overloadable)) native_divide(float16, float16);
+float __attribute__((overloadable)) native_divide(float, float);
+float2 __attribute__((overloadable)) native_divide(float2, float2);
+\
+float3 __attribute__((overloadable)) native_divide(float3, float3);
+float4 __attribute__((overloadable)) native_divide(float4, float4);
+\
+float8 __attribute__((overloadable)) native_divide(float8, float8);
+float16 __attribute__((overloadable)) native_divide(float16, float16);
 
 
 // atomic operations
@@ -390,8 +417,10 @@ atom_fct(xor)
 #define atom_dec(p) atom_sub(p, 1)
 #define atomic_inc(p) atomic_add(p, 1)
 #define atomic_dec(p) atomic_sub(p, 1)
-long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val); ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
-long __attribute__((overloadable)) atomic_cmpxchg(int *p, int cmp, int val); ulong __attribute__((overloadable)) atomic_cmpxchg(uint *p, uint cmp, uint val);
+long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val);
+ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
+long __attribute__((overloadable)) atomic_cmpxchg(int *p, int cmp, int val);
+ulong __attribute__((overloadable)) atomic_cmpxchg(uint *p, uint cmp, uint val);
 
 // convert
 #define iconv_round(dest, src, fct) dest __attribute__((overloadable)) fct(src); dest __attribute__((overloadable)) fct##_rte(src); \

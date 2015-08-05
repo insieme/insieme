@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,30 +44,30 @@
 namespace insieme {
 namespace backend {
 
-	TEST(CppCode, ExternC) {
+TEST(CppCode, ExternC) {
 
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		// create two external literals
-		auto type = builder.parseType("()->unit");
-		auto litA = builder.literal("funA", type);
-		auto litB = builder.literal("funB", type);
-
-		// the second shell be an extern "C" function
-		annotations::c::markAsExternC(litB);
-
-		// convert codes
-		auto targetCodeA = sequential::SequentialBackend::getDefault()->convert(litA);
-		ASSERT_TRUE((bool)targetCodeA);
-
-		auto targetCodeB = sequential::SequentialBackend::getDefault()->convert(litB);
-		ASSERT_TRUE((bool)targetCodeB);
-
-
-		EXPECT_PRED2(containsSubString, toString(*targetCodeA), "void funA();\n\n&funA");
-		EXPECT_PRED2(containsSubString, toString(*targetCodeB), "extern \"C\" {\n    void funB();\n}\n\n&funB");
-	}
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	// create two external literals
+	auto type = builder.parseType("()->unit");
+	auto litA = builder.literal("funA", type);
+	auto litB = builder.literal("funB", type);
+	
+	// the second shell be an extern "C" function
+	annotations::c::markAsExternC(litB);
+	
+	// convert codes
+	auto targetCodeA = sequential::SequentialBackend::getDefault()->convert(litA);
+	ASSERT_TRUE((bool)targetCodeA);
+	
+	auto targetCodeB = sequential::SequentialBackend::getDefault()->convert(litB);
+	ASSERT_TRUE((bool)targetCodeB);
+	
+	
+	EXPECT_PRED2(containsSubString, toString(*targetCodeA), "void funA();\n\n&funA");
+	EXPECT_PRED2(containsSubString, toString(*targetCodeB), "extern \"C\" {\n    void funB();\n}\n\n&funB");
+}
 
 } // namespace backend
 } // namespace insieme

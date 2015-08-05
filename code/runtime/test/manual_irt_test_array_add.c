@@ -136,16 +136,16 @@ void insieme_init_context(irt_context* context) {
 	context->impl_table_size = 2;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
-	#ifdef USE_OPENCL
+#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
-	#endif
+#endif
 }
 
 void insieme_cleanup_context(irt_context* context) {
-	#ifdef USE_OPENCL
+#ifdef USE_OPENCL
 	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
-	#endif
-
+#endif
+	
 	// nothing
 	printf("Cleaning up manual irt test array add\n");
 }
@@ -157,7 +157,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_work_item_range fullrange_wi = {0, NUM_ELEMENTS, 1};
 	irt_data_item* inputdata = irt_di_create(INSIEME_STRUCT1_T_INDEX, 1, &fullrange);
 	irt_data_item* outputdata = irt_di_create(INSIEME_INT_T_INDEX, 1, &fullrange);
-
+	
 	// fill input data
 	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
@@ -166,22 +166,22 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		input[i].v2 = i*2;
 		input[i].do_add = true;
 	}
-
+	
 	// pre-acquire output block
 	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_READ_ONLY);
 	uint64* output = (uint64*)outputblock->data;
-
+	
 	uint64 start_time = irt_time_ms();
-
+	
 	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
 	irt_work_item* addition_wi = irt_wi_create(fullrange_wi, &g_insieme_impl_table[INSIEME_ADD_WI_INDEX], (irt_lw_data_item*)&addition_params);
 	irt_work_item_id add_id = addition_wi->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), addition_wi);
-
+	
 	irt_wi_join(add_id);
-
+	
 	uint64 end_time = irt_time_ms();
-
+	
 	printf("======================\n= manual irt test array add done\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
@@ -193,7 +193,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
-
+	
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
@@ -208,13 +208,13 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
-
+	
 	for(uint64 i = wi->range.begin; i < wi->range.end; ++i) {
 		if(input[i].do_add) {
 			output[i] = (input[i].v1 + input[i].v2) / 2;
 		}
 	}
-
+	
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
@@ -222,7 +222,7 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 }
 
 void insieme_wi_add_implementation2(irt_work_item* wi) {
-	#ifdef USE_OPENCL
+#ifdef USE_OPENCL
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
@@ -230,35 +230,35 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
-
+	
 	cl_long len_input = (wi->range.end - wi->range.begin);
 	cl_long len_output = (wi->range.end - wi->range.begin);
-
+	
 	unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
 	unsigned int mem_size_output = sizeof(uint64) * len_output;
-
+	
 	irt_ocl_buffer* buf_input = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_input);
 	irt_ocl_buffer* buf_output = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_output);
-
+	
 	irt_ocl_write_buffer(buf_input, CL_FALSE, 0, mem_size_input, &input[wi->range.begin]);
-
+	
 	size_t szLocalWorkSize = 256;
 	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
-	if(multiplier > (int)multiplier){
+	if(multiplier > (int)multiplier) {
 		multiplier += 1;
 	}
 	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-
+	
 	irt_ocl_rt_run_kernel(0,	1, 0, &szGlobalWorkSize, &szLocalWorkSize,
-								3,	(size_t)0, buf_input,
-									(size_t)0, buf_output,
-									sizeof(cl_long), &len_input);
-
+	                      3,	(size_t)0, buf_input,
+	                      (size_t)0, buf_output,
+	                      sizeof(cl_long), &len_input);
+	                      
 	irt_ocl_read_buffer(buf_output, CL_TRUE, 0, mem_size_output, &output[wi->range.begin]);
 	
 	irt_ocl_release_buffer(buf_input);
 	irt_ocl_release_buffer(buf_output);
-
+	
 #ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
 	irt_ocl_print_events();
 #endif
@@ -267,7 +267,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-	#endif
+#endif
 }
 
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {

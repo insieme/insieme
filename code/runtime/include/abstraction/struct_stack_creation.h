@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,9 +42,9 @@
 // and a function which creates and returns a struct under windows (because Visual Studio does not support the compound initializer)
 
 #ifdef _MSC_VER
-	#define IRT_STACK_STRUCT(__name, ...) (__name##_create(__VA_ARGS__))
+#define IRT_STACK_STRUCT(__name, ...) (__name##_create(__VA_ARGS__))
 #else
-	#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
+#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
 #endif
 
 #endif // ifndef __GUARD_ABSTRACTION_STRUCT_STACK_CREATION_H

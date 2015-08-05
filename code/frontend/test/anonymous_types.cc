@@ -62,10 +62,10 @@ namespace frontend {
 		}\
 		EXPECT_TRUE(msg.empty());
 
-	TEST(AnonymousTypes, StructTypedef) {
+TEST(AnonymousTypes, StructTypedef) {
 
-		Source src(
-				R"(
+	Source src(
+	    R"(
 
 					typedef struct {
 					} A;
@@ -75,27 +75,27 @@ namespace frontend {
 					}
 
 				)"
-		);
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-        const boost::filesystem::path& fileName = src;
-        std::vector<std::string> argv = { "compiler",  fileName.string() };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		auto res = builder.normalize(options.job.execute(mgr));
-
+	);
+	
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::vector<std::string> argv = { "compiler",  fileName.string() };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	auto res = builder.normalize(options.job.execute(mgr));
+	
 //		dumpPretty(res);
-		RUN_SEMA(res);
-	}
+	RUN_SEMA(res);
+}
 
-	TEST(AnonymousTypes, StructArray) {
-		// TRACK THIS ERROR
+TEST(AnonymousTypes, StructArray) {
+	// TRACK THIS ERROR
 	//struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
 	//struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
-
-		Source src(
-				R"(
+	
+	Source src(
+	    R"(
 					typedef struct {
 						int a;
 						int b;
@@ -142,32 +142,32 @@ namespace frontend {
 						constRef(byConstRef());
 					}
 				)"
-		);
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-        const boost::filesystem::path& fileName = src;
-        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		auto res = builder.normalize(options.job.execute(mgr));
-
+	);
+	
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	auto res = builder.normalize(options.job.execute(mgr));
+	
 //		dumpPretty(res);
-		RUN_SEMA(res);
-	}
+	RUN_SEMA(res);
+}
 
-	TEST(AnonymousTypes, Tempalated) {
-		// TRACK THIS ERROR
+TEST(AnonymousTypes, Tempalated) {
+	// TRACK THIS ERROR
 	//struct<_const_cpp_refrc<vector<struct __mpz_struct <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
 	//struct<_const_cpp_refrc<vector<struct              <_mp_alloc:int<4>,_mp_size:int<4>,_mp_d:ref<array<uint<8>,1>>>,1>>>
 	//
-     //return RefIRToConstCpp(fun000(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type003>>, type<type003>))&[0])&[0]->mpZ);
-	 //return RefIRToConstCpp(fun001(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type001>>, type<type001>))&[0])&[0]->a);
-	 //
-
-
-		Source src(
-				R"(
+	//return RefIRToConstCpp(fun000(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type003>>, type<type003>))&[0])&[0]->mpZ);
+	//return RefIRToConstCpp(fun001(scalar.to.array(ref.narrow(scalar.to.array(v1)&[0], dp.root.as<type<type001>>, type<type001>))&[0])&[0]->a);
+	//
+	
+	
+	Source src(
+	    R"(
 
 					template <typename T>
 					struct handle {
@@ -208,29 +208,29 @@ namespace frontend {
 						f(obj.getConstRef());
 					}
 				)"
-		);
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-        const boost::filesystem::path& fileName = src;
-        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		auto res = builder.normalize(options.job.execute(mgr));
-
+	);
+	
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	auto res = builder.normalize(options.job.execute(mgr));
+	
 	//	dumpPretty(res);
-		auto msg = insieme::core::checks::check(res);
-		if(!msg.empty()) {
-			for(auto m: msg.getErrors()) {
-				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
-			}
+	auto msg = insieme::core::checks::check(res);
+	if(!msg.empty()) {
+		for(auto m: msg.getErrors()) {
+			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
 		}
-		EXPECT_TRUE(msg.empty());
 	}
+	EXPECT_TRUE(msg.empty());
+}
 
-	TEST(AnonymousTypes, Union) {
-		Source src(
-				R"(
+TEST(AnonymousTypes, Union) {
+	Source src(
+	    R"(
 
 					typedef union{
 						int a;
@@ -244,29 +244,29 @@ namespace frontend {
 						a.b = 1.0;
 					}
 				)"
-		);
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-        const boost::filesystem::path& fileName = src;
-        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		auto res = builder.normalize(options.job.execute(mgr));
-
+	);
+	
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	auto res = builder.normalize(options.job.execute(mgr));
+	
 	//	dumpPretty(res);
-		auto msg = insieme::core::checks::check(res);
-		if(!msg.empty()) {
-			for(auto m: msg.getErrors()) {
-				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
-			}
+	auto msg = insieme::core::checks::check(res);
+	if(!msg.empty()) {
+		for(auto m: msg.getErrors()) {
+			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
 		}
-		EXPECT_TRUE(msg.empty());
 	}
+	EXPECT_TRUE(msg.empty());
+}
 
-	TEST(AnonymousTypes, Nested) {
-		Source src(
-				R"(
+TEST(AnonymousTypes, Nested) {
+	Source src(
+	    R"(
 
 					typedef struct{
 						int a;
@@ -280,24 +280,24 @@ namespace frontend {
 						A var;
 					}
 				)"
-		);
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-        const boost::filesystem::path& fileName = src;
-        std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		auto res = builder.normalize(options.job.execute(mgr));
-
-		dumpPretty(res);
-		auto msg = insieme::core::checks::check(res);
-		if(!msg.empty()) {
-			for(auto m: msg.getErrors()) {
-				std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
-			}
+	);
+	
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	const boost::filesystem::path& fileName = src;
+	std::vector<std::string> argv = { "compiler",  fileName.string(), "--std=c++03" };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	auto res = builder.normalize(options.job.execute(mgr));
+	
+	dumpPretty(res);
+	auto msg = insieme::core::checks::check(res);
+	if(!msg.empty()) {
+		for(auto m: msg.getErrors()) {
+			std::cout << m.getMessage() << "\n\t" << m.getLocation() << " code: " << m.getErrorCode() << std::endl;
 		}
-		EXPECT_TRUE(msg.empty());
 	}
+	EXPECT_TRUE(msg.empty());
+}
 } // end namespace frontend
 } // end namespace insieme

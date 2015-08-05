@@ -50,13 +50,13 @@ using namespace core;
 TEST(C89Declarations, Basic) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	fs::path tmpFile;
 	{
-
+	
 // create a temporary source file
-Source file(
-R"(
+		Source file(
+		    R"(
 #include <stdio.h>
 
 // C89 / K&R style declarations

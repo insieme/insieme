@@ -47,17 +47,17 @@ namespace core {
 namespace checks {
 
 namespace {
-	NodeAddress firstAddress(NodeAddress start, NodePtr node) {
-		NodeAddress retval;
-		visitDepthFirstInterruptible(start, [&](const NodeAddress& addr) -> bool {
-			if(*node == *addr.getAddressedNode()) {
-				retval = addr;
-				return true;
-			}
-			return false;
-		});
-		return retval;
-	}
+NodeAddress firstAddress(NodeAddress start, NodePtr node) {
+	NodeAddress retval;
+	visitDepthFirstInterruptible(start, [&](const NodeAddress& addr) -> bool {
+		if(*node == *addr.getAddressedNode()) {
+			retval = addr;
+			return true;
+		}
+		return false;
+	});
+	return retval;
+}
 }
 
 OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddress& curcall) {
@@ -65,23 +65,33 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 	auto& mgr = curcall->getNodeManager();
 	auto& basic = mgr.getLangBasic();
 	IRBuilder builder(mgr);
-
+	
 	CallExprPtr curPtr = curcall.getAddressedNode();
-
+	
 	for(unsigned argIndex = 0; argIndex < curPtr->getArguments().size(); ++argIndex) {
-		 // the potential outer call to scalar.to.array in one of curcall's parameters
+		// the potential outer call to scalar.to.array in one of curcall's parameters
 		ExpressionPtr curArg = curPtr->getArgument(argIndex);
-		if (!core::analysis::isCallOf(curArg, basic.getScalarToArray())) continue;
+		if(!core::analysis::isCallOf(curArg, basic.getScalarToArray())) {
+			continue;
+		}
 		LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curPtr->getFunctionExpr());
-		if(!called) continue;
+		if(!called) {
+			continue;
+		}
 		VariablePtr param = called->getParameterList()[argIndex];
 		//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
 		NodeAddress addr = firstAddress(curcall, called->getBody());
 		if(addr) {
 			visitDepthFirst(addr, [&](const VariableAddress& var) {
-				if(*var.getAddressedNode() != *param) return;
-				if(var.isRoot()) return;
-				if(var.getParentAddress(1).getNodeType() != NT_CallExpr) return;
+				if(*var.getAddressedNode() != *param) {
+					return;
+				}
+				if(var.isRoot()) {
+					return;
+				}
+				if(var.getParentAddress(1).getNodeType() != NT_CallExpr) {
+					return;
+				}
 				CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
 				CallExprPtr usecall = useCallAdr;
 				if(usecall) {
@@ -90,30 +100,34 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 							auto formula = arithmetic::toFormula(usecall->getArgument(1));
 							if(formula.isZero()) {
 								// correct use
-							} else {
-								add(res, Message(useCallAdr,
-									EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-									format("Potentially unsafe indexing of single-element array %s using formula %s", 
-										toString(*(param)).c_str(), toString(formula).c_str()),
-									Message::WARNING));
 							}
-						} catch(const arithmetic::NotAFormulaException& e) {
-							add(res, Message(useCallAdr,
-								EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-								format("Potentially unsafe indexing of single-element array %s using expression %s", 
-									toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
-								Message::WARNING));
+							else {
+								add(res, Message(useCallAdr,
+								                 EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
+								                 format("Potentially unsafe indexing of single-element array %s using formula %s",
+								                        toString(*(param)).c_str(), toString(formula).c_str()),
+								                 Message::WARNING));
+							}
 						}
-					} else {
+						catch(const arithmetic::NotAFormulaException& e) {
+							add(res, Message(useCallAdr,
+							                 EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
+							                 format("Potentially unsafe indexing of single-element array %s using expression %s",
+							                        toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
+							                 Message::WARNING));
+						}
+					}
+					else {
 						// warn here as well? (used in unexpected call)
 					}
-				} else {
+				}
+				else {
 					// warn here as well? (used in non-call)
 				}
 			});
 		}
 	}
-
+	
 	return res;
 }
 
@@ -138,8 +152,8 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 //
 //	// check if parent in allowed set
 //	NodeType pnt = parent->getNodeType();
-//	if(core::analysis::isCallOf(parent, basic.getRefNew()) 
-//		|| core::analysis::isCallOf(parent, basic.getRefVar()) 
+//	if(core::analysis::isCallOf(parent, basic.getRefNew())
+//		|| core::analysis::isCallOf(parent, basic.getRefVar())
 //		|| core::analysis::isCallOf(parent, basic.getVectorInitUniform())
 //		|| (core::analysis::isConstructorExpr(parent) && pnt != NT_JobExpr)) {
 //
@@ -158,90 +172,98 @@ OptionalMessageList FreeBreakInsideForLoopCheck::visitForStmt(const ForStmtAddre
 	OptionalMessageList res;
 	auto& mgr = curfor->getNodeManager();
 	IRBuilder builder(mgr);
-
-    core::visitDepthFirstPrunable(curfor->getBody(), [&](const core::NodeAddress& cur) -> bool {
-        if(cur.isa<core::BreakStmtAddress>()) {
-	        add(res, Message(cur,
-	    	    EC_SEMANTIC_FREE_BREAK_INSIDE_FOR_LOOP,
-	    	    format("Free break statements are not allowed inside for loops. Consider while loop instead."),
-		        Message::ERROR));
+	
+	core::visitDepthFirstPrunable(curfor->getBody(), [&](const core::NodeAddress& cur) -> bool {
+		if(cur.isa<core::BreakStmtAddress>()) {
+			add(res, Message(cur,
+			EC_SEMANTIC_FREE_BREAK_INSIDE_FOR_LOOP,
+			format("Free break statements are not allowed inside for loops. Consider while loop instead."),
+			Message::ERROR));
 		}
-
-		if(cur.isa<core::LambdaExprAddress>() || cur.isa<core::ForStmtAddress>() 
-			|| cur.isa<core::WhileStmtAddress>() || cur.isa<core::SwitchStmtAddress>()) {
+		
+		if(cur.isa<core::LambdaExprAddress>() || cur.isa<core::ForStmtAddress>()
+		|| cur.isa<core::WhileStmtAddress>() || cur.isa<core::SwitchStmtAddress>()) {
 			return true;
-		} else {
-            return false;
 		}
-    });
-
-    return res;
+		else {
+			return false;
+		}
+	});
+	
+	return res;
 }
 
 namespace {
-	class ReturnStmtCheckVisitor : public IRVisitor<bool, Pointer, bool> {
+class ReturnStmtCheckVisitor : public IRVisitor<bool, Pointer, bool> {
 
-		bool visitReturnStmt(const ReturnStmtPtr&, bool) override {
-			LOG(DEBUG) << "Visit return!\n";
-			return true;
+	bool visitReturnStmt(const ReturnStmtPtr&, bool) override {
+		LOG(DEBUG) << "Visit return!\n";
+		return true;
+	}
+	
+	bool visitThrowStmt(const ThrowStmtPtr&, bool) override {
+		LOG(DEBUG) << "Visit throw!\n";
+		return true;
+	}
+	
+	bool visitIfStmt(const IfStmtPtr& ifst, bool inInfiniteLoop) override {
+		LOG(DEBUG) << "Visit if ---- \n" << dumpColor(ifst) << "\n-----";
+		bool ifSide = visit(ifst->getThenBody(), inInfiniteLoop);
+		bool elseSide = visit(ifst->getElseBody(), inInfiniteLoop);
+		return inInfiniteLoop ? (ifSide || elseSide) : (ifSide && elseSide);
+	}
+	
+	bool visitSwitchStmt(const SwitchStmtPtr& switchst, bool inInfiniteLoop) override {
+		LOG(DEBUG) << "Visit switch ---- \n" << dumpColor(switchst) << "\n-----";
+		bool ok = true;
+		auto cases = switchst->getCases();
+		for(auto switchcase : cases) {
+			bool caseOk = visit(switchcase->getBody(), inInfiniteLoop);
+			ok = inInfiniteLoop ? (ok || caseOk) : (ok && caseOk);
 		}
-
-		bool visitThrowStmt(const ThrowStmtPtr&, bool) override {
-			LOG(DEBUG) << "Visit throw!\n";
-			return true;
+		bool defaultOk = visit(switchst->getDefaultCase(), inInfiniteLoop);
+		ok = inInfiniteLoop ? (ok || defaultOk) : (ok && defaultOk);
+		return ok;
+	}
+	
+	bool visitWhileStmt(const WhileStmtPtr& whileStmt, bool) override {
+		LOG(DEBUG) << "Visit while ---- \n" << dumpColor(whileStmt) << "\n-----";
+		auto cond = whileStmt->getCondition();
+		bool infiniteLoop = false;
+		try {
+			auto constraint = arithmetic::toConstraint(cond);
+			infiniteLoop = constraint.isValid();
 		}
-
-		bool visitIfStmt(const IfStmtPtr& ifst, bool inInfiniteLoop) override {
-			LOG(DEBUG) << "Visit if ---- \n" << dumpColor(ifst) << "\n-----";
-			bool ifSide = visit(ifst->getThenBody(), inInfiniteLoop);
-			bool elseSide = visit(ifst->getElseBody(), inInfiniteLoop);
-			return inInfiniteLoop ? (ifSide || elseSide) : (ifSide && elseSide);
+		catch(arithmetic::NotAConstraintException) {
+			/* not a constraint, not our problem */
 		}
-
-		bool visitSwitchStmt(const SwitchStmtPtr& switchst, bool inInfiniteLoop) override {
-			LOG(DEBUG) << "Visit switch ---- \n" << dumpColor(switchst) << "\n-----";
-			bool ok = true;
-			auto cases = switchst->getCases();
-			for(auto switchcase : cases) {
-				bool caseOk = visit(switchcase->getBody(), inInfiniteLoop);
-				ok = inInfiniteLoop ? (ok || caseOk) : (ok && caseOk);
+		LOG(DEBUG) << " --> infinite? " << infiniteLoop;
+		return visit(whileStmt->getBody(), infiniteLoop);
+	}
+	
+	bool visitCompoundStmt(const CompoundStmtPtr& comp, bool inInfiniteLoop) override {
+		LOG(DEBUG) << "Visit compound ---- \n" << dumpColor(comp) << "\n-----";
+		auto elems = comp->getStatements();
+		if(elems.empty()) {
+			return false;
+		}
+		for(auto i = elems.cend()-1; i != elems.cbegin(); --i) {
+			bool r = visit(*i, inInfiniteLoop);
+			if(r) {
+				return true;
 			}
-			bool defaultOk = visit(switchst->getDefaultCase(), inInfiniteLoop);
-			ok = inInfiniteLoop ? (ok || defaultOk) : (ok && defaultOk);
-			return ok;
 		}
-
-		bool visitWhileStmt(const WhileStmtPtr& whileStmt, bool) override {
-			LOG(DEBUG) << "Visit while ---- \n" << dumpColor(whileStmt) << "\n-----";
-			auto cond = whileStmt->getCondition();
-			bool infiniteLoop = false;
-			try {
-				auto constraint = arithmetic::toConstraint(cond);
-				infiniteLoop = constraint.isValid();
-			} catch(arithmetic::NotAConstraintException) { /* not a constraint, not our problem */ }
-			LOG(DEBUG) << " --> infinite? " << infiniteLoop;
-			return visit(whileStmt->getBody(), infiniteLoop);
-		}
-
-		bool visitCompoundStmt(const CompoundStmtPtr& comp, bool inInfiniteLoop) override {
-			LOG(DEBUG) << "Visit compound ---- \n" << dumpColor(comp) << "\n-----";
-			auto elems = comp->getStatements();
-			if(elems.empty()) return false;
-			for(auto i = elems.cend()-1; i != elems.cbegin(); --i) {
-				bool r = visit(*i, inInfiniteLoop);
-				if(r) return true;
-			}
-			return visit(elems.front(), inInfiniteLoop);
-		}
-	};
+		return visit(elems.front(), inInfiniteLoop);
+	}
+};
 }
 
 OptionalMessageList MissingReturnStmtCheck::visitLambdaExpr(const LambdaExprAddress& lambdaExpr) {
 	OptionalMessageList res;
-
+	
 	auto& nodeMan = lambdaExpr->getNodeManager();
 	auto& basic = nodeMan.getLangBasic();
-
+	
 	// check non-unit return types
 	if(!basic.isUnit(lambdaExpr->getFunctionType()->getReturnType())) {
 		// skip constructors and destructors
@@ -251,15 +273,15 @@ OptionalMessageList MissingReturnStmtCheck::visitLambdaExpr(const LambdaExprAddr
 			ReturnStmtCheckVisitor checker;
 			if(!checker.visit(lambdaExpr->getBody(), false)) {
 				LOG(DEBUG) << "MissingReturnStmtCheck failed for: \n" << dumpColor(lambdaExpr);
-				VLOG(1) << " -> Text dump:\n" << dumpText(lambdaExpr); 
+				VLOG(1) << " -> Text dump:\n" << dumpText(lambdaExpr);
 				add(res, Message(lambdaExpr,
-					EC_SEMANTIC_MISSING_RETURN_STMT,
-					format("Not all control paths of non-unit lambdaExpr return a value."),
-					Message::ERROR));
+				                 EC_SEMANTIC_MISSING_RETURN_STMT,
+				                 format("Not all control paths of non-unit lambdaExpr return a value."),
+				                 Message::ERROR));
 			}
 		}
 	}
-
+	
 	return res;
 }
 

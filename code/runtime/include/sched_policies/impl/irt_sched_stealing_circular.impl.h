@@ -45,9 +45,9 @@
 #include "ir_interface.h"
 
 #ifdef _WIN32
-	#include "../../include_win32/rand_r.h"
+#include "../../include_win32/rand_r.h"
 #elif defined(_GEMS_SIM)
-	#include "include_gems/rand_r.h"
+#include "include_gems/rand_r.h"
 #endif
 
 // ============================================================================ Scheduling (general)
@@ -58,8 +58,12 @@ static inline bool _irt_cwb_try_push_back(irt_worker* target, irt_work_item* wi)
 	uint32 tries = 8;
 	while(!success && tries > 0) {
 		success = irt_cwb_push_back(&target->sched_data.queue, wi);
-		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
-		else irt_signal_worker(target);
+		if(!success) {
+			target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
+		}
+		else {
+			irt_signal_worker(target);
+		}
 		tries--;
 	}
 	return success;
@@ -70,8 +74,12 @@ static inline bool _irt_cwb_try_push_front(irt_worker* target, irt_work_item* wi
 	uint32 tries = 8;
 	while(!success && tries > 0) {
 		success = irt_cwb_push_front(&target->sched_data.queue, wi);
-		if(!success) target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
-		else irt_signal_worker(target);
+		if(!success) {
+			target = irt_g_workers[rand_r(&(irt_worker_get_current()->rand_seed)) % irt_g_worker_count];
+		}
+		else {
+			irt_signal_worker(target);
+		}
 		tries--;
 	}
 	return success;
@@ -90,7 +98,7 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_YIELD, yielding_wi->id);
 	irt_scheduling_assign_wi(self, yielding_wi);
-    _irt_worker_switch_from_wi(self, yielding_wi);
+	_irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
@@ -102,7 +110,7 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 }
 
 irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range,
-		irt_wi_implementation* impl, irt_lw_data_item* args) {
+                                     irt_wi_implementation* impl, irt_lw_data_item* args) {
 #ifndef IRT_TASK_OPT
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
@@ -128,7 +136,8 @@ irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_ran
 		joinable.wi_id = real_wi->id;
 		irt_scheduling_assign_wi(target, real_wi);
 		return joinable;
-	} else {
+	}
+	else {
 		irt_worker_run_immediate(target, range, impl, args);
 		return irt_joinable_null();
 	}
@@ -142,16 +151,18 @@ uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) 
 	uint64 selection = IRT_NUM_TASK_VARIANTS-1;
 	if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-1))/(IRT_NUM_TASK_VARIANTS*2)) {
 		selection = 0;
-	} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-2))/(IRT_NUM_TASK_VARIANTS*2)) {
+	}
+	else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-2))/(IRT_NUM_TASK_VARIANTS*2)) {
 		selection = 1;
-	} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-3))/(IRT_NUM_TASK_VARIANTS*2)) {
+	}
+	else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-3))/(IRT_NUM_TASK_VARIANTS*2)) {
 		selection = 2;
-	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-4))/(IRT_NUM_TASK_VARIANTS*2)) {
-	//	return 3;
-	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-5))/(IRT_NUM_TASK_VARIANTS*2)) {
-	//	return 4;
-	//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-6))/(IRT_NUM_TASK_VARIANTS*2)) {
-	//	return 5;
+		//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-4))/(IRT_NUM_TASK_VARIANTS*2)) {
+		//	return 3;
+		//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-5))/(IRT_NUM_TASK_VARIANTS*2)) {
+		//	return 4;
+		//} else if(demand > (IRT_CWBUFFER_LENGTH*(IRT_NUM_TASK_VARIANTS-6))/(IRT_NUM_TASK_VARIANTS*2)) {
+		//	return 5;
 	}
 	irt_inst_insert_db_event(wo, IRT_INST_DBG_TASK_SELECTION, *(irt_worker_id*)(&selection));
 	return (uint32)selection;
@@ -184,7 +195,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 int irt_scheduling_iteration(irt_worker* self) {
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
-
+	
 	// if there are WIs in the overflow stack, re-integrate as many as possible
 	if(self->sched_data.overflow_stack != NULL) {
 		irt_spin_lock(&self->sched_data.overflow_stack_lock);
@@ -195,13 +206,14 @@ int irt_scheduling_iteration(irt_worker* self) {
 				// got rid of this one
 				self->sched_data.overflow_stack = next;
 				wi = next;
-			} else {
+			}
+			else {
 				wi = NULL;
 			}
 		};
 		irt_spin_unlock(&self->sched_data.overflow_stack_lock);
 	}
-
+	
 	// try to take a work item from the queue
 #ifndef IRT_STEAL_SELF_POP_BACK
 	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
@@ -212,7 +224,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
-
+	
 	// try to steal a work item from random
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
 	irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
@@ -225,17 +237,20 @@ int irt_scheduling_iteration(irt_worker* self) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
-	} else {
+	}
+	else {
 #ifdef IRT_TASK_OPT
 		wo->sched_data.demand = IRT_CWBUFFER_LENGTH;
 #endif //IRT_TASK_OPT
 	}
-
+	
 	// if that failed as well, look in the IPC message queue
 #ifndef IRT_MIN_MODE
-	if(_irt_sched_check_ipc_queue(self)) return 1;
+	if(_irt_sched_check_ipc_queue(self)) {
+		return 1;
+	}
 #endif
-
+	
 	// didn't find any work
 	return 0;
 }

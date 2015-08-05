@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,27 +43,27 @@
 namespace insieme {
 namespace core {
 
-	TEST(NodePointer, DynamicCast) {
+TEST(NodePointer, DynamicCast) {
 
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		NodePtr a = builder.intLit(12);
-
-		// this should work
-		EXPECT_TRUE(a.isa<ExpressionPtr>());
-		a.as<ExpressionPtr>();
-
-		// this should also work
-		EXPECT_TRUE(a.isa<LiteralPtr>());
-		a.as<LiteralPtr>();
-
-		std::cout << node_type<Literal>::getName() << "\n";
-
-		// this should not work
-		// a.as<CallExprPtr>();
-
-	}
+	NodeManager manager;
+	IRBuilder builder(manager);
+	
+	NodePtr a = builder.intLit(12);
+	
+	// this should work
+	EXPECT_TRUE(a.isa<ExpressionPtr>());
+	a.as<ExpressionPtr>();
+	
+	// this should also work
+	EXPECT_TRUE(a.isa<LiteralPtr>());
+	a.as<LiteralPtr>();
+	
+	std::cout << node_type<Literal>::getName() << "\n";
+	
+	// this should not work
+	// a.as<CallExprPtr>();
+	
+}
 
 
 } // end namespace core

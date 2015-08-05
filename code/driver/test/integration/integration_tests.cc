@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,11 +56,11 @@ namespace integration {
 TEST(TestUtilsTest, getList) {
 
 	namespace fs = boost::filesystem;
-
+	
 	auto res = getAllCases();
-
+	
 	LOG(log::INFO) << join("\n", res);
-
+	
 //	// check the existens of the referenced files
 //	for_each(res, [](const IntegrationTestCase& cur) {
 //		SCOPED_TRACE(cur.getName());

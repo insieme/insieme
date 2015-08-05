@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,36 +47,36 @@
 #include <string.h>
 
 #ifdef _MSC_VER
-	#include "include_win32\inttypes.h"
+#include "include_win32\inttypes.h"
 #elif defined _GEMS_SIM
-	#include "include_gems/stdint.h"
+#include "include_gems/stdint.h"
 #else
-	#include <inttypes.h>
+#include <inttypes.h>
 #endif
 
 #include "declarations.h"
 
-// determine if reusable stacks can be stolen from other worker's pools 
+// determine if reusable stacks can be stolen from other worker's pools
 //#define LWT_STACK_STEALING_ENABLED
 
 #define LWT_STACK_ALIGNMENT 128
 
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
-
-	#if defined(__GNUC__)
-		char stack[] __attribute__ ((aligned (LWT_STACK_ALIGNMENT)));
+	
+#if defined(__GNUC__)
+	char stack[] __attribute__((aligned(LWT_STACK_ALIGNMENT)));
 	//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
-	#elif defined(__MINGW32__) || defined(__MINGW64__)
-		char stack[] __attribute__((aligned(LWT_STACK_ALIGNMENT)));
-	#elif _MSC_VER
-		__declspec(align(LWT_STACK_ALIGNMENT))
-		char stack[];
-	#else
-		#pragma warning "Unknown platform, stack unaligned" 
-		char stack[];
-	#endif
-
+#elif defined(__MINGW32__) || defined(__MINGW64__)
+	char stack[] __attribute__((aligned(LWT_STACK_ALIGNMENT)));
+#elif _MSC_VER
+	__declspec(align(LWT_STACK_ALIGNMENT))
+	char stack[];
+#else
+#pragma warning "Unknown platform, stack unaligned"
+	char stack[];
+#endif
+	
 } lwt_reused_stack;
 
 #if  defined(__x86_64__) || defined(_WIN32) || defined(_GEMS_SIM) || defined(__arm__)

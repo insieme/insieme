@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,37 +45,37 @@
 namespace insieme {
 namespace backend {
 
-	/**
-	 * The base class for backend add-ons allowing to customize
-	 * the behavior of backend instances.
-	 */
-	class AddOn {
-	public:
-
-		/**
-		 * A virtual destructor.
-		 */
-		virtual ~AddOn() {};
-
-		/**
-		 * Installs this add-on within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const =0;
-
-	};
+/**
+ * The base class for backend add-ons allowing to customize
+ * the behavior of backend instances.
+ */
+class AddOn {
+public:
 
 	/**
-	 * A type definition for an AddOn-Pointer (since AddOns are polymorph).
+	 * A virtual destructor.
 	 */
-	typedef std::shared_ptr<AddOn> AddOnPtr;
-
+	virtual ~AddOn() {};
+	
 	/**
-	 * A utility class to instantiate Add-On classes.
+	 * Installs this add-on within the given converter.
 	 */
-	template<typename A, typename ... T>
-	AddOnPtr makeAddOn(T ... args) {
-		return std::make_shared<A>(args...);
-	}
+	virtual void installOn(Converter& converter) const =0;
+	
+};
+
+/**
+ * A type definition for an AddOn-Pointer (since AddOns are polymorph).
+ */
+typedef std::shared_ptr<AddOn> AddOnPtr;
+
+/**
+ * A utility class to instantiate Add-On classes.
+ */
+template<typename A, typename ... T>
+AddOnPtr makeAddOn(T ... args) {
+	return std::make_shared<A>(args...);
+}
 
 } // end namespace backend
 } // end namespace insieme

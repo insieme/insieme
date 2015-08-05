@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,88 +46,98 @@ namespace insieme {
 namespace utils {
 namespace net {
 
-	using std::string;
+using std::string;
 
-	namespace bfs = boost::filesystem;
+namespace bfs = boost::filesystem;
 
-	/**
-	 * The class used to represent paths to files within a network.
-	 */
-	class NetworkPath : public utils::Printable {
-
-		/**
-		 * The name of the host the file is located - empty
-		 * for local hosts.
-		 */
-		string hostname;
-
-		/**
-		 * The name of the user to be used to log in on the remote
-		 * host location - empty if the current users name should be used.
-		 */
-		string username;
-
-	public:
-
-		/**
-		 * The location of the file on the remote host.
-		 */
-		bfs::path path;
-
-		NetworkPath() {};
-
-		NetworkPath(const bfs::path& path);
-
-		NetworkPath(const string& hostname, const bfs::path& path);
-
-		NetworkPath(const string& hostname, const string& username, const bfs::path& path);
-
-		// getter
-		const string& getHostname() const { return hostname; }
-		const string& getUsername() const { return username; }
-
-		bool isLocal() const { return hostname.empty(); }
-
-		string filename() const { return path.filename().string(); }
-		string getUserHostnamePrefix() const;
-
-		// navigation
-
-		NetworkPath parent_path() const;
-
-		// operators
-		bool operator==(const NetworkPath& other) const;
-
-		bool operator!=(const NetworkPath& other) const { return !(*this == other); }
-
-		NetworkPath& operator/=(const bfs::path& path);
-		NetworkPath operator/(const bfs::path& path) const;
-
-		virtual std::ostream& printTo(std::ostream& out) const;
-
-	};
-
-	bool exists(const NetworkPath& path);
-
-	bool is_directory(const NetworkPath& path);
-
-	bool create_directories(const NetworkPath& path);
-
-	bool remove(const NetworkPath& path);
-
-	bool remove_all(const NetworkPath& path);
-
-	bool copy(const NetworkPath& src, const NetworkPath& trg);
+/**
+ * The class used to represent paths to files within a network.
+ */
+class NetworkPath : public utils::Printable {
 
 	/**
-	 * Compiles the given source file using the given compiler setup  to the given target file.
-	 * The file will be compiled on the target system using
+	 * The name of the host the file is located - empty
+	 * for local hosts.
 	 */
-	bool buildRemote(const bfs::path& source, const NetworkPath& target,
-			const utils::compiler::Compiler& compilerSetup = utils::compiler::Compiler::getDefaultC99Compiler(),
-			const bfs::path& remoteWorkDir = "/tmp");
+	string hostname;
+	
+	/**
+	 * The name of the user to be used to log in on the remote
+	 * host location - empty if the current users name should be used.
+	 */
+	string username;
+	
+public:
 
+	/**
+	 * The location of the file on the remote host.
+	 */
+	bfs::path path;
+	
+	NetworkPath() {};
+	
+	NetworkPath(const bfs::path& path);
+	
+	NetworkPath(const string& hostname, const bfs::path& path);
+	
+	NetworkPath(const string& hostname, const string& username, const bfs::path& path);
+	
+	// getter
+	const string& getHostname() const {
+		return hostname;
+	}
+	const string& getUsername() const {
+		return username;
+	}
+	
+	bool isLocal() const {
+		return hostname.empty();
+	}
+	
+	string filename() const {
+		return path.filename().string();
+	}
+	string getUserHostnamePrefix() const;
+	
+	// navigation
+	
+	NetworkPath parent_path() const;
+	
+	// operators
+	bool operator==(const NetworkPath& other) const;
+	
+	bool operator!=(const NetworkPath& other) const {
+		return !(*this == other);
+	}
+	
+	NetworkPath& operator/=(const bfs::path& path);
+	NetworkPath operator/(const bfs::path& path) const;
+	
+	virtual std::ostream& printTo(std::ostream& out) const;
+	
+};
 
+bool exists(const NetworkPath& path);
+
+bool is_directory(const NetworkPath& path);
+
+bool create_directories(const NetworkPath& path);
+
+bool remove(const NetworkPath& path);
+
+bool remove_all(const NetworkPath& path);
+
+bool copy(const NetworkPath& src, const NetworkPath& trg);
+
+/**
+ * Compiles the given source file using the given compiler setup  to the given target file.
+ * The file will be compiled on the target system using
+ */
+bool buildRemote(const bfs::path& source, const NetworkPath& target,
+                 const utils::compiler::Compiler& compilerSetup = utils::compiler::Compiler::getDefaultC99Compiler(),
+                 const bfs::path& remoteWorkDir = "/tmp");
+                 
+                 
 } // end namespace net
 } // end namespace utils
 } // end namespace insieme

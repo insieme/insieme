@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,35 +51,35 @@ TEST(Pairs, LanguageExtension) {
 
 	NodeManager manager;
 	const PairExtension& ext = manager.getLangExtension<PairExtension>();
-
+	
 	EXPECT_EQ("(('a,'b)->pair<'a,'b>)", toString(*ext.pair->getType()));
-
+	
 }
 
 
 TEST(Pairs, PairConversion) {
 
 	NodeManager manager;
-
+	
 	// create a pair
-
+	
 	auto value = std::make_pair(1,2);
 	core::ExpressionPtr ir = toIR(manager, value);
 	auto back = toValue<pair<int,int>>(ir);
-
+	
 	EXPECT_EQ("(1,2)", toString(value));
 	EXPECT_EQ("pair(1, 2)", toString(*ir));
-
+	
 	EXPECT_TRUE((isEncodingOf<pair<int,int>>(ir)));
 	EXPECT_EQ(value, back);
-
+	
 	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
-
-
+	
+	
 	// test another type
 	EXPECT_EQ("pair(12, 1.47)", toString(*toIR(manager, std::make_pair(12, 1.47))));
 	EXPECT_EQ("pair(12, pair(1.47, hello))", toString(*toIR(manager, std::make_pair(12, std::make_pair(1.47, string("hello"))))));
-
+	
 }
 
 

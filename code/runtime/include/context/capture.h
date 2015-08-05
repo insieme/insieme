@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,80 +50,80 @@
 
 #ifdef RECORD
 
-	#include "record.h"
+#include "record.h"
 
-	// two macros initializing and finalizing the infrastructure
-	#define INIT() 		{  irt_cap_dbi_init(); irt_cap_region_init(); }
-	#define FINISH()  	{  irt_cap_profile_save(); irt_cap_region_finalize(); irt_cap_dbi_finalize(); }
+// two macros initializing and finalizing the infrastructure
+#define INIT() 		{  irt_cap_dbi_init(); irt_cap_region_init(); }
+#define FINISH()  	{  irt_cap_profile_save(); irt_cap_region_finalize(); irt_cap_dbi_finalize(); }
 
-	// reading and writing of values
-	#define READ(A) 		(irt_cap_read_value(&A, sizeof(A)), A)
-	// #define WRITE(A,V) 		(A = (V), irt_cap_written_value(&A, sizeof(A)), A)
-	#define WRITE(A,V) 		(A = (V), irt_cap_written_value(&A, sizeof(A)))
+// reading and writing of values
+#define READ(A) 		(irt_cap_read_value(&A, sizeof(A)), A)
+// #define WRITE(A,V) 		(A = (V), irt_cap_written_value(&A, sizeof(A)), A)
+#define WRITE(A,V) 		(A = (V), irt_cap_written_value(&A, sizeof(A)))
 
-	// reading and writing of pointers
-	#define READ_PTR(A) 	(irt_cap_read_pointer((void**)&A), A)
-	// #define WRITE_PTR(A, L) (A = (V), irt_cap_written_pointer(&A), A)
-	#define WRITE_PTR(A, V) (A = (V), irt_cap_written_pointer((void**)&A))
+// reading and writing of pointers
+#define READ_PTR(A) 	(irt_cap_read_pointer((void**)&A), A)
+// #define WRITE_PTR(A, L) (A = (V), irt_cap_written_pointer(&A), A)
+#define WRITE_PTR(A, V) (A = (V), irt_cap_written_pointer((void**)&A))
 
-	// region marking
-	#define START(ID) irt_cap_region_start(ID)
-	#define STOP(ID)  irt_cap_region_stop(ID)
+// region marking
+#define START(ID) irt_cap_region_start(ID)
+#define STOP(ID)  irt_cap_region_stop(ID)
 
 
-	// block handling
-	#define REG_BLOCK(Ptr,Size) 	irt_cap_dbi_register_block(Ptr, Size)->base
-	#define REG_LOCAL(P) 			irt_cap_dbi_register_block(&P, sizeof(P))
+// block handling
+#define REG_BLOCK(Ptr,Size) 	irt_cap_dbi_register_block(Ptr, Size)->base
+#define REG_LOCAL(P) 			irt_cap_dbi_register_block(&P, sizeof(P))
 
-	// allows to tag a block with a ID - taged blocks can be reloaded
-	#define TAG_BLOCK(P,ID) (REG_LOCAL(P), irt_cap_tag_block(&P,ID))
+// allows to tag a block with a ID - taged blocks can be reloaded
+#define TAG_BLOCK(P,ID) (REG_LOCAL(P), irt_cap_tag_block(&P,ID))
 
 #else
 
-	// in case recording is disabled
+// in case recording is disabled
 
-	// two macros initializing and finalizing the infrastructure
-	#define INIT()
-	#define FINISH()
+// two macros initializing and finalizing the infrastructure
+#define INIT()
+#define FINISH()
 
-	// reading and writing of values
-	#define READ(A) (A)
-	#define WRITE(A,V) (A = (V))
+// reading and writing of values
+#define READ(A) (A)
+#define WRITE(A,V) (A = (V))
 
-	// reading and writing of pointers
-	#define READ_PTR(A) (A)
-	#define WRITE_PTR(A, L) (A = (L))
+// reading and writing of pointers
+#define READ_PTR(A) (A)
+#define WRITE_PTR(A, L) (A = (L))
 
-	// region marking
-	#define START(ID)
-	#define STOP(ID)
+// region marking
+#define START(ID)
+#define STOP(ID)
 
 
-	// block handling
-	#define REG_BLOCK(Ptr,Size) Ptr
-	#define REG_LOCAL(P)
+// block handling
+#define REG_BLOCK(Ptr,Size) Ptr
+#define REG_LOCAL(P)
 
-	// allows to tag a block with a ID - taged blocks can be reloaded
-	#define TAG_BLOCK(P,ID)
+// allows to tag a block with a ID - taged blocks can be reloaded
+#define TAG_BLOCK(P,ID)
 
 #endif
 
 #ifdef RESTORE
-	// -- for isolated execution --
+// -- for isolated execution --
 
-	#include "restore.h"
+#include "restore.h"
 
-	// declares and restores a value of the given type from a recorded profile
-	#define LOAD(TYPE, NAME, RID, TAG) TYPE NAME; irt_cap_profile_get_value(&NAME, RID, TAG, sizeof(TYPE))
+// declares and restores a value of the given type from a recorded profile
+#define LOAD(TYPE, NAME, RID, TAG) TYPE NAME; irt_cap_profile_get_value(&NAME, RID, TAG, sizeof(TYPE))
 
-	// loads a captured value into the given variable
-	#define LOAD_VALUE(VAR,RID,TAG) irt_cap_profile_get_value(&VAR,RID,TAG,sizeof(VAR))
+// loads a captured value into the given variable
+#define LOAD_VALUE(VAR,RID,TAG) irt_cap_profile_get_value(&VAR,RID,TAG,sizeof(VAR))
 
-	// verifies whether the life-out values are accurate
-	#define CHECK_LIFE_OUT true /* not implemented */
+// verifies whether the life-out values are accurate
+#define CHECK_LIFE_OUT true /* not implemented */
 
-	// to be called after executing the isolated code region
-	#define FINALIZE() { irt_cap_profile_finalize(); }
+// to be called after executing the isolated code region
+#define FINALIZE() { irt_cap_profile_finalize(); }
 
 #endif
 

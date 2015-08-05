@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,22 +61,21 @@ void clangPreprocessorDiag(clang::Preprocessor &pp, const clang::SourceLocation&
 	pp.Diag(loc, pp.getDiagnostics().getDiagnosticIDs()->getCustomDiagID((DiagnosticIDs::Level)level, s));
 }
 
-void compilerMessage(const DiagnosticLevel& 		level, 
-					 const clang::SourceLocation& 	loc, 
-					 const std::string& 			msg, 
-					 const ClangCompiler& 			clangComp ) 
-{
+void compilerMessage(const DiagnosticLevel& 		level,
+                     const clang::SourceLocation& 	loc,
+                     const std::string& 			msg,
+                     const ClangCompiler& 			clangComp) {
 	std::ostringstream errMsg;
 	errMsg << msg;
-
+	
 	SourceManager& manager = clangComp.getSourceManager();
-    errMsg << " at location (" << frontend::utils::Line(loc, manager) << ":" <<
-            frontend::utils::Column(loc, manager) << ")." << std::endl;
-
-    clang::Preprocessor& pp = clangComp.getPreprocessor();
+	errMsg << " at location (" << frontend::utils::Line(loc, manager) << ":" <<
+	       frontend::utils::Column(loc, manager) << ")." << std::endl;
+	       
+	clang::Preprocessor& pp = clangComp.getPreprocessor();
 	clangPreprocessorDiag(pp, loc, level, errMsg.str());
 }
 
-} // end utils namespace 
-} // end frontend namespace 
-} // end insieme namespace 
+} // end utils namespace
+} // end frontend namespace
+} // end insieme namespace

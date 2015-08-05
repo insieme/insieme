@@ -76,21 +76,22 @@ unsigned actualCount = 0;
 template<typename T>
 std::function<void (const NodePtr&)> getCheckingLambda() {
 	return makeLambdaVisitor([&](const NodePtr& node) {
-		if(node->hasAnnotation(T::KEY))
+		if(node->hasAnnotation(T::KEY)) {
 			actualCount++;
+		}
 	});
 }
 
 TEST(InsiemePragmaTest, checkPragmas) {
 	NodeManager manager;
-
-    const std::string fileName = FRONTEND_TEST_DIR "/inputs/insieme_pragmas.c";
-    std::vector<std::string> argv = { "compiler",  fileName };
-    cmd::Options options = cmd::Options::parse(argv);
-    options.job.frontendExtensionInit();
-
+	
+	const std::string fileName = FRONTEND_TEST_DIR "/inputs/insieme_pragmas.c";
+	std::vector<std::string> argv = { "compiler",  fileName };
+	cmd::Options options = cmd::Options::parse(argv);
+	options.job.frontendExtensionInit();
+	
 	insieme::frontend::TranslationUnit tu(manager, fileName, options.job);
-
+	
 	EXPECT_EQ(4, tu.getPragmaList().size());
 //	for(const auto& e : tu.getPragmaList())
 //		std::cout << e->getType() << "\n";
@@ -98,15 +99,15 @@ TEST(InsiemePragmaTest, checkPragmas) {
 
 TEST(InsiemePragmaTest, checkMark) {
 	NodeManager manager;
-    const std::string fileName = FRONTEND_TEST_DIR "/inputs/insieme_pragmas.c";
-    std::vector<std::string> argv = { "compiler",  fileName };
-    cmd::Options options = cmd::Options::parse(argv);
-
+	const std::string fileName = FRONTEND_TEST_DIR "/inputs/insieme_pragmas.c";
+	std::vector<std::string> argv = { "compiler",  fileName };
+	cmd::Options options = cmd::Options::parse(argv);
+	
 	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
 	auto& entryPoints = program->getEntryPoints();
 	EXPECT_EQ(2, entryPoints.size());
-
+	
 	EXPECT_EQ("muha", insieme::core::annotations::getAttachedName(entryPoints[0]));
 	EXPECT_EQ("main", insieme::core::annotations::getAttachedName(entryPoints[1]));
 }
@@ -114,14 +115,14 @@ TEST(InsiemePragmaTest, checkMark) {
 
 TEST(InsiemePragmaTest, checkTransformations) {
 	NodeManager manager;
-    const std::string fileName = FRONTEND_TEST_DIR "/inputs/insieme_pragmas.c";
-    std::vector<std::string> argv = { "compiler",  fileName };
-    cmd::Options options = cmd::Options::parse(argv);
-
+	const std::string fileName = FRONTEND_TEST_DIR "/inputs/insieme_pragmas.c";
+	std::vector<std::string> argv = { "compiler",  fileName };
+	cmd::Options options = cmd::Options::parse(argv);
+	
 	const auto& tu = options.job.toIRTranslationUnit(manager);
 	const auto& ir = insieme::frontend::tu::toIR(tu.getNodeManager(), tu);
 	EXPECT_TRUE(ir);
-
+	
 	actualCount = 0;
 	visitDepthFirst(ir, getCheckingLambda<insieme::annotations::TransformAnnotation>());
 	EXPECT_EQ(1, actualCount);
@@ -130,9 +131,9 @@ TEST(InsiemePragmaTest, checkTransformations) {
 TEST(InsiemePragmaTest, checkFunctionUnrolling) {
 	namespace icp = insieme::core::pattern;
 	NodeManager manager;
-
+	
 	Source src(
-			R"(
+	    R"(
 #pragma insieme fun_unroll (3)
 int muha(int i) {
 if (i == 0) return 0;
@@ -146,20 +147,20 @@ int main() {
 				}
 			)");
 	const boost::filesystem::path& fileName = src;
-    std::vector<std::string> argv = { "compiler",  fileName.string()};
-    cmd::Options options  = cmd::Options::parse(argv);
-
+	std::vector<std::string> argv = { "compiler",  fileName.string()};
+	cmd::Options options  = cmd::Options::parse(argv);
+	
 	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
-
+	
 	// check for four function calls
 	TreePattern pattern =
-			irp::callExpr(
-					icp::aT(irp::callExpr(
-							icp::aT(irp::callExpr(
-									icp::aT(irp::callExpr(
-											icp::any)))))));
-
+	    irp::callExpr(
+	        icp::aT(irp::callExpr(
+	                    icp::aT(irp::callExpr(
+	                                icp::aT(irp::callExpr(
+	                                        icp::any)))))));
+	                                        
 	auto res = irp::collectAll(pattern, program, false);
 	ASSERT_EQ(1, res.size());
 	EXPECT_TRUE(res.front());
@@ -168,9 +169,9 @@ int main() {
 TEST(InsiemePragmaTest, checkReschedule) {
 	namespace icp = insieme::core::pattern;
 	NodeManager manager;
-
+	
 	Source src(
-			R"(int main() {
+	    R"(int main() {
 					int arrayA[10][10];
 					#pragma insieme reschedule (0)
 					for(int i = 0; i < 10; ++i) {
@@ -183,18 +184,20 @@ TEST(InsiemePragmaTest, checkReschedule) {
 			)");
 
 	const boost::filesystem::path& fileName = src;
-    std::vector<std::string> argv = { "compiler",  fileName.string()};
-    cmd::Options options  = cmd::Options::parse(argv);
-
+	std::vector<std::string> argv = { "compiler",  fileName.string()};
+	cmd::Options options  = cmd::Options::parse(argv);
+	
 	const ProgramPtr program = options.job.execute(manager);
 	EXPECT_TRUE(program);
-
-	auto at = [&manager](const string& str) { return irp::atom(manager, str); };
+	
+	auto at = [&manager](const string& str) {
+		return irp::atom(manager, str);
+	};
 	// check for identity
 	TreePattern pattern =
-			irp::forStmt(icp::any, at("0"), icp::any, at("1"),
-					irp::forStmt(icp::any, at("0"), icp::any, at("1"), irp::assignment()));
-
+	    irp::forStmt(icp::any, at("0"), icp::any, at("1"),
+	                 irp::forStmt(icp::any, at("0"), icp::any, at("1"), irp::assignment()));
+	                 
 	auto res = irp::collectAll(pattern, program, false);
 	ASSERT_EQ(1, res.size());
 	EXPECT_TRUE(res.front());

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,18 +53,18 @@ namespace backend {
 TEST(FullBackend, HelloWorld) {
 
 	core::NodeManager manager;
-
+	
 	// load hello world test case
 	auto testCase = driver::integration::getCase("hello_world");
 	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
-
+	
 	// convert test case into IR using the frontend
 	auto code = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs()).execute(manager);
 	ASSERT_TRUE(code) << "Unable to load input code!";
-
+	
 	// create target code using real backend
 	auto target = backend::sequential::SequentialBackend::getDefault()->convert(code);
-
+	
 	// check target code
 //	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
 //	EXPECT_EQ("", toString(*target));

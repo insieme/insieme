@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,10 +38,10 @@
 #ifndef __GUARD_INCLUDE_GEMS_RAND_R_H
 #define __GUARD_INCLUDE_GEMS_RAND_R_H
 
-//TODO [_GEMS]: missing implementation 
+//TODO [_GEMS]: missing implementation
 
 #ifndef rand_r
-	#define rand_r(__seed) (__seed == __seed ? rand() : rand())
+#define rand_r(__seed) (__seed == __seed ? rand() : rand())
 #endif
 
 #endif // ifndef __GUARD_INCLUDE_GEMS_RAND_R_H

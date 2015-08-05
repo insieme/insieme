@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,33 +49,33 @@ namespace insieme {
 namespace transform {
 
 
-	TEST(Versioning, SimpleVersioning) {
+TEST(Versioning, SimpleVersioning) {
 
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		core::StatementPtr one = builder.intLit(1);
-		core::StatementPtr two = builder.intLit(2);
-
-
-		core::StatementPtr in = builder.compoundStmt(one, two);
-		core::StatementPtr out;
-
-		out = versioning(makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick(([0,1]))");
-
-		// try special case - on transformation only
-		out = versioning(makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_EQ(*in, *out);
-
-		// and a large number of versions
-		out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::checks::check(out).empty());
-		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick(([0,1,2,3]))");
-
-	}
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	core::StatementPtr one = builder.intLit(1);
+	core::StatementPtr two = builder.intLit(2);
+	
+	
+	core::StatementPtr in = builder.compoundStmt(one, two);
+	core::StatementPtr out;
+	
+	out = versioning(makeNoOp(), makeNoOp())->apply(in);
+	EXPECT_TRUE(core::checks::check(out).empty());
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick(([0,1]))");
+	
+	// try special case - on transformation only
+	out = versioning(makeNoOp())->apply(in);
+	EXPECT_TRUE(core::checks::check(out).empty());
+	EXPECT_EQ(*in, *out);
+	
+	// and a large number of versions
+	out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
+	EXPECT_TRUE(core::checks::check(out).empty());
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick(([0,1,2,3]))");
+	
+}
 
 
 } // end namespace transform

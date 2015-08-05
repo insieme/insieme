@@ -44,28 +44,28 @@
 
 // event debug logging definitions
 #ifdef IRT_ENABLE_EVENT_DEBUG_LOGGING
-	#define _IRT_EVENT_DEBUG_DEFINES(__short__) \
+#define _IRT_EVENT_DEBUG_DEFINES(__short__) \
 		irt_spinlock _irt_##__short__##_event_debug_print_lock; \
 		FILE* _irt_##__short__##_event_debug_log_file;
-	#define _IRT_EVENT_DEBUG_INIT(__short__) \
+#define _IRT_EVENT_DEBUG_INIT(__short__) \
 		irt_spin_init(&_irt_##__short__##_event_debug_print_lock); \
 		_irt_##__short__##_event_debug_log_file = fopen("irt_event_debug_" #__short__ "_event_register_table_log", "w");
-	#define _IRT_EVENT_DEBUG_DESTROY(__short__) \
+#define _IRT_EVENT_DEBUG_DESTROY(__short__) \
 		fclose(_irt_##__short__##_event_debug_log_file); \
 		irt_spin_destroy(&_irt_##__short__##_event_debug_print_lock);
-	#define _IRT_EVENT_DEBUG_HEADER(__short__) \
+#define _IRT_EVENT_DEBUG_HEADER(__short__) \
 		irt_spin_lock(&_irt_##__short__##_event_debug_print_lock);
-	#define _IRT_EVENT_DEBUG_FOOTER(__short__, ...) \
+#define _IRT_EVENT_DEBUG_FOOTER(__short__, ...) \
 		fprintf(_irt_##__short__##_event_debug_log_file, "\n\n"); \
 		fprintf(_irt_##__short__##_event_debug_log_file, __VA_ARGS__); \
 		irt_dbg_print_##__short__##_event_register_table(_irt_##__short__##_event_debug_log_file); \
 		irt_spin_unlock(&_irt_##__short__##_event_debug_print_lock);
 #else //IRT_ENABLE_EVENT_DEBUG_LOGGING
-	#define _IRT_EVENT_DEBUG_DEFINES(__short__)
-	#define _IRT_EVENT_DEBUG_INIT(__short__)
-	#define _IRT_EVENT_DEBUG_DESTROY(__short__)
-	#define _IRT_EVENT_DEBUG_HEADER(__short__)
-	#define _IRT_EVENT_DEBUG_FOOTER(__short__, ...)
+#define _IRT_EVENT_DEBUG_DEFINES(__short__)
+#define _IRT_EVENT_DEBUG_INIT(__short__)
+#define _IRT_EVENT_DEBUG_DESTROY(__short__)
+#define _IRT_EVENT_DEBUG_HEADER(__short__)
+#define _IRT_EVENT_DEBUG_FOOTER(__short__, ...)
 #endif //IRT_ENABLE_EVENT_DEBUG_LOGGING
 
 

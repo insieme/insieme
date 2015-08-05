@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,7 +43,7 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include <clang/AST/StmtVisitor.h>
+#include <clang/AST/StmtVisitor.h>
 #pragma GCC diagnostic pop
 
 #include "insieme/core/forward_decls.h"
@@ -70,20 +70,20 @@ protected:
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
-
+	
 public:
 	StmtConverter(Converter& convFact) :
 		convFact(convFact), mgr(convFact.mgr),
 		builder(convFact.builder), gen(convFact.mgr.getLangBasic()) { }
-
+		
 	virtual ~StmtConverter() {}
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DECLARATION STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// In clang a declstmt is represented as a list of VarDecl
 	stmtutils::StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,70 +92,70 @@ public:
 	//								FOR STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitForStmt(clang::ForStmt* forStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								IF STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitIfStmt(clang::IfStmt* ifStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							WHILE STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitWhileStmt(clang::WhileStmt* whileStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DO STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitDoStmt(clang::DoStmt* doStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							SWITCH STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitSwitchStmt(clang::SwitchStmt* switchStmt);
-
+	
 	/*
 	 * as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error
 	 * in the case the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the
 	 * visitor is not called on his subnodes
 	 */
 	stmtutils::StmtWrapper VisitSwitchCase(clang::SwitchCase* caseStmt);
-
+	
 	stmtutils::StmtWrapper VisitBreakStmt(clang::BreakStmt* breakStmt);
-
+	
 	stmtutils::StmtWrapper VisitContinueStmt(clang::ContinueStmt* contStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							COMPOUND STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitCompoundStmt(clang::CompoundStmt* compStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							NULL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitNullStmt(clang::NullStmt* nullStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							GOTO STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitGotoStmt(clang::GotoStmt* gotoStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							LABEL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitLabelStmt(clang::LabelStmt* labelStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ASM STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitAsmStmt(clang::AsmStmt* asmStmt);
-
-
+	
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	virtual stmtutils::StmtWrapper Visit(clang::Stmt* stmt) = 0;
-
+	
 	stmtutils::StmtWrapper VisitStmt(clang::Stmt* stmt);
 };
 
@@ -164,17 +164,16 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 class Converter::CStmtConverter :
 	public Converter::StmtConverter,
-	public clang::StmtVisitor<Converter::CStmtConverter, stmtutils::StmtWrapper>
-{
-
+	public clang::StmtVisitor<Converter::CStmtConverter, stmtutils::StmtWrapper> {
+	
 protected:
 	//Converter& convFact;
-
+	
 public:
-	CStmtConverter(Converter& convFact) : StmtConverter(convFact) /*, convFact(convFact)*/ {
+	CStmtConverter(Converter& convFact) : StmtConverter(convFact) { /*, convFact(convFact)*/
 	}
 	virtual ~CStmtConverter() {}
-
+	
 	CALL_BASE_STMT_VISIT(StmtConverter, DeclStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, ReturnStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, ForStmt)
@@ -188,25 +187,25 @@ public:
 	CALL_BASE_STMT_VISIT(StmtConverter, CompoundStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, NullStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, GotoStmt)
-    CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
-    CALL_BASE_STMT_VISIT(StmtConverter, AsmStmt)
+	CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
+	CALL_BASE_STMT_VISIT(StmtConverter, AsmStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, Stmt)
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper Visit(clang::Stmt* stmt);
-
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(IntegerLiteral)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(FloatingLiteral)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CharacterLiteral)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StringLiteral)
-
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(BinaryOperator)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(UnaryOperator)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ConditionalOperator)
-
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CastExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ImplicitCastExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(PredefinedExpr)
@@ -217,7 +216,7 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
-    FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -225,37 +224,36 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 class Converter::CXXStmtConverter:
 	public Converter::StmtConverter,
-	public clang::StmtVisitor<Converter::CXXStmtConverter, stmtutils::StmtWrapper>
-{
-
+	public clang::StmtVisitor<Converter::CXXStmtConverter, stmtutils::StmtWrapper> {
+	
 	Converter& ConvFact;
-
+	
 public:
 	CXXStmtConverter(Converter& ConvFact) :
 		StmtConverter(ConvFact), ConvFact(ConvFact) {
 	}
 	virtual ~CXXStmtConverter() {}
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DECLARATION STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// In clang a declstmt is represented as a list of VarDecl
 	stmtutils::StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitReturnStmt(clang::ReturnStmt* retStmt);
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							COMPOUND STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	stmtutils::StmtWrapper VisitCompoundStmt(clang::CompoundStmt* compStmt);
-
+	
 	stmtutils::StmtWrapper VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt);
 	stmtutils::StmtWrapper VisitCXXTryStmt(clang::CXXTryStmt* tryStmt);
 	stmtutils::StmtWrapper VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt);
-
+	
 	CALL_BASE_STMT_VISIT(StmtConverter, ForStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, IfStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, WhileStmt)
@@ -266,19 +264,19 @@ public:
 	CALL_BASE_STMT_VISIT(StmtConverter, ContinueStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, NullStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, GotoStmt)
-    CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
-    CALL_BASE_STMT_VISIT(StmtConverter, AsmStmt)
+	CALL_BASE_STMT_VISIT(StmtConverter, LabelStmt)
+	CALL_BASE_STMT_VISIT(StmtConverter, AsmStmt)
 	CALL_BASE_STMT_VISIT(StmtConverter, Stmt)
-
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(IntegerLiteral)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(FloatingLiteral)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CharacterLiteral)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StringLiteral)
-
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(BinaryOperator)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(UnaryOperator)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ConditionalOperator)
-
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CastExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ImplicitCastExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(PredefinedExpr)
@@ -289,8 +287,8 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtExpr)
-    FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
-
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(AtomicExpr)
+	
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXConstructExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXNewExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXDeleteExpr)
@@ -300,7 +298,7 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ExprWithCleanups)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MaterializeTemporaryExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXTypeidExpr)
-
+	
 	stmtutils::StmtWrapper Visit(clang::Stmt* stmt);
 };
 

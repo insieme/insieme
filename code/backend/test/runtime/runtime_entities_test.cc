@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,7 +54,7 @@ core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
 	const auto& basic = manager.getLangBasic();
 	const auto& ext = manager.getLangExtension<Extensions>();
-
+	
 	core::VariablePtr param = builder.variable(builder.refType(ext.workItemType), 1);
 	core::StatementPtr body = builder.getNoOp();
 	return builder.lambdaExpr(basic.getUnit(), body, toVector(param));
@@ -63,7 +63,7 @@ core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
 	const auto& basic = manager.getLangBasic();
-
+	
 	core::VariablePtr a = builder.variable(basic.getInt8(),1);
 	core::VariablePtr b = builder.variable(basic.getInt8(),2);
 	core::StatementPtr body = builder.returnStmt(builder.castExpr(basic.getUInt8(), builder.sub(b, a)));
@@ -76,27 +76,27 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 	const Extensions& ext = manager.getLangExtension<Extensions>();
-
+	
 	// test type
 	EXPECT_EQ(ext.workItemVariantType, enc::getTypeFor<WorkItemVariant>(manager));
-
+	
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
 	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })",
-			toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
-
+	          toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
+	          
 	// test decoding
 	WorkItemVariant decoded = enc::toValue<WorkItemVariant>(encoded);
 	EXPECT_TRUE(variant == decoded);
-
+	
 	// test is_encoding_of
 	EXPECT_TRUE(enc::isEncodingOf<WorkItemVariant>(encoded));
 	EXPECT_FALSE(enc::isEncodingOf<WorkItemVariant>(core::ExpressionPtr()));
-
+	
 	// apply IR semantic checks
 	EXPECT_EQ("[]", toString(core::checks::check(encoded, core::checks::getFullCheck())));
-
+	
 }
 
 
@@ -106,24 +106,25 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
 	const Extensions& ext = manager.getLangExtension<Extensions>();
-
+	
 	// test type
 	EXPECT_EQ(ext.workItemImplType, enc::getTypeFor<WorkItemImpl>(manager));
-
+	
 	// test encoding
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl(([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })]))", toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
-
+	EXPECT_EQ("WorkItemImpl(([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { })]))", toString(core::printer::PrettyPrinter(encoded,
+	          core::printer::PrettyPrinter::NO_LET_BINDINGS)));
+	          
 	// test decoding
 	WorkItemImpl decoded = enc::toValue<WorkItemImpl>(encoded);
 	EXPECT_TRUE(impl == decoded);
-
+	
 	// test is_encoding_of
 	EXPECT_TRUE(enc::isEncodingOf<WorkItemImpl>(encoded));
 	EXPECT_FALSE(enc::isEncodingOf<WorkItemImpl>(core::ExpressionPtr()));
-
+	
 	// apply IR semantic checks
 	EXPECT_EQ("[]", toString(core::checks::check(encoded, core::checks::getFullCheck())));
 }
@@ -132,12 +133,12 @@ TEST(RuntimeExtensions, DataItem) {
 
 	core::NodeManager manager;
 	core::IRBuilder builder(manager);
-
+	
 	core::TypeList list;
 	core::TupleTypePtr tupleType = builder.tupleType(list);
-
+	
 	core::TypePtr lwDataItem = DataItem::toLWDataItemType(tupleType);
-
+	
 	EXPECT_EQ("irt_lwdi<()>", toString(*lwDataItem));
 	EXPECT_TRUE(DataItem::isLWDataItemType(lwDataItem));
 }

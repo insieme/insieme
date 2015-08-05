@@ -39,13 +39,13 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include "clang/AST/StmtVisitor.h"
-	#include <clang/AST/Expr.h>
-	#include <clang/AST/DeclCXX.h>
-	#include <clang/AST/ExprCXX.h>
-	#include <clang/AST/CXXInheritance.h>
+#include "clang/AST/StmtVisitor.h"
+#include <clang/AST/Expr.h>
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/CXXInheritance.h>
 
-	#include <clang/Basic/FileManager.h>
+#include <clang/Basic/FileManager.h>
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/convert.h"
@@ -69,7 +69,7 @@ namespace extensions {
 //
 //		the asm stmt has the following form:
 //		asm (
-//			TEMPLATE 
+//			TEMPLATE
 //			: [ OUTPUTS ]
 //			: [ INPUTS ]
 //			: [ CLOBBERS ]
@@ -85,22 +85,22 @@ namespace extensions {
 
 stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::conversion::Converter& convFact) {
 	stmtutils::StmtWrapper ret;
-
-	if (const clang::AsmStmt*  asmStmt = llvm::dyn_cast<clang::AsmStmt>(stmt)){
+	
+	if(const clang::AsmStmt*  asmStmt = llvm::dyn_cast<clang::AsmStmt>(stmt)) {
 		core::IRBuilder builder = convFact.getIRBuilder();
 		
-		std::string assemblerString = asmStmt->generateAsmString(convFact.getCompiler().getASTContext() );
-
+		std::string assemblerString = asmStmt->generateAsmString(convFact.getCompiler().getASTContext());
+		
 		auto expand = [&](char lookup, const char *replacement) {
 			int last = 0;
 			unsigned it;
 			string rep = replacement;
-			while((it = assemblerString.find(lookup, last)) < assemblerString.length()){
+			while((it = assemblerString.find(lookup, last)) < assemblerString.length()) {
 				last = it + rep.length();
 				assemblerString.replace(it, 1, rep);
 			}
 		};
-
+		
 		expand('\\', "\\\\");
 		expand('\n', "\\n");
 		expand('\t', "\\t");
@@ -113,25 +113,25 @@ stmtutils::StmtWrapper ASMExtension::Visit(const clang::Stmt* stmt, frontend::co
 		expand('\'', "\\\'");
 		expand('\"', "\\\"");
 		expand('\0', "\\0");
-
-
-		insieme::core::lang::AsmStmtWrapper wrap (assemblerString, asmStmt->isVolatile());
-
-		for (unsigned i=0 ; i< 	asmStmt->getNumOutputs (); ++i){
-			wrap.addOutput (asmStmt->getOutputConstraint (i).str() , builder.deref(convFact.convertExpr(asmStmt->begin_outputs()[i])));
+		
+		
+		insieme::core::lang::AsmStmtWrapper wrap(assemblerString, asmStmt->isVolatile());
+		
+		for(unsigned i=0 ; i< 	asmStmt->getNumOutputs(); ++i) {
+			wrap.addOutput(asmStmt->getOutputConstraint(i).str() , builder.deref(convFact.convertExpr(asmStmt->begin_outputs()[i])));
 		}
-
-		for (unsigned i=0 ; i< 	asmStmt->getNumInputs (); ++i){
-			wrap.addInput (asmStmt->getInputConstraint (i).str() , convFact.convertExpr(asmStmt->begin_inputs()[i]));
+		
+		for(unsigned i=0 ; i< 	asmStmt->getNumInputs(); ++i) {
+			wrap.addInput(asmStmt->getInputConstraint(i).str() , convFact.convertExpr(asmStmt->begin_inputs()[i]));
 		}
-
-		for (unsigned i=0 ; i< 	asmStmt->getNumClobbers (); ++i){
+		
+		for(unsigned i=0 ; i< 	asmStmt->getNumClobbers(); ++i) {
 			wrap.addClobber(asmStmt->getClobber(i).str());
 		}
-
-		ret.push_back( insieme::core::lang::toIR(convFact.getNodeManager(), wrap) );
+		
+		ret.push_back(insieme::core::lang::toIR(convFact.getNodeManager(), wrap));
 	}
-
+	
 	return ret;
 }
 

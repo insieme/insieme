@@ -29,18 +29,20 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
 #include <memory>
 #include <tuple>
 #include <future>
 
-namespace insieme { namespace utils { namespace pipeline {
+namespace insieme {
+namespace utils {
+namespace pipeline {
 
 namespace impl {
 
@@ -72,9 +74,9 @@ struct invoker {
 	template <class ...Args>
 	inline typename lambda_traits<typename std::tuple_element<std::tuple_size<Tuple>::value-1,Tuple>::type>::result_type
 	operator()(const Tuple& t, const Args&... args) const {
-		return invoker<Tuple,TupleId-1>()( t, std::get<std::tuple_size<Tuple>::value-TupleId>(t)(args...) );
+		return invoker<Tuple,TupleId-1>()(t, std::get<std::tuple_size<Tuple>::value-TupleId>(t)(args...));
 	}
-
+	
 };
 
 template <class Tuple>
@@ -85,7 +87,7 @@ struct invoker<Tuple,1> {
 	operator()(const Tuple& t, const Args& ... args) const {
 		return std::get<std::tuple_size<Tuple>::value-1>(t)(args...);
 	}
-
+	
 };
 
 // Check whether the list of functors are compatible with each other.
@@ -95,42 +97,42 @@ template <class ... Fs>
 struct check_compability;
 
 template <class First, class Second, class ... Fs>
-struct check_compability<First,Second,Fs...> { 
+struct check_compability<First,Second,Fs...> {
 
-	enum { value = 
-		(std::is_same<
-			type_list<typename lambda_traits<First>::result_type>, 
-			typename lambda_traits<Second>::argument_types
-		>::value || 
-		std::is_same<
-			type_list<const typename lambda_traits<First>::result_type&>, 
-			typename lambda_traits<Second>::argument_types
-		>::value) && check_compability<Second,Fs...>::value 
-	};
-
+	enum { value =
+	           (std::is_same<
+	            type_list<typename lambda_traits<First>::result_type>,
+	            typename lambda_traits<Second>::argument_types
+	            >::value ||
+	            std::is_same<
+	            type_list<const typename lambda_traits<First>::result_type&>,
+	            typename lambda_traits<Second>::argument_types
+	            >::value) && check_compability<Second,Fs...>::value
+	     };
+	     
 };
 
 template <class SecondLast, class Last>
-struct check_compability<SecondLast,Last> { 
+struct check_compability<SecondLast,Last> {
 
 	enum { value =
-		std::is_same<
-			type_list<typename lambda_traits<SecondLast>::result_type>, 
-			typename lambda_traits<Last>::argument_types
-		>::value ||
-		std::is_same<
-			type_list<const typename lambda_traits<SecondLast>::result_type&>, 
-			typename lambda_traits<Last>::argument_types
-		>::value
-	};
-
+	           std::is_same<
+	           type_list<typename lambda_traits<SecondLast>::result_type>,
+	       typename lambda_traits<Last>::argument_types
+	       >::value ||
+	       std::is_same<
+	       type_list<const typename lambda_traits<SecondLast>::result_type&>,
+	       typename lambda_traits<Last>::argument_types
+	       >::value
+	     };
+	     
 };
 
 template <class Last>
-struct check_compability<Last> { 
+struct check_compability<Last> {
 
 	enum { value = true };
-
+	
 };
 
 /**
@@ -144,16 +146,14 @@ struct check_compability<Last> {
  *
  * @ingroup g_util_tuple
  */
-template < unsigned S, unsigned N>
-struct apply_func
-{
-  template < typename Func, typename... ArgsT, typename... Args >
-  static typename lambda_traits<Func>::result_type applyTuple( const Func& f,
-                       const std::tuple<ArgsT...>& t,
-                       Args... args )
-  {
-    return apply_func<S,N-1>::applyTuple( f, t, std::get<S+N-1>( t ), args... );
-  }
+template <unsigned S, unsigned N>
+struct apply_func {
+	template <typename Func, typename... ArgsT, typename... Args>
+	static typename lambda_traits<Func>::result_type applyTuple(const Func& f,
+	        const std::tuple<ArgsT...>& t,
+	        Args... args) {
+		return apply_func<S,N-1>::applyTuple(f, t, std::get<S+N-1>(t), args...);
+	}
 };
 
 //-----------------------------------------------------------------------------
@@ -168,15 +168,13 @@ struct apply_func
  * @ingroup g_util_tuple
  */
 template <unsigned S>
-struct apply_func<S,0u>
-{
-  template < typename Func, typename... ArgsT, typename... Args >
-  static typename lambda_traits<Func>::result_type applyTuple( const Func& f,
-                       const std::tuple<ArgsT...>& /* t */,
-                       Args... args )
-  {
-	return f( args... );
-  }
+struct apply_func<S,0u> {
+	template <typename Func, typename... ArgsT, typename... Args>
+	static typename lambda_traits<Func>::result_type applyTuple(const Func& f,
+	        const std::tuple<ArgsT...>& /* t */,
+	        Args... args) {
+		return f(args...);
+	}
 };
 
 //-----------------------------------------------------------------------------
@@ -185,12 +183,11 @@ struct apply_func<S,0u>
  * Static Function Call Forwarding Using Tuple Pack Parameters
  */
 // Actual apply function
-template < unsigned Start, typename Func, typename... ArgsT>
- typename lambda_traits<Func>::result_type applyTuple( const Func& f, const std::tuple<ArgsT...>& t )
-{
-   return apply_func<Start, 
-	   		size_of<typename lambda_traits<Func>::argument_types>::value
-		  >::applyTuple( f, t );
+template <unsigned Start, typename Func, typename... ArgsT>
+typename lambda_traits<Func>::result_type applyTuple(const Func& f, const std::tuple<ArgsT...>& t) {
+	return apply_func<Start,
+	       size_of<typename lambda_traits<Func>::argument_types>::value
+	       >::applyTuple(f, t);
 }
 
 } // end details namespace
@@ -207,54 +204,57 @@ struct Pipeline;
 
 template <class ... Fs>
 struct Pipeline<
-	// typename std::enable_if<impl::check_compability<Fs...>::value>::type,
+// typename std::enable_if<impl::check_compability<Fs...>::value>::type,
 	void,
-	Fs...> 
-{
+	Fs...> {
 	typedef typename impl::first<Fs...>::value first;
 	typedef typename impl::last<Fs...>::value  last;
-
-	typedef typename lambda_traits<first>::argument_types argument_types; 
+	
+	typedef typename lambda_traits<first>::argument_types argument_types;
 	typedef typename lambda_traits<last>::result_type	  result_type;
-
-	Pipeline(const Fs&... funcs) : tup(std::make_tuple( funcs... )) { }
-
+	
+	Pipeline(const Fs&... funcs) : tup(std::make_tuple(funcs...)) { }
+	
 	template <class ... Args>
 	typename std::enable_if<
-		std::is_same<argument_types,type_list<Args...>>::value ||
-		std::is_same<argument_types,type_list<const Args&...>>::value,
-		result_type
-	>::type
-	operator()(const Args&... args) const { 
+	std::is_same<argument_types,type_list<Args...>>::value ||
+	        std::is_same<argument_types,type_list<const Args&...>>::value,
+	            result_type
+	            >::type
+	operator()(const Args&... args) const {
 		return impl::invoker<std::tuple<Fs...>,sizeof...(Fs)>()(tup, args...);
 	}
-
+	
 	template <class ... Args>
 	typename std::enable_if<
-		std::is_same<argument_types,type_list<Args&...>>::value,
-		result_type
-	>::type
-	operator()(Args&... args) const { 
+	std::is_same<argument_types,type_list<Args&...>>::value,
+	    result_type
+	    >::type
+	operator()(Args&... args) const {
 		return impl::invoker<std::tuple<Fs...>,sizeof...(Fs)>()(tup, args...);
 	}
-
-	// Specialization for pipeline starting with 0 arguments 
-	result_type operator()() const { 
+	
+	// Specialization for pipeline starting with 0 arguments
+	result_type operator()() const {
 		return impl::invoker<std::tuple<Fs...>,sizeof...(Fs)>()(tup);
 	}
-
-
+	
+	
 private:
 	std::tuple<Fs...> tup;
 };
 
 // utility functions to create pipelines
 template <class ... Fs>
-Pipeline<void,Fs...> makePipeline(const Fs&... fs) { return Pipeline<void,Fs...>(fs...); }
+Pipeline<void,Fs...> makePipeline(const Fs&... fs) {
+	return Pipeline<void,Fs...>(fs...);
+}
 
 
 template <class F1, class F2>
-Pipeline<void,F1,F2> operator>>( const F1& f1, const F2& f2 ) { return makePipeline(f1,f2); }
+Pipeline<void,F1,F2> operator>>(const F1& f1, const F2& f2) {
+	return makePipeline(f1,f2);
+}
 
 
 
@@ -263,63 +263,61 @@ struct Reduction;
 
 template <class Op, class F1, class F2>
 struct Reduction<Op,F1,F2,
-	typename std::enable_if<
-		std::is_same<
-			type_list<typename lambda_traits<F1>::result_type,typename lambda_traits<F2>::result_type>,
-			typename lambda_traits<Op>::argument_types
-		>::value ||
-		std::is_same<
-			type_list<const typename lambda_traits<F1>::result_type&, const typename lambda_traits<F2>::result_type&>, 
-			typename lambda_traits<Op>::argument_types
-		>::value>::type> 
-{
+	       typename std::enable_if<
+	       std::is_same<
+	       type_list<typename lambda_traits<F1>::result_type,typename lambda_traits<F2>::result_type>,
+	       typename lambda_traits<Op>::argument_types
+	       >::value ||
+	       std::is_same<
+	       type_list<const typename lambda_traits<F1>::result_type&, const typename lambda_traits<F2>::result_type&>,
+	       typename lambda_traits<Op>::argument_types
+	       >::value>::type> {
 	typedef typename lambda_traits<Op>::result_type result_type;
-
+	
 	typedef typename lambda_traits<F1>::argument_types f1_args;
 	typedef typename lambda_traits<F2>::argument_types f2_args;
 	typedef typename lambda_traits<F1>::result_type f1_res;
 	typedef typename lambda_traits<F2>::result_type f2_res;
 	typedef typename concat<f1_args,f2_args>::type argument_types;
-
-	Reduction(const Op& op, const F1& f1, const F2& f2) : tup( std::make_tuple(op,f1,f2) ) { }
-
+	
+	Reduction(const Op& op, const F1& f1, const F2& f2) : tup(std::make_tuple(op,f1,f2)) { }
+	
 	template <class... Args>
 	result_type operator()(const Args&... args) const {
-
+	
 		return (*this)(std::tie(args...));
 	}
-
+	
 	template <class... Args>
-	result_type operator()(const std::tuple<Args...>& tArg) const { 
-
+	result_type operator()(const std::tuple<Args...>& tArg) const {
+	
 		// Note: this is the sequential version (working with GCC 4.7)
-		auto a = [&]()->f1_res { return impl::applyTuple<0>( std::get<1>(tup), tArg ); };
-		auto b = [&]()->f2_res { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); };
-
+		auto a = [&]()->f1_res { return impl::applyTuple<0>(std::get<1>(tup), tArg); };
+		auto b = [&]()->f2_res { return impl::applyTuple<size_of<f1_args>::value>(std::get<2>(tup), tArg); };
+		
 		return std::get<0>(tup)(a(), b());
-
+		
 		// the parallel version for other GCC versions - but parallelism isn't that important here
 //		auto lhsH = std::async([&](void)->f1_res { return impl::applyTuple<0>( std::get<1>(tup), tArg ); });
 //		auto rhsH = std::async([&](void)->f2_res { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); });
 //
 //		return std::get<0>(tup)( lhsH.get(), rhsH.get() );
 	}
-
+	
 private:
 	std::tuple<Op,F1,F2> tup;
 };
 
 
 template <class Op, class F1, class F2>
-Reduction<Op,F1,F2> makeReduction(const Op& op, const F1& f1, const F2& f2) { 
-	return Reduction<Op,F1,F2>(op,f1,f2); 
+Reduction<Op,F1,F2> makeReduction(const Op& op, const F1& f1, const F2& f2) {
+	return Reduction<Op,F1,F2>(op,f1,f2);
 }
 
 template <class Op, class F1, class F2, class F3, class ... Fs>
-auto makeReduction(const Op& op, const F1& f1, const F2& f2, const F3& f3, const Fs&... fs) -> 
-Reduction<Op,F1,decltype(makeReduction(op,f2,f3,fs...))> 
-{ 
-	return Reduction<Op, F1, decltype(makeReduction(op,f2,f3,fs...))>(op, f1, makeReduction(op,f2,f3,fs...)); 
+auto makeReduction(const Op& op, const F1& f1, const F2& f2, const F3& f3, const Fs&... fs) ->
+Reduction<Op,F1,decltype(makeReduction(op,f2,f3,fs...))> {
+	return Reduction<Op, F1, decltype(makeReduction(op,f2,f3,fs...))>(op, f1, makeReduction(op,f2,f3,fs...));
 }
 
 template <class F1, class F2>
@@ -327,16 +325,18 @@ Reduction<std::plus<typename lambda_traits<F1>::result_type>,F1,F2> operator+(co
 	return makeReduction(std::plus<typename lambda_traits<F1>::result_type>(),f1,f2);
 }
 
-} } } // end insieme::utils::pipeline namespace 
+}
+}
+} // end insieme::utils::pipeline namespace
 
 template <class ... Args>
-struct lambda_traits< insieme::utils::pipeline::Pipeline<void,Args...> > {
+struct lambda_traits<insieme::utils::pipeline::Pipeline<void,Args...>> {
 	typedef typename insieme::utils::pipeline::Pipeline<void,Args...>::result_type result_type;
 	typedef typename insieme::utils::pipeline::Pipeline<void,Args...>::argument_types argument_types;
 };
 
 template <class Op, class F1, class F2>
-struct lambda_traits< insieme::utils::pipeline::Reduction<Op,F1,F2> > {
+struct lambda_traits<insieme::utils::pipeline::Reduction<Op,F1,F2>> {
 	typedef typename insieme::utils::pipeline::Reduction<Op,F1,F2>::result_type result_type;
 	typedef typename insieme::utils::pipeline::Reduction<Op,F1,F2>::argument_types argument_types;
 };

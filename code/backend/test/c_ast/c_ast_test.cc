@@ -53,68 +53,68 @@ TEST(C_AST, Basic) {
 
 	// create a simple expression
 	CNodeManager manager;
-
+	
 	TypePtr intType = manager.create<PrimitiveType>(PrimitiveType::Int32);
 	EXPECT_TRUE(intType);
 	EXPECT_EQ("int32_t", toC(intType));
-
+	
 	VariablePtr x = var(intType, "x");
 	VariablePtr y = var(intType, "y");
 	ExpressionPtr sum = add(x,y);
-
+	
 	EXPECT_EQ("x", x->name->name);
-
+	
 	EXPECT_EQ("x", toC(x));
 	EXPECT_EQ("y", toC(y));
 	EXPECT_EQ("x + y", toC(sum));
-
+	
 	sum = add(sum, x);
 	EXPECT_EQ("x + y + x", toC(sum));
-
+	
 	sum = add(sum, parentheses(add(x,y)));
 	EXPECT_EQ("x + y + x + (x + y)", toC(sum));
-
+	
 }
 
 TEST(C_AST_Printer, ParameterFormatting) {
 
 	CNodeManager manager;
-
+	
 	TypePtr type;
-
+	
 	StructTypePtr structType = manager.create<StructType>(manager.create("XY"));
 	TypePtr intType = manager.create<PrimitiveType>(PrimitiveType::Int32);
-
+	
 	type = intType;
 	structType->elements.push_back(var(type, "x1"));
-
+	
 	type = manager.create<PointerType>(type);
 	structType->elements.push_back(var(type, "x2"));
-
+	
 	structType->elements.push_back(var(manager.create<PointerType>(type), "x3"));
-
+	
 	structType->elements.push_back(var(manager.create<VectorType>(intType, manager.create<Literal>("3")), "x4"));
-
+	
 	type = manager.create<VectorType>(type, manager.create<Literal>("3"));
 	structType->elements.push_back(var(type, "x5"));
-
+	
 	type = manager.create<VectorType>(type, manager.create<Literal>("5"));
 	structType->elements.push_back(var(type, "x6"));
-
+	
 	type = manager.create<PointerType>(type);
 	structType->elements.push_back(var(type, "x7"));
-
+	
 	type = manager.create<PointerType>(type);
 	structType->elements.push_back(var(type, "x8"));
-
+	
 	type = manager.create<VectorType>(type, manager.create<Literal>("7"));
 	structType->elements.push_back(var(type, "x9"));
-
+	
 	type = manager.create<PointerType>(manager.create<FunctionType>(intType, TypePtr(), toVector(intType)));
 	structType->elements.push_back(var(type, "x10"));
-
+	
 	NodePtr def = manager.create<TypeDefinition>(structType);
-
+	
 	auto code = toC(def);
 	EXPECT_PRED2(containsSubString, code, "int32_t x1");
 	EXPECT_PRED2(containsSubString, code, "int32_t* x2");
@@ -126,36 +126,36 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	EXPECT_PRED2(containsSubString, code, "int32_t*(** x8)[5][3]");
 	EXPECT_PRED2(containsSubString, code, "int32_t*(** x9[7])[5][3]");
 	EXPECT_PRED2(containsSubString, code, "int32_t(* x10)(int32_t)");
-
+	
 }
 
 TEST(C_AST_Printer, ConstPointerParameterPrinter) {
 
 	CNodeManager manager;
-
+	
 	TypePtr type;
-
+	
 	StructTypePtr structType = manager.create<StructType>(manager.create("XY"));
 	TypePtr intType = manager.create<PrimitiveType>(PrimitiveType::Int32);
-
+	
 	structType->elements.push_back(var(intType, "x1"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(intType), "x2"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(intType, true), "x3"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType, true), true), "x4"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType, true), false), "x5"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(intType, false), true), "x6"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(c_ast::ptr(intType, false), true), false), "x7"));
-
+	
 	structType->elements.push_back(var(c_ast::ptr(c_ast::ptr(c_ast::ptr(intType, true), false), true), "x8"));
-
+	
 	NodePtr def = manager.create<TypeDefinition>(structType);
-
+	
 	auto code = toC(def);
 	EXPECT_PRED2(containsSubString, code, "int32_t x1");
 	EXPECT_PRED2(containsSubString, code, "int32_t* x2");
@@ -165,7 +165,7 @@ TEST(C_AST_Printer, ConstPointerParameterPrinter) {
 	EXPECT_PRED2(containsSubString, code, "int32_t**const x6");
 	EXPECT_PRED2(containsSubString, code, "int32_t**const* x7");
 	EXPECT_PRED2(containsSubString, code, "int32_t*const**const x8");
-
+	
 }
 
 

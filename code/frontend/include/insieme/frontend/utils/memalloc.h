@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 #pragma once
@@ -44,14 +44,14 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-    //get a sizeof expression from the given type
-    core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
+//get a sizeof expression from the given type
+core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
 
-    //get an alignof expression from the given type
-    core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type);
+//get an alignof expression from the given type
+core::CallExprPtr getAlignOfType(const core::IRBuilder& builder, const core::TypePtr& type);
 
-    //create the correct translation of malloc and calloc calls
-    core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr);
+//create the correct translation of malloc and calloc calls
+core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr);
 
 }
 }

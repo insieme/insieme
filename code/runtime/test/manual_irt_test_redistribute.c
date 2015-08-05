@@ -98,7 +98,7 @@ void insieme_cleanup_context(irt_context* context) {
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	uint64 start_time = irt_time_ms();
 	irt_work_group *wg1 = irt_wg_create();
-
+	
 	insieme_wi_test_params *test_params = (insieme_wi_test_params*)malloc(sizeof(insieme_wi_test_params));
 	test_params->type_id = 1;
 	test_params->wg = wg1;
@@ -113,15 +113,15 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	for(int i=0; i<NUM_WIS; ++i) {
 		irt_scheduling_assign_wi(irt_g_workers[i%irt_g_worker_count], test_wis[i]);
 	}
-
+	
 	for(int i=0; i<NUM_WIS; ++i) {
 		irt_wi_join(test_wi_ids[i]);
 	}
-
+	
 	uint64 end_time = irt_time_ms();
-
+	
 	printf("======================\n= manual irt test redistribute done\n");
-	printf("= time taken: %lu\n", end_time - start_time);	
+	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
 	for(uint64 i=0; i<NUM_WIS; ++i) {
 		if(test_params->vals[i] != NUM_WIS-1) {
@@ -131,7 +131,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
-
+	
 	free(test_wis);
 	free(test_wi_ids);
 	free(test_params);

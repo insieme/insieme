@@ -53,70 +53,70 @@ namespace insieme {
 namespace core {
 namespace parser3 {
 
-	// the directory to load input files from
-	const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser3/inputs/";
+// the directory to load input files from
+const auto ROOT_DIR = SRC_ROOT_DIR "core/test/parser3/inputs/";
 
 
-	using std::string;
-	namespace fs = boost::filesystem;
+using std::string;
+namespace fs = boost::filesystem;
 
-	vector<string> getInputFiles();
+vector<string> getInputFiles();
 
-	// the type definition (specifying the parameter type)
-	class IRParserTest : public ::testing::TestWithParam<string> { };
+// the type definition (specifying the parameter type)
+class IRParserTest : public ::testing::TestWithParam<string> { };
 
-	// define the test case pattern
-	TEST_P(IRParserTest, ReadFileTest) {
+// define the test case pattern
+TEST_P(IRParserTest, ReadFileTest) {
 
-		string file = ROOT_DIR + string(GetParam());
-        std::cout << "Testing: "<< GetParam() << std::endl;
+	string file = ROOT_DIR + string(GetParam());
+	std::cout << "Testing: "<< GetParam() << std::endl;
+	
+	SCOPED_TRACE(file);
+	
+	// check whether file is present
+	EXPECT_TRUE(fs::exists(file)) << "File " << file << " should exist!";
+	ASSERT_TRUE(fs::exists(file));
+	
+	// load file
+	std::stringstream ss;
+	ss << std::fstream(file).rdbuf();
+	
+	// parse file
+	NodeManager manager;
+	NodePtr res = parse_program(manager, ss.str(), true);
+	
+	//if(res) dumpColor(res);
+	
+	// it should have produced a result
+	ASSERT_TRUE(res);
+	//dumpColor(res);
+	
+	// run semantic checks on files
+	auto msg = checks::check(res);
+	EXPECT_TRUE(msg.empty()) << msg;
+	
+}
 
-		SCOPED_TRACE(file);
-
-		// check whether file is present
-		EXPECT_TRUE(fs::exists(file)) << "File " << file << " should exist!";
-		ASSERT_TRUE(fs::exists(file));
-
-		// load file
-		std::stringstream ss;
-		ss << std::fstream(file).rdbuf();
-
-		// parse file
-		NodeManager manager;
-		NodePtr res = parse_program(manager, ss.str(), true);
-
-        //if(res) dumpColor(res);
-
-		// it should have produced a result
-		ASSERT_TRUE(res);
-        //dumpColor(res);
-
-		// run semantic checks on files
-		auto msg = checks::check(res);
-		EXPECT_TRUE(msg.empty()) << msg;
-
-	}
-
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(InputFileChecks, IRParserTest, ::testing::ValuesIn(getInputFiles()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(InputFileChecks, IRParserTest, ::testing::ValuesIn(getInputFiles()));
 
 
-	vector<string> getInputFiles() {
-		vector<string> res;
-
-		fs::path root(ROOT_DIR);
-		assert_true(fs::is_directory(root));
-
-		for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
-			fs::path file = it->path();
-			if (file.extension().string() == ".ir") {
-				res.push_back(file.filename().string());
-			}
+vector<string> getInputFiles() {
+	vector<string> res;
+	
+	fs::path root(ROOT_DIR);
+	assert_true(fs::is_directory(root));
+	
+	for(auto it = fs::directory_iterator(root); it != fs::directory_iterator(); ++it) {
+		fs::path file = it->path();
+		if(file.extension().string() == ".ir") {
+			res.push_back(file.filename().string());
 		}
-		std::sort(res.begin(), res.end());
-
-		return res;
 	}
+	std::sort(res.begin(), res.end());
+	
+	return res;
+}
 
 } // end namespace parser2
 } // end namespace core

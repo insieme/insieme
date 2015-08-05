@@ -42,45 +42,45 @@
 namespace insieme {
 namespace backend {
 
+/**
+ * This class offers a list of IR extensions required within the backend. Such
+ * extensions include additional literals representing i.g. C operators or procedures of the
+ * runtime interface.
+ */
+class IRExtensions : public core::lang::Extension {
+public:
+
 	/**
-	 * This class offers a list of IR extensions required within the backend. Such
-	 * extensions include additional literals representing i.g. C operators or procedures of the
-	 * runtime interface.
+	 * The name of the global literal introduced by the preprocessor.
 	 */
-	class IRExtensions : public core::lang::Extension {
-	public:
+	static const string GLOBAL_ID;
+	
+private:
 
-		/**
-		 * The name of the global literal introduced by the preprocessor.
-		 */
-		static const string GLOBAL_ID;
+	friend class core::NodeManager;
+	
+	/**
+	 * Creates a new instance of this IRExtension set. The given manager is used to construct
+	 * the included literals.
+	 *
+	 * @param manager the manager to be used to construct the required types and literals
+	 */
+	IRExtensions(core::NodeManager& manager);
+	
+public:
 
-	private:
-
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance of this IRExtension set. The given manager is used to construct
-		 * the included literals.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		IRExtensions(core::NodeManager& manager);
-
-	public:
-
-		/**
-		 * A special literal representing a function causing the initialization of the global variables.
-		 */
-		LANG_EXT_LITERAL(RegisterGlobal, "be_registerGlobal", "(identifier, type<'a>)->unit");
-
-		/**
-		 * An operator marking the initial initialization of global values - those will be turned into
-		 * initial values at the definition of global variables.
-		 */
-		LANG_EXT_DERIVED(InitGlobal, "lambda (ref<'a> g, 'a v)->unit { g=v; }");
-
-	};
+	/**
+	 * A special literal representing a function causing the initialization of the global variables.
+	 */
+	LANG_EXT_LITERAL(RegisterGlobal, "be_registerGlobal", "(identifier, type<'a>)->unit");
+	
+	/**
+	 * An operator marking the initial initialization of global values - those will be turned into
+	 * initial values at the definition of global variables.
+	 */
+	LANG_EXT_DERIVED(InitGlobal, "lambda (ref<'a> g, 'a v)->unit { g=v; }");
+	
+};
 
 
 } // end namespace backend

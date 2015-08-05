@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,19 +42,19 @@
 
 // implementation of threads using pthread library; will be used for both Linux and Windows.
 
-void irt_spin_lock(irt_spinlock *lock){
+void irt_spin_lock(irt_spinlock *lock) {
 	pthread_spin_lock(lock);
 }
 
-void irt_spin_unlock(irt_spinlock *lock){
+void irt_spin_unlock(irt_spinlock *lock) {
 	pthread_spin_unlock(lock);
 }
 
-int irt_spin_init(irt_spinlock *lock){
+int irt_spin_init(irt_spinlock *lock) {
 	return pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE);
 }
 
-void irt_spin_destroy(irt_spinlock *lock){
+void irt_spin_destroy(irt_spinlock *lock) {
 	pthread_spin_destroy(lock);
 }
 

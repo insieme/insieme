@@ -67,7 +67,9 @@ static inline uint32 _irt_hwloc_get_num_entities_in_socket(uint32 s, hwloc_obj_t
 	int num_cores = hwloc_get_nbobjs_by_depth(irt_g_hwloc_topology, core_depth);
 	uint32 ret = 0;
 	for(int i=0; i<num_cores; ++i) {
-		if(hwloc_obj_is_in_subtree(irt_g_hwloc_topology, hwloc_get_obj_by_depth(irt_g_hwloc_topology, core_depth, i), socket)) ret++;
+		if(hwloc_obj_is_in_subtree(irt_g_hwloc_topology, hwloc_get_obj_by_depth(irt_g_hwloc_topology, core_depth, i), socket)) {
+			ret++;
+		}
 	}
 	return ret;
 }

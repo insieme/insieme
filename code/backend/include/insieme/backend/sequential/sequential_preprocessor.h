@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,13 +43,13 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-	/**
-	 * A pre-processor converting the given program into a sequential one.
-	 */
-	class Sequentializer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
-	};
+/**
+ * A pre-processor converting the given program into a sequential one.
+ */
+class Sequentializer : public PreProcessor {
+public:
+	virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+};
 
 } // end namespace runtime
 } // end namespace backend

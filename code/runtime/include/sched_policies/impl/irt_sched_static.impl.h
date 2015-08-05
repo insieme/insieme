@@ -69,11 +69,12 @@ int irt_scheduling_iteration(irt_worker* self) {
 		return 1;
 	}
 	// if that failed as well, look in the IPC message queue
-	if(_irt_sched_check_ipc_queue(self))
+	if(_irt_sched_check_ipc_queue(self)) {
 		return 1;
-	// TODO [_GEMS]: without this yield, the execution will stuck on uniprocessor systems 
+	}
+	// TODO [_GEMS]: without this yield, the execution will stuck on uniprocessor systems
 	irt_thread_yield();
-
+	
 	return 0;
 }
 
@@ -87,18 +88,19 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
 			irt_signal_worker(irt_g_workers[i]);
 		}
-	#ifdef _GEMS_SIM
+#ifdef _GEMS_SIM
 		// alloca is implemented as malloc
 		free(split_wis);
-	#endif
-	} else {
+#endif
+	}
+	else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 		irt_signal_worker(target);
 	}
 }
 
 irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
-	if (target->sched_data.queue.size >= irt_g_worker_count) {
+	if(target->sched_data.queue.size >= irt_g_worker_count) {
 		irt_joinable joinable;
 		joinable.wi_id = wi->id;
 		irt_worker_run_immediate_wi(target, wi);

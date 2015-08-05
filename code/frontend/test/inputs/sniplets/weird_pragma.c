@@ -12,7 +12,7 @@ int main(int argc, char** arv) {
 	{
 		printf("Hello World!\n");
 	} // end parallel
-
+	
 	#pragma omp parallel
 	bots_message(" completed!\n")
 	return 0;

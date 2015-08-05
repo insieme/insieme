@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,19 +45,19 @@ namespace c_ast {
 
 namespace {
 
-	// a dummy fragment just representing text
-	class TextFragment : public c_ast::CodeFragment {
-		string text;
-	public:
-		TextFragment(const string& text) : text(text) {};
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << text;
-		}
-	};
-
-	CodeFragmentPtr getTextFragment(const SharedCodeFragmentManager& manager, const string& text) {
-		return manager->create<TextFragment>(text);
+// a dummy fragment just representing text
+class TextFragment : public c_ast::CodeFragment {
+	string text;
+public:
+	TextFragment(const string& text) : text(text) {};
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << text;
 	}
+};
+
+CodeFragmentPtr getTextFragment(const SharedCodeFragmentManager& manager, const string& text) {
+	return manager->create<TextFragment>(text);
+}
 
 }
 
@@ -65,75 +65,75 @@ namespace {
 TEST(C_AST, FragmentDependencyResolution) {
 
 	SharedCodeFragmentManager fragmentManager = CodeFragmentManager::createShared();
-
+	
 	// create a simple code fragment
 	CodeFragmentPtr code = getTextFragment(fragmentManager, "A");
-
+	
 	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), code)), "A");
-
+	
 	// add something with dependencies
-
+	
 	CodeFragmentPtr codeA = getTextFragment(fragmentManager, "A");
 	CodeFragmentPtr codeB = getTextFragment(fragmentManager, "B");
 	CodeFragmentPtr codeC = getTextFragment(fragmentManager, "C");
 	CodeFragmentPtr codeD = getTextFragment(fragmentManager, "D");
-
+	
 	codeB->addDependency(codeA);
 	codeC->addDependency(codeB);
 	codeD->addDependency(codeC);
-
+	
 	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), codeD)), "ABCD");
-
+	
 	// add additional edge (should not change anything)
 	codeD->addDependency(codeA);
 	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), codeD)), "ABCD");
-
+	
 }
 
 
 TEST(C_AST, DependencyCycleDedectionTest) {
 
 	SharedCodeFragmentManager fragmentManager = CodeFragmentManager::createShared();
-
+	
 	// create a simple code fragment
 	CodeFragmentPtr code = getTextFragment(fragmentManager, "A");
-
+	
 	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), code)), "A");
-
+	
 	// add something with dependencies
-
+	
 	CodeFragmentPtr codeA = getTextFragment(fragmentManager, "A");
 	CodeFragmentPtr codeB = getTextFragment(fragmentManager, "B");
 	CodeFragmentPtr codeC = getTextFragment(fragmentManager, "C");
 	CodeFragmentPtr codeD = getTextFragment(fragmentManager, "D");
 	CodeFragmentPtr codeX = getTextFragment(fragmentManager, "X");
-
+	
 	codeB->addDependency(codeA);
 	codeC->addDependency(codeB);
 	codeD->addDependency(codeC);
-
+	
 	EXPECT_FALSE(codeA->isDependingOn(codeB));
 	EXPECT_FALSE(codeA->isDependingOn(codeC));
-
+	
 	EXPECT_TRUE(codeB->isDependingOn(codeA));
-
+	
 	EXPECT_TRUE(codeC->isDependingOn(codeA));
 	EXPECT_TRUE(codeC->isDependingOn(codeB));
-
+	
 	EXPECT_TRUE(codeD->isDependingOn(codeA));
 	EXPECT_TRUE(codeD->isDependingOn(codeB));
 	EXPECT_TRUE(codeD->isDependingOn(codeC));
-
+	
 	EXPECT_TRUE(codeA->isDependingOn(codeA));
 	EXPECT_TRUE(codeB->isDependingOn(codeB));
 	EXPECT_TRUE(codeC->isDependingOn(codeC));
 	EXPECT_TRUE(codeD->isDependingOn(codeD));
-
+	
 	// something not linear
 	EXPECT_FALSE(codeD->isDependingOn(codeX));
 	codeC->addDependency(codeX);
 	EXPECT_TRUE(codeD->isDependingOn(codeX));
-
+	
 }
 
 } // end namespace c_ast

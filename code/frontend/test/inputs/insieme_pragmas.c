@@ -48,16 +48,20 @@ int main() {
 	unsigned array1Da[10];
 	unsigned array1Db[10];
 	unsigned array2D[10][10];
-
+	
 	int x = 0;
-
+	
 #pragma insieme iterations 42
-	for(int i = 0; i < 10; ++i) { x = i; }
-
+	for(int i = 0; i < 10; ++i) {
+		x = i;
+	}
+	
 #pragma insieme fun_unroll (2)
-{
-	for(int i = 0; i < 10; ++i) { x = i; }
-}
+	{
+		for(int i = 0; i < 10; ++i) {
+			x = i;
+		}
+	}
 	return 0;
 }
 

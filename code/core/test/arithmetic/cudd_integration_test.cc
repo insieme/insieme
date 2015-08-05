@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,70 +49,71 @@
  */
 
 namespace std {
-	namespace {
+namespace {
 
-		void ownPrintRec(std::ostream& out, DdManager* mgr, DdNode* node, std::vector<int> path, DdNode* zero) {
+void ownPrintRec(std::ostream& out, DdManager* mgr, DdNode* node, std::vector<int> path, DdNode* zero) {
 
-			// terminal case - a
-			DdNode* N = Cudd_Regular(node);
-
-			if (cuddIsConstant(N)) {
-
-				// Terminal case: print the path if one has been reached
-				if (node != zero) {
-					out << " ";
-					// print path
-					for (auto it=path.begin(); it!=path.end(); ++it) {
-						int v = *it;
-						if (0 <= v && v <=1) {
-							out << v;
-						} else {
-							out << '-';
-						}
-					}
+	// terminal case - a
+	DdNode* N = Cudd_Regular(node);
+	
+	if(cuddIsConstant(N)) {
+	
+		// Terminal case: print the path if one has been reached
+		if(node != zero) {
+			out << " ";
+			// print path
+			for(auto it=path.begin(); it!=path.end(); ++it) {
+				int v = *it;
+				if(0 <= v && v <=1) {
+					out << v;
 				}
-				return;
-
+				else {
+					out << '-';
+				}
 			}
-
-			DdNode* Nv = cuddT(N);   // true path
-			DdNode* Nnv = cuddE(N);  // false path
-			if (Cudd_IsComplement(node)) {
-				Nv = Cudd_Not(Nv);
-				Nnv = Cudd_Not(Nnv);
-			}
-
-			int index = N->index;
-
-			// false path
-			path[index] = 0;
-			ownPrintRec(out, mgr, Nnv, path, zero);
-
-			// true path
-			path[index] = 1;
-			ownPrintRec(out, mgr, Nv, path, zero);
-
-			// clear path step
-			path[index] = 2;
-
-			return;
 		}
-
+		return;
+		
 	}
-	std::ostream& operator<<(std::ostream& out, const BDD& bdd) {
-
-		// create a path
-		int size = bdd.manager()->ReadSize();
-		std::vector<int> path(size, 2);
-
-		// use recursive print
-		out << "(";
-		ownPrintRec(out, bdd.manager()->getManager(), bdd.getNode(), path, bdd.manager()->bddZero().getNode());
-		out << " )";
-
-		// done
-		return out;
+	
+	DdNode* Nv = cuddT(N);   // true path
+	DdNode* Nnv = cuddE(N);  // false path
+	if(Cudd_IsComplement(node)) {
+		Nv = Cudd_Not(Nv);
+		Nnv = Cudd_Not(Nnv);
 	}
+	
+	int index = N->index;
+	
+	// false path
+	path[index] = 0;
+	ownPrintRec(out, mgr, Nnv, path, zero);
+	
+	// true path
+	path[index] = 1;
+	ownPrintRec(out, mgr, Nv, path, zero);
+	
+	// clear path step
+	path[index] = 2;
+	
+	return;
+}
+
+}
+std::ostream& operator<<(std::ostream& out, const BDD& bdd) {
+
+	// create a path
+	int size = bdd.manager()->ReadSize();
+	std::vector<int> path(size, 2);
+	
+	// use recursive print
+	out << "(";
+	ownPrintRec(out, bdd.manager()->getManager(), bdd.getNode(), path, bdd.manager()->bddZero().getNode());
+	out << " )";
+	
+	// done
+	return out;
+}
 }
 
 
@@ -125,62 +126,62 @@ TEST(CUDD, SimpleRelations) {
 
 	// creating a BDD
 	Cudd mgr;
-
+	
 	// true constant
 	BDD T = mgr.bddOne();
 	BDD F = mgr.bddZero();
-
+	
 	BDD v1 = mgr.bddVar();
 	BDD v2 = mgr.bddVar();
 	BDD v3 = mgr.bddVar();
-
+	
 	EXPECT_EQ("( --- )", toString(T));
 	EXPECT_EQ("( )", toString(F));
-
+	
 	EXPECT_EQ("( 1-- )", toString(v1));
 	EXPECT_EQ("( -1- )", toString(v2));
 	EXPECT_EQ("( --1 )", toString(v3));
-
+	
 	EXPECT_EQ("( 0-- )", toString(!v1));
 	EXPECT_EQ("( -0- )", toString(!v2));
 	EXPECT_EQ("( --0 )", toString(!v3));
-
+	
 	EXPECT_EQ("( 01- 1-- )", toString(v1 + v2));
 	EXPECT_EQ("( 11- )", toString(v1 * v2));
-
+	
 	EXPECT_EQ("( 00- )", toString(!(v1 + v2)));
-
-
+	
+	
 	EXPECT_EQ("( 0-- )", toString((!v1*!v2*!v3) + (!v1*v2*!v3) + (!v1*!v2*v3) + (!v1*v2*v3)));
 	EXPECT_EQ("( -0- )", toString((!v1*!v2*!v3) + (v1*!v2*!v3) + (!v1*!v2*v3) + (v1*!v2*v3)));
 	EXPECT_EQ("( --0 )", toString((!v1*!v2*!v3) + (v1*!v2*!v3) + (!v1*v2*!v3) + (v1*v2*!v3)));
-
-
+	
+	
 	// -- test some tautologies
-
+	
 	EXPECT_EQ(T,T);
 	EXPECT_EQ(F,F);
 	EXPECT_NE(T,F);
-
+	
 	EXPECT_EQ(T, v1 + !v1);
 	EXPECT_EQ(F, v1 * !v1);
-
+	
 	EXPECT_NE(F, v1 + !v1);
 	EXPECT_NE(T, v1 * !v1);
-
-
-
+	
+	
+	
 	// -- test multiple managers
-
+	
 	Cudd mgr1;
 	Cudd mgr2;
-
+	
 	BDD m1v1 = mgr1.bddVar(1);
 	BDD m2v1 = mgr2.bddVar(1);
-
+	
 	EXPECT_EQ(m1v1, m2v1.Transfer(mgr1));
 	EXPECT_EQ(m1v1.Transfer(mgr2), m2v1);
-
+	
 }
 
 } // end namespace arithmetic

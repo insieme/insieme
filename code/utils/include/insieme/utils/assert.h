@@ -54,67 +54,70 @@
 
 #if defined(NDEBUG)
 
-	#define _assert_ignore if(false) std::cerr << ""
+#define _assert_ignore if(false) std::cerr << ""
 
-	#define assert_decl(_DECL) ((void)0)
-	#define assert_true(_COND) _assert_ignore
-	#define assert_eq(_a,_b) _assert_ignore
-	#define assert_ne(_a,_b) _assert_ignore
-	#define assert_lt(_a,_b) _assert_ignore
-	#define assert_le(_a,_b) _assert_ignore
-	#define assert_gt(_a,_b) _assert_ignore
-	#define assert_ge(_a,_b) _assert_ignore
-	#define assert_fail() _assert_ignore
+#define assert_decl(_DECL) ((void)0)
+#define assert_true(_COND) _assert_ignore
+#define assert_eq(_a,_b) _assert_ignore
+#define assert_ne(_a,_b) _assert_ignore
+#define assert_lt(_a,_b) _assert_ignore
+#define assert_le(_a,_b) _assert_ignore
+#define assert_gt(_a,_b) _assert_ignore
+#define assert_ge(_a,_b) _assert_ignore
+#define assert_fail() _assert_ignore
 
 #else
-	#include <iostream>
+#include <iostream>
 
-	#include "insieme/utils/unused.h"
+#include "insieme/utils/unused.h"
 
-	namespace insieme {
-		namespace utils {
-			namespace detail {
+namespace insieme {
+namespace utils {
+namespace detail {
 
-				struct LazyAssertion {
-					bool value;
-					LazyAssertion(bool value) : value(value) { 
-						if(!value) { 
-							std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString();
-						} 
-					}
-					~LazyAssertion() { 
-						if(!value) { 
-							std::cerr << "\n"; abort();
-						} 
-					}
-					operator bool() const { return !value; }
-				};
+struct LazyAssertion {
+	bool value;
+	LazyAssertion(bool value) : value(value) {
+		if(!value) {
+			std::cerr << "Assertion backtrace:\n" << debug::getBacktraceString();
+		}
+	}
+	~LazyAssertion() {
+		if(!value) {
+			std::cerr << "\n";
+			abort();
+		}
+	}
+	operator bool() const {
+		return !value;
+	}
+};
 
-			} // end namespace detail
-		} // end namespace utils
-	} // end namespace insieme
+} // end namespace detail
+} // end namespace utils
+} // end namespace insieme
 
-	#define __xstr(a) __str(a)
-	#define __str(a) #a
+#define __xstr(a) __str(a)
+#define __str(a) #a
 
-	#define assert_decl(_DECL) _DECL
+#define assert_decl(_DECL) _DECL
 
-	#define assert_true(_COND) if (__unused auto x = insieme::utils::detail::LazyAssertion((bool)(_COND))) std::cerr << "\nAssertion " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"
+#define assert_true(_COND) if (__unused auto x = insieme::utils::detail::LazyAssertion((bool)(_COND))) std::cerr << "\nAssertion " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"
 
-	#define assert_eq(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) == (_B))) std::cerr << "\nAssertion " #_A " == " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define assert_eq(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) == (_B))) std::cerr << "\nAssertion " #_A " == " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define assert_ne(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) != (_B))) std::cerr << "\nAssertion " #_A " != " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define assert_ne(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) != (_B))) std::cerr << "\nAssertion " #_A " != " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define assert_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) < (_B))) std::cerr << "\nAssertion " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define assert_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) < (_B))) std::cerr << "\nAssertion " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define assert_le(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) <= (_B))) std::cerr << "\nAssertion " #_A " <= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define assert_le(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) <= (_B))) std::cerr << "\nAssertion " #_A " <= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define assert_gt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) > (_B))) std::cerr << "\nAssertion " #_A " > " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define assert_gt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) > (_B))) std::cerr << "\nAssertion " #_A " > " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define assert_ge(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) >= (_B))) std::cerr << "\nAssertion " #_A " >= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define assert_ge(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) >= (_B))) std::cerr << "\nAssertion " #_A " >= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	// the << "" part is to suppress no-effect statement warnings
-	#define assert_fail() if (__unused auto x = insieme::utils::detail::LazyAssertion(false)) std::cerr << ""
+// the << "" part is to suppress no-effect statement warnings
+#define assert_fail() if (__unused auto x = insieme::utils::detail::LazyAssertion(false)) std::cerr << ""
 
 #endif
 

@@ -45,56 +45,62 @@
 
 #ifdef NDEBUG
 
-	#define _expect_ignore if(false) std::cerr << ""
+#define _expect_ignore if(false) std::cerr << ""
 
-	#define expect_decl(_DECL) ((void)0)
-	#define expect_true(_COND) _expect_ignore
-	#define expect_eq(_a,_b) _expect_ignore
-	#define expect_ne(_a,_b) _expect_ignore
-	#define expect_lt(_a,_b) _expect_ignore
-	#define expect_le(_a,_b) _expect_ignore
-	#define expect_gt(_a,_b) _expect_ignore
-	#define expect_ge(_a,_b) _expect_ignore
+#define expect_decl(_DECL) ((void)0)
+#define expect_true(_COND) _expect_ignore
+#define expect_eq(_a,_b) _expect_ignore
+#define expect_ne(_a,_b) _expect_ignore
+#define expect_lt(_a,_b) _expect_ignore
+#define expect_le(_a,_b) _expect_ignore
+#define expect_gt(_a,_b) _expect_ignore
+#define expect_ge(_a,_b) _expect_ignore
 
 #else
 
-	#include <iostream>
+#include <iostream>
 
-	#include "insieme/utils/unused.h"
+#include "insieme/utils/unused.h"
 
-	namespace insieme {
-		namespace utils {
-			namespace detail {
+namespace insieme {
+namespace utils {
+namespace detail {
 
-				struct LazyExpectation {
-					bool value;
-					LazyExpectation(bool value) : value(value) {}
-					~LazyExpectation() { if(!value) std::cerr << "\n"; }
-					operator bool() const { return !value; }
-				};
+struct LazyExpectation {
+	bool value;
+	LazyExpectation(bool value) : value(value) {}
+	~LazyExpectation() {
+		if(!value) {
+			std::cerr << "\n";
+		}
+	}
+	operator bool() const {
+		return !value;
+	}
+};
 
-			} // end namespace detail
-		} // end namespace utils
-	} // end namespace insieme
+} // end namespace detail
+} // end namespace utils
+} // end namespace insieme
 
-	#define __xstr(a) __str(a)
-	#define __str(a) #a
+#define __xstr(a) __str(a)
+#define __str(a) #a
 
-	#define expect_decl(_DECL) _DECL
+#define expect_decl(_DECL) _DECL
 
-	#define expect_true(_COND) if (__unused auto x = insieme::utils::detail::LazyExpectation(_COND)) std::cerr << "\nExpectation " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"
+#define expect_true(_COND) if (__unused auto x = insieme::utils::detail::LazyExpectation(_COND)) std::cerr << "\nExpectation " #_COND " of " __FILE__ ":" __xstr(__LINE__) " failed!\n"
 
-	#define expect_eq(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) == (_B))) std::cerr << "\nExpectation " #_A " == " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define expect_eq(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) == (_B))) std::cerr << "\nExpectation " #_A " == " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define expect_ne(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) != (_B))) std::cerr << "\nExpectation " #_A " != " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define expect_ne(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) != (_B))) std::cerr << "\nExpectation " #_A " != " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define expect_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) < (_B))) std::cerr << "\nExpectation " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define expect_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) < (_B))) std::cerr << "\nExpectation " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define expect_le(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) <= (_B))) std::cerr << "\nExpectation " #_A " <= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define expect_le(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) <= (_B))) std::cerr << "\nExpectation " #_A " <= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define expect_gt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) > (_B))) std::cerr << "\nExpectation " #_A " > " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define expect_gt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) > (_B))) std::cerr << "\nExpectation " #_A " > " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
-	#define expect_ge(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) >= (_B))) std::cerr << "\nExpectation " #_A " >= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+#define expect_ge(_A,_B) if (__unused auto x = insieme::utils::detail::LazyExpectation((_A) >= (_B))) std::cerr << "\nExpectation " #_A " >= " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
 
 #endif

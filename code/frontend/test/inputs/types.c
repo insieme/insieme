@@ -38,54 +38,54 @@
 
 // builtin types
 void basic_type_test() {
-	#pragma test expected "decl ref<int<4>> v0 = ( var(1))"
+#pragma test expected "decl ref<int<4>> v0 = ( var(1))"
 	int a = 1;
-
-	#pragma test expected "decl ref<int<8>> v0 = ( var(undefined(type<int<8>>)))"
+	
+#pragma test expected "decl ref<int<8>> v0 = ( var(undefined(type<int<8>>)))"
 	long b;
-
-	#pragma test expected "decl ref<int<2>> v0 = ( var(65535))"
+	
+#pragma test expected "decl ref<int<2>> v0 = ( var(65535))"
 	short c = 0xFFFF;
-
-	#pragma test expected "decl ref<char> v0 = ( var('a'))"
+	
+#pragma test expected "decl ref<char> v0 = ( var('a'))"
 	char d = 'a';
-
-	#pragma test expected "decl ref<ref<any>> v0 = ( var(undefined(type<ref<any>>)))"
+	
+#pragma test expected "decl ref<ref<any>> v0 = ( var(undefined(type<ref<any>>)))"
 	void* e;
-
-	#pragma test expected "decl ref<real<4>> v0 = ( var(0.0E+0))"
+	
+#pragma test expected "decl ref<real<4>> v0 = ( var(0.0E+0))"
 	float f = 0.00f;
-
-	#pragma test expected "decl ref<real<8>> v0 = ( var(undefined(type<real<8>>)))"
+	
+#pragma test expected "decl ref<real<8>> v0 = ( var(undefined(type<real<8>>)))"
 	double g;
-
-	#pragma test expected "decl ref<real<16>> v0 = ( var(undefined(type<real<16>>)))"
+	
+#pragma test expected "decl ref<real<16>> v0 = ( var(undefined(type<real<16>>)))"
 	long double h;
-
-	#pragma test expected "decl ref<vector<real<4>,3>> v0 = ( var(undefined(type<vector<real<4>,3>>)))"
+	
+#pragma test expected "decl ref<vector<real<4>,3>> v0 = ( var(undefined(type<vector<real<4>,3>>)))"
 	float v[3];
-
-    #pragma test expected "decl ref<vector<vector<int<4>,2>,3>> v0 = ( var(undefined(type<vector<vector<int<4>,2>,3>>)))"
+	
+#pragma test expected "decl ref<vector<vector<int<4>,2>,3>> v0 = ( var(undefined(type<vector<vector<int<4>,2>,3>>)))"
 	int vv[3][2];
-
-	#pragma test expected "decl ref<vector<real<4>,3>> v0 = ( var([0.0f, 0.0f, 0.0f]))"
+	
+#pragma test expected "decl ref<vector<real<4>,3>> v0 = ( var([0.0f, 0.0f, 0.0f]))"
 	float vvv[3] = { 0, 0, 0 };
-
-	#pragma test expected "decl ref<vector<vector<real<4>,1>,2>> v0 = ( var([[0.0f], [0.0f]]))"
+	
+#pragma test expected "decl ref<vector<vector<real<4>,1>,2>> v0 = ( var([[0.0f], [0.0f]]))"
 	float vvvv[][1] = { {0}, {0} };
-
-	#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_reinterpret(ref_null, type<array<int<4>,1>>)))"
+	
+#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_reinterpret(ref_null, type<array<int<4>,1>>)))"
 	int* b1 = 0;
-
-	#pragma test expected "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 = ( var(ref_reinterpret(ref_null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)))"
+	
+#pragma test expected "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 = ( var(ref_reinterpret(ref_null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)))"
 	int*** c1 = 0;
-
-	#pragma test expected "(v100 := ref_reinterpret(ref_null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
+	
+#pragma test expected "(v100 := ref_reinterpret(ref_null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
 	c1 = 0;
-
-	#pragma test expected "decl ref<real<8>> v0 = ( var(3.1415926535897931E+0))"
+	
+#pragma test expected "decl ref<real<8>> v0 = ( var(3.1415926535897931E+0))"
 	double pi = 3.14159265358979323846;
-
+	
 //	#pragma test expected "decl ref<vector<char,10>> v0 =  var("Hello Mum")"
 //	char str[10] = "Hello Mum";
 }
@@ -100,11 +100,11 @@ struct Person {
 };
 
 void test_func() {
-	#pragma test expected \
+#pragma test expected \
 	"decl ref<struct Person <height:int<4>,age:int<4>>> v0 = ( var(undefined(type<struct Person <height:int<4>,age:int<4>>>)))"
 	struct Person p;
-
-	#pragma test expected \
+	
+#pragma test expected \
 	"decl ref<struct Person <height:int<4>,age:int<4>>> v0 = ( var(struct{height:=178, age:=28}))"
 	struct Person p2 = {178, 28};
 }
@@ -183,7 +183,7 @@ struct D1 {
 
 void mem_alloc() {
 
-	#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_reinterpret(malloc(4ul), type<array<int<4>,1>>)))"
+#pragma test expected "decl ref<ref<array<int<4>,1>>> v0 = ( var(ref_reinterpret(malloc(4ul), type<array<int<4>,1>>)))"
 	int* a = malloc(4);
 	free(a); // make the static checks happy
 }
@@ -201,20 +201,24 @@ void mem_alloc() {
 //	enum E b = OFF;
 //}
 
-int add(int a, int b) { return a+b; }
-int sub(int a, int b) { return a-b; }
+int add(int a, int b) {
+	return a+b;
+}
+int sub(int a, int b) {
+	return a-b;
+}
 
 void fun_ptr() {
 
 	// test declaration, assignment and call of function pointers
-
-	#pragma test expected "decl ref<(int<4>, int<4>) -> int<4>> v0 = ( var(fun(int<4> v1, int<4> v2) -> int<4> {return (v1+v2);}))"
+	
+#pragma test expected "decl ref<(int<4>, int<4>) -> int<4>> v0 = ( var(fun(int<4> v1, int<4> v2) -> int<4> {return (v1+v2);}))"
 	int(* f)(int,int) = &add;
-
-	#pragma test expected "(v100 := fun(int<4> v1, int<4> v2) -> int<4> {return (v1-v2);})"
+	
+#pragma test expected "(v100 := fun(int<4> v1, int<4> v2) -> int<4> {return (v1-v2);})"
 	f = &sub;
-
-	#pragma test expected "(v100)(3, 4)"
+	
+#pragma test expected "(v100)(3, 4)"
 	f(3,4);
-
+	
 }

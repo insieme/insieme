@@ -51,214 +51,225 @@ namespace insieme {
 namespace utils {
 namespace compiler {
 
-	namespace fs = boost::filesystem;
+namespace fs = boost::filesystem;
 
-	Compiler Compiler::getDefaultC99Compiler() {
+Compiler Compiler::getDefaultC99Compiler() {
 
-		const char *envVar = std::getenv("INSIEME_C_COMPILER");
-		if (envVar == nullptr) {
-			envVar = "gcc";
-		}
-		Compiler res(envVar);
-		res.addFlag("-x c");
-		res.addFlag("-Wall");
-		res.addFlag("--std=gnu99");
-		return res;
+	const char *envVar = std::getenv("INSIEME_C_COMPILER");
+	if(envVar == nullptr) {
+		envVar = "gcc";
 	}
+	Compiler res(envVar);
+	res.addFlag("-x c");
+	res.addFlag("-Wall");
+	res.addFlag("--std=gnu99");
+	return res;
+}
 
-	Compiler Compiler::getDefaultCppCompiler() {
+Compiler Compiler::getDefaultCppCompiler() {
 
-		const char *envVar = std::getenv("INSIEME_CXX_COMPILER");
-		if (envVar == nullptr) {
-			envVar = "g++";
-		}
-
-		Compiler res(envVar);
-		res.addFlag("-x c++");
-		res.addFlag("-lstdc++");
-		res.addFlag("-Wall");
-		res.addFlag("--std=c++98");
-		res.addFlag("-fpermissive");
-		res.addFlag("-Wno-write-strings");
-		return res;
+	const char *envVar = std::getenv("INSIEME_CXX_COMPILER");
+	if(envVar == nullptr) {
+		envVar = "g++";
 	}
+	
+	Compiler res(envVar);
+	res.addFlag("-x c++");
+	res.addFlag("-lstdc++");
+	res.addFlag("-Wall");
+	res.addFlag("--std=c++98");
+	res.addFlag("-fpermissive");
+	res.addFlag("-Wno-write-strings");
+	return res;
+}
 
-	Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
-		Compiler res = base;
-		res.addFlag("-I " SRC_ROOT_DIR "runtime/include -I " SRC_ROOT_DIR "common/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
-		return res;
+Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
+	Compiler res = base;
+	res.addFlag("-I " SRC_ROOT_DIR "runtime/include -I " SRC_ROOT_DIR "common/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+	return res;
+}
+
+Compiler Compiler::getOptimizedCompiler(const Compiler& base, const string& level) {
+	Compiler res = base;
+	res.addFlag("-O" + level);
+	return res;
+}
+
+Compiler Compiler::getDebugCompiler(const Compiler& base, const string& level) {
+	Compiler res = base;
+	res.addFlag("-g" + level);
+	return res;
+}
+
+string Compiler::getCommand(const vector<string>& inputFiles, const string& outputFile) const {
+	// build up compiler command
+	std::stringstream cmd;
+	
+	// some flags are known to be required to be place before the source file
+	vector<string> before;
+	vector<string> after;
+	
+	// split up flags
+	for(auto cur : flags) {
+		// the -x option has to be before the input file
+		if(cur[0] == '-' && cur[1] == 'x') {
+			before.push_back(cur);
+		}
+		else {
+			after.push_back(cur);
+		}
 	}
-
-	Compiler Compiler::getOptimizedCompiler(const Compiler& base, const string& level) {
-		Compiler res = base;
-		res.addFlag("-O" + level);
-		return res;
+	
+	cmd << executable;
+	cmd << " " << join(" ", before);
+	cmd << " " << join(" ", inputFiles);
+	cmd << " " << join(" ", after);
+	cmd << (incDirs.empty() ? "" : " -I") << join(" -I", incDirs);
+	cmd << (libs.getPaths().empty() ? "" : " -L") << join(" -L", libs.getPaths());
+	cmd << (libs.getLibs().empty() ? "" : " -l") << join(" -l", libs.getLibs());
+	cmd << " -o " << outputFile;
+	
+	// redirect streams if compilation should be 'silent'
+	if(silent) {
+		cmd << " > /dev/null 2>&1";
 	}
+	
+	return cmd.str();
+}
 
-	Compiler Compiler::getDebugCompiler(const Compiler& base, const string& level) {
-		Compiler res = base;
-		res.addFlag("-g" + level);
-		return res;
-	}
-
-	string Compiler::getCommand(const vector<string>& inputFiles, const string& outputFile) const {
-		// build up compiler command
-		std::stringstream cmd;
-
-		// some flags are known to be required to be place before the source file
-		vector<string> before;
-		vector<string> after;
-
-		// split up flags
-		for(auto cur : flags) {
-			// the -x option has to be before the input file
-			if (cur[0] == '-' && cur[1] == 'x') {
-				before.push_back(cur);
-			} else {
-				after.push_back(cur);
-			}
-		}
-
-		cmd << executable;
-		cmd << " " << join(" ", before);
-		cmd << " " << join(" ", inputFiles);
-		cmd << " " << join(" ", after);
-		cmd << (incDirs.empty() ? "" : " -I") << join(" -I", incDirs);
-		cmd << (libs.getPaths().empty() ? "" : " -L") << join(" -L", libs.getPaths());
-		cmd << (libs.getLibs().empty() ? "" : " -l") << join(" -l", libs.getLibs());
-		cmd << " -o " << outputFile;
-
-		// redirect streams if compilation should be 'silent'
-		if (silent) {
-			cmd << " > /dev/null 2>&1";
-		}
-
-		return cmd.str();
-	}
-
-	const vector<string> getDefaultIncludePaths(string cmd) {
-		vector<string> paths;
-		char line[256];
-		FILE* file = popen(cmd.c_str(), "r");
-		if (file == NULL){
-			return paths;
-		}
-		bool capture = false;
-		string input;
-		string startPrefix("#include <...> search starts here:");
-		string stopPrefix("End of search list.");
-		while(fgets(line, 256, file) ) {
-			input = string(line);
-			//#include <...> search starts here:
-			if(input.substr(0, startPrefix.length()) == startPrefix) {
-				capture = true;
-				//leave this line out
-				continue;
-			}
-			//End of Search list.
-			if(input.substr(0, stopPrefix.length()) == stopPrefix) {
-				capture = false;
-				//stop after this line
-				break;
-			}
-
-			if(capture) {
-				input.replace(input.begin(),input.begin()+1,"");
-				input.replace(input.end()-1,input.end(),"/");
-				paths.push_back(input);
-			}
-		}
-		pclose(file);
-		if(paths.empty()) {
-            std::cerr << "ATTENTION: No default include paths found. Terminal local language has to be set to en_XX.\n";
-		}
+const vector<string> getDefaultIncludePaths(string cmd) {
+	vector<string> paths;
+	char line[256];
+	FILE* file = popen(cmd.c_str(), "r");
+	if(file == NULL) {
 		return paths;
 	}
-
-	/**
-	 * Calls the backend compiler for C (gcc) to determine the include paths
-	 * @ return vector with the include paths
-	 */
-	const vector<string> getDefaultCIncludePaths() {
-		auto compiler = Compiler::getDefaultC99Compiler();
-		std::stringstream ss;
-		ss << "echo | ";
-		ss << compiler.getExecutable();
-		ss << " -v -xc -E - 2>&1";
-		return getDefaultIncludePaths(ss.str());
-	}
-
-	/**
-	 * Calls the backend compiler for C++ (g++) to determine the include paths
-	 * @ return vector with the include paths
-	 */
-	const vector<string> getDefaultCppIncludePaths() {
-		auto compiler = Compiler::getDefaultCppCompiler();
-		std::stringstream ss;
-		ss << "echo | ";
-		ss << compiler.getExecutable();
-		ss << " -v -xc++ -E - 2>&1";
-		return getDefaultIncludePaths(ss.str());
-	}
-
-	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
-		string&& cmd = compiler.getCommand(sourcefile, targetfile);
-		LOG(INFO) << "Compiling with: " << cmd << std::endl;
-		int res = system(cmd.c_str());
-		if (res) std::cerr << "Failure with exit status " << res << std::endl;
-		return res == 0;
-	}
-
-	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler) {
-		vector<string> files(1);
-		files[0] = sourcefile;
-		return compile(files, targetfile, compiler);
-	}
-
-
-	bool compile(const VirtualPrintable& source, const Compiler& compiler) {
-		string target = compileToBinary(source, compiler);
-		if (target.empty()) return false;
-
-		// delete target file
-		if (boost::filesystem::exists(target))
-			boost::filesystem::remove(target);
-
-		return true;
-	}
-
-	string compileToBinary(const VirtualPrintable& source, const Compiler& compiler) {
-		// create temporary target file name
-		fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "insieme-trg-%%%%%%%%");
-		LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
-
-		if (compileToBinary(source, targetFile.string(), compiler))
-			return targetFile.string();
-		return string();
-	}
-
-
-	bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler) {
-		// create a temporary source file
-		fs::path sourceFile = fs::unique_path(fs::temp_directory_path() / "insieme-src-%%%%%%%%");
-		LOG(DEBUG) << "Using temporary file " << sourceFile << " as a source file for compilation.";
-
-		// write source to file
-		std::fstream srcFile(sourceFile.string(), std::fstream::out);
-		srcFile << source << "\n";
-		srcFile.close();
-
-		// perform compilation
-		bool success = compile(sourceFile.string(), targetFile, compiler);
-
-		// delete source file - only if compilation was a success
-		if (boost::filesystem::exists(sourceFile)) {
-			if (success) boost::filesystem::remove(sourceFile);
-			else std::cerr << "Offending source code can be found in " << sourceFile << std::endl;
+	bool capture = false;
+	string input;
+	string startPrefix("#include <...> search starts here:");
+	string stopPrefix("End of search list.");
+	while(fgets(line, 256, file)) {
+		input = string(line);
+		//#include <...> search starts here:
+		if(input.substr(0, startPrefix.length()) == startPrefix) {
+			capture = true;
+			//leave this line out
+			continue;
 		}
-
-		return success;
+		//End of Search list.
+		if(input.substr(0, stopPrefix.length()) == stopPrefix) {
+			capture = false;
+			//stop after this line
+			break;
+		}
+		
+		if(capture) {
+			input.replace(input.begin(),input.begin()+1,"");
+			input.replace(input.end()-1,input.end(),"/");
+			paths.push_back(input);
+		}
 	}
+	pclose(file);
+	if(paths.empty()) {
+		std::cerr << "ATTENTION: No default include paths found. Terminal local language has to be set to en_XX.\n";
+	}
+	return paths;
+}
+
+/**
+ * Calls the backend compiler for C (gcc) to determine the include paths
+ * @ return vector with the include paths
+ */
+const vector<string> getDefaultCIncludePaths() {
+	auto compiler = Compiler::getDefaultC99Compiler();
+	std::stringstream ss;
+	ss << "echo | ";
+	ss << compiler.getExecutable();
+	ss << " -v -xc -E - 2>&1";
+	return getDefaultIncludePaths(ss.str());
+}
+
+/**
+ * Calls the backend compiler for C++ (g++) to determine the include paths
+ * @ return vector with the include paths
+ */
+const vector<string> getDefaultCppIncludePaths() {
+	auto compiler = Compiler::getDefaultCppCompiler();
+	std::stringstream ss;
+	ss << "echo | ";
+	ss << compiler.getExecutable();
+	ss << " -v -xc++ -E - 2>&1";
+	return getDefaultIncludePaths(ss.str());
+}
+
+bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
+	string&& cmd = compiler.getCommand(sourcefile, targetfile);
+	LOG(INFO) << "Compiling with: " << cmd << std::endl;
+	int res = system(cmd.c_str());
+	if(res) {
+		std::cerr << "Failure with exit status " << res << std::endl;
+	}
+	return res == 0;
+}
+
+bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler) {
+	vector<string> files(1);
+	files[0] = sourcefile;
+	return compile(files, targetfile, compiler);
+}
+
+
+bool compile(const VirtualPrintable& source, const Compiler& compiler) {
+	string target = compileToBinary(source, compiler);
+	if(target.empty()) {
+		return false;
+	}
+	
+	// delete target file
+	if(boost::filesystem::exists(target)) {
+		boost::filesystem::remove(target);
+	}
+	
+	return true;
+}
+
+string compileToBinary(const VirtualPrintable& source, const Compiler& compiler) {
+	// create temporary target file name
+	fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "insieme-trg-%%%%%%%%");
+	LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
+	
+	if(compileToBinary(source, targetFile.string(), compiler)) {
+		return targetFile.string();
+	}
+	return string();
+}
+
+
+bool compileToBinary(const VirtualPrintable& source, const string& targetFile, const Compiler& compiler) {
+	// create a temporary source file
+	fs::path sourceFile = fs::unique_path(fs::temp_directory_path() / "insieme-src-%%%%%%%%");
+	LOG(DEBUG) << "Using temporary file " << sourceFile << " as a source file for compilation.";
+	
+	// write source to file
+	std::fstream srcFile(sourceFile.string(), std::fstream::out);
+	srcFile << source << "\n";
+	srcFile.close();
+	
+	// perform compilation
+	bool success = compile(sourceFile.string(), targetFile, compiler);
+	
+	// delete source file - only if compilation was a success
+	if(boost::filesystem::exists(sourceFile)) {
+		if(success) {
+			boost::filesystem::remove(sourceFile);
+		}
+		else {
+			std::cerr << "Offending source code can be found in " << sourceFile << std::endl;
+		}
+	}
+	
+	return success;
+}
 
 } // end namespace compiler
 } // end namespace utils

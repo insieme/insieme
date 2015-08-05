@@ -45,43 +45,43 @@
 namespace insieme {
 namespace annotations {
 
-	using namespace std;
+using namespace std;
 
-	TEST(LoopAnnotation, BinaryDumpTest) {
+TEST(LoopAnnotation, BinaryDumpTest) {
 
-		// create a code fragment using manager A
-		NodeManager managerA;
-		IRBuilder builder(managerA);
-
-		NodePtr loop = builder.parseStmt(
-				"for(int<4> i = 0 .. 10 : 1) { }"
-		);
-
-		EXPECT_TRUE(loop);
-
-
-		// check some basic loop annotation values
-		EXPECT_FALSE(LoopAnnotation::hasAttachedValue(loop));
-
-		LoopAnnotation::attach(loop, 123);
-		EXPECT_TRUE(LoopAnnotation::hasAttachedValue(loop));
-		EXPECT_EQ(123u, LoopAnnotation::getValue(loop));
-
-
-		// dump to binary ..
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-		core::dump::binary::dumpIR(buffer, loop);
-
-		// restore within different manager
-		NodeManager managerB;
-		NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
-
-		EXPECT_NE(loop, restored);
-		EXPECT_EQ(*loop, *restored);
-
-		ASSERT_TRUE(LoopAnnotation::hasAttachedValue(restored));
-		EXPECT_EQ(123u, LoopAnnotation::getValue(restored));
-
+	// create a code fragment using manager A
+	NodeManager managerA;
+	IRBuilder builder(managerA);
+	
+	NodePtr loop = builder.parseStmt(
+	                   "for(int<4> i = 0 .. 10 : 1) { }"
+	               );
+	               
+	EXPECT_TRUE(loop);
+	
+	
+	// check some basic loop annotation values
+	EXPECT_FALSE(LoopAnnotation::hasAttachedValue(loop));
+	
+	LoopAnnotation::attach(loop, 123);
+	EXPECT_TRUE(LoopAnnotation::hasAttachedValue(loop));
+	EXPECT_EQ(123u, LoopAnnotation::getValue(loop));
+	
+	
+	// dump to binary ..
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+	core::dump::binary::dumpIR(buffer, loop);
+	
+	// restore within different manager
+	NodeManager managerB;
+	NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
+	
+	EXPECT_NE(loop, restored);
+	EXPECT_EQ(*loop, *restored);
+	
+	ASSERT_TRUE(LoopAnnotation::hasAttachedValue(restored));
+	EXPECT_EQ(123u, LoopAnnotation::getValue(restored));
+	
 //
 //		// create conversion register
 //		AnnotationConverterRegister registry;
@@ -120,7 +120,7 @@ namespace annotations {
 //		// annotation should not be available
 //		EXPECT_FALSE(restored3->hasAttachedValue<DummyAnnotation>());
 
-	}
+}
 
 
 } // end namespace annotations

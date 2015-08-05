@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,13 +62,19 @@ void get_load_own(unsigned long* time) {
 		return;
 	}
 	//            pid com sta ppi pgr ses tty tpg flg mflt cmlt jflt cjlt usr sys cusr csys
-	if(fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d", &user_time, &kernel_time) != 2) { IRT_DEBUG("Instrumentation: Unable to read process load data, reason: %s\n", strerror(errno)); fclose(file); return; }
+	if(fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d", &user_time, &kernel_time) != 2) {
+		IRT_DEBUG("Instrumentation: Unable to read process load data, reason: %s\n", strerror(errno));
+		fclose(file);
+		return;
+	}
 	fclose(file);
 	// overflow "handling"
-	if(user_time < last_user_time || kernel_time < last_kernel_time)
+	if(user_time < last_user_time || kernel_time < last_kernel_time) {
 		*time = 0;
-	else
+	}
+	else {
 		*time = (user_time - last_user_time) + (kernel_time - last_kernel_time);
+	}
 	last_user_time = user_time;
 	last_kernel_time = kernel_time;
 }
@@ -88,13 +94,18 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 		IRT_DEBUG("Instrumentation: Unable to open file for system load readings, reason: %s\n", strerror(errno));
 		return;
 	}
-	if(fscanf(file, "cpu %lu %lu %lu %lu", &total_user, &total_user_low, &total_system, &total_idle) != 4) { IRT_DEBUG("Instrumentation: Unable to read system load data, reason: %s\n", strerror(errno)); fclose(file); return; }
+	if(fscanf(file, "cpu %lu %lu %lu %lu", &total_user, &total_user_low, &total_system, &total_idle) != 4) {
+		IRT_DEBUG("Instrumentation: Unable to read system load data, reason: %s\n", strerror(errno));
+		fclose(file);
+		return;
+	}
 	fclose(file);
 	// overflow "handling"
 	if(total_user < last_total_user || total_user_low < last_total_user_low || total_system < last_total_system || total_idle < last_total_idle) {
 		*system_time = 0;
 		*idle_time = 0;
-	} else {
+	}
+	else {
 		*system_time = (total_user - last_total_user) + (total_user_low - last_total_user_low) + (total_system - last_total_system);
 		*idle_time = (total_idle - last_total_idle);
 	}

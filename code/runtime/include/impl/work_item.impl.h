@@ -54,14 +54,14 @@
 
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) {
 	IRT_ASSERT(index<wi->num_groups, IRT_ERR_INTERNAL, "WG membership access out of range.");
-	return wi->wg_memberships[index]; 
+	return wi->wg_memberships[index];
 }
 static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index) {
 	IRT_ASSERT(index<wi->num_groups, IRT_ERR_INTERNAL, "WG membership number access out of range.");
-	return wi->wg_memberships[index].num; 
+	return wi->wg_memberships[index].num;
 }
 static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index) {
-	return irt_wi_get_wg(wi,index)->local_member_count; 
+	return irt_wi_get_wg(wi,index)->local_member_count;
 }
 static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index) {
 	return irt_wi_get_wg_membership(wi, index).wg_id.cached; // TODO cached distributed crash
@@ -77,7 +77,8 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 		ret = self->wi_reuse_stack;
 		self->wi_reuse_stack = ret->next_reuse;
 		//IRT_DEBUG("WI_RE\n");
-	} else {
+	}
+	else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
 		//IRT_DEBUG("WI_FU\n");
 	}
@@ -100,12 +101,12 @@ static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
 	wi->wg_memberships = (irt_wi_wg_membership*)malloc(sizeof(irt_wi_wg_membership)*IRT_MAX_WORK_GROUPS);
 }
 
-static inline void _irt_print_work_item_range(const irt_work_item_range* r) { 
+static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%" PRId64 "..%" PRId64 " : %" PRId64, r->begin, r->end, r->step);
 }
 
 static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range,
-		irt_wi_implementation* impl, irt_lw_data_item* params) {
+                                irt_wi_implementation* impl, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
 	wi->parent_id = irt_work_item_null_id();
@@ -121,11 +122,13 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		uint32 size = irt_type_get_bytes(self->cur_context.cached, params->type_id);
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) {
 			wi->parameters = &wi->param_buffer;
-		} else {
+		}
+		else {
 			wi->parameters = (irt_lw_data_item*)malloc(size);
 		}
 		memcpy(wi->parameters, params, size);
-	} else {
+	}
+	else {
 		wi->parameters = NULL;
 	}
 	wi->range = *range;
@@ -135,7 +138,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->stack_storage = NULL;
 	wi->wg_memberships = NULL;
 	// if this WI has a parent (which means it's not the entry point) migrate some values
-	if(self->cur_wi) { 
+	if(self->cur_wi) {
 		wi->parent_id = self->cur_wi->id;
 		wi->parent_num_active_children = self->cur_wi->num_active_children;
 		wi->default_parallel_wi_count = self->cur_wi->default_parallel_wi_count;
@@ -180,7 +183,8 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
 		retval->source_id = base_source->id;
-	} else {
+	}
+	else {
 		// splitting non-fragment wi
 		retval->source_id = source->id;
 	}
@@ -250,11 +254,13 @@ bool _irt_wi_join_all_event(void *user_data) {
 	 *          I0  W0
 	 *         /  \
 	 *        W1  W2
-	 * I0 is waiting in join_all, W0 triggered the event --> needs to be ignored 
+	 * I0 is waiting in join_all, W0 triggered the event --> needs to be ignored
 	 */
-	if(*(join_data->joining_wi->num_active_children) > 0) return true;
-
-	#ifdef IRT_ASTEROIDEA_STACKS
+	if(*(join_data->joining_wi->num_active_children) > 0) {
+		return true;
+	}
+	
+#ifdef IRT_ASTEROIDEA_STACKS
 	/* NOTE:
 	 * We have to wait for the stack to be available here in order to avoid a race condition,
 	 * which may arise in a small window of vulnerability in the following situation:
@@ -273,8 +279,8 @@ bool _irt_wi_join_all_event(void *user_data) {
 	 * an immediate sibling.
 	 */
 	while(!irt_atomic_bool_compare_and_swap(&join_data->joining_wi->stack_available, true, false, bool));
-	#endif //IRT_ASTEROIDEA_STACKS
-
+#endif //IRT_ASTEROIDEA_STACKS
+	
 	irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED_JOIN_ALL, join_data->joining_wi->id);
 	IRT_DEBUG(" > %p releasing %p\n", (void*) irt_worker_get_current()->finalize_wi, (void*) join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
@@ -301,9 +307,12 @@ void irt_wi_join_all(irt_work_item* wi) {
 #endif //IRT_ASTEROIDEA_STACKS
 		_irt_worker_switch_from_wi(self, wi);
 		irt_inst_region_start_measurements(wi);
-	} else {
+	}
+	else {
 		// check if multi-level immediate wi was signaled instead of current wi
-		if(*(wi->num_active_children) != 0) irt_wi_join_all(wi);
+		if(*(wi->num_active_children) != 0) {
+			irt_wi_join_all(wi);
+		}
 	}
 	IRT_DEBUG(" J %p join_all ended\n", (void*) wi);
 }
@@ -313,38 +322,41 @@ void irt_wi_join_all(irt_work_item* wi) {
 void irt_wi_end(irt_work_item* wi) {
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", (void*) wi, (void*) irt_worker_get_current());
 	irt_worker* worker = irt_worker_get_current();
-
+	
 	// instrumentation update
 	irt_inst_region_end_measurements(wi);
 	irt_inst_region_propagate_data_from_wi_to_regions(wi);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
-
+	
 	// check for fragment, handle
 	if(irt_wi_is_fragment(wi)) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
-		if (irt_atomic_sub_and_fetch(&source->num_fragments, 1, uint32) == 0) {
+		if(irt_atomic_sub_and_fetch(&source->num_fragments, 1, uint32) == 0) {
 			irt_wi_end(source);
 		}
-	} else {
-		// delete params struct
-		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
 	}
-
+	else {
+		// delete params struct
+		if(wi->parameters != &wi->param_buffer) {
+			free(wi->parameters);
+		}
+	}
+	
 	// update state
 	irt_atomic_store(&wi->state, IRT_WI_STATE_DONE);
-
+	
 	// cleanup
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	irt_inst_region_wi_finalize(wi);
 	
 	IRT_DEBUG(" ! %p end\n", (void*) wi);
-
+	
 	irt_wi_implementation *wimpl = wi->impl;
 	irt_optimizer_remove_dvfs(&(wimpl->variants[wi->selected_impl_variant]));
 	irt_optimizer_compute_optimizations(&(wimpl->variants[wi->selected_impl_variant]), wi, false);
-
+	
 	// end
 	worker->finalize_wi = wi;
 	lwt_end(&worker->basestack);
@@ -362,7 +374,7 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	}
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, wi->id);
 	IRT_DEBUG(" ^ %p finalize\n", (void*) wi);
-
+	
 	/* NOTE:
 	 * Triggering our own completion event that late is necessary to avoid stack-
 	 * or heap corruption as a side effect of a race condition in case a parent
@@ -392,10 +404,12 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	// notify (the parent) of our end
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 	irt_wi_event_register_destroy(wi->id);
-
+	
 	// free the WG membership array which may have been allocated
-	if(wi->wg_memberships != NULL) free(wi->wg_memberships);
-
+	if(wi->wg_memberships != NULL) {
+		free(wi->wg_memberships);
+	}
+	
 	/* NOTE:
 	 * The triggering of events just at the end of the finalization and _after_
 	 * the decrementing of parent_num_active_children enables us to change the
@@ -407,7 +421,7 @@ void irt_wi_finalize(irt_worker* worker, irt_work_item* wi) {
 	 * irt_wi_join or irt_wi_join_all) for it's spawned children to die.
 	 */
 	IRT_ASSERT(*wi->num_active_children == 0, IRT_ERR_INTERNAL, "Parent died before all children did")
-
+	
 	_irt_wi_recycle(wi, worker);
 }
 
@@ -418,7 +432,9 @@ void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** ou
 	irt_work_item_range *r = &wi->range;
 	uint64 *offsets = (uint64*)alloca(sizeof(uint64)*elements);
 	uint64 step = (r->end - r->begin) / elements, cur = r->begin;
-	for(uint32 i=0; i<elements; ++i, cur+=step) offsets[i] = cur;
+	for(uint32 i=0; i<elements; ++i, cur+=step) {
+		offsets[i] = cur;
+	}
 	irt_wi_split(wi, elements, offsets, out_wis);
 #ifdef _GEMS_SIM
 	// alloca is implemented as malloc
@@ -428,7 +444,7 @@ void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** ou
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	// TODO implement custom (faster)
 	irt_work_item_range *r = &wi->range;
-	uint64 offsets[] = {(uint32)r->begin, (uint32)(r->begin + ( (r->end - r->begin) / 2))};
+	uint64 offsets[] = {(uint32)r->begin, (uint32)(r->begin + ((r->end - r->begin) / 2))};
 	irt_wi_split(wi, 2, offsets, out_wis);
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {
@@ -454,8 +470,9 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		}
 		// splitting fragment wi, can safely delete
 		_irt_wi_recycle(wi, self);
-	} else {
-		irt_atomic_fetch_and_add(&wi->num_fragments, elements, uint32); // This needs to be atomic even if it may not look like it		
+	}
+	else {
+		irt_atomic_fetch_and_add(&wi->num_fragments, elements, uint32); // This needs to be atomic even if it may not look like it
 		for(uint32 i=0; i<wi->num_groups; ++i) {
 			irt_atomic_fetch_and_add(&(wi->wg_memberships[i].wg_id.cached->local_member_count), elements - 1, uint32); // TODO
 		}

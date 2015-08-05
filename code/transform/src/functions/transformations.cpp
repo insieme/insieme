@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,33 +43,39 @@ namespace insieme {
 namespace transform {
 namespace functions {
 
-	RecursiveFunctionUnrolling::RecursiveFunctionUnrolling(const parameter::Value& value)
-		: Transformation(RecursiveFunctionUnrollingType::getInstance(), value),
-		  unrolling(parameter::getValue<unsigned>(value)) {
-		if (unrolling < 2) throw InvalidParametersException("Unrolling factor must be at least 2!");
+RecursiveFunctionUnrolling::RecursiveFunctionUnrolling(const parameter::Value& value)
+	: Transformation(RecursiveFunctionUnrollingType::getInstance(), value),
+	  unrolling(parameter::getValue<unsigned>(value)) {
+	if(unrolling < 2) {
+		throw InvalidParametersException("Unrolling factor must be at least 2!");
 	}
+}
 
-	core::NodeAddress RecursiveFunctionUnrolling::apply(const core::NodeAddress& targetAddress) const {
-		auto target = targetAddress.as<core::NodePtr>();
-
-		if (target->getNodeType() != core::NT_LambdaExpr) throw InvalidTargetException("Can only be applied to lambdas!");
-
-		// start by obtaining the lambda
-		core::LambdaExprPtr lambda = target.as<core::LambdaExprPtr>();
-
-		// can only be applied to recursive functions
-		if (!lambda->isRecursive()) throw InvalidTargetException("Can only be applied on recursive functions!");
-
-		// fix recursive variable usage
-		lambda = core::transform::correctRecursiveLambdaVariableUsage(lambda->getNodeManager(), lambda);
-
-		// unroll lambda
-		lambda = lambda->unroll(unrolling);
-
-		// simplify resulting expression
-		auto res = core::transform::simplify(lambda->getNodeManager(), lambda);
-		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
+core::NodeAddress RecursiveFunctionUnrolling::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+	
+	if(target->getNodeType() != core::NT_LambdaExpr) {
+		throw InvalidTargetException("Can only be applied to lambdas!");
 	}
+	
+	// start by obtaining the lambda
+	core::LambdaExprPtr lambda = target.as<core::LambdaExprPtr>();
+	
+	// can only be applied to recursive functions
+	if(!lambda->isRecursive()) {
+		throw InvalidTargetException("Can only be applied on recursive functions!");
+	}
+	
+	// fix recursive variable usage
+	lambda = core::transform::correctRecursiveLambdaVariableUsage(lambda->getNodeManager(), lambda);
+	
+	// unroll lambda
+	lambda = lambda->unroll(unrolling);
+	
+	// simplify resulting expression
+	auto res = core::transform::simplify(lambda->getNodeManager(), lambda);
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
+}
 
 } // end namespace functions
 } // end namespace transform

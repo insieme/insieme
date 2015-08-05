@@ -88,7 +88,7 @@ static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
 // when calling irt_clear_affinity()
 static irt_native_cpu_set irt_g_affinity_base_mask;
 
-// affinity mask struct handling //////////////////////////////////////////////////////////////////////////// 
+// affinity mask struct handling ////////////////////////////////////////////////////////////////////////////
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask);
 

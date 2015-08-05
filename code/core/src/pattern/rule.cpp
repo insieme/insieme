@@ -43,40 +43,46 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-	core::NodePtr Rule::applyTo(const core::NodePtr& tree) const {
-		auto match = pattern.matchPointer(tree);
-		if (!match) return core::NodePtr();
-		return generator.generate(*match);
+core::NodePtr Rule::applyTo(const core::NodePtr& tree) const {
+	auto match = pattern.matchPointer(tree);
+	if(!match) {
+		return core::NodePtr();
 	}
+	return generator.generate(*match);
+}
 
-	core::NodePtr Rule::fixpoint(const core::NodePtr& tree) const {
-		auto res = tree;
-
-		// while applicable ..
-		while(auto next = applyTo(res)) {
-			// if nothing has changed => done
-			if (res == next) return res;
-
-			// try next iteration
-			res = next;
+core::NodePtr Rule::fixpoint(const core::NodePtr& tree) const {
+	auto res = tree;
+	
+	// while applicable ..
+	while(auto next = applyTo(res)) {
+		// if nothing has changed => done
+		if(res == next) {
+			return res;
 		}
-
-		// done
-		return res;
+		
+		// try next iteration
+		res = next;
 	}
+	
+	// done
+	return res;
+}
 
-	Rule Rule::getNestedRule() const {
-		return Rule(
-				aT(var("%root%", pattern)),
-				generator::substitute(generator::root, generator::var("%root%"), generator)
-		);
-	}
+Rule Rule::getNestedRule() const {
+	return Rule(
+	           aT(var("%root%", pattern)),
+	           generator::substitute(generator::root, generator::var("%root%"), generator)
+	       );
+}
 
-	TreePtr Rule::applyTo(const TreePtr& tree) const {
-		auto match = pattern.matchTree(tree);
-		if (!match) return TreePtr();
-		return generator.generate(*match);
+TreePtr Rule::applyTo(const TreePtr& tree) const {
+	auto match = pattern.matchTree(tree);
+	if(!match) {
+		return TreePtr();
 	}
+	return generator.generate(*match);
+}
 
 } // end namespace pattern
 } // end namespace core

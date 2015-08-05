@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,28 +42,28 @@ namespace insieme {
 namespace annotations {
 
 
-	#include "insieme/annotations/meta_info/generators/enum.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/enum.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/struct.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/struct.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/equals.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/equals.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/clone.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/clone.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/dump_type.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/dump_type.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/dump_to.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/dump_to.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/dump_from.inc"
-	#include "test_info.def"
+#include "insieme/annotations/meta_info/generators/dump_from.inc"
+#include "test_info.def"
 
-	#include "insieme/annotations/meta_info/generators/clear.inc"
+#include "insieme/annotations/meta_info/generators/clear.inc"
 
 
 } // end namespace annotations

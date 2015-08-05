@@ -43,89 +43,89 @@ namespace core {
 namespace lang {
 
 
-	class SIMDVectorExtension : public core::lang::Extension {
+class SIMDVectorExtension : public core::lang::Extension {
 
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		SIMDVectorExtension(core::NodeManager& manager)
-				: core::lang::Extension(manager) {}
-
-	public:
-
-
-		
-		//supported operators according to: http://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+	/**
+	 * Allow the node manager to create instances of this class.
+	 */
+	friend class core::NodeManager;
 	
-		// binary operators (+, -, *, /, %, &, |, ^)
-		LANG_EXT_LITERAL(SIMDAdd, "simd_add",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDSub, "simd_sub",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDMul, "simd_mul",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDDiv, "simd_div",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDMod, "simd_mod",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDAnd, "simd_and",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDOr, "simd_or",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDXor, "simd_xor",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDLShift, "simd_lshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDRShift, "simd_rshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-
-		// comparison operators are supported from gcc 4.7
-		// GCC 4.6.3 does NOT support them
-		//comparison operators: ==, !=, <, <=, >, >=. 
-		LANG_EXT_LITERAL(SIMDEq, "simd_eq",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDNe, "simd_ne",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDLt, "simd_lt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDLe, "simd_le",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDGt, "simd_gt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDGe, "simd_ge",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
-
-		//unary operators ~, -
-		LANG_EXT_LITERAL(SIMDNot, "simd_not",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
-		LANG_EXT_LITERAL(SIMDMinus, "simd_minus",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
+	/**
+	 * Creates a new instance based on the given node manager.
+	 */
+	SIMDVectorExtension(core::NodeManager& manager)
+		: core::lang::Extension(manager) {}
 		
-		//LANG_EXT_LITERAL(SIMDInitUniform,    	"simd.init.uniform",    	"('elem, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
-		LANG_EXT_LITERAL(SIMDInitUndefined,  	"simd_init_undefined",  	"(type<'elem>, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
-		LANG_EXT_LITERAL(SIMDInitPartial, 		"simd_init_partial",		"(list<'elem>, intTypeParam<#n>) -> simd<vector<'elem,#n>>")
-
-		/*
-
-		LANG_EXT_LITERAL(VectorToSIMD, "ref.vector.to.ref.simd",  "(ref<vector<'elem1,#l>>) -> ref<simd<vector<'elem1, #l>>>")
-		LANG_EXT_LITERAL(SIMDToVector, "ref.simd.to.ref.vector",  "(ref<simd<vector<'elem1,#l>>>) -> ref<vector<'elem1, #l>>")
+public:
 
 
-		LANG_EXT_LITERAL(SIMDVectorPointwise, "simd.pointwise", 
-				"(('elem1, 'elem2) -> 'res, simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'res, #l>>")
 
-		LANG_EXT_LITERAL(SIMDVectorPointwiseUnary, "simd.pointwise.unary", 
-				"(('elem) -> 'res , simd<vector<'elem,#l>>) -> simd<vector<'res, #l>>")
-		*/
-	};
+	//supported operators according to: http://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+	
+	// binary operators (+, -, *, /, %, &, |, ^)
+	LANG_EXT_LITERAL(SIMDAdd, "simd_add",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDSub, "simd_sub",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDMul, "simd_mul",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDDiv, "simd_div",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDMod, "simd_mod",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDAnd, "simd_and",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDOr, "simd_or",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDXor, "simd_xor",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDLShift, "simd_lshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDRShift, "simd_rshift",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	
+	// comparison operators are supported from gcc 4.7
+	// GCC 4.6.3 does NOT support them
+	//comparison operators: ==, !=, <, <=, >, >=.
+	LANG_EXT_LITERAL(SIMDEq, "simd_eq",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDNe, "simd_ne",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDLt, "simd_lt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDLe, "simd_le",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDGt, "simd_gt",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDGe, "simd_ge",  "(simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'elem1, #l>>")
+	
+	//unary operators ~, -
+	LANG_EXT_LITERAL(SIMDNot, "simd_not",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
+	LANG_EXT_LITERAL(SIMDMinus, "simd_minus",  "(simd<vector<'elem1,#l>>) -> simd<vector<'elem1, #l>>")
+	
+	//LANG_EXT_LITERAL(SIMDInitUniform,    	"simd.init.uniform",    	"('elem, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
+	LANG_EXT_LITERAL(SIMDInitUndefined,  	"simd_init_undefined",  	"(type<'elem>, intTypeParam<#a>) -> simd<vector<'elem,#a>>")
+	LANG_EXT_LITERAL(SIMDInitPartial, 		"simd_init_partial",		"(list<'elem>, intTypeParam<#n>) -> simd<vector<'elem,#n>>")
+	
+	/*
+	
+	LANG_EXT_LITERAL(VectorToSIMD, "ref.vector.to.ref.simd",  "(ref<vector<'elem1,#l>>) -> ref<simd<vector<'elem1, #l>>>")
+	LANG_EXT_LITERAL(SIMDToVector, "ref.simd.to.ref.vector",  "(ref<simd<vector<'elem1,#l>>>) -> ref<vector<'elem1, #l>>")
+	
+	
+	LANG_EXT_LITERAL(SIMDVectorPointwise, "simd.pointwise",
+			"(('elem1, 'elem2) -> 'res, simd<vector<'elem1,#l>>, simd<vector<'elem2,#l>>) -> simd<vector<'res, #l>>")
+	
+	LANG_EXT_LITERAL(SIMDVectorPointwiseUnary, "simd.pointwise.unary",
+			"(('elem) -> 'res , simd<vector<'elem,#l>>) -> simd<vector<'res, #l>>")
+	*/
+};
 
-	/**
-		* Checks if the given type isj a SIMD vector
-		* @param type the type to check
-		* @return bool true if given type is SIMD, false otherwise
-		*/
-	bool isSIMDVector(const TypePtr& type);
+/**
+	* Checks if the given type isj a SIMD vector
+	* @param type the type to check
+	* @return bool true if given type is SIMD, false otherwise
+	*/
+bool isSIMDVector(const TypePtr& type);
 
-	/**
-		* Gets the inner vector type of an SIMD vector
-		* @param type the type to retrive the inner vector from
-		* @return a vectorType representing the number of elements and element of the simd vector
-		*/
-	VectorTypePtr getSIMDVectorType(const TypePtr& type);
+/**
+	* Gets the inner vector type of an SIMD vector
+	* @param type the type to retrive the inner vector from
+	* @return a vectorType representing the number of elements and element of the simd vector
+	*/
+VectorTypePtr getSIMDVectorType(const TypePtr& type);
 
-	/**
-		* Creates a SIMD vector from an Vector type
-		* @param type the type to generate a SIMD vector type from
-		* @return the SIMD vector type
-		*/
-	GenericTypePtr toSIMDVector(const VectorTypePtr& type);
+/**
+	* Creates a SIMD vector from an Vector type
+	* @param type the type to generate a SIMD vector type from
+	* @return the SIMD vector type
+	*/
+GenericTypePtr toSIMDVector(const VectorTypePtr& type);
 
 } // end namespace lang
 } // end namespace core

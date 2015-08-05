@@ -30,8 +30,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,16 +53,16 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-	core::checks::MessageList checkTU(const IRTranslationUnit& unit){
-		core::NodeManager empty;
-		core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
-
-		// encode translation unit into an IR expression
-		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals()));
-
-		// check correctnes
-		return core::checks::check( encoded);
-	}
+core::checks::MessageList checkTU(const IRTranslationUnit& unit) {
+	core::NodeManager empty;
+	core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
+	
+	// encode translation unit into an IR expression
+	auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals()));
+	
+	// check correctnes
+	return core::checks::check(encoded);
+}
 
 } // end namespace tu
 } // end namespace frontend

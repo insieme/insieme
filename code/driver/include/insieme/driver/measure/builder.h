@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,42 +50,44 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-	using std::string;
-	using std::vector;
+using std::string;
+using std::vector;
 
-	struct Host {
-		string hostname;
-		string username;
-		string tmpdir;
-		string papi_home;
-
-		Host(const string& hostname, const string& username = "", const string& papi_home = "~/libs/papi-latest", const string& tmpdir = "/tmp")
-			: hostname(hostname), username(username), tmpdir(tmpdir), papi_home(papi_home) {}
-
-		utils::net::NetworkPath getTempDir() const { return utils::net::NetworkPath(hostname, username, tmpdir); }
-	};
-
-	boost::optional<utils::net::NetworkPath> buildRemote(
-			const utils::VirtualPrintable& source, const Host& targetHost,
-			const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
-	);
-
-	template<typename Printable>
-	boost::optional<utils::net::NetworkPath> buildRemote(
-			const Printable& source, const Host& targetHost,
-			const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
-	) {
-		return buildRemote(utils::toVirtualPrintable(source), targetHost, compiler);
+struct Host {
+	string hostname;
+	string username;
+	string tmpdir;
+	string papi_home;
+	
+	Host(const string& hostname, const string& username = "", const string& papi_home = "~/libs/papi-latest", const string& tmpdir = "/tmp")
+		: hostname(hostname), username(username), tmpdir(tmpdir), papi_home(papi_home) {}
+		
+	utils::net::NetworkPath getTempDir() const {
+		return utils::net::NetworkPath(hostname, username, tmpdir);
 	}
+};
 
-	/**
-	 * Compiles the given source file using the given compiler setup  to the given target file.
-	 * The file will be compiled on the target system using
-	 */
-	boost::optional<utils::net::NetworkPath> buildRemote(
-			const vector<utils::net::NetworkPath>& sources, const string& targetFileName, const Host& targetHost,
-			const utils::compiler::Compiler& compilerSetup = utils::compiler::Compiler::getDefaultC99Compiler()
-	);
+boost::optional<utils::net::NetworkPath> buildRemote(
+    const utils::VirtualPrintable& source, const Host& targetHost,
+    const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
+);
+
+template<typename Printable>
+boost::optional<utils::net::NetworkPath> buildRemote(
+    const Printable& source, const Host& targetHost,
+    const utils::compiler::Compiler& compiler = utils::compiler::Compiler::getDefaultC99Compiler()
+) {
+	return buildRemote(utils::toVirtualPrintable(source), targetHost, compiler);
+}
+
+/**
+ * Compiles the given source file using the given compiler setup  to the given target file.
+ * The file will be compiled on the target system using
+ */
+boost::optional<utils::net::NetworkPath> buildRemote(
+    const vector<utils::net::NetworkPath>& sources, const string& targetFileName, const Host& targetHost,
+    const utils::compiler::Compiler& compilerSetup = utils::compiler::Compiler::getDefaultC99Compiler()
+);
 
 } // end namespace measure
 } // end namespace driver

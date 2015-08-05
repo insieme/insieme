@@ -44,31 +44,31 @@
 #include "abstraction/spin_locks.h"
 
 #if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
+#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
 
-	struct _irt_thread {
-		DWORD thread_id; // uniquely identifies a thread
-		HANDLE thread_handle; // just a reference to the thread (multiple handles can refer to the same thread)
-	};
+struct _irt_thread {
+	DWORD thread_id; // uniquely identifies a thread
+	HANDLE thread_handle; // just a reference to the thread (multiple handles can refer to the same thread)
+};
 
-	typedef struct _irt_thread irt_thread;
+typedef struct _irt_thread irt_thread;
 
-	// Vista and up will use slim reader writer mutex instead of critical section, condition variables are supported too
-	#if (WINVER >= 0x0600)
-		typedef SRWLOCK irt_mutex_obj;
-		typedef CONDITION_VARIABLE irt_cond_var;
-	#else
-		typedef int32 irt_cond_var; // dummy typedef such that interface below may stay untouched
-		typedef HANDLE irt_mutex_obj;
-	#endif
-
-	typedef uint32 irt_tls_key;
+// Vista and up will use slim reader writer mutex instead of critical section, condition variables are supported too
+#if (WINVER >= 0x0600)
+typedef SRWLOCK irt_mutex_obj;
+typedef CONDITION_VARIABLE irt_cond_var;
 #else
-	#include <pthread.h>
-	typedef pthread_t irt_thread;
-	typedef pthread_cond_t irt_cond_var;
-	typedef pthread_mutex_t irt_mutex_obj;
-	typedef pthread_key_t irt_tls_key;
+typedef int32 irt_cond_var; // dummy typedef such that interface below may stay untouched
+typedef HANDLE irt_mutex_obj;
+#endif
+
+typedef uint32 irt_tls_key;
+#else
+#include <pthread.h>
+typedef pthread_t irt_thread;
+typedef pthread_cond_t irt_cond_var;
+typedef pthread_mutex_t irt_mutex_obj;
+typedef pthread_key_t irt_tls_key;
 #endif
 
 typedef struct _irt_cond_bundle {

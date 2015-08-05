@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,30 +51,30 @@ bool isSigned() {
 TEST(LangBasic, Generation) {
 
 	EXPECT_EQ(1, (type_map<INT, 1>::bits));
-
+	
 	EXPECT_EQ(static_cast<std::size_t>(1), sizeof(type_map<INT,1>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(2), sizeof(type_map<INT,2>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<INT,4>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<INT,8>::value_type));
-
+	
 	EXPECT_EQ(static_cast<std::size_t>(1), sizeof(type_map<UINT,1>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(2), sizeof(type_map<UINT,2>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<UINT,4>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<UINT,8>::value_type));
-
+	
 	EXPECT_EQ(static_cast<std::size_t>(4), sizeof(type_map<REAL,4>::value_type));
 	EXPECT_EQ(static_cast<std::size_t>(8), sizeof(type_map<REAL,8>::value_type));
-
+	
 	EXPECT_TRUE((isSigned<type_map<INT,1>::value_type>()));
 	EXPECT_TRUE((isSigned<type_map<INT,2>::value_type>()));
 	EXPECT_TRUE((isSigned<type_map<INT,4>::value_type>()));
 	EXPECT_TRUE((isSigned<type_map<INT,8>::value_type>()));
-
+	
 	EXPECT_FALSE((isSigned<type_map<UINT,1>::value_type>()));
 	EXPECT_FALSE((isSigned<type_map<UINT,2>::value_type>()));
 	EXPECT_FALSE((isSigned<type_map<UINT,4>::value_type>()));
 	EXPECT_FALSE((isSigned<type_map<UINT,8>::value_type>()));
-
+	
 	EXPECT_TRUE((isSigned<type_map<REAL,4>::value_type>()));
 	EXPECT_TRUE((isSigned<type_map<REAL,8>::value_type>()));
 }

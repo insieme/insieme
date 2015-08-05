@@ -30,8 +30,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,14 +44,14 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-	/**
-	 * perform semantic checks in the structure, the IRtranslation unit will be merged into an IR
-	 * expression and checked for consistency.
-	 *
-	 * @param unit the translation unit to be checked
-	 * @return a list of error messages
-	 */
-	core::checks::MessageList checkTU(const IRTranslationUnit& unit);
+/**
+ * perform semantic checks in the structure, the IRtranslation unit will be merged into an IR
+ * expression and checked for consistency.
+ *
+ * @param unit the translation unit to be checked
+ * @return a list of error messages
+ */
+core::checks::MessageList checkTU(const IRTranslationUnit& unit);
 
 
 } // end namespace tu

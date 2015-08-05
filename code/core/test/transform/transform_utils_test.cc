@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -52,7 +52,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const auto& basic = mgr.getLangBasic();
-
+	
 	StatementList saStmts;
 	// construct a struct variable
 	{
@@ -60,30 +60,30 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		fields.push_back(builder.namedType("first", basic.getInt4()));
 		fields.push_back(builder.namedType("second", basic.getReal8()));
 		const VariablePtr& structVar = builder.variable(builder.refType(builder.structType(fields)));
-
+		
 		vector<NamedValuePtr> init;
 		init.push_back(builder.namedValue("first", builder.intLit(1)));
 		init.push_back(builder.namedValue("second", builder.literal(basic.getReal8(), "0.0")));
-
+		
 		saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), basic.getRefVar(), builder.structExpr(init))));
-
+		
 		// CompositeMemberAccess
 		saStmts.push_back(builder.callExpr(basic.getInt8(), basic.getCompositeMemberAccess(),
-				builder.callExpr(builder.structType(fields), basic.getRefDeref(), structVar),
-				builder.getIdentifierLiteral("first"), builder.getTypeLiteral(basic.getUInt2())));
+		                                   builder.callExpr(builder.structType(fields), basic.getRefDeref(), structVar),
+		                                   builder.getIdentifierLiteral("first"), builder.getTypeLiteral(basic.getUInt2())));
 		// CompositeRefElem
 		saStmts.push_back(builder.callExpr(builder.refType(basic.getReal8()), basic.getCompositeRefElem(), structVar,
-				builder.getIdentifierLiteral("second"), builder.getTypeLiteral(basic.getReal4())));
+		                                   builder.getIdentifierLiteral("second"), builder.getTypeLiteral(basic.getReal4())));
 		const StatementPtr& structAccess = builder.compoundStmt(saStmts);
-
+		
 		// test for errors
 		auto errors = check(structAccess, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(3u, errors.size());
-
+		
 		// correct errors
 		utils::MemberAccessLiteralUpdater malu(builder);
 		NodePtr corrected = malu.mapElement(0, structAccess);
-
+		
 		// test for errors again
 		errors = check(corrected, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(0u, errors.size());
@@ -92,7 +92,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 			LOG(INFO) << cur << std::endl;
 		});
 	}
-
+	
 	saStmts.clear();
 	{
 		// construct a tuple variable
@@ -104,20 +104,20 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), basic.getRefVar(), builder.tupleExpr(init))));
 		// TupleMemberAcces
 		saStmts.push_back(builder.callExpr(basic.getUInt2(), basic.getTupleMemberAccess(), builder.callExpr(tupleTy, basic.getRefDeref(), tupleVar),
-				builder.literal(basic.getUInt8(), "0"), builder.getTypeLiteral(basic.getInt4())));
+		                                   builder.literal(basic.getUInt8(), "0"), builder.getTypeLiteral(basic.getInt4())));
 		// TupleRefElem
 		saStmts.push_back(builder.callExpr(basic.getChar(), basic.getTupleRefElem(), tupleVar, builder.castExpr(basic.getUInt8(), builder.intLit(1)),
-				builder.getTypeLiteral(basic.getWChar16())));
+		                                   builder.getTypeLiteral(basic.getWChar16())));
 		const StatementPtr& tupleAccess = builder.compoundStmt(saStmts);
-
+		
 		// test for errors
 		auto errors = check(tupleAccess, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(3u, errors.size());
-
+		
 		// correct errors
 		utils::MemberAccessLiteralUpdater malu(builder);
 		NodePtr corrected = malu.mapElement(0, tupleAccess);
-
+		
 		// test for errors again
 		errors = check(corrected, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(0u, errors.size());

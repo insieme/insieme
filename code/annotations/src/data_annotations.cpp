@@ -61,7 +61,7 @@ void Range::replace(core::NodeManager& mgr, core::NodeMap& replacements) {
 	upperBoundary = core::transform::replaceAllGen(mgr, upperBoundary, replacements);
 }
 
-void Range::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode){
+void Range::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode) {
 	std::cout << "Variable " << variable << " Replacements " << oldNode << " -> " << newNode << std::endl;
 	variable = core::transform::replaceAllGen(mgr, variable, oldNode, newNode);
 	std::cout << "new Variable " << variable << std::endl;
@@ -71,16 +71,18 @@ void Range::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr
 
 ExpressionPtr Range::getUpperBoundary() const {
 	TypePtr int4 = upperBoundary->getNodeManager().getLangBasic().getInt4();
-	if(upperBoundary->getType() == int4)
+	if(upperBoundary->getType() == int4) {
 		return upperBoundary;
+	}
 	core::IRBuilder builder(upperBoundary->getNodeManager());
 	return builder.castExpr(int4, upperBoundary);
 }
 
 ExpressionPtr Range::getLowerBoundary() const {
 	TypePtr int4 = lowerBoundary->getNodeManager().getLangBasic().getInt4();
-	if(lowerBoundary->getType() == upperBoundary->getType())
+	if(lowerBoundary->getType() == upperBoundary->getType()) {
 		return lowerBoundary;
+	}
 	core::IRBuilder builder(lowerBoundary->getNodeManager());
 	return builder.castExpr(int4, lowerBoundary);
 }
@@ -92,13 +94,13 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 	for(size_t i = 0; i < oldVars.size(); ++i) {
 		replacements[oldVars.at(i)] = newVars.at(i);
 	}
-
+	
 	for_each(ranges, [&](Range& range) {
 		range.replace(mgr, replacements);
 	});
 }
 
-void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode){
+void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode) {
 	for_each(ranges, [&](Range& range) {
 		range.replace(mgr, oldNode, newNode);
 	});
@@ -113,37 +115,47 @@ const utils::StringKey<DataTransformAnnotation> DataTransformAnnotation::KEY("Tr
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
-		if(range.isSplittable())
-			out << "+";
-		else
-			out << "-";
-		switch(range.getAccessType()) {
-			case insieme::ACCESS_TYPE::read: out << "R  "; break;
-			case insieme::ACCESS_TYPE::write: out << "W  "; break;
-			case insieme::ACCESS_TYPE::readWrite: out << "RW "; break;
-			default: out << "X "; break;
-		}
-		out << *range.getVariable() << " = " << *range.getLowerBoundary() << " : " << *range.getUpperBoundary() << " ";
-
-		return out;
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
+	if(range.isSplittable()) {
+		out << "+";
 	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot) {
-		out << "DatarangeAnnotation:\n";
-		for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
-			out << "\t" << *I  << std::endl;
-		}
-
-		return out;
+	else {
+		out << "-";
 	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& tAnnot) {
-		out << "DataTransformAnnotation:\n";
-
-		out << "\t" << (tAnnot.isSoa() == 0 ? string("SOA") : (format("Tilesize: %u", tAnnot.getTilesize()))) << std::endl;
-
-		return out;
+	switch(range.getAccessType()) {
+	case insieme::ACCESS_TYPE::read:
+		out << "R  ";
+		break;
+	case insieme::ACCESS_TYPE::write:
+		out << "W  ";
+		break;
+	case insieme::ACCESS_TYPE::readWrite:
+		out << "RW ";
+		break;
+	default:
+		out << "X ";
+		break;
 	}
+	out << *range.getVariable() << " = " << *range.getLowerBoundary() << " : " << *range.getUpperBoundary() << " ";
+	
+	return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot) {
+	out << "DatarangeAnnotation:\n";
+	for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
+		out << "\t" << *I  << std::endl;
+	}
+	
+	return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataTransformAnnotation& tAnnot) {
+	out << "DataTransformAnnotation:\n";
+	
+	out << "\t" << (tAnnot.isSoa() == 0 ? string("SOA") : (format("Tilesize: %u", tAnnot.getTilesize()))) << std::endl;
+	
+	return out;
+}
 
 } // end namespace std

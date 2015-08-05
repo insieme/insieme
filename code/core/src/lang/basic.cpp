@@ -60,13 +60,13 @@ template<class ...All>
 struct GroupChecker;
 template<class Head, class ...Tail>
 struct GroupChecker<Head, Tail...> {
-	bool operator ()(const BasicGenerator& bg, const NodePtr& p) {
+	bool operator()(const BasicGenerator& bg, const NodePtr& p) {
 		return Head::isInstance(bg, p) || GroupChecker<Tail...>()(bg, p);
 	}
 };
 template<>
 struct GroupChecker<> {
-	bool operator ()(const BasicGenerator&, const NodePtr&) {
+	bool operator()(const BasicGenerator&, const NodePtr&) {
 		return false;
 	}
 };
@@ -75,7 +75,8 @@ template<class ...All> struct GroupFiller;
 template<class Head, class ...Tail>
 struct GroupFiller<Head, Tail...> {
 	void operator()(const BasicGenerator& bg, vector<NodePtr>& list) {
-		Head::append(bg, list); GroupFiller<Tail...>()(bg, list);
+		Head::append(bg, list);
+		GroupFiller<Tail...>()(bg, list);
 	}
 };
 template<>
@@ -86,42 +87,42 @@ struct GroupFiller<> {
 struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	NodeManager &nm;
 	IRBuilder build;
-
-	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
+	
+	typedef LiteralPtr(BasicGenerator::*litFunPtr)() const;
 	std::map<std::string, litFunPtr> literalMap;
-
-	typedef ExpressionPtr (BasicGenerator::*derivedFunPtr)() const;
+	
+	typedef ExpressionPtr(BasicGenerator::*derivedFunPtr)() const;
 	std::map<std::string, derivedFunPtr> derivedMap;
-
+	
 	typedef bool (BasicGenerator::*groupCheckFuncPtr)(const NodePtr&) const;
 	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, litFunPtr>> LiteralOperationMap;
 	LiteralOperationMap literalOperationMap;
-
+	
 	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, derivedFunPtr>> DerivedOperationMap;
 	DerivedOperationMap derivedOperationMap;
-
-	#define ADD_IS_AND_GET(_id) \
+	
+#define ADD_IS_AND_GET(_id) \
 	struct _id { \
 		static bool isInstance(const BasicGenerator& bg, const NodePtr& p) { return bg.is##_id(p); } \
 		static void append(const BasicGenerator& bg, vector<NodePtr>& list) { list.push_back(bg.get##_id()); } \
 	};
-
-	#define TYPE(_id, _spec) \
+	
+#define TYPE(_id, _spec) \
 	TypePtr ptr##_id; \
 	ADD_IS_AND_GET(_id)
-	#define LITERAL(_id, _name, _spec) \
+#define LITERAL(_id, _name, _spec) \
 	LiteralPtr ptr##_id; \
 	ADD_IS_AND_GET(_id)
-	#define DERIVED(_id, _name, _spec) \
+#define DERIVED(_id, _name, _spec) \
 	ExpressionPtr ptr##_id; \
 	ADD_IS_AND_GET(_id)
-	#define OPERATION(_type, _op, _name, _spec) \
+#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr ptr##_type##_op; \
 	ADD_IS_AND_GET(_type##_op)
-	#define DERIVED_OP(_type, _op, _name, _spec) \
+#define DERIVED_OP(_type, _op, _name, _spec) \
 	ExpressionPtr ptr##_type##_op; \
 	ADD_IS_AND_GET(_type##_op)
-	#define GROUP(_id, ...) \
+#define GROUP(_id, ...) \
 	struct _id { \
 		static bool isInstance(const BasicGenerator& bg, const NodePtr& p) { return bg.is##_id(p); } \
 		static void append(const BasicGenerator& bg, vector<NodePtr>& list) { \
@@ -129,23 +130,23 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 			list.insert(list.end(), tmp.begin(), tmp.end()); \
 		} \
 	};
-	#include "insieme/core/lang/inspire_api/lang.def"
-
+#include "insieme/core/lang/inspire_api/lang.def"
+	
 	BasicGeneratorImpl(NodeManager& nm) : nm(nm), build(nm) {
-		#define LITERAL(_id, _name, _spec) \
+#define LITERAL(_id, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
-		#define DERIVED(_id,_name,_spec) \
+#define DERIVED(_id,_name,_spec) \
 		derivedMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
-		#define OPERATION(_type, _op, _name, _spec) \
+#define OPERATION(_type, _op, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_type##_op)); \
 		literalOperationMap.insert(std::make_pair(BasicGenerator::_op, std::make_pair(&BasicGenerator::is##_type, &BasicGenerator::get##_type##_op)));
-		#define DERIVED_OP(_type, _op, _name, _spec) \
+#define DERIVED_OP(_type, _op, _name, _spec) \
 		derivedMap.insert(std::make_pair(_name, &BasicGenerator::get##_type##_op)); \
 		derivedOperationMap.insert(std::make_pair(BasicGenerator::_op, std::make_pair(&BasicGenerator::is##_type, &BasicGenerator::get##_type##_op)));
-		#include "insieme/core/lang/inspire_api/lang.def"
+#include "insieme/core/lang/inspire_api/lang.def"
 	}
 	
-	#define GROUP(_id, ...) \
+#define GROUP(_id, ...) \
 	mutable vector<NodePtr> group_##_id##_list; \
 	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.getLangBasic(), p); }; \
 	const vector<NodePtr>& get##_id##Group() const { \
@@ -153,10 +154,10 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 			GroupFiller<__VA_ARGS__>()(nm.getLangBasic(), group_##_id##_list); \
 		} \
 		return group_##_id##_list; }
-	#include "insieme/core/lang/inspire_api/lang.def"
-
+#include "insieme/core/lang/inspire_api/lang.def"
+	
 	// ----- extra material ---
-
+	
 	StatementPtr ptrNoOp;
 };
 
@@ -165,18 +166,18 @@ class BasicGenerator::SubTypeLattice : boost::noncopyable {
 	typedef utils::map::PointerMultiMap<TypePtr, TypePtr> RelationMap;
 	RelationMap subTypes;
 	RelationMap superTypes;
-
+	
 public:
 
 	void addRelation(const TypePtr& subType, const TypePtr& superType) {
 		subTypes.insert(std::make_pair(superType, subType));
 		superTypes.insert(std::make_pair(subType, superType));
 	}
-
+	
 	TypeSet getSubTypesOf(const TypePtr& type) const {
 		return getAllOf(type, subTypes);
 	}
-
+	
 	TypeSet getSuperTypesOf(const TypePtr& type) const {
 		return getAllOf(type, superTypes);
 	}
@@ -185,7 +186,7 @@ private:
 		TypeSet res;
 		auto types = map.equal_range(type);
 		auto cur = types.first;
-		while (cur != types.second) {
+		while(cur != types.second) {
 			res.insert(cur->second);
 			++cur;
 		}
@@ -197,7 +198,7 @@ BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGenerat
 
 BasicGenerator::~BasicGenerator() {
 	delete pimpl;
-	if (subTypeLattice) {
+	if(subTypeLattice) {
 		delete subTypeLattice;
 	}
 }
@@ -293,113 +294,125 @@ bool BasicGenerator::isRef(const NodePtr& type) const {
 
 bool BasicGenerator::isGen(const NodePtr& type) const {
 	return type->getNodeCategory() == NC_Type
-			&& type->getNodeType() != NT_VectorType		// vector types are handled using pointwise
-			&& !isBool(type) && !isChar(type)
-			&& !isSignedInt(type) && !isUnsignedInt(type)
-			&& !isReal(type)
-			&& !isType(type) && !isRef(type);
+	       && type->getNodeType() != NT_VectorType		// vector types are handled using pointwise
+	       && !isBool(type) && !isChar(type)
+	       && !isSignedInt(type) && !isUnsignedInt(type)
+	       && !isReal(type)
+	       && !isType(type) && !isRef(type);
 }
 
 
 ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {
-	{ // try literals
+	{
+		// try literals
 		auto fit = pimpl->literalOperationMap.equal_range(op);
 		for(auto it = fit.first, end = fit.second; it != end; ++it) {
 			const auto& curr = *it;
-			if(((*this).*curr.second.first)(type))
+			if(((*this).*curr.second.first)(type)) {
 				return ((*this).*curr.second.second)();
+			}
 		}
 	}
-
-	{ // try derived
+	
+	{
+		// try derived
 		auto fit = pimpl->derivedOperationMap.equal_range(op);
 		for(auto it = fit.first, end = fit.second; it != end; ++it) {
 			const auto& curr = *it;
-			if(((*this).*curr.second.first)(type))
+			if(((*this).*curr.second.first)(type)) {
 				return ((*this).*curr.second.second)();
+			}
 		}
 	}
-
-	if(VectorTypePtr vecTy = dynamic_pointer_cast<const VectorType>(type)){
-	    core::TypePtr vecElemTy = vecTy->getElementType();
-        vecElemTy = (vecElemTy->getNodeType() == core::NT_RefType ?
-            core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
-            vecElemTy);
-
-        core::ExpressionPtr&& pointwise = op != 10 ? (*this).getBuiltIn(string("vector_pointwise")) :
-        		(*this).getBuiltIn(string("vector_pointwise_unary")); // 10 = ~, the only unary OPERATION in lang def which is allowed for vectors
-
-        // check if we need add subfunction for lazy evaluation
-        if(op == BasicGenerator::LAnd || op == BasicGenerator::LOr) {
-    		std::string dataType;
-
-    		if((*this).isUnsignedInt(vecElemTy))
-    			dataType = "uint<#a>";
-    		else if((*this).isSignedInt(vecElemTy))
-    			dataType = "int<#a>";
-    		else if((*this).isReal(vecElemTy))
-    			dataType = "real<#a>";
-    		else if((*this).isChar(vecElemTy))
-    			dataType = "char";
-
-    		assert_ne(dataType, std::string()) << " unknown datatype for vector operation";
-
+	
+	if(VectorTypePtr vecTy = dynamic_pointer_cast<const VectorType>(type)) {
+		core::TypePtr vecElemTy = vecTy->getElementType();
+		vecElemTy = (vecElemTy->getNodeType() == core::NT_RefType ?
+		             core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
+		             vecElemTy);
+		             
+		core::ExpressionPtr&& pointwise = op != 10 ? (*this).getBuiltIn(string("vector_pointwise")) :
+		                                  (*this).getBuiltIn(string("vector_pointwise_unary")); // 10 = ~, the only unary OPERATION in lang def which is allowed for vectors
+		                                  
+		// check if we need add subfunction for lazy evaluation
+		if(op == BasicGenerator::LAnd || op == BasicGenerator::LOr) {
+			std::string dataType;
+			
+			if((*this).isUnsignedInt(vecElemTy)) {
+				dataType = "uint<#a>";
+			}
+			else if((*this).isSignedInt(vecElemTy)) {
+				dataType = "int<#a>";
+			}
+			else if((*this).isReal(vecElemTy)) {
+				dataType = "real<#a>";
+			}
+			else if((*this).isChar(vecElemTy)) {
+				dataType = "char";
+			}
+			
+			assert_ne(dataType, std::string()) << " unknown datatype for vector operation";
+			
 			std::string whateverToBool = (*this).isChar(vecElemTy) ? "char_to_bool" : (dataType.substr(0, dataType.length()-4) + "_to_bool");
-
+			
 			core::ExpressionPtr opFunc = (*this).getOperator((*this).getBool(), op);
-
+			
 			core::ExpressionPtr integerLogic =
-					pimpl->build.parseExpr(
-						" lambda ((bool, ()=>bool) -> bool op)  -> (" + dataType + ", " + dataType + ") => int<4> {"
-						"     return lambda (" + dataType + " v1, " + dataType + " v2) =>      "
-						"                     lambda (" + dataType + " v1, " + dataType + " v2, (bool, ()=>bool) => bool op) -> int<4> {"
-						"         return bool_to_int(op(" + whateverToBool + "(v1), lambda ( ) =>  " + whateverToBool + "(v2)), param(4));"
-						"     }(v1, v2, op);"
-						" }");
+			    pimpl->build.parseExpr(
+			        " lambda ((bool, ()=>bool) -> bool op)  -> (" + dataType + ", " + dataType + ") => int<4> {"
+			        "     return lambda (" + dataType + " v1, " + dataType + " v2) =>      "
+			        "                     lambda (" + dataType + " v1, " + dataType + " v2, (bool, ()=>bool) => bool op) -> int<4> {"
+			        "         return bool_to_int(op(" + whateverToBool + "(v1), lambda ( ) =>  " + whateverToBool + "(v2)), param(4));"
+			        "     }(v1, v2, op);"
+			        " }");
 			CallExprPtr call = pimpl->build.callExpr(integerLogic, toVector(opFunc));
-
+			
 			TypePtr pwTy = pimpl->build.parseType("(vector<" + dataType + ",#l>, vector<" + dataType + ",#l>) => vector<int<4>, #l>");
-
+			
 			return pimpl->build.callExpr(pwTy, pointwise, call);
-        }
-
-        // check if we need add subfunction for comparison operations
-		if(op == BasicGenerator::Lt || op == BasicGenerator::Gt || op == BasicGenerator::Le || op == BasicGenerator::Ge ||
-			op == BasicGenerator::Eq || op == BasicGenerator::Ne) {
-
-    		std::string dataType;
-
-    		if((*this).isUnsignedInt(vecElemTy))
-    			dataType = "uint<#a>";
-    		else if((*this).isSignedInt(vecElemTy))
-    			dataType = "int<#a>";
-    		else if((*this).isReal(vecElemTy))
-    			dataType = "real<#a>";
-    		else if((*this).isChar(vecElemTy))
-    			dataType = "char";
-
-			core::ExpressionPtr opFunc = (*this).getOperator(vecElemTy, op);
-
-			core::ExpressionPtr pointwise = (*this).getBuiltIn(string("vector_pointwise"));
-
-			core::ExpressionPtr integerComparison =
-					pimpl->build.parseExpr(
-						" lambda ((" + dataType + ", " + dataType + ") -> bool op) -> (" + dataType + ", " + dataType + ") => int<4> {"
-						"     return lambda (" + dataType + " v1, " + dataType + " v2) =>      "
-						"                     lambda (" + dataType + " v1, " + dataType + " v2, (" + dataType + ", " + dataType + ") => bool op) -> int<4> {"
-						"         return bool_to_int(op(v1, v2), param(4));"
-						"     }(v1, v2, op);"
-						" }");
-			CallExprPtr call = pimpl->build.callExpr(integerComparison, toVector(opFunc));
-
-			TypePtr pwTy = pimpl->build.parseType("(vector<" + dataType + ",#l>, vector<" + dataType + ",#l>) => vector<int<4>, #l>");
-			return pimpl->build.callExpr(pwTy, pointwise, call);
-
 		}
-
-	    return pimpl->build.callExpr(pointwise, (*this).getOperator(vecElemTy, op));
+		
+		// check if we need add subfunction for comparison operations
+		if(op == BasicGenerator::Lt || op == BasicGenerator::Gt || op == BasicGenerator::Le || op == BasicGenerator::Ge ||
+		        op == BasicGenerator::Eq || op == BasicGenerator::Ne) {
+		        
+			std::string dataType;
+			
+			if((*this).isUnsignedInt(vecElemTy)) {
+				dataType = "uint<#a>";
+			}
+			else if((*this).isSignedInt(vecElemTy)) {
+				dataType = "int<#a>";
+			}
+			else if((*this).isReal(vecElemTy)) {
+				dataType = "real<#a>";
+			}
+			else if((*this).isChar(vecElemTy)) {
+				dataType = "char";
+			}
+			
+			core::ExpressionPtr opFunc = (*this).getOperator(vecElemTy, op);
+			
+			core::ExpressionPtr pointwise = (*this).getBuiltIn(string("vector_pointwise"));
+			
+			core::ExpressionPtr integerComparison =
+			    pimpl->build.parseExpr(
+			        " lambda ((" + dataType + ", " + dataType + ") -> bool op) -> (" + dataType + ", " + dataType + ") => int<4> {"
+			        "     return lambda (" + dataType + " v1, " + dataType + " v2) =>      "
+			        "                     lambda (" + dataType + " v1, " + dataType + " v2, (" + dataType + ", " + dataType + ") => bool op) -> int<4> {"
+			        "         return bool_to_int(op(v1, v2), param(4));"
+			        "     }(v1, v2, op);"
+			        " }");
+			CallExprPtr call = pimpl->build.callExpr(integerComparison, toVector(opFunc));
+			
+			TypePtr pwTy = pimpl->build.parseType("(vector<" + dataType + ",#l>, vector<" + dataType + ",#l>) => vector<int<4>, #l>");
+			return pimpl->build.callExpr(pwTy, pointwise, call);
+			
+		}
+		
+		return pimpl->build.callExpr(pointwise, (*this).getOperator(vecElemTy, op));
 	}
-
+	
 	LOG(ERROR) << "Operation " << op << " of type " << type << " is not declared" << std::endl;
 	assert_fail() << "Required combination of operator and type not declared";
 	return 0;
@@ -408,23 +421,29 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 BasicGenerator::Operator BasicGenerator::getOperator(const ExpressionPtr& lit) const {
 	// We have to scan the multimap operationMap and find the operation which
 	// has this literal as second argument.
-	{ // try literals
- 		auto& opMap = pimpl->literalOperationMap;
+	{
+		// try literals
+		auto& opMap = pimpl->literalOperationMap;
 		auto fit = std::find_if(opMap.begin(), opMap.end(),
-			[&](const BasicGeneratorImpl::LiteralOperationMap::value_type& cur) {
-				return *((*this).*cur.second.second)() == *lit;
-			}
-		);
-		if (fit != opMap.end()) { return fit->first; }
+		[&](const BasicGeneratorImpl::LiteralOperationMap::value_type& cur) {
+			return *((*this).*cur.second.second)() == *lit;
+		}
+		                       );
+		if(fit != opMap.end()) {
+			return fit->first;
+		}
 	}
-	{ // try derived
+	{
+		// try derived
 		auto& opMap = pimpl->derivedOperationMap;
 		auto fit = std::find_if(opMap.begin(), opMap.end(),
-			[&](const BasicGeneratorImpl::DerivedOperationMap::value_type& cur) {
-				return *((*this).*cur.second.second)() == *lit;
-			}
-		);
-		if (fit != opMap.end()) { return fit->first; }
+		[&](const BasicGeneratorImpl::DerivedOperationMap::value_type& cur) {
+			return *((*this).*cur.second.second)() == *lit;
+		}
+		                       );
+		if(fit != opMap.end()) {
+			return fit->first;
+		}
 	}
 	assert_fail() << "Literal not found within the OperationMap, therefore not a valid IR literal expression";
 	// should never happen, but eliminates compiler warning in release mode
@@ -434,14 +453,14 @@ BasicGenerator::Operator BasicGenerator::getOperator(const ExpressionPtr& lit) c
 
 
 const BasicGenerator::SubTypeLattice* BasicGenerator::getSubTypeLattice() const {
-	if (!subTypeLattice) {
+	if(!subTypeLattice) {
 		SubTypeLattice* res = new SubTypeLattice();
-
+		
 		// initialize lattice with generic relations from lang.def
-		#define SUB_TYPE(_typeA, _typeB) \
+#define SUB_TYPE(_typeA, _typeB) \
 		res->addRelation(get ## _typeA(), get ## _typeB());
-		#include "insieme/core/lang/inspire_api/lang.def"
-
+#include "insieme/core/lang/inspire_api/lang.def"
+		
 		subTypeLattice = res;
 	}
 	return subTypeLattice;
@@ -459,8 +478,8 @@ TypeSet BasicGenerator::getDirectSubTypesOf(const TypePtr& type) const {
 
 std::ostream& operator<<(std::ostream& out, const BasicGenerator::Operator& op) {
 	switch(op) {
-	#define OPERATOR(_id, _str) case BasicGenerator::Operator::_id : return out << #_str;
-	#include "insieme/core/lang/inspire_api/lang.def"
+#define OPERATOR(_id, _str) case BasicGenerator::Operator::_id : return out << #_str;
+#include "insieme/core/lang/inspire_api/lang.def"
 	}
 	return out << "- unknown operator -";
 }

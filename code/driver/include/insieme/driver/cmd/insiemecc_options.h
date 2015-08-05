@@ -51,37 +51,37 @@ namespace insieme {
 namespace driver {
 namespace cmd {
 
-	using namespace std;
+using namespace std;
 
-	namespace detail {
-		class OptionParser;
+namespace detail {
+class OptionParser;
+}
+
+enum BackendEnum {
+	Runtime = 0,
+	Sequential,
+	OpenCL,
+	Pthreads
+};
+
+struct BackendHint {
+	BackendEnum backend;
+	
+	/**
+	 * allow direct comparison with BackendEnum
+	 */
+	bool operator==(const BackendEnum e) const {
+		return (this->backend == e);
 	}
+	
+	friend std::ostream& operator<<(std::ostream& out, const BackendHint& b);
+	
+};
 
-	enum BackendEnum {
-		Runtime = 0,
-		Sequential,
-		OpenCL,
-		Pthreads
-	};
+std::ostream& operator<<(std::ostream& out, const BackendHint& b);
 
-	struct BackendHint {
-		BackendEnum backend;
-
-		/**
-		 * allow direct comparison with BackendEnum
-		 */
-		bool operator==(const BackendEnum e) const {
-			return (this->backend == e);
-		}
-
-		friend std::ostream& operator<<(std::ostream& out, const BackendHint& b);
-
-	};
-
-    std::ostream& operator<<(std::ostream& out, const BackendHint& b);
-
-	// holds all settings that are not part of a ConversionJob
-	struct Settings {
+// holds all settings that are not part of a ConversionJob
+struct Settings {
 
 #define FLAG(_name__, _id__, _description__) \
 			bool _id__;
@@ -90,144 +90,144 @@ namespace cmd {
 			_type__ _id__;
 #define OPTION( _name__, _id__, _type__, _default_value__, _description__) \
 			_type__ _id__;
-			#include "insieme/driver/cmd/insiemecc_options.def"
+#include "insieme/driver/cmd/insiemecc_options.def"
 
-	};
+};
+
+/**
+ * A standard command line option utility which can be extended and customized for
+ * individual needs.
+ */
+struct Options {
 
 	/**
-	 * A standard command line option utility which can be extended and customized for
-	 * individual needs.
+	 * A flag indicating whether the passed options are valid. It will not
+	 * if a required option is missing or the help flag -h was used.
 	 */
-	struct Options {
+	bool valid;
+	
+	/**
+	 * A flag indicating whether the executable should exit without errors.
+	 * This occurs for example when requesting the version or usage.
+	 */
+	bool gracefulExit;
+	
+	/**
+	 * Holds all settings for setting up compilation
+	 */
+	Settings settings;
+	
+	/**
+	 * The configuration of the frontend encapsulated into an conversion job.
+	 */
+	insieme::frontend::ConversionJob job;
+	
+	/**
+	 * The backend to be used if code generation is requested.
+	 */
+	BackendHint backendHint;
+	
+	/**
+	 * Parses the given command line options.
+	 */
+	static detail::OptionParser parse(const std::vector<std::string>& argv);
+	
+private:
 
-		/**
-		 * A flag indicating whether the passed options are valid. It will not
-		 * if a required option is missing or the help flag -h was used.
-		 */
-		bool valid;
+	// allow the parser to construct instances
+	friend class detail::OptionParser;
+	
+	/**
+	 * A constructor for this class.
+	 */
+	Options()
+		: valid(true), gracefulExit(false), settings(Settings{}), job() {}
+		
+};
 
-		/**
-		 * A flag indicating whether the executable should exit without errors.
-		 * This occurs for example when requesting the version or usage.
-		 */
-		bool gracefulExit;
+namespace detail {
 
-		/**
-		 * Holds all settings for setting up compilation
-		 */
-		Settings settings;
+class OptionParser {
 
-		/**
-		 * The configuration of the frontend encapsulated into an conversion job.
-		 */
-		insieme::frontend::ConversionJob job;
-
-		/**
-		 * The backend to be used if code generation is requested.
-		 */
-		BackendHint backendHint;
-
-		/**
-		 * Parses the given command line options.
-		 */
-		static detail::OptionParser parse(const std::vector<std::string>& argv);
-
-	private:
-
-		// allow the parser to construct instances
-		friend class detail::OptionParser;
-
-		/**
-		 * A constructor for this class.
-		 */
-		Options()
-			: valid(true), gracefulExit(false), settings(Settings{}), job() {}
-
-	};
-
-	namespace detail {
-
-		class OptionParser {
-
-			/**
-			 * A function to be processed when parsing
-			 */
-			typedef std::function<bool(const boost::program_options::variables_map&)> parser_step;
-
-			/**
-			 * The arguments passed to the program.
-			 */
-            std::vector<std::string> argv;
-
-			/**
-			 * The description of parameters to be parsed by this parser - aggregated
-			 * on the fly.
-			 */
-			boost::program_options::options_description desc;
-
-			/**
-			 * A list of extra parser steps to be conducted when parsing program options.
-			 */
-			vector<parser_step> parser_steps;
-
-		public:
-			/**
-			 * The Option object that is going to be filled.
-			 */
-			Options res;
-
-			/**
-			 * Creates a new instance of this option parser parsing the given arguments.
-			 * This
-			 */
-			OptionParser(const std::vector<std::string>& argv);
-
-			/**
-			 * Allows to add a flag to the program options using a convenient syntax.
-			 *
-			 * @param name the name of the flag to be added
-			 * @param symbol the one-letter shortcut of the flag
-			 * @param target the target to be used for storing whether the flag has been set or not
-			 * @param description the description of the parameter to be shown in the help message
-			 */
-			OptionParser& operator()(const string& name, const string& symbol, bool& flag, const char* description);
-
-			/**
-			 * Allows to add additional program options using a convenient syntax.
-			 *
-			 * @param name the name of the option to be added
-			 * @param target the target to store the parsed result into
-			 * @param description the description of the parameter to be shown in the help message
-			 */
-			template<typename T>
-			OptionParser& operator()(const char* name, T& target, const char* description) {
-				desc.add_options()(name, boost::program_options::value<T>(&target), description);
-				return *this;
-			}
-
-			/**
-			 * Allows to add additional program options using a convenient syntax.
-			 *
-			 * @param name the name of the option to be added
-			 * @param target the target to store the parsed result into
-			 * @param def the default value to be used if non is provided
-			 * @param description the description of the parameter to be shown in the help message
-			 */
-			template<typename T>
-			OptionParser& operator()(const char* name, T& target, const T& def, const char* description) {
-				desc.add_options()(name, boost::program_options::value<T>(&target)->default_value(def), description);
-				return *this;
-			}
-
-			/**
-			 * Realizes the final step by conducting the actual parsing and returning the
-			 * parsed program options.
-			 */
-			operator Options();
-
-		};
-
+	/**
+	 * A function to be processed when parsing
+	 */
+	typedef std::function<bool(const boost::program_options::variables_map&)> parser_step;
+	
+	/**
+	 * The arguments passed to the program.
+	 */
+	std::vector<std::string> argv;
+	
+	/**
+	 * The description of parameters to be parsed by this parser - aggregated
+	 * on the fly.
+	 */
+	boost::program_options::options_description desc;
+	
+	/**
+	 * A list of extra parser steps to be conducted when parsing program options.
+	 */
+	vector<parser_step> parser_steps;
+	
+public:
+	/**
+	 * The Option object that is going to be filled.
+	 */
+	Options res;
+	
+	/**
+	 * Creates a new instance of this option parser parsing the given arguments.
+	 * This
+	 */
+	OptionParser(const std::vector<std::string>& argv);
+	
+	/**
+	 * Allows to add a flag to the program options using a convenient syntax.
+	 *
+	 * @param name the name of the flag to be added
+	 * @param symbol the one-letter shortcut of the flag
+	 * @param target the target to be used for storing whether the flag has been set or not
+	 * @param description the description of the parameter to be shown in the help message
+	 */
+	OptionParser& operator()(const string& name, const string& symbol, bool& flag, const char* description);
+	
+	/**
+	 * Allows to add additional program options using a convenient syntax.
+	 *
+	 * @param name the name of the option to be added
+	 * @param target the target to store the parsed result into
+	 * @param description the description of the parameter to be shown in the help message
+	 */
+	template<typename T>
+	OptionParser& operator()(const char* name, T& target, const char* description) {
+		desc.add_options()(name, boost::program_options::value<T>(&target), description);
+		return *this;
 	}
+	
+	/**
+	 * Allows to add additional program options using a convenient syntax.
+	 *
+	 * @param name the name of the option to be added
+	 * @param target the target to store the parsed result into
+	 * @param def the default value to be used if non is provided
+	 * @param description the description of the parameter to be shown in the help message
+	 */
+	template<typename T>
+	OptionParser& operator()(const char* name, T& target, const T& def, const char* description) {
+		desc.add_options()(name, boost::program_options::value<T>(&target)->default_value(def), description);
+		return *this;
+	}
+	
+	/**
+	 * Realizes the final step by conducting the actual parsing and returning the
+	 * parsed program options.
+	 */
+	operator Options();
+	
+};
+
+}
 
 //	class Option {
 //		bool isFlag;

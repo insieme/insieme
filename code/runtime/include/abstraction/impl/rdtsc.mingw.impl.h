@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,53 +44,57 @@
 uint64 irt_time_ticks(void) {
 
 	uint32 a, d;
-
-	__asm__ (
-		"rdtsc ;"
-		: "=d" (d), "=a" (a) // output registers
-		);
+	
+	__asm__(
+	    "rdtsc ;"
+	    : "=d"(d), "=a"(a)   // output registers
+	);
 	uint64 a64, d64;
 	a64 = a;
 	d64 = d;
-
+	
 	return (a64 | (d64 << 32));
-
-
-
+	
+	
+	
 }
 
 // checks if rdtsc instruction is available
 bool irt_time_ticks_available() {
 	unsigned d;
 	
-	__asm__ (
-		"mov $1, %%eax ;" // mov const, targetreg
-		"cpuid ;"
-		: "=d" (d) // output register
-		: /* no input */
-		: "eax", "ebx", "ecx"
-		);
-	if((d & 0x00000010) > 0)
+	__asm__(
+	    "mov $1, %%eax ;" // mov const, targetreg
+	    "cpuid ;"
+	    : "=d"(d)  // output register
+	    : /* no input */
+	    : "eax", "ebx", "ecx"
+	);
+	if((d & 0x00000010) > 0) {
 		return 1;
-	else
+	}
+	else {
 		return 0;
+	}
 }
 
 bool irt_time_ticks_constant() {
 	unsigned d;
-	__asm__ (
-		"mov $0x80000007, %%eax ;"
-		"cpuid ;"
-		: "=d" (d) // output register
-		: /* no input */
-		: "eax", "ebx", "ecx"
-		);
-
+	__asm__(
+	    "mov $0x80000007, %%eax ;"
+	    "cpuid ;"
+	    : "=d"(d)  // output register
+	    : /* no input */
+	    : "eax", "ebx", "ecx"
+	);
+	
 	// the 8th bit represents the TscInvariant bit
-	if((d & 0x00000100) > 0)
+	if((d & 0x00000100) > 0) {
 		return 1;
-	else
+	}
+	else {
 		return 0;
+	}
 }
 
 

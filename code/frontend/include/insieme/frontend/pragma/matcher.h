@@ -71,28 +71,30 @@ public:
 	struct Error {
 		std::string 			expected;
 		clang::SourceLocation 	loc;
-
+		
 		Error(const std::string& exp, const clang::SourceLocation& loc) :
 			expected(exp), loc(loc) { }
 	};
-
+	
 	typedef std::vector<Error> LocErrorList;
-
+	
 	ParserStack(): mRecordId(0) { }
-
+	
 	size_t openRecord();
-
+	
 	void addExpected(size_t recordId, const Error& pe);
-
+	
 	void discardRecord(size_t recordId);
-
+	
 	size_t getFirstValidRecord();
-
+	
 	void discardPrevRecords(size_t recordId);
-
+	
 	const LocErrorList& getRecord(size_t recordId) const;
-
-	size_t stackSize() const { return mRecords.size(); }
+	
+	size_t stackSize() const {
+		return mRecords.size();
+	}
 private:
 	size_t mRecordId;
 	std::vector<LocErrorList> mRecords;
@@ -123,36 +125,44 @@ class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*>, public 
 	bool ptrOwner;
 	bool isExp;
 	clang::ASTContext* clangCtx;
-
+	
 public:
 	ValueUnion(clang::Stmt* stmt, clang::ASTContext* ctx, bool isExpr=false) :
 		llvm::PointerUnion<clang::Stmt*, std::string*>(stmt), ptrOwner(true), isExp(isExpr), clangCtx(ctx) { }
-
+		
 	ValueUnion(std::string const& str, bool isExpr=false) :
 		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)),
 		ptrOwner(true), isExp(isExpr), clangCtx(NULL) { }
-
+		
 	ValueUnion(ValueUnion& other, bool transferOwnership=false, bool isExpr=false) :
 		llvm::PointerUnion<clang::Stmt*, std::string*>(other), ptrOwner(true), isExp(isExpr), clangCtx(other.clangCtx) {
-			if(transferOwnership) 	other.ptrOwner = false;
-			else	ptrOwner = false;
+		if(transferOwnership) {
+			other.ptrOwner = false;
+		}
+		else	{
+			ptrOwner = false;
+		}
 	}
-
+	
 	/**
 	 * A ValueUnion instance always owns the internal value. This method transfer the ownership to the owner.
 	 */
 	template<class T>
 	T take() {
 		T ret = get<T> ();
-		if (ret) ptrOwner = false;
+		if(ret) {
+			ptrOwner = false;
+		}
 		return ret;
 	}
-
+	
 	std::ostream& printTo(std::ostream& out) const;
-
+	
 	std::string toStr() const;
 	bool isExpr() const;
-	bool isString() const { return is<std::string*>(); }
+	bool isString() const {
+		return is<std::string*>();
+	}
 	~ValueUnion();
 };
 
@@ -164,10 +174,10 @@ class MatchMap: public std::map<std::string, ValueList>, public insieme::utils::
 public:
 	typedef std::map<std::string, ValueList>::value_type value_type;
 	typedef std::map<std::string, ValueList>::key_type key_type;
-
+	
 	MatchMap() {}
 	MatchMap(const MatchMap& other);
-
+	
 	std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -184,7 +194,7 @@ private:
 	core::ExpressionPtr getExpr(const ValueUnionPtr& p, conversion::Converter& fact);
 public:
 	MatchObject() : initialized(false) { };
-
+	
 	const VarList getVars(const std::string& s) const {
 		if(varList.find(s) == varList.end()) {
 			return VarList();
@@ -197,15 +207,15 @@ public:
 		}
 		return exprList.at(s);
 	}
-
+	
 	const core::ExpressionPtr getSingleExpr(const std::string& key) const {
 		const auto fitV = getVars(key);
 		const auto fitE = getExprs(key);
-
+		
 		if(fitE.empty() && fitV.empty()) {
 			return core::ExpressionPtr();
 		}
-
+		
 		// we have an expression
 		if(fitV.empty()) {
 			assert_eq(fitE.size(), 1);
@@ -219,28 +229,30 @@ public:
 		assert_fail() << "single (e.g. if, num_threads, ...) pragma element must contain either a variable or an expression.";
 		return core::ExpressionPtr();
 	}
-
+	
 	const StringList getStrings(const std::string& k) const {
-		if(stringList.find(k) == stringList.end())
+		if(stringList.find(k) == stringList.end()) {
 			return StringList();
+		}
 		return stringList.at(k);
 	}
 	const std::string getString(const std::string& k) const {
-		if(stringList.find(k) == stringList.end())
+		if(stringList.find(k) == stringList.end()) {
 			return std::string();
+		}
 		return getStrings(k).front();
 	}
-
+	
 	bool stringValueExists(const std::string& k) const {
 		return (stringList.find(k) != stringList.end());
 	}
-
+	
 	bool empty() const {
 		return (varList.empty() && exprList.empty() && stringList.empty());
 	}
-
+	
 	void cloneFromMatchMap(const MatchMap& mmap, conversion::Converter& fact);
-
+	
 	friend std::ostream& operator<<(std::ostream& out, const MatchObject& mo);
 };
 
@@ -261,12 +273,12 @@ struct node : public insieme::utils::Printable {
 	 * parsing.
 	 */
 	virtual bool match(clang::Preprocessor& PP,
-		MatchMap& 			mmap,
-		ParserStack& 		errStack,
-		size_t 				recID) const = 0;
-
+	                   MatchMap& 			mmap,
+	                   ParserStack& 		errStack,
+	                   size_t 				recID) const = 0;
+	                   
 	virtual node* copy() const = 0;
-
+	
 	/**
 	 * The semantics of the >> operator is redefined to implement "followed-by". n1 >> n2 means that
 	 * node n1 is followed by node n2.
@@ -286,19 +298,19 @@ struct node : public insieme::utils::Printable {
 	 * is found or no tokens are available from the input stream.
 	 */
 	option operator!() const;
-
+	
 	/**
 	 * Each node can be decorated with a name which states to which name the parsed value should be
 	 * associated in the outgoing map.
 	 */
 	virtual node& operator[](const std::string& map_name) = 0;
-
+	
 	bool MatchPragma(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack) {
 		return match(PP, mmap, errStack, errStack.openRecord());
 	}
-
+	
 	virtual ~node() { }
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -311,17 +323,23 @@ class val_single: public node {
 	node* n;
 public:
 	val_single(node* n) : n(n) { }
-
-	node* copy() const { return new T(*n); }
-
+	
+	node* copy() const {
+		return new T(*n);
+	}
+	
 	node& operator[](const std::string& map_name) {
 		(*n)[map_name];
 		return *this;
 	}
-
-	node* getNode() const { return n; }
-
-	virtual ~val_single() { delete n; }
+	
+	node* getNode() const {
+		return n;
+	}
+	
+	virtual ~val_single() {
+		delete n;
+	}
 };
 
 /**
@@ -330,15 +348,17 @@ public:
 template<class T>
 struct val_pair: public node, public std::pair<node*, node*> {
 	val_pair(node* n1, node* n2) : std::pair<node*, node*>(n1, n2) { }
-
-	node* copy() const { return new T(*first, *second);	}
-
+	
+	node* copy() const {
+		return new T(*first, *second);
+	}
+	
 	node& operator[](const std::string& map_name) {
 		(*first)[map_name];
 		(*second)[map_name];
 		return *this;
 	}
-
+	
 	virtual ~val_pair() {
 		delete first;
 		delete second;
@@ -350,9 +370,9 @@ struct val_pair: public node, public std::pair<node*, node*> {
  */
 struct concat: public val_pair<concat> {
 	concat(node const& n1, node const& n2) : val_pair<concat>::val_pair(n1.copy(), n2.copy()) {	}
-
+	
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -361,7 +381,7 @@ struct concat: public val_pair<concat> {
  */
 struct choice: public val_pair<choice> {
 	choice(node const& n1, node const& n2) : val_pair<choice>::val_pair(n1.copy(), n2.copy()) {	}
-
+	
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
@@ -370,9 +390,9 @@ struct choice: public val_pair<choice> {
  */
 struct option: public val_single<option> {
 	option(node const& n): val_single<option>(n.copy()) { }
-
+	
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -381,9 +401,9 @@ struct option: public val_single<option> {
  */
 struct star: public val_single<star> {
 	star(node const& n) : val_single<star>(n.copy()) { }
-
+	
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -396,26 +416,34 @@ template <class T>
 class MappableNode: public node {
 	std::string mapName;
 	bool addToMap;
-
+	
 public:
 	MappableNode(std::string const& str=std::string(), bool addToMap=true)
 		: mapName(str), addToMap(addToMap) {
 	}
-
+	
 	node& operator[](const std::string& str) {
 		mapName = str;
 		return *this;
 	}
-
-	node* copy() const { return new T( getMapName(), addToMap ); }
+	
+	node* copy() const {
+		return new T(getMapName(), addToMap);
+	}
 	/**
 	 * The operator '~' is used to say the current node (even if a map key has been assigned) will
 	 * never stored in the matcher map.
 	 */
-	T operator~() const { return T( getMapName(), false); }
-
-	const std::string& getMapName() const { return mapName; }
-	bool isAddToMap() const { return addToMap; }
+	T operator~() const {
+		return T(getMapName(), false);
+	}
+	
+	const std::string& getMapName() const {
+		return mapName;
+	}
+	bool isAddToMap() const {
+		return addToMap;
+	}
 };
 
 /**
@@ -426,9 +454,9 @@ public:
 struct expr_p: public MappableNode<expr_p> {
 	expr_p() { }
 	expr_p(std::string const& map_str, bool addToMap=true) : MappableNode<expr_p>(map_str, addToMap) { }
-
+	
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -437,11 +465,11 @@ struct expr_p: public MappableNode<expr_p> {
  * Utility function for adding a token with a specific key to the matcher map.
  */
 void AddToMap(clang::tok::TokenKind tok,
-	clang::Token const& 	token,
-	bool 					resolve,
-	std::string const& 	map_str,
-	MatchMap& 			mmap);
-
+              clang::Token const& 	token,
+              bool 					resolve,
+              std::string const& 	map_str,
+              MatchMap& 			mmap);
+              
 std::string TokenToStr(clang::tok::TokenKind tok);
 std::string TokenToStr(const clang::Token& token);
 
@@ -452,22 +480,22 @@ template<clang::tok::TokenKind T>
 struct Tok: public MappableNode<Tok<T>> {
 	bool resolve;
 	std::string tok;
-
+	
 	Tok() { }
 	Tok(std::string const& str, bool addToMap = true, bool resolve=false) :
 		MappableNode<Tok<T>>(str, addToMap), resolve(resolve), tok(str) { }
-
+		
 	node* copy() const {
 		return new Tok<T>(
-			MappableNode<Tok<T>>::getMapName(),
-			MappableNode<Tok<T>>::isAddToMap(), resolve
-			);
+		           MappableNode<Tok<T>>::getMapName(),
+		           MappableNode<Tok<T>>::isAddToMap(), resolve
+		       );
 	}
-
+	
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
-		if (token.is(T)) {
-			if (MappableNode<Tok<T>>::isAddToMap()) {
+		if(token.is(T)) {
+			if(MappableNode<Tok<T>>::isAddToMap()) {
 				AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap);
 			}
 			return true;
@@ -475,7 +503,7 @@ struct Tok: public MappableNode<Tok<T>> {
 		errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(T) + "\'", token.getLocation()));
 		return false;
 	}
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -484,13 +512,17 @@ struct Tok: public MappableNode<Tok<T>> {
  */
 struct kwd: public Tok<clang::tok::identifier> {
 	std::string kw;
-
+	
 	kwd(std::string const& kw) : Tok<clang::tok::identifier>(), kw(kw) { }
 	kwd(std::string const& kw, std::string const& map_str, bool addToMap=true) :
 		Tok<clang::tok::identifier>(map_str, addToMap), kw(kw) { }
-
-	node* copy() const { return new kwd(kw, getMapName(), isAddToMap()); }
-	kwd operator~() const { return kwd(kw, getMapName(), false); }
+		
+	node* copy() const {
+		return new kwd(kw, getMapName(), isAddToMap());
+	}
+	kwd operator~() const {
+		return kwd(kw, getMapName(), false);
+	}
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
@@ -503,35 +535,39 @@ struct kwd: public Tok<clang::tok::identifier> {
 struct var_p: public Tok<clang::tok::identifier> {
 	var_p() : Tok<clang::tok::identifier>("", true, true) { }
 	var_p(std::string const& str) : Tok<clang::tok::identifier>(str, true, true) { }
-
+	
 	virtual std::ostream& printTo(std::ostream& out) const;
 };
 
 // import token definitions from clang
 namespace tok {
-	#define PUNCTUATOR(name, _) \
+#define PUNCTUATOR(name, _) \
 		static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
-	#define TOK(name) \
+#define TOK(name) \
 		static Tok<clang::tok::name>  name = Tok<clang::tok::name>();
-	#include <clang/Basic/TokenKinds.def>
-	#undef PUNCTUATOR
-	#undef TOK
+#include <clang/Basic/TokenKinds.def>
+#undef PUNCTUATOR
+#undef TOK
 
-	struct ExprGenerator {
-		inline expr_p operator[](const std::string name) {
-			return expr_p(name);
-		}
-		inline operator expr_p() { return expr_p(); }
-	};
-	__attribute__((unused)) static ExprGenerator expr;
+struct ExprGenerator {
+	inline expr_p operator[](const std::string name) {
+		return expr_p(name);
+	}
+	inline operator expr_p() {
+		return expr_p();
+	}
+};
+__attribute__((unused)) static ExprGenerator expr;
 
-	struct VarGenerator {
-		inline var_p operator[](const std::string name) {
-			return var_p(name);
-		}
-		inline operator var_p() { return var_p(); }
-	};
-	__attribute__((unused)) static VarGenerator var;
+struct VarGenerator {
+	inline var_p operator[](const std::string name) {
+		return var_p(name);
+	}
+	inline operator var_p() {
+		return var_p();
+	}
+};
+__attribute__((unused)) static VarGenerator var;
 
 } // End tok namespace
 } // End pragma namespace

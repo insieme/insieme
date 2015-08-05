@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,146 +47,152 @@ namespace insieme {
 namespace transform {
 namespace filter {
 
-	/**
-	 * This Header file contains a definition for several node filters to be used within
-	 * several transformations e.g. for specifying potential transformation targets.
-	 *
-	 * Beside the pure definition of the filter types, a list of utilities for defining
-	 * default filters or combining filters is provided.
-	 */
+/**
+ * This Header file contains a definition for several node filters to be used within
+ * several transformations e.g. for specifying potential transformation targets.
+ *
+ * Beside the pure definition of the filter types, a list of utilities for defining
+ * default filters or combining filters is provided.
+ */
+
+/**
+ * The type defining the base type for all kind of unary node functions (hence filters).
+ */
+template<typename T>
+class UnaryNodeFunction : public std::unary_function<T, const core::NodePtr&> {
 
 	/**
-	 * The type defining the base type for all kind of unary node functions (hence filters).
+	 * A string-based description for this unary function.
 	 */
-	template<typename T>
-	class UnaryNodeFunction : public std::unary_function<T, const core::NodePtr&> {
-
-		/**
-		 * A string-based description for this unary function.
-		 */
-		std::string desc;
-
-		/**
-		 * The actual unary function to be used internally.
-		 */
-		std::function<T(const core::NodePtr&)> fun;
-
-	public:
-
-		UnaryNodeFunction(const std::string& desc, const std::function<T(const core::NodePtr&)>& fun)
-			: desc(desc), fun(fun) {}
-
-		T operator()(const core::NodePtr& node) const {
-			return fun(node);
-		}
-
-		bool operator==(const UnaryNodeFunction<T>& other) const {
-			return desc == other.desc;
-		}
-
-		bool operator!=(const UnaryNodeFunction<T>& other) const {
-			return !(*this == other);
-		}
-
-		bool operator<(const UnaryNodeFunction<T>& other) const {
-			return desc < other.desc;
-		}
-
-		const std::string& getDescription() const {
-			return desc;
-		}
-	};
-
-
+	std::string desc;
+	
 	/**
-	 * The type defining a filter.
+	 * The actual unary function to be used internally.
 	 */
-	class Filter : public UnaryNodeFunction<bool> {
-	public:
+	std::function<T(const core::NodePtr&)> fun;
+	
+public:
 
-		Filter(const std::string& desc, const std::function<bool(const core::NodePtr&)>& filter)
-			: UnaryNodeFunction<bool>(desc, filter) {}
-
-	};
-
-	/**
-	 * The type defining a target filter
-	 */
-	class TargetFilter : public UnaryNodeFunction<vector<core::NodeAddress>> {
-	public:
-
-		TargetFilter(const std::string& desc, const std::function<vector<core::NodeAddress>(const core::NodePtr&)>& filter)
-			: UnaryNodeFunction<vector<core::NodeAddress>>(desc, filter) {}
-
-	};
-
-
-	// -- Utilities --------------------------------------------------------------
-
-	// accept all nodes
-	extern const Filter all;
-
-	// don't accept any node
-	extern const Filter none;
-
-
-	// boolean operators:
-
-	inline Filter operator!(const Filter& a) {
-		return Filter(format("!%s", a.getDescription().c_str()), [=](const core::NodePtr& node) { return !a(node); });
+	UnaryNodeFunction(const std::string& desc, const std::function<T(const core::NodePtr&)>& fun)
+		: desc(desc), fun(fun) {}
+		
+	T operator()(const core::NodePtr& node) const {
+		return fun(node);
 	}
-
-	inline Filter operator&(const Filter& a, const Filter& b) {
-		return Filter(format("(%s & %s)", a.getDescription().c_str(), b.getDescription().c_str()),
-				[=](const core::NodePtr& node) { return a(node) && b(node); });
+	
+	bool operator==(const UnaryNodeFunction<T>& other) const {
+		return desc == other.desc;
 	}
-
-	inline Filter operator|(const Filter& a, const Filter& b) {
-		return Filter(format("(%s | %s)", a.getDescription().c_str(), b.getDescription().c_str()),
-				[=](const core::NodePtr& node) { return a(node) || b(node); });
+	
+	bool operator!=(const UnaryNodeFunction<T>& other) const {
+		return !(*this == other);
 	}
-
-
-	// pattern based filter
-	inline Filter pattern(const string& name, const core::pattern::TreePattern& pattern) {
-		return Filter(name, [=](const core::NodePtr& node)->bool { return pattern.matchPointer(node); });
+	
+	bool operator<(const UnaryNodeFunction<T>& other) const {
+		return desc < other.desc;
 	}
-
-	inline Filter pattern(const core::pattern::TreePattern& treePattern) {
-		return pattern(format("pattern(%s)", toString(treePattern).c_str()), treePattern);
+	
+	const std::string& getDescription() const {
+		return desc;
 	}
+};
 
 
-	// -- target filter ---
+/**
+ * The type defining a filter.
+ */
+class Filter : public UnaryNodeFunction<bool> {
+public:
 
-	// produces an empty list
-	extern const TargetFilter empty;
+	Filter(const std::string& desc, const std::function<bool(const core::NodePtr&)>& filter)
+		: UnaryNodeFunction<bool>(desc, filter) {}
+		
+};
 
-	// takes the root node and returns it as a result
-	extern const TargetFilter root;
+/**
+ * The type defining a target filter
+ */
+class TargetFilter : public UnaryNodeFunction<vector<core::NodeAddress>> {
+public:
 
-	/**
-	 * This pattern based filter is trying to match against a potential target node. If
-	 * it matches, it returns the list of matches bound to the given variable.
-	 */
-	TargetFilter pattern(const string& name, const core::pattern::TreePattern& pattern, const string& var);
+	TargetFilter(const std::string& desc, const std::function<vector<core::NodeAddress>(const core::NodePtr&)>& filter)
+		: UnaryNodeFunction<vector<core::NodeAddress>>(desc, filter) {}
+		
+};
 
-	/**
-	 * This pattern based filter is trying to match against a potential target node. If
-	 * it matches, it returns the list of matches bound to the given variable.
-	 */
-	inline TargetFilter pattern(const core::pattern::TreePattern& treePattern, const string& var) {
-		return pattern(format("all %s within (%s)", var.c_str(), toString(treePattern).c_str()), treePattern, var);
-	}
 
-	/**
-	 * Creates a filter searching all sub-structures matching the given pattern.
-	 */
-	TargetFilter allMatches(const string& name, const core::pattern::TreePattern& pattern, bool ignoreTypes = true);
+// -- Utilities --------------------------------------------------------------
 
-	inline TargetFilter allMatches(const core::pattern::TreePattern& pattern, bool ignoreTypes = true) {
-		return allMatches(format("all matching (%s)", toString(pattern).c_str()), pattern, ignoreTypes);
-	}
+// accept all nodes
+extern const Filter all;
+
+// don't accept any node
+extern const Filter none;
+
+
+// boolean operators:
+
+inline Filter operator!(const Filter& a) {
+	return Filter(format("!%s", a.getDescription().c_str()), [=](const core::NodePtr& node) {
+		return !a(node);
+	});
+}
+
+inline Filter operator&(const Filter& a, const Filter& b) {
+	return Filter(format("(%s & %s)", a.getDescription().c_str(), b.getDescription().c_str()),
+	[=](const core::NodePtr& node) {
+		return a(node) && b(node);
+	});
+}
+
+inline Filter operator|(const Filter& a, const Filter& b) {
+	return Filter(format("(%s | %s)", a.getDescription().c_str(), b.getDescription().c_str()),
+	[=](const core::NodePtr& node) {
+		return a(node) || b(node);
+	});
+}
+
+
+// pattern based filter
+inline Filter pattern(const string& name, const core::pattern::TreePattern& pattern) {
+	return Filter(name, [=](const core::NodePtr& node)->bool { return pattern.matchPointer(node); });
+}
+
+inline Filter pattern(const core::pattern::TreePattern& treePattern) {
+	return pattern(format("pattern(%s)", toString(treePattern).c_str()), treePattern);
+}
+
+
+// -- target filter ---
+
+// produces an empty list
+extern const TargetFilter empty;
+
+// takes the root node and returns it as a result
+extern const TargetFilter root;
+
+/**
+ * This pattern based filter is trying to match against a potential target node. If
+ * it matches, it returns the list of matches bound to the given variable.
+ */
+TargetFilter pattern(const string& name, const core::pattern::TreePattern& pattern, const string& var);
+
+/**
+ * This pattern based filter is trying to match against a potential target node. If
+ * it matches, it returns the list of matches bound to the given variable.
+ */
+inline TargetFilter pattern(const core::pattern::TreePattern& treePattern, const string& var) {
+	return pattern(format("all %s within (%s)", var.c_str(), toString(treePattern).c_str()), treePattern, var);
+}
+
+/**
+ * Creates a filter searching all sub-structures matching the given pattern.
+ */
+TargetFilter allMatches(const string& name, const core::pattern::TreePattern& pattern, bool ignoreTypes = true);
+
+inline TargetFilter allMatches(const core::pattern::TreePattern& pattern, bool ignoreTypes = true) {
+	return allMatches(format("all matching (%s)", toString(pattern).c_str()), pattern, ignoreTypes);
+}
 
 } // end namespace filter
 } // end namespace transform
@@ -194,9 +200,9 @@ namespace filter {
 
 namespace std {
 
-	template<typename T>
-	inline std::ostream& operator<<(std::ostream& out, const insieme::transform::filter::UnaryNodeFunction<T>& filter) {
-		return out << filter.getDescription();
-	}
+template<typename T>
+inline std::ostream& operator<<(std::ostream& out, const insieme::transform::filter::UnaryNodeFunction<T>& filter) {
+	return out << filter.getDescription();
+}
 
 } // end namespace std

@@ -50,49 +50,49 @@ namespace insieme {
 namespace core {
 namespace annotations {
 
-	using std::string;
+using std::string;
 
-	/**
-	 * Checks whether a name is attached to the given node.
-	 *
-	 * @param node the node to be tested
-	 * @return true if a name is attached, false otherwise
-	 */
-	bool hasAttachedName(const NodePtr& node);
+/**
+ * Checks whether a name is attached to the given node.
+ *
+ * @param node the node to be tested
+ * @return true if a name is attached, false otherwise
+ */
+bool hasAttachedName(const NodePtr& node);
 
-	/**
-	 * Obtains a reference to the name attached to the given node. If
-	 * no name has been attached the result is undefined (an assertion
-	 * in debug mode).
-	 *
-	 * @param node the node to obtain the attached name from
-	 * @return the name attached to the given node
-	 */
-	const string& getAttachedName(const NodePtr& node);
+/**
+ * Obtains a reference to the name attached to the given node. If
+ * no name has been attached the result is undefined (an assertion
+ * in debug mode).
+ *
+ * @param node the node to obtain the attached name from
+ * @return the name attached to the given node
+ */
+const string& getAttachedName(const NodePtr& node);
 
-	/**
-	 * Updates the name attached to the given node.
-	 *
-	 * @param node the node to attach a name to
-	 * @param name the name to be attached to the node
-	 */
-	void attachName(const NodePtr& node, const string& name);
+/**
+ * Updates the name attached to the given node.
+ *
+ * @param node the node to attach a name to
+ * @param name the name to be attached to the node
+ */
+void attachName(const NodePtr& node, const string& name);
 
 
-	/**
-	 * Updates the name attached to the given node
-	 * and returns the given node.
-	 *
-	 * @param node the node to attach a name to
-	 * @param name the name to be attached to the node
-	 * @return the given node
-	 */
-	 template<typename T>
-     const T& attachNameWithReturn(const T& node, const string& name) {
-	    const core::NodePtr& cur = node;
-        attachName(cur, name);
-        return node;
-	 }
+/**
+ * Updates the name attached to the given node
+ * and returns the given node.
+ *
+ * @param node the node to attach a name to
+ * @param name the name to be attached to the node
+ * @return the given node
+ */
+template<typename T>
+const T& attachNameWithReturn(const T& node, const string& name) {
+	const core::NodePtr& cur = node;
+	attachName(cur, name);
+	return node;
+}
 
 } // end namespace annotations
 } // end namespace core

@@ -59,19 +59,19 @@
 #include "utils/impl/frequency.impl.h"
 
 #ifndef IRT_MIN_MODE
-	#include "impl/irt_mqueue.impl.h"	
-	#include "utils/impl/affinity.impl.h"
+#include "impl/irt_mqueue.impl.h"
+#include "utils/impl/affinity.impl.h"
 #endif
 
 #ifdef _WIN32
-	#include "include_win32/memalign.h"	
+#include "include_win32/memalign.h"
 #endif
 
 #include "runtime.h"
 //#include "context/impl/capture.impl.h"
 
-#ifdef USE_OPENCL 
-	#include "impl/irt_ocl.impl.h"
+#ifdef USE_OPENCL
+#include "impl/irt_ocl.impl.h"
 #endif
 
 #include "impl/irt_debug.impl.h"

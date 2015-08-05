@@ -2,18 +2,18 @@
 #include <stdio.h>
 
 
-int f (int x){
+int f(int x) {
 
-#pragma omp task firstprivate(x)
-		{
-			printf("%d\n", x);
-		}
-
+	#pragma omp task firstprivate(x)
+	{
+		printf("%d\n", x);
+	}
+	
 	return 0;
 }
 
 
-int main (){
+int main() {
 	f(1);
 	return 0;
 }

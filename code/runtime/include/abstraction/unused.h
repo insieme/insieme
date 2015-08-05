@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,8 +38,8 @@
  * Just defines a nicer alternative to the attribute syntax.
  */
 #if defined(__GNUC__)
-	#define __irt_unused __attribute__((unused))
+#define __irt_unused __attribute__((unused))
 #elif defined(_GEMS_SIM)
-	// TODO [_GEMS]: what's the purpose of this? 
-	#define __irt_unused
+// TODO [_GEMS]: what's the purpose of this?
+#define __irt_unused
 #endif

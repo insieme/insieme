@@ -39,136 +39,136 @@
 namespace insieme {
 namespace utils {
 
+/**
+ * A small utility helper wrapping a value into a lazy closure.
+ */
+template<typename V>
+class Lazy {
+
 	/**
-	 * A small utility helper wrapping a value into a lazy closure.
+	 * The flag recording whether the value is valid or not.
 	 */
-	template<typename V>
-	class Lazy {
-
-		/**
-		 * The flag recording whether the value is valid or not.
-		 */
-		bool evaluated;
-
-		/**
-		 * The value to be represented.
-		 */
-		V value;
-
-	public:
-
-		/**
-		 * A simple constructor initializing the instance unevaluated.
-		 */
-		Lazy() : evaluated(false) {}
-
-		/**
-		 * Obtains a reference to the represented value in case it has been evaluated.
-		 */
-		V& getValue() {
-			assert_true(evaluated) << "Unsupported access to unevaluated value!";
-			return value;
-		}
-
-		/**
-		 * Obtains a reference to the represented value in case it has been evaluated.
-		 */
-		const V& getValue() const {
-			assert_true(evaluated) << "Unsupported access to unevaluated value!";
-			return value;
-		}
-
-		/**
-		 * Update the represented value. This method may only be called once.
-		 *
-		 * @param value the value to be represented.
-		 * @return a reference to the internally stored value
-		 */
-		const V& setValue(const V& newValue) {
-			assert_false(evaluated) << "Cannot update value twice!";
-			value = newValue;
-			evaluated = true;
-			return value;
-		}
-
-		/**
-		 * Allows to determine whether the value has already been evaluated or not.
-		 */
-		bool isEvaluated() const {
-			return evaluated;
-		}
-
-		/**
-		 * Resets this lazy container to an unevaluated state.
-		 */
-		void reset() {
-			if (evaluated) {
-				evaluated = false;
-				value = V();
-			}
-		}
-
-		/**
-		 * Get access to value using indirection operator.
-		 */
-		V& operator*() {
-			return getValue();
-		}
-
-		/**
-		 * Get access to value using indirection operator.
-		 */
-		const V& operator*() const {
-			return getValue();
-		}
-
-		/**
-		 * An implicit conversion to the value type.
-		 */
-		operator V&() {
-			return getValue();
-		}
-
-		/**
-		 * An implicit conversion to the value type.
-		 */
-		operator const V&() const {
-			return getValue();
-		}
-
-		/**
-		 * Provides access to the represented value.
-		 */
-		V* operator->() {
-			return &getValue();
-		}
-
-		/**
-		 * Provides access to the represented value.
-		 */
-		const V* operator->() const {
-			return &getValue();
-		}
-
-		/**
-		 * An implicit conversion to a boolean allowing to check
-		 * whether the lazy object has been evaluated or not.
-		 */
-		operator bool() const {
-			return isEvaluated();
-		}
-
-		/**
-		 * An overloaded assignment operator to simplify the assignment
-		 * of values to this lazy type.
-		 */
-		Lazy<V>& operator=(const V& value) {
-			setValue(value);
-			return *this;
-		}
-
-	};
+	bool evaluated;
 	
+	/**
+	 * The value to be represented.
+	 */
+	V value;
+	
+public:
+
+	/**
+	 * A simple constructor initializing the instance unevaluated.
+	 */
+	Lazy() : evaluated(false) {}
+	
+	/**
+	 * Obtains a reference to the represented value in case it has been evaluated.
+	 */
+	V& getValue() {
+		assert_true(evaluated) << "Unsupported access to unevaluated value!";
+		return value;
+	}
+	
+	/**
+	 * Obtains a reference to the represented value in case it has been evaluated.
+	 */
+	const V& getValue() const {
+		assert_true(evaluated) << "Unsupported access to unevaluated value!";
+		return value;
+	}
+	
+	/**
+	 * Update the represented value. This method may only be called once.
+	 *
+	 * @param value the value to be represented.
+	 * @return a reference to the internally stored value
+	 */
+	const V& setValue(const V& newValue) {
+		assert_false(evaluated) << "Cannot update value twice!";
+		value = newValue;
+		evaluated = true;
+		return value;
+	}
+	
+	/**
+	 * Allows to determine whether the value has already been evaluated or not.
+	 */
+	bool isEvaluated() const {
+		return evaluated;
+	}
+	
+	/**
+	 * Resets this lazy container to an unevaluated state.
+	 */
+	void reset() {
+		if(evaluated) {
+			evaluated = false;
+			value = V();
+		}
+	}
+	
+	/**
+	 * Get access to value using indirection operator.
+	 */
+	V& operator*() {
+		return getValue();
+	}
+	
+	/**
+	 * Get access to value using indirection operator.
+	 */
+	const V& operator*() const {
+		return getValue();
+	}
+	
+	/**
+	 * An implicit conversion to the value type.
+	 */
+	operator V&() {
+		return getValue();
+	}
+	
+	/**
+	 * An implicit conversion to the value type.
+	 */
+	operator const V&() const {
+		return getValue();
+	}
+	
+	/**
+	 * Provides access to the represented value.
+	 */
+	V* operator->() {
+		return &getValue();
+	}
+	
+	/**
+	 * Provides access to the represented value.
+	 */
+	const V* operator->() const {
+		return &getValue();
+	}
+	
+	/**
+	 * An implicit conversion to a boolean allowing to check
+	 * whether the lazy object has been evaluated or not.
+	 */
+	operator bool() const {
+		return isEvaluated();
+	}
+	
+	/**
+	 * An overloaded assignment operator to simplify the assignment
+	 * of values to this lazy type.
+	 */
+	Lazy<V>& operator=(const V& value) {
+		setValue(value);
+		return *this;
+	}
+	
+};
+
 
 } // end namespace utils
 } // end namespace insieme

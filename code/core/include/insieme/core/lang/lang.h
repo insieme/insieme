@@ -47,53 +47,53 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	using std::string;
+using std::string;
 
-	/**
-	 * Checks whether the given construct is a derived construct within
-	 * any language extension. Derived constructs are annotated by a
-	 * corresponding annotation.
-	 *
-	 * @param node the node to be tested
-	 * @return true if the given node is marked as a derived construct, false otherwise
-	 */
-	bool isDerived(const NodePtr& node);
+/**
+ * Checks whether the given construct is a derived construct within
+ * any language extension. Derived constructs are annotated by a
+ * corresponding annotation.
+ *
+ * @param node the node to be tested
+ * @return true if the given node is marked as a derived construct, false otherwise
+ */
+bool isDerived(const NodePtr& node);
 
-	/**
-	 * Extracts the name of the derived construct. If the given node
-	 * is not a derived node, the result is undefined (an assertion
-	 * in debug mode).
-	 *
-	 * @param node the node being a derived definition which needs to be named
-	 * @return the name attached to the given construct
-	 */
-	const string& getConstructName(const NodePtr& node);
+/**
+ * Extracts the name of the derived construct. If the given node
+ * is not a derived node, the result is undefined (an assertion
+ * in debug mode).
+ *
+ * @param node the node being a derived definition which needs to be named
+ * @return the name attached to the given construct
+ */
+const string& getConstructName(const NodePtr& node);
 
-	/**
-	 * Marks the given construct as being a derived construct being named
-	 * accordingly.
-	 *
-	 * @param node the node to be marked as being derived
-	 * @param name the name of the the derived construct
-	 * @return the handed in node
-	 */
-	NodePtr markAsDerived(const NodePtr& node, const string& name);
+/**
+ * Marks the given construct as being a derived construct being named
+ * accordingly.
+ *
+ * @param node the node to be marked as being derived
+ * @param name the name of the the derived construct
+ * @return the handed in node
+ */
+NodePtr markAsDerived(const NodePtr& node, const string& name);
 
-	/**
-	 * A generic version of the function above.
-	 */
-	template<typename T>
-	Pointer<T> markAsDerived(const Pointer<T>& node, const string& name) {
-		return markAsDerived(NodePtr(node), name).as<Pointer<T>>();
-	}
+/**
+ * A generic version of the function above.
+ */
+template<typename T>
+Pointer<T> markAsDerived(const Pointer<T>& node, const string& name) {
+	return markAsDerived(NodePtr(node), name).as<Pointer<T>>();
+}
 
-	
-	/**
-	 * Struct used to mark Builtins, for efficient checking
-	 */
-	struct BuiltInTag {};
-	void markAsBuiltIn(const NodePtr& node);
-	bool isBuiltIn(const core::NodePtr& node);
+
+/**
+ * Struct used to mark Builtins, for efficient checking
+ */
+struct BuiltInTag {};
+void markAsBuiltIn(const NodePtr& node);
+bool isBuiltIn(const core::NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

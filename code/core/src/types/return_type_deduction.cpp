@@ -56,146 +56,149 @@ namespace types {
 
 namespace {
 
-	class FreshVariableSubstitution : public SimpleNodeMapping {
+class FreshVariableSubstitution : public SimpleNodeMapping {
 
-		NodeManager& manager;
+	NodeManager& manager;
+	
+	// sets of used variables
+	TypeSet& varSet;
+	IntTypeParamSet& paramSet;
+	
+	// a container for "remembering" replacements
+	utils::map::PointerMap<TypeVariablePtr, TypeVariablePtr> varMap;
+	utils::map::PointerMap<VariableIntTypeParamPtr, VariableIntTypeParamPtr> paramMap;
+	
+	// some utilities for generating variables
+	unsigned varCounter;
+	unsigned paramCounter;
+	
+public:
 
-		// sets of used variables
-		TypeSet& varSet;
-		IntTypeParamSet& paramSet;
-
-		// a container for "remembering" replacements
-		utils::map::PointerMap<TypeVariablePtr, TypeVariablePtr> varMap;
-		utils::map::PointerMap<VariableIntTypeParamPtr, VariableIntTypeParamPtr> paramMap;
-
-		// some utilities for generating variables
-		unsigned varCounter;
-		unsigned paramCounter;
-
-	public:
-
-		FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, IntTypeParamSet& paramSet)
-			: SimpleNodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
-
-		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
-			// only handle type variables
-			NodeType curType = ptr->getNodeType();
-			if (curType != NT_TypeVariable && curType != NT_VariableIntTypeParam) {
-				return ptr->substitute(manager, *this);
-			}
-
-
-			switch(curType) {
-				case NT_TypeVariable: {
-
-					// cast type variable
-					TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
-
-					// search for parameter ...
-					auto pos = varMap.find(cur);
-					if (pos != varMap.end()) {
-						// found => return result
-						return pos->second;
-					}
-
-					// create new variable substitution
-					TypeVariablePtr res = getFreshVar();
-					varMap.insert(std::make_pair(cur, res));
-					varSet.insert(res);
-					return res;
-				}
-
-				case NT_VariableIntTypeParam: {
-
-					// cast int type parameter
-					VariableIntTypeParamPtr cur = static_pointer_cast<const VariableIntTypeParam>(ptr);
-
-					// search for parameter ...
-					auto pos = paramMap.find(cur);
-					if (pos != paramMap.end()) {
-						// found => return result
-						return pos->second;
-					}
-
-					// create fresh parameter ...
-					VariableIntTypeParamPtr res = getFreshParam();
-					paramMap.insert(std::make_pair(cur, res));
-					paramSet.insert(res);
-					return res;
-				}
-				default:
-					assert_fail() << "Should be impossible to reach!";
-			}
-			return ptr;
+	FreshVariableSubstitution(NodeManager& manager, TypeSet& varSet, IntTypeParamSet& paramSet)
+		: SimpleNodeMapping(), manager(manager), varSet(varSet), paramSet(paramSet), varCounter(0), paramCounter(0) {};
+		
+	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+		// only handle type variables
+		NodeType curType = ptr->getNodeType();
+		if(curType != NT_TypeVariable && curType != NT_VariableIntTypeParam) {
+			return ptr->substitute(manager, *this);
 		}
-
-	private:
-
-		TypeVariablePtr getFreshVar() {
-			TypeVariablePtr res;
-			do {
-				res = TypeVariable::get(manager, "V" + toString(++varCounter));
-			} while(varSet.find(res) != varSet.end());
+		
+		
+		switch(curType) {
+		case NT_TypeVariable: {
+	
+			// cast type variable
+			TypeVariablePtr cur = static_pointer_cast<const TypeVariable>(ptr);
+			
+			// search for parameter ...
+			auto pos = varMap.find(cur);
+			if(pos != varMap.end()) {
+				// found => return result
+				return pos->second;
+			}
+			
+			// create new variable substitution
+			TypeVariablePtr res = getFreshVar();
+			varMap.insert(std::make_pair(cur, res));
+			varSet.insert(res);
 			return res;
 		}
-
-		VariableIntTypeParamPtr getFreshParam() {
-			VariableIntTypeParamPtr res;
-			do {
-				res = VariableIntTypeParam::get(manager, 'a' + (paramCounter++));
-			} while (paramSet.find(res) != paramSet.end());
+		
+		case NT_VariableIntTypeParam: {
+	
+			// cast int type parameter
+			VariableIntTypeParamPtr cur = static_pointer_cast<const VariableIntTypeParam>(ptr);
+			
+			// search for parameter ...
+			auto pos = paramMap.find(cur);
+			if(pos != paramMap.end()) {
+				// found => return result
+				return pos->second;
+			}
+			
+			// create fresh parameter ...
+			VariableIntTypeParamPtr res = getFreshParam();
+			paramMap.insert(std::make_pair(cur, res));
+			paramSet.insert(res);
 			return res;
 		}
-
-	};
-
-
-	template<typename T>
-	Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, IntTypeParamSet& paramSet) {
-		NodeManager& manager = target->getNodeManager();
-		FreshVariableSubstitution mapper(manager, usedTypes, paramSet);
-		return static_pointer_cast<T>(target->substitute(manager, mapper));
+		default:
+			assert_fail() << "Should be impossible to reach!";
+		}
+		return ptr;
 	}
+	
+private:
+
+	TypeVariablePtr getFreshVar() {
+		TypeVariablePtr res;
+		do {
+			res = TypeVariable::get(manager, "V" + toString(++varCounter));
+		}
+		while(varSet.find(res) != varSet.end());
+		return res;
+	}
+	
+	VariableIntTypeParamPtr getFreshParam() {
+		VariableIntTypeParamPtr res;
+		do {
+			res = VariableIntTypeParam::get(manager, 'a' + (paramCounter++));
+		}
+		while(paramSet.find(res) != paramSet.end());
+		return res;
+	}
+	
+};
+
+
+template<typename T>
+Pointer<T> makeTypeVariablesUnique(const Pointer<T>& target, TypeSet& usedTypes, IntTypeParamSet& paramSet) {
+	NodeManager& manager = target->getNodeManager();
+	FreshVariableSubstitution mapper(manager, usedTypes, paramSet);
+	return static_pointer_cast<T>(target->substitute(manager, mapper));
+}
 
 }
 
 TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
-
+	
 	// try deducing variable instantiations the argument types
 	auto varInstantiation = types::getTypeVariableInstantiation(manager, funType->getParameterTypes()->getTypes(), argumentTypes);
-
+	
 	// check whether derivation was successful
-	if (!varInstantiation) {
+	if(!varInstantiation) {
 		std::stringstream msg;
 		msg << "Cannot match arguments ("
-				<< join(", ", argumentTypes, print<deref<TypePtr>>())
-				<< ") to parameters ("
-				<< join(", ", funType->getParameterTypes(), print<deref<TypePtr>>())
-				<< ")";
+		    << join(", ", argumentTypes, print<deref<TypePtr>>())
+		    << ") to parameters ("
+		    << join(", ", funType->getParameterTypes(), print<deref<TypePtr>>())
+		    << ")";
 		throw ReturnTypeDeductionException(msg.str());
 	}
-
+	
 	// extract return type
 	const TypePtr& resType = funType->getReturnType();
-
+	
 	// compute and return the expected return type
 	return varInstantiation->applyTo(manager, resType);
 }
 
 TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes, bool unitOnFail) {
 	try {
-
+	
 		// try deducing the return type ...
 		return tryDeduceReturnType(funType, argumentTypes);
-
-	} catch (const ReturnTypeDeductionException& e) {
-
+		
+	}
+	catch(const ReturnTypeDeductionException& e) {
+	
 		// didn't work => print a warning
 		LOG(DEBUG) << "Unable to deduce return type for call to function of type "
-				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
-
+		           << toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
+		           
 		LOG(DEBUG) << "Exception:\n" << e.what();
 	}
 	// return null ptr

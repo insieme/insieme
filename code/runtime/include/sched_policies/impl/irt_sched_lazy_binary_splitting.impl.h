@@ -59,7 +59,9 @@ inline void _irt_sched_split_work_item_binary(irt_work_item* wi, irt_worker* sel
 
 inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self) {
 	int32 neighbour_index = self->id.thread-1;
-	if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
+	if(neighbour_index<0) {
+		neighbour_index = irt_g_worker_count-1;
+	}
 	return irt_work_item_cdeque_pop_back(&irt_g_workers[neighbour_index]->sched_data.queue);
 }
 
@@ -75,11 +77,13 @@ int irt_scheduling_iteration(irt_worker* self) {
 		_irt_worker_switch_to_wi(self, next_wi);
 		return 1;
 	}
-
+	
 	// if that failed, try to take a work item from the queue
 	irt_work_item* new_wi = irt_work_item_cdeque_pop_front(&self->sched_data.queue);
 	// if none available, try to steal from another thread
-	if(new_wi == NULL) new_wi = _irt_sched_steal_from_prev_thread(self);
+	if(new_wi == NULL) {
+		new_wi = _irt_sched_steal_from_prev_thread(self);
+	}
 	if(new_wi != NULL) {
 		if(_irt_sched_split_decision_max_queued_min_size(new_wi, self, 4, 50)) {
 			_irt_sched_split_work_item_binary(new_wi, self);
@@ -89,7 +93,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 		_irt_worker_switch_to_wi(self, new_wi);
 		return 1;
 	}
-
+	
 	// if that failed as well, look in the IPC message queue
 	_irt_sched_check_ipc_queue(self);
 	return 0;
@@ -116,7 +120,7 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
 	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
-    _irt_worker_switch_from_wi(self, yielding_wi);
+	_irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 

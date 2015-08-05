@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,7 +41,7 @@
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-	#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/Diagnostic.h>
 #pragma GCC diagnostic pop
 
 namespace insieme {
@@ -55,12 +55,12 @@ typedef clang::DiagnosticsEngine::Level DiagnosticLevel;
 
 void clangPreprocessorDiag(clang::Preprocessor &pp, const clang::SourceLocation& loc, const DiagnosticLevel& level, const std::string& s);
 
-void compilerMessage(const DiagnosticLevel& 		level, 
-					 const clang::SourceLocation& 	loc, 
-					 const std::string&		 		msg, 
-					 const ClangCompiler& 			clangComp 
-					);
-
-} // end utils namespace 
-} // end frontend namespace 
-} // end insieme namespace 
+void compilerMessage(const DiagnosticLevel& 		level,
+                     const clang::SourceLocation& 	loc,
+                     const std::string&		 		msg,
+                     const ClangCompiler& 			clangComp
+                    );
+                    
+} // end utils namespace
+} // end frontend namespace
+} // end insieme namespace

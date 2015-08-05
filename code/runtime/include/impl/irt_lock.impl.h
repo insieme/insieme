@@ -71,8 +71,9 @@ void irt_lock_acquire(irt_lock* lock) {
 		lock->top = &selflocked;
 		irt_spin_unlock(&lock->mutex);
 		irt_inst_insert_wi_event(wo, IRT_INST_WORK_ITEM_SUSPENDED_LOCK, wi->id);
-        _irt_worker_switch_from_wi(wo, wi);
-	} else { // acquire lock
+		_irt_worker_switch_from_wi(wo, wi);
+	}
+	else {   // acquire lock
 		lock->locked = 1;
 		irt_spin_unlock(&lock->mutex);
 	}
@@ -86,10 +87,11 @@ void irt_lock_release(irt_lock* lock) {
 		__irt_unused irt_worker* wo = task->worker;
 		irt_scheduling_continue_wi(task->worker, task->wi);
 		irt_signal_worker(wo);
-	} else { // none waiting, lock is now unlocked
+	}
+	else {   // none waiting, lock is now unlocked
 		lock->locked = 0;
 	}
-	irt_spin_unlock(&lock->mutex);	
+	irt_spin_unlock(&lock->mutex);
 }
 
 

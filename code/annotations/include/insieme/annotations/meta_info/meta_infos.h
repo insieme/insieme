@@ -49,105 +49,113 @@
 namespace insieme {
 namespace annotations {
 
-	namespace detail {
+namespace detail {
 
 
-		// -- basic type conversion --
+// -- basic type conversion --
 
-		template<typename T>
-		struct compiler_type {
-			typedef T type;
-		};
+template<typename T>
+struct compiler_type {
+	typedef T type;
+};
 
-		template<typename R, typename ... Ps>
-		struct compiler_type<R(*)(Ps...)> {
-			typedef core::ExpressionPtr type;
-		};
-
-
-		// -- support for comparing fields --
-
-		template<typename T>
-		struct field_comperator {
-			bool operator()(const T& a, const T& b) const { return a == b; }
-		};
-
-		template<typename T>
-		struct field_comperator<core::Pointer<T>> {
-			bool operator()(const core::Pointer<T>& a, const core::Pointer<T>& b) const { return *a == *b; }
-		};
+template<typename R, typename ... Ps>
+struct compiler_type<R(*)(Ps...)> {
+    typedef core::ExpressionPtr type;
+};
 
 
+// -- support for comparing fields --
 
-		// -- support for cloning fields --
-
-		template<typename T>
-		struct field_cloner {
-			T operator()(core::NodeManager& mgr, const T& in) const { return in; }
-		};
-
-		template<typename T>
-		struct field_cloner<core::Pointer<T>> {
-			core::Pointer<T> operator()(core::NodeManager& mgr, const core::Pointer<T>& in) const { return mgr.get(in); }
-		};
+template<typename T>
+struct field_comperator {
+	bool operator()(const T& a, const T& b) const {
+		return a == b;
 	}
+};
 
-	// include the actual definitions
+template<typename T>
+struct field_comperator<core::Pointer<T>> {
+	bool operator()(const core::Pointer<T>& a, const core::Pointer<T>& b) const {
+		return *a == *b;
+	}
+};
 
-	#include "insieme/annotations/meta_info/generators/enum.inc"
-	#include "insieme/common/meta_infos.def"
 
-	#include "insieme/annotations/meta_info/generators/struct.inc"
-	#include "insieme/common/meta_infos.def"
 
-	#include "insieme/annotations/meta_info/generators/equals.inc"
-	#include "insieme/common/meta_infos.def"
+// -- support for cloning fields --
 
-	#include "insieme/annotations/meta_info/generators/clone.inc"
-	#include "insieme/common/meta_infos.def"
+template<typename T>
+struct field_cloner {
+	T operator()(core::NodeManager& mgr, const T& in) const {
+		return in;
+	}
+};
 
-	#include "insieme/annotations/meta_info/generators/dump_type.inc"
-	#include "insieme/common/meta_infos.def"
+template<typename T>
+struct field_cloner<core::Pointer<T>> {
+	core::Pointer<T> operator()(core::NodeManager& mgr, const core::Pointer<T>& in) const {
+		return mgr.get(in);
+	}
+};
+}
 
-	#include "insieme/annotations/meta_info/generators/dump_to.inc"
-	#include "insieme/common/meta_infos.def"
+// include the actual definitions
 
-	#include "insieme/annotations/meta_info/generators/dump_from.inc"
-	#include "insieme/common/meta_infos.def"
+#include "insieme/annotations/meta_info/generators/enum.inc"
+#include "insieme/common/meta_infos.def"
 
-	inline bool isMetaInfo(const insieme::core::NodeAnnotationPtr& ptr) {
-		return false
-		#define INFO_STRUCT_BEGIN(_name) \
+#include "insieme/annotations/meta_info/generators/struct.inc"
+#include "insieme/common/meta_infos.def"
+
+#include "insieme/annotations/meta_info/generators/equals.inc"
+#include "insieme/common/meta_infos.def"
+
+#include "insieme/annotations/meta_info/generators/clone.inc"
+#include "insieme/common/meta_infos.def"
+
+#include "insieme/annotations/meta_info/generators/dump_type.inc"
+#include "insieme/common/meta_infos.def"
+
+#include "insieme/annotations/meta_info/generators/dump_to.inc"
+#include "insieme/common/meta_infos.def"
+
+#include "insieme/annotations/meta_info/generators/dump_from.inc"
+#include "insieme/common/meta_infos.def"
+
+inline bool isMetaInfo(const insieme::core::NodeAnnotationPtr& ptr) {
+	return false
+#define INFO_STRUCT_BEGIN(_name) \
 				|| dynamic_pointer_cast<insieme::core::value_node_annotation<_name##_info>::type>(ptr)
-		#include "insieme/common/meta_infos.def"
-		;
-	}
+#include "insieme/common/meta_infos.def"
+	       ;
+}
 
-	inline void clearMetaInfos(const insieme::core::NodePtr& ptr) {
-		#define INFO_STRUCT_BEGIN(_name) \
+inline void clearMetaInfos(const insieme::core::NodePtr& ptr) {
+#define INFO_STRUCT_BEGIN(_name) \
 			ptr->detachValue<_name ## _info>();
-		#include "insieme/common/meta_infos.def"
-	}
+#include "insieme/common/meta_infos.def"
+}
 
-	#include "insieme/annotations/meta_info/generators/clear.inc"
+#include "insieme/annotations/meta_info/generators/clear.inc"
 
 
-	/**
-	 * A utility function copying all meta information from the given src to the destination node.
-	 */
-	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
-	
-	/**
-	 * A utility function moving all meta information from the given src to the destination node.
-	 */
-	void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
+/**
+ * A utility function copying all meta information from the given src to the destination node.
+ */
+void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
 
-	typedef utils::Annotatable<core::NodeAnnotation>::annotation_map_type AnnotationMap;
+/**
+ * A utility function moving all meta information from the given src to the destination node.
+ */
+void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest);
 
-	/**
-	 * A utility function returning all metainformation annotations on a node.
-	 */
-	AnnotationMap getMetaInfos(const core::NodePtr& npr);
+typedef utils::Annotatable<core::NodeAnnotation>::annotation_map_type AnnotationMap;
+
+/**
+ * A utility function returning all metainformation annotations on a node.
+ */
+AnnotationMap getMetaInfos(const core::NodePtr& npr);
 
 } // end namespace annotations
 } // end namespace insieme

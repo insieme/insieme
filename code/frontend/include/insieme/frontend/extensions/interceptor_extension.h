@@ -47,35 +47,39 @@ namespace extensions {
 
 class InterceptorExtension : public insieme::frontend::extensions::FrontendExtension {
 
-	public:
+public:
 
 	virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
-
+	
 	InterceptorExtension() : interceptor(std::set<std::string>()) {}
-
+	
 	virtual boost::optional<std::string> isPrerequisiteMissing(ConversionSetup& setup) const;
-
+	
 	// Extension Hooks
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact);
-
-    virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic);
-
-    virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) ;
-
-    virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
-
-    virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
-
-    virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact);
-
+	
+	virtual core::ExpressionPtr FuncDeclVisit(const clang::FunctionDecl* funcDecl, insieme::frontend::conversion::Converter& convFact, bool symbolic);
+	
+	virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) ;
+	
+	virtual core::ExpressionPtr ValueDeclPostVisit(const clang::ValueDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact);
+	
+	virtual core::TypePtr TypeDeclVisit(const clang::TypeDecl* decl, insieme::frontend::conversion::Converter& convFact);
+	
+	virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const core::ExpressionPtr& irExpr, conversion::Converter& convFact);
+	
 private:
 
 	insieme::frontend::utils::Interceptor interceptor;
-
-	const insieme::frontend::utils::Interceptor& getInterceptor() const { return interceptor; }
-
-	void setInterceptor(const std::set<std::string>& patterns) { interceptor = insieme::frontend::utils::Interceptor(patterns); }
-
+	
+	const insieme::frontend::utils::Interceptor& getInterceptor() const {
+		return interceptor;
+	}
+	
+	void setInterceptor(const std::set<std::string>& patterns) {
+		interceptor = insieme::frontend::utils::Interceptor(patterns);
+	}
+	
 };
 
 } // extensions

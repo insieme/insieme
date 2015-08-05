@@ -57,7 +57,9 @@ struct to_primitive : public id<T> {};
 
 template<>
 struct to_primitive<std::string> {
-	const char* operator()(const string& str) const { return str.c_str(); }
+	const char* operator()(const string& str) const {
+		return str.c_str();
+	}
 };
 
 template<typename T> struct to_primitive<T&> : public to_primitive<T> {};
@@ -69,23 +71,24 @@ string format(const char* formatString, const Args& ... args) {
 	string retval;
 	int BUFFER_SIZE = 2048;
 	char buffer[BUFFER_SIZE];
-
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wformat-security"
-
-		int written = snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
-		if(written >= BUFFER_SIZE || written < 0) { // deal with both GNU and c99 error reporting
-			BUFFER_SIZE = written>0 ? written+1 : 1024*1024*8;
-			char* heap_buffer = new char[BUFFER_SIZE];
-			snprintf(heap_buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
-			retval = string(heap_buffer);
-			delete [] heap_buffer;
-		} else {
-			retval = string(buffer);
-		}
-
-	#pragma GCC diagnostic pop
-
+	
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+	
+	int written = snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+	if(written >= BUFFER_SIZE || written < 0) { // deal with both GNU and c99 error reporting
+		BUFFER_SIZE = written>0 ? written+1 : 1024*1024*8;
+		char* heap_buffer = new char[BUFFER_SIZE];
+		snprintf(heap_buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+		retval = string(heap_buffer);
+		delete [] heap_buffer;
+	}
+	else {
+		retval = string(buffer);
+	}
+	
+#pragma GCC diagnostic pop
+	
 	return retval;
 }
 
@@ -107,8 +110,8 @@ inline std::vector<string> split(const string& str) {
 	vector<string> tokens;
 	istringstream iss(str);
 	copy(istream_iterator<string>(iss),
-	         istream_iterator<string>(),
-	         back_inserter<vector<string> >(tokens));
+	     istream_iterator<string>(),
+	     back_inserter<vector<string>>(tokens));
 	return tokens;
 }
 
@@ -118,7 +121,9 @@ inline std::vector<string> split(const string& str) {
  * @return a new string containing the prefix
  */
 inline std::string commonPrefix(std::string a, std::string b) {
-	if(a.size() > b.size()) std::swap(a,b) ;
+	if(a.size() > b.size()) {
+		std::swap(a,b) ;
+	}
 	return std::string(a.begin(), std::mismatch(a.begin(), a.end(), b.begin()).first);
 }
 
@@ -139,15 +144,19 @@ inline bool containsSubString(const string& str, const string& substr) {
  */
 inline string camelcaseToUnderscore(const string input) {
 	std::string output;
-
+	
 	for(char s : input) {
 		if(std::isupper(s)) {
-			if(!output.empty()) output.push_back('_');
+			if(!output.empty()) {
+				output.push_back('_');
+			}
 			output.push_back(tolower(s));
-		} else
+		}
+		else {
 			output.push_back(s);
+		}
 	}
-
+	
 	return output;
 }
 
@@ -170,7 +179,7 @@ struct Joinable {
 	const Iterator begin;
 	const Iterator end;
 	const Printer& printer;
-
+	
 	Joinable(const string& separator, const Iterator& begin, const Iterator& end, const Printer& printer) :
 		separator(separator), begin(begin), end(end), printer(printer) {};
 };
@@ -178,7 +187,7 @@ struct Joinable {
 
 template<typename Iterator, typename Printer>
 std::ostream& operator<<(std::ostream& out, const Joinable<Iterator, Printer>& joinable) {
-	if (joinable.begin != joinable.end) {
+	if(joinable.begin != joinable.end) {
 		auto iter = joinable.begin;
 		joinable.printer(out, *iter);
 		++iter;
@@ -200,7 +209,8 @@ Joinable<typename Container::const_iterator, Printer> join(const string& separat
 
 template<typename Container>
 Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>> join(const string& separator, const Container& container) {
-	return Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>>(separator, container.begin(), container.end(), print<id<const typename Container::value_type&>>());
+	return Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>>(separator, container.begin(), container.end(),
+	        print<id<const typename Container::value_type&>>());
 }
 
 template<typename Iterator, typename Printer>
@@ -209,8 +219,10 @@ Joinable<Iterator, Printer> join(const string& separator, const Iterator& begin,
 }
 
 template<typename Iterator>
-Joinable<Iterator, print<id<const typename std::iterator_traits<Iterator>::value_type&>>> join(const string& separator, const Iterator& begin, const Iterator& end) {
-	return Joinable<Iterator , print<id<const typename std::iterator_traits<Iterator>::value_type&>>>(separator, begin, end, print<id<const typename std::iterator_traits<Iterator>::value_type&>>());
+Joinable<Iterator, print<id<const typename std::iterator_traits<Iterator>::value_type&>>> join(const string& separator, const Iterator& begin,
+        const Iterator& end) {
+	return Joinable<Iterator , print<id<const typename std::iterator_traits<Iterator>::value_type&>>>(separator, begin, end,
+	        print<id<const typename std::iterator_traits<Iterator>::value_type&>>());
 }
 
 template<typename Iterator, typename Printer>
@@ -219,8 +231,10 @@ Joinable<Iterator, Printer> join(const string& separator, const std::pair<Iterat
 }
 
 template<typename Iterator>
-Joinable<Iterator, print<id<const typename std::iterator_traits<Iterator>::value_type&>>> join(const string& separator, const std::pair<Iterator, Iterator>& range) {
-	return Joinable<Iterator , print<id<const typename std::iterator_traits<Iterator>::value_type&>>>(separator, range.first, range.second, print<id<const typename std::iterator_traits<Iterator>::value_type&>>());
+Joinable<Iterator, print<id<const typename std::iterator_traits<Iterator>::value_type&>>> join(const string& separator,
+        const std::pair<Iterator, Iterator>& range) {
+	return Joinable<Iterator , print<id<const typename std::iterator_traits<Iterator>::value_type&>>>(separator, range.first, range.second,
+	        print<id<const typename std::iterator_traits<Iterator>::value_type&>>());
 }
 
 template<typename SeparatorFunc, typename Container, typename Printer>
@@ -243,21 +257,21 @@ struct Multiplier {
 	const unsigned times;
 	const Printer& printer;
 	const string& separator;
-
+	
 	Multiplier(const Element& element, unsigned times, const Printer& printer, const string& separator) :
 		element(element), times(times), printer(printer), separator(separator) {};
 };
 
 template<typename Element, typename Printer>
 std::ostream& operator<<(std::ostream& out, const Multiplier<Element, Printer>& multiplier) {
-	if (multiplier.times > 0) {
+	if(multiplier.times > 0) {
 		multiplier.printer(out, multiplier.element);
 	}
-	for (unsigned i = 1; i<multiplier.times; i++) {
+	for(unsigned i = 1; i<multiplier.times; i++) {
 		out << multiplier.separator;
 		multiplier.printer(out, multiplier.element);
 	}
-
+	
 	return out;
 }
 
@@ -270,51 +284,60 @@ Multiplier<Element, Printer> times(const Element& element, unsigned times, const
 namespace {
 
 	struct escape_character_filter {
-		typedef char char_type;
-		typedef boost::iostreams::output_filter_tag  category;
-
-		template<typename Sink>
-		bool put(Sink& snk, char c)
-		{
-			switch(c) {
-			case '\a': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'a');
-			case '\b': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'b');
-			case '\f': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'f');
-			case '\n': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'n');
-			case '\r': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'r');
-			case '\t': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 't');
-			case '\v': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'v');
-			case '\'': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '\'');
-			case '\\': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '\\');
-			case '"': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '"');
-			}
-			return boost::iostreams::put(snk, c);
+	    typedef char char_type;
+	    typedef boost::iostreams::output_filter_tag  category;
+	    
+	    template<typename Sink>
+	bool put(Sink& snk, char c) {
+		switch(c) {
+		case '\a':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'a');
+		case '\b':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'b');
+		case '\f':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'f');
+		case '\n':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'n');
+		case '\r':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'r');
+		case '\t':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 't');
+		case '\v':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'v');
+		case '\'':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '\'');
+		case '\\':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '\\');
+		case '"':
+			return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '"');
 		}
-	};
-
+		return boost::iostreams::put(snk, c);
+	}
+	            };
+	            
 	template<typename T>
 	class CharacterEscaper {
-		T& sink;
-		boost::iostreams::filtering_ostream filter;
-	public:
-		CharacterEscaper(T& sink) : sink(sink) {
-			filter.push(escape_character_filter());
-			filter.push(sink);
-			filter.set_auto_close(true);
-		}
-
-		CharacterEscaper(const CharacterEscaper& other) : sink(other.sink) {
-			filter.push(escape_character_filter());
-			filter.push(sink);
-			filter.set_auto_close(true);
-		}
-
-		template<typename E>
-		CharacterEscaper& operator<<(E& element) {
-			filter << element;
-			return *this;
-		}
-	};
+	    T& sink;
+	    boost::iostreams::filtering_ostream filter;
+	    public:
+	CharacterEscaper(T& sink) : sink(sink) {
+		filter.push(escape_character_filter());
+		filter.push(sink);
+		filter.set_auto_close(true);
+	}
+	
+	CharacterEscaper(const CharacterEscaper& other) : sink(other.sink) {
+		filter.push(escape_character_filter());
+		filter.push(sink);
+		filter.set_auto_close(true);
+	}
+	
+	template<typename E>
+	CharacterEscaper& operator<<(E& element) {
+		filter << element;
+		return *this;
+	}
+	       };
 }
 
 template<typename T>
@@ -334,33 +357,33 @@ struct Indent {
 	 * The number of blanks represented by this indent
 	 */
 	unsigned indent;
-
+	
 	/**
 	 * The step size the indent should be increased.
 	 */
 	unsigned stepSize;
-
+	
 	/**
 	 * Creates a new indent instance based on the given number of
 	 * indent-blanks and the given step size.
 	 */
 	Indent(unsigned indent=0, unsigned stepSize = 4)
 		: indent(indent), stepSize(stepSize) {}
-
+		
 	/**
 	 * Increases the indent by the given number of steps.
 	 */
 	Indent operator+(int steps) const {
 		return Indent(indent + steps*stepSize);
 	}
-
+	
 	/**
 	 * Decreases the indent by the given number of steps.
 	 */
 	Indent operator-(int steps) const {
 		return Indent(indent - steps*stepSize);
 	}
-
+	
 	/**
 	 * Increases the indent by one unit (prefix).
 	 */
@@ -368,7 +391,7 @@ struct Indent {
 		indent += stepSize;
 		return *this;
 	}
-
+	
 	/**
 	 * Increases the indent by one unit (postfix).
 	 */
@@ -377,7 +400,7 @@ struct Indent {
 		++*this;
 		return res;
 	}
-
+	
 };
 
 namespace std {
@@ -385,6 +408,6 @@ namespace std {
 	inline std::ostream& operator<<(std::ostream& out, const Indent& indent) {
 		return out << times(" ", indent.indent);
 	}
-
+	
 }
 

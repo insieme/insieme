@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,8 +41,7 @@
 #include "abstraction/atomic.h"
 #include "abstraction/spin_locks.h"
 
-asm int atomic_rmw_int_asm(int *ptr, int value)
-{
+asm int atomic_rmw_int_asm(int *ptr, int value) {
 	nop;
 	nop;
 	nop;
@@ -51,12 +50,11 @@ asm int atomic_rmw_int_asm(int *ptr, int value)
 	nop;
 };
 
-int atomic_rmw_int(int *ptr, int value)
-{
+int atomic_rmw_int(int *ptr, int value) {
 	return atomic_rmw_int_asm(ptr, value);
 };
 
-// TODO [_GEMS]: work-around implementation with global lock 
+// TODO [_GEMS]: work-around implementation with global lock
 
 /* 0 is unlocked */
 irt_spinlock global_lock = 0;
@@ -79,7 +77,7 @@ irt_spinlock global_lock = 0;
 		*ptr __op__##= value; \
 		irt_spin_unlock(&global_lock); \
 		return tmp; \
-	}; 
+	};
 
 #define IRT_DEFINE_SYNC_BOOL_COMPARE_AND_SWAP(__type__) \
 	bool  __sync_bool_compare_and_swap_##__type__(__type__* ptr, __type__ oldval, __type__ newval) { \

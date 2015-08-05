@@ -69,85 +69,85 @@ class BasicGenerator : boost::noncopyable {
 	mutable BasicGeneratorImpl* pimpl;
 	class SubTypeLattice;
 	mutable SubTypeLattice* subTypeLattice;
-
+	
 public:
 	BasicGenerator(NodeManager& nm);
 	~BasicGenerator();
-
+	
 	NodeManager& getNodeManager() const {
 		return nm;
 	}
-
+	
 	enum Operator {
-	#define OPERATOR(_id, _str) \
+#define OPERATOR(_id, _str) \
 	_id,
-	#include "insieme/core/lang/inspire_api/lang.def"
+#include "insieme/core/lang/inspire_api/lang.def"
 	};
-
-	#define TYPE(_id, _spec) \
+	
+#define TYPE(_id, _spec) \
 	TypePtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
-
-	#define LITERAL(_id, _name, _spec) \
+	
+#define LITERAL(_id, _name, _spec) \
 	LiteralPtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
-
-	#define DERIVED(_id, _name, _spec) \
+	
+#define DERIVED(_id, _name, _spec) \
 	ExpressionPtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
-
-	#define OPERATION(_type, _op, _name, _spec) \
+	
+#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr get##_type##_op() const; \
 	bool is##_type##_op(const NodePtr& p) const;
-
-	#define DERIVED_OP(_type, _op, _name, _spec) \
+	
+#define DERIVED_OP(_type, _op, _name, _spec) \
 	ExpressionPtr get##_type##_op() const; \
 	bool is##_type##_op(const NodePtr& p) const;
-
-	#define GROUP(_id, ...) \
+	
+#define GROUP(_id, ...) \
 	bool is##_id(const NodePtr& p) const; \
 	const vector<NodePtr>& get##_id##Group() const;
-
-	#include "insieme/core/lang/inspire_api/lang.def"
-
+	
+#include "insieme/core/lang/inspire_api/lang.def"
+	
 	ExpressionPtr getBuiltIn(const std::string& name) const;
 	LiteralPtr getLiteral(const string& name) const;
-
+	
 	/**
 	 * Required to support operators on type literals.
 	 */
 	bool isType(const NodePtr& type) const;
-
+	
 	/**
 	 * Required to support operators on type ref.
 	 */
 	bool isRef(const NodePtr& type) const;
-
+	
 	/**
 	 * Required to support operators on generic types.
 	 */
 	bool isGen(const NodePtr& type) const;
-
+	
 	/**
 	 * Obtains an expression representing the the requested operator for the
 	 * given data type.
 	 */
 	ExpressionPtr getOperator(const TypePtr& type, const Operator& op) const;
-
+	
 	/**
 	 * Obtains the operator (as defined in the lang.def file) from a literal
 	 * expression obtained through the previous method (inverse procedure)
 	 */
 	Operator getOperator(const ExpressionPtr& lit) const;
-
+	
 	// ----- type hierarchy utilities ---
-
+	
 	/**
 	 * Two methods obtaining all direct super / sub types of the given generic types
 	 */
 	TypeSet getDirectSuperTypesOf(const TypePtr& type) const;
 	TypeSet getDirectSubTypesOf(const TypePtr& type) const;
-
+	
 private:
 
 	// obtains a pointer to a lazy-instantiated sub-type lattice

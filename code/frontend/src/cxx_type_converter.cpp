@@ -76,65 +76,68 @@ core::TypePtr Converter::CXXTypeConverter::VisitPointerType(const PointerType* p
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
-
+	
 	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
 	LOG_TYPE_CONVERSION(tagType, ty) ;
-
+	
 	//if not a struct type we don't need to do anything more
-	if( !ty.isa<core::StructTypePtr>() ) { return ty; }
-
+	if(!ty.isa<core::StructTypePtr>()) {
+		return ty;
+	}
+	
 	core::StructTypePtr classType = ty.as<core::StructTypePtr>();
-
+	
 	// if is a c++ class, we need to annotate some stuff
-	if (llvm::isa<clang::RecordType>(tagType)) {
-		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
+	if(llvm::isa<clang::RecordType>(tagType)) {
+		if(!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl())) {
 			return classType;
-
+		}
+		
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
-
+		
 		if(!classDecl->getDefinition()) {
 			// check if the classDeclaration has a definition, if not we just use the the type
 			// returned by the TypeConverter
 			return classType;
 		}
-
+		
 		//~~~~~ base classes if any ~~~~~
-		if (classDecl->getNumBases() > 0){
+		if(classDecl->getNumBases() > 0) {
 			std::vector<core::ParentPtr> parents;
-
+			
 			clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
-			for (; it != classDecl->bases_end(); it++){
+			for(; it != classDecl->bases_end(); it++) {
 				// visit the parent to build its type
 				auto parentIrType = convert((it)->getType());
 				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
-
+			
 			// if we have base classes, update the classType
 			assert(classType.isa<core::StructTypePtr>());
-
+			
 			// implant new parents list
 			classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getParents(), builder.parents(parents)).as<core::StructTypePtr>();
 		}
-
+		
 //		//update name of class type
 //		classType = core::transform::replaceNode(mgr,
 //												 core::StructTypeAddress(classType)->getName(),
 //												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		//if classDecl has a name add it
-		if( !classDecl->getNameAsString().empty() ) {
-            core::annotations::attachName(classType, classDecl->getNameAsString());
+		if(!classDecl->getNameAsString().empty()) {
+			core::annotations::attachName(classType, classDecl->getNameAsString());
 		}
 	}
 	return classType;
 }
 
 // Returns all bases of a c++ record declaration
-vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX) {
 	vector<RecordDecl*> bases;
-
+	
 	for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
-			bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+	        bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
 		const CXXBaseSpecifier * base = bit;
 		RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
 		bases.push_back(baseRecord);
@@ -169,26 +172,29 @@ core::TypePtr Converter::CXXTypeConverter::VisitDependentSizedArrayType(const De
 core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION(refTy, retTy);
-
+	
 	// get inner type
-	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType()->getCanonicalTypeInternal());
-
+	core::TypePtr inTy = convFact.convertType(refTy->getPointeeType()->getCanonicalTypeInternal());
+	
 	// find out if is a const ref or not
 	QualType  qual;
 	bool isConst;
 	if(llvm::isa<clang::RValueReferenceType>(refTy)) {
 		qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
 		isConst = llvm::cast<clang::RValueReferenceType>(refTy)->getPointeeType().isConstQualified();
-	} else {
+	}
+	else {
 		qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
 		isConst = llvm::cast<clang::LValueReferenceType>(refTy)->getPointeeType().isConstQualified();
 	}
-
-	if(isConst)
-    	retTy =  core::analysis::getConstCppRef(inTy);
-	else
+	
+	if(isConst) {
+		retTy =  core::analysis::getConstCppRef(inTy);
+	}
+	else {
 		retTy =  core::analysis::getCppRef(inTy);
-
+	}
+	
 	return retTy;
 }
 
@@ -199,68 +205,68 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION(templTy, retTy);
-
+	
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
 		//we trigger the conversion of the inner type,
 		//so we don't use the converted type/expr directly
-		switch(templTy->getArg(argId).getKind()){
-			case clang::TemplateArgument::Expression: {
-				VLOG(2) << "arg: expression";
-				convFact.convertType(templTy->getArg(argId).getAsExpr()->getType());
-				break;
-			}
-			case clang::TemplateArgument::Type: {
-				VLOG(2) << "arg: TYPE";
-				convFact.convertType(templTy->getArg(argId).getAsType());
-				break;
-			}
-				// -------------------   NON IMPLEMENTED ONES ------------------------
-			case clang::TemplateArgument::Integral:  {
+		switch(templTy->getArg(argId).getKind()) {
+		case clang::TemplateArgument::Expression: {
+			VLOG(2) << "arg: expression";
+			convFact.convertType(templTy->getArg(argId).getAsExpr()->getType());
+			break;
+		}
+		case clang::TemplateArgument::Type: {
+			VLOG(2) << "arg: TYPE";
+			convFact.convertType(templTy->getArg(argId).getAsType());
+			break;
+		}
+		// -------------------   NON IMPLEMENTED ONES ------------------------
+		case clang::TemplateArgument::Integral:  {
 			// templated parameters are values wich spetialize the template, because of their value nature,
 			// they should be encapsulated as types to fit in the typing of the parent type
-				VLOG(2) << "arg: integral";
-				assert_fail();
-				break;
-			}
-			case clang::TemplateArgument::Null: {
-				VLOG(2) << "arg: NULL";
-				assert_fail();
-				break;
-			}
-			case clang::TemplateArgument::Declaration: {
-				VLOG(2) << "arg: DECL";
-				assert_fail();
-				break;
-			}
-			case clang::TemplateArgument::NullPtr: {
-				 VLOG(2) << "arg: nullptr";
-				assert_fail();
-				break;
-			}
-			case clang::TemplateArgument::Template: {
-				VLOG(2) << "arg: template";
-				// no need to do anything
-				//templTy->getArg(argId).getAsTemplate().dump();
-
-				break;
-			}
-			case clang::TemplateArgument::TemplateExpansion: {
-				VLOG(2) << "arg: template expansion";
-				assert_fail();
-				break;
-			}
-			case clang::TemplateArgument::Pack: {
-				VLOG(2) << "arg: pack";
-				assert_fail();
-				break;
-			}
+			VLOG(2) << "arg: integral";
+			assert_fail();
+			break;
 		}
-    }
-
+		case clang::TemplateArgument::Null: {
+			VLOG(2) << "arg: NULL";
+			assert_fail();
+			break;
+		}
+		case clang::TemplateArgument::Declaration: {
+			VLOG(2) << "arg: DECL";
+			assert_fail();
+			break;
+		}
+		case clang::TemplateArgument::NullPtr: {
+			VLOG(2) << "arg: nullptr";
+			assert_fail();
+			break;
+		}
+		case clang::TemplateArgument::Template: {
+			VLOG(2) << "arg: template";
+			// no need to do anything
+			//templTy->getArg(argId).getAsTemplate().dump();
+			
+			break;
+		}
+		case clang::TemplateArgument::TemplateExpansion: {
+			VLOG(2) << "arg: template expansion";
+			assert_fail();
+			break;
+		}
+		case clang::TemplateArgument::Pack: {
+			VLOG(2) << "arg: pack";
+			assert_fail();
+			break;
+		}
+		}
+	}
+	
 	assert_true(templTy->isSugared()) << "no idea what to do with non sugar";
- 	return	retTy = convFact.convertType(templTy->desugar());
+	return	retTy = convFact.convertType(templTy->desugar());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -268,8 +274,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
-    LOG_TYPE_CONVERSION( tempTy, retTy );
-
+	LOG_TYPE_CONVERSION(tempTy, retTy);
+	
 	assert_fail() << "DependentTemplateSpecializationType should not be translated, only a complete spetialization can be turn into IR";
 	return retTy;
 }
@@ -279,8 +285,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
 	core::TypePtr retTy;
-    LOG_TYPE_CONVERSION( tempTy, retTy );
-
+	LOG_TYPE_CONVERSION(tempTy, retTy);
+	
 	assert_fail() << "InjectedClassNameType not yet handled!";
 	return retTy;
 }
@@ -290,8 +296,8 @@ core::TypePtr Converter::CXXTypeConverter::VisitInjectedClassNameType(const Inje
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
 	core::TypePtr retTy;
-	LOG_TYPE_CONVERSION( substTy, retTy );
-
+	LOG_TYPE_CONVERSION(substTy, retTy);
+	
 //		VLOG(2) << "resultType: " << funcTy->getReturnType().getTypePtr()->getTypeClassName();
 //		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 //			[ this ] (const QualType& currArgType) {
@@ -302,20 +308,20 @@ core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const 
 //		VLOG(2) << "CLANG Type Classname: " << substTy->getReplacedParameter()->getTypeClassName();
 	//VLOG(2) << "Replaced Template Name: " << substTy->getReplacedParameter()->getDecl()->getNameAsString();
 	//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
-
+	
 	//START_LOG_TYPE_CONVERSION(substTy);
 	//assert_fail() << "SubstTemplateTypeParmType not yet handled!";
-	retTy = convFact.convertType( substTy->getReplacementType() );
+	retTy = convFact.convertType(substTy->getReplacementType());
 	return retTy;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DEC
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* tempTy){
+core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* tempTy) {
 	core::TypePtr retTy;
-    LOG_TYPE_CONVERSION( tempTy, retTy );
-
+	LOG_TYPE_CONVERSION(tempTy, retTy);
+	
 	assert_fail() << "TemplateTypeParmType should not show off, can you explain to me how are you planing to handle this in IR?";
 	return retTy;
 }
@@ -325,26 +331,26 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang
 //                 MEMBER POINTER TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::MemberPointerType* memPointerTy) {
-    core::TypePtr retTy;
-    LOG_TYPE_CONVERSION( memPointerTy, retTy );
-    retTy = convert(memPointerTy->getPointeeType());
+	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION(memPointerTy, retTy);
+	retTy = convert(memPointerTy->getPointeeType());
 	core::TypePtr memTy=  convFact.lookupTypeDetails(retTy);
-	core::TypePtr classTy = convert(memPointerTy->getClass ()->getCanonicalTypeInternal());
-
-	if (memPointerTy->isMemberFunctionPointer()){
+	core::TypePtr classTy = convert(memPointerTy->getClass()->getCanonicalTypeInternal());
+	
+	if(memPointerTy->isMemberFunctionPointer()) {
 		frontend_assert(memTy.isa<core::FunctionTypePtr>()) << " no function type could be retrieved for pointed type\n";
-
+		
 		// prepend this obj to the param list
 		core::TypeList paramTypes = memTy.as<core::FunctionTypePtr>()->getParameterTypes();
 		paramTypes.insert(paramTypes.begin(),builder.refType(classTy));
 		core::TypePtr  returnTy      = memTy.as<core::FunctionTypePtr>()->getReturnType();
-
+		
 		// generate new member function type
 		return retTy =  builder.functionType(paramTypes, returnTy, core::FK_MEMBER_FUNCTION);
 	}
 	else {
-		frontend_assert (memPointerTy->isMemberDataPointer());
-    	return retTy = core::analysis::getMemberPointer(classTy, memTy);
+		frontend_assert(memPointerTy->isMemberDataPointer());
+		return retTy = core::analysis::getMemberPointer(classTy, memTy);
 	}
 }
 
@@ -352,7 +358,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitMemberPointerType(const clang::M
 //			The visitor itself
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::QualType& type) {
-    return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
+	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
 }
 
 } // End conversion namespace

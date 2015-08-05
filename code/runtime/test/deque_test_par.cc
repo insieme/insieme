@@ -66,9 +66,9 @@ TEST(deques, mass_parallel_ops) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_deque_test_deque q;
 		irt_deque_test_deque_init(&q);
-
+		
 		irt_deque_test* elems[TEST_ELEMS];
-
+		
 		#pragma omp parallel
 		{
 			#pragma omp for schedule(dynamic,1)
@@ -80,11 +80,11 @@ TEST(deques, mass_parallel_ops) {
 			for(int i=0; i<TEST_ELEMS; ++i) {
 				irt_deque_test_deque_pop_back(&q);
 			}
-
+			
 			EXPECT_EQ(0 /* NULL */, q.start);
 			EXPECT_EQ(0 /* NULL */, q.end);
 		}
-
+		
 		// cleanup
 		irt_deque_test_deque_cleanup(&q);
 		for(int i=0; i<TEST_ELEMS; ++i) {

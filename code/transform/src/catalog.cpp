@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,26 +43,26 @@
 namespace insieme {
 namespace transform {
 
-	Catalog getStandardCatalog() {
-		Catalog res;
-
-		// add some connectors
-		res.add(PipelineType::getInstance());
-		res.add(FixpointType::getInstance());
-		res.add(ForAllType::getInstance());
-		res.add(ConditionType::getInstance());
-		res.add(TryOtherwiseType::getInstance());
-
-		// add manually coded transformations
-		res.add(NoOpType::getInstance());
-
-		// add pattern based transformations
-		res.add(rulebased::LoopUnrollingType::getInstance());
-
-		// TODO: add more transformation
-
-		return res;
-	}
+Catalog getStandardCatalog() {
+	Catalog res;
+	
+	// add some connectors
+	res.add(PipelineType::getInstance());
+	res.add(FixpointType::getInstance());
+	res.add(ForAllType::getInstance());
+	res.add(ConditionType::getInstance());
+	res.add(TryOtherwiseType::getInstance());
+	
+	// add manually coded transformations
+	res.add(NoOpType::getInstance());
+	
+	// add pattern based transformations
+	res.add(rulebased::LoopUnrollingType::getInstance());
+	
+	// TODO: add more transformation
+	
+	return res;
+}
 
 } // end namespace transform
 } // end namespace insieme

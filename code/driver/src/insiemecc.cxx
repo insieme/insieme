@@ -81,13 +81,13 @@ namespace cmd = insieme::driver::cmd;
 
 void openBoxTitle(const std::string title) {
 	LOG(INFO) <<
-		// Opening ascii row
-		"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << std::right << "//" <<
-		// Section title left aligned
-		"\n//" << std::setfill(' ') << std::setw(TEXT_WIDTH-2) << std::left <<
-			" " + title + " " << std::right << "//" <<
-		// Closing ascii row
-		"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << "//";
+	          // Opening ascii row
+	          "\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << std::right << "//" <<
+	          // Section title left aligned
+	          "\n//" << std::setfill(' ') << std::setw(TEXT_WIDTH-2) << std::left <<
+	          " " + title + " " << std::right << "//" <<
+	          // Closing ascii row
+	          "\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << "//";
 }
 
 void closeBox() {
@@ -111,63 +111,67 @@ void showStatistics(const core::ProgramPtr& program) {
 void benchmarkCore(const core::NodePtr& program) {
 
 	core::NodeManager& mgr = program->getNodeManager();
-
+	
 	openBoxTitle("Core Benchmarking");
-
+	
 	int count = 0;
 	// Benchmark pointer-based visitor
 	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Pointer ",
-		[&]() {
-			core::visitDepthFirst(program,
-				core::makeLambdaVisitor([&](const core::NodePtr& cur) { count++; }, true)
-			);
-		}
-	);
+	[&]() {
+		core::visitDepthFirst(program,
+		core::makeLambdaVisitor([&](const core::NodePtr& cur) {
+			count++;
+		}, true)
+		                     );
+	}
+	                           );
 	LOG(INFO) << "Number of nodes: " << count;
-
+	
 	// Benchmark address based visitor
 	utils::Timer visitAddrTime("");
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address ",
-		[&]() {
-			core::visitDepthFirst(core::ProgramAddress(program),
-				core::makeLambdaVisitor([&](const core::NodeAddress& cur) { count++; }, true)
-			);
-		}
-	);
+	[&]() {
+		core::visitDepthFirst(core::ProgramAddress(program),
+		core::makeLambdaVisitor([&](const core::NodeAddress& cur) {
+			count++;
+		}, true)
+		                     );
+	}
+	                           );
 	LOG(INFO) << "Number of nodes: " << count;
-
+	
 	// Benchmark empty-substitution operation
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address ",
-		[&]() {
-			core::SimpleNodeMapping* h;
-			auto mapper = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
-				count++;
-				return cur->substitute(mgr, *h);
-			});
-			h = &mapper;
-			mapper.map(0,program);
-		}
-	);
+	[&]() {
+		core::SimpleNodeMapping* h;
+		auto mapper = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
+			count++;
+			return cur->substitute(mgr, *h);
+		});
+		h = &mapper;
+		mapper.map(0,program);
+	}
+	                           );
 	LOG(INFO) << "Number of modifications: " << count;
-
+	
 	// Benchmark empty-substitution operation (non-types only)
 	count = 0;
 	utils::measureTimeFor<INFO>("Benchmark.NodeSubstitution.Non-Types ",
-		[&]() {
-			core::SimpleNodeMapping* h2;
-			auto mapper2 = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
-				if (cur->getNodeCategory() == core::NC_Type) {
-					return cur;
-				}
-				count++;
-				return cur->substitute(mgr, *h2);
-			});
-			h2 = &mapper2;
-			mapper2.map(0,program);
-		}
-	);
+	[&]() {
+		core::SimpleNodeMapping* h2;
+		auto mapper2 = core::makeLambdaMapper([&](unsigned, const core::NodePtr& cur)->core::NodePtr {
+			if(cur->getNodeCategory() == core::NC_Type) {
+				return cur;
+			}
+			count++;
+			return cur->substitute(mgr, *h2);
+		});
+		h2 = &mapper2;
+		mapper2.map(0,program);
+	}
+	                           );
 	LOG(INFO) << "Number of modifications: " << count;
 	closeBox();
 }
@@ -177,15 +181,17 @@ void benchmarkCore(const core::NodePtr& program) {
 //***************************************************************************************
 int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 	int retval = 0;
-
+	
 	using namespace insieme::core::printer;
-
+	
 	openBoxTitle("IR Semantic Checks");
-
+	
 	utils::measureTimeFor<INFO>("Semantic Checks ",
-		[&]() { list = core::checks::check( program ); }
-	);
-
+	[&]() {
+		list = core::checks::check(program);
+	}
+	                           );
+	                           
 	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [&](const core::checks::Message& cur) {
@@ -194,39 +200,40 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 		stringstream ss;
 		unsigned contextSize = 1;
 		do {
-
+		
 			ss.str("");
 			ss.clear();
 			core::NodePtr&& context = address.getParentNode(
-					min((unsigned)contextSize, address.getDepth()-contextSize)
-				);
+			                              min((unsigned)contextSize, address.getDepth()-contextSize)
+			                          );
 			ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
-
-		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+			
+		}
+		while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
 //		LOG(ERROR) << "\t Source-Node-Type: " << address->getNodeType();
 		LOG(ERROR) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
 		LOG(ERROR) << "\t Context: " << ss.str() << std::endl;
-
+		
 		// find enclosing function
 		auto fun = address;
 		while(!fun.isRoot() && fun->getNodeType() != core::NT_LambdaExpr) {
 			fun = fun.getParentAddress();
 		}
-		if (fun->getNodeType() == core::NT_LambdaExpr) {
+		if(fun->getNodeType() == core::NT_LambdaExpr) {
 			LOG(ERROR) << "\t Context:\n" << PrettyPrinter(fun, PrettyPrinter::PRINT_DEREFS |
-					PrettyPrinter::JUST_OUTERMOST_SCOPE |
-					PrettyPrinter::PRINT_CASTS) << std::endl;
+			           PrettyPrinter::JUST_OUTERMOST_SCOPE |
+			           PrettyPrinter::PRINT_CASTS) << std::endl;
 		}
-
+		
 //		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 	});
-
+	
 	// In the case of semantic errors, quit
-	if ( !list.getErrors().empty() ) {
+	if(!list.getErrors().empty()) {
 		cerr << "---- Semantic errors encountered!! ----\n";
 		retval = 1;
 	}
-
+	
 	closeBox();
 	return retval;
 }
@@ -235,10 +242,11 @@ int checkSema(const core::NodePtr& program, core::checks::MessageList& list) {
 //									Backend selection
 //***************************************************************************************
 insieme::backend::BackendPtr getBackend(const core::ProgramPtr& program, const cmd::Options& options) {
-	
-	if(options.backendHint == cmd::BackendEnum::Sequential)
-		return be::sequential::SequentialBackend::getDefault();
 
+	if(options.backendHint == cmd::BackendEnum::Sequential) {
+		return be::sequential::SequentialBackend::getDefault();
+	}
+	
 	return be::runtime::RuntimeBackend::getDefault(options.settings.estimateEffort, false);
 }
 
@@ -247,37 +255,41 @@ int main(int argc, char** argv) {
 	// Step 1: parse input parameters
 	std::vector<std::string> arguments(argv, argv + argc);
 	cmd::Options options = cmd::Options::parse(arguments);
-
+	
 	// if options are invalid, exit non-zero
-	if(!options.valid)
+	if(!options.valid) {
 		return 1;
-
+	}
+	
 	// if e.g. help was specified, exit with zero
-	if(options.gracefulExit)
+	if(options.gracefulExit) {
 		return 0;
-
+	}
+	
 	std::cout << "Insieme compiler - Version: " << utils::getVersion() << "\n";
-
+	
 	// Step 2: filter input files
 	vector<fe::path> inputs;
 	vector<fe::path> libs;
 	vector<fe::path> extLibs;
-
+	
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
-		if (ext == ".o" || ext == ".so") {
-			if (dr::isInsiemeLib(cur)) {
+		if(ext == ".o" || ext == ".so") {
+			if(dr::isInsiemeLib(cur)) {
 				libs.push_back(cur);
-			} else {
+			}
+			else {
 				extLibs.push_back(cur);
 			}
-		} else {
+		}
+		else {
 			inputs.push_back(cur);
 		}
 	}
 	// indicates that a shared object file should be created
 	bool createSharedObject = fs::extension(options.settings.outFile) == ".so";
-
+	
 //std::cout << "Libs:    " << libs << "\n";
 //std::cout << "Inputs:  " << inputs << "\n";
 //std::cout << "ExtLibs: " << extLibs << "\n";
@@ -288,17 +300,17 @@ int main(int argc, char** argv) {
 
 	// update input files
 	options.job.setFiles(inputs);
-
+	
 	// Step 3: load input code
 	co::NodeManager mgr;
-
+	
 	// load libraries
 	options.job.setLibs(::transform(libs, [&](const fe::path& cur) {
 		std::cout << "Loading " << cur << " ...\n";
 		return dr::loadLib(mgr, cur);
 	}));
-
-
+	
+	
 	// if it is compile only or if it should become an object file => save it
 	if(options.settings.compileOnly || createSharedObject) {
 		auto res = options.job.toIRTranslationUnit(mgr);
@@ -306,7 +318,7 @@ int main(int argc, char** argv) {
 		dr::saveLib(res, options.settings.outFile);
 		return dr::isInsiemeLib(options.settings.outFile) ? 0 : 1;
 	}
-
+	
 	// dump the translation unit file (if needed for de-bugging)
 	if(!options.settings.dumpTU.empty()) {
 		std::cout << "Dumping Translation Unit ...\n";
@@ -314,106 +326,116 @@ int main(int argc, char** argv) {
 		std::ofstream out(options.settings.dumpTU.string());
 		out << tu;
 	}
-
-
+	
+	
 	std::cout << "Extracting executable ...\n";
-
+	
 	// convert src file to target code
-	    auto program = options.job.execute(mgr);
-
+	auto program = options.job.execute(mgr);
+	
 	core::checks::MessageList errors;
 	if(options.settings.checkSema || options.settings.checkSemaOnly) {
 		int retval = checkSema(program, errors);
-		if(options.settings.checkSemaOnly)
+		if(options.settings.checkSemaOnly) {
 			return retval;
+		}
 	}
-
-	if(options.settings.showStatistics)
+	
+	if(options.settings.showStatistics) {
 		showStatistics(program);
-
-	if(options.settings.benchmarkCore)
+	}
+	
+	if(options.settings.benchmarkCore) {
 		benchmarkCore(program);
-
-	if(options.settings.taskGranularityTuning)
+	}
+	
+	if(options.settings.taskGranularityTuning) {
 		program = insieme::transform::tasks::applyTaskOptimization(program);
-
+	}
+	
 	// dump IR code
 	if(!options.settings.dumpIR.empty()) {
 		std::cout << "Dumping intermediate representation ...\n";
 		std::ofstream out(options.settings.dumpIR.string());
 		out << co::printer::PrettyPrinter(program, co::printer::PrettyPrinter::PRINT_DEREFS);
 	}
-
+	
 	// Step 3: produce output code
 	std::cout << "Creating target code ...\n";
 	backend::BackendPtr backend = getBackend(program, options);
 	auto targetCode = backend->convert(program);
-
+	
 	// dump source file if requested, exit if requested
 	fe::path filePath = options.settings.dumpTRG;
-	if(!options.settings.dumpTRGOnly.empty())
+	if(!options.settings.dumpTRGOnly.empty()) {
 		filePath = options.settings.dumpTRGOnly;
+	}
 	if(!filePath.empty()) {
 		std::cout << "Dumping target code ...\n";
 		std::ofstream out(filePath.string());
 		out << *targetCode;
-		if(!options.settings.dumpTRGOnly.empty())
+		if(!options.settings.dumpTRGOnly.empty()) {
 			return 0;
+		}
 	}
-
+	
 	// Step 4: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
 	//		if any of the translation units is has cpp belongs to cpp code, we'll use the
 	//		cpp compiler, C otherwise
 	cp::Compiler compiler =
-			(options.job.isCxx())
-				? cp::Compiler::getDefaultCppCompiler()
-				: cp::Compiler::getDefaultC99Compiler();
-
+	    (options.job.isCxx())
+	    ? cp::Compiler::getDefaultCppCompiler()
+	    : cp::Compiler::getDefaultC99Compiler();
+	    
 	switch(options.backendHint.backend) {
-		case cmd::BackendEnum::Sequential: break;
-		case cmd::BackendEnum::Runtime:
-		case cmd::BackendEnum::OpenCL:
-		case cmd::BackendEnum::Pthreads:
-		default: compiler = cp::Compiler::getRuntimeCompiler(compiler);
+	case cmd::BackendEnum::Sequential:
+		break;
+	case cmd::BackendEnum::Runtime:
+	case cmd::BackendEnum::OpenCL:
+	case cmd::BackendEnum::Pthreads:
+	default:
+		compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	}
-
+	
 	//add needed library flags
 	for(auto cur : extLibs) {
 		string libname = cur.filename().string();
 		// add libraries by splitting their paths, truncating the filename of the library in the process (lib*.so*)
 		compiler.addExternalLibrary(cur.parent_path().string(), libname.substr(3,libname.find(".")-3));
 	}
-
+	
 	//add needed includeDirs for intercepted stuff
 	for(auto cur : options.job.getInterceptedHeaderDirs()) {
 		compiler.addIncludeDir(cur.string());
 	}
-
+	
 	//add the given optimization flags (-f flags)
 	for(auto cur : options.job.getFFlags()) {
-	    compiler.addFlag(cur);
+		compiler.addFlag(cur);
 	}
-
+	
 	//add definitions
 	for(auto cur : options.job.getDefinitions()) {
-	    compiler.addFlag(std::string("-D" + cur.first));
+		compiler.addFlag(std::string("-D" + cur.first));
 	}
-
+	
 	//if an optimization flag is set (e.g. -O3)
 	//set this flag in the backend compiler
-	if(!options.settings.optimization.empty())
-	    compiler.addFlag("-O" + options.settings.optimization);
-	if (options.settings.debug)
-	    compiler.addFlag("-g3");
-
+	if(!options.settings.optimization.empty()) {
+		compiler.addFlag("-O" + options.settings.optimization);
+	}
+	if(options.settings.debug) {
+		compiler.addFlag("-g3");
+	}
+	
 	//check if the c++11 standard was set when calling insieme
 	//if yes, use the same standard in the backend compiler
 	if(options.job.isCxx()) {
-	    compiler.addFlag("-std=c++0x");
+		compiler.addFlag("-std=c++0x");
 	}
-
+	
 	return !cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
 }
 

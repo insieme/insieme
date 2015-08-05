@@ -61,65 +61,65 @@ template<typename T> struct is_ir_pointer<Pointer<T>> : public boost::true_type 
 
 namespace detail {
 
+/**
+ * A specialization of the NodeAccessor template which will be used in cases where
+ * the accessor is inherited by a pointer (to support access to the same elements
+ * as for address and nodes directly).
+ */
+template<typename Node>
+struct node_access_helper<Pointer<const Node>> {
+
 	/**
-	 * A specialization of the NodeAccessor template which will be used in cases where
-	 * the accessor is inherited by a pointer (to support access to the same elements
-	 * as for address and nodes directly).
+	 * The type of the handled node.
 	 */
-	template<typename Node>
-	struct node_access_helper<Pointer<const Node>> {
-
-		/**
-		 * The type of the handled node.
-		 */
-		typedef Node node_type;
-
-		/**
-		 * Obtains access to the accessed node.
-		 */
-		inline const Node& getNode() const {
-			return **static_cast<const Pointer<const Node>*>(this);
-		}
-
-		/**
-		 * Obtains a reference to the entire list of children stored internally.
-		 *
-		 * @return a reference to the internally maintained child list
-		 */
-		const NodeList& getChildList() const {
-			return getNode().getChildNodeList();
-		}
-
-		/**
-		 * This generic method allows to access child nodes in a type-safe way. It is also used
-		 * by node accessors to obtain addresses of child nodes.
-		 *
-		 * Note: this function is required by the node accessors
-		 *
-		 * @tparam index the index of the child node to be obtained
-		 * @tparam Res the type of the child node
-		 * @return the address of the requested child node
-		 */
-		template<
-			unsigned index,
-			typename Res = typename node_child_type<node_type,index>::type
-		>
-		Pointer<const Res> getChildNodeReference() const {
-			// access the child via static polymorthism and cast result to known type
-			return static_pointer_cast<const Res>(getChildList()[index]);
-		}
-
-		/**
-		 * Obtains access to the child associated to the given index.
-		 *
-		 * Note: this function is required by the node accessors
-		 *
-		 * @param index the index of the child node to be accessed
-		 */
-		const NodePtr& getChildNodeReference(std::size_t index) const {
-			return getChildList()[index];
-		}
-	};
+	typedef Node node_type;
+	
+	/**
+	 * Obtains access to the accessed node.
+	 */
+	inline const Node& getNode() const {
+		return **static_cast<const Pointer<const Node>*>(this);
+	}
+	
+	/**
+	 * Obtains a reference to the entire list of children stored internally.
+	 *
+	 * @return a reference to the internally maintained child list
+	 */
+	const NodeList& getChildList() const {
+		return getNode().getChildNodeList();
+	}
+	
+	/**
+	 * This generic method allows to access child nodes in a type-safe way. It is also used
+	 * by node accessors to obtain addresses of child nodes.
+	 *
+	 * Note: this function is required by the node accessors
+	 *
+	 * @tparam index the index of the child node to be obtained
+	 * @tparam Res the type of the child node
+	 * @return the address of the requested child node
+	 */
+	template<
+	    unsigned index,
+	    typename Res = typename node_child_type<node_type,index>::type
+	    >
+	Pointer<const Res> getChildNodeReference() const {
+		// access the child via static polymorthism and cast result to known type
+		return static_pointer_cast<const Res>(getChildList()[index]);
+	}
+	
+	/**
+	 * Obtains access to the child associated to the given index.
+	 *
+	 * Note: this function is required by the node accessors
+	 *
+	 * @param index the index of the child node to be accessed
+	 */
+	const NodePtr& getChildNodeReference(std::size_t index) const {
+		return getChildList()[index];
+	}
+};
 
 }
 
@@ -128,21 +128,21 @@ template<typename T>
 class Pointer :
 	public Ptr<T>,
 	public node_type<typename boost::remove_const<T>::type>::ptr_accessor_type {
-
+	
 	/**
 	 * The accessor offered to gain convenient access to members of the referenced node
 	 */
 	typedef typename node_type<typename boost::remove_const<T>::type>::ptr_accessor_type accessor_type;
-
+	
 public:
 
 	typedef StaticPointerCast StaticCast;
 	typedef DynamicPointerCast DynamicCast;
-
+	
 	Pointer() : Ptr<T>(NULL) {}
-
+	
 	Pointer(T* ptr) : Ptr<T>(ptr) { }
-
+	
 	/**
 	 * A conversion operator to a annotated pointer referencing a super type of the type
 	 * pointed to by this instance can be efficiently realized using a reinterpret_cast. This
@@ -152,14 +152,14 @@ public:
 	operator Pointer<B>() const {
 		return Pointer<B>(this->ptr);
 	}
-
+	
 	/**
 	 * Obtains a accessor instance allowing to access the members of the referenced node.
 	 */
 	const accessor_type* operator->() const {
 		return this;
 	}
-
+	
 	/**
 	 * Reinterprets this pointer to be referencing the requested element type.
 	 */
@@ -167,7 +167,7 @@ public:
 	const Pointer<R>& reinterpret() const {
 		return reinterpret_cast<const Pointer<R>&>(*this);
 	}
-
+	
 	/**
 	 * A short-cut for static pointer casts supporting a reduced syntax.
 	 */
@@ -200,10 +200,10 @@ template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Pointer<B>>::type
 static_pointer_cast(Pointer<T>& src) {
 	assert_true((!src || dynamic_cast<B*>(&(*src))))
-			<< "Invalid static cast!\n"
-			<< "  source type: " << node_type<T>::getName() << "\n"
-			<< "  actual type: " << src->getNodeType() << "\n"
-			<< "  target type: " << node_type<B>::getName() << "\n";
+	        << "Invalid static cast!\n"
+	        << "  source type: " << node_type<T>::getName() << "\n"
+	        << "  actual type: " << src->getNodeType() << "\n"
+	        << "  target type: " << node_type<B>::getName() << "\n";
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
@@ -211,10 +211,10 @@ template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Pointer<B>>::type
 static_pointer_cast(const Pointer<T>& src) {
 	assert_true((!src || dynamic_cast<B*>(&(*src))))
-				<< "Invalid static cast!\n"
-				<< "  source type: " << node_type<T>::getName() << "\n"
-				<< "  actual type: " << src->getNodeType() << "\n"
-				<< "  target type: " << node_type<B>::getName() << "\n";
+	        << "Invalid static cast!\n"
+	        << "  source type: " << node_type<T>::getName() << "\n"
+	        << "  actual type: " << src->getNodeType() << "\n"
+	        << "  target type: " << node_type<B>::getName() << "\n";
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
@@ -222,10 +222,10 @@ template<typename B, typename T, typename E = typename B::element_type>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_pointer_cast(const Pointer<T>& src) {
 	assert_true((!src || dynamic_cast<E*>(&(*src))))
-				<< "Invalid static cast!\n"
-				<< "  source type: " << node_type<T>::getName() << "\n"
-				<< "  actual type: " << src->getNodeType() << "\n"
-				<< "  target type: " << node_type<E>::getName() << "\n";
+	        << "Invalid static cast!\n"
+	        << "  source type: " << node_type<T>::getName() << "\n"
+	        << "  actual type: " << src->getNodeType() << "\n"
+	        << "  target type: " << node_type<E>::getName() << "\n";
 	return B(static_cast<E*>(src.ptr));
 }
 
@@ -259,17 +259,18 @@ struct DynamicPointerCast {
 
 namespace std {
 
-	template<typename T>
-	std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
-		out << "AP(";
-		if (!!ptr) {
-			out << *ptr;
-		} else {
-			out << "NULL";
-		}
-		out << ")";
-		return out;
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
+	out << "AP(";
+	if(!!ptr) {
+		out << *ptr;
 	}
+	else {
+		out << "NULL";
+	}
+	out << ")";
+	return out;
+}
 
 }
 

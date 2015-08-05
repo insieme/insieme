@@ -45,34 +45,36 @@ namespace insieme {
 namespace core {
 namespace annotations {
 
-	/**
-	 * The value annotation type to be attached to nodes to  mark those conatining semantic errors
-	 *
-	 */
-	struct ErrorTag : public  value_annotation::cloneable{
-		string msg;
-		ErrorTag(const string& msg) : msg(msg) {}
-		bool operator==(const ErrorTag& other) const { return msg == other.msg; }
-
-		void cloneTo(const NodePtr& target) const {
-			attachError(target, msg);
-		}
-	};
-
-	// ----------------------------------------------------
-
-	bool hasAttachedError(const NodePtr& node) {
-		return node->hasAttachedValue<ErrorTag>();
+/**
+ * The value annotation type to be attached to nodes to  mark those conatining semantic errors
+ *
+ */
+struct ErrorTag : public  value_annotation::cloneable {
+	string msg;
+	ErrorTag(const string& msg) : msg(msg) {}
+	bool operator==(const ErrorTag& other) const {
+		return msg == other.msg;
 	}
-
-	const string& getAttachedError(const NodePtr& node) {
-		assert_true(hasAttachedError(node)) << "Does not have an error annotation!";
-		return node->getAttachedValue<ErrorTag>().msg;
+	
+	void cloneTo(const NodePtr& target) const {
+		attachError(target, msg);
 	}
+};
 
-	void attachError(const NodePtr& node, const string& msg) {
-		node->attachValue(ErrorTag(msg));
-	}
+// ----------------------------------------------------
+
+bool hasAttachedError(const NodePtr& node) {
+	return node->hasAttachedValue<ErrorTag>();
+}
+
+const string& getAttachedError(const NodePtr& node) {
+	assert_true(hasAttachedError(node)) << "Does not have an error annotation!";
+	return node->getAttachedValue<ErrorTag>().msg;
+}
+
+void attachError(const NodePtr& node, const string& msg) {
+	node->attachValue(ErrorTag(msg));
+}
 
 } // end namespace annotations
 } // end namespace core

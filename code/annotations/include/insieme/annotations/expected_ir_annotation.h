@@ -50,29 +50,33 @@ using namespace insieme::core;
 
 class ExpectedIRAnnotation : public NodeAnnotation {
 	std::string expected;
-
+	
 public:
 	static const string NAME;
-    static const utils::StringKey<ExpectedIRAnnotation> KEY;
-
-    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
-
-    ExpectedIRAnnotation(std::string expected): expected(expected) {}
-
+	static const utils::StringKey<ExpectedIRAnnotation> KEY;
+	
+	const utils::AnnotationKeyPtr getKey() const {
+		return &KEY;
+	}
+	const std::string& getAnnotationName() const {
+		return NAME;
+	}
+	
+	ExpectedIRAnnotation(std::string expected): expected(expected) {}
+	
 	std::string getExpected() const;
-
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+	
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation
 		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
 		after->addAnnotation(ptr);
 		return true;
 	}
-
-    static void attach(const NodePtr& node, std::string expected);
-    static bool hasAttachedValue(const NodePtr& node);
-    static std::string getValue(const NodePtr& node);
-
+	
+	static void attach(const NodePtr& node, std::string expected);
+	static bool hasAttachedValue(const NodePtr& node);
+	static std::string getValue(const NodePtr& node);
+	
 };
 
 typedef std::shared_ptr<ExpectedIRAnnotation> ExpectedIRAnnotationPtr;
@@ -82,6 +86,6 @@ typedef std::shared_ptr<ExpectedIRAnnotation> ExpectedIRAnnotationPtr;
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::ExpectedIRAnnotation& lAnnot);
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::ExpectedIRAnnotation& lAnnot);
 
 } // end namespace std

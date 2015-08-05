@@ -46,7 +46,7 @@ namespace checks {
 #include "insieme/core/checks/check_macros.inc"
 
 /**
- * This check verifies that array indices are in range. 
+ * This check verifies that array indices are in range.
  * Currently only implemented for single element arrays generated from scalars.
  */
 SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
@@ -57,12 +57,12 @@ SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
 SIMPLE_CHECK(Undefined, CallExpr, false);
 
 /**
- * This check verifies that there are no free break statements inside for loops. 
+ * This check verifies that there are no free break statements inside for loops.
  */
 SIMPLE_CHECK(FreeBreakInsideForLoop, ForStmt, false);
 
 /**
- * This check verifies that functions with non-unit return type return something on every code path. 
+ * This check verifies that functions with non-unit return type return something on every code path.
  */
 SIMPLE_CHECK(MissingReturnStmt, LambdaExpr, false);
 

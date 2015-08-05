@@ -43,15 +43,15 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-	/**
-	 * Adds support for runtime-specific operators to the given operator converter
-	 * table.
-	 *
-	 * @param manager the node manager to be used to obtain instances of operators used as key within the given table
-	 * @param table the table to be extended
-	 * @return a reference to the handed in table
-	 */
-	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config);
+/**
+ * Adds support for runtime-specific operators to the given operator converter
+ * table.
+ *
+ * @param manager the node manager to be used to obtain instances of operators used as key within the given table
+ * @param table the table to be extended
+ * @return a reference to the handed in table
+ */
+OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table, const BackendConfig& config);
 
 } // end namespace runtime
 } // end namespace backend

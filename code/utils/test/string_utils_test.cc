@@ -42,23 +42,23 @@
 #include "insieme/utils/container_utils.h"
 
 TEST(StringUtilsTest, Format) {
-	EXPECT_EQ (format("Hello World"), "Hello World");
-	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");
-	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
+	EXPECT_EQ(format("Hello World"), "Hello World");
+	EXPECT_EQ(format("Print %2d ...", 12), "Print 12 ...");
+	EXPECT_EQ(format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
 }
 
 TEST(StringUtilsTest, FormatStrings) {
 
 	string hello = "Hello";
 	string world = "World";
-
-	EXPECT_EQ ("Hello World - 42", format("%s %s - %d", hello, world, 42));
+	
+	EXPECT_EQ("Hello World - 42", format("%s %s - %d", hello, world, 42));
 }
 
 TEST(StringUtilsTest, toString) {
-	EXPECT_EQ (toString("Hello World"), "Hello World");
-	EXPECT_EQ (toString(10), "10");
-	EXPECT_EQ (toString('c'), "c");
+	EXPECT_EQ(toString("Hello World"), "Hello World");
+	EXPECT_EQ(toString(10), "10");
+	EXPECT_EQ(toString('c'), "c");
 }
 
 TEST(StringUtilsTest, times) {
@@ -85,10 +85,10 @@ TEST(StringUtilsTest, camelcaseToUnderscore) {
 TEST(EscapeTest, escape) {
 
 	std::stringstream out;
-
+	
 	// use the escape utility to stream stuff in an escaping encoding
 	escape(out) << "Hello \n \"" << " some \\ test ...  \" \' ";
-
+	
 	// check the result
 	EXPECT_EQ("Hello \\n \\\" some \\\\ test ...  \\\" \\\' ", out.str());
 }
@@ -96,7 +96,7 @@ TEST(EscapeTest, escape) {
 TEST(Join, overloads) {
 	vector<int> data({1,3,4,2});
 	EXPECT_EQ("1,3,4,2", toString(join(",", data)));
-
+	
 	std::set<int> data2({1,3,4,2});
 	EXPECT_EQ("1,2,3,4", toString(join(",", data2)));
 }

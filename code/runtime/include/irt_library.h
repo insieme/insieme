@@ -42,7 +42,7 @@
 // This is what the original program main will be renamed to
 int _irt_lib_renamed_main(int argc, char** argv);
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -101,11 +101,11 @@ void _irt_lib_wi_startup_func(irt_work_item* wi) {
 // Library main, replaces program main
 int main(int argc, char **argv) {
 	irt_lib_critical_init();
-
+	
 	irt_wi_implementation_variant impl_var = { &_irt_lib_wi_startup_func, 0, NULL, 0, NULL, NULL, {0} };
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	_irt_lib_startup_lwdi params = { - (int32)sizeof(_irt_lib_startup_lwdi), argc, argv };
-
+	
 	irt_runtime_standalone(irt_get_default_worker_count(), &_irt_lib_context_fun, &_irt_lib_context_fun, &impl, (irt_lw_data_item*)&params);
 }
 
@@ -114,14 +114,16 @@ int main(int argc, char **argv) {
 // Starts runtime, runs the function as startup work item, then returns once it completes
 void irt_lib_init_run(voidfp fun, void* data, size_t data_size) {
 	irt_lib_critical_init();
-
+	
 	irt_wi_implementation_variant impl_var = { _irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, {0} };
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	int32 lwdi_size = data_size + sizeof(_irt_lib_lwdi);
 	_irt_lib_lwdi *lwdi = (_irt_lib_lwdi*)alloca(lwdi_size);
-	*lwdi = (_irt_lib_lwdi) { -lwdi_size /* negative == direct size, no data item table entry */, fun };
+	*lwdi = (_irt_lib_lwdi) {
+		-lwdi_size /* negative == direct size, no data item table entry */, fun
+	};
 	memcpy(lwdi->data, data, data_size);
-
+	
 	irt_runtime_standalone(irt_get_default_worker_count(), &_irt_lib_context_fun, &_irt_lib_context_fun, &impl, (irt_lw_data_item*)lwdi);
 }
 
@@ -144,14 +146,18 @@ void irt_lib_run(voidfp fun, void* data, size_t data_size) {
 	irt_wi_implementation impl = { -1, 1, &impl_var };
 	int32 lwdi_size = data_size + sizeof(_irt_lib_lwdi);
 	_irt_lib_lwdi *lwdi = (_irt_lib_lwdi*)alloca(lwdi_size);
-	*lwdi = (_irt_lib_lwdi) { -lwdi_size /* negative == direct size, no data item table entry */, fun };
+	*lwdi = (_irt_lib_lwdi) {
+		-lwdi_size /* negative == direct size, no data item table entry */, fun
+	};
 	memcpy(lwdi->data, data, data_size);
 	irt_runtime_run_wi(&impl, (irt_lw_data_item*)lwdi);
 }
 
 // End runtime
 void irt_lib_shutdown() {
-	if(irt_lib_g_context != NULL) irt_runtime_end_in_context(irt_lib_g_context);
+	if(irt_lib_g_context != NULL) {
+		irt_runtime_end_in_context(irt_lib_g_context);
+	}
 	irt_lib_g_context = NULL;
 }
 
@@ -185,13 +191,15 @@ irt_joinable irt_lib_parallel(uint32 min, uint32 max, voidfp fun, void* data, si
 	// static wi implementation (immutable)
 	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_implementation_func, 0, NULL, 0, NULL, NULL, {0} };
 	static irt_wi_implementation impl = { -1, 1, &impl_var };
-
+	
 	// build lightweight data item
 	int32 lwdi_size = data_size + sizeof(_irt_lib_lwdi);
 	_irt_lib_lwdi *lwdi = (_irt_lib_lwdi*)alloca(lwdi_size);
-	*lwdi = (_irt_lib_lwdi){ -lwdi_size /* negative == direct size, no data item table entry */, fun };
+	*lwdi = (_irt_lib_lwdi) {
+		-lwdi_size /* negative == direct size, no data item table entry */, fun
+	};
 	memcpy(lwdi->data, data, data_size);
-
+	
 	// start it
 	irt_parallel_job job = { min, max, 1, &impl, (irt_lw_data_item*)lwdi };
 	return irt_parallel(&job);
@@ -217,7 +225,7 @@ void _irt_lib_wi_pfor_func(irt_work_item* wi) {
 	_irt_lib_pfor_lwdi* lwdi = (_irt_lib_pfor_lwdi*)wi->parameters;
 	for(int64 i=wi->range.begin; i<wi->range.end; i+=wi->range.step) {
 		lwdi->function(i, (void*)lwdi->data);
-	}	
+	}
 }
 
 void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, size_t data_size) {
@@ -225,13 +233,15 @@ void irt_lib_pfor(int64 begin, int64 end, int64 step, loopfp body, void* data, s
 	// static wi implementation (immutable)
 	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_func, 0, NULL, 0, NULL, NULL, {0} };
 	static irt_wi_implementation impl = { -2, 1, &impl_var };
-
+	
 	// build lightweight data item
 	int32 lwdi_size = data_size + sizeof(_irt_lib_pfor_lwdi);
 	_irt_lib_pfor_lwdi *lwdi = (_irt_lib_pfor_lwdi*)alloca(lwdi_size);
-	*lwdi = (_irt_lib_pfor_lwdi){ -lwdi_size /* negative == direct size, no data item table entry */, body };
+	*lwdi = (_irt_lib_pfor_lwdi) {
+		-lwdi_size /* negative == direct size, no data item table entry */, body
+	};
 	memcpy(lwdi->data, data, data_size);
-
+	
 	// start it
 	irt_work_item_range range = { begin, end, step };
 	irt_work_item *wi = irt_wi_get_current();
@@ -252,7 +262,7 @@ typedef struct {
 // Trampoline function for dynamically generated sliced loops
 void _irt_lib_wi_pfor_s_func(irt_work_item* wi) {
 	_irt_lib_pfor_s_lwdi* lwdi = (_irt_lib_pfor_s_lwdi*)wi->parameters;
-	lwdi->function(wi->range.begin, wi->range.end, wi->range.step, (void*)lwdi->data);	
+	lwdi->function(wi->range.begin, wi->range.end, wi->range.step, (void*)lwdi->data);
 }
 
 void irt_lib_pfor_s(int64 begin, int64 end, int64 step, loopsfp body, void* data, size_t data_size) {
@@ -260,13 +270,15 @@ void irt_lib_pfor_s(int64 begin, int64 end, int64 step, loopsfp body, void* data
 	// static wi implementation (immutable)
 	static irt_wi_implementation_variant impl_var = { &_irt_lib_wi_pfor_s_func, 0, NULL, 0, NULL, NULL, {0} };
 	static irt_wi_implementation impl = { -2, 1, &impl_var };
-
+	
 	// build lightweight data item
 	int32 lwdi_size = data_size + sizeof(_irt_lib_pfor_lwdi);
 	_irt_lib_pfor_s_lwdi *lwdi = (_irt_lib_pfor_s_lwdi*)alloca(lwdi_size);
-	*lwdi = (_irt_lib_pfor_s_lwdi){ -lwdi_size /* negative == direct size, no data item table entry */, body };
+	*lwdi = (_irt_lib_pfor_s_lwdi) {
+		-lwdi_size /* negative == direct size, no data item table entry */, body
+	};
 	memcpy(lwdi->data, data, data_size);
-
+	
 	// start it
 	irt_work_item_range range = { begin, end, step };
 	irt_work_item *wi = irt_wi_get_current();
@@ -300,7 +312,7 @@ void irt_lib_critical_end() {
 	irt_lock_release(_irt_lib_get_critical_lock());
 }
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 }// extern C
 #endif
 #endif // ifndef __GUARD_IRT_LIBRARY_H

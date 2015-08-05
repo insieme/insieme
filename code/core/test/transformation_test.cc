@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,15 +50,15 @@ TEST(IRVisitor, NodeReplacementTest) {
 	// copy and clone the type
 	NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	GenericTypePtr type = builder.genericType("int");
-
+	
 	LiteralPtr toReplace = builder.literal(type, "14");
 	LiteralPtr replacement = builder.literal(type, "0");
-
-	IfStmtPtr ifStmt = builder.ifStmt( builder.literal(type, "12"), toReplace, builder.compoundStmt() );
-
+	
+	IfStmtPtr ifStmt = builder.ifStmt(builder.literal(type, "12"), toReplace, builder.compoundStmt());
+	
 	NodePtr newTree = transform::replaceAll(builder.getNodeManager(), ifStmt, toReplace, replacement);
-	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()) );
-
+	EXPECT_EQ(newTree, builder.ifStmt(builder.literal(type, "12"), replacement, builder.compoundStmt()));
+	
 }

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,9 +43,9 @@ bool notContainsSubString(const string& str, const string& substr) {
 
 bool containsNTimesSubString(const string& str, const string& substr, const int n) {
 	int count = 0;
-	for (size_t offset = str.find(substr); offset != string::npos;
-		 offset = str.find(substr, offset + substr.length())) {
-			count++;
+	for(size_t offset = str.find(substr); offset != string::npos;
+	        offset = str.find(substr, offset + substr.length())) {
+		count++;
 	}
 	return (count == n);
 }

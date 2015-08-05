@@ -41,9 +41,15 @@
 
 using std::string;
 
-string c() { return insieme::utils::debug::getBacktraceString(); }
-string b() { return c(); }
-string a() { return b(); }
+string c() {
+	return insieme::utils::debug::getBacktraceString();
+}
+string b() {
+	return c();
+}
+string a() {
+	return b();
+}
 
 void HelloAssert() {
 	assert_fail() << "ZOMG";

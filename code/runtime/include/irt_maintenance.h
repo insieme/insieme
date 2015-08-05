@@ -42,11 +42,11 @@
 // Implements a low-overhead system for the execution of maintenance events at fixed timesteps
 //
 // Events will be executed at the requested interval at most (subject to OS limits),
-// or at intervals up to 50% less. Events processing will be grouped so as to cause 
-// the minimum amount of interference with the rest of the system while maintaining 
+// or at intervals up to 50% less. Events processing will be grouped so as to cause
+// the minimum amount of interference with the rest of the system while maintaining
 // these constraints.
 //
-// Each event is defined by a "irt_maintenance_lambda" structure which needs to be maintained 
+// Each event is defined by a "irt_maintenance_lambda" structure which needs to be maintained
 // in user code. Its "irt_maintenance_func" will be called at the specified interval and
 // should return either the new desired interval (changing intervals incurs a small
 // performance overhead and should be avoided).
@@ -147,9 +147,9 @@ void irt_maintenance_register(irt_maintenance_lambda *lam) {
 	// determine slot to use
 	uint64 interval = lam->interval/IRT_MAINTENANCE_MIN_INTERVAL;
 	uint64 slot = _irt_maintenance_get_next_smallest_exponent_of_two(interval);
-	IRT_ASSERT(slot<IRT_MAINTENANCE_SLOTS, IRT_ERR_INVALIDARGUMENT, 
-		"Maintenance register requested for longer interval than available");
-	
+	IRT_ASSERT(slot<IRT_MAINTENANCE_SLOTS, IRT_ERR_INVALIDARGUMENT,
+	           "Maintenance register requested for longer interval than available");
+	           
 	// add event in slot
 	irt_maintenance_slot *s = &irt_g_maintenance_events[slot];
 	irt_spin_lock(&s->lock);
@@ -169,24 +169,27 @@ void irt_maintenance_register(irt_maintenance_lambda *lam) {
 				irt_cond_wake_one(&irt_g_maintenance_cond);
 			}
 			irt_mutex_unlock(&irt_g_maintenance_mutex);
-		} else break;
+		}
+		else {
+			break;
+		}
 	}
-
+	
 }
 
 // maintenance thread function
 void* irt_maintenance_thread_func(void * data) {
 	// consecutive maintenance counter to determine events to execute
 	uint64 maintenance_count = 0;
-
+	
 	// main maintenance loop
-	while(irt_g_maintenance_thread_active) { 
+	while(irt_g_maintenance_thread_active) {
 //printf("start iteration, mcount %lu, slot %u\n", maintenance_count, irt_g_maintenance_min_interval_slot);
 		uint64 starttime_ns = irt_time_ns();
 		uint64 current_min_interval = irt_g_maintenance_min_interval_slot;
 		maintenance_count += (1<<current_min_interval);
 //printf("new mcount %lu\n", maintenance_count);
-	
+
 		// execute maintenance events for this time step
 		bool slot_occupied = false;
 		for(uint32 i=current_min_interval; i<IRT_MAINTENANCE_SLOTS; ++i) {
@@ -202,16 +205,25 @@ void* irt_maintenance_thread_func(void * data) {
 					lam->interval = new_interval;
 					// return value 0 means stop this maintenance event
 					if(new_interval == 0) {
-						if(prev) prev->next = lam->next;
-						else s->first_lambda = lam->next;
-					} else
-					// if there is a significant interval change, remove and re-register lambda 
-					if(_irt_maintenance_get_next_smallest_exponent_of_two(new_interval/IRT_MAINTENANCE_MIN_INTERVAL) 
-					!= _irt_maintenance_get_next_smallest_exponent_of_two(pre_interval/IRT_MAINTENANCE_MIN_INTERVAL)) { 
-						if(prev) prev->next = lam->next;
-						else s->first_lambda = lam->next;
-						irt_maintenance_register(lam);
+						if(prev) {
+							prev->next = lam->next;
+						}
+						else {
+							s->first_lambda = lam->next;
+						}
 					}
+					else
+						// if there is a significant interval change, remove and re-register lambda
+						if(_irt_maintenance_get_next_smallest_exponent_of_two(new_interval/IRT_MAINTENANCE_MIN_INTERVAL)
+						        != _irt_maintenance_get_next_smallest_exponent_of_two(pre_interval/IRT_MAINTENANCE_MIN_INTERVAL)) {
+							if(prev) {
+								prev->next = lam->next;
+							}
+							else {
+								s->first_lambda = lam->next;
+							}
+							irt_maintenance_register(lam);
+						}
 					lam = lam->next;
 				}
 				irt_spin_unlock(&s->lock);
@@ -225,12 +237,14 @@ void* irt_maintenance_thread_func(void * data) {
 							// we set the current min interval, so we can adjust it
 							current_min_interval = i;
 						}
-					} 
+					}
 				}
-				if(s->first_lambda != NULL) slot_occupied = true;
+				if(s->first_lambda != NULL) {
+					slot_occupied = true;
+				}
 			}
 		}
-
+		
 		// sleep until next required timestep, if maintenance is still active
 		irt_mutex_lock(&irt_g_maintenance_mutex);
 		if(irt_g_maintenance_thread_active) {
@@ -238,10 +252,11 @@ void* irt_maintenance_thread_func(void * data) {
 			uint64 interval_ns = irt_g_maintenance_events[irt_g_maintenance_min_interval_slot].interval * 1000 * 1000;
 			if(maintenance_time_ns < interval_ns) {
 				uint64 sleeptime_ns = interval_ns - maintenance_time_ns;
-	//printf("go to sleep, slot: %u   interval: %lu   time: %lu ns\n", irt_g_maintenance_min_interval_slot, irt_g_maintenance_events[irt_g_maintenance_min_interval_slot].interval, sleeptime_ns);
+				//printf("go to sleep, slot: %u   interval: %lu   time: %lu ns\n", irt_g_maintenance_min_interval_slot, irt_g_maintenance_events[irt_g_maintenance_min_interval_slot].interval, sleeptime_ns);
 				irt_cond_timedwait(&irt_g_maintenance_cond, &irt_g_maintenance_mutex, sleeptime_ns);
-	//printf("woke up\n");
-			} else {
+				//printf("woke up\n");
+			}
+			else {
 				IRT_WARN("Maintenance time (%lu ns) exceeded required time slot (%lu ns)", maintenance_time_ns, interval_ns);
 			}
 		}

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,10 +47,10 @@ namespace analysis {
  */
 struct lt_ident {
 
-  bool operator()(const core::VariablePtr& s1, const core::VariablePtr& s2) const {
-    return s1->getId() < s2->getId();
-  }
-
+	bool operator()(const core::VariablePtr& s1, const core::VariablePtr& s2) const {
+		return s1->getId() < s2->getId();
+	}
+	
 };
 
 typedef std::set<core::VariablePtr, lt_ident> VarSet;
@@ -66,26 +66,28 @@ struct VarRefFinder: public core::IRVisitor<void>, public VarSet {
 		// we have to remove eventual variables which are declared inside this block of code
 		VarSet nonDecls;
 		lt_ident comp;
-		std::set_difference( begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
+		std::set_difference(begin(), end(), declaredVars.begin(), declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()), comp);
 		VarSet::operator=(nonDecls);
 	}
-
-	void visitVariable(const core::VariablePtr& varExpr) { insert(varExpr); }
-
+	
+	void visitVariable(const core::VariablePtr& varExpr) {
+		insert(varExpr);
+	}
+	
 	// don't look inside the body of functions
 	void visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { }
-
+	
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		declaredVars.insert( declStmt->getVariable() );
+		declaredVars.insert(declStmt->getVariable());
 	}
-
+	
 	void visitNode(const core::NodePtr& node) {
 		std::for_each(node->getChildList().begin(), node->getChildList().end(),
-			[ this ] (core::NodePtr curr){
-				this->visit(curr);
-			});
+		[ this ](core::NodePtr curr) {
+			this->visit(curr);
+		});
 	}
-
+	
 private:
 	VarSet declaredVars;
 };

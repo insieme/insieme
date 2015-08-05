@@ -44,80 +44,85 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-	using namespace insieme::core;
+using namespace insieme::core;
 
-	/**
-	 * The value annotation type to be attached to nodes to store
-	 * the actual name.
-	 */
-	struct IncludeTag : public value_annotation::migratable  { 
-		string include;
-		IncludeTag(const string& include) : include(include) {}
-		bool operator==(const IncludeTag& other) const { return include == other.include; }
-		bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+/**
+ * The value annotation type to be attached to nodes to store
+ * the actual name.
+ */
+struct IncludeTag : public value_annotation::migratable  {
+	string include;
+	IncludeTag(const string& include) : include(include) {}
+	bool operator==(const IncludeTag& other) const {
+		return include == other.include;
+	}
+	bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
 //   ==== this code is for the general case
-			if (hasIncludeAttached (before)) {
-				if (after.isa<core::StructTypePtr>() && after.as<core::StructTypePtr>()->getName()->getValue() == "A")
-					assert_fail();
-
-				attachInclude (after,  getAttachedInclude(before));
-				return true;
+		if(hasIncludeAttached(before)) {
+			if(after.isa<core::StructTypePtr>() && after.as<core::StructTypePtr>()->getName()->getValue() == "A") {
+				assert_fail();
 			}
-			else return false;
+			
+			attachInclude(after,  getAttachedInclude(before));
+			return true;
+		}
+		else {
+			return false;
+		}
 //	==== this code is for an spetialized case in witch migration is only done when needed
-	//		if(before.isa<GenericTypePtr>() && after.isa<GenericTypePtr>()
-	//			//For intercepted types which are represented as generic types support migration
-	//			&& before.as<GenericTypePtr>()->getFamilyName() == after.as<GenericTypePtr>()->getFamilyName()) {
-	//			after->attachValue(IncludeTag(include)); 
-	//			return true;
-	//		}
-	//		
-	//		if( before.isa<LiteralPtr>() && after.isa<LiteralPtr>() &&
-	//			before.as<LiteralPtr>()->getType().isa<FunctionTypePtr>() && 
-	//			after.as<LiteralPtr>()->getType().isa<FunctionTypePtr>() && 
-	//			//For intercepted functions which are represented as literals with function types support migration
-	//			(before.as<LiteralPtr>()->getType().as<FunctionTypePtr>()->getFunctionKind() == after.as<LiteralPtr>()->getType().as<FunctionTypePtr>()->getFunctionKind())
-	//			) {
-	//			after->attachValue(IncludeTag(include)); 
-	//			std::cout << "IncludeTag " << before << " " << after << std::endl;
-	//			return true;
-	//		}
-
-	//		return false;
-		}
-	};
-
-	// ---------------- Support Dump ----------------------
-
-	VALUE_ANNOTATION_CONVERTER(IncludeTag)
-
-		typedef core::value_node_annotation<IncludeTag>::type annotation_type;
-
-		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-			assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
-			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().include);
-		}
-
-		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-			return std::make_shared<annotation_type>(IncludeTag(encoder::toValue<string>(node)));
-		}
-	};
-
-	// ----------------------------------------------------
-
-	bool hasIncludeAttached(const NodePtr& node) {
-		return node->hasAttachedValue<IncludeTag>();
+		//		if(before.isa<GenericTypePtr>() && after.isa<GenericTypePtr>()
+		//			//For intercepted types which are represented as generic types support migration
+		//			&& before.as<GenericTypePtr>()->getFamilyName() == after.as<GenericTypePtr>()->getFamilyName()) {
+		//			after->attachValue(IncludeTag(include));
+		//			return true;
+		//		}
+		//
+		//		if( before.isa<LiteralPtr>() && after.isa<LiteralPtr>() &&
+		//			before.as<LiteralPtr>()->getType().isa<FunctionTypePtr>() &&
+		//			after.as<LiteralPtr>()->getType().isa<FunctionTypePtr>() &&
+		//			//For intercepted functions which are represented as literals with function types support migration
+		//			(before.as<LiteralPtr>()->getType().as<FunctionTypePtr>()->getFunctionKind() == after.as<LiteralPtr>()->getType().as<FunctionTypePtr>()->getFunctionKind())
+		//			) {
+		//			after->attachValue(IncludeTag(include));
+		//			std::cout << "IncludeTag " << before << " " << after << std::endl;
+		//			return true;
+		//		}
+		
+		//		return false;
 	}
+};
 
-	const string& getAttachedInclude(const NodePtr& node) {
-		assert_true(hasIncludeAttached(node)) << "Does not have a Include annotation!";
-		return node->getAttachedValue<IncludeTag>().include;
-	}
+// ---------------- Support Dump ----------------------
 
-	void attachInclude(const NodePtr& node, const string& include) {
-		node->attachValue(IncludeTag(include));
-	}
+VALUE_ANNOTATION_CONVERTER(IncludeTag)
+
+typedef core::value_node_annotation<IncludeTag>::type annotation_type;
+
+virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+	assert_true(dynamic_pointer_cast<annotation_type>(annotation)) << "Only include annotations supported!";
+	return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().include);
+}
+
+virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+	assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+	return std::make_shared<annotation_type>(IncludeTag(encoder::toValue<string>(node)));
+}
+};
+
+// ----------------------------------------------------
+
+bool hasIncludeAttached(const NodePtr& node) {
+	return node->hasAttachedValue<IncludeTag>();
+}
+
+const string& getAttachedInclude(const NodePtr& node) {
+	assert_true(hasIncludeAttached(node)) << "Does not have a Include annotation!";
+	return node->getAttachedValue<IncludeTag>().include;
+}
+
+void attachInclude(const NodePtr& node, const string& include) {
+	node->attachValue(IncludeTag(include));
+}
 
 
 } // end namespace c

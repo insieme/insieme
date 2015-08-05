@@ -44,14 +44,14 @@
 #include "error_handling.h"
 
 #ifdef _GEMS_SIM
-	#include "include_gems/sys_time.h"
+#include "include_gems/sys_time.h"
 #else
-	#include <sys/time.h>
+#include <sys/time.h>
 #endif
 
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
-	if (t == NULL) {
+	if(t == NULL) {
 		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread %p", (void*) t);
 	}
 	else {
@@ -63,7 +63,7 @@ void irt_thread_get_current(irt_thread *t) {
 	*t = pthread_self();
 }
 
-void irt_thread_cancel(irt_thread *t){
+void irt_thread_cancel(irt_thread *t) {
 #ifdef _GEMS_SIM
 	// TODO [_GEMS]: missing implementation of pthread_cancel
 	IRT_WARN("irt_thread_cancel empty implementation\n");
@@ -72,11 +72,11 @@ void irt_thread_cancel(irt_thread *t){
 #endif
 }
 
-int irt_thread_join(irt_thread *t){
+int irt_thread_join(irt_thread *t) {
 	return pthread_join(*t, NULL);
 }
 
-void irt_thread_exit(int exit_code){
+void irt_thread_exit(int exit_code) {
 	pthread_exit(&exit_code);
 }
 
@@ -84,12 +84,12 @@ void irt_thread_yield() {
 	pthread_yield();
 }
 
-bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
-	#ifdef _WIN32
-		return t1->p == t2->p;
-	#else
-		return pthread_equal(*t1, *t2);
-	#endif
+bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2) {
+#ifdef _WIN32
+	return t1->p == t2->p;
+#else
+	return pthread_equal(*t1, *t2);
+#endif
 }
 
 
@@ -124,7 +124,7 @@ void irt_mutex_destroy(irt_mutex_obj *m) {
 }
 
 void irt_cond_wake_all(irt_cond_var *cv) {
-	// TODO [_GEMS]: is it still true? irt_cond_wake_one added since no irt_cond_wake_all implementation is available 
+	// TODO [_GEMS]: is it still true? irt_cond_wake_one added since no irt_cond_wake_all implementation is available
 	pthread_cond_broadcast(cv);
 }
 

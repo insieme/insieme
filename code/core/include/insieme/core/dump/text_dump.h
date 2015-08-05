@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,85 +50,85 @@ namespace insieme {
 namespace core {
 namespace dump {
 
-	namespace text {
+namespace text {
 
-		/**
-		 * Writes a text-based encoding of the given IR node into the given output stream.
-		 *
-		 * @param out the stream to be writing to
-		 * @param ir the code fragment to be written
-		 */
-		void dumpIR(std::ostream& out, const NodePtr& ir);
+/**
+ * Writes a text-based encoding of the given IR node into the given output stream.
+ *
+ * @param out the stream to be writing to
+ * @param ir the code fragment to be written
+ */
+void dumpIR(std::ostream& out, const NodePtr& ir);
 
-		/**
-		 * Writes a text-based encoding of a given IR address into the given output stream.
-		 *
-		 * @param out the stream to be writing to
-		 * @param address the address to be written
-		 */
-		void dumpAddress(std::ostream& out, const NodeAddress& address);
+/**
+ * Writes a text-based encoding of a given IR address into the given output stream.
+ *
+ * @param out the stream to be writing to
+ * @param address the address to be written
+ */
+void dumpAddress(std::ostream& out, const NodeAddress& address);
 
-		/**
-		 * Restores an IR code fragment from the given input stream. For constructing
-		 * the resulting nodes, the given manager will be used. In case the stream contains
-		 * an illegal encoding, an InvalidEncodingException will be thrown.
-		 *
-		 * @param in the stream to be reading from
-		 * @param manager the node manager to be used for creating nodes
-		 * @return the resolved node
-		 */
-		NodePtr loadIR(std::istream& in, NodeManager& manager);
+/**
+ * Restores an IR code fragment from the given input stream. For constructing
+ * the resulting nodes, the given manager will be used. In case the stream contains
+ * an illegal encoding, an InvalidEncodingException will be thrown.
+ *
+ * @param in the stream to be reading from
+ * @param manager the node manager to be used for creating nodes
+ * @return the resolved node
+ */
+NodePtr loadIR(std::istream& in, NodeManager& manager);
 
-		/**
-		 * Restores a node address and the associated IR constructs from the given input
-		 * stream. For constructing the resulting nodes, the given manager will be used.
-		 * In case the stream contains an illegal encoding, an InvalidEncodingException
-		 * will be thrown.
-		 *
-		 * @param in the stream to be reading from
-		 * @param manager the node manager to be used for creating nodes
-		 * @return the resolved address
-		 */
-		NodeAddress loadAddress(std::istream& in, NodeManager& manager);
+/**
+ * Restores a node address and the associated IR constructs from the given input
+ * stream. For constructing the resulting nodes, the given manager will be used.
+ * In case the stream contains an illegal encoding, an InvalidEncodingException
+ * will be thrown.
+ *
+ * @param in the stream to be reading from
+ * @param manager the node manager to be used for creating nodes
+ * @return the resolved address
+ */
+NodeAddress loadAddress(std::istream& in, NodeManager& manager);
 
 
-		/**
-		 * A wrapper to be streamed into an output stream when aiming on dumping some
-		 * code.
-		 */
-		class TextDump : public utils::Printable {
+/**
+ * A wrapper to be streamed into an output stream when aiming on dumping some
+ * code.
+ */
+class TextDump : public utils::Printable {
 
-			/**
-			 * The address to be dumped.
-			 */
-			const NodeAddress address;
+	/**
+	 * The address to be dumped.
+	 */
+	const NodeAddress address;
+	
+public:
 
-		public:
+	/**
+	 * Creates a new instance dumping the given node.
+	 *
+	 * @param ir the node to be dumped.
+	 */
+	TextDump(const NodePtr& ir) : address(NodeAddress(ir)) {}
+	
+	/**
+	 * Creates a new instance dumping the given node address.
+	 *
+	 * @param address the address to be dumped.
+	 */
+	TextDump(const NodeAddress& address) : address(address) {}
+	
+	/**
+	 * Bridges the gap to the actual binary dump function.
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const {
+		dumpAddress(out, address);
+		return out;
+	}
+};
 
-			/**
-			 * Creates a new instance dumping the given node.
-			 *
-			 * @param ir the node to be dumped.
-			 */
-			TextDump(const NodePtr& ir) : address(NodeAddress(ir)) {}
-
-			/**
-			 * Creates a new instance dumping the given node address.
-			 *
-			 * @param address the address to be dumped.
-			 */
-			TextDump(const NodeAddress& address) : address(address) {}
-
-			/**
-			 * Bridges the gap to the actual binary dump function.
-			 */
-			virtual std::ostream& printTo(std::ostream& out) const {
-				dumpAddress(out, address);
-				return out;
-			}
-		};
-
-	} // end namespace text
+} // end namespace text
 
 } // end namespace dump
 } // end namespace core

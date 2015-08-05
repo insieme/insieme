@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,11 +42,11 @@
 #define __GUARD_INCLUDE_WIN32_MEMALIGN_H
 
 #ifdef _WIN32
-	#include <malloc.h>
+#include <malloc.h>
 
-	void* memalign(size_t boundary, size_t size){
-		return malloc(size);
-	}
+void* memalign(size_t boundary, size_t size) {
+	return malloc(size);
+}
 
 #endif
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,21 +44,21 @@
 
 TEST(tuning, compileable_test) {
 	// just testing whether header is compiling
-
+	
 	// check size of irt value element
 	EXPECT_LE(sizeof(irt_value), 2*sizeof(void*));
-
+	
 	// just test access
 	EXPECT_STREQ("The execution time in nano-seconds", irt_get_metric_info(IRT_METRIC_EXEC_TIME_INDEX)->description);
 	EXPECT_STREQ("The execution time in nano-seconds", irt_get_metric_info(IRT_METRIC_EXEC_TIME->index)->description);
-
+	
 	EXPECT_EQ(IRT_METRIC_EXEC_TIME_INDEX, IRT_METRIC_EXEC_TIME->index);
-
+	
 	EXPECT_LT(0, g_num_atomic_metrics);
-
+	
 	const irt_metric** all = g_all_atomic_metrics;
 	for(int i=0; i<g_num_atomic_metrics; i++) {
 		EXPECT_STRNE("Just testing presence of string", irt_get_metric_info(all[i]->index)->description);
 	}
-
+	
 }

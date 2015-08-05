@@ -70,19 +70,21 @@ using namespace insieme::core;
 
 namespace {
 
-    /**
-     *  Checks given match object for all identifiers
-     *  that are contained in the expression or variable list of
-     *  the match object.
-     */
-    std::vector<insieme::core::ExpressionPtr> handleIdentifierList(MatchObject& m, const std::string& key) {
-        std::vector<insieme::core::ExpressionPtr> ret;
-        for(insieme::core::ExpressionPtr p : m.getExprs(key))
-            ret.push_back(p);
-        for(insieme::core::VariablePtr p : m.getVars(key))
-            ret.push_back(p.as<insieme::core::ExpressionPtr>());
-        return ret;
-    }
+/**
+ *  Checks given match object for all identifiers
+ *  that are contained in the expression or variable list of
+ *  the match object.
+ */
+std::vector<insieme::core::ExpressionPtr> handleIdentifierList(MatchObject& m, const std::string& key) {
+	std::vector<insieme::core::ExpressionPtr> ret;
+	for(insieme::core::ExpressionPtr p : m.getExprs(key)) {
+		ret.push_back(p);
+	}
+	for(insieme::core::VariablePtr p : m.getVars(key)) {
+		ret.push_back(p.as<insieme::core::ExpressionPtr>());
+	}
+	return ret;
+}
 
 }
 
@@ -98,19 +100,19 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-
+	
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
-
+	
 	ASSERT_EQ((size_t) 8, pl.size());
-
+	
 	insieme::frontend::conversion::Converter converter(manager, tu, options.job);
 	converter.convert();
-
+	
 	const auto testPragmaExtension = options.job.getExtension<TestPragmaExtension>();
 	const auto dummyArgList = testPragmaExtension->getDummyArguments();
 	auto dummyArgListIt = dummyArgList.begin();
-
+	
 	PragmaPtr p;
 	p = pl[0];
 	{
@@ -118,100 +120,100 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 43, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 28);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"first\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"first\"", *dummyArgListIt++);
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 44, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 44, 7);
 	}
-
+	
 	p = pl[1];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 46, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 46, 27);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"macro\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"macro\"", *dummyArgListIt++);
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 47, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 49, 20);
-
+		
 	}
-
+	
 	p = pl[2];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 49, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 49, 26);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"solo\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"solo\"", *dummyArgListIt++);
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
-        EXPECT_TRUE ( llvm::isa<clang::NullStmt>(stmt));
+		
+		EXPECT_TRUE(llvm::isa<clang::NullStmt>(stmt));
 //      we don't check injected stmt position, might be wrong
 //		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 12, 2);
 //		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 14, 14);
 	}
-
+	
 	p = pl[3];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 55, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 55, 30);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"function\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"function\"", *dummyArgListIt++);
+		
 		// pragma associated to a function
 		EXPECT_FALSE(p->isStatement());
 		EXPECT_TRUE(p->isDecl());
 		const clang::Decl* decl = p->getDecl();
-
+		
 		CHECK_LOCATION(decl->getLocStart(), comp.getSourceManager(), 56, 1);
 		CHECK_LOCATION(decl->getLocEnd(), comp.getSourceManager(), 59, 1);
 	}
-
+	
 	p = pl[4];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 65, 3);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 66, 25);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"two lines\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"two lines\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 67, 3);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 68, 3);
 	}
-
-
+	
+	
 	/// three pragmas in a raw
 	p = pl[5];
 	{
@@ -219,13 +221,13 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 74, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 74, 25);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"one\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"one\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 77, 2);
 		// check stmt end location
@@ -237,13 +239,13 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 75, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 75, 25);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"two\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"two\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 77, 2);
 		// check stmt end location
@@ -255,13 +257,13 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 76, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 76, 27);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"three\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"three\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 77, 2);
 		// check stmt end location
@@ -280,70 +282,70 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-
+	
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
-
+	
 	insieme::frontend::conversion::Converter converter(manager, tu, options.job);
 	converter.convert();
-
+	
 	const auto testPragmaExtension = options.job.getExtension<TestPragmaExtension>();
 	const auto dummyArgList = testPragmaExtension->getDummyArguments();
 	auto dummyArgListIt = dummyArgList.begin();
-
+	
 	ASSERT_EQ((size_t) 3, pl.size());
-
+	
 	PragmaPtr p = pl[0];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 42, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 9);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"first\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"first\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 44, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 44, 11);
 	}
-
+	
 	p = pl[1];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 46, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 47, 10);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"second\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"second\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 48, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 48, 16);
 	}
-
+	
 	p = pl[2];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 50, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 51, 9);
-
+		
 		EXPECT_EQ("test::dummy", p->getType());
-		EXPECT_EQ( "\"third\"", *dummyArgListIt++);
-
+		EXPECT_EQ("\"third\"", *dummyArgListIt++);
+		
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 52, 2);
 		// check stmt end location
@@ -360,13 +362,13 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-
+	
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 	insieme::frontend::conversion::Converter convFactory(manager, tu);
-
+	
 	ASSERT_EQ((size_t) 4, pl.size());
-
+	
 	// first pragma is at location [(4:2) - (4:22)]
 	PragmaPtr p = pl[0];
 	{
@@ -374,25 +376,25 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 40, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 40, 22);
-
+		
 		EXPECT_EQ(p->getType(), "omp::parallel");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 41, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 45, 2);
-
+		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
 		auto mo = omp->getMatchObject(convFactory);
 		EXPECT_TRUE(mo.empty());
 	}
-
+	
 	// CHECK SECOND PRAGMA
 	p = pl[1];
 	{
@@ -400,87 +402,87 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 48, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 48, 60);
-
+		
 		EXPECT_EQ(p->getType(), "omp::parallel");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = (p->getStatement());
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 49, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 51, 3);
-
+		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
 		auto mo = omp->getMatchObject(convFactory);
 		EXPECT_FALSE(mo.empty());
-
+		
 		auto fit = handleIdentifierList(mo, "private");
-		EXPECT_FALSE( fit.empty() );
+		EXPECT_FALSE(fit.empty());
 		// only 1 variable in the private construct
 		EXPECT_EQ(fit.size(), (size_t) 2);
-
+		
 		// check first variable name
 		{
-		    EXPECT_TRUE(toString(fit[0].as<VariablePtr>()) == "AP(v1)");
-		    EXPECT_TRUE(toString(fit[1].as<VariablePtr>()) == "AP(v2)");
-        }
-
+			EXPECT_TRUE(toString(fit[0].as<VariablePtr>()) == "AP(v1)");
+			EXPECT_TRUE(toString(fit[1].as<VariablePtr>()) == "AP(v2)");
+		}
+		
 		// check default(shared)
-        auto def = mo.getString("default");
-        EXPECT_FALSE(def.empty());
-        EXPECT_TRUE(def == "shared");
+		auto def = mo.getString("default");
+		EXPECT_FALSE(def.empty());
+		EXPECT_TRUE(def == "shared");
 	}
-
+	
 	p = pl[2];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 51, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 51, 20);
-
+		
 		EXPECT_EQ(p->getType(), "omp::master");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = (p->getStatement());
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 52, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 52, 24);
-
+		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
-        auto mo = omp->getMatchObject(convFactory);
+		auto mo = omp->getMatchObject(convFactory);
 		EXPECT_TRUE(mo.empty());
 	}
-
+	
 	p = pl[3];
 	{
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 55, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 55, 20);
-
+		
 		EXPECT_EQ(p->getType(), "omp::single");
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 56, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 56, 23);
-
+		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
-        auto mo = omp->getMatchObject(convFactory);
+		auto mo = omp->getMatchObject(convFactory);
 		EXPECT_TRUE(mo.empty());
 	}
 }
@@ -494,54 +496,54 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-
+	
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
 	insieme::frontend::conversion::Converter convFactory(manager, tu);
-
+	
 	ASSERT_EQ((size_t) 4, pl.size());
-
+	
 	// first pragma is at location [(6:2) - (6:37)]
 	PragmaPtr p = pl[0];
 	{
-
+	
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 40, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 40, 37);
-
+		
 		EXPECT_EQ(p->getType(), "omp::parallel");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = (p->getStatement());
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 41, 2);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 45, 22);
-
+		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
 		auto mo = omp->getMatchObject(convFactory);
-
+		
 		EXPECT_FALSE(mo.empty());
-
+		
 		// look for 'for' keyword in the map
 		EXPECT_TRUE(mo.stringValueExists("for"));
-
+		
 		auto fit = handleIdentifierList(mo, "private");
 		EXPECT_FALSE(fit.empty());
 		// only 1 variable in the private construct
 		EXPECT_EQ(fit.size(), (size_t) 1);
-
+		
 		// check first variable name
 		{
-            EXPECT_TRUE(toString(fit[0].as<VariablePtr>()) == "AP(v1)");
+			EXPECT_TRUE(toString(fit[0].as<VariablePtr>()) == "AP(v1)");
 		}
 	}
-
+	
 	// pragma is at location [(11:2) - (11:22)]
 	p = pl[1];
 	{
@@ -549,26 +551,26 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 45, 2);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 45, 22);
-
+		
 		EXPECT_EQ(p->getType(), "omp::parallel");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = (p->getStatement());
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 48, 14);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 52, 2);
-
+		
 		// check empty map
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
-        auto mo = omp->getMatchObject(convFactory);
-
+		auto mo = omp->getMatchObject(convFactory);
+		
 		EXPECT_TRUE(mo.empty());
 	}
-
+	
 	// pragma is at location [(13:3) - (14:14)]
 	p = pl[2];
 	{
@@ -576,37 +578,37 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 47, 3);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 48, 14);
-
+		
 		EXPECT_EQ(p->getType(), "omp::for");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = (p->getStatement());
-
+		
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 49, 3);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 51, 3);
-
+		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
-        auto mo = omp->getMatchObject(convFactory);
-
+		auto mo = omp->getMatchObject(convFactory);
+		
 		auto ex = handleIdentifierList(mo, "firstprivate");
 		EXPECT_FALSE(ex.empty());
 		// only 1 variable in the private construct
 		EXPECT_EQ(ex.size(), (size_t) 1);
-
+		
 		// check first variable name
 		{
-            EXPECT_TRUE(toString(ex[0]) == "AP(v1)");
+			EXPECT_TRUE(toString(ex[0]) == "AP(v1)");
 		}
-
+		
 		// look for 'nowait' keyword in the map
 		EXPECT_TRUE(mo.stringValueExists("nowait"));
 	}
-
+	
 	// pragma is at location [(16:5) - (16:24)]
 	p = pl[3];
 	{
@@ -614,16 +616,16 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 50, 5);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 50, 24);
-
+		
 		EXPECT_EQ(p->getType(), "omp::barrier");
-
+		
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = (p->getStatement());
-
-		EXPECT_TRUE( llvm::dyn_cast<clang::NullStmt>(stmt) != NULL );
-		EXPECT_TRUE( stmt->getLocStart().isInvalid() );
+		
+		EXPECT_TRUE(llvm::dyn_cast<clang::NullStmt>(stmt) != NULL);
+		EXPECT_TRUE(stmt->getLocStart().isInvalid());
 	}
 }
 
@@ -635,12 +637,12 @@ TEST(PragmaMatcherTest, RecursiveFunctions) {
 	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-
+	
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
-
+	
 	ASSERT_EQ((size_t) 2, pl.size());
-
+	
 	// first pragma is at location [(6:2) - (6:37)]
 	PragmaPtr p = pl[0];
 	{
@@ -648,19 +650,19 @@ TEST(PragmaMatcherTest, RecursiveFunctions) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 40, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 41, 133);
-
+		
 		EXPECT_EQ("test::expected", p->getType());
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isDecl());
 		const clang::Decl* decl = p->getDecl();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(decl->getLocStart(), comp.getSourceManager(), 42, 1);
 		// check stmt end location
 		CHECK_LOCATION(decl->getLocEnd(), comp.getSourceManager(), 47, 2);
 	}
-
+	
 	// first pragma is at location [(6:2) - (6:37)]
 	p = pl[1];
 	{
@@ -668,13 +670,13 @@ TEST(PragmaMatcherTest, RecursiveFunctions) {
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 46, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 47, 133);
-
+		
 		EXPECT_EQ("test::expected", p->getType());
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isDecl());
 		const clang::Decl* decl = p->getDecl();
-
+		
 		// check stmt start location
 		CHECK_LOCATION(decl->getLocStart(), comp.getSourceManager(), 48, 1);
 		// check stmt end location

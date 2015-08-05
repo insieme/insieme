@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,33 +56,41 @@ template <class NodeTy, class NodeIdTy, class ProperyIdTy, class PropertyValueTy
 struct GraphBuilder {
 
 	typedef std::map<const ProperyIdTy, PropertyValueTy> Decorator;
-
+	
 	class Node: public Decorator {
 		NodeIdTy id;
 	public:
 		Node(const NodeIdTy& id): id(id) { }
-		const NodeIdTy& getId() const { return id; }
+		const NodeIdTy& getId() const {
+			return id;
+		}
 	};
-
+	
 	class Link: public Decorator {
 		NodeIdTy src;
 		NodeIdTy dest;
 	public:
 		Link(const NodeIdTy& src, const NodeIdTy& dest) : src(src), dest(dest) { }
-
-		const NodeIdTy& getSrc() const { return src; }
-		const NodeIdTy& getDest() const { return dest; }
+		
+		const NodeIdTy& getSrc() const {
+			return src;
+		}
+		const NodeIdTy& getDest() const {
+			return dest;
+		}
 	};
-
+	
 	template <class GraphNodeTy>
-	void addNode(const NodeTy& node) { addNode(GraphNodeTy( getNodeId(node) )); }
+	void addNode(const NodeTy& node) {
+		addNode(GraphNodeTy(getNodeId(node)));
+	}
 	virtual void addNode(const Node& node) = 0;
-
+	
 	virtual void addLink(const Link& link) = 0;
 	virtual NodeIdTy getNodeId(const NodeTy& fromNode) = 0;
 };
 
-enum NodeProperty{ LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR };
+enum NodeProperty { LABEL, SHAPE, STYLE, DIRECTION, HEIGHT, WIDTH, COLOR };
 
 class DOTGraphBuilder: public GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> {
 	std::ostream& 	out;
@@ -90,9 +98,9 @@ public:
 	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Node 		Node;
 	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Link 		Link;
 	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string>::Decorator	Properties;
-
+	
 	DOTGraphBuilder(std::ostream& out): out(out) { }
-
+	
 	virtual void addNode(const Node& node);
 	virtual void addLink(const Link& link);
 	virtual size_t getNodeId(const core::NodePtr& fromNode);
@@ -102,7 +110,7 @@ class ASTPrinter: public insieme::core::IRVisitor<> {
 public:
 	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> IRBuilder;
 	typedef std::shared_ptr<IRBuilder> IRBuilderPtr;
-
+	
 	ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors);
 	// Types
 	void visitTypeVariable(const TypeVariablePtr& typeVar);
@@ -113,7 +121,7 @@ public:
 	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
 	void visitRecType(const RecTypePtr& recTy);
 	void visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy);
-
+	
 	// Statements
 	void visitCompoundStmt(const CompoundStmtPtr& comp);
 	void visitForStmt(const ForStmtPtr& forStmt);
@@ -121,7 +129,7 @@ public:
 	void visitWhileStmt(const WhileStmtPtr& whileStmt);
 	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt);
 	void visitReturnStmt(const ReturnStmtPtr& retStmt);
-
+	
 	// Expressions
 	void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
 	void visitLambda(const LambdaPtr& lambda);
@@ -131,7 +139,7 @@ public:
 	void visitCastExpr(const CastExprPtr& castExpr);
 	void visitLiteral(const LiteralPtr& lit);
 	void visitVectorExpr(const VectorExprPtr& init);
-
+	
 	void visitStatement(const insieme::core::StatementPtr& stmt);
 	void visitNode(const insieme::core::NodePtr& node);
 	void visitProgram(const core::ProgramPtr& prog);

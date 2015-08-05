@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -67,9 +67,9 @@ struct _irt_wi_implementation_runtime_data {
 	bool force_dyn;
 	double distribution[IRT_MAX_WORKERS];
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER
-    irt_optimizer_runtime_data optimizer_rt_data;
-    irt_optimizer_runtime_data* wrapping_optimizer_rt_data;
-    uint32 completed_wi_count;
+	irt_optimizer_runtime_data optimizer_rt_data;
+	irt_optimizer_runtime_data* wrapping_optimizer_rt_data;
+	uint32 completed_wi_count;
 #endif
 	uint32 chunk_size;
 };

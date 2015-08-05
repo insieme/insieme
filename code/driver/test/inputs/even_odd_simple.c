@@ -46,17 +46,23 @@ bool even(unsigned x);
 bool odd(unsigned x);
 
 bool even(unsigned x) {
-	if (x==0) return true;
+	if(x==0) {
+		return true;
+	}
 	return odd(x-1);
 }
 
 bool odd(unsigned x) {
-	if (x==0) return false;
+	if(x==0) {
+		return false;
+	}
 	return even(x-1);
 }
 
 char* toStr(bool value) {
-	if (value) return "true";
+	if(value) {
+		return "true";
+	}
 	return "false";
 }
 

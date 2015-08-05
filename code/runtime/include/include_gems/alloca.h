@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,8 +38,7 @@
 #ifndef __GUARD_INCLUDE_GEMS_ALLOCA_H
 #define __GUARD_INCLUDE_GEMS_ALLOCA_H
 
-void* alloca(size_t size)
-{
+void* alloca(size_t size) {
 	return gem_malloc(size, MEM_HEAP);
 }
 

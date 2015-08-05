@@ -50,42 +50,42 @@ namespace core {
 namespace types {
 
 
-	/**
-	 * 	Hub entry point where the compatibility between types is checked and the more precise
-	 * 	techique can be used
-	 * 	 @param type, the target type, 
-	 * 	 @param expr, the source expression we want to addapt
-	 * 	 @return a casted/modified expression with the rightfull type
-	 */
-	core::ExpressionPtr smartCast (const core::TypePtr& type, const core::ExpressionPtr& expr);
-	core::ExpressionPtr smartCast (const core::ExpressionPtr& expr, const core::TypePtr& type );
+/**
+ * 	Hub entry point where the compatibility between types is checked and the more precise
+ * 	techique can be used
+ * 	 @param type, the target type,
+ * 	 @param expr, the source expression we want to addapt
+ * 	 @return a casted/modified expression with the rightfull type
+ */
+core::ExpressionPtr smartCast(const core::TypePtr& type, const core::ExpressionPtr& expr);
+core::ExpressionPtr smartCast(const core::ExpressionPtr& expr, const core::TypePtr& type);
 
 
-	/**
-	 *
-	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr expr);
+/**
+ *
+ */
+core::ExpressionPtr castScalar(const core::TypePtr& trgTy, core::ExpressionPtr expr);
 
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
+core::ExpressionPtr castToBool(const core::ExpressionPtr& expr);
 
-	ExpressionPtr convertExprToType(const IRBuilder& builder, const TypePtr& trgTy, ExpressionPtr expr);
+ExpressionPtr convertExprToType(const IRBuilder& builder, const TypePtr& trgTy, ExpressionPtr expr);
 
-	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//  some other tools
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  some other tools
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
+std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
 
-	bool isRefRef(const core::TypePtr& type);
+bool isRefRef(const core::TypePtr& type);
 
-	bool isArray(const core::TypePtr& type);
-	bool isRefArray(const core::TypePtr& type);
+bool isArray(const core::TypePtr& type);
+bool isRefArray(const core::TypePtr& type);
 
-	bool isVector(const core::TypePtr& type);
-	bool isRefVector(const core::TypePtr& type);
+bool isVector(const core::TypePtr& type);
+bool isRefVector(const core::TypePtr& type);
 
-	bool isNullPtrExpression(const core::ExpressionPtr& expr);
+bool isNullPtrExpression(const core::ExpressionPtr& expr);
 
 
 }

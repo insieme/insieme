@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,82 +54,84 @@ class AsmStmtExtension : public core::lang::Extension {
 	 * Allow the node manager to create instances of this class.
 	 */
 	friend class core::NodeManager;
-
+	
 	/**
 	 * Creates a new instance based on the given node manager.
 	 */
 	AsmStmtExtension(core::NodeManager& manager)
-			: core::lang::Extension(manager) {}
-
-
+		: core::lang::Extension(manager) {}
+		
+		
 public:
 
 	/**
 	 * wrapper function to trigger the translation of this structure
 	 */
 	LANG_EXT_LITERAL(AsmStmt, "__insieme_asm", "('a) -> unit");
-
+	
 };
 
 
 struct AsmStmtWrapper : public utils::Printable {
 
 	bool _volatile;
-
+	
 	std::string asmString;
-
-	typedef std::vector<std::pair<std::string, core::ExpressionPtr> > operandsList;
+	
+	typedef std::vector<std::pair<std::string, core::ExpressionPtr>> operandsList;
 	operandsList outputs;
 	operandsList inputs;
-
+	
 	std::vector<std::string> clobbers;
-
+	
 	/**
 	 *  constructs an asm stmt wrapper to encode it throw the compiler pipeline
 	 */
-	AsmStmtWrapper (const std::string& asmString, bool volatil = false)
-		: _volatile(volatil), asmString(asmString)
-	{ }
-
+	AsmStmtWrapper(const std::string& asmString, bool volatil = false)
+		: _volatile(volatil), asmString(asmString) {
+	}
+	
 	/**
 	 * each output in the asm wrapper is a pair string:expression
 	 */
-	void addOutput (const std::string& str, const core::ExpressionPtr& ptr){
+	void addOutput(const std::string& str, const core::ExpressionPtr& ptr) {
 		outputs.push_back({str, ptr});
 	}
 	/**
 	 * each input in the asm wrapper is a pair string:expression
 	 */
-	void addInput (const std::string& str, const core::ExpressionPtr& ptr){
+	void addInput(const std::string& str, const core::ExpressionPtr& ptr) {
 		inputs.push_back({str, ptr});
 	}
 	/*
 	 *  clobbers are strings
 	 */
-	void addClobber (const std::string& str){
+	void addClobber(const std::string& str) {
 		clobbers.push_back(str);
 	}
-
-	std::ostream& printTo (std::ostream& out) const{
-
+	
+	std::ostream& printTo(std::ostream& out) const {
+	
 		out << " ASM STMT: \n";
-		if (_volatile) out << "\tvolatile ";
+		if(_volatile) {
+			out << "\tvolatile ";
+		}
 		out << "{ " << asmString <<  " } \n: ";
-		for (auto& cur : outputs){
+		for(auto& cur : outputs) {
 			out << "\"" << cur.first << "\"(" << cur.second << ") ,";
 		}
 		out << "\n : ";
-		for (auto& cur : inputs){
+		for(auto& cur : inputs) {
 			out << "\"" << cur.first << "\"(" << cur.second << "), ";
 		}
 		out << "\n : ";
-		for (auto& cur : clobbers){
+		for(auto& cur : clobbers) {
 			out << "\"" << cur << "\"";
 		}
 		out << "\n";
 		return out;
 	}
-
+	
 };
 
 

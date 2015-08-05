@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,7 +39,7 @@
 #define __GUARD_ABSTRACTION_IMPL_ATOMIC_IMPL_H
 
 #if defined(_GEMS_SIM)
-	#include "atomic.gems.impl.h"
+#include "atomic.gems.impl.h"
 #endif
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_ATOMIC_IMPL_H

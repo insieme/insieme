@@ -49,12 +49,12 @@ namespace insieme {
 namespace transform {
 namespace tasks {
 
-	TEST(GranularityTuning, Simple) {
+TEST(GranularityTuning, Simple) {
 
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
             let int = int<4>;
             let taskfun = lambda (int v) -> unit {
                 if(v == 0) return;
@@ -67,31 +67,31 @@ namespace tasks {
             }
         )1N5P1RE");
 
-		core::ProgramPtr prog = addresses[0].getRootNode().as<core::ProgramPtr>();
-		EXPECT_TRUE(core::checks::check(prog).empty()) << core::checks::check(prog);
+	core::ProgramPtr prog = addresses[0].getRootNode().as<core::ProgramPtr>();
+	EXPECT_TRUE(core::checks::check(prog).empty()) << core::checks::check(prog);
+	
+	auto opt = applyTaskOptimization(prog);
+	EXPECT_TRUE(core::checks::check(opt).empty()) << core::checks::check(opt);
+	
+	auto newFunExp = addresses[0].switchRoot(opt).getAddressedNode().as<core::LambdaExprPtr>();
+	//dumpColor(newFunExp);
+	
+	auto definitions = newFunExp->getDefinition()->getDefinitions();
+	// check that we get 4 versions
+	EXPECT_EQ(definitions.size(), 4);
+	// check that last version is sequential
+	EXPECT_TRUE(!core::analysis::isParallel(definitions[3]));
+	// check that superfluous merges are removed
+	EXPECT_TRUE(core::analysis::isParallel(definitions[2]));
+	EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("mergeAll()")), 1);
+}
 
-		auto opt = applyTaskOptimization(prog);
-		EXPECT_TRUE(core::checks::check(opt).empty()) << core::checks::check(opt);
+TEST(GranularityTuning, Mutual) {
 
-		auto newFunExp = addresses[0].switchRoot(opt).getAddressedNode().as<core::LambdaExprPtr>();
-		//dumpColor(newFunExp);
-
-		auto definitions = newFunExp->getDefinition()->getDefinitions();
-		// check that we get 4 versions
-		EXPECT_EQ(definitions.size(), 4);
-		// check that last version is sequential
-		EXPECT_TRUE(!core::analysis::isParallel(definitions[3]));
-		// check that superfluous merges are removed
-		EXPECT_TRUE(core::analysis::isParallel(definitions[2]));
-		EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("mergeAll()")), 1);
-	}
-
-	TEST(GranularityTuning, Mutual) {
-
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
-
-		auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	
+	auto addresses = builder.parseAddressesProgram(R"1N5P1RE(
 			let int = int<4>;
 			let tf1,tf2 = lambda (int v) -> unit {
 				if(v == 0) return;
@@ -108,29 +108,29 @@ namespace tasks {
 			}
 		)1N5P1RE");
 
-		core::ProgramPtr prog = addresses[0].getRootNode().as<core::ProgramPtr>();
-		EXPECT_TRUE(core::checks::check(prog).empty()) << core::checks::check(prog);
-
-		auto opt = applyTaskOptimization(prog);
-		EXPECT_TRUE(core::checks::check(opt).empty()) << core::checks::check(opt);
-
-		auto newFunExp = addresses[0].switchRoot(opt).getAddressedNode().as<core::LambdaExprPtr>();
-		//dumpColor(newFunExp);
-
-		auto definitions = newFunExp->getDefinition()->getDefinitions();
-		// check that we get 2*4 versions
-		EXPECT_EQ(definitions.size(), 8);
-		// check that last version of fun1 is sequential
-		EXPECT_TRUE(!core::analysis::isParallel(definitions[3]));
-		// check that superfluous merges are removed
-		EXPECT_TRUE(core::analysis::isParallel(definitions[2]));
-		EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("mergeAll()")), 1);
-		// check that last version of fun2 is sequential
-		EXPECT_TRUE(!core::analysis::isParallel(definitions[7]));
-		// check that superfluous merges are removed
-		EXPECT_TRUE(core::analysis::isParallel(definitions[6]));
-		EXPECT_EQ(core::analysis::countInstances(definitions[6], builder.parseExpr("mergeAll()")), 1);
-	}
+	core::ProgramPtr prog = addresses[0].getRootNode().as<core::ProgramPtr>();
+	EXPECT_TRUE(core::checks::check(prog).empty()) << core::checks::check(prog);
+	
+	auto opt = applyTaskOptimization(prog);
+	EXPECT_TRUE(core::checks::check(opt).empty()) << core::checks::check(opt);
+	
+	auto newFunExp = addresses[0].switchRoot(opt).getAddressedNode().as<core::LambdaExprPtr>();
+	//dumpColor(newFunExp);
+	
+	auto definitions = newFunExp->getDefinition()->getDefinitions();
+	// check that we get 2*4 versions
+	EXPECT_EQ(definitions.size(), 8);
+	// check that last version of fun1 is sequential
+	EXPECT_TRUE(!core::analysis::isParallel(definitions[3]));
+	// check that superfluous merges are removed
+	EXPECT_TRUE(core::analysis::isParallel(definitions[2]));
+	EXPECT_EQ(core::analysis::countInstances(definitions[2], builder.parseExpr("mergeAll()")), 1);
+	// check that last version of fun2 is sequential
+	EXPECT_TRUE(!core::analysis::isParallel(definitions[7]));
+	// check that superfluous merges are removed
+	EXPECT_TRUE(core::analysis::isParallel(definitions[6]));
+	EXPECT_EQ(core::analysis::countInstances(definitions[6], builder.parseExpr("mergeAll()")), 1);
+}
 
 } // end namespace tasks
 } // end namespace transform

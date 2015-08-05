@@ -44,9 +44,9 @@
 #include "ir_interface.h"
 
 #ifdef _WIN32
-	#include "../../include_win32/rand_r.h"
+#include "../../include_win32/rand_r.h"
 #elif defined(_GEMS_SIM)
-	#include "include_gems/rand_r.h"
+#include "include_gems/rand_r.h"
 #endif
 
 
@@ -68,8 +68,8 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 	return irt_scheduling_optional(target, &wi->range, wi->impl, wi->parameters);
 }
 
-irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
-		irt_wi_implementation* impl, irt_lw_data_item* args) {
+irt_joinable irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range,
+                                     irt_wi_implementation* impl, irt_lw_data_item* args) {
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
 		irt_worker_run_immediate(target, range, impl, args);
@@ -133,22 +133,24 @@ int irt_scheduling_iteration(irt_worker* self) {
 		irt_signal_worker(self->sched_data.wake_target);
 		self->sched_data.wake_target = NULL;
 	}
-
+	
 	// try to take a work item from the queue
 	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
-
+	
 	// try to steal a work item from random
 	for(int i=0; i<IRT_SCHED_UBER_STEAL_ATTEMPTS; ++i) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
 		irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
 		if(irt_atomic_load(&wo->state) == IRT_WORKER_STATE_SLEEPING) {
-			if(irt_cwb_size(&wo->sched_data.queue) > 0) irt_signal_worker(wo);
+			if(irt_cwb_size(&wo->sched_data.queue) > 0) {
+				irt_signal_worker(wo);
+			}
 			continue;
-		} 
+		}
 		if((wi = irt_cwb_pop_back(&wo->sched_data.queue))) {
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
@@ -156,7 +158,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 			return 1;
 		}
 	}
-
+	
 	// didn't find any work
 	return 0;
 }

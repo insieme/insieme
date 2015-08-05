@@ -45,20 +45,21 @@ namespace extensions {
 using namespace insieme;
 
 class VariadicArgumentsExtension : public insieme::frontend::extensions::FrontendExtension {
-        
-	public:
-    virtual core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) ;
 
-    virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
-                                           insieme::frontend::conversion::Converter& convFact) ;
-
-    virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact);
-
-    virtual core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
-                                    insieme::frontend::conversion::Converter& convFact) ;
-
-    virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact, bool symbolic);
-
+public:
+	virtual core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) ;
+	
+	virtual core::ExpressionPtr PostVisit(const clang::Expr* expr, const insieme::core::ExpressionPtr& irExpr,
+	                                      insieme::frontend::conversion::Converter& convFact) ;
+	                                      
+	virtual core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact);
+	
+	virtual core::TypePtr PostVisit(const clang::QualType& type, const insieme::core::TypePtr& irType,
+	                                insieme::frontend::conversion::Converter& convFact) ;
+	                                
+	virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, insieme::frontend::conversion::Converter& convFact,
+	        bool symbolic);
+	        
 	virtual insieme::core::ProgramPtr  IRVisit(insieme::core::ProgramPtr& prog);
 };
 

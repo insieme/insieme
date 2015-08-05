@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -79,19 +79,19 @@ template<typename ContainerA, typename ContainerB>
 SubstitutionOpt unifyAll(NodeManager& manager, const ContainerA& listA, const ContainerB& listB) {
 
 	// check length of lists ...
-	if (listA.size() != listB.size()) {
+	if(listA.size() != listB.size()) {
 		// ... if not equal => not unifyable
 		return boost::optional<Substitution>();
 	}
-
+	
 	// define some types ...
 	typedef std::pair<TypePtr, TypePtr> Pair;
 	typedef std::list<Pair> List;
-
+	
 	// delegate work to non-template method within cpp file
 	List list(
-				make_paired_iterator(listA.begin(), listB.begin()),
-				make_paired_iterator(listA.end(), listB.end())
+	    make_paired_iterator(listA.begin(), listB.begin()),
+	    make_paired_iterator(listA.end(), listB.end())
 	);
 	return unifyAll(manager, list);
 }
@@ -101,22 +101,22 @@ SubstitutionOpt unifyRange(NodeManager& manager, Iterator begin, Iterator end) {
 
 	// just unify one after another
 	Substitution res;
-	if (begin == end) {
+	if(begin == end) {
 		return res;
 	}
-
+	
 	TypePtr unified = *begin;
 	++begin;
-	for(;begin != end; ++begin) {
+	for(; begin != end; ++begin) {
 		auto cur = unify(manager, unified, res.applyTo(*begin));
-		if (!cur) {
+		if(!cur) {
 			// => not unify-able
 			return 0;
 		}
 		unified = cur->applyTo(unified);
 		res = Substitution::compose(manager, res, *cur);
 	}
-
+	
 	// return result
 	return res;
 }

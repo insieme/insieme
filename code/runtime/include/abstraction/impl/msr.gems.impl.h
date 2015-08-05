@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,11 +39,11 @@
 #define __GUARD_ABSTRACTION_IMPL_MSR_GEMS_IMPL_H
 
 int32 _irt_open_msr(uint32 core) {
-    return 0;
+	return 0;
 }
 
 int64 _irt_read_msr(int32 file, int32 subject) {
-    return 0;
+	return 0;
 }
 
 int32 _irt_close_msr(int32 file) {

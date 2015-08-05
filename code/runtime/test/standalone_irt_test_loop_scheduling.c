@@ -98,8 +98,12 @@ void insieme_cleanup_context(irt_context* context) {
 
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
-	if(argc>=2) wcount = atoi(argv[1]);
-	if(argc>=3) g_memcount = atoi(argv[2]);
+	if(argc>=2) {
+		wcount = atoi(argv[1]);
+	}
+	if(argc>=3) {
+		g_memcount = atoi(argv[2]);
+	}
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
@@ -117,34 +121,42 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	printf("WI %d here\n", id);
 	irt_work_group* wg = wi->wg_memberships[0].wg_id.cached;
 	irt_wg_barrier(wg);
-
+	
 	irt_work_item_range loop_range = {0, 100, 3};
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
-	if(id == 0) printf("---\n");
+	if(id == 0) {
+		printf("---\n");
+	}
 	irt_wg_barrier(wg);
-
+	
 	irt_loop_sched_policy static10 = {IRT_STATIC_CHUNKED, 1024, .param.chunk_size = 10};
 	irt_wg_set_loop_scheduling_policy(wg, &static10);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
-	if(id == 0) printf("---\n");
+	if(id == 0) {
+		printf("---\n");
+	}
 	irt_wg_barrier(wg);
-
+	
 	irt_loop_sched_policy dynamic10 = {IRT_DYNAMIC_CHUNKED, 1024, .param.chunk_size = 2};
 	irt_wg_set_loop_scheduling_policy(wg, &dynamic10);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
-	if(id == 0) printf("---\n");
+	if(id == 0) {
+		printf("---\n");
+	}
 	irt_wg_barrier(wg);
-
+	
 	irt_loop_sched_policy guided10 = {IRT_GUIDED_CHUNKED, 1024, .param.chunk_size = 10};
 	irt_wg_set_loop_scheduling_policy(wg, &guided10);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
-	if(id == 0) printf("---\n");
+	if(id == 0) {
+		printf("---\n");
+	}
 	irt_wg_barrier(wg);
-
+	
 	uint64 boundaries[] = {2, 4, 8, 16, 32, 64};
 	irt_loop_sched_policy fixed_policy;
 	fixed_policy.type = IRT_FIXED;
@@ -153,7 +165,9 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	irt_wg_set_loop_scheduling_policy(wg, &fixed_policy);
 	irt_schedule_loop(wi, wg, loop_range, &g_insieme_impl_table[INSIEME_LOOP_WI_INDEX], NULL);
 	irt_wg_barrier(wg);
-	if(id == 0) printf("---\n");
+	if(id == 0) {
+		printf("---\n");
+	}
 	irt_wg_barrier(wg);
 }
 
