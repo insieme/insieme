@@ -1,6 +1,9 @@
 # Insieme: Compiler and Runtime Infrastructure
 The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More details are available [here](http://insieme-compiler.org/mission.html).
 
+**IMPORTANT NOTE**
+The master branch of Insieme is currently undergoing severe changes and refactoring. Until these changes are complete, several features will be missing and all interfaces are in flux. If you just want to try Insieme as a user or want to do research building on top of its infrastructure please use the **inspire_1.3** branch.
+
 ## Directory Structure
 Insieme contains 4 main sub-directories:
 
@@ -20,13 +23,12 @@ Name 		| Version | Purpose |
 [CMake](http://www.cmake.org/)                                      | >= 3.2.x | Build System |
 [Google Test](https://code.google.com/p/googletest/)                | >= 1.7   | Unit testing - is installed/build by us - no need to install it|
 [Boost](http://www.boost.org/users/history/version_1_50_0.html)     | = 1.50   | Utilities, regex, filesystem, program options|
-[LLVM/Clang](http://llvm.org/) 	                                    | = 3.4 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.4.patch)) | C/C++ frontend | 
+[LLVM/Clang](http://llvm.org/) 	                                    | = 3.6.2 ([patch](https://github.com/insieme/insieme/blob/master/scripts/patches/insieme-clang-3.6.2.patch)) | C/C++ frontend | 
 [ISL](http://garage.kotnet.org/~skimo/isl/)			    | = 0.10   | Polyhedral model representation & analysis |
 [CLooG](http://www.cloog.org/)		                            | = 0.17   | Polyhedral model code generation |
 [Barvinok](http://garage.kotnet.org/~skimo/barvinok/)               | = 0.35   | Polyhedral model cardinality |
 [CUDD](http://vlsi.colorado.edu/~fabio/CUDD/)	  	            | >= 2.4.2 | Manipulation of decision diagrams |
 [LuaJIT](http://luajit.org/)                                  	    | >= 2.0.0 | Scripting |
-[Shark](http://image.diku.dk/shark/sphinx_pages/build/html/index.html)	| >= 2.3.4 | Machine learning |
 [Kompex](http://sqlitewrapper.kompex-online.com/)             	    | >= 1.7.9 | DBMS |
 [Ruby](http://www.ruby-lang.org/en/)                                | >= 2.0   | Scripting |
 [Bison](https://www.gnu.org/software/bison/)                                | >= 3.0   | Inspire language parser |
