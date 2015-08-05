@@ -117,9 +117,9 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 	p = pl[0];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 43, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 43, 1);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 28);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 27);
 		
 		EXPECT_EQ("test::dummy", p->getType());
 		EXPECT_EQ("\"first\"", *dummyArgListIt++);
@@ -197,7 +197,7 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 	p = pl[4];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 65, 3);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 65, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 66, 25);
 		
@@ -208,9 +208,9 @@ TEST(PragmaMatcherTest, PragmaPositions) {
 		const clang::Stmt* stmt = p->getStatement();
 		
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 67, 3);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 67, 2);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 68, 3);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 68, 2);
 	}
 	
 	
@@ -298,7 +298,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 	PragmaPtr p = pl[0];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 42, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 42, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 43, 9);
 		
@@ -317,7 +317,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 	p = pl[1];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 46, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 46, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 47, 10);
 		
@@ -336,7 +336,7 @@ TEST(PragmaMatcherTest, PragmaPositions2) {
 	p = pl[2];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 50, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 50, 1);
 		// check pragma end location
 		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 51, 9);
 		
@@ -465,9 +465,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	p = pl[3];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 55, 2);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 55, 3);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 55, 20);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 55, 21);
 		
 		EXPECT_EQ(p->getType(), "omp::single");
 		
@@ -476,9 +476,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		const clang::Stmt* stmt = p->getStatement();
 		
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 56, 2);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 56, 3);
 		// check stmt end location
-		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 56, 23);
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 56, 24);
 		
 		// check the omp parallel is empty
 		FrontendExtensionPragma* omp = static_cast<FrontendExtensionPragma*>(p.get());
@@ -560,7 +560,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		const clang::Stmt* stmt = (p->getStatement());
 		
 		// check stmt start location
-		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 48, 14);
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 48, 9);
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 52, 2);
 		
@@ -577,7 +577,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// check pragma start location
 		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 47, 3);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 48, 14);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 48, 9);
 		
 		EXPECT_EQ(p->getType(), "omp::for");
 		
@@ -613,9 +613,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 	p = pl[3];
 	{
 		// check pragma start location
-		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 50, 5);
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 50, 4);
 		// check pragma end location
-		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 50, 24);
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 50, 23);
 		
 		EXPECT_EQ(p->getType(), "omp::barrier");
 		
