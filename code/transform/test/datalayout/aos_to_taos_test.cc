@@ -286,8 +286,14 @@ TEST(DataLayout, Tuple) {
 					c;
 					decl ref<int<4>> e = a[5].int;
 					decl ref<twoElem> f = var(*(a[7]));
+					f.int = *(a[7]).int;
 					f.float = subfunction(8, a);
 					f = *(a[7]);
+					decl ref<real<4>> scalar = var(*((*d)[55].float));
+					for(int<4> i = 0 .. 99 : 1) {
+						scalar = (*a[i]).float;
+						scalar = (*(*d)[i]).float;
+					}
 				};
 			
 				let local = lambda (ref<array<real<4>, 1>> b, 
@@ -366,7 +372,7 @@ TEST(DataLayout, Tuple) {
 	datalayout::AosToTaos att(code);
 	att.transform();
 
-	dumpPretty(code);
+//	dumpPretty(code);
 
 	auto semantic = checks::check(code);
 	auto warnings = semantic.getWarnings();
@@ -377,8 +383,8 @@ TEST(DataLayout, Tuple) {
 
 	EXPECT_EQ(0u, semantic.getErrors().size()) << semantic.getErrors();
 
-	EXPECT_EQ(83, numberOfCompoundStmts(code));
-	EXPECT_EQ(6, countMarshalledAccesses(code));
+	EXPECT_EQ(99, numberOfCompoundStmts(code));
+	EXPECT_EQ(10, countMarshalledAccesses(code));
 	EXPECT_EQ(0, countMarshalledAssigns(code));
 }
 
