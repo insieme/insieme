@@ -74,6 +74,7 @@
 
 #include <clang/Sema/Ownership.h>
 #include <clang/Sema/Sema.h>
+#include <clang/Sema/SemaConsumer.h>
 
 #include <clang/Parse/Parser.h>
 
