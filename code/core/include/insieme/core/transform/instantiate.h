@@ -46,7 +46,7 @@ namespace transform {
 namespace detail {
 enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
 
-static auto skipNone = [&](const NodePtr& node) {
+static auto skipNone = [](const NodePtr& node) {
 	return false;
 };
 
