@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,17 +49,17 @@ namespace backend {
 namespace addons {
 
 
+/**
+ * An Add-On providing support for SIMD vectors
+ * */
+struct SIMDVector : public AddOn {
+
 	/**
-	 * An Add-On providing support for SIMD vectors
-	 * */
-	struct SIMDVector : public AddOn {
-
-		/**
-		 * Installs the this Add-On within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const;
-
-	};
+	 * Installs the this Add-On within the given converter.
+	 */
+	virtual void installOn(Converter& converter) const;
+	
+};
 
 
 } // end namespace addons

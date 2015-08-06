@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,14 +40,14 @@
 using namespace insieme::utils;
 
 TEST(FunctionPipeline, OneStage)  {
-	
+
 	auto input = std::make_tuple(10,10);
 	auto output = std::make_tuple(1,2,3);
-
+	
 	Action<2,0,1> f(
-			input, output, std::function<int (const int&, const int&)>(std::plus<int>())
-		);
-
+	    input, output, std::function<int (const int&, const int&)>(std::plus<int>())
+	);
+	
 	EXPECT_EQ(3, std::get<2>(output));
 	f();
 	EXPECT_EQ(20, std::get<2>(output));
@@ -56,16 +56,16 @@ TEST(FunctionPipeline, OneStage)  {
 TEST(FunctionPipeline, TwoStage) {
 
 	auto s = makeStage<std::tuple<std::string, int, float>, std::tuple<int, int>>();
-
-	s->out_buffer() = std::make_tuple(1, 2); 
+	
+	s->out_buffer() = std::make_tuple(1, 2);
 	s->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
-
-	s->add( InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1) );
-	s->add( InOut<1,1,2>(), std::minus<int>() );
-
+	
+	s->add(InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1));
+	s->add(InOut<1,1,2>(), std::minus<int>());
+	
 	EXPECT_EQ(2, std::get<1>(s->out_buffer()));
 	s();
-
+	
 	EXPECT_EQ(10, std::get<1>(s->out_buffer()));
 }
 
@@ -74,33 +74,33 @@ TEST(FunctionPipeline, Pipeline) {
 	typedef std::tuple<std::string, int, float> InBuffer;
 	typedef std::tuple<int,int> InterBuffer;
 	typedef std::tuple<int> OutBuffer;
-
+	
 	auto&& s1 = makeStage<InBuffer,InterBuffer>();
 	auto&& s2 = makeStage<InterBuffer,OutBuffer>();
 	auto&& s3 = makeStage<OutBuffer, OutBuffer>();
-
+	
 	// Filling input buffer
-
+	
 	s1->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
-	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
-	s1->add( InOut<1,1,2>(), std::minus<int>() );
-	s2->add( InOut<0,0,1>(), std::plus<int>() );
-	s3->add( InOut<0,0>(), id<int>() );
-
+	s1->add(InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1));
+	s1->add(InOut<1,1,2>(), std::minus<int>());
+	s2->add(InOut<0,0,1>(), std::plus<int>());
+	s3->add(InOut<0,0>(), id<int>());
+	
 	// Build the pipeline
 	auto&& p = s1 >> s2 >> s3;
-
+	
 	typedef Pipeline<InBuffer,OutBuffer> Pipeline1;
 	const Pipeline1::out_buff& buff = p();
-
+	
 	// Check the internal buffer state
-	EXPECT_EQ(11, std::get<0>( s1->out_buffer() ));
-	EXPECT_EQ(10, std::get<1>( s1->out_buffer() ));
-
-	EXPECT_EQ(11, std::get<0>( s2->in_buffer() ));
-
-	EXPECT_EQ(10, std::get<1>( s2->in_buffer() ));
-
+	EXPECT_EQ(11, std::get<0>(s1->out_buffer()));
+	EXPECT_EQ(10, std::get<1>(s1->out_buffer()));
+	
+	EXPECT_EQ(11, std::get<0>(s2->in_buffer()));
+	
+	EXPECT_EQ(10, std::get<1>(s2->in_buffer()));
+	
 	// Check the outpt buffer state
 	EXPECT_EQ(21, std::get<0>(buff));
 	EXPECT_EQ(21, std::get<0>(s2->out_buffer()));
@@ -112,49 +112,49 @@ TEST(FunctionPipeline, Parallel) {
 	typedef std::tuple<std::string, int, float> InBuffer;
 	typedef std::tuple<int,int> InterBuffer;
 	typedef std::tuple<int> OutBuffer;
-
+	
 	auto&& s1 = makeStage<InBuffer,InterBuffer>();
 	auto&& s2 = makeStage<InterBuffer,OutBuffer>();
 	auto&& s3 = makeStage<OutBuffer, OutBuffer>();
-	s1->add( InOut<0,1>(), id<int>() );
-	s1->add( InOut<1,1>(), id<int>() );
-	s2->add( InOut<0,0>(), id<int>() );
-	s3->add( InOut<0,0>(), id<int>() );
-
+	s1->add(InOut<0,1>(), id<int>());
+	s1->add(InOut<1,1>(), id<int>());
+	s2->add(InOut<0,0>(), id<int>());
+	s3->add(InOut<0,0>(), id<int>());
+	
 	auto&& s4 = makeStage<InBuffer,InterBuffer>();
 	auto&& s5 = makeStage<InterBuffer,OutBuffer>();
-	s4->add( InOut<0,1>(), id<int>() );
-	s4->add( InOut<1,1>(), id<int>() );
-	s5->add( InOut<0,0>(), id<int>() );
-
+	s4->add(InOut<0,1>(), id<int>());
+	s4->add(InOut<1,1>(), id<int>());
+	s5->add(InOut<0,0>(), id<int>());
+	
 	auto&& par = (s1 >> s2 >> s3) | (s4 >> s5);
-
+	
 	par->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4, std::string("hello C++11"), 5, 3.4);
-
+	
 	// Trigger the stored action
 	par();
-
+	
 	EXPECT_EQ(par->out_buffer(), std::make_tuple(10,5));
 }
 
 TEST(FunctionPipeline, Sum) {
 
 	typedef std::tuple<int> Buffer;
-
+	
 	auto&& s1 = makeStage<std::tuple<std::string>,Buffer>();
 	auto&& s2 = makeStage<std::tuple<int>,Buffer>();
-
+	
 	// Get the length of the string
-	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s1->add(InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1));
 	// Forward the value from the input buffer to the output buffer
-	s2->add( InOut<0,0>(), id<int>() );
-
-	// Execute s1 and s2 in paralle and sum the result 
+	s2->add(InOut<0,0>(), id<int>());
+	
+	// Execute s1 and s2 in paralle and sum the result
 	auto&& sum = s1 + s2;
-
+	
 	// Trigger the stored action
 	sum(std::string("hello world"), 10);
-
+	
 	EXPECT_EQ(sum->out_buffer(), std::make_tuple(21));
 }
 
@@ -162,19 +162,19 @@ TEST(FunctionPipeline, Sum) {
 TEST(FunctionPipeline, Sum2) {
 
 	typedef std::tuple<int> Buffer;
-
+	
 	auto&& s1 = makeStage<std::tuple<std::string>,Buffer>();
 	auto&& s2 = makeStage<std::tuple<int>,Buffer>();
-
+	
 	// Get the length of the string
-	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s1->add(InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1));
 	// Forward the value from the input buffer to the output buffer
-	s2->add( InOut<0,0>(), id<int>() );
-
-	// Execute s1 and s2 in paralle and sum the result 
+	s2->add(InOut<0,0>(), id<int>());
+	
+	// Execute s1 and s2 in paralle and sum the result
 	FunctorPtr<std::tuple<std::string,int>,Buffer,Pipeline> sum = ((((s1+s2) >> s2) >> s2) >> s2) >> s2;
 	std::cout << sizeof(*sum) << std::endl;
-
+	
 	// Trigger the stored action
 	EXPECT_EQ(sum(std::string("hello world"), 10), std::make_tuple(21));
 }
@@ -186,23 +186,28 @@ using namespace pipeline;
 
 template <class T>
 struct square {
-	T operator()(const T& c) const { return c*c; }
+	T operator()(const T& c) const {
+		return c*c;
+	}
 };
 
 struct H {
-	int operator()(int c, int d, int e) const { return c+d+e; }
+	int operator()(int c, int d, int e) const {
+		return c+d+e;
+	}
 };
 
 TEST(FunctionPipeline2, Basic) {
 
-	std::plus<int> f; square<int> g;
-
-	auto p1 = makePipeline( g );
+	std::plus<int> f;
+	square<int> g;
+	
+	auto p1 = makePipeline(g);
 	EXPECT_EQ(25, p1(5));
-
-	auto p2 = makePipeline( g,g );
+	
+	auto p2 = makePipeline(g,g);
 	EXPECT_EQ(625, p2(5));
-
+	
 	// 10 + 20 = 30
 	pipeline::Pipeline<void,std::plus<int>> p3(f);
 	EXPECT_EQ(30, p3(10,20));
@@ -210,7 +215,7 @@ TEST(FunctionPipeline2, Basic) {
 	// (1+1) = 2 -> 2^2 = 4 -> 4^2 = 16
 	auto p4 = pipeline::makePipeline(f, g, g);
 	EXPECT_EQ(16, p4(1,1));
-
+	
 }
 
 TEST(FunctionPipeline2, Reduction) {
@@ -219,14 +224,14 @@ TEST(FunctionPipeline2, Reduction) {
 	//typedef std::plus<int> SUM;
 	SQ g;
 	
-	auto p1 = pipeline::makeReduction( std::plus<int>(), g, g );
+	auto p1 = pipeline::makeReduction(std::plus<int>(), g, g);
 	EXPECT_EQ(50, p1(5, 5));
-
+	
 	EXPECT_EQ(3, id<int>()(3));
-
+	
 	//auto p2 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g );
 	//EXPECT_EQ(12, p2(1, 2, 3));
-
+	
 	//auto p3 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g, g, g );
 //	EXPECT_EQ(14, p2(1, 2, 3, 4));
 }
@@ -236,22 +241,22 @@ TEST(FunctionPipeline2, Composition) {
 	using namespace insieme::utils;
 	typedef square<int> SQ;
 	typedef std::plus<int> SUM;
-
+	
 	SQ g;
-	auto pg = pipeline::makePipeline( g, g );
-
+	auto pg = pipeline::makePipeline(g, g);
+	
 	// compute (g*g*g)+(g*g)
 	auto p1 = pipeline::makeReduction(SUM(),pg,g);
 	EXPECT_EQ(650, p1(5,5));
-
-	auto p2 = pipeline::makePipeline( pipeline::makeReduction(SUM(),g,g), g);
+	
+	auto p2 = pipeline::makePipeline(pipeline::makeReduction(SUM(),g,g), g);
 	EXPECT_EQ(2500, p2(5,5));
 }
 
 struct S {
 
 	S(int& a) : a(a) { }
-
+	
 	int operator()(int b, int c) const {
 		a=a*(b+c);
 		return a;
@@ -261,7 +266,9 @@ struct S {
 
 struct EmptyFunc {
 
-	int operator()() const { return 10; }
+	int operator()() const {
+		return 10;
+	}
 };
 
 TEST(FunctionPipeline2, CompositionState) {
@@ -272,9 +279,9 @@ TEST(FunctionPipeline2, CompositionState) {
 	int a = 5;
 	auto r = pipeline::makeReduction(S(a),SQ(),SQ());
 	EXPECT_EQ(2500, r(10,20));
-
+	
 	EXPECT_EQ(2500, a);
-
+	
 }
 
 TEST(FunctionPipeline2, Void) {
@@ -290,5 +297,5 @@ TEST(FunctionPipeline2, ReductionWithEmpty) {
 	
 	auto r = pipeline::makeReduction(std::plus<int>(),square<int>(),EmptyFunc());
 	EXPECT_EQ(110, r(10));
-
+	
 }

@@ -58,12 +58,12 @@ class CachedNodeMapping : public SimpleNodeMapping {
 	 * id avoided.
 	 */
 	typedef member_function_trait<const NodePtr(CachedNodeMapping::*)(const NodePtr&)>::type FactoryType;
-
+	
 	/**
 	 * The cache to be used for reusing results.
 	 */
 	insieme::utils::cache::PointerCache<NodePtr, NodePtr, FactoryType> cache;
-
+	
 public:
 
 	/**
@@ -71,7 +71,7 @@ public:
 	 * internally maintained cache.
 	 */
 	CachedNodeMapping() : cache(fun(*this, &CachedNodeMapping::resolveElement)) {};
-
+	
 	/**
 	 * The mapping function which is checking whether the given node has already been
 	 * processed. If so, the result of the previous processing is returned. Otherwise,
@@ -83,19 +83,19 @@ public:
 		// just look up content of cache (will be resolved automatically)
 		return cache.get(ptr);
 	}
-
+	
 	/**
 	 * A pure virtual method to be implemented by sub-classes.
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) = 0;
-
+	
 	/**
 	 * Clears the internally maintained node resolution cache.
 	 */
 	void clearCache() {
 		cache.clear();
 	}
-
+	
 	/**
 	 * Clears the cache entry associated to the given node pointer.
 	 *
@@ -104,7 +104,7 @@ public:
 	void clearCacheEntry(const NodePtr& ptr) {
 		cache.clearEntry(ptr);
 	}
-
+	
 protected:
 
 	/**
@@ -116,7 +116,7 @@ protected:
 	void setCacheEntry(const NodePtr& key, const NodePtr& value) {
 		cache.set(key, value);
 	}
-
+	
 };
 
 
@@ -130,13 +130,13 @@ class ChildListMapping : public SimpleNodeMapping {
 	 * The mapped list of children.
 	 */
 	vector<NodePtr> children;
-
+	
 	/**
 	 * A flag indicating whether there has been any difference between the original
 	 * and the mapped list of children.
 	 */
 	bool different;
-
+	
 public:
 
 	/**
@@ -145,7 +145,7 @@ public:
 	 */
 	ChildListMapping(const NodeList& list, SimpleNodeMapping& mapping)
 		: SimpleNodeMapping(), children(mapping.mapAll(list)), different(!equals(children, list)) {}
-
+		
 	/**
 	 * Create a new child list mapping based on the given list of children. The optional boolean
 	 * flag allows to specify whether this list of children is actually different from the original list
@@ -156,7 +156,7 @@ public:
 	 */
 	ChildListMapping(const NodeList& children, bool different = true)
 		: SimpleNodeMapping(), children(children), different(different) {}
-
+		
 	/**
 	 * Determines whether this mapping would cause any modification when being applied
 	 * to the child list it has been constructed for.
@@ -164,7 +164,7 @@ public:
 	bool isDifferent() const {
 		return different;
 	}
-
+	
 	/**
 	 * Performs the actual mapping of a child node. The resulting node is identical to the
 	 * node returned by the mapping passed to the constructor of this class.
@@ -176,7 +176,7 @@ public:
 	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
 		return children[index];
 	}
-
+	
 };
 
 template<typename Lambda, typename Filter>
@@ -187,10 +187,14 @@ class CachedLambdaNodeMapping : public CachedNodeMapping {
 public:
 	CachedLambdaNodeMapping(const Lambda& lambda, const Filter& filter, bool mapTypes)
 		: lambda(lambda), filter(filter), mapTypes(mapTypes) { };
-
+		
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
-		if (!mapTypes && ptr->getNodeCategory() == NC_Type) return ptr;
-		if (!filter(ptr)) return ptr;
+		if(!mapTypes && ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+		if(!filter(ptr)) {
+			return ptr;
+		}
 		return lambda(ptr->substitute(ptr->getNodeManager(), *this));
 	}
 };

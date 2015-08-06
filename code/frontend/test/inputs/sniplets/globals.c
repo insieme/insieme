@@ -1,12 +1,12 @@
 int a;
 
-void f(){
-	a= 1; 
+void f() {
+	a= 1;
 }
 
 
-int main (){
+int main() {
 
 	f();
-
+	
 }

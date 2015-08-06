@@ -50,453 +50,454 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-	using namespace std;
+using namespace std;
 
-	TEST(TranslationUnit, Basic) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
+TEST(TranslationUnit, Basic) {
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	IRTranslationUnit unit(mgr);
+	
+	// check adding types
+	unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+	unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { real<8> y; ref<A> a; }"));
+	
+	// check adding functions
+	unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+	unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(),
+	                 builder.parseExpr("lambda ()->unit { decl int<4> x; return; }").as<core::LambdaExprPtr>());
+	                 
+	// check adding globals
+	unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
+	
+	// print it
+	EXPECT_FALSE(toString(unit).empty());
+}
 
-		IRTranslationUnit unit(mgr);
-
-		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
-		unit.addType(builder.parseType("B").as<core::GenericTypePtr>(), builder.parseType("struct { real<8> y; ref<A> a; }"));
-
-		// check adding functions
-		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
-		unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { decl int<4> x; return; }").as<core::LambdaExprPtr>());
-
-		// check adding globals
-		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
-
-		// print it
-		EXPECT_FALSE(toString(unit).empty());
-	}
 
 
+TEST(TranslationUnit, IO) {
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	// create a dummy translation unit
+	IRTranslationUnit unit(mgr);
+	
+	// check adding types
+	unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+	
+	// check adding functions
+	unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+	
+	// check adding globals
+	unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
+	
+	// -------------  dump it + restore it ------------
+	
+	// create a in-memory stream
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+	
+	// dump unit
+	dump(buffer, unit);
+	
+	// reload unit
+	core::NodeManager managerB;
+	IRTranslationUnit unitB = load(buffer, managerB);
+	
+	// they should be equal
+	EXPECT_EQ(toString(unit), toString(unitB));
+}
 
-	TEST(TranslationUnit, IO) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
+TEST(TranslationUnit, IR) {
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	// create a dummy translation unit
+	IRTranslationUnit unit(mgr);
+	
+	// check adding types
+	unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+	
+	// check adding functions
+	unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+	
+	// check adding globals
+	unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
+	
+	// -------------  dump it + restore it ------------
+	
+	core::ExpressionPtr ptr;
+	
+	// dump unit
+	ptr = toIR(mgr, unit);
+	
+	// reload unit
+	IRTranslationUnit unitB = fromIR(ptr);
+	
+	// they should be equal
+	EXPECT_EQ(toString(unit), toString(unitB));
+}
 
-		// create a dummy translation unit
-		IRTranslationUnit unit(mgr);
+TEST(TranslationUnit, MetaClassInfoMerge) {
 
-		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
+	// build elements
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	auto symbol = builder.genericType("A");
+	auto def = builder.parseType("struct { int<4> a; }");
+	
+	// build a first translation unit in a first manager
+	core::NodeManager mgrA;
+	core::IRBuilder builderA(mgrA);
+	
+	IRTranslationUnit unitA(mgrA);
+	
+	auto symbolA = mgrA.get(symbol);
+	auto defA = mgrA.get(def);
+	
+	// attach meta info to the definition
+	core::ClassMetaInfo infoA;
+	infoA.addConstructor(builderA.parseExpr(
+	                         "let A = struct { int<4> a; }; "
+	                         "lambda ctor A::() {}"
+	                     ).as<core::LambdaExprPtr>());
+	infoA.addConstructor(builderA.parseExpr(
+	                         "let A = struct { int<4> a; }; "
+	                         "lambda ctor A::(int<4> a) {}"
+	                     ).as<core::LambdaExprPtr>());
+	                     
+	// add classinfo for type
+	unitA.addMetaInfo(defA, infoA);
+	
+	// add type to unit A
+	unitA.addType(symbolA, defA);
+	EXPECT_FALSE(core::hasMetaInfo(defA));
+	
+	
+	// -----------------------------------
+	
+	
+	// built a second translation unit in another manager
+	core::NodeManager mgrB;
+	core::IRBuilder builderB(mgrB);
+	
+	IRTranslationUnit unitB(mgrB);
+	
+	auto symbolB = mgrB.get(symbol);
+	auto defB = mgrB.get(def);
+	
+	// attach meta info to the definition
+	core::ClassMetaInfo infoB;
+	infoB.addConstructor(builderB.parseExpr(
+	                         "let A = struct { int<4> a; }; "
+	                         "lambda ctor A::() {}"
+	                     ).as<core::LambdaExprPtr>());
+	infoB.addConstructor(builderB.parseExpr(
+	                         "let A = struct { int<4> a; }; "
+	                         "lambda ctor A::(int<4> a, int<4> b) {}"
+	                     ).as<core::LambdaExprPtr>());
+	                     
+	// add classinfo for type
+	unitB.addMetaInfo(defB, infoB);
+	
+	// add type to unit A
+	unitB.addType(symbolB, defB);
+	EXPECT_FALSE(core::hasMetaInfo(defB));
+	
+	
+	// -----------------------------------
+	
+	// merge the two TUs
+	core::NodeManager mgrC;
+	IRTranslationUnit unitC = merge(mgrC, unitA, unitB);
+	
+	//just check if the right amount of Ctors is in the metaInfo
+	//before merge
+	auto metaInfoA = unitA.getMetaInfo(def);
+	EXPECT_EQ(2, metaInfoA.getConstructors().size()) << metaInfoA;
+	auto metaInfoB = unitB.getMetaInfo(def);
+	EXPECT_EQ(2, metaInfoB.getConstructors().size()) << metaInfoB;
+	//after merge
+	auto metaInfoC = unitC.getMetaInfo(def);
+	EXPECT_EQ(3, metaInfoC.getConstructors().size()) << metaInfoC;
+}
 
-		// check adding functions
-		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
+TEST(TranslationUnit, MetaClassInfoDumpMerge) {
 
-		// check adding globals
-		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
-
-		// -------------  dump it + restore it ------------
-
-		// create a in-memory stream
-		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-
-		// dump unit
-		dump(buffer, unit);
-
-		// reload unit
-		core::NodeManager managerB;
-		IRTranslationUnit unitB = load(buffer, managerB);
-
-		// they should be equal
-		EXPECT_EQ(toString(unit), toString(unitB));
-	}
-
-	TEST(TranslationUnit, IR) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		// create a dummy translation unit
-		IRTranslationUnit unit(mgr);
-
-		// check adding types
-		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
-
-		// check adding functions
-		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("lambda ()->unit { return; }").as<core::LambdaExprPtr>());
-
-		// check adding globals
-		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
-
-		// -------------  dump it + restore it ------------
-
-		core::ExpressionPtr ptr;
-
-		// dump unit
-		ptr = toIR(mgr, unit);
-
-		// reload unit
-		IRTranslationUnit unitB = fromIR(ptr);
-
-		// they should be equal
-		EXPECT_EQ(toString(unit), toString(unitB));
-	}
-
-	TEST(TranslationUnit, MetaClassInfoMerge) {
-
-		// build elements
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		auto symbol = builder.genericType("A");
-		auto def = builder.parseType("struct { int<4> a; }");
-
-		// build a first translation unit in a first manager
+	// build elements
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	auto symbol = builder.genericType("A");
+	auto def = builder.parseType("struct { int<4> a; }");
+	
+	// create a in-memory streams
+	stringstream bufferA(ios_base::out | ios_base::in | ios_base::binary);
+	stringstream bufferB(ios_base::out | ios_base::in | ios_base::binary);
+	
+	// build a first translation unit in a first manager
+	{
 		core::NodeManager mgrA;
 		core::IRBuilder builderA(mgrA);
-
+		
 		IRTranslationUnit unitA(mgrA);
-
+		
 		auto symbolA = mgrA.get(symbol);
 		auto defA = mgrA.get(def);
-
+		
 		// attach meta info to the definition
 		core::ClassMetaInfo infoA;
 		infoA.addConstructor(builderA.parseExpr(
-				"let A = struct { int<4> a; }; "
-				"lambda ctor A::() {}"
-		).as<core::LambdaExprPtr>());
+		                         "let A = struct { int<4> a; }; "
+		                         "lambda ctor A::() {}"
+		                     ).as<core::LambdaExprPtr>());
 		infoA.addConstructor(builderA.parseExpr(
-				"let A = struct { int<4> a; }; "
-				"lambda ctor A::(int<4> a) {}"
-		).as<core::LambdaExprPtr>());
-		
-		// add classinfo for type 
+		                         "let A = struct { int<4> a; }; "
+		                         "lambda ctor A::(int<4> a) {}"
+		                     ).as<core::LambdaExprPtr>());
 		unitA.addMetaInfo(defA, infoA);
-
+		
 		// add type to unit A
 		unitA.addType(symbolA, defA);
-		EXPECT_FALSE(core::hasMetaInfo(defA));
-
-
-		// -----------------------------------
-
-
+		
+		// dump it
+		dump(bufferA, unitA);
+		
+		auto resA1 = unitA.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(resA1));
+		
+		
+		auto metaInfoA = unitA.getMetaInfo(def);
+		EXPECT_EQ(2, metaInfoA.getConstructors().size()) << metaInfoA;
+	}
+	
+	// -----------------------------------
+	
+	{
 		// built a second translation unit in another manager
 		core::NodeManager mgrB;
 		core::IRBuilder builderB(mgrB);
-
+		
 		IRTranslationUnit unitB(mgrB);
-
+		
 		auto symbolB = mgrB.get(symbol);
 		auto defB = mgrB.get(def);
-
+		
 		// attach meta info to the definition
 		core::ClassMetaInfo infoB;
 		infoB.addConstructor(builderB.parseExpr(
-				"let A = struct { int<4> a; }; "
-				"lambda ctor A::() {}"
-		).as<core::LambdaExprPtr>());
+		                         "let A = struct { int<4> a; }; "
+		                         "lambda ctor A::() {}"
+		                     ).as<core::LambdaExprPtr>());
 		infoB.addConstructor(builderB.parseExpr(
-				"let A = struct { int<4> a; }; "
-				"lambda ctor A::(int<4> a, int<4> b) {}"
-		).as<core::LambdaExprPtr>());
-
-		// add classinfo for type 
+		                         "let A = struct { int<4> a; }; "
+		                         "lambda ctor A::(int<4> a, int<4> b) {}"
+		                     ).as<core::LambdaExprPtr>());
 		unitB.addMetaInfo(defB, infoB);
-
+		
 		// add type to unit A
 		unitB.addType(symbolB, defB);
-		EXPECT_FALSE(core::hasMetaInfo(defB));
-
-
-		// -----------------------------------
-
-		// merge the two TUs
-		core::NodeManager mgrC;
-		IRTranslationUnit unitC = merge(mgrC, unitA, unitB);
-
-		//just check if the right amount of Ctors is in the metaInfo 
-		//before merge
-		auto metaInfoA = unitA.getMetaInfo(def);
-		EXPECT_EQ(2, metaInfoA.getConstructors().size()) << metaInfoA;
+		
+		// dump it
+		dump(bufferB, unitB);
+		
 		auto metaInfoB = unitB.getMetaInfo(def);
 		EXPECT_EQ(2, metaInfoB.getConstructors().size()) << metaInfoB;
-		//after merge
-		auto metaInfoC = unitC.getMetaInfo(def);
-		EXPECT_EQ(3, metaInfoC.getConstructors().size()) << metaInfoC;
 	}
-
-	TEST(TranslationUnit, MetaClassInfoDumpMerge) {
-
-		// build elements
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		auto symbol = builder.genericType("A");
-		auto def = builder.parseType("struct { int<4> a; }");
-
-		// create a in-memory streams
-		stringstream bufferA(ios_base::out | ios_base::in | ios_base::binary);
-		stringstream bufferB(ios_base::out | ios_base::in | ios_base::binary);
-
-		// build a first translation unit in a first manager
-		{
-			core::NodeManager mgrA;
-			core::IRBuilder builderA(mgrA);
-
-			IRTranslationUnit unitA(mgrA);
-
-			auto symbolA = mgrA.get(symbol);
-			auto defA = mgrA.get(def);
-
-			// attach meta info to the definition
-			core::ClassMetaInfo infoA;
-			infoA.addConstructor(builderA.parseExpr(
-					"let A = struct { int<4> a; }; "
-					"lambda ctor A::() {}"
-			).as<core::LambdaExprPtr>());
-			infoA.addConstructor(builderA.parseExpr(
-					"let A = struct { int<4> a; }; "
-					"lambda ctor A::(int<4> a) {}"
-			).as<core::LambdaExprPtr>());
-			unitA.addMetaInfo(defA, infoA);
-
-			// add type to unit A
-			unitA.addType(symbolA, defA);
-
-			// dump it
-			dump(bufferA, unitA);
-
-			auto resA1 = unitA.resolve(symbol).as<core::TypePtr>();
-			EXPECT_FALSE(core::hasMetaInfo(resA1));
-
-		
-			auto metaInfoA = unitA.getMetaInfo(def);
-			EXPECT_EQ(2, metaInfoA.getConstructors().size()) << metaInfoA;
-		}
-
-		// -----------------------------------
-
-		{
-			// built a second translation unit in another manager
-			core::NodeManager mgrB;
-			core::IRBuilder builderB(mgrB);
-
-			IRTranslationUnit unitB(mgrB);
-
-			auto symbolB = mgrB.get(symbol);
-			auto defB = mgrB.get(def);
-
-			// attach meta info to the definition
-			core::ClassMetaInfo infoB;
-			infoB.addConstructor(builderB.parseExpr(
-					"let A = struct { int<4> a; }; "
-					"lambda ctor A::() {}"
-			).as<core::LambdaExprPtr>());
-			infoB.addConstructor(builderB.parseExpr(
-					"let A = struct { int<4> a; }; "
-					"lambda ctor A::(int<4> a, int<4> b) {}"
-			).as<core::LambdaExprPtr>());
-			unitB.addMetaInfo(defB, infoB);
-
-			// add type to unit A
-			unitB.addType(symbolB, defB);
-
-			// dump it
-			dump(bufferB, unitB);
-
-			auto metaInfoB = unitB.getMetaInfo(def);
-			EXPECT_EQ(2, metaInfoB.getConstructors().size()) << metaInfoB;
-		}
-
-		// -----------------------------------
-
-		// load the translation units
-		core::NodeManager mgrC;
-		IRTranslationUnit unitC(mgrC);
-
-		unitC = merge(mgrC, unitC, load(bufferA, mgrC));
-		unitC = merge(mgrC, unitC, load(bufferB, mgrC));
-
-		// -----------------------------------
-
-		auto metaInfoC = unitC.getMetaInfo(def);
-		EXPECT_EQ(3, metaInfoC.getConstructors().size()) << metaInfoC;
-	}
-
-	TEST(TranslationUnit, TypeMerge) {
-		
-		core::NodeManager mgrA;
-		IRTranslationUnit unitA(mgrA);
-		core::IRBuilder builderA(mgrA);
-
-		auto symbol = builderA.parseType("A").as<core::GenericTypePtr>();
-		auto type   = builderA.parseType("struct A { int<4> x; }");
-
-		unitA.addType(symbol, type);
-			
-		core::NodeManager mgrB;
-		IRTranslationUnit unitB(mgrB);
-		core::IRBuilder builderB(mgrB);
-		{
-			auto symbol = builderB.parseType("A").as<core::GenericTypePtr>();
-			auto type   = builderB.parseType("struct A { int<4> x; }");
-			unitB.addType(symbol, type);
-
-			auto member = builderB.parseExpr(
-                            "let class = struct A { int<4> x; };"
-                            "lambda class :: ()->unit { return; }").as<core::LambdaExprPtr>();
-
-			core::ClassMetaInfo classInfo;
-			classInfo.addMemberFunction("method", member, false, false);
-			unitB.addMetaInfo(type, classInfo);
-			
-			EXPECT_EQ(1, classInfo.getMemberFunctions().size());
-			EXPECT_FALSE(core::hasMetaInfo(type));
-
-
-			core::NodeManager mgr;
-			IRTranslationUnit unit(mgr);
-			unit =  merge(mgr, unitA, unitB);
-
-			auto res1 = unit.resolve(symbol).as<core::TypePtr>();
-			EXPECT_FALSE(core::hasMetaInfo(res1));
-			EXPECT_FALSE(core::hasMetaInfo(type));
-			
-			auto meta = unit.getMetaInfo(type);
-			EXPECT_EQ(1, meta.getMemberFunctions().size());
-		}
-
-		//check if meta info traveld somehow
-		{
-			EXPECT_FALSE(core::hasMetaInfo(symbol));
-
-			auto res = unitA.resolve(symbol).as<core::TypePtr>();
-			EXPECT_FALSE(core::hasMetaInfo(res));
-
-			core::TypePtr type = unitA[symbol];
-			EXPECT_FALSE(core::hasMetaInfo(type));
-		}
-
-		core::NodeManager mgrC;
-		IRTranslationUnit unitC(mgrC);
-		core::IRBuilder builderC(mgrC);
-		{
-			auto symbol = builderC.parseType("A").as<core::GenericTypePtr>();
-			auto type   = builderC.parseType("struct A { int<4> x; }");
-
-			auto member = builderC.parseExpr("let T = struct A { int<4> x; }; "
-                                             "lambda T :: ()->unit { return; }").as<core::LambdaExprPtr>();
-			core::ClassMetaInfo classInfo;
-			classInfo.addMemberFunction("method2", member, false, false);
-			unitC.addMetaInfo(type, classInfo);
-			EXPECT_FALSE(core::hasMetaInfo(type));
-			EXPECT_FALSE(core::hasMetaInfo(symbol));
-
-			unitC.addType(symbol, type);
-
-			core::NodeManager mgr;
-			IRTranslationUnit unit(mgr);
-			unit = merge(mgrC, unitA, unitC);
-
-			EXPECT_FALSE(core::hasMetaInfo(type));
-
-			auto meta = unit.getMetaInfo(type);
-			EXPECT_EQ(1, meta.getMemberFunctions().size());
-		}
 	
+	// -----------------------------------
+	
+	// load the translation units
+	core::NodeManager mgrC;
+	IRTranslationUnit unitC(mgrC);
+	
+	unitC = merge(mgrC, unitC, load(bufferA, mgrC));
+	unitC = merge(mgrC, unitC, load(bufferB, mgrC));
+	
+	// -----------------------------------
+	
+	auto metaInfoC = unitC.getMetaInfo(def);
+	EXPECT_EQ(3, metaInfoC.getConstructors().size()) << metaInfoC;
+}
+
+TEST(TranslationUnit, TypeMerge) {
+
+	core::NodeManager mgrA;
+	IRTranslationUnit unitA(mgrA);
+	core::IRBuilder builderA(mgrA);
+	
+	auto symbol = builderA.parseType("A").as<core::GenericTypePtr>();
+	auto type   = builderA.parseType("struct A { int<4> x; }");
+	
+	unitA.addType(symbol, type);
+	
+	core::NodeManager mgrB;
+	IRTranslationUnit unitB(mgrB);
+	core::IRBuilder builderB(mgrB);
+	{
+		auto symbol = builderB.parseType("A").as<core::GenericTypePtr>();
+		auto type   = builderB.parseType("struct A { int<4> x; }");
+		unitB.addType(symbol, type);
+		
+		auto member = builderB.parseExpr(
+		                  "let class = struct A { int<4> x; };"
+		                  "lambda class :: ()->unit { return; }").as<core::LambdaExprPtr>();
+		                  
+		core::ClassMetaInfo classInfo;
+		classInfo.addMemberFunction("method", member, false, false);
+		unitB.addMetaInfo(type, classInfo);
+		
+		EXPECT_EQ(1, classInfo.getMemberFunctions().size());
+		EXPECT_FALSE(core::hasMetaInfo(type));
+		
+		
 		core::NodeManager mgr;
 		IRTranslationUnit unit(mgr);
-		unit = merge(mgr,{unitA, unitB, unitC});
-
-		{
-			core::IRBuilder builder(mgr);
-			core::GenericTypePtr symbol = builder.parseType("A").as<core::GenericTypePtr>();
-			EXPECT_FALSE(core::hasMetaInfo(symbol));
-
-			core::TypePtr type = unit[symbol];
-			EXPECT_FALSE(core::hasMetaInfo(type));
-
-			auto res = unit.resolve(symbol).as<core::TypePtr>();
-			EXPECT_FALSE(core::hasMetaInfo(res));
-
-			auto meta = unit.getMetaInfo(type);
-			EXPECT_EQ(2, meta.getMemberFunctions().size());
-		}
-
-		// create a in-memory stream
-		stringstream bufferA(ios_base::out | ios_base::in | ios_base::binary);
-		stringstream bufferB(ios_base::out | ios_base::in | ios_base::binary);
-		stringstream bufferC(ios_base::out | ios_base::in | ios_base::binary);
-
-		// dump unit
-		dump(bufferA, unitA);
-		dump(bufferB, unitB);
-		dump(bufferC, unitC);
-
+		unit =  merge(mgr, unitA, unitB);
 		
-		{
-			// reload unit
-			core::NodeManager manager;
-			core::IRBuilder builder(manager);
-
-			IRTranslationUnit unitA = load(bufferA, manager);
-			IRTranslationUnit unitB = load(bufferB, manager);
-			IRTranslationUnit unitC = load(bufferC, manager);
-			
-			IRTranslationUnit unit = merge(manager, {unitA, unitB, unitC});
-
-			auto symbol = builder.parseType("A").as<core::GenericTypePtr>();
-			EXPECT_EQ("AP(struct A <x:int<4>>)",toString(unit[symbol]));
-
-			auto meta = unit.getMetaInfo(type);
-			EXPECT_EQ(2, meta.getMemberFunctions().size());
-		}
+		auto res1 = unit.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(res1));
+		EXPECT_FALSE(core::hasMetaInfo(type));
+		
+		auto meta = unit.getMetaInfo(type);
+		EXPECT_EQ(1, meta.getMemberFunctions().size());
 	}
-
-	TEST(TranslationUnit, SimpleTypeExtraction) {
-
+	
+	//check if meta info traveld somehow
+	{
+		EXPECT_FALSE(core::hasMetaInfo(symbol));
+		
+		auto res = unitA.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(res));
+		
+		core::TypePtr type = unitA[symbol];
+		EXPECT_FALSE(core::hasMetaInfo(type));
+	}
+	
+	core::NodeManager mgrC;
+	IRTranslationUnit unitC(mgrC);
+	core::IRBuilder builderC(mgrC);
+	{
+		auto symbol = builderC.parseType("A").as<core::GenericTypePtr>();
+		auto type   = builderC.parseType("struct A { int<4> x; }");
+		
+		auto member = builderC.parseExpr("let T = struct A { int<4> x; }; "
+		                                 "lambda T :: ()->unit { return; }").as<core::LambdaExprPtr>();
+		core::ClassMetaInfo classInfo;
+		classInfo.addMemberFunction("method2", member, false, false);
+		unitC.addMetaInfo(type, classInfo);
+		EXPECT_FALSE(core::hasMetaInfo(type));
+		EXPECT_FALSE(core::hasMetaInfo(symbol));
+		
+		unitC.addType(symbol, type);
+		
 		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-
-		IRTranslationUnit tu(mgr);
-
-		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
-
-		std::cout << tu << "\n";
-
-		// resolve the recursive type
-		auto res = tu.resolve(builder.genericType("a")).as<core::TypePtr>();
-
-		// there should not be any free type variables left
-		EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
-
-		// and it should be a recursive type!
-		EXPECT_TRUE(res.isa<core::StructTypePtr>()) << res;
-
+		IRTranslationUnit unit(mgr);
+		unit = merge(mgrC, unitA, unitC);
+		
+		EXPECT_FALSE(core::hasMetaInfo(type));
+		
+		auto meta = unit.getMetaInfo(type);
+		EXPECT_EQ(1, meta.getMemberFunctions().size());
 	}
-
-	TEST(TranslationUnit, RecursiveTypeExtraction) {
-
-		core::NodeManager mgr;
+	
+	core::NodeManager mgr;
+	IRTranslationUnit unit(mgr);
+	unit = merge(mgr, {unitA, unitB, unitC});
+	
+	{
 		core::IRBuilder builder(mgr);
-
-		IRTranslationUnit tu(mgr);
-		tu.addType(builder.genericType("d"), builder.parseType("struct d { ref<array<e,1>> x; }"));
-		tu.addType(builder.genericType("e"), builder.parseType("struct e { ref<array<f,1>> x; ref<array<d,1>> y; }"));
-		tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y; }"));
-		tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; ref<array<a,1>> y; }"));
-
-		tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
-
-		std::cout << tu << "\n";
-
-		// resolve the recursive type
-		auto res = tu.resolve(builder.genericType("d")).as<core::TypePtr>();
-
-		// there should not be any free type variables left
-		EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
-
-		// and it should be a recursive type!
-		EXPECT_TRUE(res.isa<core::RecTypePtr>()) << res;
-
+		core::GenericTypePtr symbol = builder.parseType("A").as<core::GenericTypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(symbol));
+		
+		core::TypePtr type = unit[symbol];
+		EXPECT_FALSE(core::hasMetaInfo(type));
+		
+		auto res = unit.resolve(symbol).as<core::TypePtr>();
+		EXPECT_FALSE(core::hasMetaInfo(res));
+		
+		auto meta = unit.getMetaInfo(type);
+		EXPECT_EQ(2, meta.getMemberFunctions().size());
 	}
+	
+	// create a in-memory stream
+	stringstream bufferA(ios_base::out | ios_base::in | ios_base::binary);
+	stringstream bufferB(ios_base::out | ios_base::in | ios_base::binary);
+	stringstream bufferC(ios_base::out | ios_base::in | ios_base::binary);
+	
+	// dump unit
+	dump(bufferA, unitA);
+	dump(bufferB, unitB);
+	dump(bufferC, unitC);
+	
+	
+	{
+		// reload unit
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+		
+		IRTranslationUnit unitA = load(bufferA, manager);
+		IRTranslationUnit unitB = load(bufferB, manager);
+		IRTranslationUnit unitC = load(bufferC, manager);
+		
+		IRTranslationUnit unit = merge(manager, {unitA, unitB, unitC});
+		
+		auto symbol = builder.parseType("A").as<core::GenericTypePtr>();
+		EXPECT_EQ("AP(struct A <x:int<4>>)",toString(unit[symbol]));
+		
+		auto meta = unit.getMetaInfo(type);
+		EXPECT_EQ(2, meta.getMemberFunctions().size());
+	}
+}
+
+TEST(TranslationUnit, SimpleTypeExtraction) {
+
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	IRTranslationUnit tu(mgr);
+	
+	tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
+	
+	std::cout << tu << "\n";
+	
+	// resolve the recursive type
+	auto res = tu.resolve(builder.genericType("a")).as<core::TypePtr>();
+	
+	// there should not be any free type variables left
+	EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
+	
+	// and it should be a recursive type!
+	EXPECT_TRUE(res.isa<core::StructTypePtr>()) << res;
+	
+}
+
+TEST(TranslationUnit, RecursiveTypeExtraction) {
+
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	IRTranslationUnit tu(mgr);
+	tu.addType(builder.genericType("d"), builder.parseType("struct d { ref<array<e,1>> x; }"));
+	tu.addType(builder.genericType("e"), builder.parseType("struct e { ref<array<f,1>> x; ref<array<d,1>> y; }"));
+	tu.addType(builder.genericType("f"), builder.parseType("struct f { ref<array<g,1>> x; ref<array<e,1>> y; }"));
+	tu.addType(builder.genericType("g"), builder.parseType("struct g { ref<array<f,1>> x; ref<array<a,1>> y; }"));
+	
+	tu.addType(builder.genericType("a"), builder.parseType("struct a { int<4> x; }"));
+	
+	std::cout << tu << "\n";
+	
+	// resolve the recursive type
+	auto res = tu.resolve(builder.genericType("d")).as<core::TypePtr>();
+	
+	// there should not be any free type variables left
+	EXPECT_FALSE(core::analysis::hasFreeTypeVariables(res));
+	
+	// and it should be a recursive type!
+	EXPECT_TRUE(res.isa<core::RecTypePtr>()) << res;
+	
+}
 
 
 

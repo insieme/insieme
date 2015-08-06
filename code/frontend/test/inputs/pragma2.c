@@ -39,18 +39,18 @@
 
 void decl_stmt_test() {
 
-	#pragma test dummy \
+#pragma test dummy \
 	"first"
 	int b = 0;
-
-	#pragma test dummy \
+	
+#pragma test dummy \
 	"second"
 	unsigned int c;
-
-	#pragma test dummy \
+	
+#pragma test dummy \
 	"third"
 	float d;
-
+	
 	// ...
 }
 

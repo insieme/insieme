@@ -46,45 +46,45 @@
 
 #if defined(__x86_64__) || defined(__i386__) /*GNU C x86*/ || defined(_M_IX86) /*VS x86*/ || defined(_GEMS_SIM) || defined(__arm__)
 
-	// ====== all x86 based platforms, 32 and 64bit =====
+// ====== all x86 based platforms, 32 and 64bit =====
 
-	#if defined(_MSC_VER)
-		#include "abstraction/impl/rdtsc.win.impl.h"
-	#elif defined(__MINGW32__)
-		#include "abstraction/impl/rdtsc.mingw.impl.h"
-	#elif defined(_GEMS_SIM)
-		#include "abstraction/impl/rdtsc.gems.impl.h"
-	#elif defined(__arm__)
-		#include "abstraction/impl/rdtsc.arm.impl.h"
-	#else
-		#include "abstraction/impl/rdtsc.unix.impl.h"
-	#endif
+#if defined(_MSC_VER)
+#include "abstraction/impl/rdtsc.win.impl.h"
+#elif defined(__MINGW32__)
+#include "abstraction/impl/rdtsc.mingw.impl.h"
+#elif defined(_GEMS_SIM)
+#include "abstraction/impl/rdtsc.gems.impl.h"
+#elif defined(__arm__)
+#include "abstraction/impl/rdtsc.arm.impl.h"
+#else
+#include "abstraction/impl/rdtsc.unix.impl.h"
+#endif
 
 #elif defined(__powerpc__)
 
-	#warning "Incomplete implementation of rdtsc functionality for power pc!"
+#warning "Incomplete implementation of rdtsc functionality for power pc!"
 
-	// ====== PowerPC machines ==========================
-	// deliberately fails for new architectures
+// ====== PowerPC machines ==========================
+// deliberately fails for new architectures
 
-	uint64 irt_time_ticks(void) {
-		int64 upper0, upper1, lower;
-
-		__asm__ volatile("\
+uint64 irt_time_ticks(void) {
+	int64 upper0, upper1, lower;
+	
+	__asm__ volatile("\
 		mfspr %[upper0], 269 \n\
 		mfspr %[lower] , 268 \n\
 		mfspr %[upper1], 269 "
-		: [lower] "=r" (lower), 
-		[upper0] "=r" (upper0),
-		[upper1] "=r" (upper1)
-		);  
+	                 : [lower] "=r"(lower),
+	                 [upper0] "=r"(upper0),
+	                 [upper1] "=r"(upper1)
+	                );
+	                
+	return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
+}
 
-		return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
-	}
-
-	bool irt_time_ticks_constant() { 
-		return true; 
-	}
+bool irt_time_ticks_constant() {
+	return true;
+}
 
 #endif
 

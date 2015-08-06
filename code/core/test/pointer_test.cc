@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -71,25 +71,25 @@ template<> struct node_type<B> {
 TEST(Pointer, Basic) {
 
 	// Size has been reduced from 40 bytes + a unordered map to 8 bytes (64-bit)
-	EXPECT_EQ ( sizeof(Pointer<int>) , sizeof(int*) );
-	EXPECT_EQ ( sizeof(Pointer<const Node>) , sizeof(int*) );
-	EXPECT_EQ ( sizeof(Pointer<const LambdaExpr>) , sizeof(int*) );
-
+	EXPECT_EQ(sizeof(Pointer<int>) , sizeof(int*));
+	EXPECT_EQ(sizeof(Pointer<const Node>) , sizeof(int*));
+	EXPECT_EQ(sizeof(Pointer<const LambdaExpr>) , sizeof(int*));
+	
 	int a = 10;
 	int b = 15;
-
+	
 	// test simple creation
 	Pointer<int> refA(&a);
-	EXPECT_EQ (*refA, a);
-
+	EXPECT_EQ(*refA, a);
+	
 	// ... and for another element
 	Pointer<int> refB(&b);
-	EXPECT_EQ (*refB, b);
-
+	EXPECT_EQ(*refB, b);
+	
 	// test whether modifications are reflected
 	a++;
-	EXPECT_EQ (*refA, a);
-
+	EXPECT_EQ(*refA, a);
+	
 }
 
 TEST(Pointer, UpCast) {
@@ -97,11 +97,11 @@ TEST(Pointer, UpCast) {
 	// create two related instances
 	A a;
 	B b;
-
+	
 	// create references
 	Pointer<A> refA(&a);
 	Pointer<B> refB(&b);
-
+	
 	// make assignment (if it compiles, test passed!)
 	refA = refB;
 }
@@ -110,33 +110,33 @@ TEST(Pointer, SimplePointerTest) {
 
 	int value = 3;
 	Pointer<int> ptr(&value);
-
-	EXPECT_EQ( 3, value);
-	EXPECT_EQ( 3, *ptr);
-
+	
+	EXPECT_EQ(3, value);
+	EXPECT_EQ(3, *ptr);
+	
 	value = 4;
-	EXPECT_EQ( 4, value);
-	EXPECT_EQ( 4, *ptr);
-
+	EXPECT_EQ(4, value);
+	EXPECT_EQ(4, *ptr);
+	
 	*ptr = 5;
-	EXPECT_EQ( 5, value);
-	EXPECT_EQ( 5, *ptr);
+	EXPECT_EQ(5, value);
+	EXPECT_EQ(5, *ptr);
 }
 
 TEST(Pointer, As) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	NodePtr node = builder.genericType("A");
-
+	
 	// check target node type
 	TypePtr type = node.as<TypePtr>();
 	GenericTypePtr genType = node.as<GenericTypePtr>();
-
+	
 	EXPECT_EQ(type, node);
 	EXPECT_EQ(type, genType);
-
+	
 }
 
 } // end namespace core

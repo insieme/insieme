@@ -37,7 +37,7 @@
 extern void printf(const char*, ...);
 
 int main() {
-	
+
 	int a = 666;
 	
 	#pragma omp parallel

@@ -71,12 +71,12 @@ string testCaseToString(const LoopTestCase& testCase) {
 	auto p = testCase.policy;
 	auto r = testCase.range;
 	ss  << "Policy(type:" << p.type
-		<< ", participants:" << p.participants
-		<< ", chunk:" << p.param.chunk_size
-		<< ") / Range(" << r.begin
-		<< ".." << r.end
-		<< ":" << r.step
-		<< ")";
+	    << ", participants:" << p.participants
+	    << ", chunk:" << p.param.chunk_size
+	    << ") / Range(" << r.begin
+	    << ".." << r.end
+	    << ":" << r.step
+	    << ")";
 	return ss.str();
 }
 
@@ -86,24 +86,24 @@ TEST_P(LoopSchedTest, RangeCoverage) {
 	irt::run([testCase]() {
 		std::vector<int32_t> testVec(VEC_SIZE, 0);
 		irt::merge(irt::parallel(16, [testCase, &testVec]() {
-			
+		
 			// set currently tested scheduling policy
 			irt::master([testCase]() {
 				irt_work_group *wg = irt_wi_get_wg(irt_wi_get_current(), 0);
 				wg->cur_sched = testCase.policy;
 			});
 			irt::barrier();
-
+			
 			// execute loop
 			irt::pfor_impl(testCase.range.begin, testCase.range.end, testCase.range.step, [&testVec](int64 index) {
 				irt_atomic_add_and_fetch(&testVec[index], 1, int32_t);
 			});
 			irt::barrier();
-
+			
 			// check result
 			irt::master([testCase, &testVec]() {
 				for(int64 i = 0; i < VEC_SIZE; ++i) {
-					int32 expected = 0; 
+					int32 expected = 0;
 					if(i >= testCase.range.begin && i < testCase.range.end && ((i - testCase.range.begin) % testCase.range.step) == 0) {
 						expected = 1;
 					}
@@ -119,15 +119,15 @@ TEST_P(LoopSchedTest, RangeCoverage) {
 
 vector<LoopTestCase> getAllCases() {
 	vector<LoopTestCase> ret;
-
+	
 	vector<irt_loop_sched_policy_type> policies = { IRT_STATIC, IRT_STATIC_CHUNKED, IRT_DYNAMIC, IRT_DYNAMIC_CHUNKED, IRT_GUIDED, IRT_GUIDED_CHUNKED };
-
+	
 	for(auto policy_type : policies) {
 		for(int32 chunk_size = 1; chunk_size <= 9; ++chunk_size) {
 			for(uint32 participants = 1; participants <= MAX_PARA; ++participants) {
 				LoopTestCase t;
 				t.policy = { policy_type, participants, { chunk_size } };
-
+				
 				for(int64 step = -4; step <= -1; step++) {
 					t.range = { VEC_SIZE, 0, step };
 					ret.push_back(t);
@@ -143,7 +143,7 @@ vector<LoopTestCase> getAllCases() {
 			}
 		}
 	}
-	return ret; 
+	return ret;
 }
- 
+
 INSTANTIATE_TEST_CASE_P(RangeCoverageCheck, LoopSchedTest, ::testing::ValuesIn(getAllCases()));

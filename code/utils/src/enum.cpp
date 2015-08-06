@@ -29,35 +29,37 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/utils/enum.h"
 
 std::vector<std::string> getListOutOfCommaSeperated(std::string str, std::size_t enumMax) {
-    std::vector<std::string> res;
-    if (str.empty()) return res;
-    std::size_t oldFound = 0;
-    std::size_t found;
-    while ((found = str.find(',', oldFound+1)) != std::string::npos) {
-        res.push_back(enumTrimName(str.substr(oldFound, found-oldFound)));
-        oldFound = found;
-    }
-    res.push_back(enumTrimName(str.substr(oldFound)));
-    assert(res.size() == (size_t) enumMax);
-    return res;
+	std::vector<std::string> res;
+	if(str.empty()) {
+		return res;
+	}
+	std::size_t oldFound = 0;
+	std::size_t found;
+	while((found = str.find(',', oldFound+1)) != std::string::npos) {
+		res.push_back(enumTrimName(str.substr(oldFound, found-oldFound)));
+		oldFound = found;
+	}
+	res.push_back(enumTrimName(str.substr(oldFound)));
+	assert(res.size() == (size_t) enumMax);
+	return res;
 }
 
 std::string enumTrimName(std::string s) {
-    std::size_t j = 0, i = 0;
-    while( (ENUM_BAD_CHARS.find(s.at(j))) != std::string::npos) {
-        j++;
-    }
-    i = s.length() - 1;
-    while( (ENUM_BAD_CHARS.find(s.at(i))) != std::string::npos) {
-        i--;
-    }
-    return s.substr(j, i+1-j);
+	std::size_t j = 0, i = 0;
+	while((ENUM_BAD_CHARS.find(s.at(j))) != std::string::npos) {
+		j++;
+	}
+	i = s.length() - 1;
+	while((ENUM_BAD_CHARS.find(s.at(i))) != std::string::npos) {
+		i--;
+	}
+	return s.substr(j, i+1-j);
 }

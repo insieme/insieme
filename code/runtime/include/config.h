@@ -48,11 +48,11 @@
 // scheduling policy
 #ifndef IRT_SCHED_POLICY
 #ifdef _GEMS
-	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 #else
-	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
-	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
-	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
+//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
 #endif
 #endif
 
@@ -142,15 +142,15 @@
 // gemsclaim simulator
 #if defined(_GEMS)
 #ifdef __arm__
-    #define _GEMS_TODO
-    #define _GEMS_ODROID
-    #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
+#define _GEMS_TODO
+#define _GEMS_ODROID
+#define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
         "cpu_time,wall_time,a15_avgpow,a07_avgpow,mem_avgpow,gpu_avgpow,cpu_avgpow," \
         "a15_energy,a07_energy,mem_energy,gpu_energy,cpu_energy"
 #else
-    #define _GEMS_SIM
-	#define	GEMS_CORE_FREQ_MHZ 100
-    #define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
+#define _GEMS_SIM
+#define	GEMS_CORE_FREQ_MHZ 100
+#define GEMS_IRT_INST_REGION_INSTRUMENTATION_TYPES \
         "energy,average_power,ticks"
 #endif
 #endif
@@ -165,13 +165,13 @@
 //defines how many times a new frequency will be picked
 //#define IRT_OMPP_OPTIMIZER_DVFS_EVAL_STEPS
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DVFS_EVAL
-    #define IRT_ENABLE_OMPP_OPTIMIZER
+#define IRT_ENABLE_OMPP_OPTIMIZER
 #endif
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER_DCT
-    #define IRT_ENABLE_OMPP_OPTIMIZER
+#define IRT_ENABLE_OMPP_OPTIMIZER
 #endif
 #ifdef IRT_ENABLE_OMPP_OPTIMIZER
-    #define IRT_WORKER_SLEEPING
+#define IRT_WORKER_SLEEPING
 #endif
 // defines how many settings must be evaluated before sticking to the best one
 #define IRT_OMPP_OPTIMIZER_BEST (irt_g_worker_count * 40)

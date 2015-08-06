@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,21 +41,21 @@ namespace core {
 namespace encoder {
 
 
-	InvalidExpression::InvalidExpression(const ExpressionPtr& expr) {
-		std::ostringstream ss;
-		ss << "Unsupported expression: " << *expr;
-		msg = ss.str();
-	}
+InvalidExpression::InvalidExpression(const ExpressionPtr& expr) {
+	std::ostringstream ss;
+	ss << "Unsupported expression: " << *expr;
+	msg = ss.str();
+}
 
-	InvalidExpression::InvalidExpression(const TypePtr& should, const TypePtr& is) {
-		std::ostringstream ss;
-		ss << "Cannot convert expression of type " << *is << " - expecting: " << *should;
-		msg = ss.str();
-	}
+InvalidExpression::InvalidExpression(const TypePtr& should, const TypePtr& is) {
+	std::ostringstream ss;
+	ss << "Cannot convert expression of type " << *is << " - expecting: " << *should;
+	msg = ss.str();
+}
 
-	const char* InvalidExpression::what() const throw() {
-		return msg.c_str();
-	}
+const char* InvalidExpression::what() const throw() {
+	return msg.c_str();
+}
 
 
 } // end namespace lists

@@ -45,7 +45,7 @@
 #include "irt_globals.h"
 
 #ifndef IRT_MIN_MODE
-	#include "impl/irt_mqueue.impl.h"
+#include "impl/irt_mqueue.impl.h"
 #endif
 
 
@@ -64,28 +64,28 @@
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-/*	IRT_INFO("======== Worker %d debug info:\n", self->id.thread);
-#ifdef USING_MINLWT	
-	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
-#else
-	IRT_INFO("== Base ptr: %p\n", (void*)&(self->basestack)); // casting to void* would break 32 bit compatibility
-#endif
-	IRT_INFO("== Current wi: %p\n", (void*) self->cur_wi);
-	IRT_INFO("==== Pool:\n");
-	irt_work_item* next_wi = self->sched_data.pool.start;
-	while(next_wi != NULL) {
-		IRT_INFO("--- Work item %p:\n", (void*)next_wi);
-		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
-		next_wi = next_wi->sched_data.work_deque_next;
-	}
-	IRT_INFO("==== Queue:\n");
-	next_wi = self->sched_data.queue.start;
-	while(next_wi != NULL) {
-		IRT_INFO("--- Work item %p:\n", (void*)next_wi);
-		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
-		next_wi = next_wi->sched_data.work_deque_next;
-	}
-	IRT_INFO("========\n");*/
+	/*	IRT_INFO("======== Worker %d debug info:\n", self->id.thread);
+	#ifdef USING_MINLWT
+		IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
+	#else
+		IRT_INFO("== Base ptr: %p\n", (void*)&(self->basestack)); // casting to void* would break 32 bit compatibility
+	#endif
+		IRT_INFO("== Current wi: %p\n", (void*) self->cur_wi);
+		IRT_INFO("==== Pool:\n");
+		irt_work_item* next_wi = self->sched_data.pool.start;
+		while(next_wi != NULL) {
+			IRT_INFO("--- Work item %p:\n", (void*)next_wi);
+			IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
+			next_wi = next_wi->sched_data.work_deque_next;
+		}
+		IRT_INFO("==== Queue:\n");
+		next_wi = self->sched_data.queue.start;
+		while(next_wi != NULL) {
+			IRT_INFO("--- Work item %p:\n", (void*)next_wi);
+			IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
+			next_wi = next_wi->sched_data.work_deque_next;
+		}
+		IRT_INFO("========\n");*/
 }
 #endif
 
@@ -98,23 +98,24 @@ typedef struct __irt_worker_func_arg {
 
 
 /** wait until all worker threads are created (signal->init_count == irt_g_worker_count) */
-void _irt_await_all_workers_init(irt_worker_init_signal *signal){
-	#if defined(WINVER) && (WINVER < 0x0600)
-		irt_atomic_inc(&(signal->init_count, uint32));
-		HANDLE ev = OpenEvent(SYNCHRONIZE, FALSE, "AllWorkersInitialized");
-		// wait until master thread signals ev
-		WaitForSingleObject(ev, INFINITE);
-	#else
-		irt_mutex_lock(&signal->init_mutex);
-		signal->init_count++;
-		if(signal->init_count == irt_g_worker_count) {
-			// signal readyness of created thread to master thread
-			irt_cond_wake_all(&signal->init_condvar);
-		} else {
-			irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
-		}
-		irt_mutex_unlock(&signal->init_mutex);
-	#endif
+void _irt_await_all_workers_init(irt_worker_init_signal *signal) {
+#if defined(WINVER) && (WINVER < 0x0600)
+	irt_atomic_inc(&(signal->init_count, uint32));
+	HANDLE ev = OpenEvent(SYNCHRONIZE, FALSE, "AllWorkersInitialized");
+	// wait until master thread signals ev
+	WaitForSingleObject(ev, INFINITE);
+#else
+	irt_mutex_lock(&signal->init_mutex);
+	signal->init_count++;
+	if(signal->init_count == irt_g_worker_count) {
+		// signal readyness of created thread to master thread
+		irt_cond_wake_all(&signal->init_condvar);
+	}
+	else {
+		irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
+	}
+	irt_mutex_unlock(&signal->init_mutex);
+#endif
 }
 
 void* _irt_worker_func(void *argvp) {
@@ -138,7 +139,7 @@ void* _irt_worker_func(void *argvp) {
 	if(getenv(IRT_DEFAULT_VARIANT_ENV)) {
 		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
 	}
-
+	
 #ifdef IRT_WORKER_SLEEPING
 	irt_cond_var_init(&self->wait_cond);
 	self->wake_signal = true;
@@ -148,14 +149,14 @@ void* _irt_worker_func(void *argvp) {
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
-
+	
 #ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
 	IRT_ASSERT(pthread_getcpuclockid(t, &self->clockid) == 0, IRT_ERR_INIT, "Failed to retrieve thread clock id");
 	self->app_time_total = 0.0;
 	self->app_time_last_start = 0.0;
 	self->app_time_running = false;
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
-
+	
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
@@ -177,19 +178,19 @@ void* _irt_worker_func(void *argvp) {
 	self->wg_ev_register_list = NULL; // prepare some?
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
-
+	
 	irt_atomic_store(&self->state, IRT_WORKER_STATE_READY);
-
+	
 	// store self, free arg
 	irt_g_workers[arg->index] = self;
 	irt_worker_init_signal *signal = arg->signal;
 	free(arg);
-
+	
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
-
+	
 	irt_worker_late_init(self);
-
+	
 	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING, uint32)) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
 		irt_scheduling_loop(self);
@@ -200,15 +201,16 @@ void* _irt_worker_func(void *argvp) {
 
 uint32 _irt_worker_select_implementation_variant(const irt_worker* self, const irt_work_item* wi) {
 	irt_wi_implementation *wimpl = wi->impl;
-	#ifndef IRT_TASK_OPT
+#ifndef IRT_TASK_OPT
 	if(self->default_variant < wimpl->num_variants) {
 		return self->default_variant;
-	} else {
+	}
+	else {
 		return 0;
 	}
-	#else // !IRT_TASK_OPT
+#else // !IRT_TASK_OPT
 	return wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
-	#endif // !IRT_TASK_OPT
+#endif // !IRT_TASK_OPT
 }
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
@@ -217,19 +219,20 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	irt_work_item_state current_state;
 	do {
 		current_state = irt_atomic_load(&wi->state);
-	}	while(current_state != IRT_WI_STATE_NEW && current_state != IRT_WI_STATE_SUSPENDED);
-
+	}
+	while(current_state != IRT_WI_STATE_NEW && current_state != IRT_WI_STATE_SUSPENDED);
+	
 	self->cur_context = wi->context_id;
 	if(irt_atomic_load(&wi->state) == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		irt_atomic_store(&wi->state, IRT_WI_STATE_STARTED);
 		lwt_prepare(self->id.thread, wi, &self->basestack);
 		self->cur_wi = wi;
-		#ifdef USING_MINLWT
+#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", (void*) self, (void*)wi->stack_ptr);
-		#else
+#else
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", (void*) self, (void*) &(wi->stack_ptr));
-		#endif
+#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_start_measurements(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
@@ -241,15 +244,16 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		lwt_start(wi, &self->basestack, impl_variant->implementation);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", (void*) self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
-	} else { 
+	}
+	else {
 		// resume WI
 		irt_atomic_store(&wi->state, IRT_WI_STATE_STARTED);
 		self->cur_wi = wi;
-		#ifdef USING_MINLWT
+#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", (void*) self, (void*)wi->stack_ptr);
-		#else
+#else
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", (void*) self, (void*) &(wi->stack_ptr));
-		#endif
+#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED_UNKNOWN, wi->id);
 		irt_wi_implementation *wimpl = wi->impl;
@@ -318,9 +322,9 @@ void irt_worker_late_init(irt_worker* self) {
 	irt_context_id nullid = irt_context_null_id();
 	// loop until context id has been set (i.e. is not nullid), which means that the context setup is done
 	while(irt_atomic_fetch_and_add(&(self->cur_context.full), 0, uint64) == nullid.full) { }
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_inst_region_init_worker(self);
-	#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_inst_region_init_worker(self);
+#endif
 }
 
 void _irt_worker_cancel_all_others() {
@@ -339,29 +343,34 @@ void _irt_worker_end_all() {
 	// get info about calling thread
 	irt_thread calling_thread;
 	irt_thread_get_current(&calling_thread);
-
+	
 	irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
 		irt_spin_lock(&cur->shutdown_lock);
-		if(irt_atomic_load(&cur->state) == IRT_WORKER_STATE_JOINED) continue;
+		if(irt_atomic_load(&cur->state) == IRT_WORKER_STATE_JOINED) {
+			continue;
+		}
 		do {
 			irt_atomic_store(&cur->state, IRT_WORKER_STATE_STOP);
 			irt_signal_worker(cur);
 			// workers stopped by dop setting should be woken up
 			irt_cond_wake_one(&cur->dop_wait_cond);
-		} while(irt_atomic_load(&cur->state) != IRT_WORKER_STATE_STOP);
+		}
+		while(irt_atomic_load(&cur->state) != IRT_WORKER_STATE_STOP);
 		// don't join calling thread
 		if(!irt_thread_check_equality(&calling_thread, &(cur->thread))) {
 			irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
-			if(irt_atomic_load(&cur->state) != IRT_WORKER_STATE_JOINED) irt_thread_join(&(cur->thread));
+			if(irt_atomic_load(&cur->state) != IRT_WORKER_STATE_JOINED) {
+				irt_thread_join(&(cur->thread));
+			}
 			irt_mutex_lock(&irt_g_degree_of_parallelism_mutex);
 			irt_atomic_store(&cur->state, IRT_WORKER_STATE_JOINED);
 		}
 		irt_spin_unlock(&cur->shutdown_lock);
 	}
 	irt_mutex_unlock(&irt_g_degree_of_parallelism_mutex);
-
+	
 	// clean up after all workers have finished running
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker_cleanup(irt_g_workers[i]);
@@ -383,7 +392,8 @@ void irt_worker_cleanup(irt_worker* self) {
 		self->wi_reuse_stack = NULL;
 	}
 	// clean up event register reuse stacks
-	{ // wi registers
+	{
+		// wi registers
 		irt_wi_event_register *cur, *next;
 		cur = self->wi_ev_register_list;
 		while(cur) {
@@ -394,7 +404,8 @@ void irt_worker_cleanup(irt_worker* self) {
 		}
 		self->wi_ev_register_list = NULL;
 	}
-	{ // wg registers
+	{
+		// wg registers
 		irt_wg_event_register *cur, *next;
 		cur = self->wg_ev_register_list;
 		while(cur) {

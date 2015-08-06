@@ -51,7 +51,8 @@ namespace types {
 bool isVariableSized(const TypePtr& cur) {
 	NodeType type = cur->getNodeType();
 	switch(type) {
-	case NT_ArrayType: return true;
+	case NT_ArrayType:
+		return true;
 	case NT_StructType: {
 		StructTypePtr structType = cur.as<StructTypePtr>();
 		return !structType.empty() && isVariableSized(structType.back()->getType());
@@ -62,18 +63,22 @@ bool isVariableSized(const TypePtr& cur) {
 	}
 	case NT_UnionType: {
 		UnionTypePtr unionType = cur.as<UnionTypePtr>();
-		return any(unionType, [](const NamedTypePtr& cur) { return isVariableSized(cur->getType()); });
+		return any(unionType, [](const NamedTypePtr& cur) {
+			return isVariableSized(cur->getType());
+		});
 	}
-	default: return false;
+	default:
+		return false;
 	}
 }
 
 TypePtr getRepeatedType(const TypePtr& cur) {
 	assert_true(isVariableSized(cur)) << "Only variable sized types contain repeated types.";
-
+	
 	NodeType type = cur->getNodeType();
 	switch(type) {
-	case NT_ArrayType: return cur.as<ArrayTypePtr>()->getElementType();
+	case NT_ArrayType:
+		return cur.as<ArrayTypePtr>()->getElementType();
 	case NT_StructType: {
 		StructTypePtr structType = cur.as<StructTypePtr>();
 		return getRepeatedType(structType.back()->getType());
@@ -85,13 +90,16 @@ TypePtr getRepeatedType(const TypePtr& cur) {
 	case NT_UnionType: {
 		UnionTypePtr unionType = cur.as<UnionTypePtr>();
 		for(auto cur : unionType) {
-			if (isVariableSized(cur->getType())) return getRepeatedType(cur->getType());
+			if(isVariableSized(cur->getType())) {
+				return getRepeatedType(cur->getType());
+			}
 		}
 		break;
 	}
-	default: break;
+	default:
+		break;
 	}
-
+	
 	assert_fail() << "Invalid classification as a variable sized type!";
 	return TypePtr();
 }

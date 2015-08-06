@@ -1,10 +1,10 @@
-int main (){
+int main() {
 
 
 	char a;
 	int b;
-
-	if (a == '#') {}
-	if (b == '#') {}
-
+	
+	if(a == '#') {}
+	if(b == '#') {}
+	
 }

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,37 +42,37 @@ namespace insieme {
 namespace backend {
 namespace sequential {
 
-	// A forward declaration of the sequential backend implementation
-	class SequentialBackend;
-	typedef std::shared_ptr<SequentialBackend> SequentialBackendPtr;
+// A forward declaration of the sequential backend implementation
+class SequentialBackend;
+typedef std::shared_ptr<SequentialBackend> SequentialBackendPtr;
+
+/**
+ * The sequential backend aims on generating pure sequential code without
+ * any dependencies to any runtime implementation. This backend converts
+ * IR into pure C99 / C++98 target code.
+ */
+class SequentialBackend : public Backend {
+public:
 
 	/**
-	 * The sequential backend aims on generating pure sequential code without
-	 * any dependencies to any runtime implementation. This backend converts
-	 * IR into pure C99 / C++98 target code.
+	 * A factory method obtaining a smart pointer referencing a
+	 * fresh instance of the sequential backend using the default configuration.
+	 *
+	 * @return a smart pointer to a fresh instance of the sequential backend
 	 */
-	class SequentialBackend : public Backend {
-	public:
+	static SequentialBackendPtr getDefault();
+	
+protected:
 
-		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the sequential backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the sequential backend
-		 */
-		static SequentialBackendPtr getDefault();
-
-	protected:
-
-		/**
-		 * Creates the converter instance realizing the sequential backend conversion job.
-		 *
-		 * @param manager the manager to be utilized for the conversion
-		 * @return a converter instance conducting the code conversion
-		 */
-		virtual Converter buildConverter(core::NodeManager& manager) const;
-
-	};
+	/**
+	 * Creates the converter instance realizing the sequential backend conversion job.
+	 *
+	 * @param manager the manager to be utilized for the conversion
+	 * @return a converter instance conducting the code conversion
+	 */
+	virtual Converter buildConverter(core::NodeManager& manager) const;
+	
+};
 
 } // end namespace sequential
 } // end namespace backend

@@ -44,6 +44,18 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+bool isRefArrayType(const TypePtr& type);
+bool isArrayType(const TypePtr& type);
+TypePtr getArrayElementType(const TypePtr& ptr);
+RefTypePtr getRefArrayElementType(const TypePtr& ptr);
+
+// ------------------ VECTOR checks --------------------------------
+
+bool isVectorType(const TypePtr& type);
+TypePtr getVectorElementType(const TypePtr& ptr);
+bool isRefVectorType(const TypePtr& ptr);
+TypePtr getRefVectorElementType(const TypePtr& ptr);
+
 /**
  * Gets all nodes of the given type in node which are free.
  * A node is free if it is not enclosed by any node of the types listed in pruneNodes.
@@ -108,6 +120,14 @@ bool isNoOp(const StatementPtr& candidate);
 bool isGeneric(const TypePtr& type);
 
 /**
+ * Determines whether the given node contains parallel code (that is, calls to "parallel").
+ *
+ * @param node the node to be checked
+ * @return true if it contains parallel code, false otherwise
+ */
+bool isParallel(const NodePtr& node);
+
+/**
  * A universal utility extracting a list of element types from any given
  * type (e.g. parameter types of an abstract type, element types of a
  * reference, channel, array or vector type, ...)
@@ -157,8 +177,10 @@ static inline bool isRefType(const RefTypePtr& refType) {
  * @return true if the given type is a reference type, false otherwise
  */
 static inline bool isRefType(const TypePtr& type) {
-    if (!type) return false;
-    return type->getNodeType() == core::NT_RefType;
+	if(!type) {
+		return false;
+	}
+	return type->getNodeType() == core::NT_RefType;
 }
 
 /**
@@ -168,18 +190,24 @@ static inline bool isRefType(const TypePtr& type) {
  * @return true if so, false otherwise
  */
 static inline bool hasRefType(const ExpressionPtr& expr) {
-    if (!expr) return false;
+	if(!expr) {
+		return false;
+	}
 	return isRefType(expr->getType());
 }
 
 static inline TypePtr getReferencedType(const RefTypePtr& type) {
-    if (!type) assert_fail() << "Cannot get the referenced type of a non ref type.";
+	if(!type) {
+		assert_fail() << "Cannot get the referenced type of a non ref type.";
+	}
 	return type->getElementType();
 }
 
 static inline TypePtr getReferencedType(const TypePtr& type) {
-    if (!type) return NULL;
-    return getReferencedType(dynamic_pointer_cast<const RefType>(type));
+	if(!type) {
+		return NULL;
+	}
+	return getReferencedType(dynamic_pointer_cast<const RefType>(type));
 }
 
 // ----------------------------------- Type-Literals ----------------------------
@@ -299,9 +327,13 @@ static inline IntTypeParamPtr getRepresentedTypeParam(const ExpressionPtr& expr)
  * @param the type to test
  * @return whenever is a pointer represented in IR
  */
-static inline bool isPointerType(const TypePtr& ptr){
-	if (!ptr.isa<RefTypePtr>()) return false;
-	if (!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) return false;
+static inline bool isPointerType(const TypePtr& ptr) {
+	if(!ptr.isa<RefTypePtr>()) {
+		return false;
+	}
+	if(!ptr.as<RefTypePtr>().getElementType().isa<ArrayTypePtr>()) {
+		return false;
+	}
 	return true;
 }
 
@@ -409,7 +441,7 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap);
 
 /**
- * Tests whether the given type is a volatile type. In that case 
+ * Tests whether the given type is a volatile type. In that case
  * the type is of the form volatile<'a> where 'a is a concrete type.
  *
  * @param type the type to be tested
@@ -443,6 +475,15 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
 bool contains(const NodePtr& code, const NodePtr& element);
 
 /**
+ * Counts the number of occurrences of instances of the given element in the given code fragment.
+ *
+ * @param code the IR structure to be inspected
+ * @param element the element to be searched
+ * @return number of instances of element
+ */
+unsigned countInstances(const NodePtr& code, const NodePtr& element);
+
+/**
  * Tests if the variable is ever assigned or used by reference, if so, is not considered a read only
  * variable
  * is not descending into lambdas, only evaluates closest scope
@@ -462,7 +503,7 @@ bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
 bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
 
 /**
- * 	Test if the parameter is read or written in the scope, if passed by reference 
+ * 	Test if the parameter is read or written in the scope, if passed by reference
  * 	to any other scope it will be assumed to be non read-only,
  * 	no matters what happens inside of that lambda
  *
@@ -478,7 +519,7 @@ bool isReadOnlyWithinScope(const StatementPtr& context, const VariablePtr& param
  * @param var, the expression to test
  * @return whenever is a static
  */
-bool isStaticVar (const ExpressionPtr& var);
+bool isStaticVar(const ExpressionPtr& var);
 
 /**
  * compare given typePtrs, trying to unroll rectypes

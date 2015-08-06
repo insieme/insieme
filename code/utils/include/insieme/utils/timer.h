@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,54 +44,54 @@
 namespace insieme {
 namespace utils {
 
+/**
+ * Simple timer used to measured time.
+ */
+class Timer: public boost::timer {
+	double lastStep;
+	double mElapsed;
+	std::string mName;
+	bool isStopped;
+	
+	friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
+public:
+	Timer(const std::string& name = "Time"):
+		boost::timer(), lastStep(0.0), mName(name), isStopped(false) { }
 	/**
-	 * Simple timer used to measured time.
+	 * Stops the timer returning the elapsed amount of seconds
 	 */
-	class Timer: public boost::timer {
-		double lastStep;
-		double mElapsed;
-		std::string mName;
-		bool isStopped;
+	double stop();
+	
+	/**
+	 * Obtains time since start or last lap time.
+	 */
+	double step();
+	
+	/**
+	 * Return the elapsed amount of seconds
+	 */
+	double getTime() const;
+};
 
-		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
-	public:
-		Timer(const std::string& name = "Time"): 
-			boost::timer(), lastStep(0.0), mName(name), isStopped(false) { }
-		/**
-		 * Stops the timer returning the elapsed amount of seconds
-		 */
-		double stop();
+std::ostream& operator<<(std::ostream& out, const Timer& timer);
 
-		/**
-		 * Obtains time since start or last lap time.
-		 */
-		double step();
+template <class Ret, log::Level L=DEBUG>
+Ret measureTimeFor(const std::string& timerName, const std::function<Ret()>& task) {
+	Timer timer(timerName);
+	Ret ret = task(); // execute the job
+	timer.stop();
+	LOG(L) << timer;
+	return ret;
+}
 
-		/**
-		 * Return the elapsed amount of seconds
-		 */
-		double getTime() const;
-	};
-
-	std::ostream& operator<<(std::ostream& out, const Timer& timer);
-
-	template <class Ret, log::Level L=DEBUG>
-	Ret measureTimeFor(const std::string& timerName, const std::function<Ret ()>& task) {
-		Timer timer(timerName);
-		Ret ret = task(); // execute the job
-		timer.stop();
-		LOG(L) << timer;
-		return ret;
-	}
-
-	// Specialization for void returning functions 
-	template <log::Level L=DEBUG>
-	void measureTimeFor(const std::string& timerName, const std::function<void ()>& task) {
-		Timer timer(timerName);
-		task(); // execute the job
-		timer.stop();
-		LOG(L) << timer;
-	}
+// Specialization for void returning functions
+template <log::Level L=DEBUG>
+void measureTimeFor(const std::string& timerName, const std::function<void ()>& task) {
+	Timer timer(timerName);
+	task(); // execute the job
+	timer.stop();
+	LOG(L) << timer;
+}
 
 } // end utils namespace
 } // end insieme namespace

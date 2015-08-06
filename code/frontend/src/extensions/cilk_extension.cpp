@@ -49,30 +49,32 @@ namespace extensions {
 
 namespace {
 
-	using namespace insieme::core;
+using namespace insieme::core;
 
-	//returns the pragma function lambda which will add the annotation which is passed as a template argument when called
-	template<typename T>
-	PragmaHandler::pragmaHandlerFunction getMarkerAttachementLambda() {
-		return [] (const pragma::MatchObject& object, core::NodeList nodes) {
-				core::NodeList res;
-				for(const NodePtr& element : nodes) {
-					StatementPtr stmt = element.as<StatementPtr>();
-					StatementPtr tmp;
-					IRBuilder builder(stmt->getNodeManager());
-					if (element->getNodeCategory() == NC_Statement) {
-						tmp = builder.markerStmt(stmt);
-					} else if (element->getNodeCategory() == NC_Expression) {
-						tmp = builder.markerExpr(stmt.as<ExpressionPtr>());
-					} else {
-						assert_fail() << "Cannot annotate non statement/expression!";
-					}
-					tmp->attachValue<T>();
-					res.push_back(tmp);
-				}
-				return res;
-		};
-	}
+//returns the pragma function lambda which will add the annotation which is passed as a template argument when called
+template<typename T>
+PragmaHandler::pragmaHandlerFunction getMarkerAttachementLambda() {
+	return [](const pragma::MatchObject& object, core::NodeList nodes) {
+		core::NodeList res;
+		for(const NodePtr& element : nodes) {
+			StatementPtr stmt = element.as<StatementPtr>();
+			StatementPtr tmp;
+			IRBuilder builder(stmt->getNodeManager());
+			if(element->getNodeCategory() == NC_Statement) {
+				tmp = builder.markerStmt(stmt);
+			}
+			else if(element->getNodeCategory() == NC_Expression) {
+				tmp = builder.markerExpr(stmt.as<ExpressionPtr>());
+			}
+			else {
+				assert_fail() << "Cannot annotate non statement/expression!";
+			}
+			tmp->attachValue<T>();
+			res.push_back(tmp);
+		}
+		return res;
+	};
+}
 
 } //end anonymous namespace
 
@@ -82,13 +84,13 @@ CilkFrontendExtension::CilkFrontendExtension() : flagActivated(false) {
 	macros.insert(std::make_pair("cilk=", ""));
 	macros.insert(std::make_pair("spawn", "_Pragma(\"cilk spawn\")"));
 	macros.insert(std::make_pair("sync", "_Pragma(\"cilk sync\")"));
-
+	
 	//Add pragma handlers which will attach cilk annotations at the correct location
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("cilk", "spawn", pragma::tok::eod,
-			getMarkerAttachementLambda<cilk::CilkSpawnMarker>())));
-
+	                         getMarkerAttachementLambda<cilk::CilkSpawnMarker>())));
+	                         
 	pragmaHandlers.push_back(std::make_shared<PragmaHandler>(PragmaHandler("cilk", "sync", pragma::tok::eod,
-			getMarkerAttachementLambda<cilk::CilkSyncMarker>())));
+	                         getMarkerAttachementLambda<cilk::CilkSyncMarker>())));
 }
 
 tu::IRTranslationUnit CilkFrontendExtension::IRVisit(tu::IRTranslationUnit& tu) {
@@ -97,13 +99,13 @@ tu::IRTranslationUnit CilkFrontendExtension::IRVisit(tu::IRTranslationUnit& tu) 
 }
 
 FrontendExtension::flagHandler CilkFrontendExtension::registerFlag(boost::program_options::options_description& options) {
-    //register omp flag
-    options.add_options()("fcilk", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "Cilk support");
-    //create lambda
-    auto lambda = [&](const ConversionJob& job) {
-        return flagActivated;
-    };
-    return lambda;
+	//register omp flag
+	options.add_options()("fcilk", boost::program_options::value<bool>(&flagActivated)->implicit_value(true), "Cilk support");
+	//create lambda
+	auto lambda = [&](const ConversionJob& job) {
+		return flagActivated;
+	};
+	return lambda;
 }
 
 

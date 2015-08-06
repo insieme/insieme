@@ -66,17 +66,18 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
 	if(const clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) {
 		return skipSugar<ExpectedTy>(parenExpr->getSubExpr());
 	}
-
+	
 	// remove eventual casts
 	if(const clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) {
 		return skipSugar<ExpectedTy>(castExpr->getSubExpr());
 	}
-
+	
 	if(const clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
-		if(unOp->getOpcode() == clang::UO_Minus)
+		if(unOp->getOpcode() == clang::UO_Minus) {
 			return skipSugar<ExpectedTy>(unOp->getSubExpr());
+		}
 	}
-
+	
 	return dyn_cast<const ExpectedTy>(expr);
 }
 
@@ -101,16 +102,16 @@ std::string getNameForRecord(const clang::NamedDecl* decl, const clang::QualType
  * @param funcDecl: the function decl to name
  * @return unique string value
  */
-std::string buildNameForFunction (const clang::FunctionDecl* funcDecl);
+std::string buildNameForFunction(const clang::FunctionDecl* funcDecl);
 
 /**
  * same story to build a suitable name for variables (spetial treatement )
  */
-std::string buildNameForVariable (const clang::VarDecl* varDecl);
+std::string buildNameForVariable(const clang::VarDecl* varDecl);
 
 
 
-std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::SourceManager& sm);
+std::string buildNameForGlobal(const clang::VarDecl* varDecl, const clang::SourceManager& sm);
 
 /**
  * build names for enumerations. anonymous enumerations need a special naming,
@@ -118,7 +119,7 @@ std::string buildNameForGlobal (const clang::VarDecl* varDecl, const clang::Sour
  * @param tagType clang TagType pointer
  * @return name for enumeration
  */
-std::string buildNameForEnum (const clang::EnumDecl* enumDecl, const clang::SourceManager& sm);
+std::string buildNameForEnum(const clang::EnumDecl* enumDecl, const clang::SourceManager& sm);
 
 /**
  * build names for enumeration constants.

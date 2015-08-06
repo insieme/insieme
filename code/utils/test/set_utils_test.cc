@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,14 +53,14 @@ typedef std::unordered_set<int, boost::hash<int>> Set;
 TEST(SetUtilsTest, toSet) {
 
 	Set set = toSet<Set>(1,3,4,2,1);
-
+	
 	Set ref;
 	ref.insert(1);
 	ref.insert(3);
 	ref.insert(4);
 	ref.insert(2);
 	ref.insert(1);
-
+	
 	EXPECT_EQ(static_cast<std::size_t>(4), set.size());
 	EXPECT_EQ(static_cast<std::size_t>(4), ref.size());
 	EXPECT_EQ(set, ref);
@@ -71,19 +71,19 @@ TEST(SetUtilsTest, Merge) {
 	Set setA;
 	setA.insert(1);
 	setA.insert(2);
-
+	
 	Set setB;
 	setB.insert(3);
-
+	
 	Set merged = merge(setA,setB);
-
+	
 	Set setRef;
 	setRef.insert(1);
 	setRef.insert(2);
 	setRef.insert(3);
-
+	
 	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, merged );
+	EXPECT_EQ(setRef, merged);
 }
 
 TEST(SetUtilsTest, Intersect) {
@@ -91,17 +91,17 @@ TEST(SetUtilsTest, Intersect) {
 	Set setA;
 	setA.insert(1);
 	setA.insert(2);
-
+	
 	Set setB;
 	setB.insert(1);
-
+	
 	Set res = intersect(setA,setB);
-
+	
 	Set setRef;
 	setRef.insert(1);
-
+	
 	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
+	EXPECT_EQ(setRef, res);
 }
 
 TEST(SetUtilsTest, Difference) {
@@ -109,16 +109,16 @@ TEST(SetUtilsTest, Difference) {
 	Set setA;
 	setA.insert(1);
 	setA.insert(2);
-
+	
 	Set setB;
 	setB.insert(1);
-
+	
 	Set res = difference(setA,setB);
-
+	
 	Set setRef;
 	setRef.insert(2);
-
+	
 	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
+	EXPECT_EQ(setRef, res);
 }
 

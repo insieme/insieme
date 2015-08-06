@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,13 +39,13 @@
 #define __GUARD_ABSTRACTION_IMPL_MSR_IMPL_H
 
 #if defined(_MSC_VER)
-	#warning "MSR reading under Windows not implemented!"
+#warning "MSR reading under Windows not implemented!"
 #elif defined(__MINGW32__)
-	#warning "MSR reading under MINGW32 not implemented!"
+#warning "MSR reading under MINGW32 not implemented!"
 #elif defined(_GEMS_SIM)
-	#include "abstraction/impl/msr.gems.impl.h"
+#include "abstraction/impl/msr.gems.impl.h"
 #else
-	#include "abstraction/impl/msr.unix.impl.h"
+#include "abstraction/impl/msr.unix.impl.h"
 #endif
 
 

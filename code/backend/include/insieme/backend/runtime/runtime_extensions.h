@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,37 +48,37 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
+/**
+ * This class offers a list of IR extensions required to model concepts within the
+ * Insieme Runtime. The extensions include literals and types to model work items,
+ * data items and additional runtime functionality.
+ */
+class Extensions : public core::lang::Extension {
+public:
+
+	// Adds the definition of constant, public members to this definition using a macro file
+	
+#define TYPE(name, type) 			const core::TypePtr name;
+#define LITERAL(name, value, type) 	const core::LiteralPtr name;
+#include "ir_extensions.def"
+#undef TYPE
+#undef LITERAL
+	
+private:
+
+	int dummy;
+	
+	friend class core::NodeManager;
+	
 	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * Insieme Runtime. The extensions include literals and types to model work items,
-	 * data items and additional runtime functionality.
+	 * Creates a new instance of this extension set. The given manager is used to construct
+	 * the contained literals and types.
+	 *
+	 * @param manager the manager to be used to construct the required types and literals
 	 */
-	class Extensions : public core::lang::Extension {
-	public:
-
-		// Adds the definition of constant, public members to this definition using a macro file
-
-		#define TYPE(name, type) 			const core::TypePtr name;
-		#define LITERAL(name, value, type) 	const core::LiteralPtr name;
-		#include "ir_extensions.def"
-		#undef TYPE
-		#undef LITERAL
-
-	private:
-
-		int dummy;
-
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance of this extension set. The given manager is used to construct
-		 * the contained literals and types.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		Extensions(core::NodeManager& manager);
-
-	};
+	Extensions(core::NodeManager& manager);
+	
+};
 
 } // end namespace encoder
 } // end namespace core

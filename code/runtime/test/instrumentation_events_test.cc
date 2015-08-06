@@ -75,14 +75,14 @@ void insieme_cleanup_context(irt_context* context) {
 
 void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 	irt_inst_set_wi_instrumentation(true);
-
+	
 	irt_worker* worker = irt_worker_get_current();
 	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
-
+	
 	EXPECT_EQ(table->number_of_elements, 0);
-
+	
 	irt_work_item_id id = { (uint64)0 };
-
+	
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_CREATED, id);
 	EXPECT_EQ(table->number_of_elements, 1);
 	EXPECT_EQ(table->data[0].event_id, IRT_INST_WORK_ITEM_CREATED);
@@ -92,9 +92,9 @@ void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
 	EXPECT_EQ(table->data[1].event_id, IRT_INST_WORK_ITEM_STARTED);
 	EXPECT_NE(table->data[1].timestamp, 0);
 	EXPECT_GE(table->data[1].timestamp, table->data[0].timestamp);
-
+	
 	irt_inst_set_wi_instrumentation(false);
-
+	
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINALIZED, id);
 	EXPECT_EQ(table->number_of_elements, 2);
 }

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,7 +42,7 @@
 
 // Prototypes of functions using rdtsc
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -55,7 +55,7 @@ bool irt_time_ticks_available();
 // checks if rdtsc readings are constant over frequency changes (TscInvariant)
 bool irt_time_ticks_constant();
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 }
 #endif
 

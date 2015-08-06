@@ -52,10 +52,10 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
-
+	
 	DeclarationStmtPtr a = builder.declarationStmt(builder.variable(gen.getInt4()));
-
-	StatementPtr stmt = builder.parseStmt( R"(
+	
+	StatementPtr stmt = builder.parseStmt(R"(
 		{
 			let fun = lambda (int<4> arg)->int<4> { return arg + 1; };
 			let lfun = expr lit("lfun":(ref<int<4>>)->int<4>);
@@ -79,8 +79,8 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 			}
 		}
         )"
-	);
-
+	                                     );
+	                                     
 //	std::cout << " ***************************** " << std::endl;
 //	dumpPretty(stmt);
 //	std::cout << " ***************************** " << std::endl;
@@ -93,12 +93,12 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 		}
 		return false;
 	});
-
-    EXPECT_TRUE(body);
-
+	
+	EXPECT_TRUE(body);
+	
 	NodePtr call = builder.createCallExprFromBody(body, gen.getUnit());
 	NodePtr embeddedCall = transform::replaceAll(mgr, stmt, body, call);
-
+	
 //	dumpPretty(embeddedCall);
 //	std::cout << " ***************************** " << std::endl;
 
@@ -108,50 +108,50 @@ TEST(BuilderTest, CreateCallExprFromBody) {
 	for_each(warnings, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 	});
-
+	
 	auto errors = semantic.getErrors();
 	EXPECT_EQ(0u, errors.size()) ;
-
+	
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
 		std::cout << cur << std::endl;
 	});
-
+	
 }
 
 
 TEST(BuilderTest, CreateCallExprFromBody1) {
-	
+
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
-
+	
 	std::map<string, core::NodePtr> symbols;
-
+	
 	core::VariablePtr varA =  builder.variable(builder.refType(gen.getInt4()));
 	core::VariablePtr varB =  builder.variable(builder.refType(gen.getInt4()));
-
+	
 	symbols["var1"] = varA;
 	symbols["var2"] = varB;
 	symbols["var3"] = builder.variable(builder.refType(gen.getInt4()));
 	symbols["var4"] = builder.variable(builder.refType(gen.getInt4()));
-
-	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.getZero(builder.refType(gen.getInt4())) );
-	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.getZero(builder.refType(gen.getInt4())) );
-
+	
+	DeclarationStmtPtr declA = builder.declarationStmt(varA, builder.getZero(builder.refType(gen.getInt4())));
+	DeclarationStmtPtr declB = builder.declarationStmt(varB, builder.getZero(builder.refType(gen.getInt4())));
+	
 	core::StatementPtr assignStmt1 = builder.parseStmt("var1 = *var3;", symbols);
 	core::StatementPtr assignStmt2 = builder.parseStmt("var4 = *var2;", symbols);
-
+	
 	//body with 2 decl stmts and usage of 4 variables
 	core::StatementList bodyStmts;
 	bodyStmts.push_back(declA);
 	bodyStmts.push_back(declB);
 	bodyStmts.push_back(assignStmt1);
 	bodyStmts.push_back(assignStmt2);
-
+	
 	core::CompoundStmtPtr body = builder.compoundStmt(bodyStmts);
 	core::CallExprPtr call = builder.createCallExprFromBody(body, gen.getUnit()).as<core::CallExprPtr>();
-
+	
 	EXPECT_EQ(2u, call->getArguments().size());
 }
 

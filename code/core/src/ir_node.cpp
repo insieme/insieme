@@ -54,179 +54,186 @@ namespace insieme {
 namespace core {
 
 
-	// **********************************************************************************
-	// 							    Abstract Node Base
-	// **********************************************************************************
+// **********************************************************************************
+// 							    Abstract Node Base
+// **********************************************************************************
 
-	/**
-	 * Defining the equality ID generator.
-	 */
-	utils::SimpleIDGenerator<Node::EqualityID> Node::equalityClassIDGenerator;
+/**
+ * Defining the equality ID generator.
+ */
+utils::SimpleIDGenerator<Node::EqualityID> Node::equalityClassIDGenerator;
 
-	namespace detail {
+namespace detail {
 
-		/**
-		 * A visitor realizing the hashing for the value type potentially stored
-		 * within a node.
-		 */
-		struct HashVisitor : public boost::static_visitor<std::size_t> {
-			template<typename T>
-			std::size_t operator()(const T& value) const {
-				return boost::hash<T>()(value);
-			}
-
-			// hashing of integer values by according to http://www.concentric.net/~ttwang/tech/inthash.htm
-
-			std::size_t operator()(const char value) const {
-				return static_cast<std::size_t>(value * 2654435761);
-			}
-
-			std::size_t operator()(const int value) const {
-				return static_cast<std::size_t>(value * 2654435761);
-			}
-
-			std::size_t operator()(const unsigned value) const {
-				return static_cast<std::size_t>(value * 2654435761);
-			}
-
-		};
-
-		/**
-		 * Obtains a hash value for the given value instance.
-		 *
-		 * @param value the value to be hashed
-		 * @return the hash code for the given value object
-		 */
-		inline std::size_t hash(const NodeType type, const NodeValue& value) {
-			std::size_t seed = 0;
-			boost::hash_combine(seed, type);
-			boost::hash_combine(seed, boost::apply_visitor(HashVisitor(), value));
-			return seed;
-		}
-
-		/**
-		 * A static visitor determining whether an element within a boost::variant
-		 * is a value or not.
-		 */
-		struct IsValueVisitor : public boost::static_visitor<bool> {
-			bool operator()(const NodeValue& value) const { return true; }
-			template<typename T> bool operator()(const T& other) const { return false; }
-		};
-
-	}
-
-	Node::Node(const NodeType nodeType, const NodeValue& value)
-		: HashableImmutableData(detail::hash(nodeType, value)),
-		  nodeType(nodeType), value(value), nodeCategory(NC_Value),
-		  manager(0), equalityID(0) { }
-
-
-	const Node* Node::cloneTo(NodeManager& manager) const {
-		static const NodeList emptyList;
-
-		// NOTE: this method is performing the all-IR-node work, the rest is done by createCloneUsing(...)
-
-		// check whether cloning is necessary
-		if (this->manager == &manager) {
-			std::cout << "Manager is the same: " << this->manager << " vs. " << &manager << "\n";
-			return this;
-		}
-
-		// create a clone using children within the new manager
-		Node* res;
-		if (isValueInternal()) {
-			res = createInstanceUsing(emptyList);
-		} else {
-
-			// clone the child list
-			auto clonedChildList = manager.getAll(getChildListInternal());
-
-			// check whether this node was cloned as a side-effect of the child-list cloning
-			// (in case this node is somewhere refereed to within an annotation)
-			if (auto res = manager.lookupPlain(this)) {
-				assert(res != this);
-				return res;
-			}
-
-			// otherwise: create a new node
-			res = createInstanceUsing(clonedChildList);
-		}
-
-		// update manager
-		res->manager = &manager;
-
-		// update equality ID
-		res->equalityID = equalityID;
-
-		// done
-		return res;
-	}
-
-	void Node::migrateAnnotationsInternal(const NodePtr& target) const {
-		core::transform::utils::migrateAnnotations(NodePtr(this), target);
+/**
+ * A visitor realizing the hashing for the value type potentially stored
+ * within a node.
+ */
+struct HashVisitor : public boost::static_visitor<std::size_t> {
+	template<typename T>
+	std::size_t operator()(const T& value) const {
+		return boost::hash<T>()(value);
 	}
 	
-	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
+	// hashing of integer values by according to http://www.concentric.net/~ttwang/tech/inthash.htm
+	
+	std::size_t operator()(const char value) const {
+		return static_cast<std::size_t>(value * 2654435761);
+	}
+	
+	std::size_t operator()(const int value) const {
+		return static_cast<std::size_t>(value * 2654435761);
+	}
+	
+	std::size_t operator()(const unsigned value) const {
+		return static_cast<std::size_t>(value * 2654435761);
+	}
+	
+};
 
-		// check identity (under-approximation)
-		if (nodeA == nodeB) {
-			return true;
+/**
+ * Obtains a hash value for the given value instance.
+ *
+ * @param value the value to be hashed
+ * @return the hash code for the given value object
+ */
+inline std::size_t hash(const NodeType type, const NodeValue& value) {
+	std::size_t seed = 0;
+	boost::hash_combine(seed, type);
+	boost::hash_combine(seed, boost::apply_visitor(HashVisitor(), value));
+	return seed;
+}
+
+/**
+ * A static visitor determining whether an element within a boost::variant
+ * is a value or not.
+ */
+struct IsValueVisitor : public boost::static_visitor<bool> {
+	bool operator()(const NodeValue& value) const {
+		return true;
+	}
+	template<typename T> bool operator()(const T& other) const {
+		return false;
+	}
+};
+
+}
+
+Node::Node(const NodeType nodeType, const NodeValue& value)
+	: HashableImmutableData(detail::hash(nodeType, value)),
+	  nodeType(nodeType), value(value), nodeCategory(NC_Value),
+	  manager(0), equalityID(0) { }
+	  
+	  
+const Node* Node::cloneTo(NodeManager& manager) const {
+	static const NodeList emptyList;
+	
+	// NOTE: this method is performing the all-IR-node work, the rest is done by createCloneUsing(...)
+	
+	// check whether cloning is necessary
+	if(this->manager == &manager) {
+		std::cout << "Manager is the same: " << this->manager << " vs. " << &manager << "\n";
+		return this;
+	}
+	
+	// create a clone using children within the new manager
+	Node* res;
+	if(isValueInternal()) {
+		res = createInstanceUsing(emptyList);
+	}
+	else {
+	
+		// clone the child list
+		auto clonedChildList = manager.getAll(getChildListInternal());
+		
+		// check whether this node was cloned as a side-effect of the child-list cloning
+		// (in case this node is somewhere refereed to within an annotation)
+		if(auto res = manager.lookupPlain(this)) {
+			assert(res != this);
+			return res;
 		}
-
-		// check structure (over-approximation)
-		if (*nodeA!=*nodeB) {
-			return false;
-		}
-
-		// check annotations of pointer and nodes ...
-		if (!hasSameAnnotations((*nodeA).getAnnotationContainer(), (*nodeB).getAnnotationContainer())) {
-			return false;
-		}
-
-		// check annotations of references
-		auto listA = nodeA->getChildList();
-		auto listB = nodeB->getChildList();
-		return all(
-				make_paired_iterator(listA.begin(), listB.begin()),
-				make_paired_iterator(listA.end(), listB.end()),
-
-				[](const std::pair<NodePtr, NodePtr>& cur) {
-
-			// make a recursive call
-			return equalsWithAnnotations(cur.first, cur.second);
-		});
+		
+		// otherwise: create a new node
+		res = createInstanceUsing(clonedChildList);
 	}
+	
+	// update manager
+	res->manager = &manager;
+	
+	// update equality ID
+	res->equalityID = equalityID;
+	
+	// done
+	return res;
+}
 
-	void move_annotation_on_clone::operator()(const Node* src, const Node* trg) const {
-		// copy annotations
-		for_each(src->getAnnotationContainer().getAnnotations(), [&](const typename Node::annotation_container::annotation_map_type::value_type& cur) {
-			cur.second->clone(cur.second, trg);
-		});
+void Node::migrateAnnotationsInternal(const NodePtr& target) const {
+	core::transform::utils::migrateAnnotations(NodePtr(this), target);
+}
+
+bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
+
+	// check identity (under-approximation)
+	if(nodeA == nodeB) {
+		return true;
 	}
-
-	NodeManager::NodeManager() : data(new NodeManagerData(*this)) { }
-
-	NodeManager::NodeManager(NodeManager& manager)
-		: InstanceManager<Node, Pointer, move_annotation_on_clone>(manager), data(manager.data) {}
-
-	NodeManager::NodeManager(unsigned initialFreshID)
-		: data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }
-
-	const lang::Extension& NodeManager::getLangExtensionByName(const string& extensionName) {
-		const lang::ExtensionRegistry& registry = lang::ExtensionRegistry::getInstance();
-		return registry.getExtensionFactory(extensionName)(*this);
+	
+	// check structure (over-approximation)
+	if(*nodeA!=*nodeB) {
+		return false;
 	}
-
-	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager)
-		: root(manager), basic(new lang::BasicGenerator(manager)) {};
-
-
-	NodeManager::NodeManagerData::~NodeManagerData() {
-		// free all extensions
-		for_each(extensions, [](const ExtensionMap::value_type& cur) {
-			delete cur.second;
-		});
+	
+	// check annotations of pointer and nodes ...
+	if(!hasSameAnnotations((*nodeA).getAnnotationContainer(), (*nodeB).getAnnotationContainer())) {
+		return false;
 	}
+	
+	// check annotations of references
+	auto listA = nodeA->getChildList();
+	auto listB = nodeB->getChildList();
+	return all(
+	           make_paired_iterator(listA.begin(), listB.begin()),
+	           make_paired_iterator(listA.end(), listB.end()),
+	           
+	[](const std::pair<NodePtr, NodePtr>& cur) {
+	
+		// make a recursive call
+		return equalsWithAnnotations(cur.first, cur.second);
+	});
+}
+
+void move_annotation_on_clone::operator()(const Node* src, const Node* trg) const {
+	// copy annotations
+	for_each(src->getAnnotationContainer().getAnnotations(), [&](const typename Node::annotation_container::annotation_map_type::value_type& cur) {
+		cur.second->clone(cur.second, trg);
+	});
+}
+
+NodeManager::NodeManager() : data(new NodeManagerData(*this)) { }
+
+NodeManager::NodeManager(NodeManager& manager)
+	: InstanceManager<Node, Pointer, move_annotation_on_clone>(manager), data(manager.data) {}
+	
+NodeManager::NodeManager(unsigned initialFreshID)
+	: data(new NodeManagerData(*this)) {
+	setNextFreshID(initialFreshID);
+}
+
+const lang::Extension& NodeManager::getLangExtensionByName(const string& extensionName) {
+	const lang::ExtensionRegistry& registry = lang::ExtensionRegistry::getInstance();
+	return registry.getExtensionFactory(extensionName)(*this);
+}
+
+NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager)
+	: root(manager), basic(new lang::BasicGenerator(manager)) {};
+	
+	
+NodeManager::NodeManagerData::~NodeManagerData() {
+	// free all extensions
+	for_each(extensions, [](const ExtensionMap::value_type& cur) {
+		delete cur.second;
+	});
+}
 
 } // end namespace core
 } // end namespace insieme
@@ -250,7 +257,7 @@ IRDump dumpColor(const insieme::core::NodePtr& node, std::ostream& out) {
 		return out << print << std::endl;
 	}, out);
 }
-IRDump dumpOneLine(const insieme::core::NodePtr& node, std::ostream& out){
+IRDump dumpOneLine(const insieme::core::NodePtr& node, std::ostream& out) {
 	return IRDump([node](std::ostream& out)->std::ostream& {
 		insieme::core::printer::PrettyPrinter print(node);
 		print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);

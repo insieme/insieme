@@ -52,35 +52,35 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-	TEST(Manipulation, SequentializeAtomic) {
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		StatementPtr code = analysis::normalize(builder.parseStmt(
-				"{"
-				"	let int = int<4>;"
-				"	decl ref<int> a = var(2);"
-				"	atomic_fetch_and_add(a, 10);"
-				"}"
-		).as<StatementPtr>());
-
-		ASSERT_TRUE(code);
-
-		EXPECT_EQ(
-				"{decl ref<int<4>> v0 = ( var(2));atomic_fetch_and_add(v0, 10);}",
-				toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE))
-			);
-		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
-
-
-		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
+TEST(Manipulation, SequentializeAtomic) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	StatementPtr code = analysis::normalize(builder.parseStmt(
+	        "{"
+	        "	let int = int<4>;"
+	        "	decl ref<int> a = var(2);"
+	        "	atomic_fetch_and_add(a, 10);"
+	        "}"
+	                                        ).as<StatementPtr>());
+	                                        
+	ASSERT_TRUE(code);
+	
+	EXPECT_EQ(
+	    "{decl ref<int<4>> v0 = ( var(2));atomic_fetch_and_add(v0, 10);}",
+	    toString(printer::PrettyPrinter(code, printer::PrettyPrinter::PRINT_SINGLE_LINE))
+	);
+	EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
+	
+	
+	auto res = analysis::normalize(transform::trySequentialize(mgr, code));
 //		std::cout << core::printer::PrettyPrinter(res) << "\n";
-		EXPECT_EQ(
-				"{decl ref<int<4>> v0 = ( var(2));fun(ref<'a> v1, 'a v2) -> 'a {return fun(ref<'a> v1, 'a v2) -> 'a {decl 'a v3 = (v1);(v1 := gen_add((v1), v2));return v3;}(v1, v2);}(v0, 10);}",
-				toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE))
-		);
-		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
-	}
+	EXPECT_EQ(
+	    "{decl ref<int<4>> v0 = ( var(2));fun(ref<'a> v1, 'a v2) -> 'a {return fun(ref<'a> v1, 'a v2) -> 'a {decl 'a v3 = (v1);(v1 := gen_add((v1), v2));return v3;}(v1, v2);}(v0, 10);}",
+	    toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE))
+	);
+	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
+}
 
 } // end namespace transform
 } // end namespace core

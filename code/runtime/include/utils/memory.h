@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,7 +49,7 @@
  */
 
 void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
-        static int32 position_cache_virt = 0, position_cache_res = 0;
+	static int32 position_cache_virt = 0, position_cache_res = 0;
 	FILE* file = fopen("/proc/self/status", "r");
 	
 	*virt_size = 0;
@@ -60,21 +60,55 @@ void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
 	if(file == 0) {
 		IRT_DEBUG("Instrumentation: Unable to open file for memory consumption readings, reason: %s\n", strerror(errno));
 		return;
-	} else if(position_cache_virt == 0) { // first call, no position cached
-                if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmSize, reason: %s\n", strerror(errno)); fclose(file); return; }// lookup entry
-                if((position_cache_virt = ftell(file)) == -1) { IRT_DEBUG("Instrumentation: Unable to ftell for VmSize, reason: %s\n", strerror(errno)); fclose(file); return; } // save stream position
-                if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmRSS, reason: %s\n", strerror(errno)); fclose(file); return; } // skip useless info and read VmRSS
-                if((position_cache_res = ftell(file)) == -1) { IRT_DEBUG("Instrumentation: Unable to ftell for VmRSS, reason: %s\n", strerror(errno)); fclose(file); return; } // save stream position
-        } else { // if not first call, use cached positions, assumes max 8 digits
-                char str[9];
-                if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmSize position, reason: %s\n", strerror(errno)); fclose(file); return; }
-                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmSize, reason: %s\n", strerror(errno)); fclose(file); return; }
-                *virt_size = atol(str);
-                if(fseek(file, position_cache_res-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmRSS position, reason: %s\n", strerror(errno)); fclose(file); return; }
-                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmRSS\n, reason: %s\n", strerror(errno)); fclose(file); return; }
-                *res_size = atol(str);
-        }   
-        fclose(file);
+	}
+	else if(position_cache_virt == 0) {   // first call, no position cached
+		if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) {
+			IRT_DEBUG("Instrumentation: Unable to read VmSize, reason: %s\n", strerror(errno));    // lookup entry
+			fclose(file);
+			return;
+		}
+		if((position_cache_virt = ftell(file)) == -1) {
+			IRT_DEBUG("Instrumentation: Unable to ftell for VmSize, reason: %s\n", strerror(errno));    // save stream position
+			fclose(file);
+			return;
+		}
+		if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) {
+			IRT_DEBUG("Instrumentation: Unable to read VmRSS, reason: %s\n", strerror(errno));    // skip useless info and read VmRSS
+			fclose(file);
+			return;
+		}
+		if((position_cache_res = ftell(file)) == -1) {
+			IRT_DEBUG("Instrumentation: Unable to ftell for VmRSS, reason: %s\n", strerror(errno));    // save stream position
+			fclose(file);
+			return;
+		}
+	}
+	else {   // if not first call, use cached positions, assumes max 8 digits
+		char str[9];
+		if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) {
+			IRT_DEBUG("Instrumentation: Unable to seek to VmSize position, reason: %s\n", strerror(errno));
+			fclose(file);
+			return;
+		}
+		if(fgets(str, 9, file) == NULL) {
+			IRT_DEBUG("Instrumentation: Unable to fgets VmSize, reason: %s\n", strerror(errno));
+			fclose(file);
+			return;
+		}
+		*virt_size = atol(str);
+		if(fseek(file, position_cache_res-8, SEEK_SET) != 0) {
+			IRT_DEBUG("Instrumentation: Unable to seek to VmRSS position, reason: %s\n", strerror(errno));
+			fclose(file);
+			return;
+		}
+		if(fgets(str, 9, file) == NULL) {
+			IRT_DEBUG("Instrumentation: Unable to fgets VmRSS\n, reason: %s\n", strerror(errno));
+			fclose(file);
+			return;
+		}
+		*res_size = atol(str);
+	}
+	fclose(file);
 }
 
 

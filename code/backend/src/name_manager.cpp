@@ -49,216 +49,233 @@
 namespace insieme {
 namespace backend {
 
-	using namespace insieme::core;
+using namespace insieme::core;
 
-	namespace {
+namespace {
 
-		string getAttachedName(const core::NodePtr& ptr) {
+string getAttachedName(const core::NodePtr& ptr) {
 
-			// test whether the node has a name attached
-			if (core::annotations::hasAttachedName(ptr)) {
+	// test whether the node has a name attached
+	if(core::annotations::hasAttachedName(ptr)) {
+	
+		// => take the attached name
+		return core::annotations::getAttachedName(ptr);
+	}
+	
+	// no name attached
+	return "";
+}
 
-				// => take the attached name
-				return core::annotations::getAttachedName(ptr);
-			}
+}
 
-			// no name attached
-			return "";
+void SimpleNameManager::registerGlobalNames(const core::NodePtr& root) {
+
+	// just collect the names of global literals (which are all references)
+	core::visitDepthFirstOnce(root, [&](const core::LiteralPtr& literal) {
+		if(literal->getType().isa<core::RefTypePtr>()) {
+			globalScope.usedNames.insert(literal->getStringValue());
 		}
+	});
+	
+	// if the main function is renamed, we need this to avoid
+	// the original main function to be named main
+	globalScope.usedNames.insert("main");
+}
 
+string SimpleNameManager::getName(const core::VariablePtr& var) {
+
+	// test whether the name is present within the current
+	const string* res = lookup(var);
+	if(res) {
+		return *res;
 	}
-
-	void SimpleNameManager::registerGlobalNames(const core::NodePtr& root) {
-
-		// just collect the names of global literals (which are all references)
-		core::visitDepthFirstOnce(root, [&](const core::LiteralPtr& literal) {
-			if (literal->getType().isa<core::RefTypePtr>()) {
-				globalScope.usedNames.insert(literal->getStringValue());
-			}
-		});
-				
-        // if the main function is renamed, we need this to avoid 
-        // the original main function to be named main
-        globalScope.usedNames.insert("main");
+	
+	// determine name
+	string name = getAttachedName(var);
+	
+	// use attached name if present
+	if(name.empty() || isUsed(name)) {
+		// use default name
+		string prefix = string("var_") + toString(var->getId());
+		name = prefix;
+		
+		int c = 1;
+		
+		while(isUsed(name)) {
+			name = prefix + format("%s_%d", prefix, c++);
+		}
 	}
+	
+	// register name
+	varScope.back().names.insert(make_pair(var, name));
+	varScope.back().usedNames.insert(name);
+	
+	// return name
+	return name;
+}
 
-	string SimpleNameManager::getName(const core::VariablePtr& var) {
+string SimpleNameManager::getName(const NodePtr& ptr, const string& fragment) {
 
-		// test whether the name is present within the current
-		const string* res = lookup(var);
-		if (res) return *res;
-
-		// determine name
-		string name = getAttachedName(var);
-
+	// let variables be handled by the specialized variant
+	if(ptr->getNodeType() == core::NT_Variable) {
+		return getName(ptr.as<core::VariablePtr>());
+	}
+	
+	// test whether a name has already been picked
+	auto it = globalScope.names.find(ptr);
+	if(it != globalScope.names.end()) {
+		return it->second;
+	}
+	
+	{
+		string name = getAttachedName(ptr);
+		
 		// use attached name if present
-		if (name.empty() || isUsed(name)) {
-			// use default name
-			string prefix = string("var_") + toString(var->getId());
-			name = prefix;
-
-			int c = 1;
-
-			while(isUsed(name)) {
-				name = prefix + format("%s_%d", prefix, c++);
+		if(!name.empty() && !isUsed(name)) {
+			globalScope.names.insert(make_pair(ptr, name));
+			globalScope.usedNames.insert(name);
+			return name;
+		}
+	}
+	
+	// generate a new name string
+	std::stringstream name;
+	name << prefix;
+	if(!fragment.empty()) {
+		name << fragment;
+	}
+	else {
+		switch(ptr->getNodeType()) {
+		case NT_BindExpr:
+			name << "closure";
+			break;
+		default:
+			switch(ptr->getNodeCategory()) {
+			case NC_IntTypeParam:
+				name << "param";
+				break;
+			case NC_Support:
+				name << "supp";
+				break;
+			case NC_Type:
+				name << "type";
+				break;
+			case NC_Expression:
+				switch(ptr->getNodeType()) {
+				case NT_LambdaExpr:
+					name << "fun";
+					break;
+				default:
+					name << "expr";
+					break;
+				} ;
+				break;
+			case NC_Statement:
+				name << "stat";
+				break;
+			case NC_Program:
+				name << "prog";
+				break;
+			case NC_Value:
+				name << "value";
+				break;
 			}
 		}
-
-		// register name
-		varScope.back().names.insert(make_pair(var, name));
-		varScope.back().usedNames.insert(name);
-
-		// return name
-		return name;
 	}
+	
+	name << "_" << num++;
+	string resName = name.str();
+	
+	// register string
+	globalScope.names.insert(make_pair(ptr, resName));
+	globalScope.usedNames.insert(resName);
+	
+	// return result
+	return resName;
+}
 
-	string SimpleNameManager::getName( const NodePtr& ptr, const string& fragment) {
-
-		// let variables be handled by the specialized variant
-		if (ptr->getNodeType() == core::NT_Variable) {
-			return getName(ptr.as<core::VariablePtr>());
-		}
-
-		// test whether a name has already been picked
-		auto it = globalScope.names.find(ptr);
-		if(it != globalScope.names.end()) return it->second;
-
-		{
-			string name = getAttachedName(ptr);
-
-			// use attached name if present
-			if (!name.empty() && !isUsed(name)) {
-				globalScope.names.insert(make_pair(ptr, name));
-				globalScope.usedNames.insert(name);
-				return name;
-			}
-		}
-
-		// generate a new name string
-		std::stringstream name;
-		name << prefix;
-		if (!fragment.empty()) {
-			name << fragment;
-		} else {
-			switch(ptr->getNodeType()) {
-			case NT_BindExpr:
-				name << "closure"; break;
-			default:
-				switch(ptr->getNodeCategory()) {
-				case NC_IntTypeParam:
-					name << "param"; break;
-				case NC_Support:
-					name << "supp"; break;
-				case NC_Type:
-					name << "type"; break;
-				case NC_Expression:
-					switch(ptr->getNodeType()) {
-					case NT_LambdaExpr: name << "fun"; break;
-					default: name << "expr"; break;
-					} ; break;
-				case NC_Statement:
-					name << "stat"; break;
-				case NC_Program:
-					name << "prog"; break;
-				case NC_Value:
-					name << "value"; break;
-				}
-			}
-		}
-
-		name << "_" << num++;
-		string resName = name.str();
-
-		// register string
-		globalScope.names.insert(make_pair(ptr, resName));
-		globalScope.usedNames.insert(resName);
-
-		// return result
-		return resName;
+void SimpleNameManager::setName(const core::NodePtr& ptr, const string& name) {
+	// disabled since name collisions might happen with overloaded functions!
+	//assert_true((!isUsed(name) || (lookup(ptr) && *lookup(ptr) == name))) << "Cannot bind to name already used!";
+	
+	// everything is in the global scope
+	auto names = &globalScope.names;
+	auto used = &globalScope.usedNames;
+	
+	// unless it is a variable
+	if(ptr->getNodeType() == core::NT_Variable) {
+		names = &varScope.back().names;
+		used = &varScope.back().usedNames;
 	}
+	
+	// insert into data structures
+	__unused auto res = names->insert(make_pair(ptr, name));
+	
+	// disabled since name collisions might happen with overloaded member functions!
+	//assert_true((res.second || res.first->second == name)) << "Tried to alter name after already being bound!";
+	used->insert(name);
+}
 
-	void SimpleNameManager::setName(const core::NodePtr& ptr, const string& name) {
-		// disabled since name collisions might happen with overloaded functions!
-		//assert_true((!isUsed(name) || (lookup(ptr) && *lookup(ptr) == name))) << "Cannot bind to name already used!";
+void SimpleNameManager::reserveName(const string& name) {
+	globalScope.usedNames.insert(name);
+}
 
-		// everything is in the global scope
-		auto names = &globalScope.names;
-		auto used = &globalScope.usedNames;
+void SimpleNameManager::pushVarScope(bool isolated) {
 
-		// unless it is a variable
-		if (ptr->getNodeType() == core::NT_Variable) {
-			names = &varScope.back().names;
-			used = &varScope.back().usedNames;
-		}
+	// simply push a new scope on top of the scope stack
+	varScope.push_back(Scope(!isolated));
+	
+}
 
-		// insert into data structures
-		__unused auto res = names->insert(make_pair(ptr, name));
+void SimpleNameManager::popVarScope() {
+	// drop the top-level scope
+	assert_gt(varScope.size(), 1) << "Scope stack must not be empty!";
+	varScope.pop_back();
+}
 
-		// disabled since name collisions might happen with overloaded member functions!
-		//assert_true((res.second || res.first->second == name)) << "Tried to alter name after already being bound!";
-		used->insert(name);
+bool SimpleNameManager::isUsed(const string& name) const {
+
+	// test whether it is a name used by the global scope
+	if(globalScope.usedNames.find(name) != globalScope.usedNames.end()) {
+		return true;
 	}
-
-	void SimpleNameManager::reserveName(const string& name) {
-		globalScope.usedNames.insert(name);
-	}
-
-	void SimpleNameManager::pushVarScope(bool isolated) {
-
-		// simply push a new scope on top of the scope stack
-		varScope.push_back(Scope(!isolated));
-
-	}
-
-	void SimpleNameManager::popVarScope() {
-		// drop the top-level scope
-		assert_gt(varScope.size(), 1) << "Scope stack must not be empty!";
-		varScope.pop_back();
-	}
-
-	bool SimpleNameManager::isUsed(const string& name) const {
-
-		// test whether it is a name used by the global scope
-		if (globalScope.usedNames.find(name) != globalScope.usedNames.end()) {
+	
+	// check the nested variable scope
+	for(auto it=varScope.rbegin(); it != varScope.rend(); ++it) {
+		if(it->usedNames.find(name) != it->usedNames.end()) {
 			return true;
 		}
-
-		// check the nested variable scope
-		for(auto it=varScope.rbegin(); it != varScope.rend(); ++it) {
-			if (it->usedNames.find(name) != it->usedNames.end()) {
-				return true;
-			}
-			if (!it->extendsParentScope) {
-				return false;		// stop search here
-			}
+		if(!it->extendsParentScope) {
+			return false;		// stop search here
 		}
-
-		// not found
-		return false;
 	}
+	
+	// not found
+	return false;
+}
 
-	const string* SimpleNameManager::lookup(const core::NodePtr& ptr) const {
+const string* SimpleNameManager::lookup(const core::NodePtr& ptr) const {
 
-		// test nested scopes first
-		for(auto it=varScope.rbegin(); it != varScope.rend(); ++it) {
-			auto pos = it->names.find(ptr);
-			if (pos != it->names.end()) {
-				return &(pos->second);
-			}
-			if (!it->extendsParentScope) {
-				break;		// stop search here
-			}
-		}
-
-		// search within global scope
-		auto pos = globalScope.names.find(ptr);
-		if (pos != globalScope.names.end()) {
+	// test nested scopes first
+	for(auto it=varScope.rbegin(); it != varScope.rend(); ++it) {
+		auto pos = it->names.find(ptr);
+		if(pos != it->names.end()) {
 			return &(pos->second);
 		}
-
-		// not found
-		return NULL;
+		if(!it->extendsParentScope) {
+			break;		// stop search here
+		}
 	}
+	
+	// search within global scope
+	auto pos = globalScope.names.find(ptr);
+	if(pos != globalScope.names.end()) {
+		return &(pos->second);
+	}
+	
+	// not found
+	return NULL;
+}
 
 } // end: namespace simple_backend
 } // end: namespace insieme

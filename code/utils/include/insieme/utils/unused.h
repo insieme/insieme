@@ -29,12 +29,16 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 /**
  * Just defines a nicer alternative to the attribute syntax.
  */
+#ifdef __GNUC__
 #define __unused __attribute__((unused))
+#else
+#define __unused
+#endif

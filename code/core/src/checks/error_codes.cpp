@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,15 +50,15 @@ namespace checks {
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code) {
+std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code) {
 
-		out << "[" << format("%05d", (unsigned)code) << "] - ";
-		switch(code) {
-			#define CODE(KIND,NAME) case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME;
-			#include "insieme/core/checks/error_codes.inc"
-		}
-
-		return out << "Unknown Error CODE";
+	out << "[" << format("%05d", (unsigned)code) << "] - ";
+	switch(code) {
+#define CODE(KIND,NAME) case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME;
+#include "insieme/core/checks/error_codes.inc"
 	}
+	
+	return out << "Unknown Error CODE";
+}
 
 }

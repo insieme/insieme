@@ -46,178 +46,178 @@
 namespace insieme {
 namespace backend {
 
+/**
+ * A generic interface for a pre-processor to be applied to some IR code before being
+ * transformed into target code. The generic interface defines the basic interface
+ * according to the composite and command pattern.
+ */
+class PreProcessor {
+
+public:
+
 	/**
-	 * A generic interface for a pre-processor to be applied to some IR code before being
-	 * transformed into target code. The generic interface defines the basic interface
-	 * according to the composite and command pattern.
+	 * A virtual destructor to support pointers to polymorph sub-classes.
 	 */
-	class PreProcessor {
-
-	public:
-
-		/**
-		 * A virtual destructor to support pointers to polymorph sub-classes.
-		 */
-		virtual ~PreProcessor() {};
-
-		/**
-		 * This function implements the actual pre-processing step. The given code will be processed
-		 * and the result will be returned. In the likely case that new nodes need to be constructed
-		 * during the processing, the given manager will be used.
-		 *
-		 * @param converter the converter forming the context of this pre-processor invocation
-		 * @param code the code to be pre-processed
-		 * @return the result of the pre-processing step.
-		 */
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code) =0;
-
-	};
-
-
+	virtual ~PreProcessor() {};
+	
 	/**
-	 * A type definition for a shared pointer referencing a preprocessor instance.
-	 * This shared instance is required within connectors.
-	 */
-	typedef std::shared_ptr<PreProcessor> PreProcessorPtr;
-
-	/**
-	 * A generic factory method creating pre-processor pointer instances.
-	 */
-	template<typename T, typename ... E>
-	std::shared_ptr<T> makePreProcessor(E ... args) {
-		return std::make_shared<T>(args...);
-	}
-
-	/**
-	 * Flags allowing to fine-tune the pre-processing actions being conducted by the
-	 * basic pre-processing sequence.
-	 */
-	enum BasicPreprocessorFlags {
-		NONE 									= 0,
-		SKIP_POINTWISE_EXPANSION 				= 1
-	};
-
-	/**
-	 * Obtains a basic pre-processor sequence including processing steps potentially used by
-	 * all backend variants. The list includes all pre-processors defined within this header file.
+	 * This function implements the actual pre-processing step. The given code will be processed
+	 * and the result will be returned. In the likely case that new nodes need to be constructed
+	 * during the processing, the given manager will be used.
 	 *
-	 * @return a list of pre-processor instances - one of each kind
+	 * @param converter the converter forming the context of this pre-processor invocation
+	 * @param code the code to be pre-processed
+	 * @return the result of the pre-processing step.
 	 */
-	PreProcessorPtr getBasicPreProcessorSequence(BasicPreprocessorFlags options = NONE);
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code) =0;
+	
+};
 
-	// -------------------------------------------------------------------------
-	//  Some pre-processing connectors
-	// -------------------------------------------------------------------------
+
+/**
+ * A type definition for a shared pointer referencing a preprocessor instance.
+ * This shared instance is required within connectors.
+ */
+typedef std::shared_ptr<PreProcessor> PreProcessorPtr;
+
+/**
+ * A generic factory method creating pre-processor pointer instances.
+ */
+template<typename T, typename ... E>
+std::shared_ptr<T> makePreProcessor(E ... args) {
+	return std::make_shared<T>(args...);
+}
+
+/**
+ * Flags allowing to fine-tune the pre-processing actions being conducted by the
+ * basic pre-processing sequence.
+ */
+enum BasicPreprocessorFlags {
+	NONE 									= 0,
+	SKIP_POINTWISE_EXPANSION 				= 1
+};
+
+/**
+ * Obtains a basic pre-processor sequence including processing steps potentially used by
+ * all backend variants. The list includes all pre-processors defined within this header file.
+ *
+ * @return a list of pre-processor instances - one of each kind
+ */
+PreProcessorPtr getBasicPreProcessorSequence(BasicPreprocessorFlags options = NONE);
+
+// -------------------------------------------------------------------------
+//  Some pre-processing connectors
+// -------------------------------------------------------------------------
+
+/**
+ * A simple pre-processing connector aggregating a sequence of pre-processing steps into
+ * a single pre-processing instance.
+ */
+class PreProcessingSequence : public PreProcessor {
 
 	/**
-	 * A simple pre-processing connector aggregating a sequence of pre-processing steps into
-	 * a single pre-processing instance.
+	 * The sequence of pre-processing steps to be applied when applying this pre processor.
 	 */
-	class PreProcessingSequence : public PreProcessor {
-
-		/**
-		 * The sequence of pre-processing steps to be applied when applying this pre processor.
-		 */
-		const vector<PreProcessorPtr> preprocessor;
-
-	public:
-
-		/**
-		 * A generic constructor allowing to specify an arbitrary number of preprocessors.
-		 */
-		template<typename ... P>
-		PreProcessingSequence(P ... processors)
-			: preprocessor(toVector<PreProcessorPtr>(processors ...)) {}
-
-		/**
-		 * A simple constructor accepting the list of pre-processors covered by this sequence.
-		 */
-		PreProcessingSequence(const vector<PreProcessorPtr>& processors)
-			: preprocessor(processors) {}
-
-		/**
-		 * Applies this pre-processor on the given target code. Therefore, the internally maintained
-		 * sequence of pre-processing steps will be applied in order.
-		 *
-		 * @param converter the converter forming the context of this pre-processor invocation
-		 * @param code the code to be pre-processed
-		 * @return the result of the pre-processing step.
-		 */
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-
-	};
+	const vector<PreProcessorPtr> preprocessor;
+	
+public:
 
 	/**
-	 * A generic factory function for pre-processor sequences.
+	 * A generic constructor allowing to specify an arbitrary number of preprocessors.
 	 */
 	template<typename ... P>
-	PreProcessorPtr makePreProcessorSequence(const P& ... processors) {
-		return makePreProcessor<PreProcessingSequence>(processors...);
-	}
-
-
-	// ------- concrete pre-processing step implementations ---------
-
+	PreProcessingSequence(P ... processors)
+		: preprocessor(toVector<PreProcessorPtr>(processors ...)) {}
+		
 	/**
-	 * A pre-processor performing no actual pre-processing. This pre-processor can be used when aiming
-	 * on disabling the pre-processing (according to the null-pattern).
+	 * A simple constructor accepting the list of pre-processors covered by this sequence.
 	 */
-	class NoPreProcessing : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
+	PreProcessingSequence(const vector<PreProcessorPtr>& processors)
+		: preprocessor(processors) {}
+		
 	/**
-	 * This pre-processor is capturing initial values for globals such that those are encoded as initial
-	 * values at the global definition instead of an assignment in the main. Initial assignments will be
-	 * dropped.
+	 * Applies this pre-processor on the given target code. Therefore, the internally maintained
+	 * sequence of pre-processing steps will be applied in order.
+	 *
+	 * @param converter the converter forming the context of this pre-processor invocation
+	 * @param code the code to be pre-processed
+	 * @return the result of the pre-processing step.
 	 */
-	class InitGlobals : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+	
+};
 
-	/**
-	 * A simple pre-processor replacing pointwise operations on vectors with in-lined, equivalent code.
-	 */
-	class InlinePointwise : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
+/**
+ * A generic factory function for pre-processor sequences.
+ */
+template<typename ... P>
+PreProcessorPtr makePreProcessorSequence(const P& ... processors) {
+	return makePreProcessor<PreProcessingSequence>(processors...);
+}
 
-	/**
-	 * A pre-processor making implicit vector to array conversions explicit.
-	 */
-	class MakeVectorArrayCastsExplicit : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
 
-	/**
-	 * Eliminates assignments to or declarations of dead variables.
-	 */
-	class RedundancyElimination : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
+// ------- concrete pre-processing step implementations ---------
 
-	/**
-	 * Eliminated unnecessary function pointers being passed as argument within mutual
-	 * recursive functions.
-	 */
-	class CorrectRecVariableUsage : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
+/**
+ * A pre-processor performing no actual pre-processing. This pre-processor can be used when aiming
+ * on disabling the pre-processing (according to the null-pattern).
+ */
+class NoPreProcessing : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
 
-	/**
-	 * It may happen that we try to forward generic arguments to inner lambdas. This preprocessor
-	 * should identify this issue and provide a correct instantiator for such lambdas.
-	 */
-	class RecursiveLambdaInstantiator : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
+/**
+ * This pre-processor is capturing initial values for globals such that those are encoded as initial
+ * values at the global definition instead of an assignment in the main. Initial assignments will be
+ * dropped.
+ */
+class InitGlobals : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
+
+/**
+ * A simple pre-processor replacing pointwise operations on vectors with in-lined, equivalent code.
+ */
+class InlinePointwise : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
+
+/**
+ * A pre-processor making implicit vector to array conversions explicit.
+ */
+class MakeVectorArrayCastsExplicit : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
+
+/**
+ * Eliminates assignments to or declarations of dead variables.
+ */
+class RedundancyElimination : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
+
+/**
+ * Eliminated unnecessary function pointers being passed as argument within mutual
+ * recursive functions.
+ */
+class CorrectRecVariableUsage : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
+
+/**
+ * It may happen that we try to forward generic arguments to inner lambdas. This preprocessor
+ * should identify this issue and provide a correct instantiator for such lambdas.
+ */
+class RecursiveLambdaInstantiator : public PreProcessor {
+public:
+	virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
+};
 
 } // end namespace backend
 } // end namespace insieme

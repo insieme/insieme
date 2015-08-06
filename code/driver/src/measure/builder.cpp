@@ -49,93 +49,93 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-	namespace bfs = boost::filesystem;
-	namespace nfs = utils::net;
+namespace bfs = boost::filesystem;
+namespace nfs = utils::net;
 
-	int runCommand(const std::string& cmd) {
-		LOG(ERROR) << "Running " << cmd << "\n";
+int runCommand(const std::string& cmd) {
+	LOG(ERROR) << "Running " << cmd << "\n";
 //		return system((cmd + "> /dev/null").c_str());
-		return system(cmd.c_str());
+	return system(cmd.c_str());
+}
+
+boost::optional<utils::net::NetworkPath> buildRemote(
+    const utils::VirtualPrintable& source, const Host& targetHost,
+    const utils::compiler::Compiler& compiler) {
+    
+	// create a temporary local source file
+	char sourceFile[] = P_tmpdir "/srcXXXXXX";
+	int src = mkstemp(sourceFile);
+	assert_ne(src, -1);
+	close(src);
+	
+	// write source to file
+	std::fstream srcFile(sourceFile, std::fstream::out);
+	srcFile << source << "\n";
+	srcFile.close();
+	
+	// build remotely
+	auto res = buildRemote(toVector(nfs::NetworkPath(sourceFile)), "binary", targetHost, compiler);
+	
+	// delete source file
+	if(boost::filesystem::exists(sourceFile)) {
+		boost::filesystem::remove(sourceFile);
 	}
+	return res;
+}
 
-	boost::optional<utils::net::NetworkPath> buildRemote(
-				const utils::VirtualPrintable& source, const Host& targetHost,
-				const utils::compiler::Compiler& compiler) {
-
-		// create a temporary local source file
-		char sourceFile[] = P_tmpdir "/srcXXXXXX";
-		int src = mkstemp(sourceFile);
-		assert_ne(src, -1);
-		close(src);
-
-		// write source to file
-		std::fstream srcFile(sourceFile, std::fstream::out);
-		srcFile << source << "\n";
-		srcFile.close();
-
-		// build remotely
-		auto res = buildRemote(toVector(nfs::NetworkPath(sourceFile)), "binary", targetHost, compiler);
-
-		// delete source file
-		if (boost::filesystem::exists(sourceFile)) {
-			boost::filesystem::remove(sourceFile);
-		}
-		return res;
+boost::optional<utils::net::NetworkPath> buildRemote(
+    const vector<utils::net::NetworkPath>& sources,
+    const string& targetFileName,
+    const Host& targetHost,
+    const utils::compiler::Compiler& compilerSetup) {
+    
+	nfs::NetworkPath tmpDir = targetHost.getTempDir();
+	
+	// obtain a remote working directory
+	int i = 0;
+	while(!nfs::create_directories(tmpDir / format("work_dir_%d", i))) {
+		i++;
 	}
-
-	boost::optional<utils::net::NetworkPath> buildRemote(
-				const vector<utils::net::NetworkPath>& sources,
-				const string& targetFileName,
-				const Host& targetHost,
-				const utils::compiler::Compiler& compilerSetup) {
-
-		nfs::NetworkPath tmpDir = targetHost.getTempDir();
-
-		// obtain a remote working directory
-		int i = 0;
-		while (!nfs::create_directories(tmpDir / format("work_dir_%d", i))) {
-			i++;
-		}
-		nfs::NetworkPath workDir = tmpDir / format("work_dir_%d", i);
-		assert_true(nfs::exists(workDir));
-
-		bool res = true;
-
-		// create build directory
-		nfs::NetworkPath buildDir = workDir / "build";
-		res = res && nfs::create_directories(buildDir);
-
-		// copy local source to target machine (runtime is header only)
-		res = res && nfs::copy(nfs::NetworkPath(DRIVER_SRC_DIR "../../runtime/include"), buildDir / "include" );
-
-		// copy source file
-		vector<string> inputFiles;
-		for_each(sources, [&](const nfs::NetworkPath& src) {
-			inputFiles.push_back(src.filename());
-			res = res && nfs::copy(src, buildDir / inputFiles.back());
-		});
-
-		// build source file on remote machine
-		res = res && runCommand("ssh " + workDir.getUserHostnamePrefix() + " \""
-					"cd " + buildDir.path.string() + " && " +
-					compilerSetup.getCommand(inputFiles, "../" + targetFileName) +
-				"\"") == 0;
-
-		// check whether everything was successful
-		if (!res) {
-			// clean up working directory
-			nfs::remove_all(workDir);
-
-			// return uninitialized optional containing no path
-			return boost::optional<nfs::NetworkPath>();
-		}
-
-		// clean up sources
-		nfs::remove_all(buildDir);
-
-		// return path to binary
-		return workDir / targetFileName;
+	nfs::NetworkPath workDir = tmpDir / format("work_dir_%d", i);
+	assert_true(nfs::exists(workDir));
+	
+	bool res = true;
+	
+	// create build directory
+	nfs::NetworkPath buildDir = workDir / "build";
+	res = res && nfs::create_directories(buildDir);
+	
+	// copy local source to target machine (runtime is header only)
+	res = res && nfs::copy(nfs::NetworkPath(DRIVER_TEST_DIR "../../runtime/include"), buildDir / "include");
+	
+	// copy source file
+	vector<string> inputFiles;
+	for_each(sources, [&](const nfs::NetworkPath& src) {
+		inputFiles.push_back(src.filename());
+		res = res && nfs::copy(src, buildDir / inputFiles.back());
+	});
+	
+	// build source file on remote machine
+	res = res && runCommand("ssh " + workDir.getUserHostnamePrefix() + " \""
+	                        "cd " + buildDir.path.string() + " && " +
+	                        compilerSetup.getCommand(inputFiles, "../" + targetFileName) +
+	                        "\"") == 0;
+	                        
+	// check whether everything was successful
+	if(!res) {
+		// clean up working directory
+		nfs::remove_all(workDir);
+		
+		// return uninitialized optional containing no path
+		return boost::optional<nfs::NetworkPath>();
 	}
+	
+	// clean up sources
+	nfs::remove_all(buildDir);
+	
+	// return path to binary
+	return workDir / targetFileName;
+}
 
 
 } // end namespace measure

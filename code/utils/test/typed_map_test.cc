@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,29 +47,29 @@
 namespace insieme {
 namespace utils {
 
-	using namespace std;
+using namespace std;
 
-	TEST(HeterogenousContainer, Basic) {
+TEST(HeterogenousContainer, Basic) {
 
-		HeterogenousContainer c;
-
-		int& a = c.getInstance<int>();
-		a = 10;
-
-		EXPECT_EQ(10, c.getInstance<int>());
-
-		a = 12;
-		EXPECT_EQ(12, c.getInstance<int>());
-
-		string s = c.getInstance<string>("hello");
-		EXPECT_EQ("hello", s);
-
-		auto& v = c.getInstance<vector<int>>();
-		v.push_back(12);
-		v.push_back(14);
-
-		EXPECT_EQ("[12,14]", toString(c.getInstance<vector<int>>()));
-	}
+	HeterogenousContainer c;
+	
+	int& a = c.getInstance<int>();
+	a = 10;
+	
+	EXPECT_EQ(10, c.getInstance<int>());
+	
+	a = 12;
+	EXPECT_EQ(12, c.getInstance<int>());
+	
+	string s = c.getInstance<string>("hello");
+	EXPECT_EQ("hello", s);
+	
+	auto& v = c.getInstance<vector<int>>();
+	v.push_back(12);
+	v.push_back(14);
+	
+	EXPECT_EQ("[12,14]", toString(c.getInstance<vector<int>>()));
+}
 
 
 } // end namespace utils

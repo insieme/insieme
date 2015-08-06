@@ -51,7 +51,6 @@ FLAG("check-sema-only", 		checkSemaOnly,				"run semantic checks on the generate
 FLAG("check-sema", 				checkSema,					"run semantic checks on the generated IR")
 FLAG("compile,c", 				compileOnly, 				"compilation only")
 FLAG("debug-information,g", 	debug, 						"produce debug information")
-FLAG("estimate-effort", 		estimateEffort,				"enables generation of the effort estimation function")
 FLAG("help,h", 					help, 						"produce help message")
 FLAG("mark-scop",				markScop,					"mark SCoPs (Static COntrol Parts) in the IR (analysis only")
 FLAG("no-warnings", 			noWarnings, 				"inhibit all warnings")
@@ -63,6 +62,9 @@ FLAG("dumpversion", 				dumpVersion, 					"print minimal version string")
 FLAG("win-cross-compile", 		winCrossCompile,			"set cross compilation for a Windows target")
 FLAG("print-clang-ast", 		printClangAST,				"print the clang AST")
 FLAG("fnodefaultextensions", 	noDefaultExtensions,	    "disables all frontend extensions that are enabled by default")
+
+FLAG("estimate-effort", 		estimateEffort,				"enables generation of the effort estimation function")
+FLAG("task-granularity-tuning", taskGranularityTuning,		"enables multiverisoning of parallel tasks")
 
 PARAMETER("backend",				backend,					std::string,						"runtime", 							"backend selection")
 PARAMETER("outfile,o", 				outFile, 					frontend::path, 					"a.out", 							"output file")
@@ -86,6 +88,7 @@ OPTION("library-file,l", 		libraryFiles,				std::vector<frontend::path>, 		std::
 OPTION("library-path,L", 		libraryPaths,				std::vector<frontend::path>, 		std::vector<frontend::path>(), 		"library search path(s)")
 OPTION("dump-kernel",			dumpOclKernel,				frontend::path,						"a.cl", 							"dump OpenCL kernel")
 OPTION("optimization,O", 		optimization, 				std::string,						std::string(),						"optimization flag")
+OPTION("print-clang-ast-filter",	clangASTDumpFilter,			std::string, 						std::string(),						"set a regular expression to filter the clang AST dump.")
 
 #undef FLAG
 #undef PARAMETER

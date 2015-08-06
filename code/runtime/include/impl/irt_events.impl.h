@@ -206,11 +206,17 @@ void irt_##__short__##_event_reset(const irt_##__subject__##_id item_id, const i
 
 
 // WI events //////////////////////////////////////
-IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS, {if(element) {irt_spin_lock(&((irt_wi_event_register*) element)->lock);}})
+IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS, {if(element) {
+irt_spin_lock(&((irt_wi_event_register*) element)->lock);
+}
+                                                                                                                                })
 IRT_DEFINE_EVENTS(work_item, wi, IRT_WI_EV_NUM)
 
 // WG events //////////////////////////////////////
-IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS, {if(element) {irt_spin_lock(&((irt_wg_event_register*) element)->lock);}})
+IRT_DEFINE_LOCKED_LOOKUP_TABLE_WITH_POST_LOOKUP_ACTION(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS, {if(element) {
+irt_spin_lock(&((irt_wg_event_register*) element)->lock);
+}
+                                                                                                                                })
 IRT_DEFINE_EVENTS(work_group, wg, IRT_WG_EV_NUM)
 
 

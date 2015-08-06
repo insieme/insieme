@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -64,50 +64,50 @@
 
 namespace insieme {
 
-	using namespace driver;
-	using namespace driver::integration;
-	using namespace boost::filesystem;
+using namespace driver;
+using namespace driver::integration;
+using namespace boost::filesystem;
 
-	// ---------------------------------- Check the binary dump -------------------------------------
+// ---------------------------------- Check the binary dump -------------------------------------
 
-	// the type definition (specifying the parameter type)
-	class LibraryDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+// the type definition (specifying the parameter type)
+class LibraryDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
 
-	// define the test case pattern
-	TEST_P(LibraryDumpIntegrationTest, WriteReadTest) {
-		core::NodeManager managerA;
-
-		// obtain test case
-		IntegrationTestCase testCase = GetParam();
-
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
+// define the test case pattern
+TEST_P(LibraryDumpIntegrationTest, WriteReadTest) {
+	core::NodeManager managerA;
 	
-		// load the code using the frontend
-		auto unit = testCase.loadTU(managerA);
-
-		// save tu to temporary file
-		auto file = unique_path(temp_directory_path() / "tmp%%%%%%%%.o");
-
-		// save translation unit
-		saveLib(unit, file);
-
-		// check validity
-		EXPECT_TRUE(exists(file));
-		EXPECT_TRUE(isInsiemeLib(file));
-
-		// reload translation unit
-		auto tu = loadLib(managerA, file);
-
-		EXPECT_EQ(unit, tu);
-
-		// cleanup
-		if (exists(file)) {
-			remove(file);
-		}
+	// obtain test case
+	IntegrationTestCase testCase = GetParam();
+	
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
+	
+	// load the code using the frontend
+	auto unit = testCase.loadTU(managerA);
+	
+	// save tu to temporary file
+	auto file = unique_path(temp_directory_path() / "tmp%%%%%%%%.o");
+	
+	// save translation unit
+	saveLib(unit, file);
+	
+	// check validity
+	EXPECT_TRUE(exists(file));
+	EXPECT_TRUE(isInsiemeLib(file));
+	
+	// reload translation unit
+	auto tu = loadLib(managerA, file);
+	
+	EXPECT_EQ(unit, tu);
+	
+	// cleanup
+	if(exists(file)) {
+		remove(file);
 	}
+}
 
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(LibraryDumpIntegrationTestCheck, LibraryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(LibraryDumpIntegrationTestCheck, LibraryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }

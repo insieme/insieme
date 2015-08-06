@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,111 +44,112 @@
 namespace insieme {
 namespace transform {
 
-	namespace {
+namespace {
 
-		vector<TransformationPtr> extract(const parameter::Value& value) {
-			vector<TransformationPtr> res;
-			auto valueList = parameter::getValue<vector<parameter::Value>>(value);
-			for_each(valueList, [&](const parameter::Value& cur) {
-				res.push_back(parameter::getValue<TransformationPtr>(cur));
-			});
-			return res;
-		}
+vector<TransformationPtr> extract(const parameter::Value& value) {
+	vector<TransformationPtr> res;
+	auto valueList = parameter::getValue<vector<parameter::Value>>(value);
+	for_each(valueList, [&](const parameter::Value& cur) {
+		res.push_back(parameter::getValue<TransformationPtr>(cur));
+	});
+	return res;
+}
 
-		parameter::Value encode(const vector<TransformationPtr>& list) {
-			vector<parameter::Value> res;
-			for_each(list, [&](const TransformationPtr& cur) {
-				res.push_back(parameter::makeValue(cur));
-			});
-			return parameter::makeValue(res);
-		}
+parameter::Value encode(const vector<TransformationPtr>& list) {
+	vector<parameter::Value> res;
+	for_each(list, [&](const TransformationPtr& cur) {
+		res.push_back(parameter::makeValue(cur));
+	});
+	return parameter::makeValue(res);
+}
 
+}
+
+Versioning::Versioning(const vector<TransformationPtr>& transformations)
+	: Transformation(VersioningType::getInstance(), transformations, encode(transformations)) {
+	if(getSubTransformations().empty()) {
+		throw InvalidParametersException("Cannot create versioning transformation without versions!");
 	}
+}
 
-	Versioning::Versioning(const vector<TransformationPtr>& transformations)
-		: Transformation(VersioningType::getInstance(), transformations, encode(transformations)) {
-		if (getSubTransformations().empty()) {
-			throw InvalidParametersException("Cannot create versioning transformation without versions!");
-		}
+Versioning::Versioning(const parameter::Value& params)
+	: Transformation(VersioningType::getInstance(), extract(params), params) {
+	if(getSubTransformations().empty()) {
+		throw InvalidParametersException("Cannot create versioning transformation without versions!");
 	}
+}
 
-	Versioning::Versioning(const parameter::Value& params)
-		: Transformation(VersioningType::getInstance(), extract(params), params) {
-		if (getSubTransformations().empty()) {
-			throw InvalidParametersException("Cannot create versioning transformation without versions!");
-		}
+core::NodeAddress Versioning::apply(const core::NodeAddress& targetAddress) const {
+	auto target = targetAddress.as<core::NodePtr>();
+	
+	// check pre-condition
+	if(target->getNodeCategory() != core::NC_Statement && target->getNodeCategory() != core::NC_Expression) {
+		throw InvalidTargetException("Can only be applied to statements and expressions!");
 	}
-
-	core::NodeAddress Versioning::apply(const core::NodeAddress& targetAddress) const {
-		auto target = targetAddress.as<core::NodePtr>();
-
-		// check pre-condition
-		if (target->getNodeCategory() != core::NC_Statement && target->getNodeCategory() != core::NC_Expression) {
-			throw InvalidTargetException("Can only be applied to statements and expressions!");
+	
+	// check for free break statements
+	bool hasFreeBreak = false;
+	visitDepthFirstOncePrunable(target, [&](const core::NodePtr& cur) {
+		if(cur->getNodeType() == core::NT_ForStmt || cur->getNodeType() == core::NT_WhileStmt) {
+			return true; // do not decent here
 		}
-
-		// check for free break statements
-		bool hasFreeBreak = false;
-		visitDepthFirstOncePrunable(target, [&](const core::NodePtr& cur) {
-			if (cur->getNodeType() == core::NT_ForStmt || cur->getNodeType() == core::NT_WhileStmt) {
-				return true; // do not decent here
-			}
-			if (cur->getNodeType() == core::NT_BreakStmt) {
-				hasFreeBreak = true;	// "free" break found
-			}
-			return hasFreeBreak;
-		});
-		if (hasFreeBreak) {
-			throw InvalidTargetException("Transformation would capture a break. Break statements are not supported within switch statements!");
+		if(cur->getNodeType() == core::NT_BreakStmt) {
+			hasFreeBreak = true;	// "free" break found
 		}
-
-		// get list of transformations to be used for versioning
-		auto& transformations = getSubTransformations();
-
-		// special handling for single-version node
-		if (transformations.size() == 1u) {
-			return transformations[0]->apply(targetAddress);
-		}
-
-		// create switch selecting versions
-		core::IRBuilder builder(target->getNodeManager());
-
-		vector<core::ExpressionPtr> index;
-		vector<core::SwitchCasePtr> cases;
-
-		uint16_t i = 0;
-		core::TypePtr uint16 = builder.getLangBasic().getUInt2();
-		for_each(transformations, [&](const TransformationPtr& cur) {
-			core::LiteralPtr lit = builder.literal(uint16, toString(i));
-			index.push_back(lit);
-			cases.push_back(builder.switchCase(lit,
-				static_pointer_cast<core::StatementPtr>(cur->apply(target)))
-			);
-			i++;
-		});
-
-		// create final switch stmt
-		auto res = builder.switchStmt(builder.pickVariant(index), builder.switchCases(cases), builder.getNoOp());
-		return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
+		return hasFreeBreak;
+	});
+	if(hasFreeBreak) {
+		throw InvalidTargetException("Transformation would capture a break. Break statements are not supported within switch statements!");
 	}
-
-	bool Versioning::operator==(const Transformation& transform) const {
-		if (this == &transform) {
-			return true;
-		}
-
-		// check type and compare list of contained transformations
-		const Versioning* other = dynamic_cast<const Versioning*>(&transform);
-		return other && equals(getSubTransformations(), other->getSubTransformations(), equal_target<TransformationPtr>());
+	
+	// get list of transformations to be used for versioning
+	auto& transformations = getSubTransformations();
+	
+	// special handling for single-version node
+	if(transformations.size() == 1u) {
+		return transformations[0]->apply(targetAddress);
 	}
+	
+	// create switch selecting versions
+	core::IRBuilder builder(target->getNodeManager());
+	
+	vector<core::ExpressionPtr> index;
+	vector<core::SwitchCasePtr> cases;
+	
+	uint16_t i = 0;
+	core::TypePtr uint16 = builder.getLangBasic().getUInt2();
+	for_each(transformations, [&](const TransformationPtr& cur) {
+		core::LiteralPtr lit = builder.literal(uint16, toString(i));
+		index.push_back(lit);
+		cases.push_back(builder.switchCase(lit,
+		                                   static_pointer_cast<core::StatementPtr>(cur->apply(target)))
+		               );
+		i++;
+	});
+	
+	// create final switch stmt
+	auto res = builder.switchStmt(builder.pickVariant(index), builder.switchCases(cases), builder.getNoOp());
+	return core::transform::replaceAddress(target->getNodeManager(), targetAddress, res);
+}
 
-	std::ostream& Versioning::printTo(std::ostream& out, const Indent& indent) const {
-		out << indent << "Versioning\n";
-		for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
-			cur->printTo(out, indent+1); out << "\n";
-		});
-		return out;
+bool Versioning::operator==(const Transformation& transform) const {
+	if(this == &transform) {
+		return true;
 	}
+	
+	// check type and compare list of contained transformations
+	const Versioning* other = dynamic_cast<const Versioning*>(&transform);
+	return other && equals(getSubTransformations(), other->getSubTransformations(), equal_target<TransformationPtr>());
+}
+
+std::ostream& Versioning::printTo(std::ostream& out, const Indent& indent) const {
+	out << indent << "Versioning\n";
+	for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
+		cur->printTo(out, indent+1);
+		out << "\n";
+	});
+	return out;
+}
 
 
 } // end namespace transform

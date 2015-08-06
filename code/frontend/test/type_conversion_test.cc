@@ -77,14 +77,14 @@ namespace ia = insieme::annotations;
 
 TEST(TypeConversion, HandleBuildinType) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
-
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
+	
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
-
+	
 	// BOOL
 	CHECK_BUILTIN_TYPE(Bool, "bool");
-
+	
 	// UChar
 	CHECK_BUILTIN_TYPE(UChar, "uint<1>");
 	// Char
@@ -95,7 +95,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	CHECK_BUILTIN_TYPE(Char32, "wchar<32>");
 	// WChar
 	// CHECK_BUILTIN_TYPE(WChar, "wchar");  removed during port to clang2.9
-
+	
 	// UShort
 	CHECK_BUILTIN_TYPE(UShort, "uint<2>");
 	// Short
@@ -104,24 +104,24 @@ TEST(TypeConversion, HandleBuildinType) {
 	CHECK_BUILTIN_TYPE(UInt, "uint<4>");
 	// INT
 	CHECK_BUILTIN_TYPE(Int, "int<4>");
-
+	
 	// ULong
 	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
 	CHECK_BUILTIN_TYPE(ULongLong, "uint<16>");
-
+	
 	CHECK_BUILTIN_TYPE(Long, "int<8>");
 	CHECK_BUILTIN_TYPE(LongLong, "int<16>");
-
+	
 	// UInt128
 	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");
-
+	
 	// Float
 	CHECK_BUILTIN_TYPE(Float, "real<4>");
 	// Double
 	CHECK_BUILTIN_TYPE(Double, "real<8>");
 	// LongDouble
 	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
-
+	
 }
 
 #define CHECK_POINTER_TYPE(TypeName, InsiemeTypeDesc) \
@@ -158,11 +158,11 @@ TEST(TypeConversion, HandleBuildinType) {
 
 TEST(TypeConversion, PointerToType) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
-
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
+	
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
-
+	
 	CHECK_POINTER_TYPE(Void, 	"ref<any>");
 	CHECK_POINTER_TYPE(Bool, 	"ref<array<bool,1>>");
 	CHECK_POINTER_TYPE(UChar, 	"ref<array<uint<1>,1>>");
@@ -181,7 +181,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_TYPE(Float, 	"ref<array<real<4>,1>>");
 	CHECK_POINTER_TYPE(Double, 	"ref<array<real<8>,1>>");
 	CHECK_POINTER_TYPE(LongDouble, "ref<array<real<16>,1>>");
-
+	
 	CHECK_CONST_POINTER_TYPE(Void, 		"ref<any>");
 	CHECK_CONST_POINTER_TYPE(Bool, 		"ref<array<bool,1>>");
 	CHECK_CONST_POINTER_TYPE(UChar, 	"ref<array<uint<1>,1>>");
@@ -200,7 +200,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_CONST_POINTER_TYPE(Float, 	"ref<array<real<4>,1>>");
 	CHECK_CONST_POINTER_TYPE(Double, 	"ref<array<real<8>,1>>");
 	CHECK_CONST_POINTER_TYPE(LongDouble,"ref<array<real<16>,1>>");
-
+	
 	CHECK_POINTER_CONST_TYPE(Void, 		"ref<any>");
 	CHECK_POINTER_CONST_TYPE(Bool, 		"src<array<bool,1>>");
 	CHECK_POINTER_CONST_TYPE(UChar, 	"src<array<uint<1>,1>>");
@@ -219,7 +219,7 @@ TEST(TypeConversion, PointerToType) {
 	CHECK_POINTER_CONST_TYPE(Float, 	"src<array<real<4>,1>>");
 	CHECK_POINTER_CONST_TYPE(Double, 	"src<array<real<8>,1>>");
 	CHECK_POINTER_CONST_TYPE(LongDouble,"src<array<real<16>,1>>");
-
+	
 	CHECK_CONST_POINTER_CONST_TYPE(Void, 	  "ref<any>");
 	CHECK_CONST_POINTER_CONST_TYPE(Bool, 	  "src<array<bool,1>>");
 	CHECK_CONST_POINTER_CONST_TYPE(UChar, 	  "src<array<uint<1>,1>>");
@@ -258,11 +258,11 @@ TEST(TypeConversion, PointerToType) {
 
 TEST(TypeConversion, References) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
-
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
+	
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
-
+	
 	CHECK_REFERENCE_TYPE(Void, 		"struct<_cpp_ref:ref<unit>>");  // <== this is actually not a type...
 	CHECK_REFERENCE_TYPE(Bool, 		"struct<_cpp_ref:ref<bool>>");
 	CHECK_REFERENCE_TYPE(UChar, 	"struct<_cpp_ref:ref<uint<1>>>");
@@ -281,7 +281,7 @@ TEST(TypeConversion, References) {
 	CHECK_REFERENCE_TYPE(Float, 	"struct<_cpp_ref:ref<real<4>>>");
 	CHECK_REFERENCE_TYPE(Double, 	"struct<_cpp_ref:ref<real<8>>>");
 	CHECK_REFERENCE_TYPE(LongDouble,"struct<_cpp_ref:ref<real<16>>>");
-
+	
 	CHECK_REFERENCE_CONST_TYPE(Void, 	  "struct<_const_cpp_ref:src<unit>>");  // <== this is actually not a type...
 	CHECK_REFERENCE_CONST_TYPE(Bool, 	  "struct<_const_cpp_ref:src<bool>>");
 	CHECK_REFERENCE_CONST_TYPE(UChar, 	  "struct<_const_cpp_ref:src<uint<1>>>");
@@ -344,47 +344,47 @@ TEST(TypeConversion, References) {
 
 TEST(TypeConversion, CombinedTypes) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
-	Converter convFactory( manager, tu);
-
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
+	Converter convFactory(manager, tu);
+	
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
-
+	
 	////////////////////////////////////
 	//  Create a class
 	clang::SourceLocation loc;
-	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class,
-																ASTctx.getTranslationUnitDecl(), loc,
-	                                     						loc, &ASTctx.Idents.get("BaseClass"));
-	clang::BuiltinType fieldType (clang::BuiltinType::UShort);
-	clang::FieldDecl *  fieldDecl = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
-															  &ASTctx.Idents.get("fieldA"), fieldType.getCanonicalTypeInternal(),
-								 							  0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
-	fieldDecl->setAccess(clang::AccessSpecifier::AS_public );
-	classDecl->startDefinition ();
-	classDecl->addDeclInternal (fieldDecl);
-	classDecl->setCompleteDefinition (true);
-
+	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create(ASTctx,  clang::TagTypeKind::TTK_Class,
+	                                ASTctx.getTranslationUnitDecl(), loc,
+	                                loc, &ASTctx.Idents.get("BaseClass"));
+	clang::BuiltinType fieldType(clang::BuiltinType::UShort);
+	clang::FieldDecl *  fieldDecl = clang::FieldDecl::Create(ASTctx, classDecl, loc, loc,
+	                                &ASTctx.Idents.get("fieldA"), fieldType.getCanonicalTypeInternal(),
+	                                0, 0, false, clang::InClassInitStyle::ICIS_NoInit);
+	fieldDecl->setAccess(clang::AccessSpecifier::AS_public);
+	classDecl->startDefinition();
+	classDecl->addDeclInternal(fieldDecl);
+	classDecl->setCompleteDefinition(true);
+	
 	// some check to make sure that TU does as expeced
-	auto  irType = convFactory.convertType( ASTctx.getRecordType(classDecl)  );
+	auto  irType = convFactory.convertType(ASTctx.getRecordType(classDecl));
 	EXPECT_TRUE(irType);
 	EXPECT_TRUE(irType.isa<core::GenericTypePtr>());
 	EXPECT_TRUE(convFactory.getIRTranslationUnit()[irType.as<core::GenericTypePtr>()]);
-
-	CHECK_TYPE		(ASTctx.getRecordType(classDecl),"BaseClass" ,
-												   	 "struct BaseClass <fieldA:uint<2>>");
-	CHECK_POINTER	(ASTctx.getRecordType(classDecl),"ref<array<BaseClass,1>>",
-												   	 "ref<array<struct BaseClass <fieldA:uint<2>>,1>>");
-	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl),"struct<_cpp_ref:ref<BaseClass>>",
-												     "struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>");
-
-	CHECK_TYPE		(ASTctx.getRecordType(classDecl).withConst(),"BaseClass",
-															     "struct BaseClass <fieldA:uint<2>>");
-	CHECK_POINTER	(ASTctx.getRecordType(classDecl).withConst(),"src<array<BaseClass,1>>",
-															     "src<array<struct BaseClass <fieldA:uint<2>>,1>>");
-	CHECK_REFERENCE	(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:src<BaseClass>>",
-		"struct<_const_cpp_ref:src<struct BaseClass <fieldA:uint<2>>>>");
-
+	
+	CHECK_TYPE(ASTctx.getRecordType(classDecl),"BaseClass" ,
+	           "struct BaseClass <fieldA:uint<2>>");
+	CHECK_POINTER(ASTctx.getRecordType(classDecl),"ref<array<BaseClass,1>>",
+	              "ref<array<struct BaseClass <fieldA:uint<2>>,1>>");
+	CHECK_REFERENCE(ASTctx.getRecordType(classDecl),"struct<_cpp_ref:ref<BaseClass>>",
+	                "struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>");
+	                
+	CHECK_TYPE(ASTctx.getRecordType(classDecl).withConst(),"BaseClass",
+	           "struct BaseClass <fieldA:uint<2>>");
+	CHECK_POINTER(ASTctx.getRecordType(classDecl).withConst(),"src<array<BaseClass,1>>",
+	              "src<array<struct BaseClass <fieldA:uint<2>>,1>>");
+	CHECK_REFERENCE(ASTctx.getRecordType(classDecl).withConst(),"struct<_const_cpp_ref:src<BaseClass>>",
+	                "struct<_const_cpp_ref:src<struct BaseClass <fieldA:uint<2>>>>");
+	                
 	////////////////////////////////////////////////////////
 	//Now that we have a class type, lets make functions
 	{
@@ -396,153 +396,158 @@ TEST(TypeConversion, CombinedTypes) {
 		args.push_back(ASTctx.getPointerType(resultType));
 		auto funcTy = ASTctx.getFunctionType(resultType, args, clang::FunctionProtoType::ExtProtoInfo());
 		CHECK_TYPE(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
-			"((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
+		           "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
 		CHECK_POINTER(funcTy, "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)" ,
-			"((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
+		              "((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)");
 		CHECK_REFERENCE(funcTy, "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>" ,
-			"struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>");
+		                "struct<_cpp_ref:ref<((int<8>,struct<_cpp_ref:ref<int<8>>>,ref<array<int<8>,1>>)->int<8>)>>");
 	}
 	/////////////////////////////////////////////////////////
 	// function with objects
 	{
 		clang::QualType resultType = ASTctx.getRecordType(classDecl);
 		std::vector<clang::QualType> args;
-		args.push_back( resultType);
-		args.push_back( ASTctx.getLValueReferenceType( resultType));
-		args.push_back( ASTctx.getPointerType( resultType));
-		args.push_back( ASTctx.getLValueReferenceType( ASTctx.getPointerType( resultType)));
-		auto funcTy = ASTctx.getFunctionType (resultType, args, clang::FunctionProtoType::ExtProtoInfo() );
-		CHECK_TYPE		(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" ,
-								 "((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)");
-		CHECK_POINTER	(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" ,
-								 "((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)");
-		CHECK_REFERENCE	(funcTy, "struct<_cpp_ref:ref<((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)>>" ,
-								 "struct<_cpp_ref:ref<((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)>>");
+		args.push_back(resultType);
+		args.push_back(ASTctx.getLValueReferenceType(resultType));
+		args.push_back(ASTctx.getPointerType(resultType));
+		args.push_back(ASTctx.getLValueReferenceType(ASTctx.getPointerType(resultType)));
+		auto funcTy = ASTctx.getFunctionType(resultType, args, clang::FunctionProtoType::ExtProtoInfo());
+		CHECK_TYPE(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" ,
+		           "((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)");
+		CHECK_POINTER(funcTy, "((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)" ,
+		              "((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)");
+		CHECK_REFERENCE(funcTy,
+		                "struct<_cpp_ref:ref<((BaseClass,struct<_cpp_ref:ref<BaseClass>>,ref<array<BaseClass,1>>,struct<_cpp_ref:ref<ref<array<BaseClass,1>>>>)->BaseClass)>>" ,
+		                "struct<_cpp_ref:ref<((struct BaseClass <fieldA:uint<2>>,struct<_cpp_ref:ref<struct BaseClass <fieldA:uint<2>>>>,ref<array<struct BaseClass <fieldA:uint<2>>,1>>,struct<_cpp_ref:ref<ref<array<struct BaseClass <fieldA:uint<2>>,1>>>>)->struct BaseClass <fieldA:uint<2>>)>>");
 	}
 }
 
 TEST(TypeConversion, HandleRecursiveStructType) {
 	NodeManager manager;
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/emptyFile.cpp");		// just using some dummy file ..
-	Converter convFactory( manager, tu);
-
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/empty_file.cpp");		// just using some dummy file ..
+	Converter convFactory(manager, tu);
+	
 	const insieme::frontend::ClangCompiler& clang = tu.getCompiler();
 	auto& ASTctx = clang.getASTContext();
-
+	
 	// create rec struct
 	clang::SourceLocation loc;
-	clang::BuiltinType charTy (clang::BuiltinType::SChar);
-	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create( ASTctx,  clang::TagTypeKind::TTK_Class,
-																ASTctx.getTranslationUnitDecl(), loc,
-	                                     						loc, &ASTctx.Idents.get("RecClass"));
-
-	clang::FieldDecl *  fieldOne = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
-															 &ASTctx.Idents.get("one"), charTy.getCanonicalTypeInternal(),
-							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
-	fieldOne->setAccess(clang::AccessSpecifier::AS_public );
-
+	clang::BuiltinType charTy(clang::BuiltinType::SChar);
+	clang::RecordDecl *classDecl  = clang::CXXRecordDecl::Create(ASTctx,  clang::TagTypeKind::TTK_Class,
+	                                ASTctx.getTranslationUnitDecl(), loc,
+	                                loc, &ASTctx.Idents.get("RecClass"));
+	                                
+	clang::FieldDecl *  fieldOne = clang::FieldDecl::Create(ASTctx, classDecl, loc, loc,
+	                               &ASTctx.Idents.get("one"), charTy.getCanonicalTypeInternal(),
+	                               0, 0, false, clang::InClassInitStyle::ICIS_NoInit);
+	fieldOne->setAccess(clang::AccessSpecifier::AS_public);
+	
 	auto  classTy = ASTctx.getRecordType(classDecl) ;
-	clang::FieldDecl *  fieldPtr = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
-															 &ASTctx.Idents.get("rec_ptr"), ASTctx.getPointerType (classTy),
-							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
-	fieldPtr->setAccess(clang::AccessSpecifier::AS_public );
-
-	clang::FieldDecl *  fieldRef = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
-															 &ASTctx.Idents.get("ref"), ASTctx.getLValueReferenceType (classTy),
-							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
-	fieldRef->setAccess(clang::AccessSpecifier::AS_public );
-
-	clang::FieldDecl *  fieldConstRef = clang::FieldDecl::Create( ASTctx, classDecl, loc, loc,
-															 &ASTctx.Idents.get("const_ref"), ASTctx.getLValueReferenceType (classTy.withConst()),
-							 								 0, 0, false, clang::InClassInitStyle::ICIS_NoInit );
-	fieldConstRef->setAccess(clang::AccessSpecifier::AS_public );
-
-	classDecl->startDefinition ();
-	classDecl->addDeclInternal (fieldOne);
-	classDecl->addDeclInternal (fieldPtr);
-	classDecl->addDeclInternal (fieldRef);
-	classDecl->addDeclInternal (fieldConstRef);
-	classDecl->setCompleteDefinition (true);
-
-	CHECK_TYPE		(classTy, "RecClass",
-							  "rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}");
-	CHECK_POINTER	(classTy, "ref<array<RecClass,1>>",
-							  "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>},1>>");
-	CHECK_REFERENCE	(classTy, "struct<_cpp_ref:ref<RecClass>>",
-							  "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}>>");
+	clang::FieldDecl *  fieldPtr = clang::FieldDecl::Create(ASTctx, classDecl, loc, loc,
+	                               &ASTctx.Idents.get("rec_ptr"), ASTctx.getPointerType(classTy),
+	                               0, 0, false, clang::InClassInitStyle::ICIS_NoInit);
+	fieldPtr->setAccess(clang::AccessSpecifier::AS_public);
+	
+	clang::FieldDecl *  fieldRef = clang::FieldDecl::Create(ASTctx, classDecl, loc, loc,
+	                               &ASTctx.Idents.get("ref"), ASTctx.getLValueReferenceType(classTy),
+	                               0, 0, false, clang::InClassInitStyle::ICIS_NoInit);
+	fieldRef->setAccess(clang::AccessSpecifier::AS_public);
+	
+	clang::FieldDecl *  fieldConstRef = clang::FieldDecl::Create(ASTctx, classDecl, loc, loc,
+	                                    &ASTctx.Idents.get("const_ref"), ASTctx.getLValueReferenceType(classTy.withConst()),
+	                                    0, 0, false, clang::InClassInitStyle::ICIS_NoInit);
+	fieldConstRef->setAccess(clang::AccessSpecifier::AS_public);
+	
+	classDecl->startDefinition();
+	classDecl->addDeclInternal(fieldOne);
+	classDecl->addDeclInternal(fieldPtr);
+	classDecl->addDeclInternal(fieldRef);
+	classDecl->addDeclInternal(fieldConstRef);
+	classDecl->setCompleteDefinition(true);
+	
+	CHECK_TYPE(classTy, "RecClass",
+	           "rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}");
+	CHECK_POINTER(classTy, "ref<array<RecClass,1>>",
+	              "ref<array<rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>},1>>");
+	CHECK_REFERENCE(classTy, "struct<_cpp_ref:ref<RecClass>>",
+	                "struct<_cpp_ref:ref<rec 'RecClass.{'RecClass=struct RecClass <one:int<1>,rec_ptr:ref<array<'RecClass,1>>,ref:struct<_cpp_ref:ref<'RecClass>>,const_ref:struct<_const_cpp_ref:src<'RecClass>>>}>>");
 }
 
 
 TEST(TypeConversion, FileTest) {
 	NodeManager manager;
-	const std::string filename = CLANG_SRC_DIR "/inputs/types.c";
+	const std::string filename = FRONTEND_TEST_DIR "/inputs/types.c";
 	std::vector<std::string> argv = { "compiler", filename };
 	cmd::Options options = cmd::Options::parse(argv);
 	options.job.frontendExtensionInit();
 	insieme::frontend::TranslationUnit tu(manager, filename, options.job);
-
-	auto filter = [](const insieme::frontend::pragma::Pragma& curr) { return curr.getType() == "test::expected"; };
-
+	
+	auto filter = [](const insieme::frontend::pragma::Pragma& curr) {
+		return curr.getType() == "test::expected";
+	};
+	
 	const auto begin = tu.pragmas_begin(filter);
 	const auto end = tu.pragmas_end();
-
+	
 	EXPECT_NE(begin, end);
-
+	
 	// we use an internal manager to have private counter for variables so we can write independent tests
 	NodeManager mgr;
-
+	
 	insieme::frontend::conversion::Converter convFactory(mgr, tu, options.job);
 	convFactory.convert();
-
+	
 	auto resolve = [&](const core::NodePtr& cur) {
 		return convFactory.getIRTranslationUnit().resolve(cur);
 	};
-
+	
 	for(auto it = begin; it != end; ++it) {
 		const auto pragma = *it;
-
+		
 		if(pragma->isStatement()) {
 			StatementPtr stmt = insieme::frontend::fixVariableIDs(resolve(convFactory.convertStmt(pragma->getStatement()))).as<StatementPtr>();
-            std::string match = toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE));
-            EXPECT_TRUE(stmt->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
-			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(stmt), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
-		} else {
+			std::string match = toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE));
+			EXPECT_TRUE(stmt->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
+			EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(stmt), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"');
+		}
+		else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>(pragma->getDecl())) {
 				NodePtr node = resolve(convFactory.convertType(td->getTypeForDecl()->getCanonicalTypeInternal()));
 				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
-				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"');
+			}
+			else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>(pragma->getDecl())) {
 				NodePtr node = resolve(convFactory.convertVarDecl(vd));
 				EXPECT_TRUE(node->hasAnnotation(ia::ExpectedIRAnnotation::KEY));
-				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"' );
+				EXPECT_EQ(ia::ExpectedIRAnnotation::getValue(node), '\"' + node->toString() + '\"');
 			}
 		}
 	}
 }
 
 TEST(TypeConversion, EnumTest) {
-		insieme::frontend::Source file(
-				R"(
+	insieme::frontend::Source file(
+	    R"(
                     enum Color {RED, BLUE=10};
                     int main() {
                         enum Color a;
                         a=RED;
                     }
 				)"
-		);
-        core::NodeManager manager;
-		core::IRBuilder builder(manager);
-		auto irtu = insieme::frontend::ConversionJob(file).toIRTranslationUnit(manager);
-		auto program = insieme::frontend::tu::toProgram(manager, irtu);
-		//check for some enum features
-		EXPECT_TRUE(toString(program).find("ref<__insieme_enum<_enum_") != std::string::npos);
-		EXPECT_TRUE(toString(program).find("c221_45,__insieme_enum_constant__<_enumCtnt") != std::string::npos);
-		EXPECT_TRUE(toString(program).find("c233_33,0>,__insieme_enum_constant__<_enumCtnt") != std::string::npos);
+	);
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	auto irtu = insieme::frontend::ConversionJob(file).toIRTranslationUnit(manager);
+	auto program = insieme::frontend::tu::toProgram(manager, irtu);
+	//check for some enum features
+	EXPECT_TRUE(toString(program).find("ref<__insieme_enum<_enum_") != std::string::npos);
+	EXPECT_TRUE(toString(program).find("c221_45,__insieme_enum_constant__<_enumCtnt") != std::string::npos);
+	EXPECT_TRUE(toString(program).find("c233_33,0>,__insieme_enum_constant__<_enumCtnt") != std::string::npos);
 }
 
 TEST(TypeConversion, FunctionPtr) {
-		insieme::frontend::Source file(
-				R"(
+	insieme::frontend::Source file(
+	    R"(
 					int f() { return 1; }
 
 					typedef int (f_t) ();
@@ -550,12 +555,13 @@ TEST(TypeConversion, FunctionPtr) {
 						f_t* a = f;
 					}
 				)"
-		);
-        core::NodeManager manager;
-		core::IRBuilder builder(manager);
-		auto irtu = insieme::frontend::ConversionJob(file).toIRTranslationUnit(manager);
-		auto program = insieme::frontend::tu::toProgram(manager, irtu);
-
-		//check for some enum features
-   		EXPECT_EQ("PROGRAM { \n// Entry Points: \n\trec v0.{v0=fun() {ref<(()->int<4>)> v1 = rec v0.{v0=fun('a v1) {ref<'a> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc_stack); ref_assign(v2, v1); return v2;}}(rec v0.{v0=fun() {return 1;}});}}\n", toString(*program));
+	);
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	auto irtu = insieme::frontend::ConversionJob(file).toIRTranslationUnit(manager);
+	auto program = insieme::frontend::tu::toProgram(manager, irtu);
+	
+	//check for some enum features
+	EXPECT_EQ("PROGRAM { \n// Entry Points: \n\trec v0.{v0=fun() {ref<(()->int<4>)> v1 = rec v0.{v0=fun('a v1) {ref<'a> v2 = ref_alloc(rec v0.{v0=fun('a v1) {return type<'a>;}}(v1), memloc_stack); ref_assign(v2, v1); return v2;}}(rec v0.{v0=fun() {return 1;}});}}\n",
+	          toString(*program));
 }

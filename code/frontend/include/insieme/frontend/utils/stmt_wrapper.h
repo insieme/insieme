@@ -57,25 +57,27 @@ typedef vector<StatementPtr> StatementList;
 struct StmtWrapper: public StatementList {
 	StmtWrapper(const StatementList& list): StatementList(list) {
 	}
-
+	
 	StmtWrapper() :
-			StatementList() {
+		StatementList() {
 	}
 	StmtWrapper(const StatementPtr& stmt) :
-			StatementList( { stmt }) {
+		StatementList( {
+		stmt
+	}) {
 	}
-
+	
 	StatementPtr getSingleStmt() const {
 		assert_eq(size(), 1) << "More than 1 statement present";
 		return front();
 	}
-
+	
 	bool isSingleStmt() const {
 		return size() == 1;
 	}
-
-	std::ostream& operator<<(std::ostream& out){
-		for(auto s : *this){
+	
+	std::ostream& operator<<(std::ostream& out) {
+		for(auto s : *this) {
 			out << "-" << dumpOneLine(s) << "\n";
 		}
 		return out;
@@ -84,9 +86,9 @@ struct StmtWrapper: public StatementList {
 
 StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
 StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
-ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs, 
-							const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
-
+ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs,
+                            const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
+                            
 } // end namespace stmtutils
 } // end namespace frontend
 } // end namespace insieme

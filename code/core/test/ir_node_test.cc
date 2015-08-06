@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,274 +49,276 @@ namespace core {
 namespace new_core {
 
 
-	TEST(NodeType, Print) {
+TEST(NodeType, Print) {
 
-		EXPECT_EQ("TypeVariable", toString(NT_TypeVariable));
+	EXPECT_EQ("TypeVariable", toString(NT_TypeVariable));
+	
+}
 
-	}
+TEST(NodePtr, Casts) {
 
-	TEST(NodePtr, Casts) {
+	NodeManager manager;
+	
+	ValuePtr value = BoolValue::get(manager, true);
+	ValuePtr value2 = IntValue::get(manager, 12);
+	
+	EXPECT_TRUE(static_pointer_cast<const BoolValue>(value));
+	EXPECT_TRUE(static_pointer_cast<BoolValuePtr>(value));
+	
+	EXPECT_TRUE(dynamic_pointer_cast<const BoolValue>(value));
+	EXPECT_TRUE(dynamic_pointer_cast<BoolValuePtr>(value));
+	
+	EXPECT_FALSE(dynamic_pointer_cast<const BoolValue>(value2));
+	EXPECT_FALSE(dynamic_pointer_cast<BoolValuePtr>(value2));
+	
+}
 
-		NodeManager manager;
+TEST(NodePtr, Access) {
 
-		ValuePtr value = BoolValue::get(manager, true);
-		ValuePtr value2 = IntValue::get(manager, 12);
+	NodeManager manager;
+	
+	ConcreteIntTypeParamPtr p = ConcreteIntTypeParam::get(manager, 12);
+	
+	EXPECT_TRUE(typeid(p->getParam()) == typeid(UIntValuePtr));
+	EXPECT_TRUE(p->getParam());
+	EXPECT_EQ(UIntValue::get(manager, 12), p->getParam());
+	
+	EXPECT_EQ(sizeof(void*), sizeof(NodePtr));
+	EXPECT_EQ(sizeof(void*), sizeof(TupleTypePtr));
+}
 
-		EXPECT_TRUE(static_pointer_cast<const BoolValue>(value));
-		EXPECT_TRUE(static_pointer_cast<BoolValuePtr>(value));
+TEST(AddressPtr, Casts) {
 
-		EXPECT_TRUE(dynamic_pointer_cast<const BoolValue>(value));
-		EXPECT_TRUE(dynamic_pointer_cast<BoolValuePtr>(value));
-
-		EXPECT_FALSE(dynamic_pointer_cast<const BoolValue>(value2));
-		EXPECT_FALSE(dynamic_pointer_cast<BoolValuePtr>(value2));
-
-	}
-
-	TEST(NodePtr, Access) {
-
-		NodeManager manager;
-
-		ConcreteIntTypeParamPtr p = ConcreteIntTypeParam::get(manager, 12);
-
-		EXPECT_TRUE(typeid(p->getParam()) == typeid(UIntValuePtr));
-		EXPECT_TRUE(p->getParam());
-		EXPECT_EQ(UIntValue::get(manager, 12), p->getParam());
-
-		EXPECT_EQ(sizeof(void*), sizeof(NodePtr));
-		EXPECT_EQ(sizeof(void*), sizeof(TupleTypePtr));
-	}
-
-	TEST(AddressPtr, Casts) {
-
-		NodeManager manager;
-
-		ValueAddress value(BoolValue::get(manager, true));
-		ValueAddress value2(IntValue::get(manager, 12));
-
-		EXPECT_TRUE(static_address_cast<const BoolValue>(value));
-		EXPECT_TRUE(static_address_cast<BoolValueAddress>(value));
-
-		EXPECT_TRUE(dynamic_address_cast<const BoolValue>(value));
-		EXPECT_TRUE(dynamic_address_cast<BoolValueAddress>(value));
-
-		EXPECT_FALSE(dynamic_address_cast<const BoolValue>(value2));
-		EXPECT_FALSE(dynamic_address_cast<BoolValueAddress>(value2));
-
+	NodeManager manager;
+	
+	ValueAddress value(BoolValue::get(manager, true));
+	ValueAddress value2(IntValue::get(manager, 12));
+	
+	EXPECT_TRUE(static_address_cast<const BoolValue>(value));
+	EXPECT_TRUE(static_address_cast<BoolValueAddress>(value));
+	
+	EXPECT_TRUE(dynamic_address_cast<const BoolValue>(value));
+	EXPECT_TRUE(dynamic_address_cast<BoolValueAddress>(value));
+	
+	EXPECT_FALSE(dynamic_address_cast<const BoolValue>(value2));
+	EXPECT_FALSE(dynamic_address_cast<BoolValueAddress>(value2));
+	
 //		EXPECT_EQ(sizeof(void*), sizeof(NodeAddress));
-	}
+}
 
-	TEST(AddressPtr, Access) {
+TEST(AddressPtr, Access) {
 
-		NodeManager manager;
+	NodeManager manager;
+	
+	ConcreteIntTypeParamAddress a(ConcreteIntTypeParam::get(manager, 12));
+	
+	EXPECT_TRUE(typeid(a->getParam()) == typeid(UIntValueAddress));
+	EXPECT_TRUE(a->getParam());
+	EXPECT_EQ("0", toString(a));
+	EXPECT_EQ("0-0", toString(a->getParam()));
+	EXPECT_EQ(UIntValue::get(manager, 12), a->getParam().getAddressedNode());
+}
 
-		ConcreteIntTypeParamAddress a(ConcreteIntTypeParam::get(manager, 12));
-
-		EXPECT_TRUE(typeid(a->getParam()) == typeid(UIntValueAddress));
-		EXPECT_TRUE(a->getParam());
-		EXPECT_EQ("0", toString(a));
-		EXPECT_EQ("0-0", toString(a->getParam()));
-		EXPECT_EQ(UIntValue::get(manager, 12), a->getParam().getAddressedNode());
-	}
-
-	TEST(FixedSizeNode, ChildListTest) {
-		NodeManager manager;
-
-		EXPECT_TRUE(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(UIntValue::get(manager, 12))));
-
-		// death tests do not pass valgrind test
+TEST(FixedSizeNode, ChildListTest) {
+	NodeManager manager;
+	
+	EXPECT_TRUE(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(UIntValue::get(manager, 12))));
+	
+	// death tests do not pass valgrind test
 //		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>()), ".*");
 //		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(BoolValue::get(manager, false))), ".*");
+}
+
+
+TEST(NodePtr, HashMapSpeed) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	
+	int N = 100; //0000;
+	bool showTimes = false;
+	
+	// create a million nodes
+	vector<IntValuePtr> list;
+	{
+		utils::Timer timer("create");
+		for(int i=0; i<N; i++) {
+			list.push_back(builder.intValue(i));
+		}
+		timer.stop();
+		EXPECT_FALSE(showTimes) << timer;
 	}
-
-
-	TEST(NodePtr, HashMapSpeed) {
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		int N = 100; //0000;
-		bool showTimes = false;
-
-		// create a million nodes
-		vector<IntValuePtr> list;
-		{
-			utils::Timer timer("create");
-			for (int i=0; i<N; i++) {
-				list.push_back(builder.intValue(i));
-			}
-			timer.stop();
-			EXPECT_FALSE(showTimes) << timer;
-		}
-
-		{
-			vector<IntValuePtr> list2;
-			utils::Timer timer("vector");
-			for_each(list, [&](const IntValuePtr& cur){
-				list2.push_back(cur);
-			});
-			timer.stop();
-			EXPECT_FALSE(showTimes) << timer;
-		}
-
-		{
-			boost::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> set;
-			utils::Timer timer("boost::unordered_set");
-			for_each(list, [&](const IntValuePtr& cur){
-				set.insert(cur);
-			});
-			timer.stop();
-			EXPECT_FALSE(showTimes) << timer;
-		}
-
-		{
-			std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> set;
-			utils::Timer timer("std::unordered_set");
-			for_each(list, [&](const IntValuePtr& cur){
-				set.insert(cur);
-			});
-			timer.stop();
-			EXPECT_FALSE(showTimes) << timer;
-		}
-
-		{
-			std::set<IntValuePtr, compare_target<IntValuePtr>> set;
-			utils::Timer timer("std::set");
-			for_each(list, [&](const IntValuePtr& cur){
-				set.insert(cur);
-			});
-			timer.stop();
-			EXPECT_FALSE(showTimes) << timer;
-		}
-
+	
+	{
+		vector<IntValuePtr> list2;
+		utils::Timer timer("vector");
+		for_each(list, [&](const IntValuePtr& cur) {
+			list2.push_back(cur);
+		});
+		timer.stop();
+		EXPECT_FALSE(showTimes) << timer;
 	}
-
-	TEST(Node, DumpTest) {
-
-		// just create some node and dump it
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		TypePtr A = builder.genericType("A");
-		TypePtr B = builder.genericType("B", toVector(A));
-		auto node = B;
-
-		// to selected output stream
-		{
-			//dump(node);
-			std::stringstream buf;
-			dump(node, buf);
-			EXPECT_EQ("B<A>\n", buf.str());
-		}
-
-		{
-			//dumpText(node);
-			std::stringstream buf;
-			dumpText(node, buf);
-			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n", buf.str());
-		}
-
-		{
-			std::stringstream buf;
-			dumpDetail(node, buf);
-			EXPECT_EQ("B<A>\n", buf.str());
-		}
-
-		// test literal printing
-		ExpressionPtr E = builder.literal("x", B);
-		{
-			std::stringstream buf;
-			dump(E, buf);
-			EXPECT_EQ("x\n", buf.str());
-		}
-
-		{
-			std::stringstream buf;
-			dumpDetail(E, buf);
-			EXPECT_EQ("x:B<A>\n", buf.str());
-		}
+	
+	{
+		boost::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> set;
+		utils::Timer timer("boost::unordered_set");
+		for_each(list, [&](const IntValuePtr& cur) {
+			set.insert(cur);
+		});
+		timer.stop();
+		EXPECT_FALSE(showTimes) << timer;
 	}
+	
+	{
+		std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> set;
+		utils::Timer timer("std::unordered_set");
+		for_each(list, [&](const IntValuePtr& cur) {
+			set.insert(cur);
+		});
+		timer.stop();
+		EXPECT_FALSE(showTimes) << timer;
+	}
+	
+	{
+		std::set<IntValuePtr, compare_target<IntValuePtr>> set;
+		utils::Timer timer("std::set");
+		for_each(list, [&](const IntValuePtr& cur) {
+			set.insert(cur);
+		});
+		timer.stop();
+		EXPECT_FALSE(showTimes) << timer;
+	}
+	
+}
 
-	TEST(Node, DumpPlainTest) {
+TEST(Node, DumpTest) {
 
-		// just create some node and dump it
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		TypePtr A = builder.genericType("A");
-		TypePtr B = builder.genericType("B");
-		TypePtr C = builder.genericType("C");
-
+	// just create some node and dump it
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	TypePtr A = builder.genericType("A");
+	TypePtr B = builder.genericType("B", toVector(A));
+	auto node = B;
+	
+	// to selected output stream
+	{
+		//dump(node);
 		std::stringstream buf;
-
-		dump(A,buf);
-		buf << "test\n";
-		dump(B,buf);
-		buf << "test\n";
-		buf << dump(C);
-
-		EXPECT_EQ("A\ntest\nB\ntest\nC\n", buf.str());
-
+		dump(node, buf);
+		EXPECT_EQ("B<A>\n", buf.str());
 	}
-
-	TEST(Node, DumpInStreamTest) {
-
-		// just create some node and dump it
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		TypePtr A = builder.genericType("A");
-		TypePtr B = builder.genericType("B", toVector(A));
-		auto node = B;
-
-		// to selected output stream
-		{
-			//dump(node);
-			std::stringstream buf;
-			buf << dump(node);
-			EXPECT_EQ("B<A>\n", buf.str());
-		}
-
-		{
-			//dumpText(node);
-			std::stringstream buf;
-			buf << dumpText(node);
-			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n", buf.str());
-		}
-
-		{
-			std::stringstream buf;
-			buf << dumpDetail(node);
-			EXPECT_EQ("B<A>\n", buf.str());
-		}
-
-		// test literal printing
-		ExpressionPtr E = builder.literal("x", B);
-		{
-			std::stringstream buf;
-			buf << dump(E);
-			EXPECT_EQ("x\n", buf.str());
-		}
-
-		{
-			std::stringstream buf;
-			buf << dumpDetail(E);
-			EXPECT_EQ("x:B<A>\n", buf.str());
-		}
-
-		// test re-using dump object
-		auto d = dump(E);
-		{
-			std::stringstream buf;
-			buf << d;
-			EXPECT_EQ("x\n", buf.str());
-		}
-		{
-			std::stringstream buf;
-			buf << d;
-			EXPECT_EQ("x\n", buf.str());
-		}
+	
+	{
+		//dumpText(node);
+		std::stringstream buf;
+		dumpText(node, buf);
+		EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n",
+		          buf.str());
 	}
+	
+	{
+		std::stringstream buf;
+		dumpDetail(node, buf);
+		EXPECT_EQ("B<A>\n", buf.str());
+	}
+	
+	// test literal printing
+	ExpressionPtr E = builder.literal("x", B);
+	{
+		std::stringstream buf;
+		dump(E, buf);
+		EXPECT_EQ("x\n", buf.str());
+	}
+	
+	{
+		std::stringstream buf;
+		dumpDetail(E, buf);
+		EXPECT_EQ("x:B<A>\n", buf.str());
+	}
+}
+
+TEST(Node, DumpPlainTest) {
+
+	// just create some node and dump it
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	TypePtr A = builder.genericType("A");
+	TypePtr B = builder.genericType("B");
+	TypePtr C = builder.genericType("C");
+	
+	std::stringstream buf;
+	
+	dump(A,buf);
+	buf << "test\n";
+	dump(B,buf);
+	buf << "test\n";
+	buf << dump(C);
+	
+	EXPECT_EQ("A\ntest\nB\ntest\nC\n", buf.str());
+	
+}
+
+TEST(Node, DumpInStreamTest) {
+
+	// just create some node and dump it
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	TypePtr A = builder.genericType("A");
+	TypePtr B = builder.genericType("B", toVector(A));
+	auto node = B;
+	
+	// to selected output stream
+	{
+		//dump(node);
+		std::stringstream buf;
+		buf << dump(node);
+		EXPECT_EQ("B<A>\n", buf.str());
+	}
+	
+	{
+		//dumpText(node);
+		std::stringstream buf;
+		buf << dumpText(node);
+		EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n",
+		          buf.str());
+	}
+	
+	{
+		std::stringstream buf;
+		buf << dumpDetail(node);
+		EXPECT_EQ("B<A>\n", buf.str());
+	}
+	
+	// test literal printing
+	ExpressionPtr E = builder.literal("x", B);
+	{
+		std::stringstream buf;
+		buf << dump(E);
+		EXPECT_EQ("x\n", buf.str());
+	}
+	
+	{
+		std::stringstream buf;
+		buf << dumpDetail(E);
+		EXPECT_EQ("x:B<A>\n", buf.str());
+	}
+	
+	// test re-using dump object
+	auto d = dump(E);
+	{
+		std::stringstream buf;
+		buf << d;
+		EXPECT_EQ("x\n", buf.str());
+	}
+	{
+		std::stringstream buf;
+		buf << d;
+		EXPECT_EQ("x\n", buf.str());
+	}
+}
 
 } // end namespace new_core
 } // end namespace core

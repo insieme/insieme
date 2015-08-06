@@ -106,16 +106,16 @@ void insieme_cleanup_context(irt_context* context) {
 // work item function definitions
 
 void insieme_wi_startup_implementation_simple(irt_work_item* wi) {
-	for (int i = 0; i < 10; i++) {
+	for(int i = 0; i < 10; i++) {
 		irt_parallel_job job;
 		job.max = 1;
 		job.impl = &g_insieme_impl_table[1];
-
+		
 		irt_joinable child = irt_task(&job);
-
+		
 		irt_merge(child);
 	}
-
+	
 	//not really much to check here - we just want to make sure we end up here eventually
 	EXPECT_TRUE(true);
 }
@@ -128,18 +128,18 @@ void insieme_wi_startup_implementation_simple_child(irt_work_item* wi) {
 void insieme_wi_startup_implementation_complex(irt_work_item* wi) {
 	const uint32 runs = 100;
 	irt_joinable child[runs];
-	for (int i = 0; i < runs; i++) {
+	for(int i = 0; i < runs; i++) {
 		irt_parallel_job job;
 		job.max = 1;
 		job.impl = &g_insieme_impl_table[3];
-
+		
 		child[i] = irt_task(&job);
 	}
-
-	for (int i = 0; i < runs; i++) {
+	
+	for(int i = 0; i < runs; i++) {
 		irt_merge(child[i]);
 	}
-
+	
 	//not really much to check here - we just want to make sure we end up here eventually
 	EXPECT_TRUE(true);
 }
@@ -169,10 +169,10 @@ void insieme_wi_startup_implementation_recursive_child(irt_work_item* wi) {
 }
 
 uint32 fib(const uint32 param) {
-	if (param == 1 || param == 2) {
+	if(param == 1 || param == 2) {
 		return 1;
 	}
-
+	
 	data_struct args1;
 	args1.type_id = - ((int32) sizeof(data_struct));
 	args1.param = param - 1;
@@ -182,7 +182,7 @@ uint32 fib(const uint32 param) {
 	job1.impl = &g_insieme_impl_table[5];
 	job1.args = (irt_lw_data_item*) &args1;
 	irt_joinable task1 = irt_task(&job1);
-
+	
 	data_struct args2;
 	args2.type_id = - ((int32) sizeof(data_struct));
 	args2.param = param - 2;
@@ -192,11 +192,11 @@ uint32 fib(const uint32 param) {
 	job2.impl = &g_insieme_impl_table[5];
 	job2.args = (irt_lw_data_item*) &args2;
 	irt_joinable task2 = irt_task(&job2);
-
+	
 	irt_merge(task1);
 	irt_merge(task2);
 	//irt_wi_join_all(irt_wi_get_current());
-
+	
 	return *args1.result + *args2.result;
 }
 

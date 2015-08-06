@@ -39,41 +39,49 @@
 namespace insieme {
 namespace annotations {
 
-	void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest) {
+void migrateMetaInfos(const core::NodePtr& src, const core::NodePtr& dest) {
 
-		// skip operation if there is nothing to do
-		if (!src || !dest || src == dest) return;
-
-		// just iterate through all annotations and move meta information
-		for(const auto& cur : src->getAnnotations()) {
-
-			// skip non-meta info annotations
-			if (!isMetaInfo(cur.second)) continue;
-
-			// move annotation (using the clone operation)
-			cur.second->clone(cur.second, dest);
+	// skip operation if there is nothing to do
+	if(!src || !dest || src == dest) {
+		return;
+	}
+	
+	// just iterate through all annotations and move meta information
+	for(const auto& cur : src->getAnnotations()) {
+	
+		// skip non-meta info annotations
+		if(!isMetaInfo(cur.second)) {
+			continue;
 		}
-
+		
+		// move annotation (using the clone operation)
+		cur.second->clone(cur.second, dest);
 	}
+	
+}
 
-	void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest) {
+void moveMetaInfos(const core::NodePtr& src, const core::NodePtr& dest) {
 
-		// skip operation if there is nothing to do
-		if (!src || !dest || src == dest) return;
-
-		migrateMetaInfos(src, dest);
-
-		clearMetaInfos(src);
+	// skip operation if there is nothing to do
+	if(!src || !dest || src == dest) {
+		return;
 	}
+	
+	migrateMetaInfos(src, dest);
+	
+	clearMetaInfos(src);
+}
 
-	AnnotationMap getMetaInfos(const core::NodePtr& npr) {
-		AnnotationMap ann = npr->getAnnotations();
-		AnnotationMap ret;
-		for(const auto& elem : ann) {
-			if(isMetaInfo(elem.second)) ret.insert(elem);
+AnnotationMap getMetaInfos(const core::NodePtr& npr) {
+	AnnotationMap ann = npr->getAnnotations();
+	AnnotationMap ret;
+	for(const auto& elem : ann) {
+		if(isMetaInfo(elem.second)) {
+			ret.insert(elem);
 		}
-		return ret;
 	}
+	return ret;
+}
 
 
 } // end namespace annotations

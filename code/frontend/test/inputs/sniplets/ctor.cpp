@@ -1,14 +1,14 @@
 
-class Obj{
+class Obj {
 public:
 	int a;
-
-	Obj(int a){
+	
+	Obj(int a) {
 	}
-
+	
 };
 
 
-int main(){
+int main() {
 	Obj a = Obj(4);
 }

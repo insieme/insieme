@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,58 +44,60 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-	/**
-	 * Converts the given statement into an equivalent sequential code variant by replacing
-	 * all parallel constructs inside with their sequential counterpart.
-	 *
-	 * @param manager the manager used to create new nodes
-	 * @param stmt the statement to be sequentialized
-	 * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
-	 * @return a sequential version of the code
-	 * @throws NotSequentializableException in case the conversion can not be completed
-	 */
-	NodePtr sequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps = true);
+/**
+ * Converts the given statement into an equivalent sequential code variant by replacing
+ * all parallel constructs inside with their sequential counterpart.
+ *
+ * @param manager the manager used to create new nodes
+ * @param stmt the statement to be sequentialized
+ * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
+ * @return a sequential version of the code
+ * @throws NotSequentializableException in case the conversion can not be completed
+ */
+NodePtr sequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps = true);
 
-	template<typename T>
-	Pointer<const T> sequentialize(NodeManager& manager, const Pointer<const T>& code, bool removeSyncOps = true) {
-		return sequentialize(manager, NodePtr(code), removeSyncOps).as<Pointer<const T>>();
+template<typename T>
+Pointer<const T> sequentialize(NodeManager& manager, const Pointer<const T>& code, bool removeSyncOps = true) {
+	return sequentialize(manager, NodePtr(code), removeSyncOps).as<Pointer<const T>>();
+}
+
+/**
+ * Converts the given statement into an equivalent sequential code variant by replacing
+ * all parallel constructs inside with their sequential counterpart.
+ *
+ * @param manager the manager used to create new nodes
+ * @param stmt the statement to be sequentialized
+ * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
+ * @return a sequential version of the code or a null pointer if the given code can not be
+ * 			safely sequentialized.
+ */
+NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps = true);
+
+/**
+ * A generic form of the trySequentialize function preserving the type of the pointer being
+ * passed as an argument. The caller has to make sure that the result type is still valid after
+ * the sequentialization. If the sequentialization fails, a null pointer will be returned.
+ *
+ * @param manager the manager used to create new nodes
+ * @param stmt the statement to be sequentialized
+ * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
+ * @return a sequential version of the code or a null pointer if the given code can not be
+ * 			safely sequentialized.
+ */
+template<typename T>
+Pointer<const T> trySequentialize(NodeManager& manager, const Pointer<const T>& code, bool removeSyncOps = true) {
+	return trySequentialize(manager, NodePtr(code), removeSyncOps).as<Pointer<const T>>();
+}
+
+class NotSequentializableException : public std::exception {
+	std::string msg;
+public:
+	NotSequentializableException(const string& msg = "Unknown Error") : msg(msg) {};
+	virtual const char* what() const throw() {
+		return msg.c_str();
 	}
-
-	/**
-	 * Converts the given statement into an equivalent sequential code variant by replacing
-	 * all parallel constructs inside with their sequential counterpart.
-	 *
-	 * @param manager the manager used to create new nodes
-	 * @param stmt the statement to be sequentialized
-	 * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
-	 * @return a sequential version of the code or a null pointer if the given code can not be
-	 * 			safely sequentialized.
-	 */
-	NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps = true);
-
-	/**
-	 * A generic form of the trySequentialize function preserving the type of the pointer being
-	 * passed as an argument. The caller has to make sure that the result type is still valid after
-	 * the sequentialization. If the sequentialization fails, a null pointer will be returned.
-	 *
-	 * @param manager the manager used to create new nodes
-	 * @param stmt the statement to be sequentialized
-	 * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
-	 * @return a sequential version of the code or a null pointer if the given code can not be
-	 * 			safely sequentialized.
-	 */
-	template<typename T>
-	Pointer<const T> trySequentialize(NodeManager& manager, const Pointer<const T>& code, bool removeSyncOps = true) {
-		return trySequentialize(manager, NodePtr(code), removeSyncOps).as<Pointer<const T>>();
-	}
-
-	class NotSequentializableException : public std::exception {
-		std::string msg;
-	public:
-		NotSequentializableException(const string& msg = "Unknown Error") : msg(msg) {};
-		virtual const char* what() const throw() { return msg.c_str(); }
-		virtual ~NotSequentializableException() throw() { }
-	};
+	virtual ~NotSequentializableException() throw() { }
+};
 
 } // end namespace transform
 } // end namespace core

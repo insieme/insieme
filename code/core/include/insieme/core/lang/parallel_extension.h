@@ -42,25 +42,25 @@ namespace insieme {
 namespace core {
 namespace lang {
 
+/**
+ */
+class ParallelExtension : public core::lang::Extension {
+
 	/**
+	 * Allow the node manager to create instances of this class.
 	 */
-	class ParallelExtension : public core::lang::Extension {
-
-		/**
-		 * Allow the node manager to create instances of this class.
-		 */
-		friend class core::NodeManager;
-
-		/**
-		 * Creates a new instance based on the given node manager.
-		 */
-		ParallelExtension(core::NodeManager& manager)
-				: core::lang::Extension(manager) {}
-
-	public:
-		// An extension representing a busy waiting loop
-		LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
-	};
+	friend class core::NodeManager;
+	
+	/**
+	 * Creates a new instance based on the given node manager.
+	 */
+	ParallelExtension(core::NodeManager& manager)
+		: core::lang::Extension(manager) {}
+		
+public:
+	// An extension representing a busy waiting loop
+	LANG_EXT_DERIVED(BusyLoop, "lambda (()=>bool condition) -> unit { while(condition()) { } }");
+};
 }
 }
 }

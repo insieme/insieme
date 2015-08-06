@@ -49,7 +49,7 @@
 #define IRT_CWBUFFER_MASK (IRT_CWBUFFER_LENGTH-1)
 
 #if 0
-// NOTE TODO 
+// NOTE TODO
 // CWB implementation not working in /omp/private_iterator test case
 
 // ============================================================================ Circular work buffers
@@ -116,16 +116,22 @@ static inline bool irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_ite
 	irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
-		if(state.top_update != state.top_val) continue; // operation in progress on top
+		if(state.top_update != state.top_val) {
+			continue;    // operation in progress on top
+		}
 		// check for space
 		newstate.all = state.all;
 		newstate.top_update = (newstate.top_update+1) & IRT_CWBUFFER_MASK;
-		if(newstate.top_update == state.bot_update 
-			|| newstate.top_update == state.bot_val) return false; // not enough space in buffer, would be full after op
+		if(newstate.top_update == state.bot_update
+		        || newstate.top_update == state.bot_val) {
+			return false;    // not enough space in buffer, would be full after op
+		}
 		// if we reach this point and no changes happened, we can perform our op
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) break; // repeat if state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) {
+			break;    // repeat if state change since check
+		}
 	}
-
+	
 	// write actual data to buffer
 	//wb->items[newstate.top_update] = wi;
 	// finish operation - force compiler to maintain operation order by using atomic for assignment
@@ -139,16 +145,22 @@ static inline bool irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item
 	irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
-		if(state.bot_update != state.bot_val) continue; // operation in progress on bot
+		if(state.bot_update != state.bot_val) {
+			continue;    // operation in progress on bot
+		}
 		// check for space
 		newstate.all = state.all;
 		newstate.bot_update = (newstate.bot_update-1) & IRT_CWBUFFER_MASK;
-		if(newstate.bot_update == state.top_update 
-			|| newstate.bot_update == state.top_val) return false; // not enough space in buffer, would be full after op
+		if(newstate.bot_update == state.top_update
+		        || newstate.bot_update == state.top_val) {
+			return false;    // not enough space in buffer, would be full after op
+		}
 		// if we reach this point and no changes happened, we can perform our op
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) break; // repeat if state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) {
+			break;    // repeat if state change since check
+		}
 	}
-
+	
 	// write actual data to buffer
 	//wb->items[newstate.bot_val] = wi;
 	// finish operation - force compiler to maintain operation order by using atomic for assignment
@@ -162,17 +174,25 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
-		if(state.top_val == state.bot_val) return NULL; // empty buffer
-		if(state.top_update != state.top_val) continue; // operation in progress on top
-		if(state.top_val == state.bot_update) continue; // conflicting op in progress on bot
+		if(state.top_val == state.bot_val) {
+			return NULL;    // empty buffer
+		}
+		if(state.top_update != state.top_val) {
+			continue;    // operation in progress on top
+		}
+		if(state.top_val == state.bot_update) {
+			continue;    // conflicting op in progress on bot
+		}
 		
 		// decrement update pointer if feasible
 		newstate.all = state.all;
 		newstate.top_update = (newstate.top_update-1) & IRT_CWBUFFER_MASK;
 		
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) break; // state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) {
+			break;    // state change since check
+		}
 	}
-
+	
 	// read actual data from buffer
 	//irt_work_item *ret = wb->items[newstate.top_val];
 	// finish operation
@@ -182,22 +202,30 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	__irt_unused bool x = (ret = wb->items[newstate.top_val]) && (wb->state.top_val = newstate.top_update);
 	return ret;
 }
-	
+
 static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 	// check feasibility
 	irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
-		if(state.top_val == state.bot_val) return NULL; // empty buffer
-		if(state.bot_update != state.bot_val) continue; // operation in progress on bot
-		if(state.bot_val == state.top_update) continue; // conflicting op in progress on top
-
+		if(state.top_val == state.bot_val) {
+			return NULL;    // empty buffer
+		}
+		if(state.bot_update != state.bot_val) {
+			continue;    // operation in progress on bot
+		}
+		if(state.bot_val == state.top_update) {
+			continue;    // conflicting op in progress on top
+		}
+		
 		// decrement update pointer if feasible
 		newstate.all = state.all;
 		newstate.bot_update = (newstate.bot_update+1) & IRT_CWBUFFER_MASK;
-		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) break; // state change since check
+		if(irt_atomic_bool_compare_and_swap(&wb->state.all, state.all, newstate.all, uint64)) {
+			break;    // state change since check
+		}
 	}
-
+	
 	// read actual data from buffer
 	//irt_work_item *ret = wb->items[newstate.bot_update];
 	// finish operation
@@ -266,7 +294,7 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	irt_spin_unlock(&wb->lock);
 	return ret;
 }
-	
+
 static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 	irt_spin_lock(&wb->lock);
 	if(irt_cwb_size(wb)==0) {

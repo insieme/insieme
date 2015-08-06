@@ -2,13 +2,13 @@
 void a();
 void b();
 
-void a(){
+void a() {
 	b();
 }
-void b(){
+void b() {
 	a();
 }
 
-int main(){
+int main() {
 	a();
 }

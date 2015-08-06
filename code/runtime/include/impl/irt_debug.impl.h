@@ -56,16 +56,16 @@ void irt_dbg_dump_context(FILE* fd, irt_context* c) {
 		for(uint32 j = 0; j<impl->num_variants; ++j) {
 			irt_wi_implementation_variant *v = &impl->variants[j];
 			fprintf(fd, "    Variant %2u -- requirements (DIs/channels): %3u/%3u, meta info index: %3ld\n",
-				   j, v->num_required_data_items, v->num_required_channels, v->meta_info ? (long signed)(v->meta_info - c->info_table) : 0l);
+			        j, v->num_required_data_items, v->num_required_channels, v->meta_info ? (long signed)(v->meta_info - c->info_table) : 0l);
 		}
 	}
 	fprintf(fd, "----\nMeta Info table (%u entries):\n", c->info_table_size);
 	for(uint32 i = 0; i<c->info_table_size; ++i) {
 		irt_meta_info_table_entry *m = &c->info_table[i];
 		fprintf(fd, "  Info %3u:\n", i);
-		#define INFO_STRUCT_BEGIN(__name) \
+#define INFO_STRUCT_BEGIN(__name) \
 		fprintf(fd, "    "); irt_meta_info_print_##__name(fd, m); fprintf(fd, "\n");
-		#include "insieme/common/meta_infos.def"
+#include "insieme/common/meta_infos.def"
 	}
 	fprintf(fd, "--------\n");
 }
@@ -85,7 +85,7 @@ void irt_dbg_print_worker_events(int32 wid, int32 num) {
 	}
 	if(s<0) {
 		printf("\n");
-	} 
+	}
 }
 #else
 void irt_dbg_print_worker_events(int32 wid, int32 num) {
@@ -95,15 +95,24 @@ void irt_dbg_print_worker_events(int32 wid, int32 num) {
 
 const char* irt_dbg_get_worker_state_string(irt_worker_state state) {
 	switch(state) {
-	case IRT_WORKER_STATE_CREATED: return "IRT_WORKER_STATE_CREATED";
-	case IRT_WORKER_STATE_READY: return "IRT_WORKER_STATE_READY";
-	case IRT_WORKER_STATE_START: return "IRT_WORKER_STATE_START";
-	case IRT_WORKER_STATE_RUNNING: return "IRT_WORKER_STATE_RUNNING";
-	case IRT_WORKER_STATE_SLEEPING: return "IRT_WORKER_STATE_SLEEPING";
-	case IRT_WORKER_STATE_DISABLED: return "IRT_WORKER_STATE_DISABLED";
-	case IRT_WORKER_STATE_WAITING: return "IRT_WORKER_STATE_WAITING";
-	case IRT_WORKER_STATE_STOP: return "IRT_WORKER_STATE_STOP";
-	default: return "IRT_WORKER_STATE_UNKNOWN";
+	case IRT_WORKER_STATE_CREATED:
+		return "IRT_WORKER_STATE_CREATED";
+	case IRT_WORKER_STATE_READY:
+		return "IRT_WORKER_STATE_READY";
+	case IRT_WORKER_STATE_START:
+		return "IRT_WORKER_STATE_START";
+	case IRT_WORKER_STATE_RUNNING:
+		return "IRT_WORKER_STATE_RUNNING";
+	case IRT_WORKER_STATE_SLEEPING:
+		return "IRT_WORKER_STATE_SLEEPING";
+	case IRT_WORKER_STATE_DISABLED:
+		return "IRT_WORKER_STATE_DISABLED";
+	case IRT_WORKER_STATE_WAITING:
+		return "IRT_WORKER_STATE_WAITING";
+	case IRT_WORKER_STATE_STOP:
+		return "IRT_WORKER_STATE_STOP";
+	default:
+		return "IRT_WORKER_STATE_UNKNOWN";
 	}
 }
 
@@ -111,14 +120,14 @@ void irt_dbg_print_worker_state(int32 wid) {
 #if IRT_SCHED_POLICY != IRT_SCHED_POLICY_STEALING_CIRCULAR
 	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_atomic_load(&irt_g_workers[wid]->state)),
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_UBER
-		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue)
+	       irt_cwb_size(&irt_g_workers[wid]->sched_data.queue)
 #else
-		irt_g_workers[wid]->sched_data.queue.size
+	       irt_g_workers[wid]->sched_data.queue.size
 #endif
-		);
+	      );
 #else
 	printf("Worker #%03d: %32s - q:%4d || ", wid, irt_dbg_get_worker_state_string(irt_atomic_load(&irt_g_workers[wid]->state)),
-		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue));
+	       irt_cwb_size(&irt_g_workers[wid]->sched_data.queue));
 #endif
 	irt_dbg_print_worker_events(wid, 1);
 }
@@ -167,7 +176,9 @@ void _irt_dbg_wi_list_remove(_irt_dbg_wi_list **l, uint16 thread, uint32 index) 
 }
 _irt_dbg_wi_list* _irt_dbg_wi_list_get(_irt_dbg_wi_list *l, uint16 thread, uint32 index) {
 	while(l) {
-		if(l->thread == thread && l->wi_index == index) return l;
+		if(l->thread == thread && l->wi_index == index) {
+			return l;
+		}
 		l = l->next;
 	}
 	return NULL;
@@ -201,7 +212,7 @@ void irt_dbg_print_active_wis() {
 		next_ev = NULL;
 		for(uint32 w=0; w<irt_g_worker_count; ++w) {
 			uint32 s = irt_g_workers[w]->instrumentation_event_data->number_of_elements;
-			if(worker_ev_indices[w] < s) {		
+			if(worker_ev_indices[w] < s) {
 				irt_instrumentation_event_data* ev = &irt_g_workers[w]->instrumentation_event_data->data[worker_ev_indices[w]];
 				if(ev->timestamp < min_timestamp) {
 					min_worker = w;
@@ -216,13 +227,15 @@ void irt_dbg_print_active_wis() {
 			// add/remove to/from active list
 			switch(next_ev->event_id) {
 			case IRT_INST_WORK_ITEM_CREATED: {
-					//printf("created [%d %d]!\n", next_ev->thread, next_ev->index);
-					_irt_dbg_wi_list_add(&active_wis, next_ev->thread, next_ev->index);
-				} break;
+				//printf("created [%d %d]!\n", next_ev->thread, next_ev->index);
+				_irt_dbg_wi_list_add(&active_wis, next_ev->thread, next_ev->index);
+			}
+			break;
 			case IRT_INST_WORK_ITEM_FINALIZED: {
-					//printf("finalized [%d %d]!\n", next_ev->thread, next_ev->index);
-					_irt_dbg_wi_list_remove(&active_wis, next_ev->thread, next_ev->index);
-				} break;
+				//printf("finalized [%d %d]!\n", next_ev->thread, next_ev->index);
+				_irt_dbg_wi_list_remove(&active_wis, next_ev->thread, next_ev->index);
+			}
+			break;
 			}
 			// store events for active
 			_irt_dbg_wi_list *entry = _irt_dbg_wi_list_get(active_wis, next_ev->thread, next_ev->index);
@@ -230,7 +243,8 @@ void irt_dbg_print_active_wis() {
 				entry->events[entry->num_events++] = next_ev;
 			}
 		}
-	} while(next_ev != NULL);
+	}
+	while(next_ev != NULL);
 	// print active wi indices
 	_irt_dbg_wi_list *l = active_wis;
 	while(l) {

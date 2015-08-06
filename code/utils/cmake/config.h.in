@@ -36,10 +36,8 @@
 
 #pragma once
 
-//code/backend/include/insieme/backend/ocl_kernel/kernel_config.h:
-#define OCL_KERNEL_TEST_DIR "${insieme_code_dir}/backend/test/ocl_kernel/"
 //code/driver/include/insieme/driver/driver_config.h:
-#define DRIVER_SRC_DIR "${insieme_code_dir}/driver/test/"
+#define DRIVER_TEST_DIR "${insieme_code_dir}/driver/test/"
 //code/driver/include/insieme/driver/driver_config.h:
 #define PAPI_HOME "${THIRD_PARTY_LIBS_HOME}/papi-latest"
 //code/utils/include/insieme/utils/test/test_config.h:
@@ -47,9 +45,7 @@
 //code/utils/include/insieme/utils/test/test_config.h:
 #define TEST_ROOT_DIR "${insieme_code_dir}/../test"
 //code/frontend/include/insieme/frontend/clang_config.h:
-#define CLANG_SRC_DIR "${insieme_code_dir}/frontend/test/"
-//code/frontend/include/insieme/frontend/gemsclaim_config.h:
-#define GEM_SYSTEM_HEADER_REPLACEMENTS_DIR "${insieme_code_dir}/frontend/include/insieme/frontend/gemsclaim/"
+#define FRONTEND_TEST_DIR "${insieme_code_dir}/frontend/test/"
 
 /**
  *                          !!!!!!  ------ W A R N I N G -------- !!!!!
@@ -59,6 +55,3 @@
  *                          !!!!!!  ------ W A R N I N G -------- !!!!!
  */
 
-
-//code/analysis/include/insieme/analysis/cmake_config.h:
-//#define SRC_DIR "${insieme_code_dir}/analysis/test/"

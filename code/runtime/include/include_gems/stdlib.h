@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,17 +45,15 @@
 #define calloc(x, y)	gem_calloc(x * y, MEM_HEAP)
 #define free(x) 	gem_free(x)
 
-void* gem_calloc(size_t sz, int mem_id)
-{
+void* gem_calloc(size_t sz, int mem_id) {
 	void* ptr = gem_malloc(sz, mem_id);
-
+	
 	memset(ptr, 0, sz);
-
+	
 	return ptr;
 }
 
-char* getenv(const char* name)
-{
+char* getenv(const char* name) {
 	return NULL;
 }
 

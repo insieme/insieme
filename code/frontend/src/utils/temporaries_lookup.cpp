@@ -50,59 +50,62 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
-namespace{
+namespace {
 
 class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bool> {
 
 
-	private:
-		std::vector<const clang::CXXTemporary*>& tempList;
-
-	public:
-		temporariesVisitor (std::vector<const clang::CXXTemporary*>& list)
-			: tempList(list) {}
-
-
-		bool 	Visit (const clang::Stmt *S){
-		    //if our stmt is a nullptr don't use it
-		    if (!S)
-                return false;
-
-			if (llvm::isa<clang::CXXBindTemporaryExpr>(S))
-				tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary ());
-
-			// visitor does not look intside of CXXDefaultArgExpr, instantiate a new one and look inside
-			if (const clang::CXXDefaultArgExpr* def = llvm::dyn_cast<clang::CXXDefaultArgExpr>(S)){
-				temporariesVisitor inner(tempList);
-				inner.lookTemporaries(def->getExpr());
-			}
-
-			for( clang::Stmt::const_child_iterator child_it = S->child_begin(); child_it!= S->child_end(); child_it++)
-				Visit(*child_it);
-
+private:
+	std::vector<const clang::CXXTemporary*>& tempList;
+	
+public:
+	temporariesVisitor(std::vector<const clang::CXXTemporary*>& list)
+		: tempList(list) {}
+		
+		
+	bool 	Visit(const clang::Stmt *S) {
+		//if our stmt is a nullptr don't use it
+		if(!S) {
 			return false;
 		}
-
-		std::vector<const clang::CXXTemporary*>& lookTemporaries (const clang::Expr* start){
-			this->Visit (llvm::cast<clang::Stmt>(start));
-			return tempList;
+		
+		if(llvm::isa<clang::CXXBindTemporaryExpr>(S)) {
+			tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary());
 		}
-
+		
+		// visitor does not look intside of CXXDefaultArgExpr, instantiate a new one and look inside
+		if(const clang::CXXDefaultArgExpr* def = llvm::dyn_cast<clang::CXXDefaultArgExpr>(S)) {
+			temporariesVisitor inner(tempList);
+			inner.lookTemporaries(def->getExpr());
+		}
+		
+		for(clang::Stmt::const_child_iterator child_it = S->child_begin(); child_it!= S->child_end(); child_it++) {
+			Visit(*child_it);
+		}
+		
+		return false;
+	}
+	
+	std::vector<const clang::CXXTemporary*>& lookTemporaries(const clang::Expr* start) {
+		this->Visit(llvm::cast<clang::Stmt>(start));
+		return tempList;
+	}
+	
 };
 
 
 } //annonymous namespace
 
-	/**
-	 *  search in the inner tree for the used temporaries
-	 */
-	std::vector<const clang::CXXTemporary*> lookupTemporaries (const clang::Expr* innerExpr){
+/**
+ *  search in the inner tree for the used temporaries
+ */
+std::vector<const clang::CXXTemporary*> lookupTemporaries(const clang::Expr* innerExpr) {
 
-		std::vector<const clang::CXXTemporary*> temporaries;
-		temporariesVisitor vis(temporaries);
-		vis.lookTemporaries(innerExpr);
-		return temporaries;
-	}
+	std::vector<const clang::CXXTemporary*> temporaries;
+	temporariesVisitor vis(temporaries);
+	vis.lookTemporaries(innerExpr);
+	return temporaries;
+}
 
 
 

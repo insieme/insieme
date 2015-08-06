@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -70,59 +70,59 @@ void check(clang::Stmt * s, vector<clang::AttributedStmt *> * attributedStmts) {
 }
 */
 TEST(AttributedStmtTest, FileTest) {
-/*
-    vector<clang::AttributedStmt *> statements;
-    vector<string> expected_pragmas;
-
-    expected_pragmas.push_back("[omp::parallel[for[for]][private[a]]]");
-    expected_pragmas.push_back("[omp::parallel]");
-    expected_pragmas.push_back("[omp::for[firstprivate[a]][nowait[]]]");
-    expected_pragmas.push_back("[omp::barrier]");
-
-
-    //CREATE TRANSLATION UNIT AND CHECK IF ALL
-    //4 PRAGMAS HAVE BEEN MATCHED AND THE ATTRIBUTEDSTMTs
-    //HAVE BEEN CREATED CORRECTLY
-	NodeManager manager;
-	fe::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_for.c");
-
-	clang::TranslationUnitDecl * tudecl = tu.getCompiler().getASTContext().getTranslationUnitDecl();
-	for(clang::DeclContext::decl_iterator it=tudecl->decls_begin(); it!=tudecl->decls_end(); ++it) {
-        if((*it)->hasBody()) {
-            check((*it)->getBody(), &statements);
-        }
-	}
-
-    //CHECK IF ALL PRAGMAS HAVE BEEN MATCHED
-    //std::cout << "CHECK PRAGMA VECTOR SIZE\n";
-    //EXPECT_EQ(4, statements.size());
-
-    //CHECK IF THE PRAGMA ANNOTATIONS ARE CORRECT
-    for(clang::AttributedStmt * s : statements) {
-        //std::cout << "PRAGMA:\n";
-        for(const clang::Attr * attribute : s->getAttrs()) {
-            //std::cout << "CHECK ANNOTATION " << (((AnnotateAttr *) attribute)->getAnnotation().str()) << std::endl;
-            //EXPECT_TRUE(std::find(expected_pragmas.begin(), expected_pragmas.end(), ((AnnotateAttr *) attribute)->getAnnotation().str()) != expected_pragmas.end());
-        }
-    }
-
-	const fe::pragma::PragmaList& pl = tu.getPragmaList();
-	std::cout << "Checking parsed pragmas (" << pl.size() << ") in file " << SRC_DIR "inputs/omp_for.c" << ": " << std::endl;
-	int k=0;
-	for(fe::pragma::PragmaPtr ptr : pl) {
-        std::cout << "Pragma: " << ptr->getType() << "\n";
-        if(ptr->isStatement()) {
-            //check if pragma is an attributed stmt
-            if(llvm::isa<clang::AttributedStmt>(ptr->getStatement())) {
-                llvm::ArrayRef<const clang::Attr *> attrs= ((clang::AttributedStmt *)(ptr->getStatement()))->getAttrs();
-                for(auto it=attrs.begin(); it!=attrs.end(); ++it) {
-                    std::cout << ((clang::AnnotateAttr *)(*it))->getAnnotation().str() << std::endl;
-                }
-                k++;
-            }
-        }
-	}
-
-*/
+	/*
+	    vector<clang::AttributedStmt *> statements;
+	    vector<string> expected_pragmas;
+	
+	    expected_pragmas.push_back("[omp::parallel[for[for]][private[a]]]");
+	    expected_pragmas.push_back("[omp::parallel]");
+	    expected_pragmas.push_back("[omp::for[firstprivate[a]][nowait[]]]");
+	    expected_pragmas.push_back("[omp::barrier]");
+	
+	
+	    //CREATE TRANSLATION UNIT AND CHECK IF ALL
+	    //4 PRAGMAS HAVE BEEN MATCHED AND THE ATTRIBUTEDSTMTs
+	    //HAVE BEEN CREATED CORRECTLY
+		NodeManager manager;
+		fe::TranslationUnit tu(manager, SRC_DIR "/inputs/omp_for.c");
+	
+		clang::TranslationUnitDecl * tudecl = tu.getCompiler().getASTContext().getTranslationUnitDecl();
+		for(clang::DeclContext::decl_iterator it=tudecl->decls_begin(); it!=tudecl->decls_end(); ++it) {
+	        if((*it)->hasBody()) {
+	            check((*it)->getBody(), &statements);
+	        }
+		}
+	
+	    //CHECK IF ALL PRAGMAS HAVE BEEN MATCHED
+	    //std::cout << "CHECK PRAGMA VECTOR SIZE\n";
+	    //EXPECT_EQ(4, statements.size());
+	
+	    //CHECK IF THE PRAGMA ANNOTATIONS ARE CORRECT
+	    for(clang::AttributedStmt * s : statements) {
+	        //std::cout << "PRAGMA:\n";
+	        for(const clang::Attr * attribute : s->getAttrs()) {
+	            //std::cout << "CHECK ANNOTATION " << (((AnnotateAttr *) attribute)->getAnnotation().str()) << std::endl;
+	            //EXPECT_TRUE(std::find(expected_pragmas.begin(), expected_pragmas.end(), ((AnnotateAttr *) attribute)->getAnnotation().str()) != expected_pragmas.end());
+	        }
+	    }
+	
+		const fe::pragma::PragmaList& pl = tu.getPragmaList();
+		std::cout << "Checking parsed pragmas (" << pl.size() << ") in file " << SRC_DIR "inputs/omp_for.c" << ": " << std::endl;
+		int k=0;
+		for(fe::pragma::PragmaPtr ptr : pl) {
+	        std::cout << "Pragma: " << ptr->getType() << "\n";
+	        if(ptr->isStatement()) {
+	            //check if pragma is an attributed stmt
+	            if(llvm::isa<clang::AttributedStmt>(ptr->getStatement())) {
+	                llvm::ArrayRef<const clang::Attr *> attrs= ((clang::AttributedStmt *)(ptr->getStatement()))->getAttrs();
+	                for(auto it=attrs.begin(); it!=attrs.end(); ++it) {
+	                    std::cout << ((clang::AnnotateAttr *)(*it))->getAnnotation().str() << std::endl;
+	                }
+	                k++;
+	            }
+	        }
+		}
+	
+	*/
 }
 

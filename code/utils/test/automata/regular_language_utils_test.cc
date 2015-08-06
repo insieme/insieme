@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -60,31 +60,31 @@ TEST(RegLang, Composition) {
 	Lang b('b');
 	Lang c('c');
 	Lang d('d');
-
+	
 	// pattern a(b|c)*d
-
+	
 	Lang x= sequence(a, repetition(alternativ(b,c)), d);
-
+	
 	// EXPECT_EQ("", toDotGraph(x.getAutomata()));
-
+	
 	EXPECT_TRUE(match(x, "ad"));
 	EXPECT_TRUE(match(x, "abd"));
 	EXPECT_TRUE(match(x, "abcd"));
 	EXPECT_TRUE(match(x, "acbbcccbbcbcd"));
-
+	
 	EXPECT_FALSE(match(x, "abc"));
-
+	
 	// compress it to a NFA
 	auto n = toNFA(x.getAutomata());
 	// EXPECT_EQ("", toDotGraph(n));
-
+	
 	EXPECT_TRUE(accepts(n, string("ad")));
 	EXPECT_TRUE(accepts(n, string("abd")));
 	EXPECT_TRUE(accepts(n, string("abcd")));
 	EXPECT_TRUE(accepts(n, string("acbbcccbbcbcd")));
-
+	
 	EXPECT_FALSE(accepts(n, string("abc")));
-
+	
 }
 
 

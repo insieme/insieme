@@ -64,13 +64,13 @@ irt_joinable irt_joinable_null() {
 	return null_joinable;
 }
 
-/** Distributes the provided work range over the given group. 
+/** Distributes the provided work range over the given group.
  *  Needs to be called by every work item within the group! (OMP semantics)
  */
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* args);
 
 /** From a job description structure, generates a number of parallel work items to perform the job,
- *  and puts them into a shared group. 
+ *  and puts them into a shared group.
  *  The return value is a pointer to either a work item or a work group.
  *  To wait for the completion of the whole parallel job, use "irt_merge".
  */
@@ -88,7 +88,7 @@ void irt_set_default_parallel_wi_count(int num_wis);
 irt_joinable irt_task(const irt_parallel_job* job);
 
 /** From a job description structure, generates a single work item to perform the job,
- *  and immediately executes it. 
+ *  and immediately executes it.
  */
 void irt_region(const irt_parallel_job* job);
 
@@ -120,6 +120,6 @@ static inline void ir_inst_region_end(irt_inst_region_id id) {
  */
 static inline uint32 irt_variant_pick(uint32 begin, uint32 end) {
 	return begin;
-} 
+}
 
 #endif // ifndef __GUARD_IR_INTERFACE_H

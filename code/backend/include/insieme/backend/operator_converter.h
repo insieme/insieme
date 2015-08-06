@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,20 +48,20 @@
 namespace insieme {
 namespace backend {
 
-	class Converter;
-	class ConversionContext;
+class Converter;
+class ConversionContext;
 
-    namespace operators {
+namespace operators {
 
-	    c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name, bool addHeader);
+c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprPtr& call, const std::string& name, bool addHeader);
 
-    } // end namespace operators
+} // end namespace operators
 
-	typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
+typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
 
-	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
+typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
 
-	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
+OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
 
 } // end namespace backend
 } // end namespace insieme

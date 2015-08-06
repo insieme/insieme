@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,23 +42,23 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-	namespace generator {
+namespace generator {
 
-		const TreeGenerator root = TreeGenerator(std::make_shared<impl::tree::Root>());
-		const ListGenerator empty = ListGenerator(std::make_shared<impl::list::Empty>());
+const TreeGenerator root = TreeGenerator(std::make_shared<impl::tree::Root>());
+const ListGenerator empty = ListGenerator(std::make_shared<impl::list::Empty>());
 
 
-	} // end namespace generator
+} // end namespace generator
 
-	TreeGenerator::TreeGenerator() : generator(generator::root.generator) {}
+TreeGenerator::TreeGenerator() : generator(generator::root.generator) {}
 
-	std::ostream& TreeGenerator::printTo(std::ostream& out) const {
-		return out << *generator;
-	}
+std::ostream& TreeGenerator::printTo(std::ostream& out) const {
+	return out << *generator;
+}
 
-	std::ostream& ListGenerator::printTo(std::ostream& out) const {
-		return out << *generator;
-	}
+std::ostream& ListGenerator::printTo(std::ostream& out) const {
+	return out << *generator;
+}
 
 } // end namespace pattern
 } // end namespace core

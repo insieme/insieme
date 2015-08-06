@@ -40,11 +40,11 @@
 
 #define INFO_STRUCT_BEGIN(_name) \
 	namespace _name ## _ns { struct info_type; } \
-	typedef _name ## _ns::info_type _name ## _info; \
+	typedef typename _name ## _ns::info_type _name ## _info; \
 	namespace _name ## _ns { \
 	struct info_type; \
 	VALUE_ANNOTATION_CONVERTER(info_type) \
-		typedef insieme::core::value_node_annotation<info_type>::type annotation_type;\
+		typedef typename insieme::core::value_node_annotation<info_type>::type annotation_type;\
 		virtual insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& manager, const insieme::core::NodeAnnotationPtr& annotation) const; \
 		virtual insieme::core::NodeAnnotationPtr toAnnotation(const insieme::core::ExpressionPtr& node) const; \
 	}; \

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,69 +48,71 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
-	using namespace core;
+using namespace core;
 
-	namespace p = pattern;
-	namespace g = pattern::generator;
-	namespace irg = pattern::generator::irg;
+namespace p = pattern;
+namespace g = pattern::generator;
+namespace irg = pattern::generator::irg;
 
 
-	TEST(Generator, Atom) {
+TEST(Generator, Atom) {
 
-		TreePtr a = makeTree('a');
+	TreePtr a = makeTree('a');
+	
+	TreeGenerator gen;
+	Match<tree_target> match;
+	
+	gen = g::atom(a);
+	
+	EXPECT_EQ(a, g::impl::generate(gen,match));
+	
+}
 
-		TreeGenerator gen;
-		Match<tree_target> match;
+TEST(Generator, GenerateCode) {
 
-		gen = g::atom(a);
-
-		EXPECT_EQ(a, g::impl::generate(gen,match));
-
-	}
-
-	TEST(Generator, GenerateCode) {
-
-		NodeManager manager;
-		IRBuilder builder(manager);
-		auto ps = [&manager](string str) { return IRBuilder(manager).parseStmt(str); };
-
-		StatementPtr stmt = ps(
-			"for(int<4> i = 0 .. 2) { "
-			"	for(int<4> j = 1 .. 3){ "
-			"		7; "
-			"		6; " 
-			"		continue; "
-			"		8;"
-			" 	} "
-			"}");
-
-		LiteralPtr one = builder.intLit(1);
-
-		TreePattern pattern =
-				irp::forStmt(p::var("i"), p::var("s1"), p::var("e1"), p::atom(one),
-						irp::forStmt(var("j"), p::var("s2"), p::var("e2"), p::atom(one),
-								*p::var("b", p::any)
-						)
-				);
-
-		auto match = pattern.matchPointer(stmt);
-
-		TreeGenerator generator =
-				irg::forStmt(g::var("j"), g::var("s2"), g::var("e2"), g::atom(one),
-						irg::forStmt(g::var("i"), g::var("s1"), g::var("e1"), g::atom(one),
-								g::listVar("b")
-						)
-				);
-
-		NodePtr res = generator.generate(*match);
-
-		// switch again
-		NodePtr final = generator.generate(*pattern.matchPointer(res));
-
-		EXPECT_NE(*stmt, *res);
-		EXPECT_EQ(*stmt, *final);
-
-	}
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto ps = [&manager](string str) {
+		return IRBuilder(manager).parseStmt(str);
+	};
+	
+	StatementPtr stmt = ps(
+	                        "for(int<4> i = 0 .. 2) { "
+	                        "	for(int<4> j = 1 .. 3){ "
+	                        "		7; "
+	                        "		6; "
+	                        "		continue; "
+	                        "		8;"
+	                        " 	} "
+	                        "}");
+	                        
+	LiteralPtr one = builder.intLit(1);
+	
+	TreePattern pattern =
+	    irp::forStmt(p::var("i"), p::var("s1"), p::var("e1"), p::atom(one),
+	                 irp::forStmt(var("j"), p::var("s2"), p::var("e2"), p::atom(one),
+	                              *p::var("b", p::any)
+	                             )
+	                );
+	                
+	auto match = pattern.matchPointer(stmt);
+	
+	TreeGenerator generator =
+	    irg::forStmt(g::var("j"), g::var("s2"), g::var("e2"), g::atom(one),
+	                 irg::forStmt(g::var("i"), g::var("s1"), g::var("e1"), g::atom(one),
+	                              g::listVar("b")
+	                             )
+	                );
+	                
+	NodePtr res = generator.generate(*match);
+	
+	// switch again
+	NodePtr final = generator.generate(*pattern.matchPointer(res));
+	
+	EXPECT_NE(*stmt, *res);
+	EXPECT_EQ(*stmt, *final);
+	
+}
 
 
 } // end namespace pattern

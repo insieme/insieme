@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -58,36 +58,36 @@
 
 namespace insieme {
 
-	using namespace core;
-	using namespace driver::integration;
+using namespace core;
+using namespace driver::integration;
 
-	// ---------------------------------- Check the type checker -------------------------------------
+// ---------------------------------- Check the type checker -------------------------------------
 
-	// the type definition (specifying the parameter type)
-	class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+// the type definition (specifying the parameter type)
+class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTestCase> { };
 
-	// define the test case pattern
-	TEST_P(TypeVariableDeductionTest, DeriveTypes) {
-		core::NodeManager manager;
-
-		// obtain test case
-		driver::integration::IntegrationTestCase testCase = GetParam();
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
+// define the test case pattern
+TEST_P(TypeVariableDeductionTest, DeriveTypes) {
+	core::NodeManager manager;
 	
-		// load the code using the frontend
-		core::ProgramPtr code = testCase.load(manager);
+	// obtain test case
+	driver::integration::IntegrationTestCase testCase = GetParam();
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
+	
+	// load the code using the frontend
+	core::ProgramPtr code = testCase.load(manager);
+	
+	// and now, apply the check and see whether a solution could be found
+	core::visitDepthFirstOnce(code, [&](const core::CallExprPtr& call) {
+		EXPECT_TRUE(types::getTypeVariableInstantiation(manager, call))
+		//					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
+		        << "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
+		        << "Argument Types: " << extractTypes(call->getArguments());
+	});
+}
 
-		// and now, apply the check and see whether a solution could be found
-		core::visitDepthFirstOnce(code, [&](const core::CallExprPtr& call){
-			EXPECT_TRUE(types::getTypeVariableInstantiation(manager, call))
-	//					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
-					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
-					<< "Argument Types: " << extractTypes(call->getArguments());
-		});
-	}
-
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
 
 }

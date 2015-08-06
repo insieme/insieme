@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,9 +39,10 @@ unsigned int globalId;
 
 int kernelFct(int* A) {
 #pragma insieme datarange (A = globalId-1 : globalId+1)
-{
-	return -1;
-}}
+	{
+		return -1;
+	}
+}
 
 
 
@@ -49,16 +50,17 @@ int main() {
 	int* a;
 	int* b;
 	int i;
-
+	
 #pragma insieme iterations 10
 	for(i = 0; i < 10; ++i) {
 #pragma insieme datarange (a = i-1 : i+1), (b = i : i)
-	{
-		a[i] = i;
-		b[i] = 3;
-	}}
-
+		{
+			a[i] = i;
+			b[i] = 3;
+		}
+	}
+	
 	kernelFct(a);
-
+	
 	return 0;
 }

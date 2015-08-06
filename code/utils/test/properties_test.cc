@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,163 +44,175 @@
 namespace insieme {
 namespace utils {
 
-	// establish a value implementation for this test ...
+// establish a value implementation for this test ...
 
-	typedef typename properties::make_value_type<bool,int,string>::type Value;
-	typedef typename properties::Property<Value>::ptr PropertyPtr;
-	typedef typename properties::ListProperty<Value>::ptr ListPropertyPtr;
+typedef typename properties::make_value_type<bool,int,string>::type Value;
+typedef typename properties::Property<Value>::ptr PropertyPtr;
+typedef typename properties::ListProperty<Value>::ptr ListPropertyPtr;
 
-	template<typename T>
-	PropertyPtr atom(const string& desc = "") {
-		return properties::atom<Value,T>(desc);
-	}
+template<typename T>
+PropertyPtr atom(const string& desc = "") {
+	return properties::atom<Value,T>(desc);
+}
 
-	template<typename ... T>
-	PropertyPtr tuple(const T&...params) {
-		return properties::tuple<Value>(params ...);
-	}
+template<typename ... T>
+PropertyPtr tuple(const T&...params) {
+	return properties::tuple<Value>(params ...);
+}
 
-	template<typename ... T>
-	PropertyPtr tuple(const char*& desc, const T&...params) {
-		return properties::tuple<Value>(desc, params ...);
-	}
+template<typename ... T>
+PropertyPtr tuple(const char*& desc, const T&...params) {
+	return properties::tuple<Value>(desc, params ...);
+}
 
-	template<typename ... T>
-	ListPropertyPtr list(const T&...params) {
-		return properties::list<Value>(params ...);
-	}
+template<typename ... T>
+ListPropertyPtr list(const T&...params) {
+	return properties::list<Value>(params ...);
+}
 
-	template<typename ... T>
-	ListPropertyPtr list(const char*& desc, const T&...params) {
-		return properties::list<Value>(desc, params ...);
-	}
+template<typename ... T>
+ListPropertyPtr list(const char*& desc, const T&...params) {
+	return properties::list<Value>(desc, params ...);
+}
 
-	Value makeValue(int value) { return properties::makeValue<Value>(value); }
-	Value makeValue(string value) { return properties::makeValue<Value>(value); }
+Value makeValue(int value) {
+	return properties::makeValue<Value>(value);
+}
+Value makeValue(string value) {
+	return properties::makeValue<Value>(value);
+}
 
-	template<typename ... T>
-	Value combineValues(const T& ... values) { return properties::combineValues<Value>(values ...); }
+template<typename ... T>
+Value combineValues(const T& ... values) {
+	return properties::combineValues<Value>(values ...);
+}
 
-	template<typename T>
-	T getValue(const Value& value) { return properties::getValue<T,Value>(value); }
+template<typename T>
+T getValue(const Value& value) {
+	return properties::getValue<T,Value>(value);
+}
 
-	template<> Value getValue<>(const Value& value) { return value; }
+template<> Value getValue<>(const Value& value) {
+	return value;
+}
 
-	template<typename T, typename ... Path>
-	T getValue(const Value& value, Path ... path) { return properties::getValue<T>(value, path...); }
-
-
-	// -------------------- Start Tests ---------------------------------
-
-	TEST(Property, Composition) {
-
-		const PropertyPtr single = atom<int>();
-		EXPECT_TRUE(!!single);
-		EXPECT_EQ("int", toString(*single));
-
-		const PropertyPtr pair = tuple(atom<int>(), atom<string>());
-		EXPECT_TRUE(!!pair);
-		EXPECT_EQ("(int,string)", toString(*pair));
-
-		const PropertyPtr empty = tuple();
-		EXPECT_TRUE(!!empty);
-		EXPECT_EQ("()", toString(*empty));
-
-		const PropertyPtr nested = tuple(atom<int>(), tuple(atom<string>()));
-		EXPECT_TRUE(!!nested);
-		EXPECT_EQ("(int,(string))", toString(*nested));
-
-		const PropertyPtr intList = list(atom<int>());
-		EXPECT_TRUE(!!intList);
-		EXPECT_EQ("[int*]", toString(*intList));
-
-		const PropertyPtr complex = tuple(intList,nested,list(pair));
-		EXPECT_TRUE(!!complex);
-		EXPECT_EQ("([int*],(int,(string)),[(int,string)*])", toString(*complex));
-	}
-
-	TEST(Property, Printer) {
-
-		const PropertyPtr nested = tuple(atom<int>("param A"), tuple("A nested tuple", atom<string>("param B"), list("list X", atom<int>("param C"))));
-		const string info = toString(properties::printInfo(nested));
-		EXPECT_PRED2(containsSubString, info, "param A") << info;
-		EXPECT_PRED2(containsSubString, info, "param B") << info;
-		EXPECT_PRED2(containsSubString, info, "list X") << info;
-
-	}
+template<typename T, typename ... Path>
+T getValue(const Value& value, Path ... path) {
+	return properties::getValue<T>(value, path...);
+}
 
 
-	TEST(Values, Composition) {
+// -------------------- Start Tests ---------------------------------
 
-		Value a = makeValue(12);
-		EXPECT_EQ("12", toString(a));
+TEST(Property, Composition) {
 
-		Value b = makeValue("hello");
-		EXPECT_EQ("hello", toString(b));
+	const PropertyPtr single = atom<int>();
+	EXPECT_TRUE(!!single);
+	EXPECT_EQ("int", toString(*single));
+	
+	const PropertyPtr pair = tuple(atom<int>(), atom<string>());
+	EXPECT_TRUE(!!pair);
+	EXPECT_EQ("(int,string)", toString(*pair));
+	
+	const PropertyPtr empty = tuple();
+	EXPECT_TRUE(!!empty);
+	EXPECT_EQ("()", toString(*empty));
+	
+	const PropertyPtr nested = tuple(atom<int>(), tuple(atom<string>()));
+	EXPECT_TRUE(!!nested);
+	EXPECT_EQ("(int,(string))", toString(*nested));
+	
+	const PropertyPtr intList = list(atom<int>());
+	EXPECT_TRUE(!!intList);
+	EXPECT_EQ("[int*]", toString(*intList));
+	
+	const PropertyPtr complex = tuple(intList,nested,list(pair));
+	EXPECT_TRUE(!!complex);
+	EXPECT_EQ("([int*],(int,(string)),[(int,string)*])", toString(*complex));
+}
 
+TEST(Property, Printer) {
 
-		Value c = combineValues(a,b);
-		EXPECT_EQ("[12,hello]", toString(c));
-
-
-		Value d = combineValues(a, b, c, a);
-		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
-
-	}
-
-	TEST(Values, TypeCheck) {
-
-		Value a = makeValue(12);
-		EXPECT_EQ("12", toString(a));
-		EXPECT_TRUE(atom<int>()->isValid(a));
-		EXPECT_FALSE(atom<string>()->isValid(a));
-
-		Value b = makeValue("hello");
-		EXPECT_EQ("hello", toString(b));
-		EXPECT_TRUE(atom<string>()->isValid(b));
-		EXPECT_FALSE(atom<int>()->isValid(b));
-
-
-		Value c = combineValues(a,b);
-		EXPECT_EQ("[12,hello]", toString(c));
-		EXPECT_TRUE(tuple(atom<int>(),atom<string>())->isValid(c));
-		EXPECT_FALSE(atom<int>()->isValid(c));
-
-
-		Value d = combineValues(a, b, c, a);
-		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
-		EXPECT_TRUE(tuple(atom<int>(),atom<string>(),tuple(atom<int>(),atom<string>()), atom<int>())->isValid(d));
-		EXPECT_FALSE(tuple(atom<int>(),atom<string>(),tuple(atom<string>(),atom<int>()), atom<int>())->isValid(d));
-		EXPECT_FALSE(atom<int>()->isValid(d));
-
-	}
+	const PropertyPtr nested = tuple(atom<int>("param A"), tuple("A nested tuple", atom<string>("param B"), list("list X", atom<int>("param C"))));
+	const string info = toString(properties::printInfo(nested));
+	EXPECT_PRED2(containsSubString, info, "param A") << info;
+	EXPECT_PRED2(containsSubString, info, "param B") << info;
+	EXPECT_PRED2(containsSubString, info, "list X") << info;
+	
+}
 
 
-	TEST(Values, ReadValue) {
+TEST(Values, Composition) {
 
-		Value a = makeValue(12);
-		EXPECT_EQ("12", toString(a));
-		EXPECT_EQ(12, getValue<int>(a));
+	Value a = makeValue(12);
+	EXPECT_EQ("12", toString(a));
+	
+	Value b = makeValue("hello");
+	EXPECT_EQ("hello", toString(b));
+	
+	
+	Value c = combineValues(a,b);
+	EXPECT_EQ("[12,hello]", toString(c));
+	
+	
+	Value d = combineValues(a, b, c, a);
+	EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
+	
+}
 
-		Value b = makeValue("hello");
-		EXPECT_EQ("hello", toString(b));
-		EXPECT_EQ("hello", getValue<string>(b));
+TEST(Values, TypeCheck) {
 
-		Value c = combineValues(a,b);
-		EXPECT_EQ("[12,hello]", toString(c));
-		EXPECT_EQ(12, getValue<int>(c,0));
-		EXPECT_EQ("hello", getValue<string>(c,1));
+	Value a = makeValue(12);
+	EXPECT_EQ("12", toString(a));
+	EXPECT_TRUE(atom<int>()->isValid(a));
+	EXPECT_FALSE(atom<string>()->isValid(a));
+	
+	Value b = makeValue("hello");
+	EXPECT_EQ("hello", toString(b));
+	EXPECT_TRUE(atom<string>()->isValid(b));
+	EXPECT_FALSE(atom<int>()->isValid(b));
+	
+	
+	Value c = combineValues(a,b);
+	EXPECT_EQ("[12,hello]", toString(c));
+	EXPECT_TRUE(tuple(atom<int>(),atom<string>())->isValid(c));
+	EXPECT_FALSE(atom<int>()->isValid(c));
+	
+	
+	Value d = combineValues(a, b, c, a);
+	EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
+	EXPECT_TRUE(tuple(atom<int>(),atom<string>(),tuple(atom<int>(),atom<string>()), atom<int>())->isValid(d));
+	EXPECT_FALSE(tuple(atom<int>(),atom<string>(),tuple(atom<string>(),atom<int>()), atom<int>())->isValid(d));
+	EXPECT_FALSE(atom<int>()->isValid(d));
+	
+}
 
-		Value d = combineValues(a, b, c, a);
-		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
-		EXPECT_EQ(12, getValue<int>(d,0));
-		EXPECT_EQ("hello", getValue<string>(d,1));
-		EXPECT_EQ(c, getValue<Value>(d,2));
-		EXPECT_EQ(12, getValue<int>(d,2,0));
-		EXPECT_EQ("hello", getValue<string>(d,2,1));
-		EXPECT_EQ(12, getValue<int>(d,3));
 
-	}
+TEST(Values, ReadValue) {
+
+	Value a = makeValue(12);
+	EXPECT_EQ("12", toString(a));
+	EXPECT_EQ(12, getValue<int>(a));
+	
+	Value b = makeValue("hello");
+	EXPECT_EQ("hello", toString(b));
+	EXPECT_EQ("hello", getValue<string>(b));
+	
+	Value c = combineValues(a,b);
+	EXPECT_EQ("[12,hello]", toString(c));
+	EXPECT_EQ(12, getValue<int>(c,0));
+	EXPECT_EQ("hello", getValue<string>(c,1));
+	
+	Value d = combineValues(a, b, c, a);
+	EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
+	EXPECT_EQ(12, getValue<int>(d,0));
+	EXPECT_EQ("hello", getValue<string>(d,1));
+	EXPECT_EQ(c, getValue<Value>(d,2));
+	EXPECT_EQ(12, getValue<int>(d,2,0));
+	EXPECT_EQ("hello", getValue<string>(d,2,1));
+	EXPECT_EQ(12, getValue<int>(d,3));
+	
+}
 
 
 } // end namespace transform

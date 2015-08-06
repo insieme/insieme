@@ -50,8 +50,8 @@ struct _irt_meta_info_table_entry {
 	IRT_META_INFO_TABLE_ENTRY_FIELDS
 #else // IRT_META_INFO_TABLE_ENTRY_FIELDS
 	// generate default entry with all values
-	#include "meta_information/default_generator.inc"
-	#include "insieme/common/meta_infos.def"
+#include "meta_information/default_generator.inc"
+#include "insieme/common/meta_infos.def"
 #endif // IRT_META_INFO_TABLE_ENTRY_FIELDS
 };
 

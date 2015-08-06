@@ -112,7 +112,7 @@ set(CLANG_LIB_LIST
 	libclangFrontendTool.a
 	libclangLex.a
 	libclangParse.a
-	libclangRewriteCore.a
+	libclangRewrite.a
 	libclangRewriteFrontend.a
 	libclangSema.a
 	libclangSerialization.a

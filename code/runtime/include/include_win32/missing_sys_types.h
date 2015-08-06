@@ -29,16 +29,16 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 /*	In this file, missing types of <sys/types.h> shall be defined */
 
 #ifdef _WIN64
-	typedef long ssize_t;
+typedef long ssize_t;
 #else
-	typedef int ssize_t;
+typedef int ssize_t;
 #endif
 

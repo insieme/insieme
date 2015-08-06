@@ -54,37 +54,38 @@ namespace extensions {
 class InstrumentationRegionExtension : public FrontendExtension {
 public:
 	InstrumentationRegionExtension() : FrontendExtension() {
-		pragmaHandlers.push_back(std::make_shared<PragmaHandler>("instrumentation", "region", 
-				pragma::kwd("id") >> tok::l_paren >> tok::expr["id"] >> tok::r_paren >> tok::eod,
-			[](const MatchObject& match, core::NodeList nodes) {
-				try {
-					// Get id number
-					core::ExpressionPtr	idClause = match.getSingleExpr("id");
-					auto idFormula = core::arithmetic::toFormula(idClause);
-					if(!idFormula.isConstant() || !idFormula.isInteger()) {
-						throw core::arithmetic::NotAFormulaException(idClause);
-					}
-					auto id = idFormula.getIntegerValue();
-
-					// Build instrumentation calls 
-					auto& manager = nodes[0]->getNodeManager();
-					auto& instExt = manager.getLangExtension<insieme::core::lang::InstrumentationExtension>();
-					core::IRBuilder builder(manager);
-					auto startCall = builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(id));
-					auto endCall = builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(id));
-
-					// Attach instrumentation calls
-					nodes.insert(nodes.begin(), startCall);
-					nodes.push_back(endCall);
-
-				} catch(const core::arithmetic::NotAFormulaException& nafe) {
-					// TODO: use Diagnosis tools
-					std::cerr << "Instrumentation region error: id not a statically computed number";
+		pragmaHandlers.push_back(std::make_shared<PragmaHandler>("instrumentation", "region",
+		                         pragma::kwd("id") >> tok::l_paren >> tok::expr["id"] >> tok::r_paren >> tok::eod,
+		[](const MatchObject& match, core::NodeList nodes) {
+			try {
+				// Get id number
+				core::ExpressionPtr	idClause = match.getSingleExpr("id");
+				auto idFormula = core::arithmetic::toFormula(idClause);
+				if(!idFormula.isConstant() || !idFormula.isInteger()) {
+					throw core::arithmetic::NotAFormulaException(idClause);
 				}
-
-				return nodes;
+				auto id = idFormula.getIntegerValue();
+				
+				// Build instrumentation calls
+				auto& manager = nodes[0]->getNodeManager();
+				auto& instExt = manager.getLangExtension<insieme::core::lang::InstrumentationExtension>();
+				core::IRBuilder builder(manager);
+				auto startCall = builder.callExpr(instExt.getInstrumentationRegionStart(), builder.uintLit(id));
+				auto endCall = builder.callExpr(instExt.getInstrumentationRegionEnd(), builder.uintLit(id));
+				
+				// Attach instrumentation calls
+				nodes.insert(nodes.begin(), startCall);
+				nodes.push_back(endCall);
+				
+			}
+			catch(const core::arithmetic::NotAFormulaException& nafe) {
+				// TODO: use Diagnosis tools
+				std::cerr << "Instrumentation region error: id not a statically computed number";
+			}
+			
+			return nodes;
 		}));
-	}	
+	}
 };
 
 } // extensions

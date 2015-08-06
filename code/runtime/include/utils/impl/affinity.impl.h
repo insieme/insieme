@@ -49,13 +49,17 @@
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		if(mask.mask_quads[i] != ((uint64)0)) return false;
+		if(mask.mask_quads[i] != ((uint64)0)) {
+			return false;
+		}
 	return true;
 }
 
 static inline bool irt_affinity_mask_equals(const irt_affinity_mask maskA, const irt_affinity_mask maskB) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		if(maskA.mask_quads[i] != maskB.mask_quads[i]) return false;
+		if(maskA.mask_quads[i] != maskB.mask_quads[i]) {
+			return false;
+		}
 	return true;
 }
 
@@ -70,15 +74,18 @@ static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint64 cpu, bo
 	uint64 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
 	uint64 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
 	uint64 bit_val = ((uint64)1) << quad_offset;
-	if(value)
+	if(value) {
 		mask->mask_quads[quad_index] |=  bit_val;
-	else
+	}
+	else {
 		mask->mask_quads[quad_index] &= ~(bit_val);
+	}
 }
 
 static inline void irt_affinity_mask_clear(irt_affinity_mask* mask) {
-	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
 		mask->mask_quads[i] = ((uint64)0);
+	}
 }
 
 static inline irt_affinity_mask irt_affinity_mask_create_single_cpu(uint64 cpu) {
@@ -94,12 +101,13 @@ static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask,
 
 static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
-			if(mask.mask_quads[i]) {
-				for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
-					if(((mask.mask_quads[i]>>j) & 1) != 0)
-						return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
+		if(mask.mask_quads[i]) {
+			for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
+				if(((mask.mask_quads[i]>>j) & 1) != 0) {
+					return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
 				}
 			}
+		}
 	}
 	//IRT_WARN("No affinity set but affinity information requested.\n");
 	return -1;
@@ -115,7 +123,9 @@ irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
 	uint32 d = ncpus/nworkers;
 	uint32 pos = d;
 	for(uint32 i=0; i<nworkers; ++i) {
-		if(i == id) return irt_affinity_mask_create_single_cpu(pos);
+		if(i == id) {
+			return irt_affinity_mask_create_single_cpu(pos);
+		}
 		pos += 2*d;
 		if(pos>=ncpus) {
 			pos = 0;
@@ -142,7 +152,9 @@ irt_affinity_policy irt_load_affinity_from_env() {
 				policy.fixed_map[i++] = atoi(tok);
 				tok = strtok(NULL, ", ");
 			}
-			if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
+			if(i!=irt_g_worker_count) {
+				IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
+			}
 		}
 		else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
 			policy.type = IRT_AFFINITY_FILL;
@@ -158,7 +170,8 @@ irt_affinity_policy irt_load_affinity_from_env() {
 		else {
 			irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
 		}
-	} else {
+	}
+	else {
 		irt_log_setting_s(IRT_AFFINITY_POLICY_ENV, "IRT_AFFINITY_NONE");
 		policy.type = IRT_AFFINITY_NONE;
 	}
@@ -166,11 +179,19 @@ irt_affinity_policy irt_load_affinity_from_env() {
 }
 
 static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy) {
-	if(policy.type == IRT_AFFINITY_NONE) return irt_g_empty_affinity_mask;
-	if(policy.type == IRT_AFFINITY_MAX_DISTANCE) return _irt_get_affinity_max_distance(id);
-	if(policy.type == IRT_AFFINITY_FIXED) return irt_affinity_mask_create_single_cpu(policy.fixed_map[id]);
+	if(policy.type == IRT_AFFINITY_NONE) {
+		return irt_g_empty_affinity_mask;
+	}
+	if(policy.type == IRT_AFFINITY_MAX_DISTANCE) {
+		return _irt_get_affinity_max_distance(id);
+	}
+	if(policy.type == IRT_AFFINITY_FIXED) {
+		return irt_affinity_mask_create_single_cpu(policy.fixed_map[id]);
+	}
 	uint32 skip = policy.skip_count;
-	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
+	if(policy.type == IRT_AFFINITY_FILL) {
+		skip = 0;
+	}
 	skip++;
 	uint32 pos = id*skip;
 	uint32 ncpus = irt_hw_get_num_cpus();

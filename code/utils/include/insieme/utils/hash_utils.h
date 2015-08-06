@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -82,28 +82,28 @@ class HashableMutableData : public Hashable {
 	 * A flag indicating whether the currently stored hash code is valid.
 	 */
 	mutable bool accurate;
-
+	
 	/**
 	 * The cached hash code.
 	 */
 	mutable std::size_t hashCode;
-
+	
 public:
 
 	HashableMutableData() : accurate(false) {}
-
+	
 	void invalidateHash() {
 		accurate = false;
 	}
-
+	
 	std::size_t hash() const {
-		if (!accurate) {
+		if(!accurate) {
 			hashCode = static_cast<const Derived*>(this)->computeHash();
 			accurate = true;
 		}
 		return hashCode;
 	}
-
+	
 };
 
 /**
@@ -123,7 +123,7 @@ class HashableImmutableData : public Hashable {
 	 * instances are immutable, the hash does not have to be altered after the creation of a instance.
 	 */
 	std::size_t hashCode;
-
+	
 protected:
 
 //	/**
@@ -145,7 +145,7 @@ public:
 	 * @param hashCode the hash code of this immutable hashable data element
 	 */
 	HashableImmutableData(std::size_t hashCode) : hashCode(hashCode) {};
-
+	
 	/**
 	 * Computes a hash code for this node. The actual computation has to be conducted by
 	 * subclasses. This class will only return the hash code passed on through the constructor.
@@ -158,8 +158,8 @@ public:
 		// retrieve cached hash code
 		return hashCode;
 	}
-
-
+	
+	
 	/**
 	 * Compares two instances of this type by checking for their identity (same
 	 * memory location) and hash code. If those tests are not conclusive, the virtual
@@ -167,19 +167,19 @@ public:
 	 */
 	bool operator==(const Derived& other) const {
 		// test for identity
-		if (this == &other) {
+		if(this == &other) {
 			return true;
 		}
-
+		
 		// fast hash code test
-		if (hashCode != other.hash()) {
+		if(hashCode != other.hash()) {
 			return false;
 		}
-
+		
 		// use virtual equals method
 		return static_cast<const Derived*>(this)->equals(other);
 	}
-
+	
 	/**
 	 * Implementing the not-equal operator for AST nodes by negating the equals
 	 * operator.
@@ -202,7 +202,7 @@ protected:
 	 * @param hashCode the hash code of this immutable hashable data element
 	 */
 	VirtualHashableImmutableData(std::size_t hashCode) : HashableImmutableData<Derived>(hashCode) {};
-
+	
 public:
 
 	/**
@@ -233,8 +233,8 @@ inline std::size_t appendHash(std::size_t& seed) {
  * template parameters.
  */
 template<
-	template <typename H> class Extractor = id
->
+    template <typename H> class Extractor = id
+    >
 inline std::size_t appendHash(std::size_t& seed) {
 	// nothing to do
 	return seed;
@@ -248,10 +248,10 @@ inline std::size_t appendHash(std::size_t& seed) {
  * @return the resulting hash value
  */
 template<
-	template <typename H> class Extractor = id,
-	typename T,
-	typename... Args
->
+    template <typename H> class Extractor = id,
+    typename T,
+    typename... Args
+    >
 inline std::size_t appendHash(std::size_t& seed, const T& first, const Args&... rest) {
 	static Extractor<T> ext;
 	boost::hash_combine(seed, ext(first));
@@ -276,14 +276,14 @@ inline std::size_t combineHashes() {
  * @return the resulting hash value
  */
 template<
-	template <typename H> class Extractor = id,
-	typename T,
-	typename ... Args
->
+    template <typename H> class Extractor = id,
+    typename T,
+    typename ... Args
+    >
 inline std::size_t combineHashes(const T& first, const Args&... rest) {
 	// initialize hash seed
 	std::size_t seed = 0;
-
+	
 	// append all the hash values
 	appendHash<Extractor>(seed, first, rest...);
 	return seed;
@@ -341,7 +341,7 @@ std::size_t hashList(const Container& container, Hasher hasher) {
 template<typename Container, typename Hasher>
 void hashList(std::size_t& seed, const Container& container, Hasher hasher) {
 	typedef typename Container::value_type Element;
-
+	
 	// combine hashes of all elements within the container
 	std::for_each(container.begin(), container.end(), [&](const Element& cur) {
 		boost::hash_combine(seed, hasher(cur));
@@ -351,75 +351,74 @@ void hashList(std::size_t& seed, const Container& container, Hasher hasher) {
 } // end namespace utils
 } // end namespace insieme
 
-namespace std
-{
+namespace std {
 
-	/**
-	 * Integrates the exposition of hashable immutable data into the std::hash infrastructure.
-	 *
-	 * @param instance the instance for which a hash code should be obtained.
-	 * @return the hash code of the given instance
-	 */
-	template<>
-	struct hash<insieme::utils::Hashable> {
-		template<typename T>
-		size_t operator()(const T& instance) const {
-			return instance.hash();
-		}
-	};
-
-
-	/**
-	 * Add hash support for pairs.
-	 */
-	template<typename A, typename B>
-	struct hash<pair<A,B>> {
-		size_t operator()(const pair<A,B>& instance) const {
-			return boost::hash_value(instance); // bridge to boost solution
-		}
-	};
-
-	/**
-	 * Add hash support for tuples.
-	 */
-	template<typename ... R>
-	struct hash<tuple<R...>> {
-		size_t operator()(const tuple<R...>& instance) const {
-			return boost::hash_value(instance);
-		}
-	};
-
-	/**
-	 * Add hash support for vectors.
-	 */
-	template<typename T, typename A>
-	struct hash<vector<T,A>> {
-		size_t operator()(const vector<T,A>& instance) const {
-			return boost::hash_value(instance); // bridge to boost solution
-		}
-	};
-
-
-	/**
-	 * Add hash support for vectors.
-	 */
-	template<typename K, typename C, typename A>
-	struct hash<set<K,C,A>> {
-		size_t operator()(const set<K,C,A>& instance) const {
-			return boost::hash_value(instance); // bridge to boost solution
-		}
-	};
-
-
-	// --------- support for shared pointer in boost -------------
-
-	template<typename T> class shared_ptr;
-
+/**
+ * Integrates the exposition of hashable immutable data into the std::hash infrastructure.
+ *
+ * @param instance the instance for which a hash code should be obtained.
+ * @return the hash code of the given instance
+ */
+template<>
+struct hash<insieme::utils::Hashable> {
 	template<typename T>
-	size_t hash_value(const shared_ptr<T>& ptr) {
-		// forward call to std-shared ptr
-		return hash<shared_ptr<T>>()(ptr);
+	size_t operator()(const T& instance) const {
+		return instance.hash();
 	}
+};
+
+
+/**
+ * Add hash support for pairs.
+ */
+template<typename A, typename B>
+struct hash<pair<A,B>> {
+	size_t operator()(const pair<A,B>& instance) const {
+		return boost::hash_value(instance); // bridge to boost solution
+	}
+};
+
+/**
+ * Add hash support for tuples.
+ */
+template<typename ... R>
+struct hash<tuple<R...>> {
+	size_t operator()(const tuple<R...>& instance) const {
+		return boost::hash_value(instance);
+	}
+};
+
+/**
+ * Add hash support for vectors.
+ */
+template<typename T, typename A>
+struct hash<vector<T,A>> {
+	size_t operator()(const vector<T,A>& instance) const {
+		return boost::hash_value(instance); // bridge to boost solution
+	}
+};
+
+
+/**
+ * Add hash support for vectors.
+ */
+template<typename K, typename C, typename A>
+struct hash<set<K,C,A>> {
+	size_t operator()(const set<K,C,A>& instance) const {
+		return boost::hash_value(instance); // bridge to boost solution
+	}
+};
+
+
+// --------- support for shared pointer in boost -------------
+
+template<typename T> class shared_ptr;
+
+template<typename T>
+size_t hash_value(const shared_ptr<T>& ptr) {
+	// forward call to std-shared ptr
+	return hash<shared_ptr<T>>()(ptr);
+}
 
 }
 

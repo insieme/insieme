@@ -48,7 +48,9 @@
 
 template<typename T>
 struct id : public std::unary_function<const T&, const T&> {
-	const T& operator()(const T& element) const { return element; }
+	const T& operator()(const T& element) const {
+		return element;
+	}
 };
 
 template<typename PointerType>
@@ -150,22 +152,22 @@ struct hash_target<PointerType, typename boost::enable_if<boost::is_pointer<Poin
 	 * Derives the element type be removing the pointer extension.
 	 */
 	typedef typename boost::remove_pointer<PointerType>::type ElementType;
-
+	
 	/**
 	 * This function is used to compute the hash of the actual target.
 	 */
 	boost::hash<ElementType> hasher;
-
+	
 	/**
 	 * Explicit Default constructor required by VC.
 	 */
 	hash_target() : hasher() {}
-
+	
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to.
 	 */
 	std::size_t operator()(const PointerType p) const {
-		if (p) {
+		if(p) {
 			return hasher(*p);
 		}
 		return 0;
@@ -183,22 +185,22 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
 	 * Obtains the element type from the smart pointer.
 	 */
 	typedef typename PointerType::element_type ElementType;
-
+	
 	/**
 	 * This function is used to compute the hash of the actual target.
 	 */
 	boost::hash<ElementType> hasher;
-
+	
 	/**
 	 * Explicit Default constructor required by VC.
 	 */
 	hash_target() : hasher() {}
-
+	
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to.
 	 */
 	std::size_t operator()(const PointerType p) const {
-		if (p) {
+		if(p) {
 			return hasher(*p);
 		}
 		return 0;
@@ -215,7 +217,9 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
  */
 template<typename ... T>
 struct AcceptAll {
-	bool operator()(T...args) const { return true; }
+	bool operator()(T...args) const {
+		return true;
+	}
 };
 
 /**
@@ -223,7 +227,9 @@ struct AcceptAll {
  */
 template<typename ... T>
 struct RejectAll {
-	bool operator()(T...args) const { return false; }
+	bool operator()(T...args) const {
+		return false;
+	}
 };
 
 
@@ -244,9 +250,9 @@ struct RejectAll {
  */
 template<typename C, typename R, typename ... A>
 struct member_function {
-	typedef R (C::* member_function_ptr)( A ... );
-	typedef R (* pointer_to_member_function)(C*, A...);
-
+	typedef R(C::* member_function_ptr)(A ...);
+	typedef R(* pointer_to_member_function)(C*, A...);
+	
 	/**
 	 * An extension of GCC allows to obtain a function pointer to the actual
 	 * implementation of a member function. This way, the overhead of walking through
@@ -259,37 +265,37 @@ struct member_function {
 	 * table based on the static type of the pointer. Hence, resolving the real type
 	 * of a this pointer within a abstract super class was not supported.
 	 */
-
+	
 	C* object;
-
+	
 	member_function_ptr fun;  // member function version
-
+	
 	member_function(C& object, const member_function_ptr& member)
 		: object(&object), fun(member) {}
-
+		
 	R operator()(A...args) const {
 		return (object->*fun)(args...);
 	}
-
+	
 };
 
 // the same as above, for const member functions
 template<typename C, typename R, typename ... A>
 struct member_function_const {
-	typedef R (C::* member_function_ptr)( A ... ) const;
-	typedef R (* pointer_to_member_function)(const C*, A...);
-
+	typedef R(C::* member_function_ptr)(A ...) const;
+	typedef R(* pointer_to_member_function)(const C*, A...);
+	
 	const C* object;
-
+	
 	member_function_ptr fun;  // member function version
-
+	
 	member_function_const(const C& object, const member_function_ptr& member)
 		: object(&object), fun(member) {}
-
+		
 	R operator()(A...args) const {
 		return (object->*fun)(args...);
 	}
-
+	
 };
 
 
@@ -309,12 +315,12 @@ struct member_function_const {
  */
 template<typename C, typename O, typename R, typename ... A>
 typename boost::enable_if<boost::is_base_of<C,O>,member_function<C,R,A...>>::type
-fun(O& object, R (C::* fun)( A ... )) {
+fun(O& object, R(C::* fun)(A ...)) {
 	return member_function<C,R,A...>(object, fun);
 }
 template<typename C, typename O, typename R, typename ... A>
 typename boost::enable_if<boost::is_base_of<C,O>,member_function_const<C,R,A...>>::type
-fun(const O& object, R (C::* fun)( A ... ) const) {
+fun(const O& object, R(C::* fun)(A ...) const) {
 	return member_function_const<C,R,A...>(object, fun);
 }
 
@@ -401,7 +407,7 @@ struct cons<type_list<H,R...>> {
 template <class ... T>
 struct concat;
 
-// matches any number of typelists 
+// matches any number of typelists
 template <class... L1, class... Tail>
 struct concat<type_list<L1...>,Tail...> {
 	typedef typename concat<type_list<L1...>,typename concat<Tail...>::type>::type type;
@@ -427,65 +433,62 @@ struct concat<type_list<L...>> {
 
 namespace detail {
 
-	template<typename Function> struct lambda_traits_helper { };
+template<typename Function> struct lambda_traits_helper { };
 
-	// get rid of const modifier
-	template<typename T>
-	struct lambda_traits_helper<const T> : public lambda_traits_helper<T> {};
+// get rid of const modifier
+template<typename T>
+struct lambda_traits_helper<const T> : public lambda_traits_helper<T> {};
 
-	// get rid of pointers
-	template<typename T>
-	struct lambda_traits_helper<T*> : public lambda_traits_helper<T> {};
+// get rid of pointers
+template<typename T>
+struct lambda_traits_helper<T*> : public lambda_traits_helper<T> {};
 
-	// handle class of member function pointers
-	template<typename R, typename C, typename ... A>
-	struct lambda_traits_helper<R(C::*)(A...)> : public lambda_traits_helper<R(*)(A...)> {
-		typedef C class_type;
-	};
+// handle class of member function pointers
+template<typename R, typename C, typename ... A>
+struct lambda_traits_helper<R(C::*)(A...)> : public lambda_traits_helper<R(*)(A...)> {
+    typedef C class_type;
+};
 
-	// get rid of const modifier
-	template<typename R, typename C, typename ... A>
-	struct lambda_traits_helper<R(C::*)(A...) const> : public lambda_traits_helper<R(C::*)(A...)> {};
+// get rid of const modifier
+template<typename R, typename C, typename ... A>
+struct lambda_traits_helper<R(C::*)(A...) const> : public lambda_traits_helper<R(C::*)(A...)> {};
 
-	template<typename R>
-	struct lambda_traits_helper<R(void)>
-	{
-	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
-	  typedef R result_type;
-	  typedef type_list<> argument_types;
-	};
+template<typename R>
+struct lambda_traits_helper<R(void)> {
+    BOOST_STATIC_CONSTANT(unsigned, arity = 0);
+    typedef R result_type;
+    typedef type_list<> argument_types;
+};
 
-	template<typename R, typename T1>
-	struct lambda_traits_helper<R(T1)>
-	{
-	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
-	  typedef R result_type;
-	  typedef T1 arg1_type;
-	  typedef T1 argument_type;
-	  typedef type_list<T1> argument_types;
-	};
+template<typename R, typename T1>
+struct lambda_traits_helper<R(T1)> {
+    BOOST_STATIC_CONSTANT(unsigned, arity = 1);
+    typedef R result_type;
+    typedef T1 arg1_type;
+    typedef T1 argument_type;
+    typedef type_list<T1> argument_types;
+};
 
-	template<typename R, typename T1, typename T2>
-	struct lambda_traits_helper<R(T1, T2)>
-	{
-	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
-	  typedef R result_type;
-	  typedef T1 arg1_type;
-	  typedef T2 arg2_type;
-	  typedef T1 first_argument_type;
-	  typedef T2 second_argument_type;
-	  typedef type_list<T1,T2> argument_types;
-	};
+template<typename R, typename T1, typename T2>
+struct lambda_traits_helper<R(T1, T2)> {
+    BOOST_STATIC_CONSTANT(unsigned, arity = 2);
+    typedef R result_type;
+    typedef T1 arg1_type;
+    typedef T2 arg2_type;
+    typedef T1 first_argument_type;
+    typedef T2 second_argument_type;
+    typedef type_list<T1,T2> argument_types;
+};
 
-	template <typename R, typename T1, typename T2, typename T3, typename ... A >
-	struct lambda_traits_helper<R( T1, T2, T3, A ... )>  {
-		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
-		typedef R result_type;
-		typedef T1 arg1_type;
-	    typedef T2 arg2_type;
-	    typedef T3 arg3_type;
-		typedef type_list<T1,T2,T3,A...> argument_types;
-	};
+template <typename R, typename T1, typename T2, typename T3, typename ... A>
+struct lambda_traits_helper<R(T1, T2, T3, A ...)>  {
+    BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
+    typedef R result_type;
+    typedef T1 arg1_type;
+    typedef T2 arg2_type;
+    typedef T3 arg3_type;
+    typedef type_list<T1,T2,T3,A...> argument_types;
+};
 
 } // end namespace detail
 
@@ -523,13 +526,13 @@ struct element_type<pos,H,R...> {
 };
 
 //==== FinalActions ===============================================================================
-// A class which is utilized to invoke a sequence of statements (or action) when a block is exited. 
-// Because there are situation where a block can be exited from multiple paths, this object will 
-// make it sure thos actions will be invoked on every exit path. 
+// A class which is utilized to invoke a sequence of statements (or action) when a block is exited.
+// Because there are situation where a block can be exited from multiple paths, this object will
+// make it sure thos actions will be invoked on every exit path.
 //
 // Example:
 //
-// { 
+// {
 // 	stream << "";
 // 	if (x==0) {
 // 		stream.close();
@@ -541,7 +544,7 @@ struct element_type<pos,H,R...> {
 //
 // Usage with FinalActions():
 //
-// { 
+// {
 // 	FinalAction fa([&stream](){ stream.close(); });
 // 	if(x==0)
 // 		return;
@@ -550,54 +553,61 @@ struct element_type<pos,H,R...> {
 // }
 //
 // The action which is provided will be invoked when the block is exited, therefore in the
-// destructor 
+// destructor
 //=================================================================================================
 class FinalActions {
-	
+
 	typedef std::function<void ()> Action;
 	Action 	action;
 	bool 	enabled;
-
-public:
-	FinalActions(const Action& action, bool enabled=true) : 
-		action(action), enabled(enabled) { }
 	
-	bool isEnabled() const { return enabled; }
-
-	void setEnabled(bool enabled) { this->enabled = enabled; }
-
-	~FinalActions() { 
-		if(isEnabled()) { action(); }
-	}	
+public:
+	FinalActions(const Action& action, bool enabled=true) :
+		action(action), enabled(enabled) { }
+		
+	bool isEnabled() const {
+		return enabled;
+	}
+	
+	void setEnabled(bool enabled) {
+		this->enabled = enabled;
+	}
+	
+	~FinalActions() {
+		if(isEnabled()) {
+			action();
+		}
+	}
 };
 
-namespace insieme { namespace utils {
+namespace insieme {
+namespace utils {
 
 /**
  * Utility for composition of functions. Creates a bind object which models the lazy evaluation of a composition of
- * functions. For example f(g(h(X))) can be created and when the object is invoked with a value of X the h function 
- * is invoked, the result passed to g and so forth. 
+ * functions. For example f(g(h(X))) can be created and when the object is invoked with a value of X the h function
+ * is invoked, the result passed to g and so forth.
  */
 template <typename RetTy, typename... ArgTy>
-struct FunctionComposition : public std::function<RetTy (ArgTy...)> {
-	
-	/**
-	 * Constructor which allows to combine two functors (whatever their type is). This one is
-	 * selected when the return type of g is the same as the argument type of f
-	 */
-	template <class T>
-	FunctionComposition( const std::function<RetTy (T)>& f, const std::function<T (ArgTy...)>& g ) : 
-		std::function<RetTy (ArgTy...)>( std::bind(f, std::bind(g, std::placeholders::_1)) ) { } 
+struct FunctionComposition : public std::function<RetTy(ArgTy...)> {
 
-	/**
-	 * If f receive the output of g as a const ref, then this signature is selected
-	 */
-	template <class T>
-	FunctionComposition( const std::function<RetTy (const T&)>& f, const std::function<T (ArgTy...)>& g ) : 
-		std::function<RetTy (ArgTy...)>( std::bind(f, std::bind(g, std::placeholders::_1)) ) { } 
+    /**
+     * Constructor which allows to combine two functors (whatever their type is). This one is
+     * selected when the return type of g is the same as the argument type of f
+     */
+    template <class T>
+    FunctionComposition(const std::function<RetTy(T)>& f, const std::function<T(ArgTy...)>& g) :
+std::function<RetTy(ArgTy...)>(std::bind(f, std::bind(g, std::placeholders::_1))) { }
 
-};
+/**
+ * If f receive the output of g as a const ref, then this signature is selected
+ */
+template <class T>
+FunctionComposition(const std::function<RetTy(const T&)>& f, const std::function<T(ArgTy...)>& g) :
+std::function<RetTy(ArgTy...)>(std::bind(f, std::bind(g, std::placeholders::_1))) { }
 
+         };
+         
 namespace detail {
 
 template <class ...Classes>
@@ -613,22 +623,25 @@ struct last<Head> {
 	typedef typename lambda_traits<Head>::argument_type value;
 };
 
-} // end anonymous namespace 
+} // end anonymous namespace
 
-template <class Func> 
-std::function<typename lambda_traits<Func>::result_type (typename lambda_traits<Func>::argument_type)>
-composeFunc(const Func& f) { return f; }
+template <class Func>
+std::function<typename lambda_traits<Func>::result_type(typename lambda_traits<Func>::argument_type)>
+composeFunc(const Func& f) {
+	return f;
+}
 
 // compose multiple functions into a composition object
 template <typename Func1, typename Func2, typename... Funcs>
 FunctionComposition<
-	typename lambda_traits<Func1>::result_type, 
-	typename detail::last<Func2, Funcs...>::value
+typename lambda_traits<Func1>::result_type,
+         typename detail::last<Func2, Funcs...>::value
 > composeFunc(const Func1& first, const Func2& second, const Funcs&... funcs) {
 	return FunctionComposition<
-			typename lambda_traits<Func1>::result_type,
-			typename detail::last<Func2, Funcs...>::value
-		>(composeFunc(first), composeFunc(second, funcs...));
+	       typename lambda_traits<Func1>::result_type,
+	       typename detail::last<Func2, Funcs...>::value
+	       >(composeFunc(first), composeFunc(second, funcs...));
 }
 
-} } // end insieme::utils namespce 
+}
+} // end insieme::utils namespce

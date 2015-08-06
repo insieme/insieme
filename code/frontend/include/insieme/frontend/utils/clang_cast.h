@@ -44,20 +44,20 @@ namespace frontend {
 
 //FORWARD DECLARATION
 namespace conversion {
-	class Converter;
+class Converter;
 }
 
 namespace utils {
-	/**
-	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
-	 *
-	 * @param convFact, conversionFactor holding all converters and helpers
-	 * @param castExpr the clang cast expression
-	 * return right typed expression
-	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
-											  const clang::CastExpr* castExpr);
-
-} // end utils namespace 
+/**
+ * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
+ *
+ * @param convFact, conversionFactor holding all converters and helpers
+ * @param castExpr the clang cast expression
+ * return right typed expression
+ */
+core::ExpressionPtr performClangCastOnIR(insieme::frontend::conversion::Converter& convFact,
+        const clang::CastExpr* castExpr);
+        
+} // end utils namespace
 } // end frontend namespace
 } // end insisme namespace

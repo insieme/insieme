@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -66,23 +66,23 @@ typedef struct {
 typedef struct _irt_cap_block_usage_info {
 
 	const irt_cap_data_block_info* block;		// the block this usage info is covering
-
+	
 	int32 tag;					// the user defined tag identifying this region (negative if untagged)
-
+	
 	irt_spinlock* locks;  // a list of locks for synchronous access
-
+	
 	char* life_in_values;		// the life_in_values of the block when being read the first time when entering a region
 	bool* read;					// a flag mask marking read values
-
+	
 	bool* is_pointer;			// a flag mask marking data being interpreted as pointers
-
+	
 	char* life_out_values;		// the data written to the memory cells within the region
 	bool* last_written;			// a flag mask marking values been written last by the corrsponding region
-
+	
 	bool* is_life_out;			// a flag mask marking written values being read after the region
-
+	
 	struct _irt_cap_block_usage_info* next; 	// enables this struct to be used within a list
-
+	
 } irt_cap_block_usage_info;
 
 

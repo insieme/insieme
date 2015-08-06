@@ -59,7 +59,9 @@ struct PointerMap : public std::unordered_map<KeyPtr, ValueType, hash_target<Key
 	using Base = std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>>;
 	PointerMap() {};
 	PointerMap(std::initializer_list<typename Base::value_type> init) : Base(init) {}
-	template<typename Container> void insertAll(const Container& c) { this->insert(c.begin(), c.end()); }
+	template<typename Container> void insertAll(const Container& c) {
+		this->insert(c.begin(), c.end());
+	}
 };
 
 template<class KeyPtr, class ValueType>
@@ -127,20 +129,20 @@ inline PointerMap<Key,Value> toPointerMap(const Key& key, const Value& value, co
 
 namespace {
 
-	/**
-	 * The base case for a function filing a map.
-	 */
-	template<typename Key, typename Value>
-	void addMappings(std::map<Key,Value>& map) {}
+/**
+ * The base case for a function filing a map.
+ */
+template<typename Key, typename Value>
+void addMappings(std::map<Key,Value>& map) {}
 
-	/**
-	 * The step case for a function filing a map.
-	 */
-	template<typename Key, typename Value, typename ... Rest>
-	void addMappings(std::map<Key,Value>& map, const std::pair<Key,Value>& first, const Rest& ... rest) {
-		map.insert(first);
-		addMappings(map, rest...);
-	}
+/**
+ * The step case for a function filing a map.
+ */
+template<typename Key, typename Value, typename ... Rest>
+void addMappings(std::map<Key,Value>& map, const std::pair<Key,Value>& first, const Rest& ... rest) {
+	map.insert(first);
+	addMappings(map, rest...);
+}
 }
 
 /**
@@ -168,17 +170,17 @@ inline std::map<Key, Value> toMap(const std::pair<Key,Value>& first, const Eleme
 template<typename MapA, typename MapB, typename Comparator>
 bool equal(const MapA& mapA, const MapB& mapB, const Comparator& comparator) {
 	typedef typename MapA::value_type Element;
-
+	
 	// check for identity
-	if (&mapA == &mapB) {
+	if(&mapA == &mapB) {
 		return true;
 	}
-
+	
 	// quick check for its size
-	if (mapA.size() != mapB.size()) {
+	if(mapA.size() != mapB.size()) {
 		return false;
 	}
-
+	
 	// so - the size is equal - check elements ...
 	return all(mapA.begin(), mapA.end(), [&mapB,&comparator](const Element& cur)->bool {
 		auto pos = mapB.find(cur.first);
@@ -215,7 +217,7 @@ inline bool equal(const MapA& mapA, const MapB& mapB) {
 template<typename Map, typename KeyHasher, typename ValueHasher>
 std::size_t computeHash(const Map& map, KeyHasher keyHasher, ValueHasher valueHasher) {
 	typedef typename Map::value_type Element;
-
+	
 	// compute the hash code for the map
 	std::size_t seed = 0;
 	std::for_each(map.begin(), map.end(), [&seed, &keyHasher, &valueHasher](const Element& cur) {
@@ -326,7 +328,7 @@ struct hash<boost::unordered_map<K,T,H,KE,A>> {
 template<typename Key, typename Mapped, typename Hash, typename Pred, typename Alloc>
 std::ostream& operator<<(std::ostream& out, const std::unordered_map<Key, Mapped, Hash, Pred, Alloc>& container) {
 	typedef typename std::unordered_map<Key, Mapped, Hash, Pred, Alloc>::value_type Element;
-
+	
 	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
 		out << cur.first << "=" << cur.second;
 	}) << "}";
@@ -342,7 +344,7 @@ std::ostream& operator<<(std::ostream& out, const std::unordered_map<Key, Mapped
 template<typename Key, typename Mapped, typename Hash, typename Pred, typename Alloc>
 std::ostream& operator<<(std::ostream& out, const boost::unordered_map<Key,Mapped, Hash, Pred, Alloc>& container) {
 	typedef typename boost::unordered_map<Key, Mapped, Hash, Pred, Alloc>::value_type Element;
-
+	
 	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
 		out << cur.first << "=" << cur.second;
 	}) << "}";
@@ -358,7 +360,7 @@ std::ostream& operator<<(std::ostream& out, const boost::unordered_map<Key,Mappe
 template<typename Key, typename Mapped, typename Compare, typename Alloc>
 std::ostream& operator<<(std::ostream& out, const std::map<Key, Mapped, Compare, Alloc>& container) {
 	typedef typename std::map<Key, Mapped, Compare, Alloc>::value_type Element;
-
+	
 	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
 		out << cur.first << "=" << cur.second;
 	}) << "}";

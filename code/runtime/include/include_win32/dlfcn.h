@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -50,10 +50,10 @@
 
 __BEGIN_DECLS
 
-void *dlopen (const char *filename, int flag);
+void *dlopen(const char *filename, int flag);
 const char *dlerror(void);
 void *dlsym(void *handle, char *symbol);
-int dlclose (void *handle);
+int dlclose(void *handle);
 
 __END_DECLS
 

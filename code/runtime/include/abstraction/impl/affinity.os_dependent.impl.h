@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,11 +39,11 @@
 #define __GUARD_ABSTRACTION_IMPL_AFFINITY_OS_DEPENDENT_IMPL_H
 
 #if defined(_WIN32)
-	#include "affinity.win.impl.h"
+#include "affinity.win.impl.h"
 #elif defined(_GEMS_SIM)
-	#include "affinity.gems.impl.h"
+#include "affinity.gems.impl.h"
 #else
-	#include "affinity.unix.impl.h"
+#include "affinity.unix.impl.h"
 #endif
 
 

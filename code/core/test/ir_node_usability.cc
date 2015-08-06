@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,48 +48,48 @@ TEST(Node, Basic) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	IntValuePtr node = builder.intValue(14);
-
+	
 	EXPECT_TRUE(node->isValue());
-
-
+	
+	
 	TypeList list;
-
+	
 	TupleTypePtr tuple1 = builder.tupleType(list);
-
+	
 	list.push_back(tuple1);
 	TupleTypePtr tuple2 = builder.tupleType(list);
-
+	
 	EXPECT_EQ(0u, tuple1.getChildList().size());
 	EXPECT_EQ(1u, tuple2.getChildList().size());
-
+	
 	EXPECT_EQ(NT_TupleType, tuple1.getNodeType());
-
-
+	
+	
 	LiteralPtr lit = builder.literal(manager.getLangBasic().getBool(), "true");
 	EXPECT_EQ(NT_Literal, lit->getNodeType());
-
+	
 	IfStmtPtr stmt = builder.ifStmt(lit, lit, lit);
 	EXPECT_EQ(NT_IfStmt, stmt->getNodeType());
 	EXPECT_EQ(3u, stmt->getChildList().size());
-
+	
 	EXPECT_EQ(lit, stmt->getChildList()[0]);
 	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[1]);
 	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[2]);
-
+	
 	EXPECT_EQ(lit, stmt->getChildNodeReference<0>());
 	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildNodeReference<1>());
 	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildNodeReference<2>());
-
+	
 	EXPECT_TRUE(typeid(stmt->getChildNodeReference<0>()) == typeid(ExpressionPtr));
 	EXPECT_TRUE(typeid(stmt->getChildNodeReference<1>()) == typeid(CompoundStmtPtr));
 	EXPECT_TRUE(typeid(stmt->getChildNodeReference<2>()) == typeid(CompoundStmtPtr));
-
+	
 	EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<0>()) == typeid(const Expression*));
 	EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<1>()) == typeid(const CompoundStmt*));
 	EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<2>()) == typeid(const CompoundStmt*));
-
+	
 	EXPECT_EQ(&*lit, &*stmt->getChildNodeReference<0>());
 	EXPECT_EQ(&*builder.compoundStmt(lit), &*stmt->getChildNodeReference<1>());
 	EXPECT_EQ(&*builder.compoundStmt(lit), &*stmt->getChildNodeReference<2>());
@@ -99,7 +99,7 @@ TEST(Node, MemberTypeTraits) {
 
 	EXPECT_TRUE(typeid(node_child_type<IfStmt,0>::type) == typeid(Expression));
 	EXPECT_TRUE(typeid(node_child_type<IfStmt,1>::type) == typeid(CompoundStmt));
-
+	
 	EXPECT_TRUE(typeid(node_child_type<TupleType,1>::type) == typeid(Type));
 	EXPECT_TRUE(typeid(node_child_type<TupleType,100>::type) == typeid(Type));
 }
@@ -108,27 +108,27 @@ TEST(Node, MemberTypeTraits) {
 TEST(Node, MemberAccess) {
 	NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	LiteralPtr literal = builder.intLit(1);
 	ExpressionPtr lit(literal);
-
+	
 	IfStmtPtr stmt = builder.ifStmt(lit, lit, lit);
-
+	
 	IfStmtPtr ptr(stmt);
 	IfStmtAddress adr(stmt);
-
+	
 	ptr->getChildNodeReference<0>();
 	adr->getChildNodeReference<0>();
-
+	
 	ExpressionPtr stmtPtr = ptr->getCondition();
 	ExpressionAddress stmtAdr = adr->getCondition();
-
+	
 	ptr->getThenBody();
 	ptr->getElseBody();
-
+	
 	adr->getThenBody();
 	adr->getElseBody();
-
+	
 }
 
 } // end namespace core

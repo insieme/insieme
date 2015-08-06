@@ -45,8 +45,7 @@
 #define N 22
 
 TEST(WIOversubscription, Simple) {
-	EXPECT_IN_TIME(10*1000, 
-	{
+	EXPECT_IN_TIME(10*1000, {
 		irt::init(3);
 		irt::run([]() {
 			irt::merge(irt::parallel(N, [] {
@@ -58,8 +57,7 @@ TEST(WIOversubscription, Simple) {
 }
 
 TEST(WIOversubscription, Barrier) {
-	EXPECT_IN_TIME(10*1000, 
-	{
+	EXPECT_IN_TIME(10*1000, {
 		irt::init(3);
 		irt::run([]() {
 			irt::merge(irt::parallel(N, [] {
@@ -73,7 +71,9 @@ TEST(WIOversubscription, Barrier) {
 }
 
 int RecParCount(int n) {
-	if(n == 0) return 1;
+	if(n == 0) {
+		return 1;
+	}
 	int ret = 0;
 	irt::merge(irt::parallel(n, [&ret,n] {
 		ret = RecParCount(n-1)+1;
@@ -82,8 +82,7 @@ int RecParCount(int n) {
 }
 
 TEST(WIOversubscription, Nested) {
-	EXPECT_IN_TIME(100*1000, 
-	{
+	EXPECT_IN_TIME(100*1000, {
 		irt::init(3);
 		irt::run([]() {
 			std::cout << RecParCount(5) << std::endl;

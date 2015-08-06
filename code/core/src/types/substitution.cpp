@@ -42,87 +42,87 @@ namespace types {
 
 namespace {
 
+/**
+ * This class provides a wrapper for a substitution to be applied to some type. This
+ * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
+ * mechanism to perform
+ */
+class SubstitutionMapper : public SimpleNodeMapping {
+
 	/**
-	 * This class provides a wrapper for a substitution to be applied to some type. This
-	 * wrapper is based on a node mapping, which allows this class to exploit the general node mapping
-	 * mechanism to perform
+	 * The node manager to be used for creating new type nodes.
 	 */
-	class SubstitutionMapper : public SimpleNodeMapping {
+	NodeManager& manager;
+	
+	/**
+	 * The type variable mapping constituting the substitution to be wrapped by this instance.
+	 */
+	const Substitution::Mapping& mapping;
+	
+	/**
+	 * The int type parameter mapping of the substitution to be wrapped by this instance.
+	 */
+	const Substitution::IntTypeParamMapping& paramMapping;
+	
+public:
 
-		/**
-		 * The node manager to be used for creating new type nodes.
-		 */
-		NodeManager& manager;
-
-		/**
-		 * The type variable mapping constituting the substitution to be wrapped by this instance.
-		 */
-		const Substitution::Mapping& mapping;
-
-		/**
-		 * The int type parameter mapping of the substitution to be wrapped by this instance.
-		 */
-		const Substitution::IntTypeParamMapping& paramMapping;
-
-	public:
-
-		/**
-		 * Creates a new instance of this class wrapping the given substitution.
-		 *
-		 * @param manager the node manager to be used for creating new node instances if necessary
-		 * @param substitution the substitution to be wrapped by the resulting instance.
-		 */
-		SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-			: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()),
-			  paramMapping(substitution.getIntTypeParamMapping()) {};
-
-		/**
-		 * The procedure mapping a node to its substitution.
-		 *
-		 * @param element the node to be resolved
-		 */
-		const NodePtr mapElement(unsigned, const NodePtr& element) {
-			// quick check - only variables are substituted
-			auto currentType = element->getNodeType();
-			if (currentType != NT_TypeVariable && currentType != NT_VariableIntTypeParam) {
-				return element->substitute(manager, *this);
+	/**
+	 * Creates a new instance of this class wrapping the given substitution.
+	 *
+	 * @param manager the node manager to be used for creating new node instances if necessary
+	 * @param substitution the substitution to be wrapped by the resulting instance.
+	 */
+	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
+		: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()),
+		  paramMapping(substitution.getIntTypeParamMapping()) {};
+		  
+	/**
+	 * The procedure mapping a node to its substitution.
+	 *
+	 * @param element the node to be resolved
+	 */
+	const NodePtr mapElement(unsigned, const NodePtr& element) {
+		// quick check - only variables are substituted
+		auto currentType = element->getNodeType();
+		if(currentType != NT_TypeVariable && currentType != NT_VariableIntTypeParam) {
+			return element->substitute(manager, *this);
+		}
+		
+		switch(currentType) {
+		
+		case NT_TypeVariable: {
+			// lookup current variable within the mapping
+			auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
+			if(pos != mapping.end()) {
+				// found! => replace
+				return (*pos).second;
 			}
-
-			switch (currentType) {
-
-				case NT_TypeVariable: {
-					// lookup current variable within the mapping
-					auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
-					if (pos != mapping.end()) {
-						// found! => replace
-						return (*pos).second;
-					}
-
-					// not found => return current node
-					// (since nothing within a variable node may be substituted)
-					return element;
-				}
-				case NT_VariableIntTypeParam: {
-					// lookup int type param variable ...
-					auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(element));
-					if (pos != paramMapping.end()) {
-						// found! => replace
-						return (*pos).second;
-					}
-					// not found => return current node
-					return element;
-				}
-
-				default:
-					assert_fail() << "Only type and parameter variables should reach this point!";
-			}
-
-			//should never be reached
-			assert_fail() << "This point shouldn't be reachable!";
+			
+			// not found => return current node
+			// (since nothing within a variable node may be substituted)
 			return element;
 		}
-
-	};
+		case NT_VariableIntTypeParam: {
+			// lookup int type param variable ...
+			auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(element));
+			if(pos != paramMapping.end()) {
+				// found! => replace
+				return (*pos).second;
+			}
+			// not found => return current node
+			return element;
+		}
+		
+		default:
+			assert_fail() << "Only type and parameter variables should reach this point!";
+		}
+		
+		//should never be reached
+		assert_fail() << "This point shouldn't be reachable!";
+		return element;
+	}
+	
+};
 
 } // end anonymous namespace
 
@@ -142,11 +142,11 @@ TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
 }
 
 IntTypeParamPtr Substitution::applyTo(const IntTypeParamPtr& param) const {
-	if (param->getNodeType() != core::NT_VariableIntTypeParam) {
+	if(param->getNodeType() != core::NT_VariableIntTypeParam) {
 		return param;
 	}
 	auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(param));
-	if (pos == paramMapping.end()) {
+	if(pos == paramMapping.end()) {
 		return param;
 	}
 	return (*pos).second;
@@ -156,7 +156,7 @@ IntTypeParamPtr Substitution::applyTo(const IntTypeParamPtr& param) const {
 void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	auto element = std::make_pair(var,type);
 	auto res = mapping.insert(element);
-	if (!res.second) {
+	if(!res.second) {
 		mapping.erase(var);
 		res = mapping.insert(element);
 		assert_true(res.second) << "Insert was not successful!";
@@ -166,7 +166,7 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value) {
 	auto element = std::make_pair(var,value);
 	auto res = paramMapping.insert(element);
-	if (!res.second) {
+	if(!res.second) {
 		paramMapping.erase(var);
 		res = paramMapping.insert(element);
 		assert_true(res.second) << "Insert was not successful!";
@@ -194,8 +194,10 @@ std::ostream& Substitution::printTo(std::ostream& out) const {
 	out << join(",", mapping, [](std::ostream& out, const Mapping::value_type& cur)->std::ostream& {
 		return out << *cur.first << "->" << *cur.second;
 	});
-
-	if (!mapping.empty() && !paramMapping.empty()) out << "/";
+	
+	if(!mapping.empty() && !paramMapping.empty()) {
+		out << "/";
+	}
 	out << join(",", paramMapping, [](std::ostream& out, const IntTypeParamMapping::value_type& cur)->std::ostream& {
 		return out << *cur.first << "->" << *cur.second;
 	});
@@ -207,40 +209,40 @@ Substitution Substitution::compose(NodeManager& manager, const Substitution& a, 
 
 	typedef Substitution::Mapping::value_type Entry;
 	typedef Substitution::IntTypeParamMapping::value_type ParamEntry;
-
+	
 	// copy substitution a
 	Substitution res(a);
-
+	
 	// --- normal types ---
-
+	
 	// apply substitution b to all mappings in a
 	for_each(res.mapping, [&manager, &b](Entry& cur) {
 		cur.second = b.applyTo(manager, cur.second);
 	});
-
+	
 	// add remaining mappings of b
 	Substitution::Mapping& resMapping = res.mapping;
 	for_each(b.mapping, [&resMapping](const Entry& cur) {
-		if (resMapping.find(cur.first) == resMapping.end()) {
+		if(resMapping.find(cur.first) == resMapping.end()) {
 			resMapping.insert(cur);
 		}
 	});
-
+	
 	// --- int type parameter ---
-
+	
 	// apply substitution b to all mappings in a
 	for_each(res.paramMapping, [&manager, &b](ParamEntry& cur) {
 		cur.second = b.applyTo(cur.second);
 	});
-
+	
 	// add remaining mappings of b
 	Substitution::IntTypeParamMapping& resParamMapping = res.paramMapping;
 	for_each(b.paramMapping, [&resParamMapping](const ParamEntry& cur) {
-		if (resParamMapping.find(cur.first) == resParamMapping.end()) {
+		if(resParamMapping.find(cur.first) == resParamMapping.end()) {
 			resParamMapping.insert(cur);
 		}
 	});
-
+	
 	return res;
 }
 

@@ -48,9 +48,9 @@ namespace extensions {
  * here is the place to fix the right return value
  */
 class CppRefsCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-    public:
-    FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
-
+public:
+	FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
+	
 	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
 };
 

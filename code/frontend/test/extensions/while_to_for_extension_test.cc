@@ -47,9 +47,9 @@ using namespace core;
 TEST(WhileToFor, Simple) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-				R"(
+	                               R"(
 				int<4> main() {
 					decl ref<int<4>> i = 0;
 					decl ref<int<4>> j = 4;
@@ -63,10 +63,10 @@ TEST(WhileToFor, Simple) {
 					return i;
 				}
 				)"
-			);
-
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	frontend::extensions::WhileToForExtension extension;
 	auto str=toString(extension.IRVisit(program));
 	EXPECT_PRED2(containsSubString, str, "{{}; {}; for(int<4> v5 = 0 .. 10 : 3) {ref<int<4>> v3 = v1; {};}; for(int<4> v4 = 4 .. 0 : -2) {{};}; return v1;}}");
@@ -75,9 +75,9 @@ TEST(WhileToFor, Simple) {
 TEST(WhileToFor, MultipleAss) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-				R"(
+	                               R"(
 				int<4> main() {
 					decl ref<int<4>> i = 0;
 					decl ref<int<4>> j = 4;
@@ -90,21 +90,22 @@ TEST(WhileToFor, MultipleAss) {
 					return 0;
 				}
 				)"
-			);
-
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	frontend::extensions::WhileToForExtension extension;
 	auto str=toString(extension.IRVisit(program));
-	EXPECT_PRED2(containsSubString, str, "{ref<int<4>> v1 = 0; ref<int<4>> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_lt(ref_deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>> v2) {return int_ne(ref_deref(v2), 0);}}(v2)})) {ref<int<4>> v5 = v1; ref_assign(v1, int_add(int_add(1, ref_deref(v1)), 1)); ref_assign(v2, int_sub(ref_deref(v2), 2)); ref_assign(v1, int_sub(ref_deref(v1), 1));}; return 0;}");
+	EXPECT_PRED2(containsSubString, str,
+	             "{ref<int<4>> v1 = 0; ref<int<4>> v2 = 4; while(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int_lt(ref_deref(v1), 10), bind(){rec v0.{v0=fun(ref<int<4>> v2) {return int_ne(ref_deref(v2), 0);}}(v2)})) {ref<int<4>> v5 = v1; ref_assign(v1, int_add(int_add(1, ref_deref(v1)), 1)); ref_assign(v2, int_sub(ref_deref(v2), 2)); ref_assign(v1, int_sub(ref_deref(v1), 1));}; return 0;}");
 }
 
 TEST(WhileToFor, ConfusedMultipleAss) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-				R"(
+	                               R"(
 				int<4> main() {
 					decl ref<int<4>> i = 0;
 					decl ref<int<4>> j = 4;
@@ -117,10 +118,10 @@ TEST(WhileToFor, ConfusedMultipleAss) {
 					return 0;
 				}
 				)"
-			);
-
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	frontend::extensions::WhileToForExtension extension;
 	extension.IRVisit(program);
 }
@@ -128,9 +129,9 @@ TEST(WhileToFor, ConfusedMultipleAss) {
 TEST(WhileToFor, Nested) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-				R"(
+	                               R"(
 				int<4> main() {
 					decl ref<int<4>> i1 = 0;
 					while (i1 < 10) {
@@ -147,77 +148,78 @@ TEST(WhileToFor, Nested) {
 					return 0;
 				}
 				)"
-			);
-
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	frontend::extensions::WhileToForExtension extension;
 	auto str=toString(extension.IRVisit(program));
-	EXPECT_PRED2(containsSubString, str, "{{}; for(int<4> v6 = 0 .. 10 : 2) {{}; for(int<4> v5 = 8 .. 5 : -1) {{};}; {};}; {}; for(int<4> v4 = 2 .. 4 : -2) {{};}; return 0;}");
+	EXPECT_PRED2(containsSubString, str,
+	             "{{}; for(int<4> v6 = 0 .. 10 : 2) {{}; for(int<4> v5 = 8 .. 5 : -1) {{};}; {};}; {}; for(int<4> v4 = 2 .. 4 : -2) {{};}; return 0;}");
 }
 
 TEST(WhileToFor, NestedDeps) {
 	NodeManager man;
 	IRBuilder builder(man);
-
+	
 	core::ProgramPtr program = builder.parseProgram(
-				"int<4> main() {"
-				"	decl ref<int<4>> i1 = 0;"
-				"	while (i1 < 10) {"
-				"		decl ref<int<4>> i2 = i1;"
-				"		while(i2 > 5) {"
-				"			i2 = i2 - 1;"
-				"		}"
-				"		i1 = i1 + 2;"
-				"	}"
-				"   decl ref<int<4>> i3 = 2;"
-				"	while (i1 > 4) {"
-				"      i1 = i1 - i3;"
-				"   }"
-				"	return 0;"
-				"}"
-				);
-		
+	                               "int<4> main() {"
+	                               "	decl ref<int<4>> i1 = 0;"
+	                               "	while (i1 < 10) {"
+	                               "		decl ref<int<4>> i2 = i1;"
+	                               "		while(i2 > 5) {"
+	                               "			i2 = i2 - 1;"
+	                               "		}"
+	                               "		i1 = i1 + 2;"
+	                               "	}"
+	                               "   decl ref<int<4>> i3 = 2;"
+	                               "	while (i1 > 4) {"
+	                               "      i1 = i1 - i3;"
+	                               "   }"
+	                               "	return 0;"
+	                               "}"
+	                           );
+	                           
 	ASSERT_TRUE(program);
-
+	
 	frontend::extensions::WhileToForExtension extension;
 	extension.IRVisit(program);
 }
+
+TEST(WhileToFor, NonConvertible) {
+	NodeManager man;
+	IRBuilder builder(man);
 	
-	TEST(WhileToFor, NonConvertible) {
-		NodeManager man;
-		IRBuilder builder(man);
-
-		core::ProgramPtr program = builder.parseProgram(
-			"int<4> main() {"
-			"   decl ref<int<4>> i1 = 0;"
-			"   decl ref<int<4>> j1 = 10;"
-			"	while (i1 < 10 && j1 > 7) {"  // not convertible -- 2 iteration variables
-			"		i1 = i1 + 2;"
-			"		j1 = j1 - 2;"
-			"	}"
-			"	while (i1 < 10) {"  // not convertible (for now!) -- 2 assignments to iteration variable
-			"		i1 = i1 + 2;"
-			"		i1 = i1 + 1;"
-			"	}"
-			"	while (i1 + j1 < 10) {"  // not convertible (for now!) -- 2 assignments to iteration variable
-			"		i1 = i1 + 2;"
-			"		i1 = i1 + 1;"
-			"	}"
-			"   decl ref<int<4>> i3 = 2;" // not convertible -- break
-			"	while (i1 > 4) {"
-			"      i1 = i1 - i3;"
-			"      if(i1==2) break;"
-			"   }"
-			"	return 0;"
-			"}"
-		);
-		
-		ASSERT_TRUE(program);
-
-		frontend::extensions::WhileToForExtension extension;
-		extension.IRVisit(program);
-	}
+	core::ProgramPtr program = builder.parseProgram(
+	                               "int<4> main() {"
+	                               "   decl ref<int<4>> i1 = 0;"
+	                               "   decl ref<int<4>> j1 = 10;"
+	                               "	while (i1 < 10 && j1 > 7) {"  // not convertible -- 2 iteration variables
+	                               "		i1 = i1 + 2;"
+	                               "		j1 = j1 - 2;"
+	                               "	}"
+	                               "	while (i1 < 10) {"  // not convertible (for now!) -- 2 assignments to iteration variable
+	                               "		i1 = i1 + 2;"
+	                               "		i1 = i1 + 1;"
+	                               "	}"
+	                               "	while (i1 + j1 < 10) {"  // not convertible (for now!) -- 2 assignments to iteration variable
+	                               "		i1 = i1 + 2;"
+	                               "		i1 = i1 + 1;"
+	                               "	}"
+	                               "   decl ref<int<4>> i3 = 2;" // not convertible -- break
+	                               "	while (i1 > 4) {"
+	                               "      i1 = i1 - i3;"
+	                               "      if(i1==2) break;"
+	                               "   }"
+	                               "	return 0;"
+	                               "}"
+	                           );
+	                           
+	ASSERT_TRUE(program);
+	
+	frontend::extensions::WhileToForExtension extension;
+	extension.IRVisit(program);
+}
 } // namespace pattern
 } // namespace core
 } // namespace insieme

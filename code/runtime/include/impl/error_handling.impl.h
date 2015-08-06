@@ -53,21 +53,21 @@
 
 void irt_error_handler(irt_error* error) {
 	irt_mutex_lock(&irt_g_error_mutex); // not unlocked, prevent multiple reports
-
+	
 	irt_thread t;
 	irt_thread_get_current(&t);
-
-	#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-		fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
-	#elif defined(_WIN32)
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
-	#else
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t, irt_errcode_string(error->errcode));
-	#endif
-
+	
+#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
+	fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
+#elif defined(_WIN32)
+	fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
+#else
+	fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t, irt_errcode_string(error->errcode));
+#endif
+	
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
-
+	
 	// suppress exit handling
 	irt_g_exit_handling_done = true;
 	exit(-error->errcode);
@@ -79,7 +79,7 @@ void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 	char buffer[512];
 	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
 	va_end(args);
-
+	
 	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
 	err->errcode = code;
 	err->additional_bytes = additional_bytes;
@@ -89,8 +89,8 @@ void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 
 const char* irt_errcode_string(irt_errcode code) {
 	static const char *irt_errcode_strings[] = {
-		#define IRT_ERROR(_err) #_err,
-		#include "irt_errors.def"
+#define IRT_ERROR(_err) #_err,
+#include "irt_errors.def"
 	};
 	return irt_errcode_strings[code];
 }

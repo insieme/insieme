@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,30 +43,30 @@
 namespace insieme {
 namespace driver {
 
-	/**
-	 * Checks whether the given file is a Insieme library file.
-	 *
-	 * @param file the file to be tested
-	 * @return true if so, false otherwise
-	 */
-	bool isInsiemeLib(const boost::filesystem::path& file);
+/**
+ * Checks whether the given file is a Insieme library file.
+ *
+ * @param file the file to be tested
+ * @return true if so, false otherwise
+ */
+bool isInsiemeLib(const boost::filesystem::path& file);
 
-	/**
-	 * Loads an Insieme library file.
-	 *
-	 * @param mgr the node manager to maintain the resulting IR nodes
-	 * @param file the library to be loaded
-	 * @return the loaded translation unit
-	 */
-	frontend::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file);
+/**
+ * Loads an Insieme library file.
+ *
+ * @param mgr the node manager to maintain the resulting IR nodes
+ * @param file the library to be loaded
+ * @return the loaded translation unit
+ */
+frontend::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file);
 
-	/**
-	 * Saves an Insieme library to a file.
-	 *
-	 * @param unit the translation unit to be saved
-	 * @param file the target location
-	 */
-	void saveLib(const frontend::tu::IRTranslationUnit& unit, const boost::filesystem::path& file);
+/**
+ * Saves an Insieme library to a file.
+ *
+ * @param unit the translation unit to be saved
+ * @param file the target location
+ */
+void saveLib(const frontend::tu::IRTranslationUnit& unit, const boost::filesystem::path& file);
 
 } // end namespace driver
 } // end namespace insieme

@@ -52,14 +52,16 @@
 IRT_MAKE_ID_TYPE(work_item)
 
 typedef enum _irt_work_item_state {
-	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_SUSPENDED, IRT_WI_STATE_DONE, 
+	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_SUSPENDED, IRT_WI_STATE_DONE,
 } irt_work_item_state;
 
 struct _irt_work_item_range {
 	int64 begin, end, step;
 };
 static const irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
-static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->end - r->begin) / r->step; }
+static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) {
+	return (r->end - r->begin) / r->step;
+}
 static inline void _irt_print_work_item_range(const irt_work_item_range* r);
 
 typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
@@ -110,7 +112,9 @@ struct _irt_work_item {
 
 static inline irt_work_item* irt_wi_get_current();
 
-static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.full != irt_work_item_null_id().full; }
+static inline bool irt_wi_is_fragment(irt_work_item *wi) {
+	return wi->source_id.full != irt_work_item_null_id().full;
+}
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);
@@ -119,16 +123,16 @@ static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation* impl, irt_lw_data_item* params);
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* params);
 
-// on the WIN64 platform, function _irt_wi_trampoline will be called from a linked obj-file, which implements some 
+// on the WIN64 platform, function _irt_wi_trampoline will be called from a linked obj-file, which implements some
 // functionality in assembly code for  -> thus its name must not be mangled by a c++ compiler -> wrap extern "C" around
 #ifdef __cplusplus
 extern "C" {
 #endif
-	void
-	#if (defined(_M_IX86)  && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
-	__fastcall
-	#endif
-	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func);
+void
+#if (defined(_M_IX86)  && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
+__fastcall
+#endif
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func);
 
 #ifdef __cplusplus
 }

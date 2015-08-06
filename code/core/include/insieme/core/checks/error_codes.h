@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,10 +42,10 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-	enum ErrorCode {
-		#define CODE(KIND,NAME) EC_##KIND##_##NAME,
-		#include "error_codes.inc"
-	};
+enum ErrorCode {
+#define CODE(KIND,NAME) EC_##KIND##_##NAME,
+#include "error_codes.inc"
+};
 
 } // end namespace checks
 } // end namespace core
@@ -53,6 +53,6 @@ namespace checks {
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code);
+std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code);
 
 }

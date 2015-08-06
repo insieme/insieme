@@ -44,47 +44,49 @@ namespace insieme {
 namespace core {
 namespace annotations {
 
-	/**
-	 * The value annotation type to be attached to nodes to store
-	 * the actual name.
-	 */
-	struct NameTag : public core::value_annotation::copy_on_migration {
-		string name;
-		NameTag(const string& name) : name(name) {}
-		bool operator==(const NameTag& other) const { return name == other.name; }
-	};
-
-	// ---------------- Support Dump ----------------------
-
-	VALUE_ANNOTATION_CONVERTER(NameTag)
-
-		typedef core::value_node_annotation<NameTag>::type annotation_type;
-
-		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
-			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
-		}
-
-		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
-			assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
-			return std::make_shared<annotation_type>(NameTag(encoder::toValue<string>(node)));
-		}
-	};
-
-	// ----------------------------------------------------
-
-	bool hasAttachedName(const NodePtr& node) {
-		return node->hasAttachedValue<NameTag>();
+/**
+ * The value annotation type to be attached to nodes to store
+ * the actual name.
+ */
+struct NameTag : public core::value_annotation::copy_on_migration {
+	string name;
+	NameTag(const string& name) : name(name) {}
+	bool operator==(const NameTag& other) const {
+		return name == other.name;
 	}
+};
 
-	const string& getAttachedName(const NodePtr& node) {
-		assert_true(hasAttachedName(node)) << "Does not have a name annotation!";
-		return node->getAttachedValue<NameTag>().name;
-	}
+// ---------------- Support Dump ----------------------
 
-	void attachName(const NodePtr& node, const string& name) {
-		node->attachValue(NameTag(name));
-	}
+VALUE_ANNOTATION_CONVERTER(NameTag)
+
+typedef core::value_node_annotation<NameTag>::type annotation_type;
+
+virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+	assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+	return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
+}
+
+virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+	assert_true(encoder::isEncodingOf<string>(node.as<ExpressionPtr>())) << "Invalid encoding encountered!";
+	return std::make_shared<annotation_type>(NameTag(encoder::toValue<string>(node)));
+}
+};
+
+// ----------------------------------------------------
+
+bool hasAttachedName(const NodePtr& node) {
+	return node->hasAttachedValue<NameTag>();
+}
+
+const string& getAttachedName(const NodePtr& node) {
+	assert_true(hasAttachedName(node)) << "Does not have a name annotation!";
+	return node->getAttachedValue<NameTag>().name;
+}
+
+void attachName(const NodePtr& node, const string& name) {
+	node->attachValue(NameTag(name));
+}
 
 } // end namespace annotations
 } // end namespace core

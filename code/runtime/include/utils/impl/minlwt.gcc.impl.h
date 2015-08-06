@@ -36,44 +36,44 @@
 
 // currently only a 64 bit implementation exists
 #if __GNUC_PREREQ(4,8)
-__attribute__ ((noinline,noclone,optimize(0),aligned(16)))
+__attribute__((noinline,noclone,optimize(0),aligned(16)))
 #else
-__attribute__ ((noinline,noclone,optimize(0)))
+__attribute__((noinline,noclone,optimize(0)))
 #endif
-void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
-		intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
-	__asm__ (
-		/* save registers on stack */
-		"push %%rbp ;"
-		"push %%rbx ;"
-		"push %%r12 ;"
-		"push %%r13 ;"
-		"push %%r14 ;"
-		"push %%r15 ;"
-		/* swap stacks */
-		"movq %%rsp, (%%rcx) ;"
-		"movq (%%rdx), %%rsp ;"
-		/* call function if func != NULL */
-		"movq %%rsi, %%rcx ;"
-		"jrcxz 1f ;"			/* jump to local label 1 - forward */
-		/* rdi still has wi, rsi still has func, so just call */
-		"call *%%rax ;"
-		/* restore registers for other coroutine */
-		"1:"					/* the target of the jump */
-		"pop %%r15 ;"
-		"pop %%r14 ;"
-		"pop %%r13 ;"
-		"pop %%r12 ;"
-		"pop %%rbx ;"
-		"pop %%rbp ;"
-	: /* no output registers */
-	: "a" (&_irt_wi_trampoline) );
+void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/,
+                       intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
+	__asm__(
+	    /* save registers on stack */
+	    "push %%rbp ;"
+	    "push %%rbx ;"
+	    "push %%r12 ;"
+	    "push %%r13 ;"
+	    "push %%r14 ;"
+	    "push %%r15 ;"
+	    /* swap stacks */
+	    "movq %%rsp, (%%rcx) ;"
+	    "movq (%%rdx), %%rsp ;"
+	    /* call function if func != NULL */
+	    "movq %%rsi, %%rcx ;"
+	    "jrcxz 1f ;"			/* jump to local label 1 - forward */
+	    /* rdi still has wi, rsi still has func, so just call */
+	    "call *%%rax ;"
+	    /* restore registers for other coroutine */
+	    "1:"					/* the target of the jump */
+	    "pop %%r15 ;"
+	    "pop %%r14 ;"
+	    "pop %%r13 ;"
+	    "pop %%r12 ;"
+	    "pop %%rbx ;"
+	    "pop %%rbp ;"
+	    : /* no output registers */
+	    : "a"(&_irt_wi_trampoline));
 }
 
-__attribute__ ((noinline))
+__attribute__((noinline))
 void lwt_get_stack_ptr(intptr_t *dest /*rdi*/) {
-	__asm__ (
-		/* store sp */
-		"movq %%rsp, (%%rdi) ;"
-	: : );
+	__asm__(
+	    /* store sp */
+	    "movq %%rsp, (%%rdi) ;"
+	    : :);
 }

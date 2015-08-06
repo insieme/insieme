@@ -51,9 +51,9 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
-	namespace bfs = boost::filesystem;
+namespace bfs = boost::filesystem;
 
-	TEST(Dummy, MustNotBeEmpty) {}
+TEST(Dummy, MustNotBeEmpty) {}
 
 //	TEST(RemoteCompilation, Localhost) {
 //		// create a test program fragment

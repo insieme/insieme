@@ -41,7 +41,6 @@
 #include "declarations.h"
 #include "client_app.h"
 #include "instrumentation_regions.h"
-
 #ifdef USE_OPENCL
 #include "irt_ocl.h"
 #endif
@@ -64,19 +63,19 @@ struct _irt_context {
 	irt_wi_implementation* impl_table;
 	uint32 info_table_size;
 	irt_meta_info_table_entry* info_table;
-
+	
 	// TODO: moved this into an #ifdef and have the backend only set it when actually required
 	uint32 num_regions;													// initialized by compiler
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_region_context_data* inst_region_data;							// initialized by runtime
 	irt_inst_region_context_declarations inst_region_metric_group_support_data;					// initialized by runtime
 #endif
-
+	
 #ifdef USE_OPENCL
 	irt_ocl_kernel_code* kernel_code_table;
 	irt_ocl_kernel** kernel_binary_table;
 #endif
-
+	
 	// private implementation detail
 	struct _irt_context* lookup_table_next;
 };

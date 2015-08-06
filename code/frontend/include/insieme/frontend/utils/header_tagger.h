@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,88 +53,89 @@
 #pragma GCC diagnostic pop
 
 
-namespace clang { 
-	class Decl; 
+namespace clang {
+class Decl;
 }
 
 namespace insieme {
 namespace frontend {
 namespace utils {
 
-	namespace fs = boost::filesystem;
-	namespace ba = boost::algorithm;
+namespace fs = boost::filesystem;
+namespace ba = boost::algorithm;
 
-		/**
-		 * class which helps finding the more suitable header for a declaration, not allways top
-		 * level since we might have a system header included deep in a includes chain.
-		 * the most apropiate header has to be computed
-		 */
-		class HeaderTagger { 
-			
-			vector<fs::path> stdLibDirs;
-			vector<fs::path> interceptedHeaderDirs;
-			vector<fs::path> userIncludeDirs;
-			const clang::SourceManager& sm;
+/**
+ * class which helps finding the more suitable header for a declaration, not allways top
+ * level since we might have a system header included deep in a includes chain.
+ * the most apropiate header has to be computed
+ */
+class HeaderTagger {
 
-			mutable std::map<clang::FileID, std::pair<std::string, bool> > isStdCache;
-			mutable std::map<clang::FileID, std::pair<std::string, bool> > isInterceptedCache;
-			mutable std::map<clang::FileID, std::pair<std::string, bool> > isUserCache;
+	vector<fs::path> stdLibDirs;
+	vector<fs::path> interceptedHeaderDirs;
+	vector<fs::path> userIncludeDirs;
+	const clang::SourceManager& sm;
+	
+	mutable std::map<clang::FileID, std::pair<std::string, bool>> isStdCache;
+	mutable std::map<clang::FileID, std::pair<std::string, bool>> isInterceptedCache;
+	mutable std::map<clang::FileID, std::pair<std::string, bool>> isUserCache;
+	
+	/**
+	 * A utility function cutting down std-lib header files.
+	 */
+	boost::optional<fs::path> toStdLibHeader(const fs::path& path) const;
+	
+	bool isStdLibHeader(const clang::SourceLocation& loc) const;
+	
+	bool isStdLibHeader(const fs::path& path) const;
+	
+	bool isInterceptedLibHeader(const clang::SourceLocation& loc) const;
+	
+	bool isInterceptedLibHeader(const fs::path& path) const;
+	
+	boost::optional<fs::path> toInterceptedLibHeader(const fs::path& path) const;
+	
+	bool isUserLibHeader(const clang::SourceLocation& loc) const;
+	
+	bool isUserLibHeader(const fs::path& path) const;
+	
+	boost::optional<fs::path> toUserLibHeader(const fs::path& path) const;
+	
+	bool isHeaderFile(const string& name) const;
+	
+	string getTopLevelInclude(const clang::SourceLocation& loc) const;
+	
+	bool isIntrinsicHeader(const string& name) const;
+	
+	bool isInjectedHeader(const clang::PresumedLoc& ploc) const;
+	
+	boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
+	
+	
+public:
 
-			/**
-			 * A utility function cutting down std-lib header files.
-			 */
-			boost::optional<fs::path> toStdLibHeader(const fs::path& path) const;
-
-			bool isStdLibHeader(const clang::SourceLocation& loc) const;
-
-			bool isStdLibHeader(const fs::path& path) const;
-
-			bool isInterceptedLibHeader(const clang::SourceLocation& loc) const;
-
-			bool isInterceptedLibHeader(const fs::path& path) const;
-
-			boost::optional<fs::path> toInterceptedLibHeader(const fs::path& path) const;
-
-			bool isUserLibHeader(const clang::SourceLocation& loc) const;
-
-			bool isUserLibHeader(const fs::path& path) const;
-
-			boost::optional<fs::path> toUserLibHeader(const fs::path& path) const;
-
-			bool isHeaderFile(const string& name) const;
-
-			string getTopLevelInclude(const clang::SourceLocation& loc) const;
-			
-			bool isIntrinsicHeader(const string& name) const;
-			
-			bool isInjectedHeader(const clang::PresumedLoc& ploc) const;
-
-			boost::optional<fs::path> toIntrinsicHeader(const fs::path& path) const;
-
-
-		public:
-
-			HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs, const clang::SourceManager& srcMgr );
-
-
-			/**
-			 *	asks whenever this declaration is in a system header, 
-			 *	@param the declaration we are asking for
-			 *	@whenever is a system header
-			 */
-			bool isDefinedInSystemHeader (const clang::Decl* decl) const;
-
-			/**
-			 * Attaches a header annotation to the given node which is supposed to be
-			 * the result of converting the given declaration.
-			 *
-			 * @param node the node to be annotated
-			 * @param decl the declaration this node has been derived from
-			 * @param the header tagger which stores all information about headers
-			 * @param whenever we want to annotate user defined headers, for explicit code sections interception
-			 */
-			void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined = false) const;
-		};
+	HeaderTagger(const vector<fs::path>& stdLibDirs, const vector<fs::path>& interceptedHeaderDirs, const vector<fs::path>& userIncludeDirs,
+	             const clang::SourceManager& srcMgr);
+	             
+	             
+	/**
+	 *	asks whenever this declaration is in a system header,
+	 *	@param the declaration we are asking for
+	 *	@whenever is a system header
+	 */
+	bool isDefinedInSystemHeader(const clang::Decl* decl) const;
+	
+	/**
+	 * Attaches a header annotation to the given node which is supposed to be
+	 * the result of converting the given declaration.
+	 *
+	 * @param node the node to be annotated
+	 * @param decl the declaration this node has been derived from
+	 * @param the header tagger which stores all information about headers
+	 * @param whenever we want to annotate user defined headers, for explicit code sections interception
+	 */
+	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, bool attachUserDefined = false) const;
+};
 
 } // end namespace utils
 } // end namespace frontend

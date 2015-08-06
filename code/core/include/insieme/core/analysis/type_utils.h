@@ -42,22 +42,22 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-	/**
-	 * Checks whether there are unbound type variables present within the given type.
-	 *
-	 * @param type the type to be checked
-	 * @return true if there are free type variables, false otherwise
-	 */
-	bool hasFreeTypeVariables(const TypePtr& type);
-	
-	/**
-	 * Determines the return type of a function based on its return statements.
-	 *
-	 * @param nodeMan NodeManager used to generate required types if necessary
-	 * @param body body of the function
-	 * @return the deduced return type
-	 */
-	TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body);
+/**
+ * Checks whether there are unbound type variables present within the given type.
+ *
+ * @param type the type to be checked
+ * @return true if there are free type variables, false otherwise
+ */
+bool hasFreeTypeVariables(const TypePtr& type);
+
+/**
+ * Determines the return type of a function based on its return statements.
+ *
+ * @param nodeMan NodeManager used to generate required types if necessary
+ * @param body body of the function
+ * @return the deduced return type
+ */
+TypePtr autoReturnType(NodeManager& nodeMan, const CompoundStmtPtr& body);
 
 } // end namespace analysis
 } // end namespace core

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,23 +42,25 @@ namespace insieme {
 namespace utils {
 
 
-	/**
-	 * A utility header for generating sequences of values.
-	 * TODO: implement this in a way such that the result is a lazy-evaluated,
-	 *  random access container
-	 */
+/**
+ * A utility header for generating sequences of values.
+ * TODO: implement this in a way such that the result is a lazy-evaluated,
+ *  random access container
+ */
 
 
-	/**
-	 * Creates a vector of elements containing all the values within the
-	 * range [begin, ... ,end : step].
-	 */
-	template<typename T>
-	std::vector<T> seq(T begin, T end, T step = 1) {
-		std::vector<T> res;
-		for(T i = begin; i <= end; i+=step) { res.push_back(i); }
-		return res;
+/**
+ * Creates a vector of elements containing all the values within the
+ * range [begin, ... ,end : step].
+ */
+template<typename T>
+std::vector<T> seq(T begin, T end, T step = 1) {
+	std::vector<T> res;
+	for(T i = begin; i <= end; i+=step) {
+		res.push_back(i);
 	}
+	return res;
+}
 
 
 } // end namespace utils

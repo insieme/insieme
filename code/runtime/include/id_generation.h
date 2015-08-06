@@ -47,9 +47,9 @@ typedef enum {
 } irt_id_type;
 
 #ifdef _GEMS_SIM
-    #define ID_TYPE_BIT_FIELD uint8 id_type 
-#else 
-    #define ID_TYPE_BIT_FIELD irt_id_type id_type : 8
+#define ID_TYPE_BIT_FIELD uint8 id_type
+#else
+#define ID_TYPE_BIT_FIELD irt_id_type id_type : 8
 #endif
 
 #define IRT_DECLARE_ID_TYPE(__type) \

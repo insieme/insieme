@@ -73,7 +73,7 @@ void irt_scheduling_set_dop_per_socket(uint32 sockets, uint32* dops) {
 		parallelism += dops[s];
 	}
 	irt_scheduling_set_dop(parallelism);
-
+	
 	uint32 worker_num = 0;
 	for(uint32 s = 0; s<sockets; ++s) {
 		for(uint32 c = 0; c<dops[s]; ++c) {
@@ -117,14 +117,17 @@ void irt_scheduling_loop(irt_worker* self) {
 				irt_wi_finalize(self, self->finalize_wi);
 				self->finalize_wi = NULL;
 			}
-			#ifdef IRT_ASTEROIDEA_STACKS
+#ifdef IRT_ASTEROIDEA_STACKS
 			if(self->share_stack_wi != NULL) {
 				IRT_DEBUG(" - %p allowing stack stealing: %d children\n", (void*) self->share_stack_wi, *self->share_stack_wi->num_active_children);
-				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&self->share_stack_wi->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not make stack available after suspension.\n");
+				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&self->share_stack_wi->stack_available, false, true, bool), IRT_ERR_INTERNAL,
+				           "Asteroidea: Could not make stack available after suspension.\n");
 				self->share_stack_wi = NULL;
 			}
-			#endif //IRT_ASTEROIDEA_STACKS
-			if(_irt_scheduling_sleep_if_dop_inactive(self)) break;
+#endif //IRT_ASTEROIDEA_STACKS
+			if(_irt_scheduling_sleep_if_dop_inactive(self)) {
+				break;
+			}
 		}
 		_irt_scheduling_sleep_if_dop_inactive(self);
 #ifdef IRT_WORKER_SLEEPING

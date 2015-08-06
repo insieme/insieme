@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,27 +42,31 @@
 
 uint64 irt_time_ticks(void) {
 	volatile uint64 a, d;
-	__asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d));
+	__asm__ __volatile__("rdtsc" : "=a"(a), "=d"(d));
 	return (a | (d << 32));
 }
 
 // checks if rdtsc instruction is available
 bool irt_time_ticks_available() {
 	volatile unsigned d;
-	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
-	if((d & 0x00000010) > 0)
+	__asm__ __volatile__("cpuid" : "=d"(d) : "a"(0x00000001) : "ebx", "ecx");
+	if((d & 0x00000010) > 0) {
 		return 1;
-	else
+	}
+	else {
 		return 0;
+	}
 }
 
 bool irt_time_ticks_constant() {
 	volatile unsigned d;
-	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
-	if((d & 0x00000100) > 0)
+	__asm__ __volatile__("cpuid" : "=d"(d) : "a"(0x80000007) : "ebx", "ecx");
+	if((d & 0x00000100) > 0) {
 		return 1;
-	else
+	}
+	else {
 		return 0;
+	}
 }
 
 

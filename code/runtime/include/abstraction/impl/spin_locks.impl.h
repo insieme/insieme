@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,13 +39,13 @@
 #define __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_IMPL_H
 
 #if defined(_GEMS_SIM)
-	#include "spin_locks.gems.impl.h"
-	#include "atomic.impl.h"
+#include "spin_locks.gems.impl.h"
+#include "atomic.impl.h"
 #elif defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-	#include "spin_locks.win.impl.h"
+#include "spin_locks.win.impl.h"
 #else
-	// both unix and win support pthreads
-	#include "spin_locks.pthreads.impl.h"
+// both unix and win support pthreads
+#include "spin_locks.pthreads.impl.h"
 #endif
 
 #endif // ifndef __GUARD_ABSTRACTION_IMPL_SPIN_LOCKS_IMPL_H

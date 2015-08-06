@@ -29,25 +29,23 @@
 #define _ADXINTRIN_H_INCLUDED
 
 //INSIEME HACK
-unsigned char __builtin_ia32_addcarryx_u32 (unsigned char __CF, unsigned int __X, unsigned int __Y, unsigned int *__P);
-unsigned char __builtin_ia32_addcarryx_u64 (unsigned char __CF, unsigned long __X, unsigned long __Y, unsigned long long *__P);
+unsigned char __builtin_ia32_addcarryx_u32(unsigned char __CF, unsigned int __X, unsigned int __Y, unsigned int *__P);
+unsigned char __builtin_ia32_addcarryx_u64(unsigned char __CF, unsigned long __X, unsigned long __Y, unsigned long long *__P);
 //INSIEME HACK
 
 extern __inline unsigned char
 __attribute__((__gnu_inline__, __always_inline__, __artificial__))
-_addcarryx_u32 (unsigned char __CF, unsigned int __X,
-		unsigned int __Y, unsigned int *__P)
-{
-    return __builtin_ia32_addcarryx_u32 (__CF, __X, __Y, __P);
+_addcarryx_u32(unsigned char __CF, unsigned int __X,
+               unsigned int __Y, unsigned int *__P) {
+	return __builtin_ia32_addcarryx_u32(__CF, __X, __Y, __P);
 }
 
 #ifdef __x86_64__
 extern __inline unsigned char
 __attribute__((__gnu_inline__, __always_inline__, __artificial__))
-_addcarryx_u64 (unsigned char __CF, unsigned long __X,
-		unsigned long __Y, unsigned long long *__P)
-{
-    return __builtin_ia32_addcarryx_u64 (__CF, __X, __Y, __P);
+_addcarryx_u64(unsigned char __CF, unsigned long __X,
+               unsigned long __Y, unsigned long long *__P) {
+	return __builtin_ia32_addcarryx_u64(__CF, __X, __Y, __P);
 }
 #endif
 

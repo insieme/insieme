@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,12 +41,12 @@
 #include "irt_inttypes.h"
 
 #if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
-	typedef long irt_spinlock;
+typedef long irt_spinlock;
 #elif defined(_GEMS_SIM)
-	typedef volatile int irt_spinlock;
+typedef volatile int irt_spinlock;
 #else
-	#include <pthread.h>
-	typedef pthread_spinlock_t irt_spinlock;
+#include <pthread.h>
+typedef pthread_spinlock_t irt_spinlock;
 #endif
 
 /** spin until lock is acquired */

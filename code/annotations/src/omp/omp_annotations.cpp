@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,15 +55,15 @@ void RegionAnnotation::attach(const core::NodePtr& node) {
 	node->addAnnotation(std::make_shared<RegionAnnotation>());
 }
 
-} // namespace omp 
+} // namespace omp
 } // namespace annotations
 } // namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot) {
-        out << "OmpRegionAnnotation ()" << std::endl;
-        return out;
-    }
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::omp::RegionAnnotation& lAnnot) {
+	out << "OmpRegionAnnotation ()" << std::endl;
+	return out;
+}
 
 } // end namespace std

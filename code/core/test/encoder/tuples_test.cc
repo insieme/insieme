@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,17 +51,17 @@ namespace encoder {
 TEST(Tuples, TypeUtilities) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
-
+	
 	// check the create_tuple_type
 	EXPECT_EQ("()", toString(*detail::create_tuple_type<>()(mgr)));
 	EXPECT_EQ("(int<4>)", toString(*detail::create_tuple_type<int>()(mgr)));
 	EXPECT_EQ("(int<4>,real<8>)", toString(*detail::create_tuple_type<int, double>()(mgr)));
-
+	
 	// check the encoding
 	EXPECT_TRUE(detail::is_tuple<>()(builder.tupleExpr()));
 	EXPECT_TRUE(detail::is_tuple<int>()(builder.tupleExpr(toIR(mgr, 8))));
 	EXPECT_TRUE((detail::is_tuple<int, double>()(builder.tupleExpr(toIR(mgr, 8),toIR(mgr, 8.0)))));
-
+	
 	EXPECT_FALSE(detail::is_tuple<int>()(builder.tupleExpr(toIR(mgr, 8), toIR(mgr, 8.0))));
 	EXPECT_FALSE((detail::is_tuple<int, double>()(builder.tupleExpr(toIR(mgr, 8.0),toIR(mgr, 8.0)))));
 }
@@ -70,30 +70,30 @@ TEST(Tuples, TypeUtilities) {
 TEST(Tuples, TupleConversion) {
 
 	NodeManager manager;
-
+	
 	// create a tuple
-
+	
 	auto value = std::make_tuple(1,1.3,string("hello"));
 	core::ExpressionPtr ir = toIR(manager, value);
 	auto back = toValue<decltype(value)>(ir);
-
+	
 	EXPECT_EQ("(1,1.3,hello)", toString(value));
 	EXPECT_EQ("tuple(1,1.3,hello)", toString(*ir));
-
+	
 	EXPECT_TRUE((isEncodingOf<decltype(value)>(ir)));
 	EXPECT_EQ(value, back);
-
+	
 	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
-
-
+	
+	
 	// check something more complex
 	auto value2 = std::make_tuple(1,2,std::make_pair(string("hello"), true), std::make_tuple(4,3,2));
 	core::ExpressionPtr ir2 = toIR(manager, value2);
 	auto back2 = toValue<decltype(value2)>(ir2);
-
+	
 	EXPECT_TRUE((isEncodingOf<decltype(value2)>(ir2)));
 	EXPECT_EQ(value2, back2);
-
+	
 	EXPECT_EQ("[]", toString(check(ir2, checks::getFullCheck())));
 }
 

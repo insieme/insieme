@@ -83,7 +83,9 @@ void insieme_cleanup_context(irt_context* context) {
 
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
-	if(argc>=2) wcount = atoi(argv[1]);
+	if(argc>=2) {
+		wcount = atoi(argv[1]);
+	}
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, &g_insieme_impl_table[0], NULL);
 	return 0;
 }
@@ -92,20 +94,22 @@ int main(int argc, char **argv) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	printf("Startup!\n");
-
+	
 	irt_time_set_ticks_per_sec();
 	bool ticks_available = irt_time_ticks_available();
-	if (!ticks_available)
+	if(!ticks_available) {
 		printf("No time ticks available!\n");
-
+	}
+	
 	printf("tsc constant: %d\n", irt_time_ticks_constant());
-
+	
 	uint64 starttsc, endtsc;
-	if (ticks_available)
+	if(ticks_available) {
 		starttsc = irt_time_ticks();
+	}
 	
 	uint64 startms = irt_time_ms();
-
+	
 	irt_work_item_range range;
 	range.begin = 0;
 	range.end = irt_g_worker_count;
@@ -114,11 +118,11 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_work_item_id child_id = child->id;
 	irt_scheduling_assign_wi(irt_worker_get_current(), child);
 	irt_wi_join(child_id);
-
+	
 	uint64 endms = irt_time_ms();
-
+	
 	// we have a couple of ticks more now because of the irt_time_ms() call
-	if (ticks_available){
+	if(ticks_available) {
 		endtsc = irt_time_ticks();
 		printf("tickdiff: %16lu\n", endtsc - starttsc);
 		printf("tickdiff: %16lu ns\n", irt_time_convert_ticks_to_ns(endtsc - starttsc));

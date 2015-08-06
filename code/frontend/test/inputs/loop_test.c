@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,22 +44,22 @@ int main() {
 	unsigned int a = 0u;
 	unsigned long b = 10lu;
 	int c = 0;
-
+	
 	// works
 	for(unsigned int i = 0; i < ulVal(); ++i) {
 		++c;
 	}
-
+	
 	// works
 	for(a = 0; a < ulVal(); a+=1) {
 		++c;
 	}
-
+	
 	// works
 	for(a = 0; a < b; a++) {
 		++c;
 	}
-
+	
 	// fails
 	for(a = 0; a < ulVal(); a++) {
 		++c;

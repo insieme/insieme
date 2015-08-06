@@ -76,130 +76,130 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-	namespace {
+namespace {
 
-		void addRuntimeFunctionIncludes(FunctionIncludeTable& table);
+void addRuntimeFunctionIncludes(FunctionIncludeTable& table);
 
-		void addRuntimeTypeIncludes(TypeIncludeTable& table);
+void addRuntimeTypeIncludes(TypeIncludeTable& table);
 
+}
+
+
+RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation, bool isGemsclaim) {
+	BackendConfigPtr config = std::make_shared<BackendConfig>();
+	
+	if(isGemsclaim) {
+		config->mainFunctionName = "insieme_main";
+		config->additionalHeaderFiles.push_back("input_file.h");
+		// Jan fixed the issue but let's keep the code for a while
+		//config->areShiftOpsSupported = false;
+		config->instrumentMainFunction = true;
 	}
+	
+	auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
+	res->addAddOn<addons::CppReferences>();
+	res->addAddOn<addons::CppMembAddon>();
+	res->addAddOn<addons::ComplexType>();
+	res->addAddOn<addons::EnumTypes>();
+	res->addAddOn<addons::LongLongType>();
+	res->addAddOn<addons::SIMDVector>();
+	res->addAddOn<addons::AsmStmt>();
+	res->addAddOn<addons::VarArgs>();
+	res->addAddOn<addons::StaticVariables>();
+	return res;
+}
 
+Converter RuntimeBackend::buildConverter(core::NodeManager& manager) const {
 
-	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation, bool isGemsclaim) {
-        BackendConfigPtr config = std::make_shared<BackendConfig>();
+	// create and set up the converter
+	Converter converter(manager, "RuntimeBackend", getConfiguration());
+	
+	// set up pre-processing
+	PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
+	                                    getBasicPreProcessorSequence(),
+	                                    makePreProcessor<runtime::InstrumentationSupport>(),				// needs to be before the conversion to work-items
+	                                    makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation),
+	                                    makePreProcessor<runtime::StandaloneWrapper>()
+	                                );
+	converter.setPreProcessor(preprocessor);
+	
+	// Prepare managers
+	
+	TypeManager& typeManager = converter.getTypeManager();
+	addRuntimeTypeIncludes(typeManager.getTypeIncludeTable());
+	typeManager.addTypeHandler(RuntimeTypeHandler);
+	
+	StmtConverter& stmtConverter = converter.getStmtConverter();
+	stmtConverter.addStmtHandler(RuntimeStmtHandler);
+	
+	FunctionManager& functionManager = converter.getFunctionManager();
+	addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
+	addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
+	
+	NameManager& nameMan = converter.getNameManager();
+	// this should be an exhaustive listing at some point, for now it only includes functions which caused issues
+	nameMan.reserveName("read");  // unistd.h
+	nameMan.reserveName("write"); // unistd.h
+	
+	// done
+	return converter;
+}
 
-        if(isGemsclaim) {
-            config->mainFunctionName = "insieme_main";
-            config->additionalHeaderFiles.push_back("input_file.h");
-            // Jan fixed the issue but let's keep the code for a while
-            //config->areShiftOpsSupported = false;
-            config->instrumentMainFunction = true;
-        }
+namespace {
 
-		auto res = std::make_shared<RuntimeBackend>(includeEffortEstimation, config);
-		res->addAddOn<addons::CppReferences>();
-		res->addAddOn<addons::CppMembAddon>();
-        res->addAddOn<addons::ComplexType>();
-        res->addAddOn<addons::EnumTypes>();
-        res->addAddOn<addons::LongLongType>();
-		res->addAddOn<addons::SIMDVector>();
-		res->addAddOn<addons::AsmStmt>();
-		res->addAddOn<addons::VarArgs>();
-		res->addAddOn<addons::StaticVariables>();
-		return res;
-	}
+void addRuntimeFunctionIncludes(FunctionIncludeTable& table) {
 
-	Converter RuntimeBackend::buildConverter(core::NodeManager& manager) const {
+	// add runtime-specific includes
+	table["irt_get_default_worker_count"] 	= "standalone.h";
+	table["irt_runtime_standalone"] 		= "standalone.h";
+	table["irt_exit"] 						= "standalone.h";
+	
+	table["irt_parallel"] 					= "ir_interface.h";
+	table["irt_task"] 					    = "ir_interface.h";
+	table["irt_region"] 				    = "ir_interface.h";
+	table["irt_merge"] 						= "ir_interface.h";
+	table["irt_pfor"]						= "ir_interface.h";
+	
+	table["irt_wi_end"]						= "irt_all_impls.h";
+	table["irt_wi_get_current"]				= "irt_all_impls.h";
+	table["irt_wi_get_wg"]					= "irt_all_impls.h";
+	table["irt_wi_get_wg_num"]				= "irt_all_impls.h";
+	table["irt_wi_get_wg_size"]				= "irt_all_impls.h";
+	table["irt_wi_join_all"] 				= "irt_all_impls.h";
+	
+	table["irt_wg_join"]					= "irt_all_impls.h";
+	table["irt_wg_barrier"]					= "irt_all_impls.h";
+	table["irt_wg_joining_barrier"]			= "irt_all_impls.h";
+	
+	table["irt_inst_region_start"]			= "irt_all_impls.h";
+	table["irt_inst_region_end"]			= "irt_all_impls.h";
+	
+	table["irt_lock_init"] 		= "irt_all_impls.h";
+	table["irt_lock_acquire"] 	= "irt_all_impls.h";
+	table["irt_lock_release"] 	= "irt_all_impls.h";
+	
+	table["irt_atomic_fetch_and_add"]			= "irt_all_impls.h";
+	table["irt_atomic_fetch_and_sub"]			= "irt_all_impls.h";
+	table["irt_atomic_add_and_fetch"]			= "irt_all_impls.h";
+	table["irt_atomic_sub_and_fetch"]			= "irt_all_impls.h";
+	table["irt_atomic_or_and_fetch"]			= "irt_all_impls.h";
+	table["irt_atomic_and_and_fetch"]			= "irt_all_impls.h";
+	table["irt_atomic_xor_and_fetch"]			= "irt_all_impls.h";
+	table["irt_atomic_val_compare_and_swap"]	= "irt_all_impls.h";
+	table["irt_atomic_bool_compare_and_swap"]	= "irt_all_impls.h";
+	
+	table["irt_variant_pick"]	= "irt_all_impls.h";
+}
 
-		// create and set up the converter
-		Converter converter(manager, "RuntimeBackend", getConfiguration());
+void addRuntimeTypeIncludes(TypeIncludeTable& table) {
 
-		// set up pre-processing
-		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				getBasicPreProcessorSequence(),
-				makePreProcessor<runtime::InstrumentationSupport>(),				// needs to be before the conversion to work-items
-				makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation),
-				makePreProcessor<runtime::StandaloneWrapper>()
-		);
-		converter.setPreProcessor(preprocessor);
+	// some runtime types ...
+	table["irt_parallel_job"]				= "ir_interface.h";
+	table["irt_work_item_range"]			= "irt_all_impls.h";
+	table["irt_wi_implementation_id"]		= "irt_all_impls.h";
+}
 
-		// Prepare managers
-
-		TypeManager& typeManager = converter.getTypeManager();
-		addRuntimeTypeIncludes(typeManager.getTypeIncludeTable());
-		typeManager.addTypeHandler(RuntimeTypeHandler);
-
-		StmtConverter& stmtConverter = converter.getStmtConverter();
-		stmtConverter.addStmtHandler(RuntimeStmtHandler);
-
-		FunctionManager& functionManager = converter.getFunctionManager();
-		addRuntimeFunctionIncludes(functionManager.getFunctionIncludeTable());
-		addRuntimeSpecificOps(manager, functionManager.getOperatorConverterTable(), getConfiguration());
-
-		NameManager& nameMan = converter.getNameManager();
-		// this should be an exhaustive listing at some point, for now it only includes functions which caused issues
-		nameMan.reserveName("read");  // unistd.h
-		nameMan.reserveName("write"); // unistd.h
-
-		// done
-		return converter;
-	}
-
-	namespace {
-
-		void addRuntimeFunctionIncludes(FunctionIncludeTable& table) {
-
-			// add runtime-specific includes
-			table["irt_get_default_worker_count"] 	= "standalone.h";
-			table["irt_runtime_standalone"] 		= "standalone.h";
-			table["irt_exit"] 						= "standalone.h";
-
-			table["irt_parallel"] 					= "ir_interface.h";
-			table["irt_task"] 					    = "ir_interface.h";
-			table["irt_region"] 				    = "ir_interface.h";
-			table["irt_merge"] 						= "ir_interface.h";
-			table["irt_pfor"]						= "ir_interface.h";
-
-			table["irt_wi_end"]						= "irt_all_impls.h";
-			table["irt_wi_get_current"]				= "irt_all_impls.h";
-			table["irt_wi_get_wg"]					= "irt_all_impls.h";
-			table["irt_wi_get_wg_num"]				= "irt_all_impls.h";
-			table["irt_wi_get_wg_size"]				= "irt_all_impls.h";
-			table["irt_wi_join_all"] 				= "irt_all_impls.h";
-
-			table["irt_wg_join"]					= "irt_all_impls.h";
-			table["irt_wg_barrier"]					= "irt_all_impls.h";
-			table["irt_wg_joining_barrier"]			= "irt_all_impls.h";
-
-			table["irt_inst_region_start"]			= "irt_all_impls.h";
-			table["irt_inst_region_end"]			= "irt_all_impls.h";
-
-			table["irt_lock_init"] 		= "irt_all_impls.h";
-			table["irt_lock_acquire"] 	= "irt_all_impls.h";
-			table["irt_lock_release"] 	= "irt_all_impls.h";
-
-			table["irt_atomic_fetch_and_add"]			= "irt_all_impls.h";
-			table["irt_atomic_fetch_and_sub"]			= "irt_all_impls.h";
-			table["irt_atomic_add_and_fetch"]			= "irt_all_impls.h";
-			table["irt_atomic_sub_and_fetch"]			= "irt_all_impls.h";
-			table["irt_atomic_or_and_fetch"]			= "irt_all_impls.h";
-			table["irt_atomic_and_and_fetch"]			= "irt_all_impls.h";
-			table["irt_atomic_xor_and_fetch"]			= "irt_all_impls.h";
-			table["irt_atomic_val_compare_and_swap"]	= "irt_all_impls.h";
-			table["irt_atomic_bool_compare_and_swap"]	= "irt_all_impls.h";
-
-			table["irt_variant_pick"]	= "irt_all_impls.h";
-		}
-
-		void addRuntimeTypeIncludes(TypeIncludeTable& table) {
-
-			// some runtime types ...
-			table["irt_parallel_job"]				= "ir_interface.h";
-			table["irt_work_item_range"]			= "irt_all_impls.h";
-			table["irt_wi_implementation_id"]		= "irt_all_impls.h";
-		}
-
-	}
+}
 
 } // end namespace sequential
 } // end namespace backend

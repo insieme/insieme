@@ -55,131 +55,131 @@ namespace parser3 {
 namespace detail {
 
 
-	TEST(Parser_Tools, ctx_manager) {
+TEST(Parser_Tools, ctx_manager) {
 
-	    NodeManager mgr;
-	    IRBuilder builder(mgr);
-	    DeclarationContext dc;
-
-	    auto one = builder.concreteIntTypeParam(12);
-	    auto two = builder.variableIntTypeParam('c');
-
-	    EXPECT_NE( one, two);
-
-	    dc.add_symb ("one", one);
-	    dc.add_symb ("two", two);
-
-	    EXPECT_NE( dc.find("one"), dc.find("two"));
-	    EXPECT_NE( dc.find("one"), two);
-	    EXPECT_NE( dc.find("twp"), one);
-	    EXPECT_EQ( dc.find("one"), one);
-	    EXPECT_EQ( dc.find("two"), two);
-
-	    // enter an scope
-	    dc.open_scope();
-
-		auto three = builder.variableIntTypeParam('t');
-		dc.add_symb ("three", three);
-		
-		EXPECT_NE( dc.find("one"), dc.find("two"));
-		EXPECT_NE( dc.find("one"), two);
-		EXPECT_NE( dc.find("twp"), one);
-		EXPECT_EQ( dc.find("one"), one);
-		EXPECT_EQ( dc.find("two"), two);
-		EXPECT_EQ( dc.find("three"), three);
-	    
-		// declare a shadow name
-		auto notOne = builder.variableIntTypeParam('x');
-		dc.add_symb ("one", notOne);
-
-		EXPECT_NE( dc.find("one"), one);
-		EXPECT_EQ( dc.find("one"), notOne);
-
-		// once again
-		dc.open_scope();
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	DeclarationContext dc;
 	
-		    // declare a shadow name
-		    auto notTwo = builder.variableIntTypeParam('y');
-		    dc.add_symb ("two", notTwo);
+	auto one = builder.concreteIntTypeParam(12);
+	auto two = builder.variableIntTypeParam('c');
+	
+	EXPECT_NE(one, two);
+	
+	dc.add_symb("one", one);
+	dc.add_symb("two", two);
+	
+	EXPECT_NE(dc.find("one"), dc.find("two"));
+	EXPECT_NE(dc.find("one"), two);
+	EXPECT_NE(dc.find("twp"), one);
+	EXPECT_EQ(dc.find("one"), one);
+	EXPECT_EQ(dc.find("two"), two);
+	
+	// enter an scope
+	dc.open_scope();
+	
+	auto three = builder.variableIntTypeParam('t');
+	dc.add_symb("three", three);
+	
+	EXPECT_NE(dc.find("one"), dc.find("two"));
+	EXPECT_NE(dc.find("one"), two);
+	EXPECT_NE(dc.find("twp"), one);
+	EXPECT_EQ(dc.find("one"), one);
+	EXPECT_EQ(dc.find("two"), two);
+	EXPECT_EQ(dc.find("three"), three);
+	
+	// declare a shadow name
+	auto notOne = builder.variableIntTypeParam('x');
+	dc.add_symb("one", notOne);
+	
+	EXPECT_NE(dc.find("one"), one);
+	EXPECT_EQ(dc.find("one"), notOne);
+	
+	// once again
+	dc.open_scope();
+	
+	// declare a shadow name
+	auto notTwo = builder.variableIntTypeParam('y');
+	dc.add_symb("two", notTwo);
+	
+	EXPECT_NE(dc.find("two"), two);
+	EXPECT_EQ(dc.find("two"), notTwo);
+	EXPECT_NE(dc.find("one"), one);
+	EXPECT_EQ(dc.find("one"), notOne);
+	
+	dc.close_scope();
+	
+	EXPECT_NE(dc.find("one"), one);
+	EXPECT_EQ(dc.find("one"), notOne);
+	
+	// close the scope
+	dc.close_scope();
+	
+	EXPECT_EQ(dc.find("one"), one);
+	EXPECT_NE(dc.find("one"), notOne);
+}
 
-		    EXPECT_NE( dc.find("two"), two);
-		    EXPECT_EQ( dc.find("two"), notTwo);
-		    EXPECT_NE( dc.find("one"), one);
-		    EXPECT_EQ( dc.find("one"), notOne);
+TEST(Parser_Tools, error_locations) {
 
-		dc.close_scope();
-
-		EXPECT_NE( dc.find("one"), one);
-		EXPECT_EQ( dc.find("one"), notOne);
-	    
-	    // close the scope  
-	    dc.close_scope();
-	    
-	    EXPECT_EQ( dc.find("one"), one);
-	    EXPECT_NE( dc.find("one"), notOne);
-	}
-
-	TEST(Parser_Tools, error_locations) {
-
-	    std::string filename ("unknown");
-	    NodeManager mgr;
-
-	    {
-			std::stringstream ss;
-			std::string text("#hello, this is just a text");
-			inspire_driver driver(text, mgr);
-
-			position beg (&filename, 1,2);
-			position end (&filename, 1,10);
-			location errorloc (beg, end);
-
-			driver.error(errorloc, "here is the error");
-			driver.print_errors(ss, false);
-
-			EXPECT_EQ(ss.str(), "ERROR: unknown:1.2-9 here is the error\n#hello, this is just a text\n ^~~~~~~~\n");
-	    }
-
-	    {
-			std::stringstream ss;
-			std::string text("int<4.");
-			inspire_driver driver(text, mgr);
-			driver.parseExpression();
-			driver.print_errors(ss, false);
-			EXPECT_EQ(ss.str(), "ERROR: 1.1-3 the symbol int was not declared in this context\nint<4.\n^~~\nERROR: 1.1-3 unrecoverable error\nint<4.\n^~~\n");
-	    }
+	std::string filename("unknown");
+	NodeManager mgr;
+	
+	{
+		std::stringstream ss;
+		std::string text("#hello, this is just a text");
+		inspire_driver driver(text, mgr);
 		
-	    {
-			std::stringstream ss;
-			std::string text("int<4.");
-			inspire_driver driver(text, mgr);
-			driver.parseType();
-			driver.print_errors(ss, false);
-			EXPECT_EQ(ss.str(), "ERROR: 1.6 syntax error, unexpected ., expecting >\nint<4.\n     ^\n");
-	    }
-
-		//acurate tabs
-		// there is the thing, a tab is a single char, and the location will be updated by one single possition
-		// at the time to print, the easyest way is to replace tabs in input by spaces, and then the green arrow will
-		// point the right char
-	    {
-			std::stringstream ss;
-			std::string text("\t\t\tx");
-			inspire_driver driver(text, mgr);
-			driver.parseExpression();
-			driver.print_errors(ss, false);
-			EXPECT_EQ(ss.str(), "ERROR: 1.4 the symbol x was not declared in this context\n   x\n   ^\nERROR: 1.4 unrecoverable error\n   x\n   ^\n");
-	    }
-
-		//tabs and newlines
-	    {
-			std::stringstream ss;
-			std::string text("\t\t\n\tx");
-			inspire_driver driver(text, mgr);
-			driver.parseExpression();
-			driver.print_errors(ss, false);
-			EXPECT_EQ(ss.str(), "ERROR: 2.2 the symbol x was not declared in this context\n x\n ^\nERROR: 2.2 unrecoverable error\n x\n ^\n");
-	    }
+		position beg(&filename, 1,2);
+		position end(&filename, 1,10);
+		location errorloc(beg, end);
+		
+		driver.error(errorloc, "here is the error");
+		driver.print_errors(ss, false);
+		
+		EXPECT_EQ(ss.str(), "ERROR: unknown:1.2-9 here is the error\n#hello, this is just a text\n ^~~~~~~~\n");
 	}
+	
+	{
+		std::stringstream ss;
+		std::string text("int<4.");
+		inspire_driver driver(text, mgr);
+		driver.parseExpression();
+		driver.print_errors(ss, false);
+		EXPECT_EQ(ss.str(), "ERROR: 1.1-3 the symbol int was not declared in this context\nint<4.\n^~~\nERROR: 1.1-3 unrecoverable error\nint<4.\n^~~\n");
+	}
+	
+	{
+		std::stringstream ss;
+		std::string text("int<4.");
+		inspire_driver driver(text, mgr);
+		driver.parseType();
+		driver.print_errors(ss, false);
+		EXPECT_EQ(ss.str(), "ERROR: 1.6 syntax error, unexpected ., expecting >\nint<4.\n     ^\n");
+	}
+	
+	//acurate tabs
+	// there is the thing, a tab is a single char, and the location will be updated by one single possition
+	// at the time to print, the easyest way is to replace tabs in input by spaces, and then the green arrow will
+	// point the right char
+	{
+		std::stringstream ss;
+		std::string text("\t\t\tx");
+		inspire_driver driver(text, mgr);
+		driver.parseExpression();
+		driver.print_errors(ss, false);
+		EXPECT_EQ(ss.str(), "ERROR: 1.4 the symbol x was not declared in this context\n   x\n   ^\nERROR: 1.4 unrecoverable error\n   x\n   ^\n");
+	}
+	
+	//tabs and newlines
+	{
+		std::stringstream ss;
+		std::string text("\t\t\n\tx");
+		inspire_driver driver(text, mgr);
+		driver.parseExpression();
+		driver.print_errors(ss, false);
+		EXPECT_EQ(ss.str(), "ERROR: 2.2 the symbol x was not declared in this context\n x\n ^\nERROR: 2.2 unrecoverable error\n x\n ^\n");
+	}
+}
 
 } // detail
 } // parser3

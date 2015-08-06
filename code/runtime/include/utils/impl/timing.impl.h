@@ -47,7 +47,7 @@
 #include "irt_logging.h"
 
 #ifdef _GEMS_SIM
-	#include "include_gems/impl/time.impl.h"
+#include "include_gems/impl/time.impl.h"
 #endif
 
 // ====== sleep functions ======================================
@@ -133,24 +133,27 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 	static uint64 before = 0;
 	//static struct timespec time_before;
 	static struct timeval time_before;
-
+	
 	if(before == 0) {
-		if(irt_time_ticks_constant())
+		if(irt_time_ticks_constant()) {
 			irt_log_setting_s("irt_time_ticks_constant", "yes");
-		else
+		}
+		else {
 			irt_log_setting_s("irt_time_ticks_constant", "no");
+		}
 		before = irt_time_ticks();  // has a resolution of 1 clock cycle (yay!)
 		//clock_gettime(CLOCK_REALTIME, &time_before); // has a resolution of 256 nanoseconds in linux, but there's nothing better...
 		gettimeofday(&time_before, NULL);
 		return 0;
-	} else {
+	}
+	else {
 		char path[4096];
 		FILE* temp_time_file;
 		int retval = 0;
 		uint64 reference_clock = 0;
-
+	
 		sprintf(path, "%s/insieme_reference_cpu_clocks", irt_get_tmp_dir());
-
+	
 		if((temp_time_file = fopen(path, "r")) != NULL) {
 			if((retval = fscanf(temp_time_file, "%" PRIu64, &reference_clock)) == 1) {
 				if(reference_clock >= 1e6 && reference_clock <= 1e11) { // 1MHz < reference_clock < 100 GHz
@@ -162,13 +165,13 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 			}
 			fclose(temp_time_file);
 		}
-
+	
 		uint64 after = irt_time_ticks();
 		//struct timespec time_after;
 		struct timeval time_after;
 		//clock_gettime(CLOCK_REALTIME, &time_after);
 		gettimeofday(&time_after, NULL);
-
+	
 		// check the run time R of the runtime, if R was below a second, wait additional 1 - R seconds to increase accuracy of measurement
 		uint64 elapsed_time = ((time_after.tv_sec * 1e6 + time_after.tv_usec) - (time_before.tv_sec * 1e6 + time_before.tv_usec));
 		if(elapsed_time < 1e6) {
@@ -177,14 +180,14 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 			//clock_gettime(CLOCK_REALTIME, &time_after);
 			gettimeofday(&time_after, NULL);
 		}
-
+	
 		irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e6)/((time_after.tv_sec * 1e6 + time_after.tv_usec) - (time_before.tv_sec * 1e6 + time_before.tv_usec));
-
+	
 		if((temp_time_file = fopen(path, "w")) != NULL) {
 			fprintf(temp_time_file, "%" PRIu64, irt_g_time_ticks_per_sec);
 			fclose(temp_time_file);
 		}
-
+	
 		return irt_g_time_ticks_per_sec;
 	}
 #endif

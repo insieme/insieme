@@ -38,15 +38,15 @@
 	{ x++; }
 
 
-int main (){
+int main() {
 
-	#pragma test dummy "first"
+#pragma test dummy "first"
 	int x;
-
+	
 #pragma test dummy "macro"
 	FAKE(x);
-
+	
 #pragma test dummy "solo"
 	
-
+	
 }

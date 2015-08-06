@@ -55,30 +55,34 @@ using namespace insieme::core;
 
 class LoopAnnotation : public NodeAnnotation {
 	size_t iterations;
-
+	
 public:
 	static const string NAME;
-    static const utils::StringKey<LoopAnnotation> KEY;
-
-    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
-
+	static const utils::StringKey<LoopAnnotation> KEY;
+	
+	const utils::AnnotationKeyPtr getKey() const {
+		return &KEY;
+	}
+	const std::string& getAnnotationName() const {
+		return NAME;
+	}
+	
 //    LoopAnnotation() {} iterations has to be initialized
-    LoopAnnotation(size_t iterations): iterations(iterations) {}
-
+	LoopAnnotation(size_t iterations): iterations(iterations) {}
+	
 	size_t getIterations() const;
-
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+	
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation
 		assert_true(&*ptr == this) << "Annotation pointer should reference this annotation!";
 		after->addAnnotation(ptr);
 		return true;
 	}
-
-    static void attach(const NodePtr& node, size_t iterations);
-    static bool hasAttachedValue(const NodePtr& node);
-    static size_t getValue(const NodePtr& node);
-
+	
+	static void attach(const NodePtr& node, size_t iterations);
+	static bool hasAttachedValue(const NodePtr& node);
+	static size_t getValue(const NodePtr& node);
+	
 };
 
 typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
@@ -88,6 +92,6 @@ typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
+std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
 
 } // end namespace std

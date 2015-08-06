@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,14 +45,16 @@
  * returns the temporary directory using standard conventions
  */
 const char* irt_get_tmp_dir() {
-	if(getenv("TMPDIR"))
+	if(getenv("TMPDIR")) {
 		return getenv("TMPDIR");
-
+	}
+	
 #	ifdef P_tmpdir // might not be defined in some stdio.h files (like MinGW)
-		else if(P_tmpdir != NULL)
-			return P_tmpdir;
+	else if(P_tmpdir != NULL) {
+		return P_tmpdir;
+	}
 #	endif
-
+	
 	else {
 		return "/tmp";
 	}

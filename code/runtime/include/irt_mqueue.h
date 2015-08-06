@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,11 +43,11 @@
 // include implementation only in non-min mode
 
 //#ifndef IRT_MIN_MODE
-	#ifdef _WIN32
-		#include "include_win32\mqueue.h"
-	#else
-		#include <mqueue.h>
-	#endif
+#ifdef _WIN32
+#include "include_win32\mqueue.h"
+#else
+#include <mqueue.h>
+#endif
 //#endif
 
 extern mqd_t irt_g_message_queue;

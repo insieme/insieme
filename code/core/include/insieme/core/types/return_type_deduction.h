@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -51,7 +51,9 @@ class ReturnTypeDeductionException : public std::exception {
 public:
 	ReturnTypeDeductionException(const string& msg = "Unable to deduce return type.") : msg(msg) {}
 	virtual ~ReturnTypeDeductionException() throw() { }
-	virtual const char* what() const throw() { return msg.c_str(); }
+	virtual const char* what() const throw() {
+		return msg.c_str();
+	}
 };
 
 /**

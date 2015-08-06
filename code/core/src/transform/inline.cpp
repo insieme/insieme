@@ -69,18 +69,18 @@ class Redeemer : public SimpleNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
-
+	
 	CompoundStmtPtr outerBody;
 	ExpressionPtr retLoc;
 	VariablePtr returned;
 	
 	bool compRetActive;
 	bool encounteredReturn;
-
+	
 	NodePtr getReturnedAssignment() {
 		return build.assign(returned, build.boolLit(true));
 	}
-
+	
 	IfStmtPtr wrapNotReturned(const CompoundStmtPtr& comp) {
 		return build.ifStmt(build.logicNeg(build.deref(returned)), comp);
 	}
@@ -101,7 +101,7 @@ class Redeemer : public SimpleNodeMapping {
 		}
 		return build.compoundStmt(retStmts);
 	}
-
+	
 	NodePtr mapWhileStmt(const WhileStmtPtr& whileStmt) {
 		WhileStmtPtr replacement = whileStmt->substitute(nodeMan, *this).as<WhileStmtPtr>();
 		if(compRetActive) {
@@ -111,45 +111,53 @@ class Redeemer : public SimpleNodeMapping {
 		}
 		return replacement;
 	}
-
+	
 	NodePtr mapReturnStmt(const ReturnStmtPtr& retStmt) {
 		compRetActive = true;
 		encounteredReturn = true;
 		StatementList retStmts;
-		if(retLoc) retStmts.push_back(build.assign(retLoc, retStmt->getReturnExpr()));
+		if(retLoc) {
+			retStmts.push_back(build.assign(retLoc, retStmt->getReturnExpr()));
+		}
 		retStmts.push_back(getReturnedAssignment().as<StatementPtr>());
 		return build.compoundStmt(retStmts);
 	}
-
+	
 public:
 	Redeemer(NodeManager& nodeMan) : nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()),
 		retLoc() { }
-
+		
 	CompoundStmtPtr apply(const CompoundStmtPtr& body, const ExpressionPtr returnLocation = ExpressionPtr()) {
 		retLoc = returnLocation;
 		outerBody = body;
 		StatementList retStmts;
 		compRetActive = false;
 		encounteredReturn = false;
-
+		
 		// build returned boolean
 		returned = build.variable(build.refType(build.getLangBasic().getBool()));
 		retStmts.push_back(build.declarationStmt(returned, build.refVar(build.boolLit(false))));
-
+		
 		// adjust body
 		retStmts.push_back(map(body));
 		return encounteredReturn ? build.compoundStmt(retStmts) : body;
 	}
-
-
+	
+	
 protected:
 	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-		if(ptr->getNodeCategory() == NC_Expression || ptr->getNodeCategory() == NC_Type) return ptr;
+		if(ptr->getNodeCategory() == NC_Expression || ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
 		switch(ptr->getNodeType()) {
-		case NT_CompoundStmt: return mapCompoundStmt(ptr.as<CompoundStmtPtr>());
-		case NT_ReturnStmt: return mapReturnStmt(ptr.as<ReturnStmtPtr>());
-		case NT_WhileStmt: return mapWhileStmt(ptr.as<WhileStmtPtr>());
-		default: return ptr->substitute(nodeMan, *this);
+		case NT_CompoundStmt:
+			return mapCompoundStmt(ptr.as<CompoundStmtPtr>());
+		case NT_ReturnStmt:
+			return mapReturnStmt(ptr.as<ReturnStmtPtr>());
+		case NT_WhileStmt:
+			return mapWhileStmt(ptr.as<WhileStmtPtr>());
+		default:
+			return ptr->substitute(nodeMan, *this);
 		}
 	}
 };
@@ -157,11 +165,11 @@ protected:
 
 CompoundStmtPtr inlineMultiReturnInternal(StatementList& retStmts, NodeManager& nodeMan, const CallExprPtr& call, const ExpressionPtr& retLocation) {
 	IRBuilder build(nodeMan);
-
+	
 	// get called lambda and its parameters
 	assert_eq(call->getFunctionExpr()->getNodeType(), NT_LambdaExpr);
 	LambdaExprPtr lambdaExpr = call->getFunctionExpr().as<LambdaExprPtr>();
-
+	
 	// build parameter map
 	VarExprMap parReplacements;
 	VariableList parameters = lambdaExpr->getParameterList()->getParameters();
@@ -171,27 +179,29 @@ CompoundStmtPtr inlineMultiReturnInternal(StatementList& retStmts, NodeManager& 
 		if(LiteralPtr lit = dynamic_pointer_cast<LiteralPtr>(cur.second)) {
 			// this literal can be mapped directly
 			parReplacements.insert(make_pair(cur.first, cur.second));
-		} else if(VariablePtr argVar = dynamic_pointer_cast<VariablePtr>(cur.second)) {
+		}
+		else if(VariablePtr argVar = dynamic_pointer_cast<VariablePtr>(cur.second)) {
 			// this variable can be mapped directly
 			parReplacements.insert(make_pair(cur.first, cur.second));
-		} else {
+		}
+		else {
 			// a more complex expression - we need to build a variable and map it to that
 			VariablePtr newVar = build.variable(cur.first->getType());
 			retStmts.push_back(build.declarationStmt(newVar, cur.second));
 			parReplacements.insert(make_pair(cur.first, newVar));
 		}
 	});
-
+	
 	// adjust function body
 	CompoundStmtPtr body = lambdaExpr->getBody();
 	body = core::transform::replaceVarsGen(nodeMan, body, parReplacements);
-
+	
 	// replace returns with assignments, and adjust control flow
 	Redeemer redeemer(nodeMan);
 	body = redeemer.apply(body, retLocation);
-
+	
 	retStmts.push_back(body);
-
+	
 	return build.compoundStmt(retStmts);
 }
 
@@ -199,16 +209,16 @@ CompoundStmtPtr inlineMultiReturnInternal(StatementList& retStmts, NodeManager& 
 
 CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExprPtr& assignment) {
 	StatementList retStmts;
-
+	
 	// ensure that it is really an assign statement
 	assert(assignment->getFunctionExpr() == nodeMan.getLangBasic().getRefAssign());
-
+	
 	// split into left and right side of assignment
 	ExpressionPtr rhsExpr = assignment->getArgument(1);
 	assert_eq(rhsExpr->getNodeType(), NT_CallExpr);
 	CallExprPtr rhsCall = rhsExpr.as<CallExprPtr>();
 	ExpressionPtr retLocation = assignment->getArgument(0);
-
+	
 	return inlineMultiReturnInternal(retStmts, nodeMan, rhsCall, retLocation);
 }
 
@@ -220,8 +230,12 @@ CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprP
 
 insieme::core::CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call) {
 	const lang::BasicGenerator& basic = nodeMan.getLangBasic();
-	if(call->getFunctionExpr() == basic.getRefAssign()) return inlineMultiReturnAssignment(nodeMan, call);
-	else return inlineMultiReturnPlainCall(nodeMan, call);
+	if(call->getFunctionExpr() == basic.getRefAssign()) {
+		return inlineMultiReturnAssignment(nodeMan, call);
+	}
+	else {
+		return inlineMultiReturnPlainCall(nodeMan, call);
+	}
 }
 
 class Inliner : public core::transform::CachedNodeMapping {
@@ -229,26 +243,29 @@ class Inliner : public core::transform::CachedNodeMapping {
 public:
 
 	Inliner(NodeManager& manager) : manager(manager) {};
-
+	
 	const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-
-
-		// skip types 
-		if (ptr->getNodeCategory() == core::NC_Type) return ptr;
-
+	
+	
+		// skip types
+		if(ptr->getNodeCategory() == core::NC_Type) {
+			return ptr;
+		}
+		
 		// look for call expressions
-		if (ptr->getNodeType() == core::NT_CallExpr) {
+		if(ptr->getNodeType() == core::NT_CallExpr) {
 			// extract the call
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
 			
-			if(call->getFunctionExpr()->getNodeType() != core::NT_Literal)
-				return inlineMultiReturn(manager, call); 
+			if(call->getFunctionExpr()->getNodeType() != core::NT_Literal) {
+				return inlineMultiReturn(manager, call);
+			}
 		}
-
+		
 		// descend recursively
 		return ptr->substitute(manager, *this);
 	}
-
+	
 };
 
 insieme::core::NodePtr inlineCode(NodeManager& manager, const NodePtr& code) {

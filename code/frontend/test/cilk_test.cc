@@ -65,19 +65,19 @@ TEST(Cilk, Pragmas) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
-    cmd::Options options = cmd::Options::parse(args);
+	
+	std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/hello.cilk", "-fcilk" };
+	cmd::Options options = cmd::Options::parse(args);
 	options.job.frontendExtensionInit();
-	insieme::frontend::TranslationUnit tu(manager, CLANG_SRC_DIR "/inputs/hello.cilk", options.job);
-
+	insieme::frontend::TranslationUnit tu(manager, FRONTEND_TEST_DIR "/inputs/hello.cilk", options.job);
+	
 	const auto& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
-
-
+	
+	
 	// check number of annotations
 	EXPECT_EQ((size_t) 4, pl.size());
-
+	
 	// check version before cilk-sema is applied
 //	auto raw = tu.convert();
 //	dump(raw);
@@ -85,69 +85,69 @@ TEST(Cilk, Pragmas) {
 
 	{
 		auto p = pl[0];
-
+		
 		// check pragma start location
 		EXPECT_EQ((size_t)7, utils::Line(p->getStartLocation(), comp.getSourceManager()));
-
+		
 		EXPECT_EQ(p->getType(), "cilk::spawn");
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		auto node = p->getStatement();
-
+		
 		// check stmt start location
 		EXPECT_EQ((size_t)7, utils::Line(node->getLocStart(), comp.getSourceManager()));
 	}
-
+	
 	{
 		auto p = pl[1];
-
+		
 		// check pragma start location
 		EXPECT_EQ((size_t)9, utils::Line(p->getStartLocation(), comp.getSourceManager()));
-
+		
 		EXPECT_EQ(p->getType(), "cilk::spawn");
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		auto node = p->getStatement();
-
+		
 		// check stmt start location
 		EXPECT_EQ((size_t)9, utils::Line(node->getLocStart(), comp.getSourceManager()));
 	}
-
+	
 	{
 		auto p = pl[2];
-
+		
 		// check pragma start location
 		EXPECT_EQ((size_t)11, utils::Line(p->getStartLocation(), comp.getSourceManager()));
-
+		
 		EXPECT_EQ(p->getType(), "cilk::spawn");
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		auto node = p->getStatement();
-
+		
 		// check stmt start location
 		EXPECT_EQ((size_t)11, utils::Line(node->getLocStart(), comp.getSourceManager()));
 	}
-
+	
 	{
 		auto p = pl[3];
-
+		
 		// check pragma start location
 		EXPECT_EQ((size_t)13, utils::Line(p->getStartLocation(), comp.getSourceManager()));
-
+		
 		EXPECT_EQ(p->getType(), "cilk::sync");
-
+		
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		auto node = p->getStatement();
-
+		
 		// check stmt start location
 		EXPECT_EQ((size_t)14, utils::Line(node->getLocStart(), comp.getSourceManager()));
-
+		
 	}
-
+	
 }
 
 
@@ -155,25 +155,25 @@ TEST(Cilk, Sema) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-
-    std::vector<std::string> args = { "compiler", CLANG_SRC_DIR "/inputs/hello.cilk", "-fcilk" };
-    cmd::Options options = cmd::Options::parse(args);
-
+	
+	std::vector<std::string> args = { "compiler", FRONTEND_TEST_DIR "/inputs/hello.cilk", "-fcilk" };
+	cmd::Options options = cmd::Options::parse(args);
+	
 	// check proper encoding of cilk primitives
 	auto code = builder.normalize(options.job.execute(manager));
-
+	
 	auto str = toString(printer::PrettyPrinter(code));
-
+	
 	EXPECT_PRED2(containsSubString, str, "(v5 := v0((v4-1)));");
 	EXPECT_PRED2(containsSubString, str, "(v8 := v0((v7-2)));");
 	EXPECT_PRED2(containsSubString, str, "v0((v10-3));");
-
+	
 	EXPECT_PRED2(containsSubString, str, "decl ref<int<4>> v2 = ( var(undefined(type<int<4>>)));");
-
+	
 	EXPECT_PRED2(containsSubString, str, "bind(){fun000(v1, v2)}");
 	EXPECT_PRED2(containsSubString, str, "bind(){fun001(v1, v6)}");
 	EXPECT_PRED2(containsSubString, str, "bind(){fun002(v1)}");
-
+	
 	EXPECT_PRED2(containsSubString, str, "mergeAll()");
 	EXPECT_PRED2(containsSubString, str, "return ((v2)+(v6))");
 }

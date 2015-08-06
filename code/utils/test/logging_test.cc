@@ -42,95 +42,90 @@
 class StdoutRedirect {
 	std::stringstream buffer;
 	std::streambuf* old;
-
+	
 public:
 	StdoutRedirect() : old(std::cout.rdbuf(buffer.rdbuf())) { }
-
+	
 	~StdoutRedirect() {
 		std::cout.rdbuf(old);
 		std::cerr << buffer.str();
 	}
-
+	
 };
 
 TEST(Logging, EnvVariableLevel) {
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "DEBUG", 1);
-			LOG(DEBUG) << "DEBUG log test";
-			LOG(INFO) << "INFO log test";
-			LOG(WARNING) << "WARNING log test";
-			LOG(ERROR) << "ERROR log test";
-			LOG(FATAL) << "FATAL log test";
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"DEBUG.*INFO.*WARNING.*ERROR.*FATAL");
-		
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "INFO", 1);
-			LOG(DEBUG) << "DEBUG log test";
-			LOG(INFO) << "INFO log test";
-			LOG(WARNING) << "WARNING log test";
-			LOG(ERROR) << "ERROR log test";
-			LOG(FATAL) << "FATAL log test";
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"INFO.*WARNING.*ERROR.*FATAL");
-
-		
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "WARNING", 1);
-			LOG(DEBUG) << "DEBUG log test";
-			LOG(INFO) << "INFO log test";
-			LOG(WARNING) << "WARNING log test";
-			LOG(ERROR) << "ERROR log test";
-			LOG(FATAL) << "FATAL log test";
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"WARNING.*ERROR.*FATAL");
-
-		
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "ERROR", 1);
-			LOG(DEBUG) << "DEBUG log test";
-			LOG(INFO) << "INFO log test";
-			LOG(WARNING) << "WARNING log test";
-			LOG(ERROR) << "ERROR log test";
-			LOG(FATAL) << "FATAL log test";
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"ERROR.*FATAL");
-
-		
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "FATAL", 1);
-			LOG(DEBUG) << "DEBUG log test";
-			LOG(INFO) << "INFO log test";
-			LOG(WARNING) << "WARNING log test";
-			LOG(ERROR) << "ERROR log test";
-			LOG(FATAL) << "FATAL log test";
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"FATAL");
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
+		LOG(DEBUG) << "DEBUG log test";
+		LOG(INFO) << "INFO log test";
+		LOG(WARNING) << "WARNING log test";
+		LOG(ERROR) << "ERROR log test";
+		LOG(FATAL) << "FATAL log test";
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"DEBUG.*INFO.*WARNING.*ERROR.*FATAL");
+	
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "INFO", 1);
+		LOG(DEBUG) << "DEBUG log test";
+		LOG(INFO) << "INFO log test";
+		LOG(WARNING) << "WARNING log test";
+		LOG(ERROR) << "ERROR log test";
+		LOG(FATAL) << "FATAL log test";
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"INFO.*WARNING.*ERROR.*FATAL");
+	
+	
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "WARNING", 1);
+		LOG(DEBUG) << "DEBUG log test";
+		LOG(INFO) << "INFO log test";
+		LOG(WARNING) << "WARNING log test";
+		LOG(ERROR) << "ERROR log test";
+		LOG(FATAL) << "FATAL log test";
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"WARNING.*ERROR.*FATAL");
+	
+	
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "ERROR", 1);
+		LOG(DEBUG) << "DEBUG log test";
+		LOG(INFO) << "INFO log test";
+		LOG(WARNING) << "WARNING log test";
+		LOG(ERROR) << "ERROR log test";
+		LOG(FATAL) << "FATAL log test";
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"ERROR.*FATAL");
+	
+	
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "FATAL", 1);
+		LOG(DEBUG) << "DEBUG log test";
+		LOG(INFO) << "INFO log test";
+		LOG(WARNING) << "WARNING log test";
+		LOG(ERROR) << "ERROR log test";
+		LOG(FATAL) << "FATAL log test";
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"FATAL");
 }
 
 // single character, since otherwise regexs get cumbersome
@@ -142,29 +137,27 @@ void Beta() {
 }
 
 TEST(Logging, EnvVariableFilter) {
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "DEBUG", 1);
-			setenv(LOG_FILTER_ENV, ".*Alpha.*", 1);
-			Alpha();
-			Beta();
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"^[^%]*$[^%]*$");
-
-	ASSERT_EXIT(
-		{
-			StdoutRedirect redirect;
-			setenv(LOG_LEVEL_ENV, "DEBUG", 1);
-			setenv(LOG_FILTER_ENV, ".*Beta.*", 1);
-			Alpha();
-			Beta();
-		}
-		exit(0);
-		, 
-		::testing::ExitedWithCode(0),
-		"^[^$]*%[^$]*$");
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
+		setenv(LOG_FILTER_ENV, ".*Alpha.*", 1);
+		Alpha();
+		Beta();
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"^[^%]*$[^%]*$");
+	
+	ASSERT_EXIT( {
+		StdoutRedirect redirect;
+		setenv(LOG_LEVEL_ENV, "DEBUG", 1);
+		setenv(LOG_FILTER_ENV, ".*Beta.*", 1);
+		Alpha();
+		Beta();
+	}
+	exit(0);
+	,
+	::testing::ExitedWithCode(0),
+	"^[^$]*%[^$]*$");
 }

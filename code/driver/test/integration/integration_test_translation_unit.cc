@@ -60,92 +60,94 @@
 
 namespace insieme {
 
-	using namespace driver::integration;
+using namespace driver::integration;
 
-	// ---------------------------------- Check the runtime backend -------------------------------------
+// ---------------------------------- Check the runtime backend -------------------------------------
 
-	// the type definition (specifying the parameter type)
-	class MigrationIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+// the type definition (specifying the parameter type)
+class MigrationIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
 
-	// define the test case pattern
-	TEST_P(MigrationIntegrationTest, CompileableCode) {
-		core::NodeManager manager;
-
-		// obtain test case
-		driver::integration::IntegrationTestCase testCase = GetParam();
-
-		SCOPED_TRACE("Testing Case: " + testCase.getName());
-		LOG(INFO) << "Testing Case: " + testCase.getName();
-
-		// skip OpenCL tests in case we have OpenCL disabled
-		#ifndef USE_OPENCL
-		if (testCase.isEnableOpenCL()) {
-			LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
-			return;
-		}
-		#endif
-
-		//each test might require some prerequisites which are checked here
-		if (!checkPrerequisites(testCase)) {
-			ASSERT_TRUE(false) << "Prerequisites for test case " << testCase.getName() << " are not satisfied";
-			return;
-		}
-
-		std::string filename;
-		{
-			core::NodeManager tmpManager;
-			//load program and create IR TU
-			frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
-			char tmpname[] = "tmp.XXXXXX";
-			mkstemp(tmpname);
-			filename = tmpname;
-			insieme::driver::saveLib(code, filename);
-			EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
-		}
-
-		// load TU using the frontend (and all its potential extensions)
-		insieme::frontend::ConversionJob job;
-		job.addLib(insieme::driver::loadLib(manager, filename));
-		core::ProgramPtr code = job.execute(manager);
-
-		// create target code using the runtime backend
-		auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
-
-		// see whether target code can be compiled
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
-
-		std::string step=TEST_STEP_INSIEMECC_RUN_C_COMPILE;
-		// switch to C++ compiler if necessary
-		if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
-			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
-			step=TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
-		}
-
-		// add extra compiler flags from test case
-		for(const auto& flag : testCase.getCompilerArguments(step)) {
-			compiler.addFlag(flag);
-		}
-
-		// add includes
-		for(const auto& cur : testCase.getIncludeDirs()) {
-			compiler.addIncludeDir(cur.string());
-		}
-
-		// add library directories
-		for(const auto& cur : testCase.getLibDirs()) {
-			compiler.addFlag("-L" + cur.string());
-		}
-
-		// add libraries
-		for(const auto& cur : testCase.getLibNames()) {
-			compiler.addFlag("-l" + cur);
-		}
-
-		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
-		unlink(filename.c_str());
+// define the test case pattern
+TEST_P(MigrationIntegrationTest, CompileableCode) {
+	core::NodeManager manager;
+	
+	// obtain test case
+	driver::integration::IntegrationTestCase testCase = GetParam();
+	
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
+	
+	// skip OpenCL tests in case we have OpenCL disabled
+#ifndef USE_OPENCL
+	if(testCase.isEnableOpenCL()) {
+		LOG(INFO) << "Skipping OpenCL test: " + testCase.getName();
+		return;
 	}
+#endif
+	
+	//each test might require some prerequisites which are checked here
+	if(!checkPrerequisites(testCase)) {
+		ASSERT_TRUE(false) << "Prerequisites for test case " << testCase.getName() << " are not satisfied";
+		return;
+	}
+	
+	std::string filename;
+	{
+		core::NodeManager tmpManager;
+		//load program and create IR TU
+		frontend::tu::IRTranslationUnit code = testCase.loadTU(tmpManager);
+		char tmpname[] = "tmp.XXXXXX";
+		mkstemp(tmpname);
+		filename = tmpname;
+		insieme::driver::saveLib(code, filename);
+		EXPECT_TRUE(insieme::driver::isInsiemeLib(filename));
+	}
+	
+	// load TU using the frontend (and all its potential extensions)
+	insieme::frontend::ConversionJob job;
+	job.addLib(insieme::driver::loadLib(manager, filename));
+	core::ProgramPtr code = job.execute(manager);
+	
+	// create target code using the runtime backend
+	auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+	
+	// see whether target code can be compiled
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+	
+	std::string step=TEST_STEP_INSIEMECC_RUN_C_COMPILE;
+	// switch to C++ compiler if necessary
+	if(any(testCase.getFiles(), [](const frontend::path& cur) {
+	return *cur.string().rbegin() == 'p';
+	})) {
+		compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
+		step=TEST_STEP_INSIEMECC_RUN_CPP_COMPILE;
+	}
+	
+	// add extra compiler flags from test case
+	for(const auto& flag : testCase.getCompilerArguments(step)) {
+		compiler.addFlag(flag);
+	}
+	
+	// add includes
+	for(const auto& cur : testCase.getIncludeDirs()) {
+		compiler.addIncludeDir(cur.string());
+	}
+	
+	// add library directories
+	for(const auto& cur : testCase.getLibDirs()) {
+		compiler.addFlag("-L" + cur.string());
+	}
+	
+	// add libraries
+	for(const auto& cur : testCase.getLibNames()) {
+		compiler.addFlag("-l" + cur);
+	}
+	
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
+	unlink(filename.c_str());
+}
 
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(MigrationIntegrationCheck, MigrationIntegrationTest, ::testing::ValuesIn(getAllCases()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(MigrationIntegrationCheck, MigrationIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }

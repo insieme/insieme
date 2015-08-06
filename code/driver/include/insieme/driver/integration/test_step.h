@@ -52,205 +52,204 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-	// a forward declaration of the step class
-	struct TestStep;
-	class TestRunner;
+// a forward declaration of the step class
+struct TestStep;
+class TestRunner;
 
-	// a function obtaining an index of available steps
-	const std::map<std::string,TestStep>& getFullStepList(int statThreads,bool scheduling);
-	const std::map<std::string,TestStep>& getFullStepList();
+// a function obtaining an index of available steps
+const std::map<std::string,TestStep>& getFullStepList(int statThreads,bool scheduling);
+const std::map<std::string,TestStep>& getFullStepList();
 
-	// gets a specific test step by name
-	const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false);
+// gets a specific test step by name
+const TestStep& getStepByName(const std::string& name, int numThreads=0, bool scheduling=false);
 
-	// filters out test steps that are not suitable for the given tests
-	vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string,string>& conflicting = map<string,string>());
+// filters out test steps that are not suitable for the given tests
+vector<TestStep> filterSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, const map<string,string>& conflicting = map<string,string>());
 
-	// schedules the list of test steps by adding dependent steps and fixing the order properly
-	vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
+// schedules the list of test steps by adding dependent steps and fixing the order properly
+vector<TestStep> scheduleSteps(const vector<TestStep>& steps, const IntegrationTestCase& test, int numThreads=0, bool scheduling=false);
 
-	//checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
-	bool checkPrerequisites(const IntegrationTestCase& test);
+//checks the prerequisites for a test case in case there is such a step. Returns false if the prerequisites are not satisfied.
+bool checkPrerequisites(const IntegrationTestCase& test);
 
-	//reads out a given file and returns the contents
-	std::string readFile(std::string filename);
+//reads out a given file and returns the contents
+std::string readFile(std::string filename);
 
-	// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
-	static const std::string TEST_STEP_REF_C_COMPILE = "ref_c_compile";
-	static const std::string TEST_STEP_REF_CPP_COMPILE = "ref_cpp_compile";
+static const std::string TEST_STEP_REF_C_COMPILE = "ref_c_compile";
+static const std::string TEST_STEP_REF_CPP_COMPILE = "ref_cpp_compile";
 
-	static const std::string TEST_STEP_REF_C_EXECUTE = "ref_c_execute";
-	static const std::string TEST_STEP_REF_CPP_EXECUTE = "ref_cpp_execute";
+static const std::string TEST_STEP_REF_C_EXECUTE = "ref_c_execute";
+static const std::string TEST_STEP_REF_CPP_EXECUTE = "ref_cpp_execute";
 
-	static const std::string TEST_STEP_REF_C_CHECK = "ref_c_check";
-	static const std::string TEST_STEP_REF_CPP_CHECK = "ref_cpp_check";
+static const std::string TEST_STEP_REF_C_CHECK = "ref_c_check";
+static const std::string TEST_STEP_REF_CPP_CHECK = "ref_cpp_check";
 
-	static const std::string TEST_STEP_INSIEMECC_C_SEMA = "insiemecc_c_sema";
-	static const std::string TEST_STEP_INSIEMECC_CPP_SEMA = "insiemecc_cpp_sema";
+static const std::string TEST_STEP_INSIEMECC_C_SEMA = "insiemecc_c_sema";
+static const std::string TEST_STEP_INSIEMECC_CPP_SEMA = "insiemecc_cpp_sema";
 
-	static const std::string TEST_STEP_INSIEMECC_SEQ_C_CONVERT = "insiemecc_seq_c_convert";
-	static const std::string TEST_STEP_INSIEMECC_RUN_C_CONVERT = "insiemecc_run_c_convert";
-	static const std::string TEST_STEP_INSIEMECC_OCL_C_CONVERT = "insiemecc_ocl_c_convert";
-	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT = "insiemecc_seq_cpp_convert";
-	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_CONVERT = "insiemecc_run_cpp_convert";
+static const std::string TEST_STEP_INSIEMECC_SEQ_C_CONVERT = "insiemecc_seq_c_convert";
+static const std::string TEST_STEP_INSIEMECC_RUN_C_CONVERT = "insiemecc_run_c_convert";
+static const std::string TEST_STEP_INSIEMECC_OCL_C_CONVERT = "insiemecc_ocl_c_convert";
+static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_CONVERT = "insiemecc_seq_cpp_convert";
+static const std::string TEST_STEP_INSIEMECC_RUN_CPP_CONVERT = "insiemecc_run_cpp_convert";
 
-	static const std::string TEST_STEP_INSIEMECC_SEQ_C_COMPILE = "insiemecc_seq_c_compile";
-	static const std::string TEST_STEP_INSIEMECC_RUN_C_COMPILE = "insiemecc_run_c_compile";
-	static const std::string TEST_STEP_INSIEMECC_OCL_C_COMPILE = "insiemecc_ocl_c_compile";
-	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE = "insiemecc_seq_cpp_compile";
-	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_COMPILE = "insiemecc_run_cpp_compile";
+static const std::string TEST_STEP_INSIEMECC_SEQ_C_COMPILE = "insiemecc_seq_c_compile";
+static const std::string TEST_STEP_INSIEMECC_RUN_C_COMPILE = "insiemecc_run_c_compile";
+static const std::string TEST_STEP_INSIEMECC_OCL_C_COMPILE = "insiemecc_ocl_c_compile";
+static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_COMPILE = "insiemecc_seq_cpp_compile";
+static const std::string TEST_STEP_INSIEMECC_RUN_CPP_COMPILE = "insiemecc_run_cpp_compile";
 
-	static const std::string TEST_STEP_INSIEMECC_SEQ_C_EXECUTE = "insiemecc_seq_c_execute";
-	static const std::string TEST_STEP_INSIEMECC_RUN_C_EXECUTE = "insiemecc_run_c_execute";
-	static const std::string TEST_STEP_INSIEMECC_OCL_C_EXECUTE = "insiemecc_ocl_c_execute";
-	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE = "insiemecc_seq_cpp_execute";
-	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE = "insiemecc_run_cpp_execute";
+static const std::string TEST_STEP_INSIEMECC_SEQ_C_EXECUTE = "insiemecc_seq_c_execute";
+static const std::string TEST_STEP_INSIEMECC_RUN_C_EXECUTE = "insiemecc_run_c_execute";
+static const std::string TEST_STEP_INSIEMECC_OCL_C_EXECUTE = "insiemecc_ocl_c_execute";
+static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_EXECUTE = "insiemecc_seq_cpp_execute";
+static const std::string TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE = "insiemecc_run_cpp_execute";
 
-	static const std::string TEST_STEP_INSIEMECC_SEQ_C_CHECK = "insiemecc_seq_c_check";
-	static const std::string TEST_STEP_INSIEMECC_RUN_C_CHECK = "insiemecc_run_c_check";
-	static const std::string TEST_STEP_INSIEMECC_OCL_C_CHECK = "insiemecc_ocl_c_check";
-	static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_CHECK = "insiemecc_seq_cpp_check";
-	static const std::string TEST_STEP_INSIEMECC_RUN_CPP_CHECK = "insiemecc_run_cpp_check";
+static const std::string TEST_STEP_INSIEMECC_SEQ_C_CHECK = "insiemecc_seq_c_check";
+static const std::string TEST_STEP_INSIEMECC_RUN_C_CHECK = "insiemecc_run_c_check";
+static const std::string TEST_STEP_INSIEMECC_OCL_C_CHECK = "insiemecc_ocl_c_check";
+static const std::string TEST_STEP_INSIEMECC_SEQ_CPP_CHECK = "insiemecc_seq_cpp_check";
+static const std::string TEST_STEP_INSIEMECC_RUN_CPP_CHECK = "insiemecc_run_cpp_check";
 
-	static const std::string TEST_STEP_PREPROCESSING = "preprocessing";
-	static const std::string TEST_STEP_POSTPROCESSING = "postprocessing";
+static const std::string TEST_STEP_PREPROCESSING = "preprocessing";
+static const std::string TEST_STEP_POSTPROCESSING = "postprocessing";
 
-	static const std::string TEST_STEP_CHECK_PREREQUISITES = "check_prerequisites";
+static const std::string TEST_STEP_CHECK_PREREQUISITES = "check_prerequisites";
 
-	// ------------------------------------------------------------------------
-
-
-
-	struct TestSetup {
-		bool mockRun;
-		SchedulingPolicy sched;
-		bool clean;
-		int numThreads;
-		std::string stdOutFile;
-		std::string stdErrFile;
-		std::string outputFile;
-		std::string executionDir;
-
-		//perf metrics
-		bool perf;
-		string load_miss;
-		string store_miss;
-		string flops;
-		vector<string> perf_metrics;
-	};
-
-	enum StepType {COMPILE,RUN,CHECK,STATIC_METRIC,UNDEFINED};
-
-	struct TestStep :
-			public boost::less_than_comparable<TestStep>,
-			public boost::equality_comparable<TestStep>,
-			public insieme::utils::Printable
-	{
-
-		typedef std::function<TestResult(const TestSetup&, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
-
-	private:
-		std::string name;
-
-		StepOp step;
-
-		std::set<std::string> dependencies;
-
-		StepType type;
-
-	protected:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive & ar, const unsigned int version) {
-			ar & name;
-			//ar & step;
-			ar & dependencies;
-			ar & type;
-		}
-
-		TestStep(StepType type) : type(type) {};
-
-	public:
-		TestStep() {};
-
-		TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>(),
-				StepType type=UNDEFINED)
-			: name(name), step(op), dependencies(dependencies),type(type) {}
-
-		const std::string& getName() const {
-			return name;
-		}
-
-		TestResult run(const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) const {
-			return step(setup, test, runner);
-		}
-
-		const std::set<std::string>& getDependencies() const {
-			return dependencies;
-		}
-
-		bool operator==(const TestStep& other) const {
-			return name == other.name;
-		}
-
-		bool operator<(const TestStep& other) const {
-			return name < other.name;
-		}
-
-		std::ostream& printTo(std::ostream& out) const {
-			return out << name;
-		}
-
-		const StepType getStepType() const {
-			return type;
-		}
-	};
-
-	//special test step only to contain results of static metrics
-	struct StaticMetricsStep : public TestStep{
-		public:
-		StaticMetricsStep() : TestStep(STATIC_METRIC) {};
-	};
+// ------------------------------------------------------------------------
 
 
 
-	//define the TestRunner here
-	class TestRunner {
-	private:
-		typedef insieme::driver::integration::IntegrationTestCase TestCase;
-		mutable std::vector<pid_t> pids;
-		std::function<void()> func;
-		std::function<void()> pre;
-		TestRunner() {
-			//register signal handler
-			signal(SIGINT, TestRunner::signalHandler);
-		}
-		TestRunner(const TestRunner&);
-		TestRunner& operator =(const TestRunner&);
-	public:
-		static TestRunner& getInstance() {
-			static TestRunner r = TestRunner();
-			return r;
-		}
-		int executeWithTimeout(const string& executableParam, const string& argumentsParam,
-		                       const string& environmentParam, const string& outFilePath,
-		                       const string& errFilePath, unsigned cpuTimeLimit, const string& execDir = "") const;
-		TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig,
-		                      const string& cmd, const string& producedFile="", const string& execDir = "") const;
-		void attachExecuteOnKill(std::function<void()> f) {
-			func = f;
-		}
-		void attachExecuteBeforeKill(std::function<void()> f) {
-			pre = f;
-		}
+struct TestSetup {
+	bool mockRun;
+	SchedulingPolicy sched;
+	bool clean;
+	int numThreads;
+	std::string stdOutFile;
+	std::string stdErrFile;
+	std::string outputFile;
+	std::string executionDir;
+	
+	//perf metrics
+	bool perf;
+	string load_miss;
+	string store_miss;
+	string flops;
+	vector<string> perf_metrics;
+};
 
-		static void signalHandler(int signum) {
+enum StepType {COMPILE,RUN,CHECK,STATIC_METRIC,UNDEFINED};
+
+struct TestStep :
+	public boost::less_than_comparable<TestStep>,
+	public boost::equality_comparable<TestStep>,
+	public insieme::utils::Printable {
+	
+	typedef std::function<TestResult(const TestSetup&, const IntegrationTestCase& test, const TestRunner& runner)> StepOp;
+	
+private:
+	std::string name;
+	
+	StepOp step;
+	
+	std::set<std::string> dependencies;
+	
+	StepType type;
+	
+protected:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version) {
+		ar & name;
+		//ar & step;
+		ar & dependencies;
+		ar & type;
+	}
+	
+	TestStep(StepType type) : type(type) {};
+	
+public:
+	TestStep() {};
+	
+	TestStep(const std::string& name, const StepOp& op, const std::set<std::string>& dependencies = std::set<std::string>(),
+	         StepType type=UNDEFINED)
+		: name(name), step(op), dependencies(dependencies),type(type) {}
+		
+	const std::string& getName() const {
+		return name;
+	}
+	
+	TestResult run(const TestSetup& setup, const IntegrationTestCase& test, const TestRunner& runner) const {
+		return step(setup, test, runner);
+	}
+	
+	const std::set<std::string>& getDependencies() const {
+		return dependencies;
+	}
+	
+	bool operator==(const TestStep& other) const {
+		return name == other.name;
+	}
+	
+	bool operator<(const TestStep& other) const {
+		return name < other.name;
+	}
+	
+	std::ostream& printTo(std::ostream& out) const {
+		return out << name;
+	}
+	
+	const StepType getStepType() const {
+		return type;
+	}
+};
+
+//special test step only to contain results of static metrics
+struct StaticMetricsStep : public TestStep {
+public:
+	StaticMetricsStep() : TestStep(STATIC_METRIC) {};
+};
+
+
+
+//define the TestRunner here
+class TestRunner {
+private:
+	typedef insieme::driver::integration::IntegrationTestCase TestCase;
+	mutable std::vector<pid_t> pids;
+	std::function<void()> func;
+	std::function<void()> pre;
+	TestRunner() {
+		//register signal handler
+		signal(SIGINT, TestRunner::signalHandler);
+	}
+	TestRunner(const TestRunner&);
+	TestRunner& operator =(const TestRunner&);
+public:
+	static TestRunner& getInstance() {
+		static TestRunner r = TestRunner();
+		return r;
+	}
+	int executeWithTimeout(const string& executableParam, const string& argumentsParam,
+	                       const string& environmentParam, const string& outFilePath,
+	                       const string& errFilePath, unsigned cpuTimeLimit, const string& execDir = "") const;
+	TestResult runCommand(const string& stepName, const TestSetup& setup, const PropertyView& testConfig,
+	                      const string& cmd, const string& producedFile="", const string& execDir = "") const;
+	void attachExecuteOnKill(std::function<void()> f) {
+		func = f;
+	}
+	void attachExecuteBeforeKill(std::function<void()> f) {
+		pre = f;
+	}
+	
+	static void signalHandler(int signum) {
 		#pragma omp single
 		{
 			TestRunner::getInstance().pre();
 			sleep(1);
-		#pragma omp critical (pids)
+			#pragma omp critical (pids)
 			{
 				for(auto pid : TestRunner::getInstance().pids) {
 					kill(pid, SIGINT);
@@ -260,8 +259,8 @@ namespace integration {
 			}
 		}
 		exit(0);
-		}
-	};
+	}
+};
 
 } // end namespace integration
 } // end namespace driver

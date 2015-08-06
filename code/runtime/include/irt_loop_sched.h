@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -74,8 +74,8 @@ struct _irt_loop_sched_data {
 // schedule a loop using the policy specified for this group
 // runs the optimizer and collects instrumentation data if the IRT_RUNTIME_TUNING flag is active
 inline static void irt_schedule_loop(
-	irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
-	irt_wi_implementation* impl, irt_lw_data_item* args);
+    irt_work_item* self, irt_work_group* group, irt_work_item_range base_range,
+    irt_wi_implementation* impl, irt_lw_data_item* args);
 
 // sets the scheduling policy for the given group
 // it will activate upon reaching the next loop

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -72,7 +72,9 @@ TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
  */
 template<typename Container>
 TypePtr getSmallestCommonSuperType(const Container& types) {
-	if (types.empty()) { return 0; }
+	if(types.empty()) {
+		return 0;
+	}
 	auto it = types.begin();
 	TypePtr res = *it;
 	for(++it; res && it != types.end(); ++it) {
@@ -98,7 +100,9 @@ TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB);
  */
 template<typename Container>
 TypePtr getBiggestCommonSubType(const Container& types) {
-	if (types.empty()) { return 0; }
+	if(types.empty()) {
+		return 0;
+	}
 	auto it = types.begin();
 	TypePtr res = *it;
 	for(++it; res && it != types.end(); ++it) {

@@ -67,7 +67,7 @@ TEST(queues, basic_sequential_ops) {
 	// using 0 instead of NULL to prevent GCC warning
 	EXPECT_EQ(0 /* NULL */, irt_deque_test_deque_pop_back(&q));
 	EXPECT_EQ(0 /* NULL */, irt_deque_test_deque_pop_front(&q));
-
+	
 	irt_deque_test *elem = make_item(1.0f);
 	irt_deque_test_deque_insert_front(&q, elem);
 	EXPECT_EQ(elem, q.start);
@@ -81,8 +81,8 @@ TEST(queues, basic_sequential_ops) {
 	EXPECT_EQ(elem, irt_deque_test_deque_pop_back(&q));
 	EXPECT_EQ(0 /* NULL */, q.start);
 	EXPECT_EQ(0 /* NULL */, q.end);
-
-
+	
+	
 	irt_deque_test *elem2 = make_item(2.0f), *elem3 = make_item(3.0f);
 	irt_deque_test_deque_insert_back(&q, elem);
 	irt_deque_test_deque_insert_back(&q, elem2);
@@ -102,7 +102,7 @@ TEST(queues, basic_sequential_ops) {
 	EXPECT_EQ(elem3, irt_deque_test_deque_take_elem(&q, elem3));
 	EXPECT_EQ(0 /* NULL */, q.end);
 	EXPECT_EQ(0 /* NULL */, q.end);
-
+	
 	free(elem);
 	free(elem2);
 	free(elem3);
@@ -114,9 +114,9 @@ TEST(queues, basic_sequential_ops) {
 TEST(queues, mass_sequential_ops) {
 	irt_deque_test_deque q;
 	irt_deque_test_deque_init(&q);
-
+	
 	irt_deque_test* elems[TEST_ELEMS];
-
+	
 	for(int i=0; i<TEST_ELEMS; ++i) {
 		elems[i] = make_item(i/10.0f);
 		irt_deque_test_deque_insert_back(&q, elems[i]);
@@ -126,7 +126,7 @@ TEST(queues, mass_sequential_ops) {
 	for(int i=TEST_ELEMS-1; i>=0; --i) {
 		EXPECT_EQ(elems[i], irt_deque_test_deque_pop_back(&q));
 	}
-
+	
 	for(int i=0; i<TEST_ELEMS; ++i) {
 		irt_deque_test_deque_insert_front(&q, elems[i]);
 	}
@@ -135,7 +135,7 @@ TEST(queues, mass_sequential_ops) {
 	for(int i=TEST_ELEMS-1; i>=0; --i) {
 		EXPECT_EQ(elems[i], irt_deque_test_deque_pop_front(&q));
 	}
-
+	
 	// cleanup
 	irt_deque_test_deque_cleanup(&q);
 	for(int i=0; i<TEST_ELEMS; ++i) {

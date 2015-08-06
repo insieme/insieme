@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,9 +39,9 @@
 #define __GUARD_ABSTRACTION_MEASUREMENTS_H
 
 #if defined(__arm__) || defined(_GEMS_SIM)
-    // nothing to include
+// nothing to include
 #else
-	#include "measurements.rapl.h"
+#include "measurements.rapl.h"
 #endif
 
 

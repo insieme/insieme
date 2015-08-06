@@ -29,24 +29,24 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <vector>
 
 namespace insieme {
-namespace frontend { 
+namespace frontend {
 namespace utils {
 
-	/**
-	 *  search in the inner tree for the used temporaries
-	 */
-	std::vector<const clang::CXXTemporary*> lookupTemporaries (const clang::Expr* innerExpr);
+/**
+ *  search in the inner tree for the used temporaries
+ */
+std::vector<const clang::CXXTemporary*> lookupTemporaries(const clang::Expr* innerExpr);
 
 
 
-} //namespace utils 
-} //namespace frontend 
-} //namespace insieme 
+} //namespace utils
+} //namespace frontend
+} //namespace insieme

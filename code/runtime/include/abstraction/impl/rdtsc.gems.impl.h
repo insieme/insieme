@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,14 +40,14 @@
 
 #include "irt_inttypes.h"
 
-// TODO [_GEMS]: implementations are work-arounds 
+// TODO [_GEMS]: implementations are work-arounds
 
 uint64 irt_time_ticks(void) {
 	// time in us since boot
 	unsigned int cur_time = *(unsigned int*)(0x08000000);
-
+	
 	// core frequency is 100 MHz (it can be modified via simulator configuration)
-	return cur_time * GEMS_CORE_FREQ_MHZ; 
+	return cur_time * GEMS_CORE_FREQ_MHZ;
 }
 
 bool irt_time_ticks_available() {

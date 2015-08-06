@@ -51,12 +51,22 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 	 * we can fix the capture list.
 	 */
 	std::map <const clang::Decl*, const clang::LambdaExpr*> lambdaMap;
-
+	
+	/**
+	 * Lambdas that should be converted into function pointers
+	 * must not be converted into struct types that contain
+	 * a parentheses operator overloading. Simple lambdas are
+	 * stored and in case of a function pointer conversion we
+	 * use the plain function instead of a struct.
+	 */
+	std::map <const clang::CXXRecordDecl*, core::ExpressionPtr> simpleLambdaReplacementMap;
+	
+	
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 stmts
 
 	stmtutils::StmtWrapper VisitCXXForRangeStmt(const clang::CXXForRangeStmt* frStmt, frontend::conversion::Converter& convFact) ;
-
+	
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 expressions
 
@@ -64,26 +74,26 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 	 *			Cxx11 null pointer
 	 *	Cxx11 introduces a null pointer value called nullptr, it avoids typing problems
 	 */
-	insieme::core::ExpressionPtr VisitCXXNullPtrLiteralExpr	(const clang::CXXNullPtrLiteralExpr* nullPtrExpr, insieme::frontend::conversion::Converter& convFact);
-
+	insieme::core::ExpressionPtr VisitCXXNullPtrLiteralExpr(const clang::CXXNullPtrLiteralExpr* nullPtrExpr, insieme::frontend::conversion::Converter& convFact);
+	
 	/**
 	 *  			Cxx11 lambda expression
 	 *  		we could convert the body, encapsulate it into a function and pas all the captures
 	 *  		as parameters, but this will ruin compatibility. We need a class with the operator() overload
 	 */
-	insieme::core::ExpressionPtr VisitLambdaExpr (const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) ;
-
-
+	insieme::core::ExpressionPtr VisitLambdaExpr(const clang::LambdaExpr* lambdaExpr, insieme::frontend::conversion::Converter& convFact) ;
+	
+	
 	/**
 	 *			SizeOfPackExpr
 	 */
 	insieme::core::ExpressionPtr VisitSizeOfPackExpr(const clang::SizeOfPackExpr* sizeOfPackExpr, insieme::frontend::conversion::Converter& convFact);
-
+	
 	/**
 	 *			StdInitListExpr
 	 */
 	insieme::core::ExpressionPtr VisitInitListExpr(const clang::CXXStdInitializerListExpr* initList, insieme::frontend::conversion::Converter& convFact);
-
+	
 //////////////////////////////////////////////////////////////////////////////////////
 //               C++11 types
 
@@ -91,56 +101,79 @@ class Cpp11Extension : public insieme::frontend::extensions::FrontendExtension {
 	 * auto type
 	 */
 	insieme::core::TypePtr VisitAutoType(const clang::AutoType* autoTy, insieme::frontend::conversion::Converter& convFact) ;
-
+	
 	/**
 	 * decltype(E) is the type ("declared type") of the name or expression E and can be used in declarations.
 	 *	   If you just need the type for a variable that you are about to initialize auto is often a simpler choice.
 	 *	   You really need decltype if you need a type for something that is not a variable, such as a return type.
 	 */
 	insieme::core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy, insieme::frontend::conversion::Converter& convFact) ;
-
+	
 	insieme::core::TypePtr VisitRValueReferenceType(const clang::RValueReferenceType* rvalref, insieme::frontend::conversion::Converter& convFact);
-
+	
 //////////////////////////////////////////////////////////////////////////////////////
 //               Extension Hooks
 
-	virtual stmtutils::StmtWrapper Visit (const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
-		if (const clang::CXXForRangeStmt* fr =  llvm::dyn_cast<clang::CXXForRangeStmt>(stmt))
-			return VisitCXXForRangeStmt (fr, convFact);
+	virtual stmtutils::StmtWrapper Visit(const clang::Stmt* stmt, insieme::frontend::conversion::Converter& convFact) {
+		if(const clang::CXXForRangeStmt* fr =  llvm::dyn_cast<clang::CXXForRangeStmt>(stmt)) {
+			return VisitCXXForRangeStmt(fr, convFact);
+		}
 		return stmtutils::StmtWrapper();
 	}
-
+	
 	virtual insieme::core::ExpressionPtr Visit(const clang::Expr* expr, insieme::frontend::conversion::Converter& convFact) {
-		if (const clang::LambdaExpr* lambda =  llvm::dyn_cast<clang::LambdaExpr>(expr))
+		if(const clang::CXXMemberCallExpr* memberExpr = llvm::dyn_cast<clang::CXXMemberCallExpr>(expr)) {
+			if(const clang::CXXConversionDecl* cd = llvm::dyn_cast<clang::CXXConversionDecl>(memberExpr->getMethodDecl())) {
+				//check if the conversion decl belongs to a lambda
+				if(cd->getParent()->isLambda()) {
+					//convert the lambda and check if we find the
+					//declaration in the simple lambda map afterwards
+					convFact.convertExpr(memberExpr->getCallee());
+					auto fit = simpleLambdaReplacementMap.find(cd->getParent());
+					if(fit != simpleLambdaReplacementMap.end()) {
+						return convFact.getIRBuilder().refVar(fit->second);
+					}
+				}
+			}
+		}
+		if(const clang::LambdaExpr* lambda =  llvm::dyn_cast<clang::LambdaExpr>(expr)) {
 			return VisitLambdaExpr(lambda, convFact);
-		if (const clang::CXXNullPtrLiteralExpr* nullExpr =  llvm::dyn_cast<clang::CXXNullPtrLiteralExpr>(expr))
+		}
+		if(const clang::CXXNullPtrLiteralExpr* nullExpr =  llvm::dyn_cast<clang::CXXNullPtrLiteralExpr>(expr)) {
 			return VisitCXXNullPtrLiteralExpr(nullExpr, convFact);
-		if(const clang::SizeOfPackExpr* sope = llvm::dyn_cast<clang::SizeOfPackExpr>(expr))
+		}
+		if(const clang::SizeOfPackExpr* sope = llvm::dyn_cast<clang::SizeOfPackExpr>(expr)) {
 			return VisitSizeOfPackExpr(sope, convFact);
-	        if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr))
-        		return VisitInitListExpr(initList, convFact);
+		}
+		if(const clang::CXXStdInitializerListExpr* initList = llvm::dyn_cast<clang::CXXStdInitializerListExpr>(expr)) {
+			return VisitInitListExpr(initList, convFact);
+		}
 		return nullptr;
 	}
-
+	
 	virtual insieme::core::TypePtr Visit(const clang::QualType& type, insieme::frontend::conversion::Converter& convFact) {
-		if (const clang::AutoType* autoTy =  llvm::dyn_cast<clang::AutoType>(type.getTypePtr()))
+		if(const clang::AutoType* autoTy =  llvm::dyn_cast<clang::AutoType>(type.getTypePtr())) {
 			return VisitAutoType(autoTy, convFact);
-		if (const clang::DecltypeType* declTy =  llvm::dyn_cast<clang::DecltypeType>(type.getTypePtr()))
+		}
+		if(const clang::DecltypeType* declTy =  llvm::dyn_cast<clang::DecltypeType>(type.getTypePtr())) {
 			return VisitDecltypeType(declTy, convFact);
-        if (const clang::RValueReferenceType* rvalRef = llvm::dyn_cast<clang::RValueReferenceType>(type.getTypePtr()))
+		}
+		if(const clang::RValueReferenceType* rvalRef = llvm::dyn_cast<clang::RValueReferenceType>(type.getTypePtr())) {
 			return VisitRValueReferenceType(rvalRef, convFact);
+		}
 		return nullptr;
 	}
-
+	
 	/**
 	 * a post visit in needed to:
 	 * 		- fix captured variables in lambdas
 	 */
-	virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact, bool symbolic=false);
-
+	virtual core::ExpressionPtr FuncDeclPostVisit(const clang::FunctionDecl* decl, core::ExpressionPtr expr, frontend::conversion::Converter& convFact,
+	        bool symbolic=false);
+	        
 public:
 	virtual FrontendExtension::flagHandler registerFlag(boost::program_options::options_description& options);
-
+	
 };
 
 } //namespace extensions

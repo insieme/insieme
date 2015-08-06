@@ -57,10 +57,12 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next, intptr_t)) {
 			//IRT_DEBUG("LWT_RE\n");
 			return ret;
-		} else {
+		}
+		else {
 			return _lwt_get_stack(w_id);
 		}
-	} else {
+	}
+	else {
 		for(int i=0; i<irt_g_worker_count; ++i) {
 			ret = lwt_g_stack_reuse.stacks[i];
 			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next, intptr_t)) {
@@ -94,9 +96,9 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	//printf("Total allocated: %6.2lf MB\n", total/(1024.0*1024.0));
 	// TODO [_GEMS]: we need +4 because of gemsclaim compiler generated instruction: when entering a function call the sp is stored on the stack
 	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE + 4);
-		
-    IRT_ASSERT(ret != NULL, IRT_ERR_IO, "Malloc of lwt stack failed.\n");
-		
+	
+	IRT_ASSERT(ret != NULL, IRT_ERR_IO, "Malloc of lwt stack failed.\n");
+	
 	ret->next = NULL;
 	return ret;
 }
@@ -119,7 +121,8 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage, intptr_t)) {
 			//IRT_DEBUG("LWT_CYC\n");
 			return;
-		} else {
+		}
+		else {
 			//IRT_DEBUG("LWT_FCY\n");
 		}
 	}
@@ -171,18 +174,19 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 				wi->stack_ptr = parent->stack_ptr - 8;
 				wi->stack_ptr -= wi->stack_ptr % LWT_STACK_ALIGNMENT;
 				return;
-			} else {
+			}
+			else {
 				// otherwise give it back, since we shouldn't have taken it in the first place
 				IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true, bool), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack to parent.\n");
 			}
 		}
 	}
 #endif
-
+	
 	// heap allocated thread memory
 	wi->stack_storage = _lwt_get_stack(tid);
 	wi->stack_ptr = (intptr_t)(&wi->stack_storage->stack) + IRT_WI_STACK_SIZE;
-
+	
 	// let stack be allocated by the OS kernel
 	// see http://www.evanjones.ca/software/threading.html
 	// section: Implementing Kernel Threads on Linux
@@ -198,37 +202,37 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 // as assembly syntax varies with each compiler (and platform) we switch implementation depending on compiler
 #ifdef _MSC_VER // MS VS Compiler
 
-	#include "minlwt.msc.impl.h"
+#include "minlwt.msc.impl.h"
 
 #elif defined(__MINGW64__) || defined(__MINGW32__) // any mingw compiler
 
-	#include "minlwt.mingw.impl.h"
+#include "minlwt.mingw.impl.h"
 
 #elif defined(_GEMS_SIM)
-	
-	#include "minlwt.gems.impl.h"
+
+#include "minlwt.gems.impl.h"
 
 #elif defined (__arm__)
 
-	#include "minlwt.arm.impl.h"
+#include "minlwt.arm.impl.h"
 
 #else // eg. GCC (on Linux), if not gcc compiler we will get an error anyway
 
-	#include "minlwt.gcc.impl.h"
+#include "minlwt.gcc.impl.h"
 
 #endif
 
 
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 	IRT_DEBUG_ONLY(
-			//dirty hack to print the function pointer in debug output, as function pointers can't be legally casted to void pointers.
-			//This solution may still be undefined behaviour, but it will probably do what it is supposed to do for our debugging purposes
-			union {
-				wi_implementation_func* f;
-				void* pt;
-			} hack;
-			hack.f = func;
-			IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*) wi, (void*)*basestack, hack.pt);
+	    //dirty hack to print the function pointer in debug output, as function pointers can't be legally casted to void pointers.
+	    //This solution may still be undefined behaviour, but it will probably do what it is supposed to do for our debugging purposes
+	union {
+		wi_implementation_func* f;
+		void* pt;
+	} hack;
+	hack.f = func;
+	         IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", (void*) wi, (void*)*basestack, hack.pt);
 	)
 	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);
 }

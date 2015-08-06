@@ -59,13 +59,15 @@ public:
 	 * Needs to be defined in subclasses.
 	 */
 	virtual const NodePtr mapAddress(const NodePtr& ptr, NodeAddress& prevAddr) = 0;
-
+	
 	/*
-	 * Maps elements while keeping track of addresses. 
+	 * Maps elements while keeping track of addresses.
 	 * Internal, should not be changed afterwards.
 	 */
 	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr, NodeAddress& topAddr) final override {
-		if(topAddr && topAddr->isValue()) return ptr->substitute(ptr->getNodeManager(), *this, topAddr);
+		if(topAddr && topAddr->isValue()) {
+			return ptr->substitute(ptr->getNodeManager(), *this, topAddr);
+		}
 		auto curAddr = (topAddr) ? topAddr.getAddressOfChild(index) : NodeAddress(ptr);
 		return mapAddress(ptr, curAddr);
 	}
@@ -89,7 +91,7 @@ class LambdaAddressMapping : public AddressMapping {
 public:
 	LambdaAddressMapping(const Lambda& lambda, const Filter& filter, bool mapTypes)
 		: lambda(lambda), filter(filter), mapTypes(mapTypes) { };
-
+		
 	virtual const NodePtr mapAddress(const NodePtr& ptr, NodeAddress& prevAddr) override {
 		return lambda(ptr->substitute(ptr->getNodeManager(), *this, prevAddr), prevAddr);
 	}

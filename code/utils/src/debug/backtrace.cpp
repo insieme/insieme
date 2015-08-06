@@ -56,18 +56,18 @@ std::string	demangle(const char* symbol) {
 	char temp[128];
 	char* demangled;
 	//first, try to demangle a c++ name
-	if (1 == sscanf(symbol, "%*[^(]%*[^_]%127[^)+]", temp)) {
-		if (NULL != (demangled = abi::__cxa_demangle(temp, NULL, &size, &status))) {
+	if(1 == sscanf(symbol, "%*[^(]%*[^_]%127[^)+]", temp)) {
+		if(NULL != (demangled = abi::__cxa_demangle(temp, NULL, &size, &status))) {
 			std::string result(demangled);
 			free(demangled);
 			return result;
 		}
 	}
 	//if that didn't work, try to get a regular c symbol
-	if (1 == sscanf(symbol, "%127s", temp)) {
+	if(1 == sscanf(symbol, "%127s", temp)) {
 		return temp;
 	}
-
+	
 	//if all else fails, just return the symbol
 	return symbol;
 }
@@ -76,20 +76,20 @@ std::string getBacktraceString() {
 	const static int MAX_FRAMES = 4096;
 	void** buffer = new void*[MAX_FRAMES];
 	int numTraced = backtrace(buffer, MAX_FRAMES);
-	char** symbols = backtrace_symbols(buffer, numTraced); 
-
+	char** symbols = backtrace_symbols(buffer, numTraced);
+	
 	std::stringstream ss;
-
+	
 	for(int i=numTraced-1; i>0; --i) {
 		ss << format("%4d: %s\n", i, demangle(symbols[i]));
 	}
-
+	
 	free(symbols); // malloc'ed by backtrace_symbols()
-
+	
 	return ss.str();
 }
 
-#else 
+#else
 
 std::string getBacktraceString() {
 	return "Backtrace not supported on this compiler\n";

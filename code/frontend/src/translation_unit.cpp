@@ -45,22 +45,20 @@
 #include <clang/Serialization/ASTWriter.h>
 #pragma GCC diagnostic pop
 
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/DeclGroup.h>
+
+#include <clang/Analysis/CFG.h>
+
+#include <clang/Parse/Parser.h>
+#include <clang/Parse/ParseAST.h>
+
+#include <clang/Sema/Sema.h>
+#include <clang/Sema/SemaConsumer.h>
+#include <clang/Sema/ExternalSemaSource.h>
+
 #include "insieme/frontend/pragma/handler.h"
-
-#include "insieme/frontend/ocl/ocl_compiler.h"
-
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DeclGroup.h"
-
-#include "clang/Analysis/CFG.h"
-
-#include "clang/Parse/Parser.h"
-#include "clang/Parse/ParseAST.h"
-
-#include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaConsumer.h"
-#include "clang/Sema/ExternalSemaSource.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -80,38 +78,43 @@ namespace {
 ///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSema& sema) {
 
-	Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
+	Parser *_P = new Parser(comp.getPreprocessor(), sema, false);
+	Parser& P = *_P;// (comp.getPreprocessor(), sema, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();
-
+	
 	ParserProxy::init(&P);
 	P.Initialize();	  //FIXME
 	Consumer->Initialize(comp.getASTContext());
-	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
+	if(SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer)) {
 		SC->InitializeSema(sema);
-
-	if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
-		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
+	}
+	
+	if(ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
+		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External)) {
 			ExternalSema->InitializeSema(sema);
+		}
 		External->StartTranslationUnit(Consumer);
 	}
-
+	
 	Parser::DeclGroupPtrTy ADecl;
 	while(!P.ParseTopLevelDecl(ADecl)) {
-		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getPtrAs<DeclGroupRef>());
+		if(ADecl) {
+			Consumer->HandleTopLevelDecl(ADecl.getPtrAs<DeclGroupRef>());
+		}
 	}
 	Consumer->HandleTranslationUnit(comp.getASTContext());
 	ParserProxy::discard();  // FIXME
-
+	
 	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
 	if(false) {
 		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
-		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
-			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
-				if( func_decl->hasBody() ) {
+		std::for_each(dc->decls_begin(), dc->decls_end(), [&](const clang::Decl* d) {
+			if(const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
+				if(func_decl->hasBody()) {
 					clang::CFG::BuildOptions bo;
 					bo.AddInitializers = true;
 					bo.AddImplicitDtors = true;
-					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
+					auto cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
 					assert_true(cfg);
 					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
 					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
@@ -127,10 +130,9 @@ namespace insieme {
 namespace frontend {
 
 TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const ConversionSetup& setup)
-	: mMgr(mgr), mFileName(file), setup(setup), mClang(setup, file),  
-		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) 
-	{
-
+	: mMgr(mgr), mFileName(file), setup(setup), mClang(setup, file),
+	  mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) {
+	  
 	// check for frontend extensions pragma handlers
 	// and add user provided pragmas to be handled
 	// by insieme
@@ -146,31 +148,48 @@ TranslationUnit::TranslationUnit(NodeManager& mgr, const path& file,  const Conv
 			}
 			// add the user provided pragma handler
 			pragmaNamespaces[name]->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<pragma::Pragma>(
-														mClang.getPreprocessor().getIdentifierInfo(ph->getKeyword()),
-														*ph->getToken(), ph->getName(), ph->getFunction()));
-
+			                                      mClang.getPreprocessor().getIdentifierInfo(ph->getKeyword()),
+			                                      *ph->getToken(), ph->getName(), ph->getFunction()));
+			                                      
 		}
 	}
-
+	
 	parseClangAST(mClang, &emptyCons, mSema);
-
-    // all pragmas should now have either a decl or a stmt attached.
-    // it can be the case that a pragma is at the end of a file
-    // and therefore not attached to anything. Find these cases
-    // and attach the pragmas to the translation unit declaration.
-    for(auto cur : mPragmaList) {
-        if(!cur->isStatement() && !cur->isDecl()) {
-            cur->setDecl(getCompiler().getASTContext().getTranslationUnitDecl());
-        }
-    }
-
+	
+	// all pragmas should now have either a decl or a stmt attached.
+	// it can be the case that a pragma is at the end of a file
+	// and therefore not attached to anything. Find these cases
+	// and attach the pragmas to the translation unit declaration.
+	for(auto cur : mPragmaList) {
+		if(!cur->isStatement() && !cur->isDecl()) {
+			cur->setDecl(getCompiler().getASTContext().getTranslationUnitDecl());
+		}
+	}
+	
 	if(mClang.getDiagnostics().hasErrorOccurred()) {
 		// errors are always fatal
 		throw ClangParsingError(mFileName);
 	}
-
+	
 	if(setup.hasOption(ConversionSetup::DumpClangAST)) {
-		getASTContext().getTranslationUnitDecl()->dumpColor();
+		const std::string filter = setup.getClangASTDumpFilter();
+		auto tuDecl = getASTContext().getTranslationUnitDecl();
+		//if nothing defined print the whole context
+		if(filter.empty()) {
+			tuDecl->dumpColor();
+		}
+		else {
+			//else filter out the right function decls
+			auto declCtx = clang::TranslationUnitDecl::castToDeclContext(tuDecl);
+			// iterate through the declarations inside and print (maybe)
+			for(auto it=declCtx->decls_begin(); it!=declCtx->decls_end(); ++it) {
+				if(const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(*it)) {
+					if(boost::regex_match(funDecl->getNameAsString(), boost::regex(filter))) {
+						funDecl->dumpColor();
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -191,14 +210,14 @@ bool TranslationUnit::PragmaIterator::operator!=(const PragmaIterator& iter) con
 	return (pragmaIt != iter.pragmaIt);
 }
 
-void TranslationUnit::PragmaIterator::inc() { 
+void TranslationUnit::PragmaIterator::inc() {
 	while(pragmaIt != pragmaItEnd) {
 		++pragmaIt;
-
+		
 		if(pragmaIt != pragmaItEnd && filteringFunc(**pragmaIt)) {
 			return;
 		}
-	} 
+	}
 }
 
 PragmaPtr TranslationUnit::PragmaIterator::operator*() const {

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,13 +43,13 @@
 namespace insieme {
 namespace frontend {
 
-	TEST(SrcFileTest, HelloWorldTest) {
+TEST(SrcFileTest, HelloWorldTest) {
 
-		fs::path tmpFile;
-		{
-			// create a temporary source file
-			Source file(
-					R"(
+	fs::path tmpFile;
+	{
+		// create a temporary source file
+		Source file(
+		    R"(
 
 					#include <stdio.h>
 					
@@ -59,23 +59,23 @@ namespace frontend {
 					}
 	
 					)"
-			);
-
-			// check whether there is a temporary file
-			tmpFile = file.getPath();
-			EXPECT_TRUE(fs::exists(tmpFile));
-
-			// parse temporary file
-			core::NodeManager manager;
-			ConversionJob job(file);
-			auto code = job.execute(manager);
-			EXPECT_TRUE(code);
-
-		}
-
-		// check whether temporary file has been properly removed
-		EXPECT_FALSE(fs::exists(tmpFile));
+		);
+		
+		// check whether there is a temporary file
+		tmpFile = file.getPath();
+		EXPECT_TRUE(fs::exists(tmpFile));
+		
+		// parse temporary file
+		core::NodeManager manager;
+		ConversionJob job(file);
+		auto code = job.execute(manager);
+		EXPECT_TRUE(code);
+		
 	}
+	
+	// check whether temporary file has been properly removed
+	EXPECT_FALSE(fs::exists(tmpFile));
+}
 
 } // end namespace frontend
 } // end namespace insieme

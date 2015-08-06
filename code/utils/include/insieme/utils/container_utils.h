@@ -67,10 +67,9 @@ using boost::enable_if;
  *  @param predicate function to be called for each element, returns bool
  */
 template<class InputIterator, class Function>
-bool any(InputIterator first, InputIterator last, const Function& predicate)
-{
-	while (first != last) {
-		if (predicate(*first)) {
+bool any(InputIterator first, InputIterator last, const Function& predicate) {
+	while(first != last) {
+		if(predicate(*first)) {
 			return true;
 		}
 		++first;
@@ -122,9 +121,9 @@ inline void copy(const Container& c, OutputIterator out) {
 /**
  * Convenience function for std::transform for vector-like types.
  */
-template<template <typename, typename> class Container, typename Functor, 
-	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = Container<ResultMember, A<ResultMember>>>
+template<template <typename, typename> class Container, typename Functor,
+         typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = Container<ResultMember, A<ResultMember>>>
 inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
@@ -135,9 +134,9 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 /**
  * Convenience function for std::transform for simple map-like types.
  */
-template<template <typename, typename> class SimpleMapLikeContainer, typename Functor, 
-	typename K, typename V, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = SimpleMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type>>
+template<template <typename, typename> class SimpleMapLikeContainer, typename Functor,
+         typename K, typename V, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = SimpleMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type>>
 inline Result transform(const SimpleMapLikeContainer<K, V>& m, const Functor& f) {
 	Result res;
 	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
@@ -147,9 +146,9 @@ inline Result transform(const SimpleMapLikeContainer<K, V>& m, const Functor& f)
 /**
  * Convenience function for std::transform for map-like types.
  */
-template<template <typename, typename, typename, typename> class MapLikeContainer, typename Functor, 
-	typename T, typename K, typename V, typename C, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = MapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, std::less<typename ResultMember::first_type>, A<ResultMember>>>
+template<template <typename, typename, typename, typename> class MapLikeContainer, typename Functor,
+         typename T, typename K, typename V, typename C, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = MapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, std::less<typename ResultMember::first_type>, A<ResultMember>>>
 inline Result transform(const MapLikeContainer<K, V, C, A<T>>& m, const Functor& f) {
 	Result res;
 	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
@@ -159,11 +158,11 @@ inline Result transform(const MapLikeContainer<K, V, C, A<T>>& m, const Functor&
 /**
  * Convenience function for std::transform for unordered_map-like types.
  */
-template<template <typename, typename, typename, typename, typename> class HashLikeContainer, typename Functor, 
-	typename T, typename K, typename V, template <typename> class H, template <typename> class E, 
-	template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = HashLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, 
-		H<typename ResultMember::first_type>, E<typename ResultMember::first_type>, A<ResultMember>>>
+template<template <typename, typename, typename, typename, typename> class HashLikeContainer, typename Functor,
+         typename T, typename K, typename V, template <typename> class H, template <typename> class E,
+         template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = HashLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type,
+                 H<typename ResultMember::first_type>, E<typename ResultMember::first_type>, A<ResultMember>>>
 inline Result transform(const HashLikeContainer<K, V, H<K>, E<K>, A<T>>& m, const Functor& f) {
 	Result res;
 	std::transform(m.begin(), m.end(), inserter(res, res.end()), f);
@@ -174,9 +173,9 @@ inline Result transform(const HashLikeContainer<K, V, H<K>, E<K>, A<T>>& m, cons
 /**
  * Convenience function for std::transform for changing vector-like types to other vector-like types.
  */
-template<template <typename, typename> class TargetContainer, template <typename, typename> class Container, typename Functor, 
-	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = TargetContainer<ResultMember, A<ResultMember>>>
+template<template <typename, typename> class TargetContainer, template <typename, typename> class Container, typename Functor,
+         typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = TargetContainer<ResultMember, A<ResultMember>>>
 inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
@@ -186,9 +185,9 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 /**
  * Convenience function for std::transform for changing vector-like types to map-like types.
  */
-template<template <typename, typename, typename, typename> class TargetMapLikeContainer, template <typename, typename> class Container, typename Functor, 
-	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = TargetMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, std::less<typename ResultMember::first_type>, A<ResultMember>>>
+template<template <typename, typename, typename, typename> class TargetMapLikeContainer, template <typename, typename> class Container, typename Functor,
+         typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = TargetMapLikeContainer<typename ResultMember::first_type, typename ResultMember::second_type, std::less<typename ResultMember::first_type>, A<ResultMember>>>
 inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
@@ -198,10 +197,10 @@ inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
 /**
  * Convenience function for std::transform for changing map-like types to vector-like types.
  */
-template<template <typename, typename> class TargetContainer, 
-	template <typename, typename, typename, typename> class MapLikeContainer, typename Functor, 
-	typename T, typename K, typename V, typename C, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
-	typename Result = TargetContainer<ResultMember, A<ResultMember>>>
+template<template <typename, typename> class TargetContainer,
+         template <typename, typename, typename, typename> class MapLikeContainer, typename Functor,
+         typename T, typename K, typename V, typename C, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+         typename Result = TargetContainer<ResultMember, A<ResultMember>>>
 inline Result transform(const MapLikeContainer<K, V, C, A<T>>& c, const Functor& f) {
 	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
@@ -243,7 +242,7 @@ namespace {
 	 */
 	template<typename T>
 	inline void appendToVector(vector<T>& vector) {}
-
+	
 	/**
 	 * A variable-argument function writing elements into a vector in the given order.
 	 *
@@ -258,7 +257,7 @@ namespace {
 		vector.push_back(first);
 		appendToVector<T>(vector, rest...);
 	}
-
+	
 }
 
 /**
@@ -300,7 +299,7 @@ inline vector<T> toVector(const T& first, const Elements& ... rest) {
  */
 template<typename T, typename B>
 typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, const vector<B>& source) {
-	if (source.empty())  {
+	if(source.empty())  {
 		return;
 	}
 	// add all elements of the source to the end of the target
@@ -322,10 +321,10 @@ template<typename ListA, typename ListB, typename Comparator>
 inline bool equals(const ListA& a, const ListB& b, const Comparator& comparator) {
 
 	// ensure same size
-	if (a.size() != b.size()) {
+	if(a.size() != b.size()) {
 		return false;
 	}
-
+	
 	// compare values using std equal ...
 	return std::equal(a.begin(), a.end(), b.begin(), comparator);
 }
@@ -355,7 +354,7 @@ inline bool equals(const ListA& a, const ListB& b) {
  */
 template<class Container, typename Comparator>
 inline bool contains(const Container& container, const typename Container::value_type& value, const Comparator& comparator) {
-	return ::any(container, [&value, &comparator](const typename Container::value_type& cur){
+	return ::any(container, [&value, &comparator](const typename Container::value_type& cur) {
 		return comparator(cur, value);
 	});
 }
@@ -442,10 +441,9 @@ std::vector<T> concatenate(const L1& listA, const L2& listB) {
  *  @param predicate function to be called for each element, returns bool
  */
 template<class InputIterator, class Function>
-bool all(InputIterator first, InputIterator last, const Function& predicate)
-{
-	while (first != last) {
-		if (!predicate(*first)) {
+bool all(InputIterator first, InputIterator last, const Function& predicate) {
+	while(first != last) {
+		if(!predicate(*first)) {
 			return false;
 		}
 		++first;
@@ -473,7 +471,7 @@ bool all(const ContainerType& list, const Function& predicate) {
  */
 template<class InputIterator>
 void hashPtrRange(size_t& seed, InputIterator first, InputIterator last) {
-	while (first != last) {
+	while(first != last) {
 		boost::hash_combine(seed, hash_value(**first));
 		++first;
 	}
@@ -504,7 +502,7 @@ void hashPtrRange(size_t& seed, const ContainerType& container) {
 template<class InputIterator>
 bool hasDuplicates(InputIterator first, InputIterator last) {
 	typedef typename std::iterator_traits<InputIterator>::value_type Element;
-
+	
 	// NOTE: uses the boost hasher instead of the default hasher!
 	// see: http://stackoverflow.com/questions/647967/how-to-extend-stdtr1hash-for-custom-types
 	std::unordered_set<Element, boost::hash<Element>> set(std::distance(first,last));
@@ -541,7 +539,9 @@ bool hasDuplicates(const ContainerType& list) {
 template<class Pair>
 struct extractFirst {
 	typedef const typename Pair::first_type & result_type;
-	result_type operator()(const Pair& p) const { return p.first; }
+	result_type operator()(const Pair& p) const {
+		return p.first;
+	}
 };
 
 /**
@@ -552,7 +552,9 @@ struct extractFirst {
 template<class Pair>
 struct extractSecond {
 	typedef const typename Pair::second_type & result_type;
-	result_type operator()(const Pair& p) const { return p.second; }
+	result_type operator()(const Pair& p) const {
+		return p.second;
+	}
 };
 
 template<typename InputIterator, typename OutputIterator>
@@ -593,119 +595,119 @@ vector<typename PairContainer::value_type::second_type> projectToSecond(const Pa
 
 namespace std {
 
-/**
- * Allows to print arrays including printable elements.
- *
- * @param out the stream to which the given vector should be printed to
- * @param container the array to be printed
- * @return the handed in ostream to chain operation invocations.
- */
-template<typename Element, std::size_t size>
-std::ostream& operator<<(std::ostream& out, const std::array<Element,size>& container) {
-	// print the joined elements
-	return out << "[" << join(",", container) << "]";
-}
-
-/**
- * Allows to print vectors including printable elements.
- *
- * @param out the stream to which the given vector should be printed to
- * @param container the vector to be printed
- * @return the handed in ostream to chain operation invocations.
- */
-template<typename Element>
-std::ostream& operator<<(std::ostream& out, const vector<Element>& container) {
-
-	// convert elements into strings
-	vector<string> list;
-	std::transform(container.begin(), container.end(), back_inserter(list), &toString<Element>);
-
-	// print and done
-	return out << "[" << boost::join(list, ",") << "]";
-}
-
-/**
- * Allows to print lists including printable elements.
- *
- * @param out the stream to which the given vector should be printed to
- * @param container the list to be printed
- * @return the handed in ostream to chain operation invocations.
- */
-template<typename Element>
-std::ostream& operator<<(std::ostream& out, const std::list<Element>& container) {
-
-	// convert elements into strings
-	vector<string> list;
-	std::transform(container.begin(), container.end(), back_inserter(list), &toString<Element>);
-
-	// print and done
-	return out << "[" << boost::join(list, ",") << "]";
-}
-
-/**
- * Enables user to print pairs whenever the element types are printable.
- *
- * @param out the stream to which the given pair should be printed
- * @param pair the pair to be printed
- * @return the handed in ostream to chain operation invocations.
- */
-template<typename First, typename Second>
-std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair) {
-	return out << "(" << pair.first << "," << pair.second << ")";
-}
-
-/**
- * Enable users to print tuples whenever the element types are printable.
- */
-namespace {
-
-	template<std::size_t> struct int_{};
-
-	template <class Tuple, size_t Pos>
-	std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<Pos> ) {
-		out << std::get< std::tuple_size<Tuple>::value-Pos >(t) << ',';
-		return print_tuple(out, t, int_<Pos-1>());
+	/**
+	 * Allows to print arrays including printable elements.
+	 *
+	 * @param out the stream to which the given vector should be printed to
+	 * @param container the array to be printed
+	 * @return the handed in ostream to chain operation invocations.
+	 */
+	template<typename Element, std::size_t size>
+	std::ostream& operator<<(std::ostream& out, const std::array<Element,size>& container) {
+		// print the joined elements
+		return out << "[" << join(",", container) << "]";
 	}
-
-	template <class Tuple>
-	std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<1> ) {
+	
+	                   /**
+	                    * Allows to print vectors including printable elements.
+	                    *
+	                    * @param out the stream to which the given vector should be printed to
+	                    * @param container the vector to be printed
+	                    * @return the handed in ostream to chain operation invocations.
+	                    */
+	                   template<typename Element>
+	std::ostream& operator<<(std::ostream& out, const vector<Element>& container) {
+	
+		// convert elements into strings
+		vector<string> list;
+		std::transform(container.begin(), container.end(), back_inserter(list), &toString<Element>);
+		
+		// print and done
+		return out << "[" << boost::join(list, ",") << "]";
+	}
+	
+	                   /**
+	                    * Allows to print lists including printable elements.
+	                    *
+	                    * @param out the stream to which the given vector should be printed to
+	                    * @param container the list to be printed
+	                    * @return the handed in ostream to chain operation invocations.
+	                    */
+	                   template<typename Element>
+	std::ostream& operator<<(std::ostream& out, const std::list<Element>& container) {
+	
+		// convert elements into strings
+		vector<string> list;
+		std::transform(container.begin(), container.end(), back_inserter(list), &toString<Element>);
+		
+		// print and done
+		return out << "[" << boost::join(list, ",") << "]";
+	}
+	
+	                   /**
+	                    * Enables user to print pairs whenever the element types are printable.
+	                    *
+	                    * @param out the stream to which the given pair should be printed
+	                    * @param pair the pair to be printed
+	                    * @return the handed in ostream to chain operation invocations.
+	                    */
+	                   template<typename First, typename Second>
+	std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair) {
+		return out << "(" << pair.first << "," << pair.second << ")";
+	}
+	
+	                                        /**
+	                                         * Enable users to print tuples whenever the element types are printable.
+	                                         */
+	                                        namespace {
+	                                        
+	                                            template<std::size_t> struct int_ {};
+	                                            
+	                                            template <class Tuple, size_t Pos>
+	std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<Pos>) {
+		out << std::get< std::tuple_size<Tuple>::value-Pos >(t) << ',';
+		     return print_tuple(out, t, int_<Pos-1>());
+	}
+	
+	     template <class Tuple>
+	std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<1>) {
 		return out << std::get<std::tuple_size<Tuple>::value-1>(t);
 	}
-
+	
 	template <class Tuple>
-	std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<0> ) {
+	std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<0>) {
 		return out;
 	}
-
-} // end anonymous namespace
-
-template <class... Args>
-std::ostream& operator<<(std::ostream& out, const std::tuple<Args...>& t) {
-	out << '(';
-	print_tuple(out, t, int_<sizeof...(Args)>());
-	return out << ')';
-} // end std namespace 
-
-
+	
+	                         } // end anonymous namespace
+	                         
+	template <class... Args>
+	std::ostream& operator<<(std::ostream& out, const std::tuple<Args...>& t) {
+		out << '(';
+		print_tuple(out, t, int_<sizeof...(Args)>());
+		return out << ')';
+	} // end std namespace
+	
+	
 } // end namespace std
 
 
 // Method to remove the head element from a std::tuple
 namespace {
-template<std::size_t> struct int_{};
-
-template <size_t Pos, class H, class ...T>
-void copyTail(const std::tuple<H, T...>& src, std::tuple<T...>& dest, int_<Pos>) {
-	std::get<Pos>(dest) = std::get<Pos+1>(src);
-	copyTail(src, dest, int_<Pos-1>());
-}
-
-template< class H, class ...T>
-void copyTail(const std::tuple<H, T...>& src, std::tuple<T...>& dest, int_<1>) {
-	std::get<0>(dest) = std::get<1>(src);
-}
-
-} // end anonymous namespace 
+	template<std::size_t> struct int_ {};
+	
+	template <size_t Pos, class H, class ...T>
+	void copyTail(const std::tuple<H, T...>& src, std::tuple<T...>& dest, int_<Pos>) {
+		std::get<Pos>(dest) = std::get<Pos+1>(src);
+		copyTail(src, dest, int_<Pos-1>());
+	}
+	
+	template<class H, class ...T>
+	void copyTail(const std::tuple<H, T...>& src, std::tuple<T...>& dest, int_<1>) {
+		std::get<0>(dest) = std::get<1>(src);
+	}
+	
+} // end anonymous namespace
 
 template <class H, class ...T>
 std::tuple<T...> removeFirst(const std::tuple<H,T...>& t) {

@@ -54,115 +54,116 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	using std::string;
+using std::string;
+
+/**
+ * This class represents the common base class of language extensions. Such
+ * extensions are defining new types or literals and can be used within the
+ * frontend, backends or analyses to encode information within the IR.
+ *
+ * Extensions should not directly be created. Instead, extensions should be created
+ * using the corresponding factory method of the NodeManager.
+ *
+ * One can define named IR extensions by using the macros with the _WITH_NAME suffix
+ * provided. Those can be used to create named types, literal and derived constructs.
+ * Note that names used to identify these have to be unique - not just within this
+ * extension but also across all other extensions. If an extension is created with
+ * the the macro without _WITH_NAME, its IR_NAME will be converted from camelcase to
+ * underscores and used as name. Also this name has to be unique.
+ *
+ * Each new extension should be registered with a unique name in the ExtensionRegistry.
+ * This name can then be used to reference all the named constructs defined within
+ * this extension in arbitrary IR code during parsing, as well as in other extensions.
+ */
+class Extension : private boost::noncopyable {
+
+	NodeManager& manager;
+	
+	/**
+	 * A map with all named types, literals and derived constructs defined within this extension
+	 */
+	mutable std::map<string, NodePtr> extensionIrNames;
+	
+protected:
 
 	/**
-	 * This class represents the common base class of language extensions. Such
-	 * extensions are defining new types or literals and can be used within the
-	 * frontend, backends or analyses to encode information within the IR.
-	 *
-	 * Extensions should not directly be created. Instead, extensions should be created
-	 * using the corresponding factory method of the NodeManager.
-	 *
-	 * One can define named IR extensions by using the macros with the _WITH_NAME suffix
-	 * provided. Those can be used to create named types, literal and derived constructs.
-	 * Note that names used to identify these have to be unique - not just within this
-	 * extension but also across all other extensions. If an extension is created with
-	 * the the macro without _WITH_NAME, its IR_NAME will be converted from camelcase to
-	 * underscores and used as name. Also this name has to be unique.
-	 *
-	 * Each new extension should be registered with a unique name in the ExtensionRegistry.
-	 * This name can then be used to reference all the named constructs defined within
-	 * this extension in arbitrary IR code during parsing, as well as in other extensions.
+	 * Creates a new instance of this language extension being associated to the
+	 * given manager.
 	 */
-	class Extension : private boost::noncopyable {
-
-		NodeManager& manager;
-
-		/**
-		 * A map with all named types, literals and derived constructs defined within this extension
-		 */
-		mutable std::map<string, NodePtr> extensionIrNames;
-
-	protected:
-
-		/**
-		 * Creates a new instance of this language extension being associated to the
-		 * given manager.
-		 */
-		Extension(NodeManager& manager) : manager(manager) {}
-
-		/**
-		 * Checks if the given name is not already in use.
-		 * Will fail an assertion in case the name is already in use.
-		 */
-		void checkIrNameNotAlreadyInUse(const string& irName) const;
-
-		/**
-		 * Adds a new mapping to the list of named mappings in this extension.
-		 */
-		void addNamedIrExtension(const string name, const NodePtr node) const {
-			if (!name.empty()) {
-				extensionIrNames.insert(std::make_pair(name, node));
-			}
+	Extension(NodeManager& manager) : manager(manager) {}
+	
+	/**
+	 * Checks if the given name is not already in use.
+	 * Will fail an assertion in case the name is already in use.
+	 */
+	void checkIrNameNotAlreadyInUse(const string& irName) const;
+	
+	/**
+	 * Adds a new mapping to the list of named mappings in this extension.
+	 */
+	void addNamedIrExtension(const string name, const NodePtr node) const {
+		if(!name.empty()) {
+			extensionIrNames.insert(std::make_pair(name, node));
 		}
-
-	public:
-		/**
-		 * A virtual destructor to enable the proper destruction of derived
-		 * instances.
-		 */
-		virtual ~Extension() {}
-
-		/**
-		 * Obtains a copy of the internally maintained reference to the node
-		 * manager this extension is associated with.
-		 */
-		NodeManager& getNodeManager() const {
-			return manager;
-		}
-
-		/**
-		 * Returns a map with all the named IR extensions defined by this extension
-		 */
-		const std::map<string, NodePtr>& getNamedIrExtensions() const {
-			return extensionIrNames;
-		}
-	};
-
+	}
+	
+public:
 	/**
-	 * A utility simplifying the creation of a type within language extensions. The
-	 * given type string will be parsed and returned.
-	 *
-	 * @param manager the node manager to be used for creating the type
-	 * @param type the string to be parsed
-	 * @param definitions a map of already existing named definitions used during parsing
-	 * @return the requested type
+	 * A virtual destructor to enable the proper destruction of derived
+	 * instances.
 	 */
-	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
-
+	virtual ~Extension() {}
+	
 	/**
-	 * A utility simplifying the creation of literals within language extensions.
-	 * The type of the literal is passed as a string which will internally be parsed.
-	 *
-	 * @param manager the node manager to be used for creating the resulting literal
-	 * @param type the type of the resulting literal, encoded as a string
-	 * @param value the value of the resulting literal
-	 * @param definitions a map of already existing named definitions used during parsing
-	 * @return the requested literal
+	 * Obtains a copy of the internally maintained reference to the node
+	 * manager this extension is associated with.
 	 */
-	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value, const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
-
-
+	NodeManager& getNodeManager() const {
+		return manager;
+	}
+	
 	/**
-	 * A macro supporting the simple declaration and definition of a type within a language extension
-	 * implementation.
-	 *
-	 * @param NAME the name of the type literal to be added
-	 * @param IR_NAME the name used to reference this type within this extension and in parsed code
-	 * @param TYPE the IR type to be represented as a string
+	 * Returns a map with all the named IR extensions defined by this extension
 	 */
-	#define LANG_EXT_TYPE_WITH_NAME(NAME, IR_NAME, TYPE) \
+	const std::map<string, NodePtr>& getNamedIrExtensions() const {
+		return extensionIrNames;
+	}
+};
+
+/**
+ * A utility simplifying the creation of a type within language extensions. The
+ * given type string will be parsed and returned.
+ *
+ * @param manager the node manager to be used for creating the type
+ * @param type the string to be parsed
+ * @param definitions a map of already existing named definitions used during parsing
+ * @return the requested type
+ */
+TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+
+/**
+ * A utility simplifying the creation of literals within language extensions.
+ * The type of the literal is passed as a string which will internally be parsed.
+ *
+ * @param manager the node manager to be used for creating the resulting literal
+ * @param type the type of the resulting literal, encoded as a string
+ * @param value the value of the resulting literal
+ * @param definitions a map of already existing named definitions used during parsing
+ * @return the requested literal
+ */
+LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value,
+                      const std::map<string, NodePtr>& definitions = std::map<string, NodePtr>());
+                      
+                      
+/**
+ * A macro supporting the simple declaration and definition of a type within a language extension
+ * implementation.
+ *
+ * @param NAME the name of the type literal to be added
+ * @param IR_NAME the name used to reference this type within this extension and in parsed code
+ * @param TYPE the IR type to be represented as a string
+ */
+#define LANG_EXT_TYPE_WITH_NAME(NAME, IR_NAME, TYPE) \
 		private: \
 			const insieme::core::TypePtr type_##NAME = create##NAME(); \
 			 \
@@ -181,26 +182,26 @@ namespace lang {
 				return node && (*node == *get##NAME()); \
 			}
 
-	/**
-	 * A macro supporting the simple declaration and definition of a type within a language extension
-	 * implementation.
-	 *
-	 * @param NAME the name of the type literal to be added
-	 * @param TYPE the IR type to be represented as a string
-	 */
-	#define LANG_EXT_TYPE(NAME, TYPE) \
+/**
+ * A macro supporting the simple declaration and definition of a type within a language extension
+ * implementation.
+ *
+ * @param NAME the name of the type literal to be added
+ * @param TYPE the IR type to be represented as a string
+ */
+#define LANG_EXT_TYPE(NAME, TYPE) \
 		LANG_EXT_TYPE_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), TYPE)
 
-	/**
-	 * A macro supporting the simple declaration and definition of a literal within a language extension
-	 * implementation.
-	 *
-	 * @param NAME the name of the literal to be added
-	 * @param IR_NAME the name used to reference this literal within this extension and in parsed code
-	 * @param VALUE the value of this literal
-	 * @param TYPE the IR type of the literal
-	 */
-	#define LANG_EXT_LITERAL_WITH_NAME(NAME, IR_NAME, VALUE, TYPE) \
+/**
+ * A macro supporting the simple declaration and definition of a literal within a language extension
+ * implementation.
+ *
+ * @param NAME the name of the literal to be added
+ * @param IR_NAME the name used to reference this literal within this extension and in parsed code
+ * @param VALUE the value of this literal
+ * @param TYPE the IR type of the literal
+ */
+#define LANG_EXT_LITERAL_WITH_NAME(NAME, IR_NAME, VALUE, TYPE) \
 		private: \
 			const insieme::core::LiteralPtr lit_##NAME = create##NAME(); \
 			 \
@@ -220,25 +221,25 @@ namespace lang {
 				return node && (*node == *get##NAME()); \
 			}
 
-	/**
-	 * A macro supporting the simple declaration and definition of a literal within a language extension
-	 * implementation.
-	 *
-	 * @param NAME the name of the literal to be added
-	 * @param VALUE the value of this literal
-	 * @param TYPE the IR type of the literal
-	 */
-	#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) \
+/**
+ * A macro supporting the simple declaration and definition of a literal within a language extension
+ * implementation.
+ *
+ * @param NAME the name of the literal to be added
+ * @param VALUE the value of this literal
+ * @param TYPE the IR type of the literal
+ */
+#define LANG_EXT_LITERAL(NAME, VALUE, TYPE) \
 		LANG_EXT_LITERAL_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), VALUE, TYPE)
 
-	/**
-	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
-	 *
-	 * @param NAME the name of the language construct
-	 * @param IR_NAME the name used to reference this derived within this extension and in parsed code
-	 * @param SPEC the implementation of the derived construct (using INSPIRE)
-	 */
-	#define LANG_EXT_DERIVED_WITH_NAME(NAME, IR_NAME, SPEC) \
+/**
+ * A macro supporting the simple declaration and definition of a derived language extension implementation.
+ *
+ * @param NAME the name of the language construct
+ * @param IR_NAME the name used to reference this derived within this extension and in parsed code
+ * @param SPEC the implementation of the derived construct (using INSPIRE)
+ */
+#define LANG_EXT_DERIVED_WITH_NAME(NAME, IR_NAME, SPEC) \
 		private: \
 			const insieme::core::ExpressionPtr expr_##NAME = create##NAME(); \
 			 \
@@ -259,13 +260,13 @@ namespace lang {
 				return node && (*node == *get ## NAME()); \
 			}
 
-	/**
-	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
-	 *
-	 * @param NAME the name of the language construct
-	 * @param SPEC the implementation of the derived construct (using INSPIRE)
-	 */
-	#define LANG_EXT_DERIVED(NAME, SPEC) \
+/**
+ * A macro supporting the simple declaration and definition of a derived language extension implementation.
+ *
+ * @param NAME the name of the language construct
+ * @param SPEC the implementation of the derived construct (using INSPIRE)
+ */
+#define LANG_EXT_DERIVED(NAME, SPEC) \
 		LANG_EXT_DERIVED_WITH_NAME(NAME, camelcaseToUnderscore(#NAME), SPEC)
 
 } // end namespace lang

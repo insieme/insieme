@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,8 +40,8 @@
 
 #include "abstraction/temperature_intel.h"
 
-uint64 (*irt_get_temperature_core)(const irt_worker* worker);
-uint64 (*irt_get_temperature_package)(const irt_worker* worker);
+uint64(*irt_get_temperature_core)(const irt_worker* worker);
+uint64(*irt_get_temperature_package)(const irt_worker* worker);
 
 void irt_temperature_select_instrumentation_method();
 

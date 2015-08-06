@@ -37,60 +37,62 @@
 #include "insieme/transform/filter/filter.h"
 #include "insieme/core/ir_visitor.h"
 
-#include "insieme/analysis/polyhedral/scopregion.h"
-
 namespace insieme {
 namespace transform {
 namespace filter {
 
-	// accept all nodes
-	const Filter all("all",AcceptAll<const core::NodePtr&>());
+// accept all nodes
+const Filter all("all",AcceptAll<const core::NodePtr&>());
 
-	// don't accept any node
-	const Filter none("none",RejectAll<const core::NodePtr&>());
+// don't accept any node
+const Filter none("none",RejectAll<const core::NodePtr&>());
 
-	// produces an empty list
-	extern const TargetFilter empty("empty", [](const core::NodePtr& node){ return vector<core::NodeAddress>(); });
+// produces an empty list
+extern const TargetFilter empty("empty", [](const core::NodePtr& node) {
+	return vector<core::NodeAddress>();
+});
 
-	// takes the root node and returns it as a result
-	extern const TargetFilter root("root", [](const core::NodePtr& node){ return toVector(core::NodeAddress(node)); });
-
-
-	TargetFilter pattern(const string& name, const core::pattern::TreePattern& pattern, const string& var) {
-		return TargetFilter(name,
-				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
-					auto res = pattern.matchAddress(core::NodeAddress(node));
-					if (!res || !res->isVarBound(var)) {
-						return vector<core::NodeAddress>();
-					}
-					auto value = res->getVarBinding(var);
-					if (value.getDepth() == 0) {
-						return toVector(value.getValue());
-					}
-					if (value.getDepth() == 1) {
-						return value.getList();
-					}
-					assert_fail() << "Higher dimensions are not supported!";
-					return vector<core::NodeAddress>();
-		});
-	}
+// takes the root node and returns it as a result
+extern const TargetFilter root("root", [](const core::NodePtr& node) {
+	return toVector(core::NodeAddress(node));
+});
 
 
-	TargetFilter allMatches(const string& name, const core::pattern::TreePattern& pattern, bool ignoreTypes) {
-		return TargetFilter(name,
-				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
-					vector<core::NodeAddress> res;
+TargetFilter pattern(const string& name, const core::pattern::TreePattern& pattern, const string& var) {
+	return TargetFilter(name,
+	[=](const core::NodePtr& node)->vector<core::NodeAddress> {
+		auto res = pattern.matchAddress(core::NodeAddress(node));
+		if(!res || !res->isVarBound(var)) {
+			return vector<core::NodeAddress>();
+		}
+		auto value = res->getVarBinding(var);
+		if(value.getDepth() == 0) {
+			return toVector(value.getValue());
+		}
+		if(value.getDepth() == 1) {
+			return value.getList();
+		}
+		assert_fail() << "Higher dimensions are not supported!";
+		return vector<core::NodeAddress>();
+	});
+}
 
-					// search for all matching candidates
-					core::visitDepthFirst(core::NodeAddress(node), [&](const core::NodeAddress& candidate) {
-						if (pattern.match(candidate.getAddressedNode())) {
-							res.push_back(candidate);
-						}
-					}, ignoreTypes);
 
-					return res;
-		});
-	}
+TargetFilter allMatches(const string& name, const core::pattern::TreePattern& pattern, bool ignoreTypes) {
+	return TargetFilter(name,
+	[=](const core::NodePtr& node)->vector<core::NodeAddress> {
+		vector<core::NodeAddress> res;
+		
+		// search for all matching candidates
+		core::visitDepthFirst(core::NodeAddress(node), [&](const core::NodeAddress& candidate) {
+			if(pattern.match(candidate.getAddressedNode())) {
+				res.push_back(candidate);
+			}
+		}, ignoreTypes);
+		
+		return res;
+	});
+}
 
 } // end namespace filter
 } // end namespace transform

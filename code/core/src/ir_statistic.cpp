@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,19 +48,19 @@ namespace core {
 
 namespace {
 
-	/**
-	 * Obtains the height of the subtree rooted by the given node.
-	 *
-	 * @param node the node representing the root node of the tree to be evaluated
-	 */
-	unsigned evalHeight(const NodePtr& node) {
-		unsigned res = 1;
-		for_each(node->getChildList(), [&res](const NodePtr& cur) {
-			unsigned height = evalHeight(cur)+1;
-			res = (res<height)?height:res;
-		});
-		return res;
-	}
+/**
+ * Obtains the height of the subtree rooted by the given node.
+ *
+ * @param node the node representing the root node of the tree to be evaluated
+ */
+unsigned evalHeight(const NodePtr& node) {
+	unsigned res = 1;
+	for_each(node->getChildList(), [&res](const NodePtr& cur) {
+		unsigned height = evalHeight(cur)+1;
+		res = (res<height)?height:res;
+	});
+	return res;
+}
 
 }
 
@@ -71,22 +71,22 @@ IRStatistic::IRStatistic() : numSharedNodes(0), numAddressableNodes(0), height(0
 IRStatistic IRStatistic::evaluate(const NodePtr& node) {
 
 	IRStatistic res;
-
+	
 	// count number of shared nodes ...
 	visitDepthFirstOnce(node, makeLambdaVisitor([&res](const NodePtr& ptr) {
 		res.numSharedNodes++;
 		res.nodeTypeInfo[ptr->getNodeType()].numShared++;
 	}, true));
-
+	
 	// ... and addressable nodes
 	visitDepthFirst(node, makeLambdaVisitor([&res](const NodePtr& ptr) {
 		res.numAddressableNodes++;
 		res.nodeTypeInfo[ptr->getNodeType()].numAddressable++;
 	}, true));
-
+	
 	// ... and height (lightweight)
 	res.height = evalHeight(node);
-
+	
 	// build result
 	return res;
 }
@@ -98,28 +98,28 @@ NodeStatistic::NodeStatistic() : numNodes(0), totalMemory(0) {
 NodeStatistic NodeStatistic::evaluate(const NodeManager& manager) {
 
 	NodeStatistic res;
-
+	
 	// collect memory requirement
 	unsigned perNodeMemory[NUM_CONCRETE_NODE_TYPES];
-
-	#define CONCRETE(name) \
+	
+#define CONCRETE(name) \
 		perNodeMemory[NT_##name] = sizeof(name); \
 		// std::cout << "Nodes of type " #name " require " << sizeof(name) << " bytes.\n";
-
+	
 	// the necessary information is obtained from the node-definition file
-	#include "insieme/core/ir_nodes.def"
-	#undef CONCRETE
-
+#include "insieme/core/ir_nodes.def"
+#undef CONCRETE
+	
 	for_each(manager, [&](const NodePtr& ptr) {
-
+	
 		unsigned curMem = perNodeMemory[ptr->getNodeType()] + sizeof(NodePtr) * ptr->getChildList().size();
-
+		
 		res.numNodes++;
 		res.totalMemory += curMem;
 		res.nodeTypeInfo[ptr->getNodeType()].num++;
 		res.nodeTypeInfo[ptr->getNodeType()].memory += curMem;
 	});
-
+	
 	return res;
 }
 
@@ -139,10 +139,10 @@ struct NodeInfo {
 	unsigned num;
 	unsigned used;
 	float ratio;
-
+	
 	NodeInfo(const char* name, unsigned num, unsigned used)
 		: name(name), num(num), used(used), ratio((num==0)?0.0:used/(float)num) { }
-
+		
 	bool operator<(const NodeInfo& other) const {
 		return num < other.num;
 	}
@@ -155,29 +155,29 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& st
 
 	// extract node info records
 	vector<NodeInfo> infos;
-
+	
 	int numShared;
 	int numAddressable;
-
-	#define CONCRETE(name) \
+	
+#define CONCRETE(name) \
 		numShared = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).numShared; \
 		numAddressable = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).numAddressable; \
 		if (numShared > 0) infos.push_back(NodeInfo(" " #name, numShared, numAddressable));
-
+	
 	// the necessary information is obtained from the node-definition file
-	#include "insieme/core/ir_nodes.def"
-	#undef CONCRETE
-
+#include "insieme/core/ir_nodes.def"
+#undef CONCRETE
+	
 	// sort records
 	sort(infos.begin(), infos.end());
-
-
+	
+	
 	// print data
 	out << "                           --- General Information ---" << std::endl;
 	out << "                                Height of tree: " << statistics.getHeight() << std::endl;
 	out << std::endl;
 	out << "                           --- Node Sharing Infos ---" << std::endl;
-
+	
 	// print data
 	out << format("%30s%10s%10s%12s", "NodeType", "Nodes", "Shared", "Ratio") << std::endl;
 	out << "        -----------------------------------------------------------------------------------" << std::endl;
@@ -191,45 +191,45 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& st
 
 
 namespace {
-	struct SimpleNodeInfo {
+struct SimpleNodeInfo {
 
-		const char* name;
-		unsigned num;
-		unsigned memory;
-
-		SimpleNodeInfo(const char* name, unsigned num, unsigned memory)
-			: name(name), num(num), memory(memory) { }
-
-		bool operator<(const SimpleNodeInfo& other) const {
-			return num < other.num;
-		}
-	};
+	const char* name;
+	unsigned num;
+	unsigned memory;
+	
+	SimpleNodeInfo(const char* name, unsigned num, unsigned memory)
+		: name(name), num(num), memory(memory) { }
+		
+	bool operator<(const SimpleNodeInfo& other) const {
+		return num < other.num;
+	}
+};
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& statistics) {
 
 	// extract node info records
 	vector<SimpleNodeInfo> infos;
-
+	
 	unsigned num;
 	unsigned memory;
-
-	#define CONCRETE(name) \
+	
+#define CONCRETE(name) \
 		num = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).num; \
 		memory = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).memory; \
 		if (num > 0) infos.push_back(SimpleNodeInfo(" " #name, num, memory));
-
+	
 	// the necessary information is obtained from the node-definition file
-	#include "insieme/core/ir_nodes.def"
-	#undef CONCRETE
-
+#include "insieme/core/ir_nodes.def"
+#undef CONCRETE
+	
 	// sort records
 	sort(infos.begin(), infos.end());
-
-
+	
+	
 	// print data
 	out << "                           --- Node Information ---" << std::endl;
-
+	
 	// print data
 	out << format("%30s%10s%15s%15s", "NodeType", "Num", "Memory","Memory/Node") << std::endl;
 	out << "        --------------------------------------------------------------------------" << std::endl;
@@ -238,7 +238,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& 
 	});
 	out << "        --------------------------------------------------------------------------" << std::endl;
 	out << format("%30s%10d%15d%14.1f", "Total", statistics.getNumNodes(), statistics.getTotalMemory(),
-			statistics.getTotalMemory() / (double) statistics.getNumNodes()) << std::endl;
+	              statistics.getTotalMemory() / (double) statistics.getNumNodes()) << std::endl;
 	return out;
 }
 

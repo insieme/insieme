@@ -39,8 +39,8 @@
 #define __GUARD_COMMON_H
 
 #ifdef __cplusplus
-	namespace insieme {
-	namespace common {
+namespace insieme {
+namespace common {
 #endif // __cplusplus
 
 typedef enum {
@@ -56,8 +56,8 @@ typedef enum {
 } irt_loop_sched_policy_type;
 
 #ifdef __cplusplus
-	}
-	}
+}
+}
 #endif // __cplusplus
 
 #endif // __GUARD_COMMON_H

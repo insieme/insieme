@@ -60,7 +60,7 @@ void semanticCheckSecond(std::map<T, insieme::core::NodePtr> map) {
 
 	for(auto cur : map) {
 		auto errors = checks::check(cur.second).empty();
-
+		
 		// just check whether the code is not exhibiting errors
 		EXPECT_TRUE(errors) << errors;
 	}

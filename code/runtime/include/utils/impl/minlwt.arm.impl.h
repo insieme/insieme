@@ -35,32 +35,32 @@
  */
 
 #if __GNUC_PREREQ(4,8)
-__attribute__ ((noinline,noclone,optimize(0),aligned(16)))
+__attribute__((noinline,noclone,optimize(0),aligned(16)))
 #else
-__attribute__ ((noinline,noclone,optimize(0)))
+__attribute__((noinline,noclone,optimize(0)))
 #endif
-void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) { 
+void lwt_continue_impl(irt_work_item *wi /*r0*/, wi_implementation_func* func /*r1*/, intptr_t *newstack /*r2*/, intptr_t *basestack /*r3*/) {
 
-	__asm (
-		"push {r4-r11, lr};"     // save LR, R4-R11
-		"vstmdb sp!, {d8-d15};"  // save vector regs
-
-		/* swap stacks */
-		"str r13, [r3];"
-		"ldr r13, [r2];"
-
-		/* call function if func != NULL */
-		"cmp r1, #0;"
-		"beq endlab;"
+	__asm(
+	    "push {r4-r11, lr};"     // save LR, R4-R11
+	    "vstmdb sp!, {d8-d15};"  // save vector regs
+	    
+	    /* swap stacks */
+	    "str r13, [r3];"
+	    "ldr r13, [r2];"
+	    
+	    /* call function if func != NULL */
+	    "cmp r1, #0;"
+	    "beq endlab;"
 	);
-
+	
 	_irt_wi_trampoline(wi, func);
-
-	__asm (
-		/* restore registers for other coroutine */
-		"endlab:"
-		"vldmia sp!, {d8-d15};"  // restore vector regs
-		"pop {r4-r11, lr};"      // restore R4-R11, return to saved LR
+	
+	__asm(
+	    /* restore registers for other coroutine */
+	    "endlab:"
+	    "vldmia sp!, {d8-d15};"  // restore vector regs
+	    "pop {r4-r11, lr};"      // restore R4-R11, return to saved LR
 	);
 }
 

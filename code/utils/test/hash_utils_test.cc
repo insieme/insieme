@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,42 +47,42 @@ using namespace insieme::utils;
 TEST(HashUtils, combineHashes) {
 
 	// create some "objects"
-
+	
 	int x = 15;
 	long y = 60;
 	bool b = true;
 	std::string str = "Hello World!";
-
+	
 	std::size_t hash;
 	// compare manually and automatically combined hashes
 	hash = 0;
 	EXPECT_EQ(hash, combineHashes());
-
+	
 	boost::hash_combine(hash, x);
 	EXPECT_EQ(hash, combineHashes(x));
-
+	
 	boost::hash_combine(hash, y);
 	EXPECT_EQ(hash, combineHashes(x, y));
-
+	
 	boost::hash_combine(hash, b);
 	EXPECT_EQ(hash, combineHashes(x,y,b));
-
+	
 	boost::hash_combine(hash, str);
 	EXPECT_EQ(hash, combineHashes(x,y,b,str));
-
+	
 }
 
 TEST(HashUtils, hashLists) {
 
 	// create some list of elements
 	auto list = toVector(15, 16, 22);
-
+	
 	// hash list manually
 	std::size_t hash = 0;
 	boost::hash_combine(hash, list[0]);
 	boost::hash_combine(hash, list[1]);
 	boost::hash_combine(hash, list[2]);
-
+	
 	EXPECT_EQ(hash, hashList(list));
-
+	
 }

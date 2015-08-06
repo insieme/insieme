@@ -1,1 +1,0 @@
-main.cpp src/BlockHistogram.cpp src/ContextOpenCL.cpp src/DeviceMatrix.cpp src/FlexibleFilter.cpp src/OpenCLKernels.cpp src/PairwiseDistance.cpp 

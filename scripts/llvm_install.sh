@@ -12,7 +12,7 @@
 #   your machine, please use the python2 install script.
 ###########################################################################
 
-VERSION=3.4
+VERSION=3.6.2
 
 if [ -d $PREFIX/llvm-$VERSION ]; then
   echo "LLVM version $VERSION already installed"
@@ -25,32 +25,32 @@ CURRENT=`pwd`
 echo "*****************************************"
 echo "* Downloading current LLVM distribution *"
 echo "*****************************************"
-wget -nc http://www.insieme-compiler.org/ext_libs/llvm-$VERSION.src.tar.gz 
+wget -nc http://www.insieme-compiler.org/ext_libs/llvm-$VERSION.src.tar.xz 
 
 RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-tar -xf llvm-$VERSION.src.tar.gz
+tar -xf llvm-$VERSION.src.tar.xz
 # change dire into tools
 
 echo "******************************************"
 echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 
-wget -nc http://www.insieme-compiler.org/ext_libs/clang-$VERSION.src.tar.gz 
+wget -nc http://www.insieme-compiler.org/ext_libs/cfe-$VERSION.src.tar.xz 
 
 RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-cd llvm-$VERSION/tools
+cd llvm-$VERSION.src/tools
 
-tar -xf ../../clang-$VERSION.src.tar.gz
+tar -xf ../../cfe-$VERSION.src.tar.xz
 
-mv clang-$VERSION clang
+mv cfe-$VERSION.src clang
 cd $CURRENT
 
 #echo "******************************************"
@@ -73,7 +73,7 @@ cd $CURRENT
 echo "***********************************"
 echo "* Applying insieme patch to CLANG *"
 echo "***********************************"
-cd llvm-$VERSION
+cd llvm-$VERSION.src
 patch -p1  < $CURRENT/patches/insieme-clang-$VERSION.patch
 
 RET=$?
@@ -89,7 +89,7 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 
 CFLAGS="-O3 -std=c++0x"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" \
-	$CURRENT/llvm-$VERSION/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
+	$CURRENT/llvm-$VERSION.src/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
   	 --enable-assert=yes --enable-debug-runtime=no --enable-debug-symbols=no --enable-optimized=yes
 # --enable-doxygen=yes
 
@@ -112,7 +112,7 @@ cd ../
 echo "****************************************"
 echo "* Removing LLVM installation directory *"
 echo "****************************************"
-rm -R llvm-$VERSION
+rm -R llvm-$VERSION.src
 rm -f llvm-$VERSION.src.tar.gz
 rm -f clang-$VERSION.src.tar.gz
 
@@ -122,7 +122,7 @@ rm -f clang-$VERSION.src.tar.gz
 #echo "****************************************************************"
 #patch -d $PREFIX/llvm-$VERSION/lib/clang/$VERSION/include < ./patches/stdarg.patch
 
-rm -f $PREFIX/llvm-latest
-ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
+#rm -f $PREFIX/llvm-latest
+#ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
 
 exit 0

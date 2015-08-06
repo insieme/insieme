@@ -57,17 +57,17 @@ TEST(IRBuilder, Basic) {
 	VariablePtr var1 = build.variable(build.getLangBasic().getBool(), 1);
 	std::vector<StatementPtr> statements;
 	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(var1, build.getLangBasic().getTrue() ));
+	statements.push_back(build.declarationStmt(var1, build.getLangBasic().getTrue()));
 	auto compound = build.compoundStmt(statements);
-
+	
 	// Without Builder
 	NodeManager manager2;
 	VariablePtr var2 = Variable::get(manager2, build.getLangBasic().getBool(), 1);
 	std::vector<StatementPtr> statements2;
 	statements2.push_back(BreakStmt::get(manager2));
-	statements2.push_back(DeclarationStmt::get(manager2, var2, build.getLangBasic().getTrue() ));
+	statements2.push_back(DeclarationStmt::get(manager2, var2, build.getLangBasic().getTrue()));
 	auto compound2 = CompoundStmt::get(manager2, statements2);
-
+	
 	EXPECT_EQ(*compound2, *compound);
 }
 
@@ -75,12 +75,12 @@ TEST(IRBuilder, TypeMatch) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	auto type = builder.parseType("ref<vector<int<4>,6>>");
 	EXPECT_TRUE(builder.matchType("ref<vector<'a,#n>>", type));
 	EXPECT_FALSE(builder.matchType("ref<vector<'a,5>>", type));
 	EXPECT_TRUE(builder.matchType("ref<vector<int<#b>,6>>", type));
-
+	
 }
 
 int check(NodePtr nodeToCheck) {
@@ -90,7 +90,7 @@ int check(NodePtr nodeToCheck) {
 	for_each(warnings, [](const checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 	});
-
+	
 	auto errors = semantic.getErrors();
 	EXPECT_EQ(0u, errors.size()) << " failed on: " << nodeToCheck;
 	std::sort(errors.begin(), errors.end());
@@ -102,7 +102,7 @@ int check(NodePtr nodeToCheck) {
 		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
 		 */
 	});
-
+	
 	return errors.size();
 }
 
@@ -111,14 +111,14 @@ TEST(IRBuilder, Assign) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	auto& basic = manager.getLangBasic();
-
-    VariablePtr lhs = builder.variable(builder.refType(basic.getInt4()));
-    VariablePtr rhs = builder.variable(basic.getInt4());
-
-    ExpressionPtr simpleAssign = builder.assign(lhs, rhs);
-
-    check(simpleAssign);
-
+	
+	VariablePtr lhs = builder.variable(builder.refType(basic.getInt4()));
+	VariablePtr rhs = builder.variable(basic.getInt4());
+	
+	ExpressionPtr simpleAssign = builder.assign(lhs, rhs);
+	
+	check(simpleAssign);
+	
 // NOTE: this makes no sense anymore since the builder should not look for the union field you want to access
 //	vector<std::pair<StringValuePtr,TypePtr>> unionEntries;
 //	unionEntries.push_back(std::make_pair(builder.stringValue("a"), basic.getReal4()));
@@ -137,25 +137,25 @@ TEST(IRBuilder, References) {
 
 	NodeManager manager;
 	FrontendIRBuilder builder(manager);
-
+	
 	// create an IR, C++ and const C++ reference
 	TypePtr T = builder.genericType("T");
 	ExpressionPtr a = builder.literal(builder.refType(T),"a");
 	ExpressionPtr b = builder.literal(analysis::getCppRef(T),"b");
 	ExpressionPtr c = builder.literal(analysis::getConstCppRef(T),"c");
-
+	
 	// apply sequence of semantic checks
 	for(auto cur : {
-			a, b, c,
-			builder.toCppRef(a), builder.toConstCppRef(a),
-			builder.toIRRef(b), builder.toIRRef(c)
-	}) {
+	            a, b, c,
+	            builder.toCppRef(a), builder.toConstCppRef(a),
+	            builder.toIRRef(b), builder.toIRRef(c)
+	        }) {
 		// just apply checks
 		EXPECT_TRUE(checks::check(cur).empty()) << "\nNode: \n" << cur << "\nErrors: \n" << check(cur);
 	}
-
+	
 	// check identities
 	EXPECT_EQ(a, builder.toIRRef(builder.toCppRef(a)));
 	EXPECT_EQ(a, builder.toIRRef(builder.toConstCppRef(a)));
-
+	
 }

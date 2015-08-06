@@ -43,27 +43,27 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	bool isSIMDVector(const TypePtr& type) {
-		core::GenericTypePtr gt;
-		return type->getNodeType() == core::NT_GenericType && 
-		   (gt = static_pointer_cast<const core::GenericType>(type), 
-				gt->getName()->getValue() == "simd" && 
-				gt->getTypeParameter().size() == 1u && 
-				gt->getTypeParameter()[0].isa<core::VectorTypePtr>() &&
-				gt->getIntTypeParameter().empty()
-		   );
-	}
-	
-	VectorTypePtr getSIMDVectorType(const TypePtr& type) {
-		assert_true(core::lang::isSIMDVector(type));
-		return core::static_pointer_cast<const core::GenericType>( type )->getTypeParameter()[0].as<core::VectorTypePtr>();
-	}
+bool isSIMDVector(const TypePtr& type) {
+	core::GenericTypePtr gt;
+	return type->getNodeType() == core::NT_GenericType &&
+	       (gt = static_pointer_cast<const core::GenericType>(type),
+	        gt->getName()->getValue() == "simd" &&
+	        gt->getTypeParameter().size() == 1u &&
+	        gt->getTypeParameter()[0].isa<core::VectorTypePtr>() &&
+	        gt->getIntTypeParameter().empty()
+	       );
+}
 
-	GenericTypePtr toSIMDVector(const VectorTypePtr& type) {
-		assert(type.isa<core::VectorTypePtr>() && "no SIMD type can be made out of a vector type");
-		insieme::core::IRBuilder builder(type.getNodeManager());
-		return builder.genericType("simd", {type}, IntParamList());
-	}
+VectorTypePtr getSIMDVectorType(const TypePtr& type) {
+	assert_true(core::lang::isSIMDVector(type));
+	return core::static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0].as<core::VectorTypePtr>();
+}
+
+GenericTypePtr toSIMDVector(const VectorTypePtr& type) {
+	assert(type.isa<core::VectorTypePtr>() && "no SIMD type can be made out of a vector type");
+	insieme::core::IRBuilder builder(type.getNodeManager());
+	return builder.genericType("simd", {type}, IntParamList());
+}
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme

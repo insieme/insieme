@@ -80,7 +80,7 @@ const char* irt_g_instrumentation_group_names[] = {
 #define IRT_INST_EVENT(event, group_label, event_label) +1
 uint32 irt_g_inst_num_event_types = 0
 #include "instrumentation_events.def"
-;
+                                    ;
 #undef IRT_INST_EVENT
 
 typedef struct _irt_instrumentation_event_data {
@@ -154,7 +154,7 @@ void irt_inst_set_di_instrumentation(bool enable);
 void irt_inst_set_db_instrumentation(bool enable);
 void irt_inst_set_all_instrumentation(bool enable);
 
-// dummy functions to be used via function pointer to disable 
+// dummy functions to be used via function pointer to disable
 // instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
 
 void _irt_inst_insert_no_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id);

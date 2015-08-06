@@ -55,23 +55,23 @@ namespace extensions {
 class InsiemePragmaExtension: public FrontendExtension {
 private:
 	vector<insieme::core::NodePtr> entryPoints;
-
+	
 public:
 	/**
 	 * Registers all "insieme" pragmas and their handlers
 	 */
 	InsiemePragmaExtension();
-
+	
 	/**
 	 * Used for processing previously established TransformationAnnotation objects
 	 */
 	virtual insieme::core::ProgramPtr IRVisit(insieme::core::ProgramPtr& program);
-
+	
 	/**
 	 * Used for adding previously identified entry points
 	 */
 	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-
+	
 	/**
 	 * Visits the entire program to look for and process transformation annotations
 	 * @param program the program which to check for TransformationAnnotation objects

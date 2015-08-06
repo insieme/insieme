@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,21 +44,23 @@
 namespace insieme {
 namespace utils {
 
-	TEST(IsPrintable, Test) {
+TEST(IsPrintable, Test) {
 
-		struct unprintable {};
-
-		struct printable : utils::Printable {
-			std::ostream& printTo(std::ostream& out) const { return out; };
+	struct unprintable {};
+	
+	struct printable : utils::Printable {
+		std::ostream& printTo(std::ostream& out) const {
+			return out;
 		};
-
-		EXPECT_TRUE(is_printable<int>::value);
-		EXPECT_TRUE(is_printable<std::string>::value);
-		EXPECT_TRUE(is_printable<printable>::value);
-
-		EXPECT_FALSE(is_printable<unprintable>::value);
-
-	}
+	};
+	
+	EXPECT_TRUE(is_printable<int>::value);
+	EXPECT_TRUE(is_printable<std::string>::value);
+	EXPECT_TRUE(is_printable<printable>::value);
+	
+	EXPECT_FALSE(is_printable<unprintable>::value);
+	
+}
 
 } // end namespace utils
 } // end namespace insieme

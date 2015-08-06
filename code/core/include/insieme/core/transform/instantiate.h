@@ -44,12 +44,14 @@ namespace core {
 namespace transform {
 
 namespace detail {
-	enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
+enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
 
-	static auto skipNone = [&](const NodePtr& node) { return false; };
+static auto skipNone = [&](const NodePtr& node) {
+	return false;
+};
 
-	NodePtr instantiateInternal(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip, 
-		detail::InstantiationOption opt);
+NodePtr instantiateInternal(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip,
+                            detail::InstantiationOption opt);
 }
 
 /**
@@ -61,7 +63,7 @@ namespace detail {
  */
 template<typename T>
 core::Pointer<T> instantiateIntTypeParams(const core::Pointer<T>& root,
-		std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+        std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
 	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::INT_TYPE_PARAMS));
 }
 
@@ -74,7 +76,7 @@ core::Pointer<T> instantiateIntTypeParams(const core::Pointer<T>& root,
  */
 template<typename T>
 core::Pointer<T> instantiateTypeVariables(const core::Pointer<T>& root,
-		std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+        std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
 	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::TYPE_VARIABLES));
 }
 
@@ -87,7 +89,7 @@ core::Pointer<T> instantiateTypeVariables(const core::Pointer<T>& root,
  */
 template<typename T>
 core::Pointer<T> instantiateTypes(const core::Pointer<T>& root,
-		std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
+                                  std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
 	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::BOTH));
 }
 

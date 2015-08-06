@@ -74,17 +74,17 @@ namespace io = boost::iostreams;
 struct Writer {
 	std::ostream& logStream;
 	std::recursive_mutex& mutex;
-
-	Writer(std::ostream& out, std::recursive_mutex& mutex) : logStream( out ), mutex( mutex ) {
+	
+	Writer(std::ostream& out, std::recursive_mutex& mutex) : logStream(out), mutex(mutex) {
 		mutex.lock();
 	}
-
+	
 	// Creates a copy from an existing writer. When a logger is requested
 	// a temporary object is created. Also a new lock is created.
-	Writer(const Writer& other) : logStream( other.logStream ), mutex( other.mutex ) {
+	Writer(const Writer& other) : logStream(other.logStream), mutex(other.mutex) {
 		mutex.lock();
 	}
-
+	
 	~Writer() {
 		// Append a new line at the end of this log sequence
 		logStream << std::endl;
@@ -127,32 +127,50 @@ struct TimeSpec<DATE> {
 };
 
 struct LoggingLevelNotDefined: public std::runtime_error {
-	LoggingLevelNotDefined(const std::string& message): std::runtime_error(message){}
+	LoggingLevelNotDefined(const std::string& message): std::runtime_error(message) {}
 };
 
 static inline std::string loggingLevelToStr(const Level& level) {
 	switch(level) {
-	case DEBUG:		return "DEBUG";
-	case INFO:		return "INFO ";
-	case WARNING:	return "WARN ";
-	case ERROR:		return "ERROR";
-	case FATAL:		return "FATAL";
+	case DEBUG:
+		return "DEBUG";
+	case INFO:
+		return "INFO ";
+	case WARNING:
+		return "WARN ";
+	case ERROR:
+		return "ERROR";
+	case FATAL:
+		return "FATAL";
 	default:
-		assert_fail(); return "UNKNOWN";
+		assert_fail();
+		return "UNKNOWN";
 	}
 }
 
 static inline Level loggingLevelFromStr(const std::string& level) {
-	if(level.empty())		return LOG_DEFAULT;
-	if(level == "DEBUG")	return DEBUG;
-	if(level == "INFO")		return INFO;
-	if(level == "WARNING")	return WARNING;
-	if(level == "ERROR")	return ERROR;
-	if(level == "FATAL")	return FATAL;
+	if(level.empty()) {
+		return LOG_DEFAULT;
+	}
+	if(level == "DEBUG")	{
+		return DEBUG;
+	}
+	if(level == "INFO") {
+		return INFO;
+	}
+	if(level == "WARNING")	{
+		return WARNING;
+	}
+	if(level == "ERROR")	{
+		return ERROR;
+	}
+	if(level == "FATAL")	{
+		return FATAL;
+	}
 	std::ostringstream os;
-	os << "Logging level '" << level << 
-		"' not valid. Available logging levels are: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL'" 
-		<< std::endl;
+	os << "Logging level '" << level <<
+	   "' not valid. Available logging levels are: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL'"
+	   << std::endl;
 	throw LoggingLevelNotDefined(os.str());
 }
 
@@ -203,7 +221,8 @@ struct FileNameSpec {
 		size_t pos = file_name.find_last_of('/');
 		if(pos == std::string::npos) {
 			out << file_name;
-		} else {
+		}
+		else {
 			out << file_name.substr(pos+1);
 		}
 	}
@@ -214,7 +233,9 @@ struct FileNameSpec {
  */
 template <unsigned Line>
 struct LineSpec {
-	static void format(std::ostream& out, const Ctx& ctx) { out << Line; }
+	static void format(std::ostream& out, const Ctx& ctx) {
+		out << Line;
+	}
 };
 
 /**
@@ -269,22 +290,22 @@ class Logger {
 	// guarantee that different threads writing into the logger
 	// do not overlap
 	std::recursive_mutex mutex;
-
+	
 	// reference to the output stream
 	std::ostream& out;
-
+	
 	Level m_level;
 	unsigned short m_verbosity;
 	boost::regex filter;
-
+	
 	Logger(std::ostream& out, const Level& level, unsigned short verbosity, boost::regex filter) :
 		m_null_logger(io::null_sink()),
 		out(out),
 		m_level(level),
 		m_verbosity(verbosity),
-		filter(filter)
-	{ }
-
+		filter(filter) {
+	}
+	
 public:
 	/**
 	 * Returns a reference to the current logger. The first time the method is
@@ -299,19 +320,23 @@ public:
 	}
 	
 	// getters
-	const Level& level() const { return m_level; }
-	const unsigned short& verbosity() const { return m_verbosity; }
-
+	const Level& level() const {
+		return m_level;
+	}
+	const unsigned short& verbosity() const {
+		return m_verbosity;
+	}
+	
 	/**
 	 * Returns a writer to the active stream.
 	 */
 	template <class Formatter>
 	Writer getActiveStream(const Ctx& ctx) {
-		Writer currStream( out, mutex );
+		Writer currStream(out, mutex);
 		Formatter::format(currStream.logStream, ctx);
 		return currStream;
 	}
-
+	
 	/**
 	 * Returns the stream which matches the level @level.
 	 */
@@ -322,7 +347,7 @@ public:
 			Formatter::format(currStream.logStream, ctx);
 			return currStream;
 		}
-		return Writer( m_null_logger, mutex );
+		return Writer(m_null_logger, mutex);
 	}
 	
 	/**

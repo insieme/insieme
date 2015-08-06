@@ -68,863 +68,889 @@
 namespace insieme {
 namespace backend {
 
-	// --------------- Conversion Context struct ---------------
+// --------------- Conversion Context struct ---------------
 
-	namespace {
+namespace {
 
-		c_ast::CCodeFragmentPtr toCodeFragment(const ConversionContext& context, c_ast::NodePtr code) {
-			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getFragmentManager(), code);
-			fragment->addDependencies(context.getDependencies());
-			return fragment;
+c_ast::CCodeFragmentPtr toCodeFragment(const ConversionContext& context, c_ast::NodePtr code) {
+	c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getFragmentManager(), code);
+	fragment->addDependencies(context.getDependencies());
+	return fragment;
+}
+
+}
+
+
+// --------------- conversion operations -------------------
+
+c_ast::NodePtr StmtConverter::convert(ConversionContext& context, const core::NodePtr& node) {
+	// create a context for the conversion and conduct procedure
+	return visit(node, context);
+}
+
+
+////////////////////////////////////////////////////////////////////////// Core Visitor
+
+c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
+	// first ask the handlers
+	for(auto cur : stmtHandler) {
+		c_ast::NodePtr res = cur(context, node);
+		if(res) {
+			return res;
 		}
-
 	}
+	
+	// use default conversion
+	return IRVisitor::visit(node, context);
+}
 
 
-	// --------------- conversion operations -------------------
+////////////////////////////////////////////////////////////////////////// Basic Nodes
 
-	c_ast::NodePtr StmtConverter::convert(ConversionContext& context, const core::NodePtr& node) {
-		// create a context for the conversion and conduct procedure
-		return visit(node, context);
-	}
+c_ast::NodePtr StmtConverter::visitNode(const core::NodePtr& node, ConversionContext& context) {
+	// default handling of unsupported nodes => produce comment
+	return converter.getCNodeManager()->create<c_ast::Comment>("Unsupported: " + toString(node));
+}
+
+c_ast::NodePtr StmtConverter::visitType(const core::TypePtr& type, ConversionContext& context) {
+	// obtain type information, add dependency and return type name
+	const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+	context.getDependencies().insert(info.definition);
+	return info.rValueType;
+}
 
 
-	////////////////////////////////////////////////////////////////////////// Core Visitor
+c_ast::NodePtr StmtConverter::visitProgram(const core::ProgramPtr& node, ConversionContext& context) {
 
-	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
-		// first ask the handlers
-		for(auto cur : stmtHandler) {
-			c_ast::NodePtr res = cur(context, node);
-			if (res) {
-				return res;
-			}
+	// get shared C Node Manager reference
+	const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
+	// program is not producing any C code => just dependencies
+	for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
+	
+		// fix name of main entry
+		if(node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
+			context.getConverter().getNameManager().setName(entryPoint, converter.getBackendConfig().mainFunctionName);
 		}
-
-		// use default conversion
-		return IRVisitor::visit(node, context);
-	}
-
-
-	////////////////////////////////////////////////////////////////////////// Basic Nodes
-
-	c_ast::NodePtr StmtConverter::visitNode(const core::NodePtr& node, ConversionContext& context) {
-		// default handling of unsupported nodes => produce comment
-		return converter.getCNodeManager()->create<c_ast::Comment>("Unsupported: " + toString(node));
-	}
-
-	c_ast::NodePtr StmtConverter::visitType(const core::TypePtr& type, ConversionContext& context) {
-		// obtain type information, add dependency and return type name
-		const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
-		context.getDependencies().insert(info.definition);
-		return info.rValueType;
-	}
-
-
-	c_ast::NodePtr StmtConverter::visitProgram(const core::ProgramPtr& node, ConversionContext& context) {
-
-		// get shared C Node Manager reference
-		const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
-		// program is not producing any C code => just dependencies
-		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
-
-			// fix name of main entry
-			if (node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
-				context.getConverter().getNameManager().setName(entryPoint, converter.getBackendConfig().mainFunctionName);
-			}
-
-			// create a new context
-			ConversionContext entryContext(converter, core::LambdaPtr());
-
-			c_ast::CodeFragmentPtr fragment;
-			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
-				// handle function-entry point specially
-				core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(entryPoint);
-				fragment = converter.getFunctionManager().getInfo(lambda).definition;
-			} else {
-				// use default conversion
-				fragment = toCodeFragment(entryContext, this->visit(entryPoint, entryContext));
-			}
-
-			// add converted fragment to dependency list
-			context.getDependencies().insert(fragment);
-
-		});
-
-		// create empty node (program does not represent any code)
-		return manager->create<c_ast::OpaqueCode>("");
-	}
+		
+		// create a new context
+		ConversionContext entryContext(converter, core::LambdaPtr());
+		
+		c_ast::CodeFragmentPtr fragment;
+		if(entryPoint->getNodeType() == core::NT_LambdaExpr) {
+			// handle function-entry point specially
+			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(entryPoint);
+			fragment = converter.getFunctionManager().getInfo(lambda).definition;
+		}
+		else {
+			// use default conversion
+			fragment = toCodeFragment(entryContext, this->visit(entryPoint, entryContext));
+		}
+		
+		// add converted fragment to dependency list
+		context.getDependencies().insert(fragment);
+		
+	});
+	
+	// create empty node (program does not represent any code)
+	return manager->create<c_ast::OpaqueCode>("");
+}
 
 
-	////////////////////////////////////////////////////////////////////////// Expressions
+////////////////////////////////////////////////////////////////////////// Expressions
 
-	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context) {
-		// handled by the function manager
-		return converter.getFunctionManager().getCall(ptr, context);
-	}
+c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context) {
+	// handled by the function manager
+	return converter.getFunctionManager().getCall(ptr, context);
+}
 
-	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context) {
-		// handled by the function manager
+c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context) {
+	// handled by the function manager
+	return converter.getFunctionManager().getValue(ptr, context);
+}
+
+c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
+	const auto& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+	context.addDependency(info.definition);
+	return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
+}
+
+c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context) {
+	return converter.getCNodeManager()->create<c_ast::Literal>("JOB-UNSUPPORTED");
+}
+
+c_ast::NodePtr StmtConverter::visitLambdaExpr(const core::LambdaExprPtr& ptr, ConversionContext& context) {
+	// handled by the function manager
+	return converter.getFunctionManager().getValue(ptr, context);
+}
+
+c_ast::NodePtr StmtConverter::visitLiteral(const core::LiteralPtr& ptr, ConversionContext& context) {
+	// Function literals are handled by function manager
+	if(ptr->getType()->getNodeType() == core::NT_FunctionType) {
 		return converter.getFunctionManager().getValue(ptr, context);
 	}
-
-	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
-		const auto& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+	
+	// special handling for unit literal
+	if(converter.getNodeManager().getLangBasic().isUnitConstant(ptr)) {
+		return c_ast::cast(
+		           converter.getCNodeManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void),
+		           converter.getCNodeManager()->create<c_ast::Literal>("0")
+		       );
+	}
+	
+	// special handling for int-type-parameter literal
+	if(core::analysis::isIntTypeParamLiteral(ptr)) {
+		core::IntTypeParamPtr value = core::analysis::getRepresentedTypeParam(ptr);
+		assert(value.isa<core::ConcreteIntTypeParamPtr>() && "Uninstantiated int-type-parameter literal encountered!");
+		return converter.getCNodeManager()->create<c_ast::Literal>(toString(*value) + "u");
+	}
+	
+	// convert literal
+	auto toLiteral = [&](const string& value) {
+		return converter.getCNodeManager()->create<c_ast::Literal>(value);
+	};
+	c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
+	
+	// handle primitive types
+	auto& basic = ptr->getNodeManager().getLangBasic();
+	if(basic.isPrimitive(ptr->getType())) {
+	
+		// handle special cases
+		const string& value = ptr->getStringValue();
+		
+		// things that need not be extra-casted (default values)
+		if(basic.isInt4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+			return res;
+		}
+		
+		// add a f in case it is a float literal and it is missing
+		if(basic.isReal4(ptr->getType())) {
+			if(*value.rbegin() != 'f') {
+				res = toLiteral(value + "f");
+				// add a ".0" if we have an integer in a float literal
+				if(!any(value, [](const string::value_type& ch) {
+				return ch=='.' || ch=='e';
+			})) {
+					res = toLiteral(value + ".0f");
+				}
+			}
+			return res;
+		}
+		
+		// add a u in case it is a signed literal and it is missing
+		if(basic.isUInt4(ptr->getType())) {
+			if(*value.rbegin() != 'u') {
+				res = toLiteral(value + "u");
+			}
+			return res;
+		}
+		
+		// fall-back solution: use an explicit cast
+		auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
 		context.addDependency(info.definition);
-		return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
+		return c_ast::cast(info.rValueType ,res);
 	}
-
-	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("JOB-UNSUPPORTED");
-	}
-
-	c_ast::NodePtr StmtConverter::visitLambdaExpr(const core::LambdaExprPtr& ptr, ConversionContext& context) {
-		// handled by the function manager
-		return converter.getFunctionManager().getValue(ptr, context);
-	}
-
-	c_ast::NodePtr StmtConverter::visitLiteral(const core::LiteralPtr& ptr, ConversionContext& context) {
-		// Function literals are handled by function manager
-		if (ptr->getType()->getNodeType() == core::NT_FunctionType) {
-			return converter.getFunctionManager().getValue(ptr, context);
+	
+	// special handling for the global struct
+	if(!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
+		if(ptr->getType()->getNodeType() == core::NT_RefType) {
+			res = c_ast::ref(res);
 		}
-
-		// special handling for unit literal
-		if (converter.getNodeManager().getLangBasic().isUnitConstant(ptr)) {
-			return c_ast::cast(
-				converter.getCNodeManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void),
-				converter.getCNodeManager()->create<c_ast::Literal>("0")
-			);
-		}
-
-		// special handling for int-type-parameter literal
-		if (core::analysis::isIntTypeParamLiteral(ptr)) {
-			core::IntTypeParamPtr value = core::analysis::getRepresentedTypeParam(ptr);
-			assert(value.isa<core::ConcreteIntTypeParamPtr>() && "Uninstantiated int-type-parameter literal encountered!");
-			return converter.getCNodeManager()->create<c_ast::Literal>(toString(*value) + "u");
-		}
-
-		// convert literal
-		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
-		c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
-
-		// handle primitive types
-		auto& basic = ptr->getNodeManager().getLangBasic();
-		if (basic.isPrimitive(ptr->getType())) {
-
-			// handle special cases
-			const string& value = ptr->getStringValue();
-
-			// things that need not be extra-casted (default values)
-			if (basic.isInt4(ptr->getType()) || basic.isReal8(ptr->getType())) {
-				return res;
-			}
-
-			// add a f in case it is a float literal and it is missing
-			if (basic.isReal4(ptr->getType())) {
-				if (*value.rbegin() != 'f') {
-					res = toLiteral(value + "f");
-					// add a ".0" if we have an integer in a float literal
-					if (!any(value, [](const string::value_type& ch) { return ch=='.' || ch=='e'; })) {
-						res = toLiteral(value + ".0f");
-					}
-				}
-				return res;
-			}
-
-			// add a u in case it is a signed literal and it is missing
-			if (basic.isUInt4(ptr->getType())) {
-				if (*value.rbegin() != 'u') {
-					res = toLiteral(value + "u");
-				}
-				return res;
-			}
-
-			// fall-back solution: use an explicit cast
-			auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
-			context.addDependency(info.definition);
-			return c_ast::cast(info.rValueType ,res);
-		}
-
-		// special handling for the global struct
-		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
-			if (ptr->getType()->getNodeType() == core::NT_RefType) {
-				res = c_ast::ref(res);
-			}
-
-			// add code dependency to global struct
-			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
-			assert_true(fragment) << "Global Fragment not yet initialized!";
-			context.getDependencies().insert(fragment);
-			return res;
-		}
-
-		// special handling for type literals (fall-back solution)
-		if (core::analysis::isTypeLiteralType(ptr->getType())) {
-			const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
-			context.addDependency(info.declaration);
-			return c_ast::lit(info.rValueType, "type_token");
-		}
-
-		// special handling for boolean literals
-		if (ptr.getNodeManager().getLangBasic().isBool(ptr->getType())) {
-			context.getIncludes().insert("stdbool.h");
-		}
-
-		// handle null pointer
-		if (converter.getNodeManager().getLangBasic().isRefNull(ptr)) {
-			return converter.getCNodeManager()->create<c_ast::Literal>("0");
-		}
-
-		// handle pre-defined C identifiers (standard - 6.4.2.2)
-		const static vector<string> predefined = { "__func__", "__FUNCTION__", "__PRETTY_FUNCTION__" };
-		if (contains(predefined, ptr->getStringValue())) {
-			return res;		// just print literal as it is
-		}
-
-		// handle C string literals (which are of type ref<vector<...>>)
-		if (ptr->getStringValue()[0] == '"') {
-			assert(ptr->getType().isa<core::RefTypePtr>());
-			core::TypePtr type = ptr->getType().as<core::RefTypePtr>()->getElementType();
-			if(type.isa<core::VectorTypePtr>() && basic.isWChar(type.as<core::VectorTypePtr>()->getElementType())){
-				// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
-				res = toLiteral("L"+ptr->getStringValue());
-			}
-			return res;
-		}
-
-		// handle literals declared within other header files
-		if (annotations::c::hasIncludeAttached(ptr)) {
-			// add header file
-			context.getIncludes().insert(annotations::c::getAttachedInclude(ptr));
-
-			// and use it (as a pointer if it is a reference type)
-			return (ptr->getType().isa<core::RefTypePtr>())?c_ast::ref(res):res;
-		}
-
-		// handle literals referencing external data elements
-		if (core::analysis::isRefType(ptr->getType())) {
-			// look up external variable declaration
-			auto fragmentManager = converter.getFragmentManager();
-			string fragmentName = "global:" + ptr->getStringValue();
-			auto fragment = fragmentManager->getFragment(fragmentName);
-
-			// check fragment
-			if (!fragment) {
-
-				// create new declaration
-				c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
-				// register fragment
-				fragmentManager->bindFragment(fragmentName, declaration);
-
-				// get type info
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
-
-				// add external declaration
-				auto& cManager = converter.getCNodeManager();
-				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Global Variable Declaration ----------"));
-				declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
-
-				// add dependency to type declaration
-				declaration->addDependency(info.definition);
-
-				fragment = declaration;
-			}
-
-			// add dependency
-			context.getDependencies().insert(fragment);
-
-			// also, result has to be referenced
-			return c_ast::ref(res);
-		}
-
-		// done
+		
+		// add code dependency to global struct
+		auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
+		assert_true(fragment) << "Global Fragment not yet initialized!";
+		context.getDependencies().insert(fragment);
 		return res;
 	}
-
-	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding struct
-		//     (<type>){<list of members>}
-
-		auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
-		context.addDependency(typeInfo.definition);
-
-		// get type
-		c_ast::TypePtr type = typeInfo.rValueType;
-
-		// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
-		if(auto stp = ptr->getType().isa<core::StructTypePtr>()) {
-			if(!stp.size()) {
-				auto cmgr = context.getConverter().getCNodeManager();
-				auto zero = cmgr->create("0");
-				return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
-			}
-		}
-
-		// create init expression
-		c_ast::InitializerPtr init = c_ast::init(type);
-
-		// obtain some helper
-		auto& basic = converter.getNodeManager().getLangBasic();
-
-		// append initialization values
-		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values),
-				[&](const core::NamedValuePtr& cur) {
-					core::ExpressionPtr arg = cur->getValue();
-					// skip ref.var if present
-					if (core::analysis::isCallOf(cur->getValue(), basic.getRefVar())) {
-						arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
-						if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
-							arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0);
-						}
-					}
-					return convert(context, arg);
-		});
-
-		// remove last element if it is a variable sized struct
-		if (core::types::isVariableSized(ptr->getType())) {
-			assert_false(init->values.empty());
-			init->values.pop_back();
-		}
-
-		// return completed
-		return init;
-	}
-
-	c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding union
-		//     (<type>){<single member>}
-
-		core::TypePtr unionType = ptr->getType();
-        auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
-        context.addDependency(typeInfo.definition);
-
-        // get type and create init expression
-        c_ast::TypePtr type = typeInfo.rValueType;
-
-        auto cmgr = context.getConverter().getCNodeManager();
-
-        // special handling for vector initialization (should not be turned into a struct)
-        auto value = convertExpression(context, ptr->getMember());
-        if (ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
-        	assert(dynamic_pointer_cast<c_ast::Initializer>(value));
-        	value = cmgr->create<c_ast::VectorInit>(
-        			static_pointer_cast<c_ast::VectorInit>(
-        					static_pointer_cast<c_ast::Initializer>(value)->values[0]
-        			)->values
-        	);
-        }
-
-        return c_ast::init(
-        		type,
-        		cmgr->create(ptr->getMemberName()->getValue()),
-        		value
-        );
-//		return c_ast::init(type, convert(context, ptr->getMember()));
-	}
-
-	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding struct
-		//     (<type>){<list of members>}
-
-        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
-        context.addDependency(typeInfo.definition);
-
-        // get type and create init expression
-        c_ast::TypePtr type = typeInfo.rValueType;
-		c_ast::InitializerPtr init = c_ast::init(type);
-
-		// append initialization values
-		::transform(ptr->getExpressions()->getElements(), std::back_inserter(init->values),
-				[&](const core::ExpressionPtr& cur) {
-					return convert(context, cur);
-		});
-
-		// return completed
-		return init;
-	}
-
-	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
-		// just look up variable within variable manager and return variable token ...
-		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
-		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::NT_ArrayType))?c_ast::ref(info.var):info.var;
-	}
-
-	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
-		// to be created: an initialization of the corresponding struct - where one value is a vector
-		//     (<type>){{<list of members>}}
-
-		// get type and create empty init expression
+	
+	// special handling for type literals (fall-back solution)
+	if(core::analysis::isTypeLiteralType(ptr->getType())) {
 		const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
-		c_ast::TypePtr type = info.rValueType;
-		context.getDependencies().insert(info.definition);
-
-		// create inner vector init and append initialization values
-		c_ast::VectorInitPtr vectorInit = context.getConverter().getCNodeManager()->create<c_ast::VectorInit>();
-		::transform(ptr->getExpressions()->getElements(), std::back_inserter(vectorInit->values),
-				[&](const core::ExpressionPtr& cur) {
-					return convert(context, cur);
-		});
-
-		// create and return out initializer
-		return c_ast::init(type, vectorInit);
+		context.addDependency(info.declaration);
+		return c_ast::lit(info.rValueType, "type_token");
 	}
-
-	c_ast::NodePtr StmtConverter::visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context) {
-		// markers are just ignored
-		return visit(ptr->getSubExpression(), context);
+	
+	// special handling for boolean literals
+	if(ptr.getNodeManager().getLangBasic().isBool(ptr->getType())) {
+		context.getIncludes().insert("stdbool.h");
 	}
-
-
-
-	////////////////////////////////////////////////////////////////////////// Statements
-
-	c_ast::NodePtr StmtConverter::visitBreakStmt(const core::BreakStmtPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Break>();
+	
+	// handle null pointer
+	if(converter.getNodeManager().getLangBasic().isRefNull(ptr)) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("0");
 	}
-
-	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context) {
-		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
-		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
-			c_ast::NodePtr stmt = this->visit(cur,context);
-			if (stmt) { res->statements.push_back(stmt); }
-		});
+	
+	// handle pre-defined C identifiers (standard - 6.4.2.2)
+	const static vector<string> predefined = { "__func__", "__FUNCTION__", "__PRETTY_FUNCTION__" };
+	if(contains(predefined, ptr->getStringValue())) {
+		return res;		// just print literal as it is
+	}
+	
+	// handle C string literals (which are of type ref<vector<...>>)
+	if(ptr->getStringValue()[0] == '"') {
+		assert(ptr->getType().isa<core::RefTypePtr>());
+		core::TypePtr type = ptr->getType().as<core::RefTypePtr>()->getElementType();
+		if(type.isa<core::VectorTypePtr>() && basic.isWChar(type.as<core::VectorTypePtr>()->getElementType())) {
+			// reproduce the longstring signature for widechars, this is 16 in windows and 32 in unix
+			res = toLiteral("L"+ptr->getStringValue());
+		}
 		return res;
 	}
-
-	c_ast::NodePtr StmtConverter::visitContinueStmt(const core::ContinueStmtPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Continue>();
+	
+	// handle literals declared within other header files
+	if(annotations::c::hasIncludeAttached(ptr)) {
+		// add header file
+		context.getIncludes().insert(annotations::c::getAttachedInclude(ptr));
+		
+		// and use it (as a pointer if it is a reference type)
+		return (ptr->getType().isa<core::RefTypePtr>())?c_ast::ref(res):res;
 	}
-
-	namespace {
-
-		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
-			auto& basic = initValue->getNodeManager().getLangBasic();
-
-			// if call to volatileMake, check inner
-			if (core::analysis::isCallOf(initValue, basic.getVolatileMake())) {
-				return toBeAllocatedOnStack(initValue.as<core::CallExprPtr>()[0]);
-			}
-
-			// if it is a call to a ref.var => put it on the stack
-			if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
-				return true;
-			}
-
-			// if it is a constructor call ..
-			if (core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) {
-				return core::analysis::isCallOf(call[0], basic.getRefVar());
-			}
-
-			// everything else is heap based
-			return false;
+	
+	// handle literals referencing external data elements
+	if(core::analysis::isRefType(ptr->getType())) {
+		// look up external variable declaration
+		auto fragmentManager = converter.getFragmentManager();
+		string fragmentName = "global:" + ptr->getStringValue();
+		auto fragment = fragmentManager->getFragment(fragmentName);
+		
+		// check fragment
+		if(!fragment) {
+		
+			// create new declaration
+			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
+			// register fragment
+			fragmentManager->bindFragment(fragmentName, declaration);
+			
+			// get type info
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(core::analysis::getReferencedType(ptr->getType()));
+			
+			// add external declaration
+			auto& cManager = converter.getCNodeManager();
+			declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Global Variable Declaration ----------"));
+			declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
+			
+			// add dependency to type declaration
+			declaration->addDependency(info.definition);
+			
+			fragment = declaration;
 		}
-
-		bool isStackBasedCArray(const core::ExpressionPtr& initValue) {
-			const auto& basic = initValue->getNodeManager().getLangBasic();
-
-			// it has to be stack based ..
-			if (!core::analysis::isCallOf(initValue, basic.getRefVar())) {
-				return false;
-			}
-
-			// .. and a newly created array
-			auto value = initValue.as<core::CallExprPtr>()->getArgument(0);
-			return core::analysis::isCallOf(value, basic.getArrayCreate1D());
-		}
-
-		bool isStackBasedCppArray(const core::ExpressionPtr& initValue) {
-			const auto& basic = initValue->getNodeManager().getLangBasic();
-			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-
-			// check whether it is a array ctor call
-			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor())
-				&& !core::analysis::isCallOf(initValue, ext.getVectorCtor())
-				&& !core::analysis::isCallOf(initValue, ext.getVectorCtor2D())
-			) {
-				return false;
-			}
-
-			// first argument needs to be a ref.var
-			return basic.isRefVar(initValue.as<core::CallExprPtr>()->getArgument(0));
-		}
-
-		bool isStackBasedArray(const core::ExpressionPtr& initValue) {
-			return isStackBasedCArray(initValue) || isStackBasedCppArray(initValue);
-		}
-
-		c_ast::NodePtr resolveStackBasedArrayInternal(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& sizeExpr) {
-
-			// obtain c-ast node manager
-			const auto& converter = context.getConverter();
-			auto manager = converter.getCNodeManager();
-
-			// resolve type (needs to be explicitly handled here)
-			auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
-			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::SingleElementTypePtr>()->getElementType();
-			const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
-
-			// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)
-			const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::INDIRECT, typeInfo);
-
-			// add dependency to type definition of variable
-			context.getDependencies().insert(info.typeInfo->definition);
-
-			// create a variable declaration without init value
-			return manager->create<c_ast::VarDecl>(info.var);
-		}
-
-		c_ast::NodePtr resolveStackBasedCArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert_true(isStackBasedCArray(init)) << "Invalid input parameter!";
-			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(0).as<core::CallExprPtr>()->getArgument(1));
-		}
-
-		c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			assert_true(isStackBasedCppArray(init)) << "Invalid input parameter!";
-			const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
-			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(
-					(core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2
-			));
-		}
-
-		c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
-			if (isStackBasedCArray(init)) return resolveStackBasedCArray(context, var, init);
-			if (isStackBasedCppArray(init)) return resolveStackBasedCppArray(context, var, init);
-			assert_fail() << "Init value is not a stack based array!";
-			return 0;
-		}
-
+		
+		// add dependency
+		context.getDependencies().insert(fragment);
+		
+		// also, result has to be referenced
+		return c_ast::ref(res);
 	}
+	
+	// done
+	return res;
+}
 
-	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
-
-		// goal: create a variable declaration and register new variable within variable manager
-		auto manager = converter.getCNodeManager();
-		core::IRBuilder builder(ptr->getNodeManager());
-
-		core::VariablePtr var = ptr->getVariable();
-		core::ExpressionPtr init = ptr->getInitialization();
-
-		// special handling for stack based arrays (special case in C)
-		if (isStackBasedArray(init)) {
-			// delegate processing
-			return resolveStackBasedArray(context, var, init);
+c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
+	// to be created: an initialization of the corresponding struct
+	//     (<type>){<list of members>}
+	
+	auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+	context.addDependency(typeInfo.definition);
+	
+	// get type
+	c_ast::TypePtr type = typeInfo.rValueType;
+	
+	// special case.. empty struct: instead (<type>)(<members>) we use *((<type>*)(0))
+	if(auto stp = ptr->getType().isa<core::StructTypePtr>()) {
+		if(!stp.size()) {
+			auto cmgr = context.getConverter().getCNodeManager();
+			auto zero = cmgr->create("0");
+			return c_ast::deref(c_ast::cast(c_ast::ptr(type), zero));
 		}
-
-		core::TypePtr plainType = var->getType();
-		if(core::analysis::isVolatileType(plainType)) {
-			plainType = core::analysis::getVolatileType(plainType);
-		}
-
-		// decide storage location of variable
-		VariableInfo::MemoryLocation location = VariableInfo::NONE;
-		if (plainType.isa<core::RefTypePtr>()) {
-
-			if (toBeAllocatedOnStack(init)) {
-				location = VariableInfo::DIRECT;
-			} else {
-				location = VariableInfo::INDIRECT;
-			}
-		}
-
-		// register variable information
-		const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location);
-
-		// add code dependency
-		context.getDependencies().insert(info.typeInfo->definition);
-
-		// if a reference variable is put on the stack, the element type definition is also required
-		if (location == VariableInfo::DIRECT) {
-			auto elementType = core::analysis::getReferencedType(plainType);
-			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
-		}
-
-		// create declaration statement
-		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
-
-		// get rid of & operator in front of stack-based constructor calls
-		if( core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT ) {
-			initValue = c_ast::deref(initValue);
-		}
-
-        // check if we have an intercepted default ctor call (e.g., std::stringstream s;)
-        // the interceptor adds a zero initalization that would be converted into something like
-        // std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
-        // and therefore we need to avoid such copy initalizations.
-		if(init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size()==1)) {
-			core::TypePtr refType = core::analysis::getReferencedType(init->getType());
-			// only do this for intercepted types
-			if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasAttachedName(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
-                core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
-                core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
-                if(arg == zeroInit)
-                    initValue = c_ast::ExpressionPtr();
-			}
-        }
-
-		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}
-
-	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
-		auto& basic = converter.getNodeManager().getLangBasic();
-		auto manager = converter.getCNodeManager();
-
-		// skip make volatile calls ...
-		if (core::analysis::isCallOf(init, basic.getVolatileMake())) {
-			return convertInitExpression(context, init.as<core::CallExprPtr>()[0]);
+	
+	// create init expression
+	c_ast::InitializerPtr init = c_ast::init(type);
+	
+	// obtain some helper
+	auto& basic = converter.getNodeManager().getLangBasic();
+	
+	// append initialization values
+	::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values),
+	[&](const core::NamedValuePtr& cur) {
+		core::ExpressionPtr arg = cur->getValue();
+		// skip ref.var if present
+		if(core::analysis::isCallOf(cur->getValue(), basic.getRefVar())) {
+			arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
+			if(core::analysis::isCallOf(arg, basic.getRefDeref())) {
+				arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0);
+			}
 		}
+		return convert(context, arg);
+	});
+	
+	// remove last element if it is a variable sized struct
+	if(core::types::isVariableSized(ptr->getType())) {
+		assert_false(init->values.empty());
+		init->values.pop_back();
+	}
+	
+	// return completed
+	return init;
+}
 
-		// test whether initialization is required ...
-		if (core::analysis::isCallOf(init, basic.getRefVar())) {
-			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
-			core::ExpressionPtr init = call->getArgument(0);
-			if (core::analysis::isCallOf(init, basic.getUndefined())) {
-				// => undefined initialization, hence no initialization!
+c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context) {
+	// to be created: an initialization of the corresponding union
+	//     (<type>){<single member>}
+	
+	core::TypePtr unionType = ptr->getType();
+	auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
+	context.addDependency(typeInfo.definition);
+	
+	// get type and create init expression
+	c_ast::TypePtr type = typeInfo.rValueType;
+	
+	auto cmgr = context.getConverter().getCNodeManager();
+	
+	// special handling for vector initialization (should not be turned into a struct)
+	auto value = convertExpression(context, ptr->getMember());
+	if(ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
+		assert(dynamic_pointer_cast<c_ast::Initializer>(value));
+		value = cmgr->create<c_ast::VectorInit>(
+		            static_pointer_cast<c_ast::VectorInit>(
+		                static_pointer_cast<c_ast::Initializer>(value)->values[0]
+		            )->values
+		        );
+	}
+	
+	return c_ast::init(
+	           type,
+	           cmgr->create(ptr->getMemberName()->getValue()),
+	           value
+	       );
+//		return c_ast::init(type, convert(context, ptr->getMember()));
+}
+
+c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
+	// to be created: an initialization of the corresponding struct
+	//     (<type>){<list of members>}
+	
+	auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+	context.addDependency(typeInfo.definition);
+	
+	// get type and create init expression
+	c_ast::TypePtr type = typeInfo.rValueType;
+	c_ast::InitializerPtr init = c_ast::init(type);
+	
+	// append initialization values
+	::transform(ptr->getExpressions()->getElements(), std::back_inserter(init->values),
+	[&](const core::ExpressionPtr& cur) {
+		return convert(context, cur);
+	});
+	
+	// return completed
+	return init;
+}
+
+c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
+	// just look up variable within variable manager and return variable token ...
+	const VariableInfo& info = context.getVariableManager().getInfo(ptr);
+	return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::NT_ArrayType))?c_ast::ref(info.var):info.var;
+}
+
+c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
+	// to be created: an initialization of the corresponding struct - where one value is a vector
+	//     (<type>){{<list of members>}}
+	
+	// get type and create empty init expression
+	const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+	c_ast::TypePtr type = info.rValueType;
+	context.getDependencies().insert(info.definition);
+	
+	// create inner vector init and append initialization values
+	c_ast::VectorInitPtr vectorInit = context.getConverter().getCNodeManager()->create<c_ast::VectorInit>();
+	::transform(ptr->getExpressions()->getElements(), std::back_inserter(vectorInit->values),
+	[&](const core::ExpressionPtr& cur) {
+		return convert(context, cur);
+	});
+	
+	// create and return out initializer
+	return c_ast::init(type, vectorInit);
+}
+
+c_ast::NodePtr StmtConverter::visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context) {
+	// markers are just ignored
+	return visit(ptr->getSubExpression(), context);
+}
+
+
+
+////////////////////////////////////////////////////////////////////////// Statements
+
+c_ast::NodePtr StmtConverter::visitBreakStmt(const core::BreakStmtPtr& ptr, ConversionContext& context) {
+	return converter.getCNodeManager()->create<c_ast::Break>();
+}
+
+c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context) {
+	c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
+	for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
+		c_ast::NodePtr stmt = this->visit(cur,context);
+		if(stmt) {
+			res->statements.push_back(stmt);
+		}
+	});
+	return res;
+}
+
+c_ast::NodePtr StmtConverter::visitContinueStmt(const core::ContinueStmtPtr& ptr, ConversionContext& context) {
+	return converter.getCNodeManager()->create<c_ast::Continue>();
+}
+
+namespace {
+
+bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
+	auto& basic = initValue->getNodeManager().getLangBasic();
+	
+	// if call to volatileMake, check inner
+	if(core::analysis::isCallOf(initValue, basic.getVolatileMake())) {
+		return toBeAllocatedOnStack(initValue.as<core::CallExprPtr>()[0]);
+	}
+	
+	// if it is a call to a ref.var => put it on the stack
+	if(core::analysis::isCallOf(initValue, basic.getRefVar())) {
+		return true;
+	}
+	
+	// if it is a constructor call ..
+	if(core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) {
+		return core::analysis::isCallOf(call[0], basic.getRefVar());
+	}
+	
+	// everything else is heap based
+	return false;
+}
+
+bool isStackBasedCArray(const core::ExpressionPtr& initValue) {
+	const auto& basic = initValue->getNodeManager().getLangBasic();
+	
+	// it has to be stack based ..
+	if(!core::analysis::isCallOf(initValue, basic.getRefVar())) {
+		return false;
+	}
+	
+	// .. and a newly created array
+	auto value = initValue.as<core::CallExprPtr>()->getArgument(0);
+	return core::analysis::isCallOf(value, basic.getArrayCreate1D());
+}
+
+bool isStackBasedCppArray(const core::ExpressionPtr& initValue) {
+	const auto& basic = initValue->getNodeManager().getLangBasic();
+	const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+	
+	// check whether it is a array ctor call
+	if(!core::analysis::isCallOf(initValue, ext.getArrayCtor())
+	        && !core::analysis::isCallOf(initValue, ext.getVectorCtor())
+	        && !core::analysis::isCallOf(initValue, ext.getVectorCtor2D())
+	  ) {
+		return false;
+	}
+	
+	// first argument needs to be a ref.var
+	return basic.isRefVar(initValue.as<core::CallExprPtr>()->getArgument(0));
+}
+
+bool isStackBasedArray(const core::ExpressionPtr& initValue) {
+	return isStackBasedCArray(initValue) || isStackBasedCppArray(initValue);
+}
+
+c_ast::NodePtr resolveStackBasedArrayInternal(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& sizeExpr) {
+
+	// obtain c-ast node manager
+	const auto& converter = context.getConverter();
+	auto manager = converter.getCNodeManager();
+	
+	// resolve type (needs to be explicitly handled here)
+	auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
+	auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::SingleElementTypePtr>()->getElementType();
+	const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
+	
+	// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)
+	const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::INDIRECT, typeInfo);
+	
+	// add dependency to type definition of variable
+	context.getDependencies().insert(info.typeInfo->definition);
+	
+	// create a variable declaration without init value
+	return manager->create<c_ast::VarDecl>(info.var);
+}
+
+c_ast::NodePtr resolveStackBasedCArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
+	assert_true(isStackBasedCArray(init)) << "Invalid input parameter!";
+	return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(0).as<core::CallExprPtr>()->getArgument(1));
+}
+
+c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
+	assert_true(isStackBasedCppArray(init)) << "Invalid input parameter!";
+	const auto& ext = init->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+	return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(
+	        (core::analysis::isCallOf(init, ext.getVectorCtor2D())) ? 3 : 2
+	                                      ));
+}
+
+c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
+	if(isStackBasedCArray(init)) {
+		return resolveStackBasedCArray(context, var, init);
+	}
+	if(isStackBasedCppArray(init)) {
+		return resolveStackBasedCppArray(context, var, init);
+	}
+	assert_fail() << "Init value is not a stack based array!";
+	return 0;
+}
+
+}
+
+c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
+
+	// goal: create a variable declaration and register new variable within variable manager
+	auto manager = converter.getCNodeManager();
+	core::IRBuilder builder(ptr->getNodeManager());
+	
+	core::VariablePtr var = ptr->getVariable();
+	core::ExpressionPtr init = ptr->getInitialization();
+	
+	// special handling for stack based arrays (special case in C)
+	if(isStackBasedArray(init)) {
+		// delegate processing
+		return resolveStackBasedArray(context, var, init);
+	}
+	
+	core::TypePtr plainType = var->getType();
+	if(core::analysis::isVolatileType(plainType)) {
+		plainType = core::analysis::getVolatileType(plainType);
+	}
+	
+	// decide storage location of variable
+	VariableInfo::MemoryLocation location = VariableInfo::NONE;
+	if(plainType.isa<core::RefTypePtr>()) {
+	
+		if(toBeAllocatedOnStack(init)) {
+			location = VariableInfo::DIRECT;
+		}
+		else {
+			location = VariableInfo::INDIRECT;
+		}
+	}
+	
+	// register variable information
+	const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location);
+	
+	// add code dependency
+	context.getDependencies().insert(info.typeInfo->definition);
+	
+	// if a reference variable is put on the stack, the element type definition is also required
+	if(location == VariableInfo::DIRECT) {
+		auto elementType = core::analysis::getReferencedType(plainType);
+		context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
+	}
+	
+	// create declaration statement
+	c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
+	
+	// get rid of & operator in front of stack-based constructor calls
+	if(core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT) {
+		initValue = c_ast::deref(initValue);
+	}
+	
+	// check if we have an intercepted default ctor call (e.g., std::stringstream s;)
+	// the interceptor adds a zero initalization that would be converted into something like
+	// std::stringstream s = std::stringstream(). This is maybe wrong (e.g., private copy ctor)
+	// and therefore we need to avoid such copy initalizations.
+	if(init.isa<core::CallExprPtr>() && core::analysis::isRefType(init->getType()) && (init.as<core::CallExprPtr>()->getArguments().size()==1)) {
+		core::TypePtr refType = core::analysis::getReferencedType(init->getType());
+		// only do this for intercepted types
+		if(annotations::c::hasIncludeAttached(refType) && !core::annotations::hasAttachedName(refType) && !builder.getLangBasic().isIRBuiltin(refType)) {
+			core::NodePtr arg = init.as<core::CallExprPtr>()->getArgument(0);
+			core::NodePtr zeroInit = builder.getZero(core::analysis::getReferencedType(init->getType()));
+			if(arg == zeroInit) {
+				initValue = c_ast::ExpressionPtr();
+			}
+		}
+	}
+	
+	return manager->create<c_ast::VarDecl>(info.var, initValue);
+}
+
+c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
+	auto& basic = converter.getNodeManager().getLangBasic();
+	auto manager = converter.getCNodeManager();
+	
+	// skip make volatile calls ...
+	if(core::analysis::isCallOf(init, basic.getVolatileMake())) {
+		return convertInitExpression(context, init.as<core::CallExprPtr>()[0]);
+	}
+	
+	// test whether initialization is required ...
+	if(core::analysis::isCallOf(init, basic.getRefVar())) {
+		core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
+		core::ExpressionPtr init = call->getArgument(0);
+		if(core::analysis::isCallOf(init, basic.getUndefined())) {
+			// => undefined initialization, hence no initialization!
+			return c_ast::ExpressionPtr();
+		}
+		
+		if(init->getNodeType() == core::NT_StructExpr) {
+			auto isUndefined = [&](const core::NamedValuePtr& cur) {
+				return core::analysis::isCallOf(cur->getValue(), basic.getUndefined());
+			};
+			if(all(init.as<core::StructExprPtr>()->getMembers(), isUndefined)) {
+				// no init required
 				return c_ast::ExpressionPtr();
 			}
+			
+			// this is not supported yet - TODO: update struct expression to use names and initialize members individually
+			assert(!any(init.as<core::StructExprPtr>()->getMembers(), isUndefined) && "Unsupported combination of defined and undefined values!");
+		}
+		
+	}
+	
+	// TODO: handle initUndefine and init struct cases
+	
+	// drop ref.var ...
+	core::ExpressionPtr initValue = init;
+	if(core::analysis::isCallOf(initValue, basic.getRefVar())) {
+		initValue = core::analysis::getArgument(initValue, 0);
+	}
+	
+	return convertExpression(context, initValue);
+}
 
-			if (init->getNodeType() == core::NT_StructExpr) {
-				auto isUndefined = [&](const core::NamedValuePtr& cur) { return core::analysis::isCallOf(cur->getValue(), basic.getUndefined()); };
-				if (all(init.as<core::StructExprPtr>()->getMembers(), isUndefined)) {
-					// no init required
-					return c_ast::ExpressionPtr();
+namespace {
+bool isSimple(const core::ExpressionPtr& exp) {
+	try {
+		core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
+		if(form.isConstant() || form.isValue()) {
+			return true;
+		}
+	}
+	catch(core::arithmetic::NotAFormulaException e) { }
+	return false;
+}
+}
+
+
+c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
+
+	converter.getNameManager().pushVarScope(false);
+	
+	auto manager = converter.getCNodeManager();
+	
+	VariableManager& varManager = context.getVariableManager();
+	core::IRBuilder builder(ptr->getNodeManager());
+	auto var_iter = ptr->getIterator();
+	
+	// get induction variable info
+	const VariableInfo& info_iter = varManager.addInfo(converter, var_iter, VariableInfo::NONE);
+	// add dependency to iterator type definition
+	context.getDependencies().insert(info_iter.typeInfo->definition);
+	
+	auto initVector = toVector(std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())));
+	
+	// Process:
+	// For both "end" and "step" expressions:
+	// - if simple: use directly
+	// - if not: build variables to store results
+	
+	// handle step
+	core::ExpressionPtr step = ptr->getStep();
+	c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
+	if(!isSimple(step)) {
+		// create variable storing step
+		c_ast::VariablePtr var_step = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_step"));
+		initVector.push_back(std::make_pair(var_step, convertExpression(context, step)));
+		cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, var_step);
+	}
+	else { // use pre(inc/dec) if abs(step) == 1
+		core::arithmetic::Formula form = core::arithmetic::toFormula(step);
+		if(form.isConstant()) {
+			if(form.isOne()) {
+				cStep = c_ast::preInc(info_iter.var);
+			}
+			if((-form).isOne()) {
+				cStep = c_ast::preDec(info_iter.var);
+			}
+		}
+	}
+	
+	// handle end
+	core::ExpressionPtr end = ptr->getEnd();
+	c_ast::ExpressionPtr cCheck = c_ast::lt(info_iter.var, convertExpression(context, end));
+	if(!isSimple(end)) {
+		// create variable storing end
+		c_ast::VariablePtr var_end = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_end"));
+		initVector.push_back(std::make_pair(var_end, convertExpression(context, end)));
+		cCheck = c_ast::lt(info_iter.var, var_end);
+	}
+	
+	// create init and body
+	c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
+	converter.getNameManager().pushVarScope(false);
+	c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
+	converter.getNameManager().popVarScope();
+	
+	// remove variable info since no longer in scope
+	varManager.remInfo(var_iter);
+	
+	converter.getNameManager().popVarScope();
+	// combine all into a for
+	return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
+}
+
+c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context) {
+
+	auto manager = converter.getCNodeManager();
+	
+	// create condition, then and else branch
+	c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
+	c_ast::StatementPtr thenBranch = convertStmt(context, ptr->getThenBody());
+	c_ast::StatementPtr elseBranch = (core::analysis::isNoOp(ptr->getElseBody()))
+	                                 ?c_ast::StatementPtr():convertStmt(context, ptr->getElseBody());
+	                                 
+	return manager->create<c_ast::If>(condition, thenBranch, elseBranch);
+}
+
+c_ast::NodePtr StmtConverter::visitWhileStmt(const core::WhileStmtPtr& ptr, ConversionContext& context) {
+
+	auto manager = converter.getCNodeManager();
+	
+	// create condition, then and else branch
+	c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
+	c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+	
+	return manager->create<c_ast::While>(condition, body);
+}
+
+c_ast::NodePtr StmtConverter::visitTryCatchStmt(const core::TryCatchStmtPtr& ptr, ConversionContext& context) {
+	const auto& basic = converter.getNodeManager().getLangBasic();
+	
+	// convert body
+	c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+	
+	// convert clauses
+	vector<c_ast::TryCatch::Clause> clauses;
+	for(const core::CatchClausePtr& clause : ptr->getClauses()) {
+	
+		// handle catch-all case
+		if(basic.isAny(clause->getVariable()->getType())) {
+			clauses.push_back(c_ast::TryCatch::Clause(convertStmt(context, clause->getBody())));
+			break;
+		}
+		
+		// register variable information
+		const VariableInfo& info = context.getVariableManager().addInfo(converter, clause->getVariable(), VariableInfo::MemoryLocation::NONE);
+		
+		// convert body of catch clause with registered variable
+		auto body = convertStmt(context, clause->getBody());
+		
+		// add clause
+		clauses.push_back(c_ast::TryCatch::Clause(info.var, body));
+	}
+	
+	// finally create a try-catch node and be done
+	return converter.getCNodeManager()->create<c_ast::TryCatch>(body, clauses);
+}
+
+c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
+	// wrap sub-expression into return expression
+	if(converter.getNodeManager().getLangBasic().isUnitConstant(ptr->getReturnExpr())) {
+		// special handling for unit-return
+		return converter.getCNodeManager()->create<c_ast::Return>();
+	}
+	
+	// special handling for returns in ctors / dtors
+	auto funType = context.getEntryPoint()->getType();
+	if(funType->isConstructor() || funType->isDestructor()) {
+		return converter.getCNodeManager()->create<c_ast::Return>();
+	}
+	
+	core::IRBuilder builder(ptr.getNodeManager());
+	core::ExpressionPtr tmpRet = ptr->getReturnExpr();
+	
+	// try to find refNarrow calls in the return statement
+	// those calls should be avoided because they create
+	// useless static_casts to base classes (should be done implicitly)
+	bool stopCond = true;
+	core::ExpressionPtr innerExpr = tmpRet;
+	while(stopCond) {
+		if(!innerExpr.isa<core::CallExprPtr>()) {
+			stopCond = false;
+		}
+		else {
+			// we know that this we have a call expr
+			// but we only can handle it if it has an argument
+			if(!innerExpr.as<core::CallExprPtr>()->getArguments().size()) {
+				stopCond = false;
+			}
+			else {
+				// ok, we have an argument. replace the innerExpr with the argument
+				// to dig into the expression. Once we found the narrow, replace it
+				// and stop the loop
+				if(core::analysis::isCallOf(innerExpr, builder.getLangBasic().getRefNarrow())) {
+					tmpRet = core::transform::replaceAll(ptr.getNodeManager(), tmpRet,
+					                                     innerExpr, innerExpr.as<core::CallExprPtr>()->getArgument(0)).as<core::ExpressionPtr>();
+					stopCond = false;
 				}
-
-				// this is not supported yet - TODO: update struct expression to use names and initialize members individually
-				assert(!any(init.as<core::StructExprPtr>()->getMembers(), isUndefined) && "Unsupported combination of defined and undefined values!");
-			}
-
-		}
-
-		// TODO: handle initUndefine and init struct cases
-
-		// drop ref.var ...
-		core::ExpressionPtr initValue = init;
-		if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
-			initValue = core::analysis::getArgument(initValue, 0);
-		}
-
-		return convertExpression(context, initValue);
-	}
-
-	namespace {
-		bool isSimple(const core::ExpressionPtr& exp) {
-			try {
-				core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
-				if(form.isConstant() || form.isValue()) return true;
-			} catch(core::arithmetic::NotAFormulaException e) { }
-			return false;
-		}
-	}
-
-
-	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
-
-		converter.getNameManager().pushVarScope(false);
-
-		auto manager = converter.getCNodeManager();
-
-		VariableManager& varManager = context.getVariableManager();
-		core::IRBuilder builder(ptr->getNodeManager());
-		auto var_iter = ptr->getIterator();
-
-		// get induction variable info
-		const VariableInfo& info_iter = varManager.addInfo(converter, var_iter, VariableInfo::NONE);
-		// add dependency to iterator type definition
-		context.getDependencies().insert(info_iter.typeInfo->definition);
-
-		auto initVector = toVector(std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())));
-
-		// Process:
-		// For both "end" and "step" expressions:
-		// - if simple: use directly
-		// - if not: build variables to store results
-
-		// handle step
-		core::ExpressionPtr step = ptr->getStep();
-		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
-		if(!isSimple(step)) {
-			// create variable storing step
-			c_ast::VariablePtr var_step = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_step"));
-			initVector.push_back(std::make_pair(var_step, convertExpression(context, step)));
-			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, var_step);
-		}
-		else { // use pre(inc/dec) if abs(step) == 1
-			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
-			if(form.isConstant()) {
-				if(form.isOne()) cStep = c_ast::preInc(info_iter.var);
-				if((-form).isOne()) cStep = c_ast::preDec(info_iter.var);
+				innerExpr = innerExpr.as<core::CallExprPtr>()->getArgument(0);
 			}
 		}
-
-		// handle end
-		core::ExpressionPtr end = ptr->getEnd();
-		c_ast::ExpressionPtr cCheck = c_ast::lt(info_iter.var, convertExpression(context, end));
-		if(!isSimple(end)) {
-			// create variable storing end
-			c_ast::VariablePtr var_end = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_end"));
-			initVector.push_back(std::make_pair(var_end, convertExpression(context, end)));
-			cCheck = c_ast::lt(info_iter.var, var_end);
-		}
-
-		// create init and body
-		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
-		converter.getNameManager().pushVarScope(false);
-		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
-		converter.getNameManager().popVarScope();
-
-		// remove variable info since no longer in scope
-		varManager.remInfo(var_iter);
-
-		converter.getNameManager().popVarScope();
-		// combine all into a for
-		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
 	}
+	
+	return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, tmpRet));
+}
 
-	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context) {
+c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
 
-		auto manager = converter.getCNodeManager();
-
-		// create condition, then and else branch
-		c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
-		c_ast::StatementPtr thenBranch = convertStmt(context, ptr->getThenBody());
-		c_ast::StatementPtr elseBranch = (core::analysis::isNoOp(ptr->getElseBody()))
-				?c_ast::StatementPtr():convertStmt(context, ptr->getElseBody());
-
-		return manager->create<c_ast::If>(condition, thenBranch, elseBranch);
+	core::ExpressionPtr expr = ptr->getThrowExpr();
+	core::IRBuilder builder(expr.getNodeManager());
+	
+	core::ExpressionPtr rethrow = builder.literal("__insieme__rethrow", builder.getLangBasic().getUnit());
+	if(expr == rethrow) {
+		return converter.getCNodeManager()->create<c_ast::Throw>();
 	}
-
-	c_ast::NodePtr StmtConverter::visitWhileStmt(const core::WhileStmtPtr& ptr, ConversionContext& context) {
-
-		auto manager = converter.getCNodeManager();
-
-		// create condition, then and else branch
-		c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
-		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
-
-		return manager->create<c_ast::While>(condition, body);
+	else {
+		return converter.getCNodeManager()->create<c_ast::Throw>(convertExpression(context, ptr->getThrowExpr()));
 	}
+}
 
-	c_ast::NodePtr StmtConverter::visitTryCatchStmt(const core::TryCatchStmtPtr& ptr, ConversionContext& context) {
-		const auto& basic = converter.getNodeManager().getLangBasic();
+c_ast::NodePtr StmtConverter::visitGotoStmt(const core::GotoStmtPtr& ptr, ConversionContext& context) {
+	// just create a goto stmt within the c_ast
+	return converter.getCNodeManager()->create<c_ast::Goto>(ptr->getLabel()->getValue());
+}
 
-		// convert body
-		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+c_ast::NodePtr StmtConverter::visitLabelStmt(const core::LabelStmtPtr& ptr, ConversionContext& context) {
+	// just create a goto stmt within the c_ast
+	return converter.getCNodeManager()->create<c_ast::Label>(ptr->getLabel()->getValue());
+}
 
-		// convert clauses
-		vector<c_ast::TryCatch::Clause> clauses;
-		for(const core::CatchClausePtr& clause : ptr->getClauses()) {
+c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context) {
 
-			// handle catch-all case
-			if (basic.isAny(clause->getVariable()->getType())) {
-				clauses.push_back(c_ast::TryCatch::Clause(convertStmt(context, clause->getBody())));
-				break;
-			}
+	auto manager = converter.getCNodeManager();
+	
+	// create empty switch ...
+	c_ast::SwitchPtr res = manager->create<c_ast::Switch>(convertExpression(context, ptr->getSwitchExpr()));
+	
+	// add cases ..
+	::transform(ptr->getCases()->getElements(), std::back_inserter(res->cases), [&](const core::SwitchCasePtr& cur) {
+		return std::make_pair(convertExpression(context, cur->getGuard()), convertStmt(context, cur->getBody()));
+	});
+	
+	// add default ..
+	res->defaultBranch = convertStmt(context, ptr->getDefaultCase());
+	
+	// .. and done
+	return res;
+}
 
-			// register variable information
-			const VariableInfo& info = context.getVariableManager().addInfo(converter, clause->getVariable(), VariableInfo::MemoryLocation::NONE);
-
-			// convert body of catch clause with registered variable
-			auto body = convertStmt(context, clause->getBody());
-
-			// add clause
-			clauses.push_back(c_ast::TryCatch::Clause(info.var, body));
-		}
-
-		// finally create a try-catch node and be done
-		return converter.getCNodeManager()->create<c_ast::TryCatch>(body, clauses);
-	}
-
-	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
-		// wrap sub-expression into return expression
-		if (converter.getNodeManager().getLangBasic().isUnitConstant(ptr->getReturnExpr())) {
-			// special handling for unit-return
-			return converter.getCNodeManager()->create<c_ast::Return>();
-		}
-
-		// special handling for returns in ctors / dtors
-		auto funType = context.getEntryPoint()->getType();
-		if (funType->isConstructor() || funType->isDestructor()) {
-			return converter.getCNodeManager()->create<c_ast::Return>();
-		}
-
-		core::IRBuilder builder(ptr.getNodeManager());
-		core::ExpressionPtr tmpRet = ptr->getReturnExpr();
-
-        // try to find refNarrow calls in the return statement
-        // those calls should be avoided because they create
-        // useless static_casts to base classes (should be done implicitly)
-		bool stopCond = true;
-		core::ExpressionPtr innerExpr = tmpRet;
-		while(stopCond) {
-            if(!innerExpr.isa<core::CallExprPtr>()) {
-                stopCond = false;
-            } else {
-                // we know that this we have a call expr
-                // but we only can handle it if it has an argument
-                if(!innerExpr.as<core::CallExprPtr>()->getArguments().size()) {
-                    stopCond = false;
-                } else {
-                    // ok, we have an argument. replace the innerExpr with the argument
-                    // to dig into the expression. Once we found the narrow, replace it
-                    // and stop the loop
-                    if(core::analysis::isCallOf(innerExpr, builder.getLangBasic().getRefNarrow())) {
-                        tmpRet = core::transform::replaceAll(ptr.getNodeManager(), tmpRet,
-                                                    innerExpr, innerExpr.as<core::CallExprPtr>()->getArgument(0)).as<core::ExpressionPtr>();
-                        stopCond = false;
-                    }
-                    innerExpr = innerExpr.as<core::CallExprPtr>()->getArgument(0);
-                }
-            }
-		}
-
-		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, tmpRet));
-	}
-
-	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
-
-		core::ExpressionPtr expr = ptr->getThrowExpr();
-		core::IRBuilder builder(expr.getNodeManager());
-
-		core::ExpressionPtr rethrow = builder.literal("__insieme__rethrow", builder.getLangBasic().getUnit());
-		if (expr == rethrow)
-			return converter.getCNodeManager()->create<c_ast::Throw>();
-		else
-			return converter.getCNodeManager()->create<c_ast::Throw>(convertExpression(context, ptr->getThrowExpr()));
-	}
-
-	c_ast::NodePtr StmtConverter::visitGotoStmt(const core::GotoStmtPtr& ptr, ConversionContext& context) {
-		// just create a goto stmt within the c_ast
-		return converter.getCNodeManager()->create<c_ast::Goto>(ptr->getLabel()->getValue());
-	}
-
-	c_ast::NodePtr StmtConverter::visitLabelStmt(const core::LabelStmtPtr& ptr, ConversionContext& context) {
-		// just create a goto stmt within the c_ast
-		return converter.getCNodeManager()->create<c_ast::Label>(ptr->getLabel()->getValue());
-	}
-
-	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context) {
-
-		auto manager = converter.getCNodeManager();
-
-		// create empty switch ...
-		c_ast::SwitchPtr res = manager->create<c_ast::Switch>(convertExpression(context, ptr->getSwitchExpr()));
-
-		// add cases ..
-		::transform(ptr->getCases()->getElements(), std::back_inserter(res->cases), [&](const core::SwitchCasePtr& cur) {
-			return std::make_pair(convertExpression(context, cur->getGuard()), convertStmt(context, cur->getBody()));
-		});
-
-		// add default ..
-		res->defaultBranch = convertStmt(context, ptr->getDefaultCase());
-
-		// .. and done
-		return res;
-	}
-
-	c_ast::NodePtr StmtConverter::visitMarkerStmt(const core::MarkerStmtPtr& ptr, ConversionContext& context) {
-		// markers are just ignored
-		return visit(ptr->getSubStatement(), context);
-	}
+c_ast::NodePtr StmtConverter::visitMarkerStmt(const core::MarkerStmtPtr& ptr, ConversionContext& context) {
+	// markers are just ignored
+	return visit(ptr->getSubStatement(), context);
+}
 
 
 } // end namespace backend

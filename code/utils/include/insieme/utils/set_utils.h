@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -56,23 +56,23 @@ namespace set {
 
 /// PointerSet is based upon unordered_set, so there is no way to insert elements in a given order. See unordered_set::insert.
 template<class Ptr>
-class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> { 
+class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> {
 	typedef boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> base;
-
+	
 public:
 	PointerSet() : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>() { }
-
+	
 	template <class IterT>
-	PointerSet(const IterT& begin, const IterT& end) : 
-		boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(begin, end) { } 
-
+	PointerSet(const IterT& begin, const IterT& end) :
+		boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(begin, end) { }
+		
 	/**
 	 * Constructor which allows to build a set from an initializer list:
 	 * PointerSet<int> a { 01, 20, 30 };
 	 */
-	PointerSet(std::initializer_list<Ptr> list) : 
+	PointerSet(std::initializer_list<Ptr> list) :
 		boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(list.begin(), list.end()) { }
-
+		
 	bool contains(const Ptr& entry) const {
 		return base::find(entry) != base::cend();
 	}
@@ -129,10 +129,16 @@ inline bool contains(const Set& set, const Element& element) {
  */
 template<typename SetA, typename SetB>
 inline bool isSubset(const SetA& setA, const SetB& setB) {
-	if (setA.size() > setB.size()) return false;
-	if (&setA == &setB) return true;
-	for (const auto& cur : setA) {
-		if (!insieme::utils::set::contains(setB, cur)) return false;
+	if(setA.size() > setB.size()) {
+		return false;
+	}
+	if(&setA == &setB) {
+		return true;
+	}
+	for(const auto& cur : setA) {
+		if(!insieme::utils::set::contains(setB, cur)) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -180,11 +186,11 @@ inline void insertAll(Set& target, const Container& source) {
 template<typename Set>
 Set intersect(const Set& setA, const Set& setB) {
 	typedef typename Set::value_type Element;
-
+	
 	// intersection by iterating through one set and checking membership within the other
 	Set res;
 	std::for_each(setA.cbegin(), setA.cend(), [&res,&setB](const Element& cur) {
-		if (setB.find(cur) != setB.cend()) {
+		if(setB.find(cur) != setB.cend()) {
 			res.insert(cur);
 		}
 	});
@@ -204,11 +210,11 @@ Set intersect(const Set& setA, const Set& setB) {
 template<typename Set>
 Set difference(const Set& setA, const Set& setB) {
 	typedef typename Set::value_type Element;
-
+	
 	// intersection by iterating through one set and checking membership within the other
 	Set res;
 	std::for_each(setA.cbegin(), setA.cend(), [&res,&setB](const Element& cur) {
-		if (setB.find(cur) == setB.cend()) {
+		if(setB.find(cur) == setB.cend()) {
 			res.insert(cur);
 		}
 	});
@@ -218,17 +224,17 @@ Set difference(const Set& setA, const Set& setB) {
 template<typename SetA, typename SetB>
 bool equal(const SetA& setA, const SetB& setB) {
 	typedef typename SetA::value_type Element;
-
+	
 	// check for identity
-	if (&setA == &setB) {
+	if(&setA == &setB) {
 		return true;
 	}
-
+	
 	// quick check for its size
-	if (setA.size() != setB.size()) {
+	if(setA.size() != setB.size()) {
 		return false;
 	}
-
+	
 	// so - the size is equal - check membership!
 	return all(setA.cbegin(), setA.cend(), [&setB](const Element& cur) {
 		return setB.find(cur) != setB.cend();
@@ -248,13 +254,13 @@ bool equal(const SetA& setA, const SetB& setB) {
 template<typename Set, typename Hasher>
 std::size_t computeHash(const Set& set, Hasher hasher) {
 	typedef typename Set::value_type Element;
-
+	
 	std::size_t seed = 0;
 	std::for_each(set.cbegin(), set.cend(), [&seed, &hasher](const Element& cur) {
 		seed += hasher(cur);
 	});
 	return seed;
-
+	
 }
 
 /**
@@ -291,7 +297,7 @@ std::ostream& operator<<(std::ostream& out, const std::set<Key, Compare, Allocat
 	// convert elements into strings
 	std::vector<std::string> list;
 	std::transform(container.begin(), container.end(), back_inserter(list), &toString<Key>);
-
+	
 	// print and done
 	return out << "{" << boost::join(list, ",") << "}";
 }
@@ -309,7 +315,7 @@ std::ostream& operator<<(std::ostream& out, const std::unordered_set<Element, Ha
 	// convert elements into strings
 	std::vector<std::string> list;
 	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
-
+	
 	// print and done
 	return out << "{" << boost::join(list, ",") << "}";
 }
@@ -327,7 +333,7 @@ std::ostream& operator<<(std::ostream& out, const boost::unordered_set<Element, 
 	// convert elements into strings
 	std::vector<std::string> list;
 	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
-
+	
 	// print and done
 	return out << "{" << boost::join(list, ",") << "}";
 }

@@ -44,12 +44,12 @@ TEST(DefaultParallelWiCountTest, Simple) {
 	irt::init(4);
 	irt::run([]() {
 		irt_set_default_parallel_wi_count(2);
-		irt::merge(irt::parallel([]{
+		irt::merge(irt::parallel([] {
 			EXPECT_EQ(2, irt::group_size());
 		}));
-
+		
 		irt_set_default_parallel_wi_count(6);
-		irt::merge(irt::parallel([]{
+		irt::merge(irt::parallel([] {
 			EXPECT_EQ(6, irt::group_size());
 		}));
 	});
@@ -60,7 +60,7 @@ TEST(DefaultParallelWiCountTest, Nested) {
 	irt::init(4);
 	irt::run([]() {
 		irt_set_default_parallel_wi_count(3);
-		irt::merge(irt::parallel([]{
+		irt::merge(irt::parallel([] {
 			irt::merge(irt::parallel([]{
 				EXPECT_EQ(3, irt::group_size());
 			}));

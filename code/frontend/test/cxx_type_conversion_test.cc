@@ -387,18 +387,18 @@ TEST(TypeConversion, FileTest) {
 // 	NodeManager manager;
 // 	fe::Program prog(manager);
 // 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cxx_types.cpp" );
-// 
+//
 // 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
-// 
+//
 // 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 // 		// we use an internal manager to have private counter for variables so we can write independent tests
 // 		NodeManager mgr;
-// 
+//
 // 		CXXConversionFactory convFactory( mgr, prog );
 // 		convFactory.setTranslationUnit(tu);
-// 
+//
 // 		const fe::TestPragmaExtension& tp = static_cast<const fe::TestPragmaExtension&>(*(*it).first);
-// 
+//
 // 		if(tp.isStatement())
 // 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
 // 		else {

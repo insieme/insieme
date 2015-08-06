@@ -73,7 +73,7 @@ protected:
 	 * A simple default constructor which is protected to avoid instances of this class.
 	 */
 	AnnotationKey(std::size_t hashCode) : VirtualHashableImmutableData(hashCode) {};
-
+	
 };
 
 /**
@@ -104,9 +104,11 @@ public:
 	 * @return the name of this annotation type
 	 */
 	virtual const std::string& getAnnotationName() const = 0;
-
-	virtual std::ostream& printTo(std::ostream& out) const { return out << getAnnotationName(); }
-
+	
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << getAnnotationName();
+	}
+	
 	/**
 	 * Checks whether this annotation is equivalent to the given annotation. The default
 	 * implementation returns true if and only if the given object is the same instance
@@ -118,7 +120,7 @@ public:
 	virtual bool operator==(const Annotation& other) const {
 		return this == &other;
 	}
-
+	
 	/**
 	 * Checks whether this annotation is not equivalent to the given annotation. The default
 	 * implementation returns returns true whenever the given annotation is not the same
@@ -130,7 +132,7 @@ public:
 	virtual bool operator!=(const Annotation& other) const {
 		return !(this==&other);
 	}
-
+	
 };
 
 /**
@@ -145,40 +147,40 @@ typedef std::shared_ptr<Annotation> AnnotationPtr;
  * the same object. Useful to encode both OpenMP and OpenCL annotations.
  */
 template <
-	class SubAnnTy,
-	class BaseAnnotation = Annotation,
-	typename boost::enable_if<boost::is_base_of<Annotation, BaseAnnotation>, int>::type = 0
->
+    class SubAnnTy,
+    class BaseAnnotation = Annotation,
+    typename boost::enable_if<boost::is_base_of<Annotation, BaseAnnotation>, int>::type = 0
+    >
 class CompoundAnnotation : public BaseAnnotation {
 public:
 	typedef std::shared_ptr<SubAnnTy> SubAnnotationPtr;
 	typedef std::vector<SubAnnotationPtr> AnnotationList;
-
+	
 	CompoundAnnotation() { }
-
+	
 	CompoundAnnotation(const AnnotationList& annotationList) : annotationList(annotationList) { }
-
-	inline typename AnnotationList::const_iterator getAnnotationListBegin() const { 
-		return annotationList.cbegin(); 
+	
+	inline typename AnnotationList::const_iterator getAnnotationListBegin() const {
+		return annotationList.cbegin();
 	}
-	inline typename AnnotationList::const_iterator getAnnotationListEnd() const { 
+	inline typename AnnotationList::const_iterator getAnnotationListEnd() const {
 		return annotationList.cend();
 	}
-	inline typename AnnotationList::const_reverse_iterator getAnnotationListRBegin() const { 
-		return annotationList.crbegin(); 
+	inline typename AnnotationList::const_reverse_iterator getAnnotationListRBegin() const {
+		return annotationList.crbegin();
 	}
-	inline typename AnnotationList::const_reverse_iterator getAnnotationListREnd() const { 
-		return annotationList.crend(); 
+	inline typename AnnotationList::const_reverse_iterator getAnnotationListREnd() const {
+		return annotationList.crend();
 	}
-
+	
 	inline const AnnotationList& getAnnotationList() const {
 		return annotationList;
 	}
-
+	
 	inline AnnotationList& getAnnotationList() {
 		return annotationList;
 	}
-
+	
 private:
 	AnnotationList annotationList;
 };
@@ -188,228 +190,228 @@ private:
 
 namespace detail {
 
-	template<typename V, typename A, typename K>
-	class ValueAnnotation;
+template<typename V, typename A, typename K>
+class ValueAnnotation;
+
+/**
+ * A special key used to identify value annotations.
+ */
+template<
+    typename V,
+    typename AnnotationType,
+    typename KeyType
+    >
+class ValueAnnotationKey : public KeyType {
+public:
 
 	/**
-	 * A special key used to identify value annotations.
+	 * The type of annotation referenced by this key. Since it is a simple, general key
+	 * the annotation key type is
 	 */
-	template<
-		typename V,
-		typename AnnotationType,
-		typename KeyType
-	>
-	class ValueAnnotationKey : public KeyType {
-	public:
-
-		/**
-		 * The type of annotation referenced by this key. Since it is a simple, general key
-		 * the annotation key type is
-		 */
-		typedef ValueAnnotation<V,AnnotationType,KeyType> annotation_type;
-
-		/**
-		 * Default constructor for this key type.
-		 */
-		ValueAnnotationKey() : KeyType(boost::hash<string>()(string(typeid(V).name()))) {}
-
-		/**
-		 * Tests whether this key is equal to the given key.
-		 */
-		bool equals(const AnnotationKey& other) const {
-			// quick check regarding memory location
-			if (this == &other) {
-				return true;
-			}
-
-			// check type of other key (that's all)
-			return typeid(other) == typeid(ValueAnnotationKey<V,AnnotationType, KeyType>);
+	typedef ValueAnnotation<V,AnnotationType,KeyType> annotation_type;
+	
+	/**
+	 * Default constructor for this key type.
+	 */
+	ValueAnnotationKey() : KeyType(boost::hash<string>()(string(typeid(V).name()))) {}
+	
+	/**
+	 * Tests whether this key is equal to the given key.
+	 */
+	bool equals(const AnnotationKey& other) const {
+		// quick check regarding memory location
+		if(this == &other) {
+			return true;
 		}
-
-		/**
-		 * Prints an info regarding this key to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "ValueAnnotationKey(" << typeid(V).name() << ")";
-		}
-	};
-
-	const string VALUE_ANNOTATION_NAME = "Value Annotation";
-
-
-	namespace {
-
-		/**
-		 * A template implementing the equals method for value types.
-		 */
-		template<typename Value, bool compare>
-		struct equal_value_impl;
-
-		/**
-		 * The partial template specialization for value types having an internal
-		 * state. Such Value-classes have to implement the equals operator. This
-		 * operator is used for the actual comparison.
-		 */
-		template<typename Value>
-		struct equal_value_impl<Value, false> {
-			bool operator()(const Value& a, const Value& b) const {
-				return a == b;
-			}
-		};
-
-		/**
-		 * The partial template specialization for value types not having any internal
-		 * state. Stateless Values are considered to be markers and every instance
-		 * is equivalent to every other instance.
-		 */
-		template<typename Value>
-		struct equal_value_impl<Value, true> {
-			bool operator()(const Value& a, const Value& b) const {
-				return true;
-			}
-		};
-
-		/**
-		 * The actual implementation of the equal_values struct comparing value
-		 * instances based on their properties.
-		 */
-		template<typename Value>
-		struct equal_value : public equal_value_impl<Value, boost::is_stateless<Value>::value> {};
-
+		
+		// check type of other key (that's all)
+		return typeid(other) == typeid(ValueAnnotationKey<V,AnnotationType, KeyType>);
 	}
+	
+	/**
+	 * Prints an info regarding this key to the given output stream.
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << "ValueAnnotationKey(" << typeid(V).name() << ")";
+	}
+};
 
+const string VALUE_ANNOTATION_NAME = "Value Annotation";
+
+
+namespace {
+
+/**
+ * A template implementing the equals method for value types.
+ */
+template<typename Value, bool compare>
+struct equal_value_impl;
+
+/**
+ * The partial template specialization for value types having an internal
+ * state. Such Value-classes have to implement the equals operator. This
+ * operator is used for the actual comparison.
+ */
+template<typename Value>
+struct equal_value_impl<Value, false> {
+	bool operator()(const Value& a, const Value& b) const {
+		return a == b;
+	}
+};
+
+/**
+ * The partial template specialization for value types not having any internal
+ * state. Stateless Values are considered to be markers and every instance
+ * is equivalent to every other instance.
+ */
+template<typename Value>
+struct equal_value_impl<Value, true> {
+	bool operator()(const Value& a, const Value& b) const {
+		return true;
+	}
+};
+
+/**
+ * The actual implementation of the equal_values struct comparing value
+ * instances based on their properties.
+ */
+template<typename Value>
+struct equal_value : public equal_value_impl<Value, boost::is_stateless<Value>::value> {};
+
+}
+
+
+/**
+ * A special annotation used internally to attach values directly to annotatable objects.
+ */
+template<
+    typename V,
+    typename AnnotationType,
+    typename KeyType,
+    typename Derived
+    >
+class ValueAnnotationBase : public AnnotationType {
+
+public:
 
 	/**
-	 * A special annotation used internally to attach values directly to annotatable objects.
+	 * The key used when adding instances of this class to an object.
 	 */
-	template<
-		typename V,
-		typename AnnotationType,
-		typename KeyType,
-		typename Derived
-	>
-	class ValueAnnotationBase : public AnnotationType {
-
-	public:
-
-		/**
-		 * The key used when adding instances of this class to an object.
-		 */
-		static const ValueAnnotationKey<V, AnnotationType, KeyType> KEY;
-
-		/**
-		 * The name of this annotation kind.
-		 */
-		static const string NAME;
-
-	private:
-
-		/**
-		 * The value to be attached.
-		 */
-		V value;
-
-	public:
-
-		/**
-		 * Creates a new annotation representing the given value.
-		 *
-		 * @param value the value to be represented
-		 */
-		template<typename ... Args>
-		ValueAnnotationBase(const Args& ... args) : value(args...) {}
-
-		/**
-		 * Obtains the key to be used to identify this annotation within an annotatable object.
-		 */
-		virtual const AnnotationKeyPtr getKey() const {
-			return &KEY;
-		}
-
-		/**
-		 * Provides a name for this annotation.
-		 */
-		virtual const std::string& getAnnotationName() const {
-			return VALUE_ANNOTATION_NAME;
-		}
-
-		/**
-		 * Checks whether the given annotation is equal to this one or not.
-		 */
-		virtual bool operator==(const Annotation& other) const {
-			// check identity
-			if (this == &other) {
-				return true;
-			}
-
-			// check types
-			if (typeid(other) != typeid(Derived)) {
-				return false;
-			}
-
-			// compare values
-			static equal_value<V> comparator;
-			return comparator(value, static_cast<const ValueAnnotation<V,AnnotationType,KeyType>&>(other).getValue());
-		}
-
-
-		/**
-		 * Obtains the value represented by this annotation.
-		 *
-		 * @return the value represented by this annotation
-		 */
-		const V& getValue() const {
-			return value;
-		}
-
-		/**
-		 * Updates the value represented by this annotation.
-		 *
-		 * @param value the new value to be represented
-		 */
-		void setValue(const V& newValue) {
-			value = newValue;
-		}
-
-		/**
-		 * If this value annotation is printed, the contained value should be printed.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return print(out);
-		}
-
-	private:
-
-		// print - in case the value type V is printable
-		template<typename T>
-		typename std::enable_if<is_printable<V>::value, T&>::type
-		print(T& out) const {
-			return out << value;
-		}
-
-		// print - fallback in case V is not printable
-		template<typename T>
-		typename std::enable_if<!is_printable<V>::value, T&>::type
-		print(T& out) const {
-			return out << "Value(" << typeid(V).name() << ")";
-		}
-
-	};
-
-	// the initialization of the static key used for value annotations
-	template<typename V,typename A, typename K, typename D>
-	const ValueAnnotationKey<V,A,K> ValueAnnotationBase<V,A,K,D>::KEY;
+	static const ValueAnnotationKey<V, AnnotationType, KeyType> KEY;
+	
+	/**
+	 * The name of this annotation kind.
+	 */
+	static const string NAME;
+	
+private:
 
 	/**
-	 * The implementation of the standard value annotation. This implementation may
-	 * be specialized for specific annotation types.
+	 * The value to be attached.
 	 */
-	template<typename V, typename AnnotationType, typename KeyType>
-	class ValueAnnotation : public ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>> {
-	public:
-		template<typename ... Args>
-		ValueAnnotation(const Args& ... args) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(args...) {}
-	};
+	V value;
+	
+public:
+
+	/**
+	 * Creates a new annotation representing the given value.
+	 *
+	 * @param value the value to be represented
+	 */
+	template<typename ... Args>
+	ValueAnnotationBase(const Args& ... args) : value(args...) {}
+	
+	/**
+	 * Obtains the key to be used to identify this annotation within an annotatable object.
+	 */
+	virtual const AnnotationKeyPtr getKey() const {
+		return &KEY;
+	}
+	
+	/**
+	 * Provides a name for this annotation.
+	 */
+	virtual const std::string& getAnnotationName() const {
+		return VALUE_ANNOTATION_NAME;
+	}
+	
+	/**
+	 * Checks whether the given annotation is equal to this one or not.
+	 */
+	virtual bool operator==(const Annotation& other) const {
+		// check identity
+		if(this == &other) {
+			return true;
+		}
+		
+		// check types
+		if(typeid(other) != typeid(Derived)) {
+			return false;
+		}
+		
+		// compare values
+		static equal_value<V> comparator;
+		return comparator(value, static_cast<const ValueAnnotation<V,AnnotationType,KeyType>&>(other).getValue());
+	}
+	
+	
+	/**
+	 * Obtains the value represented by this annotation.
+	 *
+	 * @return the value represented by this annotation
+	 */
+	const V& getValue() const {
+		return value;
+	}
+	
+	/**
+	 * Updates the value represented by this annotation.
+	 *
+	 * @param value the new value to be represented
+	 */
+	void setValue(const V& newValue) {
+		value = newValue;
+	}
+	
+	/**
+	 * If this value annotation is printed, the contained value should be printed.
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return print(out);
+	}
+	
+private:
+
+	// print - in case the value type V is printable
+	template<typename T>
+	typename std::enable_if<is_printable<V>::value, T&>::type
+	print(T& out) const {
+		return out << value;
+	}
+	
+	// print - fallback in case V is not printable
+	template<typename T>
+	typename std::enable_if<!is_printable<V>::value, T&>::type
+	print(T& out) const {
+		return out << "Value(" << typeid(V).name() << ")";
+	}
+	
+};
+
+// the initialization of the static key used for value annotations
+template<typename V,typename A, typename K, typename D>
+const ValueAnnotationKey<V,A,K> ValueAnnotationBase<V,A,K,D>::KEY;
+
+/**
+ * The implementation of the standard value annotation. This implementation may
+ * be specialized for specific annotation types.
+ */
+template<typename V, typename AnnotationType, typename KeyType>
+class ValueAnnotation : public ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>> {
+public:
+	template<typename ... Args>
+	ValueAnnotation(const Args& ... args) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(args...) {}
+};
 
 }
 
@@ -418,11 +420,11 @@ namespace detail {
  * an offers means to manipulate the set of associated annotations.
  */
 template<
-	typename AnnotationType = Annotation,
-	typename KeyType = AnnotationKey,
-	typename boost::enable_if<boost::is_base_of<Annotation, AnnotationType>, int>::type = 0,
-	typename boost::enable_if<boost::is_base_of<AnnotationKey, KeyType>, int>::type = 0
-	>
+    typename AnnotationType = Annotation,
+    typename KeyType = AnnotationKey,
+    typename boost::enable_if<boost::is_base_of<Annotation, AnnotationType>, int>::type = 0,
+    typename boost::enable_if<boost::is_base_of<AnnotationKey, KeyType>, int>::type = 0
+    >
 class Annotatable {
 
 public:
@@ -431,17 +433,17 @@ public:
 	 * A type definition for key type used internally to handle attachements.
 	 */
 	typedef KeyType key_type;
-
+	
 	/**
 	 * A type definition for the pointer type used to internally maintain annotation instances.
 	 */
 	typedef std::shared_ptr<AnnotationType> annotation_ptr_type;
-
+	
 	/**
 	 * A type definition for the internal data structure used for storing the annotations.
 	 */
 	typedef utils::map::PointerMap<const KeyType*, annotation_ptr_type> annotation_map_type;
-
+	
 private:
 
 	/**
@@ -450,19 +452,19 @@ private:
 	 * internal map will only be created in case an actual annotation should be attached.
 	 */
 	typedef std::unique_ptr<annotation_map_type> AnnotationMapOpt;
-
+	
 	/**
 	 * The internal storage for annotations. It links every key to its corresponding value.
 	 */
 	mutable AnnotationMapOpt map;
-
+	
 public:
 
 	/**
 	 * The constructor of this class is initializing the referenced shared annotation register.
 	 */
 	Annotatable() {};
-
+	
 	/**
 	 * Supports the construction of a copy of an annotation container. The content of the given
 	 * container will be copied.
@@ -471,12 +473,12 @@ public:
 	 */
 	Annotatable(const Annotatable<AnnotationType, KeyType>& other)
 		: map((other.map)?new annotation_map_type(*other.map):0) {}
-
+		
 	/**
 	 * The destructor is marked virtual since most likely derived classes will be used by client code.
 	 */
 	virtual ~Annotatable() {};
-
+	
 	/**
 	 * Adds a new annotation referenced by the given shared pointer. In case another annotation is already
 	 * registered based on the same key, the current version will be overridden by the newly provided value.
@@ -486,19 +488,19 @@ public:
 	void addAnnotation(const annotation_ptr_type& annotation) const {
 		// check pre-condition
 		assert_true(annotation) << "Cannot add NULL annotation!";
-
+		
 		// ensure map to be initialized
 		initAnnotationMap();
-
+		
 		// insert new element
 		auto key = annotation->getKey();
 		(*map)[key] = annotation;
-
+		
 		// check post-condition
 		assert_true(hasAnnotation(key)) << "Insert not successful!";
 		assert_eq(map->find(key)->second.get(), annotation.get()) << "Insert not successful!";
 	}
-
+	
 	/**
 	 * Adds a new annotation of the given generic type to this class. The annotation
 	 * will be constructed internally based on the given parameters.
@@ -511,25 +513,25 @@ public:
 	void addAnnotation(Params ... p) const {
 		addAnnotation(std::make_shared<Annotation>(p...));
 	}
-
+	
 	const annotation_ptr_type& getAnnotation(const AnnotationKeyPtr& key) const {
 		static const annotation_ptr_type none;
-
+		
 		// check whether there are annotations
-		if (!hasAnnotations()) {
+		if(!hasAnnotations()) {
 			return none;
 		}
-
+		
 		// search for entry
 		auto pos = map->find(key);
-		if (pos == map->end() ) {
+		if(pos == map->end()) {
 			return none;
 		}
-
+		
 		// return pointer to result
 		return pos->second;
 	}
-
+	
 	/**
 	 * Obtains a pointer to an Annotation associated to this annotatable class.
 	 *
@@ -539,20 +541,22 @@ public:
 	 */
 	template<typename Key>
 	typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key* key) const {
-
+	
 		auto res = getAnnotation((AnnotationKeyPtr)key);
-
+		
 		// handle null-pointer
-		if (!res) return std::shared_ptr<typename Key::annotation_type>();
-
+		if(!res) {
+			return std::shared_ptr<typename Key::annotation_type>();
+		}
+		
 		// check type
 		assert_true(std::dynamic_pointer_cast<typename Key::annotation_type>(res))
-				<< "Annotation Type of Key does not match actual annotation!";
-
+		        << "Annotation Type of Key does not match actual annotation!";
+		        
 		// return pointer to result
 		return std::static_pointer_cast<typename Key::annotation_type>(res);
 	}
-
+	
 	/**
 	 * Obtains a pointer to an Annotation associated to this annotatable class.
 	 *
@@ -564,25 +568,25 @@ public:
 	typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key& key) const {
 		return getAnnotation(&key);
 	}
-
+	
 	/**
 	 * Removes the annotation referenced by the given key from the list of maintained references.
 	 *
 	 * @param key a pointer to the key addressing the element to be removed.
 	 */
 	void remAnnotation(const KeyType* key) const {
-
+	
 		// check whether there are annotations at all
-		if (!map) {
+		if(!map) {
 			return;
 		}
-
+		
 		auto pos = map->find(key);
-		if (pos != map->end()) {
+		if(pos != map->end()) {
 			map->erase(pos);
 		}
 	}
-
+	
 	/**
 	 * Removes the annotation referenced by the given key from the list of maintained references.
 	 *
@@ -591,7 +595,7 @@ public:
 	void remAnnotation(const KeyType& key) const {
 		remAnnotation(&key);
 	}
-
+	
 	/**
 	 * Checks whether there is an annotation referenced by the given key associated with this object.
 	 *
@@ -601,7 +605,7 @@ public:
 	bool hasAnnotation(const KeyType* key) const {
 		return map && map->find(key) != map->end();
 	}
-
+	
 	/**
 	 * Checks whether there is an annotation referenced by the given key associated with this object.
 	 *
@@ -611,7 +615,7 @@ public:
 	bool hasAnnotation(const KeyType& key) const {
 		return hasAnnotation(&key);
 	}
-
+	
 	/**
 	 * Obtains an immutable reference to the internally maintained annotations.
 	 */
@@ -619,7 +623,7 @@ public:
 		static const annotation_map_type empty;
 		return (map)?*map:empty;
 	}
-
+	
 	/**
 	 * Replaces the currently assigned annotation map by the given annotations. This
 	 * modifications will not be reflected to other copies of this instance. After the
@@ -629,18 +633,18 @@ public:
 	 * @param annotations the annotations to be assigned
 	 */
 	void setAnnotations(const annotation_map_type& annotations) const {
-
+	
 		// special handling for cleaning annotations
-		if (annotations.empty()) {
+		if(annotations.empty()) {
 			map.reset();
 			return;
 		}
-
+		
 		// replace all currently assigned annotations
 		initAnnotationMap();
 		*map = annotations;
 	}
-
+	
 	/**
 	 * Tests whether this annotatable object has annotations or not.
 	 *
@@ -650,9 +654,9 @@ public:
 		// check state of internally maintained map
 		return map && !(map->empty());
 	}
-
+	
 	// -- Value Attachments ---------------------
-
+	
 	/**
 	 * A shortcut for attaching values being identified by their type. This method
 	 * checks whether a value of type V has been attached to this object.
@@ -664,7 +668,7 @@ public:
 	bool hasAttachedValue() const {
 		return hasAnnotation(detail::ValueAnnotation<V,AnnotationType,KeyType>::KEY);
 	}
-
+	
 	/**
 	 * A shortcut for attaching values being identified by their type to this object.
 	 * The given value will be attached to this object using an internal key based
@@ -676,10 +680,10 @@ public:
 	template<typename V, typename ... Args>
 	void attachValue(const Args&  ... args) const {
 		std::shared_ptr<detail::ValueAnnotation<V,AnnotationType,KeyType>> annotation
-			= std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(args...);
+		        = std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(args...);
 		addAnnotation(annotation);
 	}
-
+	
 	/**
 	 * Removes the value of the given type attached to this object (if present).
 	 *
@@ -689,7 +693,7 @@ public:
 	void detachValue() const {
 		remAnnotation(detail::ValueAnnotation<V,AnnotationType,KeyType>::KEY);
 	}
-
+	
 	/**
 	 * Obtains a value being attached to this object (if present). If the requested
 	 * value is not present, an assertion will be triggered.
@@ -703,7 +707,7 @@ public:
 		assert_true(ptr) << "Requested value not present!";
 		return ptr->getValue();
 	}
-
+	
 	/**
 	 * Adds support for the assignment operator. The annotations attached to the given object
 	 * will be copied to this instance. The currently attached annotations will be discarded.
@@ -712,20 +716,21 @@ public:
 	 */
 	Annotatable<AnnotationType, KeyType>& operator =(const Annotatable<AnnotationType, KeyType>& other) {
 		// update map pointer
-		if (other.map) {
+		if(other.map) {
 			// create a copy and delete current version
 			map.reset(new annotation_map_type(*other.map));
-		} else {
+		}
+		else {
 			map.reset(0);
 		}
 		return *this;
 	}
-
+	
 private:
 
 	void initAnnotationMap() const {
 		// test whether it has already been initialized
-		if (map) {
+		if(map) {
 			return;
 		}
 		// the annotation map has to be created
@@ -748,19 +753,19 @@ public:
 	 * the annotation key type is
 	 */
 	typedef AnnotationType annotation_type;
-
+	
 private:
 
 	/**
 	 * The value making this key unique.
 	 */
 	const T value;
-
+	
 	/**
 	 * The comparator used to compare instances of the value represented by this key.
 	 */
 	Comparator comparator;
-
+	
 public:
 
 	/**
@@ -769,7 +774,7 @@ public:
 	 * @param value the value to be represented by this instance
 	 */
 	SimpleKey(const T& value) : AnnotationKey(boost::hash<T>()(value)), value(value) {};
-
+	
 	/**
 	 * Compares this key with another AnnotationKey.
 	 *
@@ -777,20 +782,20 @@ public:
 	 */
 	bool equals(const AnnotationKey& other) const {
 		// quick check regarding memory location
-		if (this == &other) {
+		if(this == &other) {
 			return true;
 		}
-
+		
 		// check type of other key
-		if (typeid(other) != typeid(SimpleKey<T, Comparator>)) {
+		if(typeid(other) != typeid(SimpleKey<T, Comparator>)) {
 			return false;
 		}
-
+		
 		// check value
 		const SimpleKey<T,Comparator>& otherKey = static_cast<const SimpleKey<T, Comparator>&>(other);
 		return comparator(value, otherKey.getValue());
 	}
-
+	
 	/**
 	 * Obtains the value represented by this key.
 	 *
@@ -799,7 +804,7 @@ public:
 	const T& getValue() const {
 		return value;
 	}
-
+	
 	/**
 	 * Allows simple keys to be printed to an output stream.
 	 *
@@ -825,7 +830,7 @@ public:
 	 * @param value the value to be represented.
 	 */
 	StringKey(const string& value) : SimpleKey<string, AnnotationType, std::equal_to<string>>(value) {};
-
+	
 	/**
 	 * Allows string keys to be printed to an output stream.
 	 *
@@ -849,22 +854,22 @@ template<typename Annotation, typename Key>
 bool hasSameAnnotations(const Annotatable<Annotation, Key>& annotatableA, const Annotatable<Annotation, Key>& annotatableB) {
 	typedef typename Annotatable<Annotation, Key>::annotation_ptr_type Ptr;
 	typedef typename Annotatable<Annotation, Key>::annotation_map_type Map;
-
-
+	
+	
 	// check whether both have no annotations ...
-	if (!annotatableA.hasAnnotations() && !annotatableB.hasAnnotations()) {
+	if(!annotatableA.hasAnnotations() && !annotatableB.hasAnnotations()) {
 		return true;
 	}
-
+	
 	// check in case both have annotations ...
-	if (!(annotatableA.hasAnnotations() && annotatableB.hasAnnotations())) {
+	if(!(annotatableA.hasAnnotations() && annotatableB.hasAnnotations())) {
 		return false;
 	}
-
+	
 	// extract maps
 	const Map& mapA = annotatableA.getAnnotations();
 	const Map& mapB = annotatableB.getAnnotations();
-
+	
 	// compare maps
 	return insieme::utils::map::equal(mapA, mapB, equal_target<Ptr>());
 }

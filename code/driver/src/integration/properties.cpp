@@ -44,171 +44,187 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
-	using std::pair;
+using std::pair;
 
-	const string& Properties::get(const string& key, const string& category, const string& def) const {
+const string& Properties::get(const string& key, const string& category, const string& def) const {
 
-		// check the first level
-		auto p1 = data.find(key);
-		if (p1 == data.end()) return def;
-
-		// check the second level for a category
-		auto p2 = p1->second.find(category);
-		if (p2 == p1->second.end()) {
-			// if the category is not present => fall-back
-			if(category == "") return def;
-			return get(key, "");
+	// check the first level
+	auto p1 = data.find(key);
+	if(p1 == data.end()) {
+		return def;
+	}
+	
+	// check the second level for a category
+	auto p2 = p1->second.find(category);
+	if(p2 == p1->second.end()) {
+		// if the category is not present => fall-back
+		if(category == "") {
+			return def;
 		}
-
-		// take the value
-		return p2->second;
+		return get(key, "");
 	}
+	
+	// take the value
+	return p2->second;
+}
 
-	std::set<string> Properties::getKeys() const {
-		std::set<string> res;
-		for(const auto& cur : data) {
-			res.insert(cur.first);
-		}
-		return res;
+std::set<string> Properties::getKeys() const {
+	std::set<string> res;
+	for(const auto& cur : data) {
+		res.insert(cur.first);
 	}
+	return res;
+}
 
-	PropertyView Properties::getView(const string& category) const {
-		return PropertyView(*this, category);
+PropertyView Properties::getView(const string& category) const {
+	return PropertyView(*this, category);
+}
+
+std::ostream& Properties::printTo(std::ostream& out) const {
+	// check for empty properties
+	if(empty()) {
+		return out << "Properties { }\n";
 	}
-
-	std::ostream& Properties::printTo(std::ostream& out) const {
-		// check for empty properties
-		if (empty()) return out << "Properties { }\n";
-
-		// print the properties
-		out << "Properties {\n\t";
-		out << join("\n\t", data, [](std::ostream& out, const pair<string,map<string,string>>& cur) {
-			out << join("\n\t", cur.second, [&](std::ostream& out, const pair<string,string>& p) {
-				out << cur.first;
-				if (p.first != "") {
-					out << "[" << p.first << "]";
-				}
-				out << "=" << p.second;
-			});
+	
+	// print the properties
+	out << "Properties {\n\t";
+	out << join("\n\t", data, [](std::ostream& out, const pair<string,map<string,string>>& cur) {
+		out << join("\n\t", cur.second, [&](std::ostream& out, const pair<string,string>& p) {
+			out << cur.first;
+			if(p.first != "") {
+				out << "[" << p.first << "]";
+			}
+			out << "=" << p.second;
 		});
-		out << "\n}\n";
+	});
+	out << "\n}\n";
+	
+	return out;
+}
 
-		return out;
-	}
+string Properties::mapVars(const string& in) const {
 
-	string Properties::mapVars(const string& in) const {
-
-		auto res = in;
-		for(const auto& o : data) {
-			for(const auto& i : o.second) {
-				if (i.first.empty()) continue;		// skip those for now
-				auto key = "${" + o.first + "[" + i.first + "]}";
-
-				// replace key with value
-				boost::replace_all(res, key, i.second);
+	auto res = in;
+	for(const auto& o : data) {
+		for(const auto& i : o.second) {
+			if(i.first.empty()) {
+				continue;    // skip those for now
 			}
-
-			// and the potential empty one
-			auto key = "${" + o.first + "}";
-			boost::replace_all(res, key, get(o.first));
+			auto key = "${" + o.first + "[" + i.first + "]}";
+			
+			// replace key with value
+			boost::replace_all(res, key, i.second);
 		}
-
-		return res;
+		
+		// and the potential empty one
+		auto key = "${" + o.first + "}";
+		boost::replace_all(res, key, get(o.first));
 	}
+	
+	return res;
+}
 
-	Properties& Properties::operator<<=(const Properties& other) {
-		Properties orig = *this;
+Properties& Properties::operator<<=(const Properties& other) {
+	Properties orig = *this;
+	
+	// merge the data
+	for(const auto& o : other.data) {
+		for(const auto& i : o.second) {
+			// TODO: apply variable substitution
+			set(o.first, i.first, orig.mapVars(i.second));
+		}
+	}
+	
+	// map existing keys with new info
+	for(const auto& o : data) {
+		for(const auto& i : o.second) {
+			set(o.first, i.first, mapVars(i.second));
+		}
+	}
+	
+	// done
+	return *this;
+}
 
-		// merge the data
-		for(const auto& o : other.data) {
-			for(const auto& i : o.second) {
-				// TODO: apply variable substitution
-				set(o.first, i.first, orig.mapVars(i.second));
+Properties Properties::load(std::istream& in) {
+	Properties res;
+	
+	// process line by line
+	string line;
+	while(std::getline(in, line)) {
+	
+		// skip empty lines
+		if(line.empty()) {
+			continue;
+		}
+		
+		// skip comments
+		if(line[0] == '#') {
+			continue;
+		}
+		
+		// first split at = sign
+		auto sep = line.find('=');
+		if(sep == string::npos) {
+			continue;
+		}
+		
+		auto key = line.substr(0,sep);
+		auto cat = string("");
+		auto value = line.substr(sep+1, line.size());
+		
+		// check whether key needs to cut up
+		if(*key.rbegin() == ']') {
+			auto csep = key.find('[');
+			
+			// sanity check
+			if(csep == string::npos) {
+				continue;
 			}
+			
+			key = line.substr(0,csep);
+			cat = line.substr(csep+1,sep-csep-2);
 		}
+		
+		// register value
+		res.set(key, cat, value);
+		
+	}
+	
+	// done
+	return res;
+}
 
-		// map existing keys with new info
-		for(const auto& o : data) {
-			for(const auto& i : o.second) {
-				set(o.first, i.first, mapVars(i.second));
+void Properties::store(std::ostream& out) const {
+	// write the data to the stream
+	for(const auto& o : data) {
+		for(const auto& i : o.second) {
+			out << o.first;
+			if(!i.first.empty()) {
+				out << "[" << i.first << "]";
 			}
-		}
-
-		// done
-		return *this;
-	}
-
-	Properties Properties::load(std::istream& in) {
-		Properties res;
-
-		// process line by line
-		string line;
-		while (std::getline(in, line)) {
-
-			// skip empty lines
-			if (line.empty()) continue;
-
-			// skip comments
-			if (line[0] == '#') continue;
-
-			// first split at = sign
-			auto sep = line.find('=');
-			if (sep == string::npos) continue;
-
-			auto key = line.substr(0,sep);
-			auto cat = string("");
-			auto value = line.substr(sep+1, line.size());
-
-			// check whether key needs to cut up
-			if (*key.rbegin() == ']') {
-				auto csep = key.find('[');
-
-				// sanity check
-				if (csep == string::npos) continue;
-
-				key = line.substr(0,csep);
-				cat = line.substr(csep+1,sep-csep-2);
-			}
-
-			// register value
-			res.set(key, cat, value);
-
-		}
-
-		// done
-		return res;
-	}
-
-	void Properties::store(std::ostream& out) const {
-		// write the data to the stream
-		for(const auto& o : data) {
-			for(const auto& i : o.second) {
-				out << o.first;
-				if (!i.first.empty()) {
-					out << "[" << i.first << "]";
-				}
-				out << "=";
-				out << i.second;
-				out << "\n";
-			}
+			out << "=";
+			out << i.second;
+			out << "\n";
 		}
 	}
+}
 
-	std::ostream& PropertyView::printTo(std::ostream& out) const {
+std::ostream& PropertyView::printTo(std::ostream& out) const {
 
-		// special case: empty
-		if (properties.empty()) {
-			return out << properties;
-		}
-
-		out << "Properties {\n\t";
-		out << join("\n\t", properties.getKeys(), [&](std::ostream& out, const string& key) {
-			out << key << "=" << this->get(key);
-		});
-		out << "\n}\n";
-
-		return out;
+	// special case: empty
+	if(properties.empty()) {
+		return out << properties;
 	}
+	
+	out << "Properties {\n\t";
+	out << join("\n\t", properties.getKeys(), [&](std::ostream& out, const string& key) {
+		out << key << "=" << this->get(key);
+	});
+	out << "\n}\n";
+	
+	return out;
+}
 
 } // end namespace integration
 } // end namespace driver

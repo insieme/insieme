@@ -49,147 +49,173 @@ namespace driver {
 namespace measure {
 
 
-	namespace {
+namespace {
 
-		int runCommand(const std::string& cmd) {
-			LOG(DEBUG) << "Running " << cmd << "\n";
+int runCommand(const std::string& cmd) {
+	LOG(DEBUG) << "Running " << cmd << "\n";
 //			return system((cmd + "> /dev/null").c_str());
-			return system(cmd.c_str());
-		}
+	return system(cmd.c_str());
+}
 
-		string setupEnv(const std::map<string,string>& env) {
-			if (env.empty()) return "";
-
-			std::stringstream res;
-			res << join(" ", env, [](std::ostream& out, const std::pair<string,string>& cur) {
-				out << cur.first << "=" << cur.second;
-			});
-			return res.str();
-		}
-
+string setupEnv(const std::map<string,string>& env) {
+	if(env.empty()) {
+		return "";
 	}
+	
+	std::stringstream res;
+	res << join(" ", env, [](std::ostream& out, const std::pair<string,string>& cur) {
+		out << cur.first << "=" << cur.second;
+	});
+	return res.str();
+}
+
+}
 
 
-	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
-		// create output directory
+int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
+	// create output directory
 #ifndef DISABLE_ENERGY
-		// set capabilities for energy measurements, required for kernel versions 3.7 and newer
-		// TODO: only do this for newer kernel versions or kernels that have this fix
-		runCommand("sudo setcap cap_sys_rawio=ep " + binary);
+	// set capabilities for energy measurements, required for kernel versions 3.7 and newer
+	// TODO: only do this for newer kernel versions or kernels that have this fix
+	runCommand("sudo setcap cap_sys_rawio=ep " + binary);
 #endif
-		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
+	return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
+}
+
+ExecutorPtr makeLocalExecutor() {
+	return std::make_shared<LocalExecutor>();
+}
+
+
+int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
+
+	// extract name of file
+	boost::filesystem::path path = binary;
+	string binaryName = path.filename().string();
+	
+	// extract directory name
+	string dirName = boost::filesystem::path(dir).filename().string();
+	boost::uuids::uuid u = uuidGen();
+	dirName += toString(u);
+	
+	// create ssh-url
+	std::string url = hostname;
+	if(!username.empty()) {
+		url = username + "@" + hostname;
 	}
-
-	ExecutorPtr makeLocalExecutor() {
-		return std::make_shared<LocalExecutor>();
+	
+	std::string remoteDir = workdir + "/_remote_" + dirName;
+	
+	int res = 0;
+	
+	// start by creating a remote working directory
+	if(res==0) {
+		res = runCommand("ssh " + url + " mkdir " + remoteDir);
 	}
-
-
-	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
-
-		// extract name of file
-		boost::filesystem::path path = binary;
-		string binaryName = path.filename().string();
-
-		// extract directory name
-		string dirName = boost::filesystem::path(dir).filename().string();
-		boost::uuids::uuid u = uuidGen();
-		dirName += toString(u);
-
-		// create ssh-url
-		std::string url = hostname;
-		if (!username.empty()) {
-			url = username + "@" + hostname;
+	
+	// copy binary
+	if(res==0) {
+		res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
+	}
+	
+	// execute binary
+	switch(system) {
+	case SSH:
+		if(res==0) {
+			res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
 		}
-
-		std::string remoteDir = workdir + "/_remote_" + dirName;
-
-		int res = 0;
-
-		// start by creating a remote working directory
-		if (res==0) res = runCommand("ssh " + url + " mkdir " + remoteDir);
-
-		// copy binary
-		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
-
-		// execute binary
-		switch(system) {
-		case SSH:
-			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
-			break;
-		case SGE:
-			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " + binaryName + "\"");
-			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
-			break;
-		case PBS:
-			assert_fail() << "Not tested!";
-			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" + binaryName + "\"");
-			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
-			break;
-		case LL:
-			std::string jobscript = "#!/bin/bash\n"
-									"#@ energy_policy_tag=my_energy_tag\n"
-									"#@ max_perf_decrease_allowed=1\n"
-									"#@ wall_clock_limit = 00:05:00\n"
-									"#@ job_name = insieme\n"
-									"#@ job_type = parallel\n"
-									"#@ class = test\n"
-									"#@ node = 1\n"
-									"#@ total_tasks = 1\n"
-									"#@ node_usage = not_shared\n"
-									"#@ initialdir = " + remoteDir + "\n"
-									"#@ output = job$(jobid).out\n"
-									"#@ error = job$(jobid).err\n"
-									"#@ notification=error\n"
-									"#@ notify_user=philipp.gschwandtner@uibk.ac.at\n"
-									"#@ restart=no\n"
-									"#@ queue\n"
-									". /etc/profile\n"
-									". /etc/profile.d/modules.sh\n" +
-									setupEnv(env);
-			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"");
-			//std::cout << "ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"\n";
-			//if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
-			//if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
-			break;
+		break;
+	case SGE:
+		if(res==0) {
+			res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " + binaryName + "\"");
 		}
-
-		// copy back log files
-		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
-
-		// move files locally
-		if (res==0) res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*");
-
-		// delete local files
-		if (res==0) res = runCommand("rm -rf _remote_" + dirName);
-
-		// delete remote working directory
-		if (res==0) res = runCommand("ssh " + url + " rm -rf " + remoteDir);
-
-		return res;
-
+		if(res==0) {
+			res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+		}
+		break;
+	case PBS:
+		assert_fail() << "Not tested!";
+		if(res==0) {
+			res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" + binaryName + "\"");
+		}
+		if(res==0) {
+			res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+		}
+		break;
+	case LL:
+		std::string jobscript = "#!/bin/bash\n"
+		                        "#@ energy_policy_tag=my_energy_tag\n"
+		                        "#@ max_perf_decrease_allowed=1\n"
+		                        "#@ wall_clock_limit = 00:05:00\n"
+		                        "#@ job_name = insieme\n"
+		                        "#@ job_type = parallel\n"
+		                        "#@ class = test\n"
+		                        "#@ node = 1\n"
+		                        "#@ total_tasks = 1\n"
+		                        "#@ node_usage = not_shared\n"
+		                        "#@ initialdir = " + remoteDir + "\n"
+		                        "#@ output = job$(jobid).out\n"
+		                        "#@ error = job$(jobid).err\n"
+		                        "#@ notification=error\n"
+		                        "#@ notify_user=philipp.gschwandtner@uibk.ac.at\n"
+		                        "#@ restart=no\n"
+		                        "#@ queue\n"
+		                        ". /etc/profile\n"
+		                        ". /etc/profile.d/modules.sh\n" +
+		                        setupEnv(env);
+		if(res==0) {
+			res = runCommand("ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"");
+		}
+		//std::cout << "ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"\n";
+		//if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
+		//if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+		break;
 	}
-
-
-	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir, RemoteExecutor::JobSystem system) {
-		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir, system);
+	
+	// copy back log files
+	if(res==0) {
+		res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
 	}
-
-	ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SSH);
+	
+	// move files locally
+	if(res==0) {
+		res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*");
 	}
-
-	ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SGE);
+	
+	// delete local files
+	if(res==0) {
+		res = runCommand("rm -rf _remote_" + dirName);
 	}
-
-	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::PBS);
+	
+	// delete remote working directory
+	if(res==0) {
+		res = runCommand("ssh " + url + " rm -rf " + remoteDir);
 	}
+	
+	return res;
+	
+}
 
-	ExecutorPtr makeRemoteLLExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::LL);
-	}
+
+ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir, RemoteExecutor::JobSystem system) {
+	return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir, system);
+}
+
+ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+	return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SSH);
+}
+
+ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+	return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SGE);
+}
+
+ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+	return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::PBS);
+}
+
+ExecutorPtr makeRemoteLLExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+	return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::LL);
+}
 
 
 } // end namespace measure

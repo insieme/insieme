@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,31 +41,31 @@ namespace utils {
 namespace lua {
 
 
-	Lua::Lua() {
-		// open default libraries within state
-		luaL_openlibs(state);
+Lua::Lua() {
+	// open default libraries within state
+	luaL_openlibs(state);
+}
+
+void Lua::run(const std::string& script) {
+	check(luaL_loadstring(state, script.c_str()));
+	check(lua_pcall(state, 0, 0, 0));
+}
+
+void Lua::check(int code) {
+	// check the state
+	if(code == 0) {
+		return;
 	}
-
-	void Lua::run(const std::string& script) {
-		check(luaL_loadstring(state, script.c_str()));
-		check(lua_pcall(state, 0, 0, 0));
-	}
-
-	void Lua::check(int code) {
-		// check the state
-		if (code == 0) {
-			return;
-		}
-
-		// get error message
-		std::string msg(lua_tostring(state, -1));
-
-		// remove error message from stack
-		lua_pop(state, 1);
-
-		// throw exception
-		throw LuaException(msg);
-	}
+	
+	// get error message
+	std::string msg(lua_tostring(state, -1));
+	
+	// remove error message from stack
+	lua_pop(state, 1);
+	
+	// throw exception
+	throw LuaException(msg);
+}
 
 
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -48,25 +48,25 @@
 int32 _irt_open_msr(uint32 core) {
 	char path_to_msr[512];
 	int32 file;
-
+	
 	sprintf(path_to_msr, "/dev/cpu/%u/msr", core);
-
-	if ((file = open(path_to_msr, O_RDONLY)) < 0) {
+	
+	if((file = open(path_to_msr, O_RDONLY)) < 0) {
 		IRT_DEBUG("Instrumentation: Unable to open MSR file for reading, file %s, reason: %s\n", path_to_msr, strerror(errno));
 		return -1;
 	}
-
+	
 	return file;
 }
 
 int64 _irt_read_msr(int32 file, int32 subject) {
 	int64 data;
-
-	if (pread(file, &data, sizeof data, subject) != sizeof data) {
+	
+	if(pread(file, &data, sizeof data, subject) != sizeof data) {
 		IRT_DEBUG("Instrumentation: Unable to read MSR file descriptor %d, reason: %s\n", file, strerror(errno));
 		return -1.0;
 	}
-
+	
 	return data;
 }
 

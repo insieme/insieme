@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,50 +42,44 @@ namespace insieme {
 namespace transform {
 namespace filter {
 
-	/**
-	 * Obtains a target filter selecting all outermost for-loops within
-	 * a program fragment.
-	 */
-	TargetFilter outermostLoops();
+/**
+ * Obtains a target filter selecting all outermost for-loops within
+ * a program fragment.
+ */
+TargetFilter outermostLoops();
 
-	/**
-	 * Obtains a target filter selecting all innermost for-loops of a
-	 * given nesting level within a program fragment.
-	 *
-	 * @param level the nesting-level of the selected loops
-	 */
-	TargetFilter innermostLoops(unsigned level = 1);
+/**
+ * Obtains a target filter selecting all innermost for-loops of a
+ * given nesting level within a program fragment.
+ *
+ * @param level the nesting-level of the selected loops
+ */
+TargetFilter innermostLoops(unsigned level = 1);
 
-	/**
-	 * A filter selecting all outermost SCoPs of a program fragment.
-	 */
-	TargetFilter outermostSCoPs();
+/**
+ * A filter picking the loop with the given index. Indices are defined
+ * in a hierarchical way according to the code structure.
+ */
+TargetFilter pickLoop(const vector<unsigned>& index);
 
+/**
+ * A convenience wrapper for the function above.
+ */
+template<typename ... T>
+TargetFilter pickLoop(unsigned first, T ... rest) {
+	return pickLoop(toVector<unsigned>(first, rest...));
+}
 
-	/**
-	 * A filter picking the loop with the given index. Indices are defined
-	 * in a hierarchical way according to the code structure.
-	 */
-	TargetFilter pickLoop(const vector<unsigned>& index);
-
-	/**
-	 * A convenience wrapper for the function above.
-	 */
-	template<typename ... T>
-	TargetFilter pickLoop(unsigned first, T ... rest) {
-		return pickLoop(toVector<unsigned>(first, rest...));
-	}
-
-	/**
-	 * A filter picking the location addressed by the given relative address.
-	 * The filter will only select a single node in any case. Further, a node will
-	 * only be selected in case the node the filter is applied to is the root of the given
-	 * address.
-	 *
-	 * @param relativeAddress the address of the node to be selected
-	 * @return a filter selecting the specified node
-	 */
-	TargetFilter pickRelative(const core::NodeAddress& relativeAddress);
+/**
+ * A filter picking the location addressed by the given relative address.
+ * The filter will only select a single node in any case. Further, a node will
+ * only be selected in case the node the filter is applied to is the root of the given
+ * address.
+ *
+ * @param relativeAddress the address of the node to be selected
+ * @return a filter selecting the specified node
+ */
+TargetFilter pickRelative(const core::NodeAddress& relativeAddress);
 
 
 } // end namespace filter

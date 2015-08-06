@@ -34,7 +34,7 @@ typedef struct {
 
 extern int printf(char *, ...);
 
-int main (){
+int main() {
 	t_mine a;
 	printf("%s",a.str);
 	printf("%s","asas");

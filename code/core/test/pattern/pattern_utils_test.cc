@@ -66,8 +66,10 @@ bool noMatch(const TreePattern& pattern, const NodePtr& node) {
 template<typename T>
 vector<T> filterNull(const vector<T>& list) {
 	vector<T> res;
-	for (auto cur : list) {
-		if (cur) res.push_back(cur);
+	for(auto cur : list) {
+		if(cur) {
+			res.push_back(cur);
+		}
 	}
 	return res;
 }
@@ -75,10 +77,10 @@ vector<T> filterNull(const vector<T>& list) {
 TEST(PatternUtils, basic) {
 	core::NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	std::map<std::string, core::NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-
+	
 	core::NodePtr node = builder.parseStmt(R"(
 		for(uint<4> l = 8u .. 70u : 3u) {
 			l; 
@@ -99,28 +101,28 @@ TEST(PatternUtils, basic) {
 		)", symbols);
 
 	EXPECT_TRUE(node);
-
+	
 	core::NodeAddress root(node);
-
+	
 	core::NodeAddress for1(node);
 	core::NodeAddress for2 = for1.getAddressOfChild(3,1);
 	core::NodeAddress for3 = for2.getAddressOfChild(3,0);
 	core::NodeAddress for4 = for3.getAddressOfChild(3,1);
 	core::NodeAddress for5 = for1.getAddressOfChild(3,2);
 	auto allFors = toVector(for1, for2, for3, for4, for5);
-
+	
 	EXPECT_EQ(core::NT_ForStmt, for1->getNodeType());
 	EXPECT_EQ(core::NT_ForStmt, for2->getNodeType());
 	EXPECT_EQ(core::NT_ForStmt, for3->getNodeType());
 	EXPECT_EQ(core::NT_ForStmt, for4->getNodeType());
 	EXPECT_EQ(core::NT_ForStmt, for5->getNodeType());
-
+	
 	// collect all
 	TreePattern pattern = irp::forStmt();
 	EXPECT_EQ(allFors, irp::collectAll(pattern, root));
 	pattern = irp::whileStmt();
 	EXPECT_TRUE(irp::collectAll(pattern, root).empty());
-
+	
 	// match all
 	pattern = irp::forStmt();
 	std::vector<core::NodePtr> results;
@@ -128,14 +130,14 @@ TEST(PatternUtils, basic) {
 		results.push_back(m.getRoot().getAddressedNode());
 	});
 	EXPECT_EQ(toVector(for1.getAddressedNode(), for2.getAddressedNode(), for3.getAddressedNode(), for4.getAddressedNode(), for5.getAddressedNode()), results);
-
+	
 	pattern = irp::whileStmt();
 	results.clear();
 	irp::matchAll(pattern, root, [&](AddressMatch m) {
 		results.push_back(m.getRoot());
 	});
 	EXPECT_TRUE(results.empty());
-
+	
 	// replace all
 	auto insertStmt = builder.declarationStmt(builder.intLit(5));
 	pattern = irp::forStmt();
@@ -151,17 +153,17 @@ TEST(PatternUtils, basic) {
 TEST(PatternUtils, performance) {
 	core::NodeManager manager;
 	IRBuilder builder(manager);
-
+	
 	core::StatementPtr node = builder.parseStmt(
-		"for(uint<4> k = 2u .. 100u) { "
-		"	decl ref<uint<4>> a = var(3u); "
-		"} ");
-
+	                              "for(uint<4> k = 2u .. 100u) { "
+	                              "	decl ref<uint<4>> a = var(3u); "
+	                              "} ");
+	                              
 	EXPECT_TRUE(node);
-
+	
 	StatementList l(100, node);
 	auto compound = builder.compoundStmt(l);
-
+	
 	auto pattern = aT((!irp::forStmt()) & irp::declarationStmt());
 	
 	unsigned matches = 0;

@@ -73,7 +73,7 @@ typedef irt_ocl_bitfield	irt_ocl_mem_flag;
 #define IRT_OCL_MEM_USE_HOST_PTR	(1 << 3)
 #define IRT_OCL_MEM_ALLOC_HOST_PTR	(1 << 4)
 #define IRT_OCL_MEM_COPY_HOST_PTR	(1 << 5)
-// reserved				(1 << 6)    
+// reserved				(1 << 6)
 #define IRT_OCL_MEM_HOST_WRITE_ONLY	(1 << 7)
 #define IRT_OCL_MEM_HOST_READ_ONLY	(1 << 8)
 #define IRT_OCL_MEM_HOST_NO_ACCESS	(1 << 9)
@@ -112,12 +112,12 @@ typedef struct _irt_ocl_local_device {
 	cl_device_id cl_dev;
 	cl_context context;
 	cl_command_queue queue;
-
+	
 	// buffers info
 	cl_ulong mem_size; // memory of the device
 	cl_ulong mem_available; // memory still available, reduced after each buffer allocation
 	cl_ulong max_buffer_size; // max size of a buffer
-	irt_spinlock local_buffer_lock; 
+	irt_spinlock local_buffer_lock;
 	irt_ocl_local_buffer* local_buffer;
 	
 	// device info
@@ -127,14 +127,14 @@ typedef struct _irt_ocl_local_device {
 	char *version;
 	char *driver_version;
 	char *profile;
-
+	
 	cl_uint max_compute_units;
 	cl_uint max_clock_frequency;
 	cl_uint max_work_item_dimensions;
 	size_t* max_work_item_sizes;
 	size_t max_work_group_size;
-
-
+	
+	
 	cl_bool image_support;
 	cl_device_fp_config single_fp_config;
 	cl_bool endian_little;
@@ -143,9 +143,9 @@ typedef struct _irt_ocl_local_device {
 	cl_device_mem_cache_type mem_cache_type;
 	cl_ulong global_mem_cacheline_size;
 	cl_ulong global_mem_cache_size;
-
+	
 	cl_ulong max_constant_buffer_size;
-
+	
 	cl_device_local_mem_type local_mem_type;
 	cl_ulong local_mem_size;
 } irt_ocl_local_device;
@@ -165,12 +165,12 @@ typedef struct _irt_ocl_local_kernel {
 	size_t* global_work_offset;
 	size_t* global_work_size;
 	size_t* local_work_size;
-
+	
 	irt_spinlock kernel_lock;
 	irt_ocl_local_device* local_dev;
-
+	
 	char** args; // is not important the type, is used only for the free
-	int num_args; 
+	int num_args;
 } irt_ocl_local_kernel;
 
 irt_ocl_local_device* local_devices;
@@ -231,7 +231,8 @@ void irt_ocl_write_buffer(irt_ocl_buffer* buffer, irt_ocl_blocking_flag blocking
 void irt_ocl_release_buffer(irt_ocl_buffer* buffer);
 
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, uint32_t work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_size);
-void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
+void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options,
+                           irt_ocl_create_kernel_flag flag);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 
 void irt_ocl_print_device_short_info(irt_ocl_device* dev);
@@ -248,7 +249,8 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, uint32_t g_kernel_code
 
 irt_ocl_buffer* irt_ocl_rt_create_buffer(irt_ocl_mem_flag flags, size_t size);
 
-void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_siz, uint32_t num_args, ...);
+void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_siz,
+                           uint32_t num_args, ...);
 
 void irt_ocl_print_events();
 

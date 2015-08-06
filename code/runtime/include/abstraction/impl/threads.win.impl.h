@@ -68,25 +68,26 @@ void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	params->fun = fun;
 	params->args = args;
 	HANDLE thread_handle;
-	if (t == NULL)
+	if(t == NULL) {
 		thread_handle = CreateThread(NULL, 0, _irt_win_thread_func, params, 0, NULL);
+	}
 	else {
 		thread_handle = CreateThread(NULL, 0, _irt_win_thread_func, params, 0, &(t->thread_id));
 		t->thread_handle = thread_handle;
 	}
-
+	
 	IRT_ASSERT(thread_handle != NULL, IRT_ERR_INTERNAL, "Could not create worker thread");
 }
 
 void irt_thread_get_current(irt_thread *t) {
 	HANDLE real_handle = NULL;
 	HANDLE proc_handle = GetCurrentProcess();
-	DuplicateHandle( proc_handle, GetCurrentThread(), proc_handle, &real_handle, 0, TRUE, DUPLICATE_SAME_ACCESS );
+	DuplicateHandle(proc_handle, GetCurrentThread(), proc_handle, &real_handle, 0, TRUE, DUPLICATE_SAME_ACCESS);
 	t->thread_handle = real_handle;
 	t->thread_id = GetCurrentThreadId();
 }
 
-void irt_thread_cancel(irt_thread *t){
+void irt_thread_cancel(irt_thread *t) {
 	/*
 	from http://msdn.microsoft.com/en-us/library/windows/desktop/ms686717(v=vs.85).aspx :
 	TerminateThread can result in the following problems:
@@ -94,27 +95,26 @@ void irt_thread_cancel(irt_thread *t){
 	- If the target thread is allocating memory from the heap, the heap lock will not be released.
 	- If the target thread is executing certain kernel32 calls when it is terminated, the kernel32 state for the thread's process could be inconsistent.
 	- If the target thread is manipulating the global state of a shared DLL, the state of the DLL could be destroyed, affecting other users of the DLL.
-
+	
 	we don't care about all those issues since this function is only called in case of an error and the program
 	should exit
 	*/
 	TerminateThread(t->thread_handle, -1);
 }
 
-int irt_thread_join(irt_thread *t){
+int irt_thread_join(irt_thread *t) {
 	return WaitForSingleObject(t->thread_handle, INFINITE);
 }
 
-void irt_thread_exit(int exit_code){
+void irt_thread_exit(int exit_code) {
 	ExitThread(exit_code);
-}  
+}
 
-void irt_thread_yield()
-{
+void irt_thread_yield() {
 	IRT_WARN("irt_thread_yield empty implementation");
 }
 
-bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
+bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2) {
 	return t1->thread_id == t2->thread_id;
 }
 
@@ -123,74 +123,74 @@ bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
 // condition variables are supported in WINDOWS Vista and up, compiling on older platforms will raise an error
 // if IRT_WORKER_SLEEPING is defined
 void irt_cond_var_init(irt_cond_var *cv) {
-	#if (WINVER < 0x0600)
-		#ifdef IRT_WORKER_SLEEPING
-			#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
-		#endif
-		// NOOP
-	#else
-		InitializeConditionVariable(cv);
-	#endif
+#if (WINVER < 0x0600)
+#ifdef IRT_WORKER_SLEEPING
+#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
+#endif
+	// NOOP
+#else
+	InitializeConditionVariable(cv);
+#endif
 }
 
 void irt_cond_var_destroy(irt_cond_var *cv) {
 	// there is no WinAPI call
 }
 
-void irt_cond_wake_all(irt_cond_var* cv){
-	#if (WINVER < 0x0600)
-		#ifdef IRT_WORKER_SLEEPING
-			#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
-		#endif
-		// NOOP
-	#else
-		WakeAllConditionVariable(cv);
-	#endif
+void irt_cond_wake_all(irt_cond_var* cv) {
+#if (WINVER < 0x0600)
+#ifdef IRT_WORKER_SLEEPING
+#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
+#endif
+	// NOOP
+#else
+	WakeAllConditionVariable(cv);
+#endif
 }
 
-int irt_cond_wait(irt_cond_var* cv, irt_mutex_obj* m){
-	#if (WINVER < 0x0600)
-		#ifdef IRT_WORKER_SLEEPING
-			#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
-		#else
-			return 0;
-		#endif
-	#else
-		return !SleepConditionVariableSRW(cv, m, INFINITE, 0);
-	#endif
+int irt_cond_wait(irt_cond_var* cv, irt_mutex_obj* m) {
+#if (WINVER < 0x0600)
+#ifdef IRT_WORKER_SLEEPING
+#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
+#else
+	return 0;
+#endif
+#else
+	return !SleepConditionVariableSRW(cv, m, INFINITE, 0);
+#endif
 }
 
-void irt_cond_wake_one(irt_cond_var *cv){
-	#if (WINVER < 0x0600)
-		#ifdef IRT_WORKER_SLEEPING
-			#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
-		#endif
-		// NOOP
-	#else
-		WakeConditionVariable(cv);
-	#endif
+void irt_cond_wake_one(irt_cond_var *cv) {
+#if (WINVER < 0x0600)
+#ifdef IRT_WORKER_SLEEPING
+#error "IRT_WORKER_SLEEPING is not supported on Windows platforms older than Vista (condition variables unsupported)"
+#endif
+	// NOOP
+#else
+	WakeConditionVariable(cv);
+#endif
 }
 
 // Windows Vista and up use slim reader writer locks
 #if (WINVER >= 0x0600)
 
-void irt_mutex_init(irt_mutex_obj *m){
+void irt_mutex_init(irt_mutex_obj *m) {
 	InitializeSRWLock(m);
 }
 
-void irt_mutex_lock(irt_mutex_obj *m){
+void irt_mutex_lock(irt_mutex_obj *m) {
 	AcquireSRWLockExclusive(m);
 }
 
-int irt_mutex_trylock(irt_mutex_obj *m){
+int irt_mutex_trylock(irt_mutex_obj *m) {
 	return !TryAcquireSRWLockExclusive(m);
 }
 
-void irt_mutex_unlock(irt_mutex_obj *m){
+void irt_mutex_unlock(irt_mutex_obj *m) {
 	ReleaseSRWLockExclusive(m);
 }
 
-void irt_mutex_destroy(irt_mutex_obj *m){
+void irt_mutex_destroy(irt_mutex_obj *m) {
 	// there is no WinAPI call
 }
 
@@ -201,27 +201,29 @@ void irt_mutex_destroy(irt_mutex_obj *m){
 // it won't be blocked
 #else
 
-void irt_mutex_init(irt_mutex_obj *m){
+void irt_mutex_init(irt_mutex_obj *m) {
 	*m = CreateSemaphore(NULL, 1, 1, NULL);
 }
 
-void irt_mutex_lock(irt_mutex_obj *m){
+void irt_mutex_lock(irt_mutex_obj *m) {
 	WaitForSingleObject(*m, INFINITE); // decreases semaphore count by 1 if it is greater than 0, else waits until it becomes greater than 0
 }
 
-int irt_mutex_trylock(irt_mutex_obj *m){
+int irt_mutex_trylock(irt_mutex_obj *m) {
 	DWORD res = WaitForSingleObject(*m, 1); // wait 1ms for m being signalled, then return
-	if (res == WAIT_OBJECT_0)
+	if(res == WAIT_OBJECT_0) {
 		return 0;
-	else
+	}
+	else {
 		return -1;
+	}
 }
 
-void irt_mutex_unlock(irt_mutex_obj *m){
+void irt_mutex_unlock(irt_mutex_obj *m) {
 	ReleaseSemaphore(*m, 1, NULL); // increase semaphore count by 1
 }
 
-void irt_mutex_destroy(irt_mutex_obj *m){
+void irt_mutex_destroy(irt_mutex_obj *m) {
 	CloseHandle(*m);
 }
 
@@ -230,10 +232,11 @@ void irt_mutex_destroy(irt_mutex_obj *m){
 
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 
-int irt_tls_key_create(irt_tls_key* k){
+int irt_tls_key_create(irt_tls_key* k) {
 	*k = TlsAlloc();
-	if (*k == TLS_OUT_OF_INDEXES)
+	if(*k == TLS_OUT_OF_INDEXES) {
 		return -1;
+	}
 	return 0;
 }
 
@@ -241,11 +244,11 @@ void irt_tls_key_delete(irt_tls_key k) {
 	TlsFree(k);
 }
 
-void* irt_tls_get(irt_tls_key k){
+void* irt_tls_get(irt_tls_key k) {
 	return TlsGetValue(k);
 }
 
-int irt_tls_set(irt_tls_key k, void *val){
+int irt_tls_set(irt_tls_key k, void *val) {
 	return !TlsSetValue(k, val);
 }
 

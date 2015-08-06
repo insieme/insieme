@@ -9,17 +9,17 @@ int array[100];
 int*  pointer;
 
 // in class
-class Obj{
+class Obj {
 	static int member;
-
-	Obj(){
+	
+	Obj() {
 		static int ctorGlobal;
 	}
 };
 
 
 // class object with static inside
-static struct Obj2{
+static struct Obj2 {
 	static int a;
 	int b;
 } instance;
@@ -29,10 +29,10 @@ int Obj2::a = 6;
 
 int f();
 
-int main(){
+int main() {
 	static int var;   // alias
 	static int diffName;
 	int local = f();
-
+	
 	Obj2::a++;
 }

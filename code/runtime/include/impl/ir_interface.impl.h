@@ -76,17 +76,19 @@ void _irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range b
 	uint64 chunk = numit / participants;
 	uint64 rem = numit % participants;
 	base_range.begin = base_range.begin + id * chunk * base_range.step;
-
+	
 	// adjust chunk and begin to take care of remainder
 	if(id < rem) {
 		chunk++;
 	}
 	base_range.begin += MIN(rem, id) * base_range.step;
 	base_range.end = base_range.begin + chunk * base_range.step;
-
+	
 	// run chunk
 	irt_work_item_range range = base_range;
-	if(range.begin == range.end) return;
+	if(range.begin == range.end) {
+		return;
+	}
 	irt_lw_data_item *prev_args = self->parameters;
 	irt_work_item_range prev_range = self->range;
 	self->parameters = args;
@@ -99,16 +101,18 @@ void _irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range b
 
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation* impl, irt_lw_data_item* args) {
 	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
-	irt_optimizer_runtime_data* old_data = irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(impl->variants[0]));
+	irt_optimizer_runtime_data* old_data = irt_optimizer_set_wrapping_optimizations(&
+	                                       (irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(impl->variants[0]));
 	irt_optimizer_apply_dvfs(&(impl->variants[0]));
-
+	
 	irt_schedule_loop(self, group, range, impl, args);
-
+	
 	//Note: As the selection of loop implementation variants may be different from WI impl selection we simply use the first implementation for now
 	irt_optimizer_remove_dvfs(&(impl->variants[0]));
 	irt_optimizer_compute_optimizations(&(impl->variants[0]), NULL, true);
-	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), old_data);
-
+	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]),
+	        old_data);
+	        
 #ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
 	irt_atomic_add_and_fetch(&irt_g_app_progress, 1, uint64);
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
@@ -130,15 +134,20 @@ irt_joinable irt_parallel(const irt_parallel_job* job) {
 	uint32 num_threads = (job->max/2+job->min/2);
 	num_threads -= num_threads%job->mod;
 	if(job->max >= IRT_SANE_PARALLEL_MAX) {
-		num_threads = irt_g_degree_of_parallelism;	
+		num_threads = irt_g_degree_of_parallelism;
 		irt_work_item* cur_wi = irt_wi_get_current();
 		if(cur_wi && cur_wi->default_parallel_wi_count != 0) {
 			num_threads = cur_wi->default_parallel_wi_count;
 		}
 	}
-	if(num_threads<job->min) num_threads = job->min;
-	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
-	irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0], &(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]));
+	if(num_threads<job->min) {
+		num_threads = job->min;
+	}
+	if(num_threads>IRT_SANE_PARALLEL_MAX) {
+		num_threads = IRT_SANE_PARALLEL_MAX;
+	}
+	irt_optimizer_set_wrapping_optimizations(&job->impl->variants[0],
+	        &(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]));
 #ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
 	irt_atomic_add_and_fetch(&irt_g_app_progress, num_threads, uint64);
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
@@ -173,17 +182,19 @@ irt_joinable irt_task(const irt_parallel_job* job) {
 
 void irt_region(const irt_parallel_job* job) {
 	irt_work_item* wis = irt_wi_create(irt_g_wi_range_one_elem, job->impl, job->args);
-
+	
 	//Note: We use the first implementation here since it may carry optimization data
-	irt_optimizer_runtime_data* old_data =  irt_optimizer_set_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(job->impl->variants[0]));
+	irt_optimizer_runtime_data* old_data =  irt_optimizer_set_wrapping_optimizations(&
+	                                        (irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), &(job->impl->variants[0]));
 	irt_optimizer_apply_dvfs(&(job->impl->variants[0]));
-
+	
 	job->impl->variants[0].implementation(wis);
-
+	
 	irt_optimizer_remove_dvfs(&(job->impl->variants[0]));
 	irt_optimizer_compute_optimizations(&(job->impl->variants[0]), NULL, true);
-	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]), old_data);
-
+	irt_optimizer_reset_wrapping_optimizations(&(irt_worker_get_current()->cur_wi->impl->variants[irt_worker_get_current()->cur_wi->selected_impl_variant]),
+	        old_data);
+	        
 	//TODO need some proper cleanup here. simply freeing the WI will not clean everything which has been created
 	free(wis);
 }
@@ -192,12 +203,15 @@ void irt_merge(irt_joinable joinable) {
 #ifdef IRT_ENABLE_APP_TIME_ACCOUNTING
 	irt_atomic_add_and_fetch(&irt_g_app_progress, 1, uint64);
 #endif // IRT_ENABLE_APP_TIME_ACCOUNTING
-
-	if(joinable.wi_id.full == irt_work_item_null_id().full) return;
-
+	
+	if(joinable.wi_id.full == irt_work_item_null_id().full) {
+		return;
+	}
+	
 	if(joinable.wi_id.id_type == IRT_ID_work_group) {
 		irt_wg_join(joinable.wg_id);
-	} else {
+	}
+	else {
 		irt_wi_join(joinable.wi_id);
 	}
 }

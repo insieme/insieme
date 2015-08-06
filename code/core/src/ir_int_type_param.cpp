@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,62 +44,62 @@ namespace insieme {
 namespace core {
 
 
-	// ----------------------- Concrete Integer Type Parameter ------------------------
+// ----------------------- Concrete Integer Type Parameter ------------------------
 
-	ConcreteIntTypeParamPtr ConcreteIntTypeParam::get(NodeManager& manager, std::size_t value) {
-		return manager.get(ConcreteIntTypeParam(UIntValue::get(manager, value)));
-	}
+ConcreteIntTypeParamPtr ConcreteIntTypeParam::get(NodeManager& manager, std::size_t value) {
+	return manager.get(ConcreteIntTypeParam(UIntValue::get(manager, value)));
+}
 
-	bool ConcreteIntTypeParam::operator<(const IntTypeParam& param) const {
-		NodePtr other(&param);
-
-		// variable int type parameters are smaller than all other parameters
-		if (other->getNodeType() != NT_ConcreteIntTypeParam) {
-			if (other->getNodeType() == NT_InfiniteIntTypeParam) {
-				// it is smaller than an infinite int type param ...
-				return true;
-			}
-
-			// compare based on parameters type
-			return getNodeTypeInternal() < other->getNodeType();
+bool ConcreteIntTypeParam::operator<(const IntTypeParam& param) const {
+	NodePtr other(&param);
+	
+	// variable int type parameters are smaller than all other parameters
+	if(other->getNodeType() != NT_ConcreteIntTypeParam) {
+		if(other->getNodeType() == NT_InfiniteIntTypeParam) {
+			// it is smaller than an infinite int type param ...
+			return true;
 		}
-
-		// compare the symbol
-		return getParam()->getValue() < static_cast<const ConcreteIntTypeParam&>(param).getParam()->getValue();
+		
+		// compare based on parameters type
+		return getNodeTypeInternal() < other->getNodeType();
 	}
+	
+	// compare the symbol
+	return getParam()->getValue() < static_cast<const ConcreteIntTypeParam&>(param).getParam()->getValue();
+}
 
 
 
-	// ----------------------- Variable Integer Type Parameter ------------------------
+// ----------------------- Variable Integer Type Parameter ------------------------
 
-	VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
-		return manager.get(VariableIntTypeParam(CharValue::get(manager, symbol)));
-	}
+VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
+	return manager.get(VariableIntTypeParam(CharValue::get(manager, symbol)));
+}
 
-	bool VariableIntTypeParam::operator<(const IntTypeParam& param) const {
-		NodePtr other(&param);
-
-		// variable int type parameters are smaller than all other parameters
-		if (other->getNodeType() != NT_VariableIntTypeParam) {
-			return false;
-		}
-
-		// compare the symbol
-		return getSymbol()->getValue() < static_cast<const VariableIntTypeParam&>(other).getSymbol()->getValue();
-	}
-
-
-
-	// ----------------------- Infinite Integer Type Parameter ------------------------
-
-	InfiniteIntTypeParamPtr InfiniteIntTypeParam::get(NodeManager& manager) {
-		return manager.get(InfiniteIntTypeParam());
-	}
-
-	bool InfiniteIntTypeParam::operator<(const IntTypeParam& other) const {
-		// nothing is larger than infinite
+bool VariableIntTypeParam::operator<(const IntTypeParam& param) const {
+	NodePtr other(&param);
+	
+	// variable int type parameters are smaller than all other parameters
+	if(other->getNodeType() != NT_VariableIntTypeParam) {
 		return false;
 	}
+	
+	// compare the symbol
+	return getSymbol()->getValue() < static_cast<const VariableIntTypeParam&>(other).getSymbol()->getValue();
+}
+
+
+
+// ----------------------- Infinite Integer Type Parameter ------------------------
+
+InfiniteIntTypeParamPtr InfiniteIntTypeParam::get(NodeManager& manager) {
+	return manager.get(InfiniteIntTypeParam());
+}
+
+bool InfiniteIntTypeParam::operator<(const IntTypeParam& other) const {
+	// nothing is larger than infinite
+	return false;
+}
 
 
 } // end namespace core

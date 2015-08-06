@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,215 +47,219 @@ namespace driver {
 namespace integration {
 
 
-	TEST(Properties, Basic) {
+TEST(Properties, Basic) {
 
-		Properties p;
+	Properties p;
+	
+	EXPECT_EQ("Properties { }\n", toString(p));
+	
+	
+	EXPECT_EQ("", p.get(""));
+	EXPECT_EQ("", p.get("a"));
+	EXPECT_EQ("", p.get("a","b"));
+	
+	p.set("a", "v1");
+	EXPECT_EQ("Properties {\n\ta=v1\n}\n", toString(p));
+	
+	EXPECT_EQ("", p.get(""));
+	EXPECT_EQ("v1", p.get("a"));
+	EXPECT_EQ("v1", p.get("a","b"));
+	EXPECT_EQ("v1", p.get("a","c"));
+	EXPECT_EQ("", p.get("x"));
+	
+	p.set("a", "b", "v2");
+	EXPECT_EQ("Properties {\n\ta=v1\n\ta[b]=v2\n}\n", toString(p));
+	
+	EXPECT_EQ("", p.get(""));
+	EXPECT_EQ("v1", p.get("a"));
+	EXPECT_EQ("v2", p.get("a","b"));
+	EXPECT_EQ("v1", p.get("a","c"));
+	EXPECT_EQ("", p.get("x"));
+	
+	p.set("a", "c", "v3");
+	EXPECT_EQ("Properties {\n\ta=v1\n\ta[b]=v2\n\ta[c]=v3\n}\n", toString(p));
+	
+	EXPECT_EQ("", p.get(""));
+	EXPECT_EQ("v1", p.get("a"));
+	EXPECT_EQ("v2", p.get("a","b"));
+	EXPECT_EQ("v3", p.get("a","c"));
+	EXPECT_EQ("", p.get("x"));
+	
+}
 
-		EXPECT_EQ("Properties { }\n", toString(p));
+TEST(Properties, Getter) {
 
+	Properties p;
+	p.set("a", "5");
+	p.set("b", "1,2,3,2,1");
+	p.set("c", "1,2,3,,2,1");
+	
+	EXPECT_EQ("5", p.get("a"));
+	EXPECT_EQ("1,2,3,2,1", p.get("b"));
+	EXPECT_EQ("1,2,3,,2,1", p.get("c"));
+	
+	EXPECT_EQ(5, p.get<int>("a"));
+	EXPECT_THROW(p.get<int>("b"), boost::bad_lexical_cast);
+	
+	EXPECT_EQ(toVector(5), p.get<vector<int>>("a"));
+	EXPECT_EQ(std::set<int>({5}), p.get<set<int>>("a"));
+	
+	EXPECT_EQ(toVector(1,2,3,2,1), p.get<vector<int>>("b"));
+	EXPECT_EQ(std::set<int>({1,2,3}), p.get<set<int>>("b"));
+	
+	EXPECT_EQ(toVector(1,2,3,2,1), p.get<vector<int>>("c"));
+	EXPECT_EQ(std::set<int>({1,2,3}), p.get<set<int>>("c"));
+	
+}
 
-		EXPECT_EQ("", p.get(""));
-		EXPECT_EQ("", p.get("a"));
-		EXPECT_EQ("", p.get("a","b"));
+TEST(Properties, VarSubstitute) {
 
-		p.set("a", "v1");
-		EXPECT_EQ("Properties {\n\ta=v1\n}\n", toString(p));
+	Properties p;
+	p.set("a", "x");
+	p.set("b", "y");
+	
+	EXPECT_EQ("test", p.mapVars("test"));
+	EXPECT_EQ("testx", p.mapVars("test${a}"));
+	EXPECT_EQ("testy", p.mapVars("test${b}"));
+	EXPECT_EQ("testxsdydsxdf", p.mapVars("test${a}sd${b}ds${a}df"));
+	
+}
 
-		EXPECT_EQ("", p.get(""));
-		EXPECT_EQ("v1", p.get("a"));
-		EXPECT_EQ("v1", p.get("a","b"));
-		EXPECT_EQ("v1", p.get("a","c"));
-		EXPECT_EQ("", p.get("x"));
+TEST(Properties, Merge) {
 
-		p.set("a", "b", "v2");
-		EXPECT_EQ("Properties {\n\ta=v1\n\ta[b]=v2\n}\n", toString(p));
-
-		EXPECT_EQ("", p.get(""));
-		EXPECT_EQ("v1", p.get("a"));
-		EXPECT_EQ("v2", p.get("a","b"));
-		EXPECT_EQ("v1", p.get("a","c"));
-		EXPECT_EQ("", p.get("x"));
-
-		p.set("a", "c", "v3");
-		EXPECT_EQ("Properties {\n\ta=v1\n\ta[b]=v2\n\ta[c]=v3\n}\n", toString(p));
-
-		EXPECT_EQ("", p.get(""));
-		EXPECT_EQ("v1", p.get("a"));
-		EXPECT_EQ("v2", p.get("a","b"));
-		EXPECT_EQ("v3", p.get("a","c"));
-		EXPECT_EQ("", p.get("x"));
-
+	{
+		// a simple case
+		Properties p1;
+		p1.set("a", "v1");
+		
+		Properties p2;
+		p2.set("b", "v2");
+		
+		auto r = p1 << p2;
+		EXPECT_EQ(2, r.size());
+		EXPECT_EQ("v1", r.get("a")) << r;
+		EXPECT_EQ("v2", r.get("b")) << r;
 	}
-
-	TEST(Properties, Getter) {
-
-		Properties p;
-		p.set("a", "5");
-		p.set("b", "1,2,3,2,1");
-		p.set("c", "1,2,3,,2,1");
-
-		EXPECT_EQ("5", p.get("a"));
-		EXPECT_EQ("1,2,3,2,1", p.get("b"));
-		EXPECT_EQ("1,2,3,,2,1", p.get("c"));
-
-		EXPECT_EQ(5, p.get<int>("a"));
-		EXPECT_THROW(p.get<int>("b"), boost::bad_lexical_cast);
-
-		EXPECT_EQ(toVector(5), p.get<vector<int>>("a"));
-		EXPECT_EQ(std::set<int>({5}), p.get<set<int>>("a"));
-
-		EXPECT_EQ(toVector(1,2,3,2,1), p.get<vector<int>>("b"));
-		EXPECT_EQ(std::set<int>({1,2,3}), p.get<set<int>>("b"));
-
-		EXPECT_EQ(toVector(1,2,3,2,1), p.get<vector<int>>("c"));
-		EXPECT_EQ(std::set<int>({1,2,3}), p.get<set<int>>("c"));
-
+	
+	{
+		// a case with collisions
+		Properties p1;
+		p1.set("a", "v1");
+		
+		Properties p2;
+		p2.set("a", "v2");
+		
+		auto r = p1 << p2;
+		EXPECT_EQ(1, r.size());
+		EXPECT_EQ("v2", r.get("a")) << r;
 	}
-
-	TEST(Properties, VarSubstitute) {
-
-		Properties p;
-		p.set("a", "x");
-		p.set("b", "y");
-
-		EXPECT_EQ("test", p.mapVars("test"));
-		EXPECT_EQ("testx", p.mapVars("test${a}"));
-		EXPECT_EQ("testy", p.mapVars("test${b}"));
-		EXPECT_EQ("testxsdydsxdf", p.mapVars("test${a}sd${b}ds${a}df"));
-
+	
+	{
+		// a case with a category
+		Properties p1;
+		p1.set("a", "v1");
+		
+		Properties p2;
+		p2.set("a", "c1", "v2");
+		
+		auto r = p1 << p2;
+		EXPECT_EQ(1, r.size());
+		EXPECT_EQ("v1", r.get("a")) << r;
+		EXPECT_EQ("v2", r.get("a", "c1")) << r;
 	}
-
-	TEST(Properties, Merge) {
-
-		{ 	// a simple case
-			Properties p1;
-			p1.set("a", "v1");
-
-			Properties p2;
-			p2.set("b", "v2");
-
-			auto r = p1 << p2;
-			EXPECT_EQ(2, r.size());
-			EXPECT_EQ("v1", r.get("a")) << r;
-			EXPECT_EQ("v2", r.get("b")) << r;
-		}
-
-		{ 	// a case with collisions
-			Properties p1;
-			p1.set("a", "v1");
-
-			Properties p2;
-			p2.set("a", "v2");
-
-			auto r = p1 << p2;
-			EXPECT_EQ(1, r.size());
-			EXPECT_EQ("v2", r.get("a")) << r;
-		}
-
-		{ 	// a case with a category
-			Properties p1;
-			p1.set("a", "v1");
-
-			Properties p2;
-			p2.set("a", "c1", "v2");
-
-			auto r = p1 << p2;
-			EXPECT_EQ(1, r.size());
-			EXPECT_EQ("v1", r.get("a")) << r;
-			EXPECT_EQ("v2", r.get("a", "c1")) << r;
-		}
-
-		{ 	// a case with variable substitution
-			Properties p1;
-			p1.set("a", "v1");
-			p1.set("a", "c", "v2");
-
-			Properties p2;
-			p2.set("a", "x ${a} ${a[c]}");
-
-			auto r = p1 << p2;
-			EXPECT_EQ(1, r.size());
-			EXPECT_EQ("x v1 v2", r.get("a")) << r;
-		}
+	
+	{
+		// a case with variable substitution
+		Properties p1;
+		p1.set("a", "v1");
+		p1.set("a", "c", "v2");
+		
+		Properties p2;
+		p2.set("a", "x ${a} ${a[c]}");
+		
+		auto r = p1 << p2;
+		EXPECT_EQ(1, r.size());
+		EXPECT_EQ("x v1 v2", r.get("a")) << r;
 	}
+}
 
-	TEST(PropertyView, Merge) {
+TEST(PropertyView, Merge) {
 
-		Properties p;
-		p.set("a", "v1");
-		p.set("a", "c1", "v2");
-		p.set("a", "c2", "v3");
-
-		p.set("b", "v4");
-		p.set("b", "c1", "v5");
-
-		p.set("c", "v6");
-
-		// create views
-		auto view1 = p.getView("c1");
-		auto view2 = p.getView("c2");
-		auto view3 = p.getView("c3");
-
-		// test views
-		EXPECT_EQ("v2", view1["a"]);
-		EXPECT_EQ("v5", view1["b"]);
-		EXPECT_EQ("v6", view1["c"]);
-		EXPECT_EQ("", view1["d"]);
-
-		EXPECT_EQ("v3", view2["a"]);
-		EXPECT_EQ("v4", view2["b"]);
-		EXPECT_EQ("v6", view2["c"]);
-		EXPECT_EQ("", view2["d"]);
-
-		EXPECT_EQ("v1", view3["a"]);
-		EXPECT_EQ("v4", view3["b"]);
-		EXPECT_EQ("v6", view3["c"]);
-		EXPECT_EQ("", view3["d"]);
-
-		// and test print operation
-		EXPECT_EQ("Properties {\n\ta=v2\n\tb=v5\n\tc=v6\n}\n", toString(view1));
-		EXPECT_EQ("Properties {\n\ta=v3\n\tb=v4\n\tc=v6\n}\n", toString(view2));
-		EXPECT_EQ("Properties {\n\ta=v1\n\tb=v4\n\tc=v6\n}\n", toString(view3));
-
-	}
-
-
-
-	TEST(Properties, IO) {
-
-		std::stringstream buffer;
-
-		Properties p;
-		p.set("a", "v1");
-		p.set("a", "c1", "v2");
-		p.set("b", "v3");
-
-		// safe stuff in buffer
-		p.store(buffer);
+	Properties p;
+	p.set("a", "v1");
+	p.set("a", "c1", "v2");
+	p.set("a", "c2", "v3");
+	
+	p.set("b", "v4");
+	p.set("b", "c1", "v5");
+	
+	p.set("c", "v6");
+	
+	// create views
+	auto view1 = p.getView("c1");
+	auto view2 = p.getView("c2");
+	auto view3 = p.getView("c3");
+	
+	// test views
+	EXPECT_EQ("v2", view1["a"]);
+	EXPECT_EQ("v5", view1["b"]);
+	EXPECT_EQ("v6", view1["c"]);
+	EXPECT_EQ("", view1["d"]);
+	
+	EXPECT_EQ("v3", view2["a"]);
+	EXPECT_EQ("v4", view2["b"]);
+	EXPECT_EQ("v6", view2["c"]);
+	EXPECT_EQ("", view2["d"]);
+	
+	EXPECT_EQ("v1", view3["a"]);
+	EXPECT_EQ("v4", view3["b"]);
+	EXPECT_EQ("v6", view3["c"]);
+	EXPECT_EQ("", view3["d"]);
+	
+	// and test print operation
+	EXPECT_EQ("Properties {\n\ta=v2\n\tb=v5\n\tc=v6\n}\n", toString(view1));
+	EXPECT_EQ("Properties {\n\ta=v3\n\tb=v4\n\tc=v6\n}\n", toString(view2));
+	EXPECT_EQ("Properties {\n\ta=v1\n\tb=v4\n\tc=v6\n}\n", toString(view3));
+	
+}
 
 
-		// load stuff from buffer
-		Properties p2 = Properties::load(buffer);
 
-		EXPECT_EQ(p,p2);
+TEST(Properties, IO) {
 
-	}
+	std::stringstream buffer;
+	
+	Properties p;
+	p.set("a", "v1");
+	p.set("a", "c1", "v2");
+	p.set("b", "v3");
+	
+	// safe stuff in buffer
+	p.store(buffer);
+	
+	
+	// load stuff from buffer
+	Properties p2 = Properties::load(buffer);
+	
+	EXPECT_EQ(p,p2);
+	
+}
 
-	TEST(Properties, IO_empty) {
+TEST(Properties, IO_empty) {
 
-		std::stringstream buffer;
-
-		Properties p;
-
-		// safe stuff in buffer
-		p.store(buffer);
-
-		// load stuff from buffer
-		Properties p2 = Properties::load(buffer);
-
-		EXPECT_EQ(p,p2);
-
-	}
+	std::stringstream buffer;
+	
+	Properties p;
+	
+	// safe stuff in buffer
+	p.store(buffer);
+	
+	// load stuff from buffer
+	Properties p2 = Properties::load(buffer);
+	
+	EXPECT_EQ(p,p2);
+	
+}
 
 
 } // end namespace integration

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,35 +55,35 @@ public:
 		std::uint64_t numShared;
 		std::uint64_t numAddressable;
 	} NodeTypeInfo;
-
+	
 private:
 
 	/**
 	 * The number of nodes within an IR.
 	 */
 	std::uint64_t numSharedNodes;
-
+	
 	/**
 	 * The number of addressable nodes within an IR.
 	 */
 	std::uint64_t numAddressableNodes;
-
+	
 	/**
 	 * The height of the IR, hence, the maximum length of a path
 	 * from the root node to one of the leafs.
 	 */
 	unsigned height;
-
+	
 	/**
 	 * The statistical information stored per node type.
 	 */
 	NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
-
+	
 	/**
 	 * Creates a new instance of this class, initializing all values to 0.
 	 */
 	IRStatistic();
-
+	
 public:
 
 	/**
@@ -93,7 +93,7 @@ public:
 	 * @return the collected statistic information
 	 */
 	static IRStatistic evaluate(const NodePtr& node);
-
+	
 	/**
 	 * Obtains the number of shared nodes.
 	 *
@@ -102,7 +102,7 @@ public:
 	std::uint64_t getNumSharedNodes() const {
 		return numSharedNodes;
 	}
-
+	
 	/**
 	 * Obtains the number of addressable nodes within the IR.
 	 *
@@ -111,7 +111,7 @@ public:
 	std::uint64_t getNumAddressableNodes() const {
 		return numAddressableNodes;
 	}
-
+	
 	/**
 	 * Obtains the height of the IR.
 	 *
@@ -120,7 +120,7 @@ public:
 	unsigned getHeight() const {
 		return height;
 	}
-
+	
 	/**
 	 * Returns to average number nodes are shared within an IR, hence
 	 * the ratio between the number of addressable nodes and the number
@@ -131,7 +131,7 @@ public:
 	float getShareRatio() const {
 		return numAddressableNodes/(float)numSharedNodes;
 	}
-
+	
 	/**
 	 * Returns an array filled with the statistical data describing the
 	 * distribution of the various node types within the covered IR.
@@ -141,7 +141,7 @@ public:
 	const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
 		return nodeTypeInfo[nodeType];
 	}
-
+	
 };
 
 
@@ -156,30 +156,30 @@ public:
 		unsigned num;
 		unsigned memory;
 	} NodeTypeInfo;
-
+	
 private:
 
 	/**
 	 * The number of nodes encountered.
 	 */
 	unsigned numNodes;
-
+	
 	/**
 	 * The total amount of memory consumed by those nodes (not including
 	 * any annotations).
 	 */
 	unsigned totalMemory;
-
+	
 	/**
 	 * The statistical information stored per node type.
 	 */
 	NodeTypeInfo nodeTypeInfo[NUM_CONCRETE_NODE_TYPES];
-
+	
 	/**
 	 * Creates a new instance of this class, initializing all values to 0.
 	 */
 	NodeStatistic();
-
+	
 public:
 
 	/**
@@ -189,7 +189,7 @@ public:
 	 * @return the collected statistic information
 	 */
 	static NodeStatistic evaluate(const NodeManager& manager);
-
+	
 	/**
 	 * Obtains the total number of nodes encountered when producing this statistic.
 	 *
@@ -198,7 +198,7 @@ public:
 	unsigned getNumNodes() const {
 		return numNodes;
 	}
-
+	
 	/**
 	 * Obtains the total amount of memory consumed by the encountered nodes. The
 	 * computation is not including any memory spend on annotations.
@@ -208,7 +208,7 @@ public:
 	unsigned getTotalMemory() const {
 		return totalMemory;
 	}
-
+	
 	/**
 	 * Returns an array filled with the statistical data describing the
 	 * distribution of the various node types within the covered IR.
@@ -218,7 +218,7 @@ public:
 	const NodeTypeInfo& getNodeTypeInfo(NodeType nodeType) const {
 		return nodeTypeInfo[nodeType];
 	}
-
+	
 };
 
 
@@ -229,14 +229,14 @@ public:
 
 namespace std {
 
-	/**
-	 * Allows IR statistics to be directly printed into output streams.
-	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& statistics);
+/**
+ * Allows IR statistics to be directly printed into output streams.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& statistics);
 
-	/**
-	 * Allows a node statistics to be directly printed into output streams.
-	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& statistics);
+/**
+ * Allows a node statistics to be directly printed into output streams.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& statistics);
 
 }

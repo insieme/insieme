@@ -50,13 +50,13 @@
 #include "irt_maintenance.h"
 
 #ifdef _MSC_VER
-	#include <io.h>
+#include <io.h>
 #else
-	#include <unistd.h>
+#include <unistd.h>
 #endif
 
 #ifdef _WIN32
-	#warning "RAPL energy measurements in Windows are not supported!"
+#warning "RAPL energy measurements in Windows are not supported!"
 #endif
 
 /*
@@ -87,27 +87,30 @@ irt_spinlock _rapl_register_lock;
 
 uint64 _irt_read_rapl_register(void* user_data) {
 	static rapl_energy_data last_energy_data[IRT_HW_MAX_NUM_SOCKETS];
-
+	
 	rapl_energy_data current_data = { 0, 0, 0 };
-
+	
 	int32 file = 0;
 	int64 result = 0;
 	double energy_units = -1.0;
-
+	
 	uint32 num_sockets = irt_hw_get_num_sockets();
-
+	
 	// read RAPL register, fix overflow problem, store in global counter variable to be read by the instrumentation system
 	for(uint32 socket_id = 0; socket_id < num_sockets; ++socket_id) {
 		if((file = _irt_open_msr(socket_id * irt_hw_get_num_cores_per_socket())) > 0) {
 			if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
-				energy_units = pow(0.5, (double) ((result >> 8) & 0x1F));
-				if ((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
-					current_data.package = (double) (result & 0xFFFFFFFF) * energy_units;
-				if ((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
-					current_data.mc = (double) (result & 0xFFFFFFFF) * energy_units;
-				if ((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS) & 0xFFFFFFFF) >= 0)
-					current_data.cores = (double) (result & 0xFFFFFFFF) * energy_units;
-
+				energy_units = pow(0.5, (double)((result >> 8) & 0x1F));
+				if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS) & 0xFFFFFFFF) >= 0) {
+					current_data.package = (double)(result & 0xFFFFFFFF) * energy_units;
+				}
+				if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS) & 0xFFFFFFFF) >= 0) {
+					current_data.mc = (double)(result & 0xFFFFFFFF) * energy_units;
+				}
+				if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS) & 0xFFFFFFFF) >= 0) {
+					current_data.cores = (double)(result & 0xFFFFFFFF) * energy_units;
+				}
+				
 				// critical region because we're accessing a static local and a global array from
 				// both workers (when measurements are requested) and from the maintenance thread
 				irt_spin_lock(&_rapl_register_lock);
@@ -128,29 +131,31 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 	// needs to be called to get updates when a measurement is requested,
 	// and not only when periodic polling via the maintenance thread occurred
 	_irt_read_rapl_register(NULL);
-
+	
 	data->package = 0.0;
 	data->mc = 0.0;
 	data->cores = 0.0;
-
+	
 	// mark sockets that should be measured (i.e. that have cores which have workers running on them)
 	uint32 num_sockets = irt_hw_get_num_sockets();
 	uint32 num_cpus = irt_hw_get_num_cpus();
 	bool hyperthreading_enabled = irt_hw_get_hyperthreading_enabled();
 	bool socket_mask[num_sockets];
-
-	for(uint32 i = 0; i < num_sockets; ++i)
+	
+	for(uint32 i = 0; i < num_sockets; ++i) {
 		socket_mask[i] = false;
-
+	}
+	
 	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		uint32 coreid = irt_affinity_mask_get_first_cpu(irt_g_workers[i]->affinity);
 		if(coreid != (uint32)-1) {
-			if(hyperthreading_enabled && coreid >= (num_cpus/2))
+			if(hyperthreading_enabled && coreid >= (num_cpus/2)) {
 				coreid -= num_cpus/2;
+			}
 			socket_mask[coreid / irt_hw_get_num_cores_per_socket()] = true;
 		}
 	}
-
+	
 	// get readings from global RAPL counter variable, sum over all sockets
 	for(uint32 socket_id = 0; socket_id < num_sockets; ++socket_id) {
 		if(socket_mask[socket_id]) {
@@ -163,30 +168,31 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 
 bool irt_rapl_is_supported() {
 	// if not Intel CPU
-	if(strncmp(irt_hw_get_vendor_string(), "GenuineIntel", 12) != 0)
+	if(strncmp(irt_hw_get_vendor_string(), "GenuineIntel", 12) != 0) {
 		return false;
-
+	}
+	
 	irt_hw_cpuid_info cpuid_info = irt_hw_get_cpuid_info();
-
+	
 	// a whitelist of known RAPL-supporting microarchitectures
 	if(cpuid_info.family == 6) {
 		switch(cpuid_info.model) {
-			case 42: // SandyBridge 32nm
-			case 45: // dx1 = E5-2660
-			case 46: // SandyBridge EN 32nm
-			case 58: // IvyBridge 22nm
-			case 60: // Haswell, e.g. i7-4770k
-			case 62: // SandyBridge EP, e.g. E5-1620, E5-2680, Ivy Bridge-E, e.g. i7-4820K
-			case 63: // Haswell-E, e.g. i7-5930K
-			case 69: // Haswell-ULT, e.g. i5-4310
-			case 70: // Haswell-H, e.g. i7-4770HQ
-				return true;
-				break;
-			default:
-				return false;
+		case 42: // SandyBridge 32nm
+		case 45: // dx1 = E5-2660
+		case 46: // SandyBridge EN 32nm
+		case 58: // IvyBridge 22nm
+		case 60: // Haswell, e.g. i7-4770k
+		case 62: // SandyBridge EP, e.g. E5-1620, E5-2680, Ivy Bridge-E, e.g. i7-4820K
+		case 63: // Haswell-E, e.g. i7-5930K
+		case 69: // Haswell-ULT, e.g. i5-4310
+		case 70: // Haswell-H, e.g. i7-4770HQ
+			return true;
+			break;
+		default:
+			return false;
 		}
 	}
-
+	
 	return false;
 }
 
@@ -202,8 +208,9 @@ void irt_rapl_init() {
 }
 
 void irt_rapl_finalize() {
-	if(irt_g_inst_rapl_in_use)
+	if(irt_g_inst_rapl_in_use) {
 		irt_spin_destroy(&_rapl_register_lock);
+	}
 }
 
 void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
@@ -224,7 +231,8 @@ void irt_energy_select_instrumentation_method() {
 		irt_g_inst_rapl_in_use = true;
 		irt_rapl_init();
 		irt_log_setting_s("irt energy measurement method", "rapl");
-	} else {
+	}
+	else {
 		irt_get_energy_consumption = &_irt_get_energy_consumption_dummy;
 		irt_log_setting_s("irt energy measurement method", "none");
 	}

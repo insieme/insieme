@@ -51,46 +51,46 @@ namespace insieme {
 namespace frontend {
 
 
-	std::vector<std::string> listSources(){
-		namespace fs = boost::filesystem;
-		fs::path someDir(CLANG_SRC_DIR "/inputs/sniplets");
-		fs::directory_iterator end_iter;
-
-		std::vector<std::string> result;
-
-		if ( fs::exists(someDir) && fs::is_directory(someDir)) {
-			for( fs::directory_iterator dir_iter(someDir) ; dir_iter != end_iter ; ++dir_iter) {
-				if (fs::is_regular_file(dir_iter->status()) &&
-				    (dir_iter->path().extension().compare(".c") || dir_iter->path().extension().compare(".cpp"))) {
-					result.push_back(dir_iter->path().string());
-				}
+std::vector<std::string> listSources() {
+	namespace fs = boost::filesystem;
+	fs::path someDir(FRONTEND_TEST_DIR "/inputs/sniplets");
+	fs::directory_iterator end_iter;
+	
+	std::vector<std::string> result;
+	
+	if(fs::exists(someDir) && fs::is_directory(someDir)) {
+		for(fs::directory_iterator dir_iter(someDir) ; dir_iter != end_iter ; ++dir_iter) {
+			if(fs::is_regular_file(dir_iter->status()) &&
+			        (dir_iter->path().extension().compare(".c") || dir_iter->path().extension().compare(".cpp"))) {
+				result.push_back(dir_iter->path().string());
 			}
 		}
-		return result;
 	}
+	return result;
+}
 
 
 
-	// the type definition (specifying the parameter type)
-	class FrontendSnipletTestCase : public ::testing::TestWithParam<std::string> { };
+// the type definition (specifying the parameter type)
+class FrontendSnipletTestCase : public ::testing::TestWithParam<std::string> { };
 
-	// define the test case pattern
-	TEST_P(FrontendSnipletTestCase, SemanticChecks) {
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
+// define the test case pattern
+TEST_P(FrontendSnipletTestCase, SemanticChecks) {
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	
+	std::cout << "testing: " <<  GetParam() << std::endl;
+	// parse temporary file
+	std::vector<std::string> argv = { "compiler",  GetParam() };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	auto res = builder.normalize(options.job.execute(mgr));
+	
+	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+}
 
-			std::cout << "testing: " <<  GetParam() << std::endl;
-		// parse temporary file
-        std::vector<std::string> argv = { "compiler",  GetParam() };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		auto res = builder.normalize(options.job.execute(mgr));
-
-		EXPECT_TRUE ( core::checks::check(res).empty()) << core::checks::check(res);
-	}
-
-	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(FrontendSnipletTest, FrontendSnipletTestCase, ::testing::ValuesIn(listSources()));
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(FrontendSnipletTest, FrontendSnipletTestCase, ::testing::ValuesIn(listSources()));
 
 
 } // fe namespace

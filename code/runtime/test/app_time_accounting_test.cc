@@ -92,7 +92,7 @@ TEST(AppTimeAccounting, AppProgress) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	});
-
+	
 	irt::init(4);
 	irt::run([]() {
 		irt::merge(irt::parallel([] {
@@ -109,7 +109,7 @@ TEST(AppTimeAccounting, AppProgress) {
 		}));
 	});
 	irt::shutdown();
-
+	
 	run = false;
 	extThread.wait();
 }

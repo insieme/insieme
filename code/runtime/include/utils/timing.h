@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,16 +42,16 @@
 #include "abstraction/rdtsc.h"
 
 #ifdef _WIN32
-	#define CLOCK_REALTIME 1 // just to have some definition for CLOCK_REALTIME
-	#include "include_win32/time.h"
-	#include "include_win32/sys_time.h"
+#define CLOCK_REALTIME 1 // just to have some definition for CLOCK_REALTIME
+#include "include_win32/time.h"
+#include "include_win32/sys_time.h"
 #elif defined _GEMS_SIM
-	#include "include_gems/time.h"
-	#include "include_gems/sys_time.h"
+#include "include_gems/time.h"
+#include "include_gems/sys_time.h"
 #else
-	#include <time.h>
-	#include <unistd.h>
-	#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/time.h>
 #endif
 
 

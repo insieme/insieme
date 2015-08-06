@@ -38,43 +38,43 @@
 	{ x++; }
 
 
-int main (){
+int main() {
 
-	#pragma test dummy "first"
+#pragma test dummy "first"
 	int x;
-
+	
 #pragma test dummy "macro"
 	FAKE(x)
-
+	
 #pragma test dummy "solo"
 	
-
+	
 }
 
 
 #pragma test dummy "function"
-int f(){
+int f() {
 
 	return 0;
 }
 
-void g(){
+void g() {
 
 	int a;
 	int n;
-  #pragma test \
+#pragma test \
        dummy "two lines"
-  for(a=0;a<n;a++) {
-  }
+	for(a=0; a<n; a++) {
+	}
 }
 
 
-void h(int x){
+void h(int x) {
 	FAKE(x);
 #pragma test dummy "one"
 #pragma test dummy "two"
 #pragma test dummy "three"
-	for (x =0; x < 10; x ++){
+	for(x =0; x < 10; x ++) {
 	}
-
+	
 }

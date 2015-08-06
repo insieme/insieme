@@ -44,33 +44,45 @@ namespace core {
 namespace lang {
 
 
-	bool StaticVariableExtension::isStaticType(const TypePtr& type) const {
-		if (!type || type->getNodeType() != NT_StructType) return false;
-		StructTypePtr structType = type.as<StructTypePtr>();
-		if (structType->getName()->getValue() != "__static_var") return false;
-		if (structType.size() != 2) return false;
-		if (structType[0]->getName()->getValue() != "initialized") return false;
-		if (structType[1]->getName()->getValue() != "value") return false;
-		if (!type.getNodeManager().getLangBasic().isBool(structType[0]->getType())) return false;
-		return true;
+bool StaticVariableExtension::isStaticType(const TypePtr& type) const {
+	if(!type || type->getNodeType() != NT_StructType) {
+		return false;
 	}
+	StructTypePtr structType = type.as<StructTypePtr>();
+	if(structType->getName()->getValue() != "__static_var") {
+		return false;
+	}
+	if(structType.size() != 2) {
+		return false;
+	}
+	if(structType[0]->getName()->getValue() != "initialized") {
+		return false;
+	}
+	if(structType[1]->getName()->getValue() != "value") {
+		return false;
+	}
+	if(!type.getNodeManager().getLangBasic().isBool(structType[0]->getType())) {
+		return false;
+	}
+	return true;
+}
 
-	TypePtr StaticVariableExtension::wrapStaticType(const TypePtr& type) const {
-		IRBuilder builder(type.getNodeManager());
-		return builder.structType(
-				builder.stringValue("__static_var"),
-				builder.parents(),
-				toVector(
-						builder.namedType("initialized", builder.getLangBasic().getBool()),
-						builder.namedType("value", type)
-				)
-		);
-	}
+TypePtr StaticVariableExtension::wrapStaticType(const TypePtr& type) const {
+	IRBuilder builder(type.getNodeManager());
+	return builder.structType(
+	           builder.stringValue("__static_var"),
+	           builder.parents(),
+	           toVector(
+	               builder.namedType("initialized", builder.getLangBasic().getBool()),
+	               builder.namedType("value", type)
+	           )
+	       );
+}
 
-	TypePtr StaticVariableExtension::unwrapStaticType(const TypePtr& type) const {
-		assert_true(isStaticType(type)) << "Unable to unwrap non-static type.";
-		return type.as<StructTypePtr>()[1]->getType();
-	}
+TypePtr StaticVariableExtension::unwrapStaticType(const TypePtr& type) const {
+	assert_true(isStaticType(type)) << "Unable to unwrap non-static type.";
+	return type.as<StructTypePtr>()[1]->getType();
+}
 
 
 } // end namespace lang

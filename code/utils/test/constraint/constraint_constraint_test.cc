@@ -42,35 +42,35 @@ namespace insieme {
 namespace utils {
 namespace constraint {
 
-	TEST(Constraint, Basic) {
+TEST(Constraint, Basic) {
 
-		typedef TypedSetVariable<int> Set;
-
-		// simple set tests
-		Set a = 1;
-		Set b = 2;
-		Set c = 3;
-
-		EXPECT_EQ("v1", toString(a));
-
-		EXPECT_EQ("v1 sub v2", toString(*subset(a,b)));
-
-		EXPECT_EQ("5 in v1 => v2 sub v3", toString(*subsetIf(5,a,b,c)));
-
-		EXPECT_EQ("|v1| > 5 => v2 sub v3", toString(*subsetIfBigger(a,5,b,c)));
-
-		// constraint test
-		Constraints problem = {
-				elem(3, a),
-				subset(a,b),
-				subsetIf(5,a,b,c),
-				subsetIfBigger(a,5,b,c),
-				subsetIfReducedBigger(a, 3, 2, b, c)
-		};
-
-		EXPECT_EQ("{3 in v1,v1 sub v2,5 in v1 => v2 sub v3,|v1| > 5 => v2 sub v3,|v1 - {3}| > 2 => v2 sub v3}", toString(problem));
-
-	}
+	typedef TypedSetVariable<int> Set;
+	
+	// simple set tests
+	Set a = 1;
+	Set b = 2;
+	Set c = 3;
+	
+	EXPECT_EQ("v1", toString(a));
+	
+	EXPECT_EQ("v1 sub v2", toString(*subset(a,b)));
+	
+	EXPECT_EQ("5 in v1 => v2 sub v3", toString(*subsetIf(5,a,b,c)));
+	
+	EXPECT_EQ("|v1| > 5 => v2 sub v3", toString(*subsetIfBigger(a,5,b,c)));
+	
+	// constraint test
+	Constraints problem = {
+		elem(3, a),
+		subset(a,b),
+		subsetIf(5,a,b,c),
+		subsetIfBigger(a,5,b,c),
+		subsetIfReducedBigger(a, 3, 2, b, c)
+	};
+	
+	EXPECT_EQ("{3 in v1,v1 sub v2,5 in v1 => v2 sub v3,|v1| > 5 => v2 sub v3,|v1 - {3}| > 2 => v2 sub v3}", toString(problem));
+	
+}
 
 
 } // end namespace set_constraint

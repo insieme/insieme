@@ -48,9 +48,9 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
-struct GlobalRequiredAnnotation : public core::NodeAnnotation { 
+struct GlobalRequiredAnnotation : public core::NodeAnnotation {
 	const static string name;
-	const static utils::StringKey<GlobalRequiredAnnotation> key; 
+	const static utils::StringKey<GlobalRequiredAnnotation> key;
 	virtual const utils::AnnotationKeyPtr getKey() const {
 		return &key;
 	}
@@ -69,19 +69,19 @@ class GlobalMapper : public core::SimpleNodeMapping {
 	core::IRBuilder build;
 	core::VariablePtr curVar;
 	bool startedMapping;
-
+	
 	/* Caching of generated lambdas */
 	typedef member_function_trait<const core::NodePtr(GlobalMapper::*)(const core::LambdaExprPtr&)>::type FactoryType;
 	insieme::utils::cache::PointerCache<core::LambdaExprPtr, core::NodePtr, FactoryType> cache;
-
+	
 public:
-	GlobalMapper(core::NodeManager& nodeMan, const core::VariablePtr& global) 
-			: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false), cache(fun(*this, &GlobalMapper::mapLambdaExpr)) {
+	GlobalMapper(core::NodeManager& nodeMan, const core::VariablePtr& global)
+		: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false), cache(fun(*this, &GlobalMapper::mapLambdaExpr)) {
 	}
-
+	
 protected:
 	virtual const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr);
-		
+	
 	const core::NodePtr mapCall(const core::CallExprPtr& call);
 	const core::NodePtr mapBind(const core::BindExprPtr& bind);
 	//const core::NodePtr mapJob(const core::JobExprPtr& bind);

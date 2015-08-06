@@ -64,7 +64,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 	}
 	// try to steal a work item from predecessor
 	int pred = self->id.thread-1;
-	if(pred < 0) pred = irt_g_worker_count-1;
+	if(pred < 0) {
+		pred = irt_g_worker_count-1;
+	}
 	irt_work_item* stolen_wi = irt_work_item_cdeque_pop_front(&irt_g_workers[pred]->sched_data.queue);
 	if(stolen_wi != NULL) {
 		//printf("I'm a dirty thief %d.value\n", self->id.thread);
@@ -72,8 +74,9 @@ int irt_scheduling_iteration(irt_worker* self) {
 		return 1;
 	}
 	// if that failed as well, look in the IPC message queue
-	if(_irt_sched_check_ipc_queue(self))
+	if(_irt_sched_check_ipc_queue(self)) {
 		return 1;
+	}
 	return 0;
 }
 
@@ -84,7 +87,8 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 		// signal successor
 		int succ = (target->id.thread+1)%irt_g_worker_count;
 		irt_signal_worker(irt_g_workers[succ]);
-	} else {
+	}
+	else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 	}
 }
@@ -156,7 +160,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //		return 1;
 //	}
 //	// try to steal a work item from right thread
-//	int right_index = irt_g_worker_count/2 + tid/2; 
+//	int right_index = irt_g_worker_count/2 + tid/2;
 //	if(right_index == tid) right_index = 0; // last worker overflows to start
 //	stolen_wi = irt_work_item_cdeque_pop_front(&irt_g_workers[left_index]->sched_data.queue);
 //	if(stolen_wi != NULL) {
@@ -216,7 +220,7 @@ irt_joinable irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", (void*) self, (void*) yielding_wi);
 	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
-    _irt_worker_switch_from_wi(self, yielding_wi);
+	_irt_worker_switch_from_wi(self, yielding_wi);
 }
 
 

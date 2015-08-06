@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
 #include <string>
 #include <cassert>
@@ -46,54 +46,56 @@
 namespace insieme {
 namespace utils {
 
-class SourceLocation: 
-	public boost::less_than_comparable<SourceLocation, SourceLocation>, 
-	public utils::Printable 
-{
+class SourceLocation:
+	public boost::less_than_comparable<SourceLocation, SourceLocation>,
+	public utils::Printable {
 	const std::string 	fileName;
 	const size_t		lineNo;
 	const size_t 		columnNo;
 	const bool 			valid;
-
+	
 public:
 	SourceLocation(): fileName(), lineNo(0), columnNo(0), valid(false) { }
-
-	SourceLocation(const std::string& 	fileName, 
-				   const size_t& 		lineNo, 
-				   const size_t& 		columnNo)
+	
+	SourceLocation(const std::string& 	fileName,
+	               const size_t& 		lineNo,
+	               const size_t& 		columnNo)
 		:  fileName(fileName), lineNo(lineNo), columnNo(columnNo), valid(true) { }
-
-	const std::string& getFileName() const { 
-		assert_true(valid) << "Source location is not valid!"; 
+		
+	const std::string& getFileName() const {
+		assert_true(valid) << "Source location is not valid!";
 		return fileName;
 	}
-
-	bool isValid() const { return valid; }
-
-	size_t getLine() const { 
-		assert_true(valid) << "Source location is not valid!"; 
+	
+	bool isValid() const {
+		return valid;
+	}
+	
+	size_t getLine() const {
+		assert_true(valid) << "Source location is not valid!";
 		return lineNo;
 	}
-
-	size_t getColumn() const { 
-		assert_true(valid) << "Source location is not valid!"; 
-		return columnNo; 
+	
+	size_t getColumn() const {
+		assert_true(valid) << "Source location is not valid!";
+		return columnNo;
 	}
-
+	
 	bool operator<(const SourceLocation& other) const {
 		assert_true(valid) << "Source location is not valid!";
-		return fileName == other.fileName && 
-			   (lineNo < other.lineNo || (lineNo == other.lineNo && columnNo < other.columnNo));
+		return fileName == other.fileName &&
+		       (lineNo < other.lineNo || (lineNo == other.lineNo && columnNo < other.columnNo));
 	}
-
+	
 	bool operator==(const SourceLocation& other) const {
-		if(!isValid() || !other.isValid())
+		if(!isValid() || !other.isValid()) {
 			return false;
-		return fileName == other.fileName && 
-				lineNo == other.lineNo && 
-				columnNo == other.columnNo;
+		}
+		return fileName == other.fileName &&
+		       lineNo == other.lineNo &&
+		       columnNo == other.columnNo;
 	}
-
+	
 	std::ostream& printTo(std::ostream& out) const {
 		return out << fileName << ":" << lineNo << ":" << columnNo;
 	}

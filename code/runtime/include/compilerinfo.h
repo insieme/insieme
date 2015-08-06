@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,26 +39,26 @@
 #define __GUARD_COMPILERINFO_H
 
 void irt_log_compiler_info() {
-	#define IRT_COMPILER_PREFIX "Compiled with: "
-	#if defined _MSC_VER
-		irt_log_comment(IRT_COMPILER_PREFIX "Microsoft C/C++ Compiler " _MSC_FULL_VER);
-	#elif defined __clang__
-		irt_log_comment(IRT_COMPILER_PREFIX "clang " __clang_version__);
-	#elif defined __INTEL_COMPILER
-		irt_log_comment(IRT_COMPILER_PREFIX "Intel Compiler " __VERSION__);
+#define IRT_COMPILER_PREFIX "Compiled with: "
+#if defined _MSC_VER
+	irt_log_comment(IRT_COMPILER_PREFIX "Microsoft C/C++ Compiler " _MSC_FULL_VER);
+#elif defined __clang__
+	irt_log_comment(IRT_COMPILER_PREFIX "clang " __clang_version__);
+#elif defined __INTEL_COMPILER
+	irt_log_comment(IRT_COMPILER_PREFIX "Intel Compiler " __VERSION__);
 	// check for gcc last since many compilers define __GNUC__ for compatibility reasons
-	#elif defined __GNUC__
-		#ifdef __cplusplus
-			irt_log_comment(IRT_COMPILER_PREFIX "g++ " __VERSION__);
-		#else
-			irt_log_comment(IRT_COMPILER_PREFIX "gcc " __VERSION__);
-		#endif
-	#elif defined _GEMS_SIM
-		irt_log_comment(IRT_COMPILER_PREFIX "Gemsclaim Compiler");
-	#else
-		irt_log_comment(IRT_COMPILER_PREFIX "unknown backend compiler " __VERSION__);
-	#endif
-	#undef IRT_COMPILER_PREFIX
+#elif defined __GNUC__
+#ifdef __cplusplus
+	irt_log_comment(IRT_COMPILER_PREFIX "g++ " __VERSION__);
+#else
+	irt_log_comment(IRT_COMPILER_PREFIX "gcc " __VERSION__);
+#endif
+#elif defined _GEMS_SIM
+	irt_log_comment(IRT_COMPILER_PREFIX "Gemsclaim Compiler");
+#else
+	irt_log_comment(IRT_COMPILER_PREFIX "unknown backend compiler " __VERSION__);
+#endif
+#undef IRT_COMPILER_PREFIX
 }
 
 #endif //__GUARD_COMPILERINFO_H

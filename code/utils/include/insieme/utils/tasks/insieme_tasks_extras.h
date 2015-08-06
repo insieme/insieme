@@ -37,15 +37,15 @@
 #include "insieme_tasks.h"
 
 
-namespace insieme{
-namespace utils{
+namespace insieme {
+namespace utils {
 
 
 
 /**
  * wrap class for reduction:
  *  a reduction is defined over a collection, we operate over an input type, and we have to
- *  compute a single unique output. 
+ *  compute a single unique output.
  *  in order to use, we need to fulfill some requirements
  *  -  (T, S) - > S  is the prototype of the isolated operation to perform over a single element,
  *  -  this function needs to be provided of an identity element over the operator.
@@ -53,91 +53,98 @@ namespace utils{
  *  -  the output has to be a single value of type S
  */
 
-	template <typename T, typename S>
-	class ReductionTask : public TaskBase { 
+template <typename T, typename S>
+class ReductionTask : public TaskBase {
 
-		typedef typename std::vector<T> storage_t;
-		typedef typename std::vector<T>::const_iterator iterator;
+	typedef typename std::vector<T> storage_t;
+	typedef typename std::vector<T>::const_iterator iterator;
+	
+	
+	const storage_t& collection;
+	S& returnValue;
+	const S& identityValue;
+	
+	typedef std::function<S(S, T)> fun_t;
+	fun_t fun;
+	
+public:
 
-
-		const storage_t& collection;
-		S& returnValue;
-		const S& identityValue;
-
-		typedef std::function<S(S, T)> fun_t;
-		fun_t fun;
-
-		public:
-
-		ReductionTask (const storage_t& input, S& ret, const  S& identity, fun_t f)
-			: collection(input), returnValue(ret), identityValue(identity), fun(f)
-		{ }
-
-		/** 
-		 * this is the implementation of the the reduction task, 
-		 * 	- easy to begin with, tree reduction
-		 */
-		virtual void operator()(){
-
-
-			// matrix reduction, create a matrix with same rows as workers
-			//	an undefined number of rows will perform operation on one extra element
-			//	to map non-divisible workloads
-			//
-			//		<--------
-			//		<--------
-			//		<-------
-			//		<-------
-			//
-			// after this we reduce the first column
-			//
-			// 		^-------
-			// 		|-------
-			// 		|-------
-			// 		|----
-			//
-			// 	result is in the 0,0 position
-
-
-
-			unsigned workers = TaskManager::getNumWorkers();
-			unsigned items   = collection.size();
-			if (workers > items) workers = items;
-
-			float div = (float)items/(float)workers;
-			unsigned quota   =  items/workers;
-			float leftovers =  ceil((div-quota) * workers);
-
-			std::vector<S> result (workers, identityValue);
-			auto rowReduce = [this, &result]( iterator it,  iterator end, unsigned i) {
-				for (; it != end; ++it)
-					result[i] = std::move(fun(result[i], *it));
-			};
-
-			auto matrixReduce = task();
-			iterator last = collection.begin();
-			for(unsigned i=0; i<workers; ++i){
-
-				iterator it = last;
-				iterator end= it;
-				if (quota*(i+1) >=  items) end = collection.end();
-				else {
-					end+=quota;
-					if (i < leftovers) end++;
+	ReductionTask(const storage_t& input, S& ret, const  S& identity, fun_t f)
+		: collection(input), returnValue(ret), identityValue(identity), fun(f) {
+	}
+	
+	/**
+	 * this is the implementation of the the reduction task,
+	 * 	- easy to begin with, tree reduction
+	 */
+	virtual void operator()() {
+	
+	
+		// matrix reduction, create a matrix with same rows as workers
+		//	an undefined number of rows will perform operation on one extra element
+		//	to map non-divisible workloads
+		//
+		//		<--------
+		//		<--------
+		//		<-------
+		//		<-------
+		//
+		// after this we reduce the first column
+		//
+		// 		^-------
+		// 		|-------
+		// 		|-------
+		// 		|----
+		//
+		// 	result is in the 0,0 position
+		
+		
+		
+		unsigned workers = TaskManager::getNumWorkers();
+		unsigned items   = collection.size();
+		if(workers > items) {
+			workers = items;
+		}
+		
+		float div = (float)items/(float)workers;
+		unsigned quota   =  items/workers;
+		float leftovers =  ceil((div-quota) * workers);
+		
+		std::vector<S> result(workers, identityValue);
+		auto rowReduce = [this, &result](iterator it,  iterator end, unsigned i) {
+			for(; it != end; ++it) {
+				result[i] = std::move(fun(result[i], *it));
+			}
+		};
+		
+		auto matrixReduce = task();
+		iterator last = collection.begin();
+		for(unsigned i=0; i<workers; ++i) {
+		
+			iterator it = last;
+			iterator end= it;
+			if(quota*(i+1) >=  items) {
+				end = collection.end();
+			}
+			else {
+				end+=quota;
+				if(i < leftovers) {
+					end++;
 				}
-				last = end;
-
-				//auto tn = task< decltype(rowReduce), std::function<void(iterator, iterator, unsigned)>, iterator, iterator, unsigned>  (rowReduce, it, end, i);
-				auto tn = task  (rowReduce, it, end, i);
-				tn >> matrixReduce;
 			}
-			matrixReduce();
-
-			returnValue = identityValue;
-			for (const auto& cur: result){
-				returnValue = std::move(fun(returnValue, cur));
-			}
-
+			last = end;
+			
+			//auto tn = task< decltype(rowReduce), std::function<void(iterator, iterator, unsigned)>, iterator, iterator, unsigned>  (rowReduce, it, end, i);
+			auto tn = task(rowReduce, it, end, i);
+			tn >> matrixReduce;
+		}
+		matrixReduce();
+		
+		returnValue = identityValue;
+		for(const auto& cur: result) {
+			returnValue = std::move(fun(returnValue, cur));
+		}
+		
 //			unsigned size = collection.size();
 //			if (size%2 ==1) size++;
 //			std::vector<S> result(size, identityValue);
@@ -172,15 +179,15 @@ namespace utils{
 //					tn >> level;
 //				}
 //				level();
-//			
+//
 //				// increase offset
 //				offset *= 2;
 //			}
 //
 //			returnValue = std::move(result[0]);
 
-		}
-	};
+	}
+};
 
 
 } // namespace

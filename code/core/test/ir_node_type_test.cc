@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,15 +42,15 @@ namespace insieme {
 namespace core {
 
 
-	TEST(NodeType, IsCategory) {
+TEST(NodeType, IsCategory) {
 
-		EXPECT_TRUE(isA<NC_Expression>(NT_Literal));
-		EXPECT_TRUE(isA<NC_Statement>(NT_Literal));
-
-		EXPECT_FALSE(isA<NC_Statement>(NT_GenericType));
-		EXPECT_FALSE(isA<NC_Program>(NT_IntTypeParams));
-
-	}
+	EXPECT_TRUE(isA<NC_Expression>(NT_Literal));
+	EXPECT_TRUE(isA<NC_Statement>(NT_Literal));
+	
+	EXPECT_FALSE(isA<NC_Statement>(NT_GenericType));
+	EXPECT_FALSE(isA<NC_Program>(NT_IntTypeParams));
+	
+}
 
 
 } // end namespace core

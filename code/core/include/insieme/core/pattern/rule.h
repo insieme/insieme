@@ -47,71 +47,71 @@ namespace insieme {
 namespace core {
 namespace pattern {
 
+/**
+ * A rule consisting of a pattern to be matched and a generator rule
+ * producing the replacement for the matched structure.
+ */
+class Rule : public utils::Printable {
+
+	TreePattern pattern;
+	TreeGenerator generator;
+	
+public:
+
+	Rule(const TreePattern& pattern = any, const TreeGenerator& generator = generator::root)
+		: pattern(pattern), generator(generator) {}
+		
 	/**
-	 * A rule consisting of a pattern to be matched and a generator rule
-	 * producing the replacement for the matched structure.
+	 * Applies this rule to the given input node.
+	 * If the rule does not fit a null pointer will be returned.
 	 */
-	class Rule : public utils::Printable {
+	core::NodePtr applyTo(const core::NodePtr& tree) const;
+	
+	/**
+	 * Applies this rule to one of the sub-nodes of the given input node.
+	 * If the rule does not fit a null pointer will be returned.
+	 */
+	core::NodePtr applyToNested(const core::NodePtr& tree) const {
+		return getNestedRule().applyTo(tree);
+	}
+	
+	/**
+	 * Applies this rule to the given input node.
+	 * If the rule does not fit a null pointer will be returned.
+	 */
+	core::NodePtr operator()(const core::NodePtr& tree) const {
+		return applyTo(tree);
+	}
+	
+	/**
+	 * Applies this rule until a fixpoint is reached.
+	 */
+	core::NodePtr fixpoint(const core::NodePtr& tree) const;
+	
+	/**
+	 * Applies this rule to all nested sub-structures until a fixpoint is reached.
+	 */
+	core::NodePtr fixpointNested(const core::NodePtr& tree) const {
+		return getNestedRule().fixpoint(tree);
+	}
+	
+	/**
+	 * Obtains a rule equivalent to this rule, yet targeting an arbitrarily nested sub-structure.
+	 */
+	Rule getNestedRule() const;
+	
+	std::ostream& printTo(std::ostream& out) const {
+		return out << pattern << " -> " << generator;
+	}
+	
+	// for testing only ...
+	TreePtr applyTo(const TreePtr& tree) const;
+	
+};
 
-		TreePattern pattern;
-		TreeGenerator generator;
-
-	public:
-
-		Rule(const TreePattern& pattern = any, const TreeGenerator& generator = generator::root)
-			: pattern(pattern), generator(generator) {}
-
-		/**
-		 * Applies this rule to the given input node.
-		 * If the rule does not fit a null pointer will be returned.
-		 */
-		core::NodePtr applyTo(const core::NodePtr& tree) const;
-
-		/**
-		 * Applies this rule to one of the sub-nodes of the given input node.
-		 * If the rule does not fit a null pointer will be returned.
-		 */
-		core::NodePtr applyToNested(const core::NodePtr& tree) const {
-			return getNestedRule().applyTo(tree);
-		}
-
-		/**
-		 * Applies this rule to the given input node.
-		 * If the rule does not fit a null pointer will be returned.
-		 */
-		core::NodePtr operator()(const core::NodePtr& tree) const {
-			return applyTo(tree);
-		}
-
-		/**
-		 * Applies this rule until a fixpoint is reached.
-		 */
-		core::NodePtr fixpoint(const core::NodePtr& tree) const;
-
-		/**
-		 * Applies this rule to all nested sub-structures until a fixpoint is reached.
-		 */
-		core::NodePtr fixpointNested(const core::NodePtr& tree) const {
-			return getNestedRule().fixpoint(tree);
-		}
-
-		/**
-		 * Obtains a rule equivalent to this rule, yet targeting an arbitrarily nested sub-structure.
-		 */
-		Rule getNestedRule() const;
-
-		std::ostream& printTo(std::ostream& out) const {
-			return out << pattern << " -> " << generator;
-		}
-
-		// for testing only ...
-		TreePtr applyTo(const TreePtr& tree) const;
-
-	};
-
-    inline core::NodePtr apply(const core::NodePtr& node, const TreePattern& pattern, const TreeGenerator& generator) {
-        return Rule(pattern, generator).applyTo(node);
-    }
+inline core::NodePtr apply(const core::NodePtr& node, const TreePattern& pattern, const TreeGenerator& generator) {
+	return Rule(pattern, generator).applyTo(node);
+}
 
 
 } // end namespace pattern

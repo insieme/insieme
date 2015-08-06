@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,7 +43,7 @@
 
 #include "error_handling.h"
 
-/* Declares a thread-safe counted deque and the functions to insert, 
+/* Declares a thread-safe counted deque and the functions to insert,
  * retrieve and delete elements from it.
  * __type__ : struct type to create deque for
  * */
@@ -66,7 +66,7 @@ static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##
 static inline uint32 irt_##__type__##_cdeque_get_size(irt_##__type__##_cdeque* q);
 
 
-/* Defines a thread-safe counted deque and the functions to insert, 
+/* Defines a thread-safe counted deque and the functions to insert,
  * retrieve and delete elements from it.
  * __type__ : struct type to create deque for
  * __next_name__ : name of the next pointer in the struct

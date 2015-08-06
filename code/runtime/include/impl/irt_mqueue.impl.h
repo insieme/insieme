@@ -72,7 +72,7 @@ irt_mqueue_msg* irt_mqueue_receive() {
 	char buffer[IRT_MQUEUE_MAXMSGSIZE];
 	mqd_t retcode = mq_receive(irt_g_message_queue, buffer, IRT_MQUEUE_MAXMSGSIZE, NULL);
 	if(retcode == -1 && errno == EAGAIN) {
-		return NULL; 
+		return NULL;
 	}
 	IRT_ASSERT(retcode != -1, IRT_ERR_IO, "Could not retrieve posix message.\nError string: %s\n", strerror(errno));
 	irt_mqueue_msg *msg = (irt_mqueue_msg*)buffer;
@@ -90,13 +90,15 @@ void irt_mqueue_send_new_app(const char* appname) {
 	irt_mqueue_send((irt_mqueue_msg*)&msg);
 }
 
-#else 
+#else
 
 void irt_mqueue_init() {}
 void irt_mqueue_cleanup() {}
 
 void irt_mqueue_send(const irt_mqueue_msg* msg) {}
-irt_mqueue_msg* irt_mqueue_receive() { return NULL; }
+irt_mqueue_msg* irt_mqueue_receive() {
+	return NULL;
+}
 
 void irt_mqueue_send_new_app(const char* appname) {}
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -38,43 +38,31 @@
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/primitives.h"
-
-#include "insieme/transform/polyhedral/transformations.h"
-
 #include "insieme/transform/rulebased/transformations.h"
 
 namespace insieme {
 namespace transform {
 
-	Catalog getStandardCatalog() {
-		Catalog res;
-
-		// add some connectors
-		res.add(PipelineType::getInstance());
-		res.add(FixpointType::getInstance());
-		//res.add(ForEachType::getInstance());
-		res.add(ForAllType::getInstance());
-		res.add(ConditionType::getInstance());
-		res.add(TryOtherwiseType::getInstance());
-
-		// add manually coded transformations
-		res.add(NoOpType::getInstance());
-
-
-		// add polyhedral transformations
-		res.add(polyhedral::LoopInterchangeType::getInstance());
-		res.add(polyhedral::LoopStripMiningType::getInstance());
-		res.add(polyhedral::LoopTilingType::getInstance());
-		res.add(polyhedral::LoopFusionType::getInstance());
-		res.add(polyhedral::LoopFissionType::getInstance());
-
-		// add pattern based transformations
-		res.add(rulebased::LoopUnrollingType::getInstance());
-
-		// TODO: add more transformation
-
-		return res;
-	}
+Catalog getStandardCatalog() {
+	Catalog res;
+	
+	// add some connectors
+	res.add(PipelineType::getInstance());
+	res.add(FixpointType::getInstance());
+	res.add(ForAllType::getInstance());
+	res.add(ConditionType::getInstance());
+	res.add(TryOtherwiseType::getInstance());
+	
+	// add manually coded transformations
+	res.add(NoOpType::getInstance());
+	
+	// add pattern based transformations
+	res.add(rulebased::LoopUnrollingType::getInstance());
+	
+	// TODO: add more transformation
+	
+	return res;
+}
 
 } // end namespace transform
 } // end namespace insieme

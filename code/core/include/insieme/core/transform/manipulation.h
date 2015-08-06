@@ -45,7 +45,7 @@
 namespace insieme {
 namespace core {
 namespace transform {
-	
+
 using std::map;
 
 /**
@@ -231,7 +231,7 @@ NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr
 
 /**
  * A generic version of the fixVariable function declared above.
- * 
+ *
  * @param manager the manager to be used to create and maintain nodes which might have to be created
  * @param node the code fragment within which the given variable should be fixed
  * @param var the variable to be fixed
@@ -312,7 +312,7 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt, bool allowRe
 CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr);
 
 /** Inlines the evaluation of the given lazy expression.
- ** 
+ **
  ** @param manager the manager used to create new nodes
  ** @param lazy the target lazy expression
  ** @param evalDerivedOps determines whether derived operators should be evaluated too
@@ -323,7 +323,7 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy, bool eva
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a bound expression.
  ** This is the statement version that generates an initialized lambda returning unit.
- ** 
+ **
  ** @param manager the manager used to create new nodes
  ** @param root the target statement that should form the body of the extracted lambda
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)

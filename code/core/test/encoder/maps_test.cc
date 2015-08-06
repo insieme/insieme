@@ -52,41 +52,41 @@ namespace encoder {
 TEST(Maps, MapsConversion) {
 
 	NodeManager manager;
-
+	
 	// create a pair
-
+	
 	map<string, int> value;
-
+	
 	core::ExpressionPtr ir = toIR(manager, value);
 	auto back = toValue<map<string,int>>(ir);
-
+	
 	EXPECT_EQ("{}", toString(value));
 	EXPECT_EQ("empty(type<pair<ref<array<char,1>>,int<4>>>)", toString(*ir));
-
-
+	
+	
 	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
 	EXPECT_TRUE((isEncodingOf<vector<pair<string,int>>>(ir)));
 	EXPECT_FALSE((isEncodingOf<pair<int,int>>(ir)));
 	EXPECT_EQ(value, back);
 	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
-
-
+	
+	
 	// fill the map with something
-
+	
 	value["hello"] = 12;
 	value["world"] = 14;
-
+	
 	ir = toIR(manager, value);
 	back = toValue<map<string,int>>(ir);
-
+	
 	EXPECT_EQ("{hello=12, world=14}", toString(value));
 	EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(type<pair<ref<array<char,1>>,int<4>>>)))", toString(*ir));
-
+	
 	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
 	EXPECT_EQ(value, back);
-
+	
 	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
-
+	
 }
 
 

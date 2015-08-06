@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,18 +41,20 @@
 namespace insieme {
 namespace frontend {
 
-namespace tu { class IRTranslationUnit; }
+namespace tu {
+class IRTranslationUnit;
+}
 
 namespace cilk {
 
-	/**
-	 * Applies cilk semantics to all the definitions within the given translation unit.
-	 *
-	 * @param unit the translation unit to be processed
-	 * @param mgr the node manager to be utilized for creating IR nodes
-	 * @return the modified translation unit
-	 */
-	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
+/**
+ * Applies cilk semantics to all the definitions within the given translation unit.
+ *
+ * @param unit the translation unit to be processed
+ * @param mgr the node manager to be utilized for creating IR nodes
+ * @return the modified translation unit
+ */
+tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
 
 } // namespace cilk
 } // namespace frontend

@@ -64,10 +64,10 @@ namespace frontend {
 		}\
 		EXPECT_TRUE(msg.empty());
 
-	TEST(AnonymousTypes, StructNaming) {
+TEST(AnonymousTypes, StructNaming) {
 
-		Source src(
-				R"(
+	Source src(
+	    R"(
 
 					struct name{
 						int a;
@@ -88,48 +88,48 @@ namespace frontend {
 					}
 
 				)"
-		);
-
-		core::NodeManager mgr;
-		core::IRBuilder builder(mgr);
-		// parse temporary file
-        const boost::filesystem::path& fileName = src;
-        std::vector<std::string> argv = { "compiler",  fileName.string() };
-        cmd::Options options = cmd::Options::parse(argv);
-
-		core::ProgramPtr res = builder.normalize(options.job.execute(mgr));
-		RUN_SEMA(res);
-
-		dumpPretty(res);
-
-		core::CompoundStmtPtr body = (*res)[0].as<core::LambdaExprPtr>()->getBody();
-
-		EXPECT_TRUE(body[0].isa<core::DeclarationStmtPtr>());
-		EXPECT_TRUE(body[1].isa<core::DeclarationStmtPtr>());
-		EXPECT_TRUE(body[2].isa<core::DeclarationStmtPtr>());
-
-		{
-			core::TypePtr type = body[0].as<core::DeclarationStmtPtr>()->getVariable()->getType();
-			type = type.as<core::RefTypePtr>()->getElementType();
-			EXPECT_EQ (toString(type), "AP(struct name <a:int<4>>)");
-			EXPECT_TRUE(core::annotations::hasAttachedName(type));
-			EXPECT_EQ (core::annotations::getAttachedName(type), "name");
-		}
-		{
-			core::TypePtr type = body[1].as<core::DeclarationStmtPtr>()->getVariable()->getType();
-			type = type.as<core::RefTypePtr>()->getElementType();
-			EXPECT_EQ (toString(type), "AP(struct oldname <a:int<4>>)");
-			EXPECT_TRUE(core::annotations::hasAttachedName(type));
-			EXPECT_EQ (core::annotations::getAttachedName(type), "oldname");
-		}
-		{
-			core::TypePtr type = body[2].as<core::DeclarationStmtPtr>()->getVariable()->getType();
-			type = type.as<core::RefTypePtr>()->getElementType();
-			EXPECT_EQ (toString(type), "AP(struct anon_renamed <a:int<4>>)");
-			EXPECT_TRUE(core::annotations::hasAttachedName(type));
-			EXPECT_EQ (core::annotations::getAttachedName(type), "anon_renamed");
-		}
-
+	);
+	
+	core::NodeManager mgr;
+	core::IRBuilder builder(mgr);
+	// parse temporary file
+	const boost::filesystem::path& fileName = src;
+	std::vector<std::string> argv = { "compiler",  fileName.string() };
+	cmd::Options options = cmd::Options::parse(argv);
+	
+	core::ProgramPtr res = builder.normalize(options.job.execute(mgr));
+	RUN_SEMA(res);
+	
+	dumpPretty(res);
+	
+	core::CompoundStmtPtr body = (*res)[0].as<core::LambdaExprPtr>()->getBody();
+	
+	EXPECT_TRUE(body[0].isa<core::DeclarationStmtPtr>());
+	EXPECT_TRUE(body[1].isa<core::DeclarationStmtPtr>());
+	EXPECT_TRUE(body[2].isa<core::DeclarationStmtPtr>());
+	
+	{
+		core::TypePtr type = body[0].as<core::DeclarationStmtPtr>()->getVariable()->getType();
+		type = type.as<core::RefTypePtr>()->getElementType();
+		EXPECT_EQ(toString(type), "AP(struct name <a:int<4>>)");
+		EXPECT_TRUE(core::annotations::hasAttachedName(type));
+		EXPECT_EQ(core::annotations::getAttachedName(type), "name");
 	}
+	{
+		core::TypePtr type = body[1].as<core::DeclarationStmtPtr>()->getVariable()->getType();
+		type = type.as<core::RefTypePtr>()->getElementType();
+		EXPECT_EQ(toString(type), "AP(struct oldname <a:int<4>>)");
+		EXPECT_TRUE(core::annotations::hasAttachedName(type));
+		EXPECT_EQ(core::annotations::getAttachedName(type), "oldname");
+	}
+	{
+		core::TypePtr type = body[2].as<core::DeclarationStmtPtr>()->getVariable()->getType();
+		type = type.as<core::RefTypePtr>()->getElementType();
+		EXPECT_EQ(toString(type), "AP(struct anon_renamed <a:int<4>>)");
+		EXPECT_TRUE(core::annotations::hasAttachedName(type));
+		EXPECT_EQ(core::annotations::getAttachedName(type), "anon_renamed");
+	}
+	
+}
 } // end namespace frontend
 } // end namespace insieme

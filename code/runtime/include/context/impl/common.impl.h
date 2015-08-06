@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,7 +44,9 @@
 // resolves the name of the file to be used for context capturing
 const char* irt_cap_profile_get_filename() {
 	const char* res = getenv("IRT_CONTEXT_FILE");
-	if (!res) { res = "context.dat"; }
+	if(!res) {
+		res = "context.dat";
+	}
 	return res;
 }
 

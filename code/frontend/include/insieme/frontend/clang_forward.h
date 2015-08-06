@@ -42,22 +42,22 @@
  */
 
 namespace clang {
-    class Expr;
-    class Stmt;
+class Expr;
+class Stmt;
 
-    class QualType;
+class QualType;
 
-    class Decl;
-    class FunctionDecl;
-    class TypeDecl;
-    class ValueDecl;
+class Decl;
+class FunctionDecl;
+class TypeDecl;
+class ValueDecl;
 
-	class CastExpr; 
+class CastExpr;
 
-	class SourceLocation;
-	class SourceRange;
-	class SourceManager;
+class SourceLocation;
+class SourceRange;
+class SourceManager;
 
-	class ASTContext;
-	class Preprocessor;
+class ASTContext;
+class Preprocessor;
 }

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,37 +41,37 @@
 namespace insieme {
 namespace utils {
 
-	/**
-	 * A base class for constant singleton values. Subclasses of this
-	 * class should be instantiated only once and reused like a singleton.
-	 *
-	 * The represented value has to be default-constructable.
-	 *
-	 * @tparam the type of constant to be represented (has to be default-constructable)
-	 */
-	template<typename Derived>
-	class StaticConstant : boost::noncopyable {
-
-		/**
-		 * The singleton instance of this value (default constructed).
-		 */
-		static const Derived instance;
-
-	public:
-
-		/**
-		 * Obtains a reference to the maintained singleton instance.
-		 */
-		static const Derived& getInstance() {
-			return instance;
-		}
-	};
+/**
+ * A base class for constant singleton values. Subclasses of this
+ * class should be instantiated only once and reused like a singleton.
+ *
+ * The represented value has to be default-constructable.
+ *
+ * @tparam the type of constant to be represented (has to be default-constructable)
+ */
+template<typename Derived>
+class StaticConstant : boost::noncopyable {
 
 	/**
-	 * The definition of the static constant.
+	 * The singleton instance of this value (default constructed).
 	 */
-	template<typename Derived>
-	const Derived StaticConstant<Derived>::instance;
+	static const Derived instance;
+	
+public:
+
+	/**
+	 * Obtains a reference to the maintained singleton instance.
+	 */
+	static const Derived& getInstance() {
+		return instance;
+	}
+};
+
+/**
+ * The definition of the static constant.
+ */
+template<typename Derived>
+const Derived StaticConstant<Derived>::instance;
 
 
 } // end namespace utils

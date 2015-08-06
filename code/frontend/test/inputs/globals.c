@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,17 +44,17 @@ myStruct* ptr;                     // non extern var, but with non defined type 
 int withInit = 4;
 static int myStatic= 1;
 
-int *f(){
+int *f() {
 	return &ext;
 }
 
-void plus(int val){
+void plus(int val) {
 	static int count = 7;
 	withInit+= val;
 }
 
 
-int main(){
+int main() {
 	*f() += 4;
 	plus(myStatic);
 	plus(myStatic);

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,10 +41,10 @@
 #include "utils/temperature.h"
 
 #ifdef _WIN32
-	#warning "Temperature measurements in Windows are not supported!"
+#warning "Temperature measurements in Windows are not supported!"
 #else
-	#include "utils/temperature.h"
-	#include "abstraction/impl/temperature_intel.impl.h"
+#include "utils/temperature.h"
+#include "abstraction/impl/temperature_intel.impl.h"
 #endif
 
 uint64 irt_get_temperature_dummy(const irt_worker* worker) {
@@ -55,15 +55,17 @@ void irt_temperature_select_instrumentation_method() {
 	if(irt_temperature_intel_core_is_supported()) {
 		irt_get_temperature_core = &irt_get_temperature_intel_core;
 		irt_log_setting_s("irt core temperature measurement method", "intel");
-	} else {
+	}
+	else {
 		irt_get_temperature_core = &irt_get_temperature_dummy;
 		irt_log_setting_s("irt core temperature measurement method", "none");
 	}
-
+	
 	if(irt_temperature_intel_package_is_supported()) {
 		irt_get_temperature_package = &irt_get_temperature_intel_package;
 		irt_log_setting_s("irt pkg temperature measurement method", "intel");
-	} else {
+	}
+	else {
 		irt_get_temperature_package = &irt_get_temperature_dummy;
 		irt_log_setting_s("irt pkg temperature measurement method", "none");
 	}

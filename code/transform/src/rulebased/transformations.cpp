@@ -51,334 +51,339 @@ namespace insieme {
 namespace transform {
 namespace rulebased {
 
-	using namespace core::pattern;
-	using namespace core::pattern::generator;
-	using namespace core::pattern::generator::irg;
+using namespace core::pattern;
+using namespace core::pattern::generator;
+using namespace core::pattern::generator::irg;
 
 
-	namespace p = core::pattern;
-	namespace g = core::pattern::generator;
-	namespace irp = core::pattern::irp;
-	namespace irg = core::pattern::generator::irg;
+namespace p = core::pattern;
+namespace g = core::pattern::generator;
+namespace irp = core::pattern::irp;
+namespace irg = core::pattern::generator::irg;
 
 
-	// --- Abstract base class of rule-based transformation ----
+// --- Abstract base class of rule-based transformation ----
 
-	RuleBasedTransformation::RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<Rule>& rules)
-		: Transformation(type, param), rules(rules) {}
+RuleBasedTransformation::RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<Rule>& rules)
+	: Transformation(type, param), rules(rules) {}
+	
+	
+core::NodeAddress RuleBasedTransformation::apply(const core::NodeAddress& target) const {
+	// the first matching rule will be applied
+	for(auto it = rules.begin(); it != rules.end(); ++it) {
+		core::NodePtr res = it->applyTo(target);
+		if(res) {
+			return core::transform::replaceAddress(target->getNodeManager(), target, res);
+		}
+	}
+	throw InvalidTargetException(target);
+}
 
 
-	core::NodeAddress RuleBasedTransformation::apply(const core::NodeAddress& target) const {
-		// the first matching rule will be applied
-		for(auto it = rules.begin(); it != rules.end(); ++it) {
-			core::NodePtr res = it->applyTo(target);
-			if (res) {
-				return core::transform::replaceAddress(target->getNodeManager(), target, res);
+
+CompoundElimination::CompoundElimination(const parameter::Value& value)
+	: RuleBasedTransformation(
+	      CompoundEliminationType::getInstance(), value,
+	      
+	      Rule(    // {{x}} => {x}
+	          irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
+	          irg::compoundStmt(g::listVar("stmts"))
+	      ),
+	      Rule(   // {x...x {} y...y} => {x...x,y...y}
+	          irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
+	          irg::compoundStmt(g::listVar("before") << g::listVar("after"))
+	      ),
+	      Rule()   		// otherwise do nothing
+	  ) {};
+	  
+	  
+LoopUnrolling::LoopUnrolling(const parameter::Value& params)
+	: RuleBasedTransformation(
+	      LoopUnrollingType::getInstance(), params,
+	      
+	      Rule(
+	      
+	          // for[V.L.U.S.BODY]
+	          
+	          irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
+	          
+	          // parameter f ... unrolling factor
+	          // number of iterations of original loop: n  = ((U-L) div S) + 1
+	          // add(div(sub(U,L),S),1)
+	          // irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1))
+	          // number of iterations of unrolled loop: n' = n div f = (((U-L) div S) + 1) div f
+	          // div(n,f)
+	          // irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
+	          // remaining iterations of original loop: r  = n mod f = (((U-L) div S) + 1) mod f
+	          // mod(n,f)
+	          // irg::mod(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
+	          
+	          irg::compoundStmt(
+	              // unrolled loop
+	              // *lower bound* : L' = L
+	              //  g::var("L")
+	              // *upper bound* : U' = L+(n'-1)*S*f = L+(((((U-L) div S) + 1) div f)-1)*S*f
+	              //  add(L,mul(sub(n',1),mul(S,f)))
+	              //  irg:add(g::var("L"),irg::mul(irg::sub(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::literal(irg::int4(),1)),irg::mul(g::var("S"),f)))
+	              // *step*        : S' = S*f
+	              //  mul(S,f)
+	              //  irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
+	              irg::forStmt(g::var("V"),
+	                           g::var("L"),
+	                           // u - (u-l)%(f*s)
+	                           //irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+	                           
+	                           // orig
+	                           //irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
+	                           // l+((u-l-1)/s + 1)/f * s * f;
+	                           
+	                           irg::simplify(irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),
+	                                   g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),
+	                                           parameter::getValue<unsigned>(params))))),
+	                           irg::simplify(irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
+	                           irg::forEach("_i",0,parameter::getValue<unsigned>(params),
+	                                        g::substitute(
+	                                                g::var("BODY"),
+	                                                g::var("V"),
+	                                                irg::simplify(irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(g::var("T"),g::var("_i")))))
+	                                        )
+	                                       )
+	                          ) <<
+	              // remaining loop
+	              // *lower bound* : L" = L+n'*S*f = L+((((U-L) div S) + 1) div f)*S*f
+	              //  add(L,mul(n',mul(S,f)))
+	              //  irg:add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),f)))
+	              // *upper bound* : U" = L"+(r-1)*S = L"+(((((U-L) div S) + 1) mod f)-1)*S
+	              // *upper bound* : U" = U (simpler)
+	              // *step*        : S" = S
+	              irg::forStmt(g::var("V"),
+	                           //irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+	                           //irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
+	                           irg::simplify(irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),
+	                                   g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),
+	                                           parameter::getValue<unsigned>(params))))),
+	                           g::var("U"),
+	                           g::var("S"),
+	                           g::var("BODY")
+	                          )
+	          )
+	          // ------------------------------------------------------------
+	      )
+	  ) {
+	  
+	if(parameter::getValue<unsigned>(params) < 2) {
+		throw InvalidParametersException("Loop unrolling factor has to be >= 2!");
+	}
+	
+};
+
+
+TransformationPtr makeLoopUnrolling(size_t factor) {
+	return std::make_shared<LoopUnrolling>(parameter::makeValue<unsigned>(factor));
+}
+
+
+namespace {
+
+/**
+ * A utility match-expression required by the total loop unrolling transformation. It creates
+ * a sequence of string-value nodes iterating over the interval [0 .. e-s : st) where e,
+ * s and st are obtained by interpreting the expressions bound to the variable names
+ * start, end and step.
+ */
+MatchExpressionPtr deltaRange(const string& var_start, const string& var_end, const string& var_step) {
+	return std::make_shared<generator::impl::expression::Constructor<ptr_target>>([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+		core::NodeManager& manager = match.getRoot()->getNodeManager();
+		core::IRBuilder builder(manager);
+		
+		// resolve start/end variables
+		assert_true(match.isVarBound(var_start)) << "Start variable not bound to value!";
+		assert_true(match.isVarBound(var_end)) << "End variable not bound to value!";
+		assert_true(match.isVarBound(var_step)) << "Step variable not bound to value!";
+		
+		const auto& start_value = match.getVarBinding(var_start).getValue();
+		const auto& end_value   = match.getVarBinding(var_end).getValue();
+		const auto& step_value  = match.getVarBinding(var_step).getValue();
+		
+		assert(start_value->getNodeCategory() == core::NC_Expression && "Start variable must be bound to an expression!");
+		assert(end_value->getNodeCategory()   == core::NC_Expression && "End variable must be bound to an expression");
+		assert(step_value->getNodeCategory()  == core::NC_Expression && "Step variable must be bound to an expression");
+		
+		
+		try {
+		
+			auto start_formula = core::arithmetic::toPiecewise(start_value.as<core::ExpressionPtr>());
+			auto end_formula   = core::arithmetic::toPiecewise(end_value.as<core::ExpressionPtr>());
+			auto step_formula  = core::arithmetic::toPiecewise(step_value.as<core::ExpressionPtr>());
+			
+			auto diff_formula = end_formula - start_formula;
+			
+			// check whether values are constants
+			if(!diff_formula.isInteger()) {
+				throw InvalidTargetException("Number of iterations is not constant!");
 			}
+			if(!step_formula.isInteger()) {
+				throw InvalidTargetException("Step size is not constant!");
+			}
+			
+			int64_t diff = diff_formula.toFormula().getConstantValue();
+			int64_t step = step_formula.toFormula().getConstantValue();
+			
+			vector<MatchValue<ptr_target>> res;
+			for(int i=0; i<diff; i+= step) {
+				core::NodePtr expr = builder.stringValue(toString(i));
+				res.push_back(MatchValue<ptr_target>(expr));
+			}
+			
+			return res;
+			
 		}
-		throw InvalidTargetException(target);
-	}
-
-
-
-	CompoundElimination::CompoundElimination(const parameter::Value& value)
-			: RuleBasedTransformation(
-					CompoundEliminationType::getInstance(), value,
-
-					Rule(  		// {{x}} => {x}
-							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
-							irg::compoundStmt(g::listVar("stmts"))
-					),
-					Rule(			// {x...x {} y...y} => {x...x,y...y}
-							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
-							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
-					),
-					Rule()   		// otherwise do nothing
-			) {};
-
-
-	LoopUnrolling::LoopUnrolling(const parameter::Value& params)
-		: RuleBasedTransformation(
-			LoopUnrollingType::getInstance(), params,
-
-			Rule(
-
-				// for[V.L.U.S.BODY]
-
-				irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
-
-				// parameter f ... unrolling factor
-				// number of iterations of original loop: n  = ((U-L) div S) + 1
-				// add(div(sub(U,L),S),1)
-				// irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1))
-				// number of iterations of unrolled loop: n' = n div f = (((U-L) div S) + 1) div f
-				// div(n,f)
-				// irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
-				// remaining iterations of original loop: r  = n mod f = (((U-L) div S) + 1) mod f
-				// mod(n,f)
-				// irg::mod(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
-
-				irg::compoundStmt(
-					// unrolled loop
-					// *lower bound* : L' = L
-					//  g::var("L")
-					// *upper bound* : U' = L+(n'-1)*S*f = L+(((((U-L) div S) + 1) div f)-1)*S*f
-					//  add(L,mul(sub(n',1),mul(S,f)))
-					//  irg:add(g::var("L"),irg::mul(irg::sub(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::literal(irg::int4(),1)),irg::mul(g::var("S"),f)))
-					// *step*        : S' = S*f
-					//  mul(S,f)
-					//  irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
-					irg::forStmt(g::var("V"),
-						g::var("L"),
-						// u - (u-l)%(f*s)
-						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
-
-						// orig
-						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						// l+((u-l-1)/s + 1)/f * s * f;
-
-						irg::simplify(irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						irg::simplify(irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
-						irg::forEach("_i",0,parameter::getValue<unsigned>(params),
-							g::substitute(
-								g::var("BODY"),
-								g::var("V"),
-								irg::simplify(irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(g::var("T"),g::var("_i")))))
-							)
-						)
-					) <<
-					// remaining loop
-					// *lower bound* : L" = L+n'*S*f = L+((((U-L) div S) + 1) div f)*S*f
-					//  add(L,mul(n',mul(S,f)))
-					//  irg:add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),f)))
-					// *upper bound* : U" = L"+(r-1)*S = L"+(((((U-L) div S) + 1) mod f)-1)*S
-					// *upper bound* : U" = U (simpler)
-					// *step*        : S" = S
-					irg::forStmt(g::var("V"),
-						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
-						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						irg::simplify(irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						g::var("U"),
-						g::var("S"),
-						g::var("BODY")
-					)
-				)
-				// ------------------------------------------------------------
-			)
-		) {
-
-		if (parameter::getValue<unsigned>(params) < 2) {
-			throw InvalidParametersException("Loop unrolling factor has to be >= 2!");
+		catch(const core::arithmetic::NotAFormulaException& nfe) {
+			// fail transformation
+			throw InvalidTargetException("Loop boundaries or step size is not a formula!");
 		}
-
-	};
-
-
-	TransformationPtr makeLoopUnrolling(size_t factor) {
-		return std::make_shared<LoopUnrolling>(parameter::makeValue<unsigned>(factor));
-	}
+	}, format("[0,..,%s-%s : %s)", var_end.c_str(), var_start.c_str(), var_step.c_str()));
+}
+}
 
 
-	namespace {
-
-		/**
-		 * A utility match-expression required by the total loop unrolling transformation. It creates
-		 * a sequence of string-value nodes iterating over the interval [0 .. e-s : st) where e,
-		 * s and st are obtained by interpreting the expressions bound to the variable names
-		 * start, end and step.
-		 */
-		MatchExpressionPtr deltaRange(const string& var_start, const string& var_end, const string& var_step) {
-			return std::make_shared<generator::impl::expression::Constructor<ptr_target>>([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
-				core::NodeManager& manager = match.getRoot()->getNodeManager();
-				core::IRBuilder builder(manager);
-
-				// resolve start/end variables
-				assert_true(match.isVarBound(var_start)) << "Start variable not bound to value!";
-				assert_true(match.isVarBound(var_end)) << "End variable not bound to value!";
-				assert_true(match.isVarBound(var_step)) << "Step variable not bound to value!";
-
-				const auto& start_value = match.getVarBinding(var_start).getValue();
-				const auto& end_value   = match.getVarBinding(var_end).getValue();
-				const auto& step_value  = match.getVarBinding(var_step).getValue();
-
-				assert(start_value->getNodeCategory() == core::NC_Expression && "Start variable must be bound to an expression!");
-				assert(end_value->getNodeCategory()   == core::NC_Expression && "End variable must be bound to an expression");
-				assert(step_value->getNodeCategory()  == core::NC_Expression && "Step variable must be bound to an expression");
-
-
-				try {
-
-					auto start_formula = core::arithmetic::toPiecewise(start_value.as<core::ExpressionPtr>());
-					auto end_formula   = core::arithmetic::toPiecewise(end_value.as<core::ExpressionPtr>());
-					auto step_formula  = core::arithmetic::toPiecewise(step_value.as<core::ExpressionPtr>());
-
-					auto diff_formula = end_formula - start_formula;
-
-					// check whether values are constants
-					if (!diff_formula.isInteger()) {
-						throw InvalidTargetException("Number of iterations is not constant!");
-					}
-					if (!step_formula.isInteger()) {
-						throw InvalidTargetException("Step size is not constant!");
-					}
-
-					int64_t diff = diff_formula.toFormula().getConstantValue();
-					int64_t step = step_formula.toFormula().getConstantValue();
-
-					vector<MatchValue<ptr_target>> res;
-					for(int i=0; i<diff; i+= step) {
-						core::NodePtr expr = builder.stringValue(toString(i));
-						res.push_back(MatchValue<ptr_target>(expr));
-					}
-
-					return res;
-
-				} catch (const core::arithmetic::NotAFormulaException& nfe) {
-					// fail transformation
-					throw InvalidTargetException("Loop boundaries or step size is not a formula!");
-				}
-			}, format("[0,..,%s-%s : %s)", var_end.c_str(), var_start.c_str(), var_step.c_str()));
-		}
-	}
+TotalLoopUnrolling::TotalLoopUnrolling(const parameter::Value& params)
+	: RuleBasedTransformation(
+	      TotalLoopUnrollingType::getInstance(), params,
+	      
+	      Rule(
+	      
+	          // match the for-loop
+	          irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
+	          
+	          // create an alternative unfolded list of statements
+	          irg::compoundStmt(
+	              g::forEach("_i",deltaRange("L","U","S"),
+	                         g::substitute(
+	                             g::var("BODY"),
+	                             g::var("V"),
+	                             irg::simplify(irg::add(g::var("L"), irg::literal(g::var("T"),g::var("_i"))))
+	                         )
+	                        )
+	          )
+	          // ------------------------------------------------------------
+	      )
+	  ) {};
+	  
+TransformationPtr makeTotalLoopUnrolling() {
+	return std::make_shared<TotalLoopUnrolling>();
+}
 
 
-	TotalLoopUnrolling::TotalLoopUnrolling(const parameter::Value& params)
-		: RuleBasedTransformation(
-			TotalLoopUnrollingType::getInstance(), params,
+SimpleLoopTiling2D::SimpleLoopTiling2D(const parameter::Value& params)
+	: RuleBasedTransformation(
+	      SimpleLoopTiling2DType::getInstance(), params,
+	      
+	      Rule(
+	      
+	          // match the 2 nested for-loops
+	          irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
+	                       irp::compoundStmt(
+	                           p::listVar("A1", *!(irp::forStmt() | irp::compoundStmt()))
+	                           <<
+	                           irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
+	                                        p::var("BODY")
+	                                       )
+	                           <<
+	                           p::listVar("B1", *!(irp::forStmt() | irp::compoundStmt()))
+	                       )
+	                      ),
+	                      
+	          // create the tiled replacement
+	          g::let("ii", irg::variable(g::var("T1")), g::let("tsA", irg::literal(g::var("T1"),parameter::getValue<unsigned>(params, 0)),
+	                  g::let("jj", irg::variable(g::var("T2")), g::let("tsB", irg::literal(g::var("T2"),parameter::getValue<unsigned>(params, 1)),
+	                  
+	                          irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
+	                                       irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
+	                                               irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"),g::var("S1"))), g::var("U1")), g::var("S1"),
+	                                                       g::listVar("A1")
+	                                                       <<
+	                                                       irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"),g::var("S2"))), g::var("U2")), g::var("S2"),
+	                                                               g::var("BODY")
+	                                                                   )
+	                                                       <<
+	                                                       g::listVar("B1")
+	                                                           )
+	                                                   )
+	                                      )
+	                                      
+	                                                                  ))
+	                                                          ))
+	      )
+	  ) {};
+	  
+TransformationPtr makeSimpleLoopTiling2D(unsigned tsA, unsigned tsB) {
+	return std::make_shared<SimpleLoopTiling2D>(parameter::combineValues(tsA, tsB));
+}
 
-			Rule(
-
-				// match the for-loop
-				irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
-
-				// create an alternative unfolded list of statements
-				irg::compoundStmt(
-					g::forEach("_i",deltaRange("L","U","S"),
-						g::substitute(
-							g::var("BODY"),
-							g::var("V"),
-							irg::simplify(irg::add(g::var("L"), irg::literal(g::var("T"),g::var("_i"))))
-						)
-					)
-				)
-				// ------------------------------------------------------------
-			)
-		) {};
-
-	TransformationPtr makeTotalLoopUnrolling() {
-		return std::make_shared<TotalLoopUnrolling>();
-	}
-
-
-	SimpleLoopTiling2D::SimpleLoopTiling2D(const parameter::Value& params)
-		: RuleBasedTransformation(
-			SimpleLoopTiling2DType::getInstance(), params,
-
-			Rule(
-
-				// match the 2 nested for-loops
-				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
-					irp::compoundStmt(
-						p::listVar("A1", *!(irp::forStmt() | irp::compoundStmt()))
-						<<
-						irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
-							p::var("BODY")
-						)
-						<<
-						p::listVar("B1", *!(irp::forStmt() | irp::compoundStmt()))
-					)
-				),
-
-				// create the tiled replacement
-				g::let("ii", irg::variable(g::var("T1")), g::let("tsA", irg::literal(g::var("T1"),parameter::getValue<unsigned>(params, 0)),
-				g::let("jj", irg::variable(g::var("T2")), g::let("tsB", irg::literal(g::var("T2"),parameter::getValue<unsigned>(params, 1)),
-
-					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
-						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
-							irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"),g::var("S1"))), g::var("U1")), g::var("S1"),
-								g::listVar("A1")
-								<<
-								irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"),g::var("S2"))), g::var("U2")), g::var("S2"),
-									g::var("BODY")
-								)
-								<<
-								g::listVar("B1")
-							)
-						)
-					)
-
-				))
-				))
-			)
-		) {};
-
-	TransformationPtr makeSimpleLoopTiling2D(unsigned tsA, unsigned tsB) {
-		return std::make_shared<SimpleLoopTiling2D>(parameter::combineValues(tsA, tsB));
-	}
-
-	SimpleLoopTiling3D::SimpleLoopTiling3D(const parameter::Value& params)
-		: RuleBasedTransformation(
-			SimpleLoopTiling3DType::getInstance(), params,
-
-			Rule(
-
-				// match the 2 nested for-loops
-				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
-					irp::compoundStmt(
-						p::listVar("A1", *!(irp::forStmt() | irp::compoundStmt()))
-						<<
-						irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
-							irp::compoundStmt(
-								p::listVar("A2", *!(irp::forStmt() | irp::compoundStmt()))
-								<<
-								irp::forStmt(p::var("V3", irp::variable(p::var("T3"), p::any)),p::var("L3"),p::var("U3"),p::var("S3"),
-										p::var("BODY")
-								)
-								<<
-								p::listVar("B2", *!(irp::forStmt() | irp::compoundStmt()))
-							)
-						)
-						<<
-						p::listVar("B1", *!(irp::forStmt() | irp::compoundStmt()))
-					)
-				),
-
-				// create the tiled replacement
-				g::let("ii", irg::variable(g::var("T1")), g::let("tsA", irg::literal(g::var("T1"),parameter::getValue<unsigned>(params, 0)),
-				g::let("jj", irg::variable(g::var("T2")), g::let("tsB", irg::literal(g::var("T2"),parameter::getValue<unsigned>(params, 1)),
-				g::let("kk", irg::variable(g::var("T3")), g::let("tsC", irg::literal(g::var("T3"),parameter::getValue<unsigned>(params, 2)),
-
-					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
-						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
-							irg::forStmt(g::var("kk"), g::var("L3"), g::var("U3"), irg::mul(g::var("tsC"),g::var("S3")),
-								irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"),g::var("S1"))), g::var("U1")), g::var("S1"),
-									g::listVar("A1")
-									<<
-									irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"),g::var("S2"))), g::var("U2")), g::var("S2"),
-										g::listVar("A2")
-										<<
-										irg::forStmt(g::var("V3"), g::var("kk"), irg::min(irg::add(g::var("kk"), irg::mul(g::var("tsC"),g::var("S3"))), g::var("U3")), g::var("S3"),
-											g::var("BODY")
-										)
-										<<
-										g::listVar("B2")
-									)
-									<<
-									g::listVar("B1")
-								)
-							)
-						)
-					)
-
-				))
-				))
-				))
-			)
-		) {};
-
-	TransformationPtr makeSimpleLoopTiling3D(unsigned tsA, unsigned tsB, unsigned tsC) {
-		return std::make_shared<SimpleLoopTiling3D>(parameter::combineValues(tsA, tsB, tsC));
-	}
+SimpleLoopTiling3D::SimpleLoopTiling3D(const parameter::Value& params)
+	: RuleBasedTransformation(
+	      SimpleLoopTiling3DType::getInstance(), params,
+	      
+	      Rule(
+	      
+	          // match the 2 nested for-loops
+	          irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
+	                       irp::compoundStmt(
+	                           p::listVar("A1", *!(irp::forStmt() | irp::compoundStmt()))
+	                           <<
+	                           irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
+	                                        irp::compoundStmt(
+	                                                p::listVar("A2", *!(irp::forStmt() | irp::compoundStmt()))
+	                                                <<
+	                                                irp::forStmt(p::var("V3", irp::variable(p::var("T3"), p::any)),p::var("L3"),p::var("U3"),p::var("S3"),
+	                                                        p::var("BODY")
+	                                                            )
+	                                                <<
+	                                                p::listVar("B2", *!(irp::forStmt() | irp::compoundStmt()))
+	                                        )
+	                                       )
+	                           <<
+	                           p::listVar("B1", *!(irp::forStmt() | irp::compoundStmt()))
+	                       )
+	                      ),
+	                      
+	          // create the tiled replacement
+	          g::let("ii", irg::variable(g::var("T1")), g::let("tsA", irg::literal(g::var("T1"),parameter::getValue<unsigned>(params, 0)),
+	                  g::let("jj", irg::variable(g::var("T2")), g::let("tsB", irg::literal(g::var("T2"),parameter::getValue<unsigned>(params, 1)),
+	                          g::let("kk", irg::variable(g::var("T3")), g::let("tsC", irg::literal(g::var("T3"),parameter::getValue<unsigned>(params, 2)),
+	                          
+	                                  irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
+	                                          irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
+	                                                  irg::forStmt(g::var("kk"), g::var("L3"), g::var("U3"), irg::mul(g::var("tsC"),g::var("S3")),
+	                                                          irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), irg::mul(g::var("tsA"),g::var("S1"))), g::var("U1")), g::var("S1"),
+	                                                                  g::listVar("A1")
+	                                                                  <<
+	                                                                  irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), irg::mul(g::var("tsB"),g::var("S2"))), g::var("U2")), g::var("S2"),
+	                                                                          g::listVar("A2")
+	                                                                          <<
+	                                                                          irg::forStmt(g::var("V3"), g::var("kk"), irg::min(irg::add(g::var("kk"), irg::mul(g::var("tsC"),g::var("S3"))), g::var("U3")), g::var("S3"),
+	                                                                                  g::var("BODY")
+	                                                                                      )
+	                                                                          <<
+	                                                                          g::listVar("B2")
+	                                                                              )
+	                                                                  <<
+	                                                                  g::listVar("B1")
+	                                                                      )
+	                                                              )
+	                                                      )
+	                                              )
+	                                              
+	                                                                          ))
+	                                                                  ))
+	                                                          ))
+	      )
+	  ) {};
+	  
+TransformationPtr makeSimpleLoopTiling3D(unsigned tsA, unsigned tsB, unsigned tsC) {
+	return std::make_shared<SimpleLoopTiling3D>(parameter::combineValues(tsA, tsB, tsC));
+}
 
 } // end namespace rulebased
 } // end namespace transform

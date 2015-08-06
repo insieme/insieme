@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
 #include <gtest/gtest.h>
 #include <future>

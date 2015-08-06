@@ -43,14 +43,14 @@
 #include "config.h"
 
 #ifdef _WIN32
-	#include <Windows.h>
-	#include <malloc.h>
+#include <Windows.h>
+#include <malloc.h>
 #elif defined(_GEMS_SIM)
-	#include <include_gems/alloca.h>
-	#include <include_gems/stdlib.h>
-	#include <include_gems/stdio.h>
+#include <include_gems/alloca.h>
+#include <include_gems/stdlib.h>
+#include <include_gems/stdio.h>
 #else
-	#include <alloca.h>
+#include <alloca.h>
 #endif
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))

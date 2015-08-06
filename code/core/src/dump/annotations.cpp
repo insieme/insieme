@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -43,40 +43,40 @@ namespace dump {
 
 
 
-	// ------------- Annotation Converter Register -----------------
+// ------------- Annotation Converter Register -----------------
 
-	AnnotationConverterRegister& AnnotationConverterRegister::getDefault() {
-		static AnnotationConverterRegister registry;
-		return registry;
+AnnotationConverterRegister& AnnotationConverterRegister::getDefault() {
+	static AnnotationConverterRegister registry;
+	return registry;
+}
+
+bool AnnotationConverterRegister::registerConverter(const AnnotationConverterPtr& converter, const std::type_index& type) {
+	name_index[converter->getName()] = converter;
+	type_index[type] = converter;
+	return true;
+}
+
+const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const std::string& name) const {
+	static AnnotationConverterPtr notFound;
+	
+	// look-up converter within name-based index
+	auto pos = name_index.find(name);
+	if(pos != name_index.end()) {
+		return pos->second;
 	}
+	return notFound;
+}
 
-	bool AnnotationConverterRegister::registerConverter(const AnnotationConverterPtr& converter, const std::type_index& type) {
-		name_index[converter->getName()] = converter;
-		type_index[type] = converter;
-		return true;
+const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const NodeAnnotationPtr& annotation) const {
+	static AnnotationConverterPtr notFound;
+	
+	// look-up converter within index
+	auto pos = type_index.find(typeid(*annotation));
+	if(pos != type_index.end()) {
+		return pos->second;
 	}
-
-	const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const std::string& name) const {
-		static AnnotationConverterPtr notFound;
-
-		// look-up converter within name-based index
-		auto pos = name_index.find(name);
-		if (pos != name_index.end()) {
-			return pos->second;
-		}
-		return notFound;
-	}
-
-	const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const NodeAnnotationPtr& annotation) const {
-		static AnnotationConverterPtr notFound;
-
-		// look-up converter within index
-		auto pos = type_index.find(typeid(*annotation));
-		if (pos != type_index.end()) {
-			return pos->second;
-		}
-		return notFound;
-	}
+	return notFound;
+}
 
 
 } // end namespace dump

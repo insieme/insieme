@@ -77,90 +77,90 @@ using itc::TestStep;
 using itc::TestResult;
 
 namespace tf = itc::testFramework;
-namespace{
-	tf::Options parseCommandLine(int argc, char** argv) {
-		static const tf::Options fail(false);
-
-		// -- parsing -------------------------------------------
-
-		// define options
-		bpo::options_description desc("Supported Parameters");
-		desc.add_options()
-			("help,h",             "produce help message")
-			("config,c",           "print the configuration of the selected test cases")
-			("mock,m",             "make it a mock run just printing commands not really executing those")
-			("panic,p",            "panic on first sign of trouble and stop execution")
-			("list,l",             "just list the targeted test cases")
-			("worker,w",           bpo::value<int>()->default_value(1),     "the number of parallel workers to be utilized")
-			("cases",              bpo::value<vector<string>>(),            "the list of test cases to be executed")
-			("step,s",             bpo::value<string>(),                    "the test step to be applied")
-			("repeat,r",           bpo::value<int>()->default_value(1),     "the number of times the tests shell be repeated")
-			("no-clean",           "keep all output files")
-			("no-color",           "no highlighting of output")
-			("preprocessing",      "perform all pre-processing steps")
-			("postprocessing",     "perform all post-processing steps")
-		;
-
-		// define positional options (all options not being named)
-		bpo::positional_options_description pos;
-		pos.add("cases", -1);
-
-		// parse parameters
-		bpo::variables_map map;
-		bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
-		bpo::notify(map);
-
-
-		// check whether help was requested
-		if (map.count("help")) {
-			std::cout << desc << "\n";
-
-			std::cout << " ------------- Steps -----------------\n";
-			for(auto entry: insieme::driver::integration::getFullStepList()) {
-				std::cout << "\t" << std::left <<  std::setw(30) << entry.first;
-				auto deps = entry.second.getDependencies();
-				if(!deps.empty()) {
-					std::cout << " <- [ ";
-					for(auto dep: deps) {
-						std::cout << dep << " ";
-					}
-					std::cout << "]";
+namespace {
+tf::Options parseCommandLine(int argc, char** argv) {
+	static const tf::Options fail(false);
+	
+	// -- parsing -------------------------------------------
+	
+	// define options
+	bpo::options_description desc("Supported Parameters");
+	desc.add_options()
+	("help,h",             "produce help message")
+	("config,c",           "print the configuration of the selected test cases")
+	("mock,m",             "make it a mock run just printing commands not really executing those")
+	("panic,p",            "panic on first sign of trouble and stop execution")
+	("list,l",             "just list the targeted test cases")
+	("worker,w",           bpo::value<int>()->default_value(1),     "the number of parallel workers to be utilized")
+	("cases",              bpo::value<vector<string>>(),            "the list of test cases to be executed")
+	("step,s",             bpo::value<string>(),                    "the test step to be applied")
+	("repeat,r",           bpo::value<int>()->default_value(1),     "the number of times the tests shell be repeated")
+	("no-clean",           "keep all output files")
+	("no-color",           "no highlighting of output")
+	("preprocessing",      "perform all pre-processing steps")
+	("postprocessing",     "perform all post-processing steps")
+	;
+	
+	// define positional options (all options not being named)
+	bpo::positional_options_description pos;
+	pos.add("cases", -1);
+	
+	// parse parameters
+	bpo::variables_map map;
+	bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
+	bpo::notify(map);
+	
+	
+	// check whether help was requested
+	if(map.count("help")) {
+		std::cout << desc << "\n";
+		
+		std::cout << " ------------- Steps -----------------\n";
+		for(auto entry: insieme::driver::integration::getFullStepList()) {
+			std::cout << "\t" << std::left <<  std::setw(30) << entry.first;
+			auto deps = entry.second.getDependencies();
+			if(!deps.empty()) {
+				std::cout << " <- [ ";
+				for(auto dep: deps) {
+					std::cout << dep << " ";
 				}
-				std::cout << "\n";
+				std::cout << "]";
 			}
-
-			return fail;
+			std::cout << "\n";
 		}
-
-		tf::Options res;
-
-		if (map.count("config")) {
-			res.print_configs = true;
-		}
-
-		if (map.count("cases")) {
-			res.cases = map["cases"].as<vector<string>>();
-		}
-
-		res.mockrun = map.count("mock");
-		res.no_clean=map.count("no-clean");
-		res.color=!map.count("no-color");
-		res.panic_mode = map.count("panic");
-		res.num_threads = map["worker"].as<int>();
-		res.num_repetitions = map["repeat"].as<int>();
-		res.perf = false;
-
-		res.list_only = map.count("list");
-
-		if (map.count("step")) {
-			res.steps.push_back(map["step"].as<string>());
-		}
-
-		res.preprocessingOnly = map.count("preprocessing");
-		res.postprocessingOnly = map.count("postprocessing");
-
-		return res;
+		
+		return fail;
 	}
+	
+	tf::Options res;
+	
+	if(map.count("config")) {
+		res.print_configs = true;
+	}
+	
+	if(map.count("cases")) {
+		res.cases = map["cases"].as<vector<string>>();
+	}
+	
+	res.mockrun = map.count("mock");
+	res.no_clean=map.count("no-clean");
+	res.color=!map.count("no-color");
+	res.panic_mode = map.count("panic");
+	res.num_threads = map["worker"].as<int>();
+	res.num_repetitions = map["repeat"].as<int>();
+	res.perf = false;
+	
+	res.list_only = map.count("list");
+	
+	if(map.count("step")) {
+		res.steps.push_back(map["step"].as<string>());
+	}
+	
+	res.preprocessingOnly = map.count("preprocessing");
+	res.postprocessingOnly = map.count("postprocessing");
+	
+	return res;
+}
 }
 
 void printSummary(const int totalTests, const int okCount, const int omittedCount,
@@ -168,29 +168,29 @@ void printSummary(const int totalTests, const int okCount, const int omittedCoun
                   const int screenWidth, const tf::Colorize& col) {
 	string footerSummaryFormat("%" + to_string(screenWidth - 12) + "d");
 	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
-
+	
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "#" << boost::format(centerAlign) % "INTEGRATION TEST SUMMARY" << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "# TOTAL:  " << boost::format(footerSummaryFormat) % totalTests << " #\n";
 	std::cout << "# PASSED: " << col.green() << boost::format(footerSummaryFormat) % okCount << col.reset() << " #\n";
 	std::cout << "# OMITTED:"
-			<< (omittedCount != 0 ? col.yellow() : "")
-			<< boost::format(footerSummaryFormat) % omittedCount
-			<< (omittedCount != 0 ? col.reset() : "")
-			<< " #\n";
+	          << (omittedCount != 0 ? col.yellow() : "")
+	          << boost::format(footerSummaryFormat) % omittedCount
+	          << (omittedCount != 0 ? col.reset() : "")
+	          << " #\n";
 	std::cout << "# FAILED: "
-			<< (failedSteps.size() != 0 ? col.red() : "")
-			<< boost::format(footerSummaryFormat) % failedSteps.size()
-			<< (failedSteps.size() != 0 ? col.reset() : "")
-			<< " #\n";
+	          << (failedSteps.size() != 0 ? col.red() : "")
+	          << boost::format(footerSummaryFormat) % failedSteps.size()
+	          << (failedSteps.size() != 0 ? col.reset() : "")
+	          << " #\n";
 	for(const auto& cur : failedSteps) {
 		TestCase testCase = cur.first;
 		TestResult testResult = cur.second;
 		string failedStepInfo(testResult.getStepName() + ": exit code " + to_string(testResult.getRetVal()));
 		string footerFailedListFormat("%" + to_string(screenWidth - 10 - testCase.getName().length()) + "s");
-		std::cout << "#" << col.red() << "   - " << testCase.getName() << ": " 
-			<< col.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
+		std::cout << "#" << col.red() << "   - " << testCase.getName() << ": "
+		          << col.reset() << boost::format(footerFailedListFormat) % failedStepInfo << " #\n";
 	}
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 }
@@ -201,73 +201,76 @@ int main(int argc, char** argv) {
 	// set OMP/IRT environment variables if not already set
 	setenv("IRT_NUM_WORKERS", "3", 0);
 	setenv("OMP_NUM_THREADS", "3", 0);
-
+	
 	// parse parameters
 	tf::Options options = parseCommandLine(argc, argv);
-
+	
 	// output width in characters
 	unsigned screenWidth = 120;
 	// formatting string for center aligned output
 	string centerAlign("%|=" + to_string(screenWidth-2) + "|");
-
+	
 	// check whether the options have been valid
-	if (!options.valid) return 1;		// fail otherwise
-
+	if(!options.valid) {
+		return 1;    // fail otherwise
+	}
+	
 	// get list of test cases
 	auto cases = tf::loadCases(options);
-
+	
 	string insiemeVersion("Insieme version: " + tf::getGitVersion());
-
+	
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	std::cout << "#" << boost::format(centerAlign) % insiemeVersion << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
 	string benchmarkHeader("Running " + to_string(cases.size()) + " benchmark(s) " + to_string(options.num_repetitions) + " time(s)");
 	std::cout << "#" << boost::format(centerAlign) % benchmarkHeader << "#\n";
 	std::cout << "#" << string(screenWidth-2,'-') << "#\n";
-
+	
 	// check whether only the configurations are requested
-	if (options.print_configs) {
+	if(options.print_configs) {
 		int counter = 0;
 		// print configurations
 		for(const auto& cur : cases) {
-
+		
 			std::cout << (++counter) << "/" << cases.size() << ":\n";
 			std::cout << "Test Case: " << cur.getName() << "\n";
 			std::cout << "Directory: " << cur.getDirectory().string() << "\n";
 			std::cout << cur.getProperties() << "\n";
-
+			
 		}
-
+		
 		return 0;
 	}
-
+	
 	int totalTests = cases.size() * options.num_repetitions;
 	int maxCounterStringLength = to_string(totalTests).length();
 	string maxCounterStringLengthAsString(to_string(maxCounterStringLength));
-
+	
 	// only list test cases if requested so
-	if (options.list_only) {
+	if(options.list_only) {
 		int counter = 0;
 		for(const auto& cur : cases) {
 			string paddingWidth(to_string(screenWidth-(8+maxCounterStringLength*2)));
-			std::cout << boost::format("# %" + maxCounterStringLengthAsString + "d/%" + maxCounterStringLengthAsString + "d - %-" + paddingWidth + "s") % ++counter % cases.size() % cur.getName() << " #\n";
+			std::cout << boost::format("# %" + maxCounterStringLengthAsString + "d/%" + maxCounterStringLengthAsString + "d - %-" + paddingWidth + "s") % ++counter %
+			          cases.size() % cur.getName() << " #\n";
 		}
 		std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
-
+		
 		return 0;
 	}
-
+	
 	// load list of test steps
 	auto steps = tf::getTestSteps(options);
-
+	
 	itc::TestSetup setup;
 	setup.mockRun = options.mockrun;
 	setup.clean=!options.no_clean;
 	setup.perf=options.perf;
 	setup.executionDir="";
-
+	
 	tf::Colorize colorize(options.color);
-
+	
 	// setup highlighted tests:
 	std::set<std::string> highlight;
 	highlight.insert(itc::TEST_STEP_INSIEMECC_SEQ_C_EXECUTE);
@@ -276,56 +279,60 @@ int main(int argc, char** argv) {
 	highlight.insert(itc::TEST_STEP_INSIEMECC_RUN_CPP_EXECUTE);
 	highlight.insert(itc::TEST_STEP_REF_C_EXECUTE);
 	highlight.insert(itc::TEST_STEP_REF_CPP_EXECUTE);
-
+	
 	// run test cases in parallel
 	vector<TestCase> ok;
 	vector<TestCase> failed;
 	int omittedTestsCount = 0;
 	map<TestCase,TestResult> failedSteps;
 	omp_set_num_threads(options.num_threads);
-
+	
 	bool panic = false;
 	int act = 0;
-
+	
 	for(int i=0; i<options.num_repetitions; i++) {
 		//get instance of the test runner
 		itc::TestRunner& runner = itc::TestRunner::getInstance();
 		//set lambda to print some execution summary at the end
-		runner.attachExecuteOnKill([&](){
+		runner.attachExecuteOnKill([&]() {
 			printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize);
 		});
 		//set lambda to set panic mode before killing all the processes
-		runner.attachExecuteBeforeKill([&](){
+		runner.attachExecuteBeforeKill([&]() {
 			panic = true;
 		});
-
-
+		
+		
 		#pragma omp parallel for schedule(dynamic)
 		for(auto it = cases.begin(); it < cases.end(); it++) {			// GCC requires the ugly syntax for OpenMP
 			const auto& cur = *it;
-
-			if (panic) continue;
-
+			
+			if(panic) {
+				continue;
+			}
+			
 			vector<TestStep> list;
-
-			if (options.preprocessingOnly) {
+			
+			if(options.preprocessingOnly) {
 				list.push_back(itc::getStepByName(itc::TEST_STEP_PREPROCESSING));
-
-			} else if (options.postprocessingOnly) {
+				
+			}
+			else if(options.postprocessingOnly) {
 				list.push_back(itc::getStepByName(itc::TEST_STEP_POSTPROCESSING));
-
-			} else {
+				
+			}
+			else {
 				// filter applicable steps based on test case
 				list = itc::filterSteps(steps, cur);
 				// schedule resulting steps
 				list = itc::scheduleSteps(list,cur);
 			}
-
+			
 			//if this test doesn't schedule any steps we count it as omitted
-			if (list.empty()) {
+			if(list.empty()) {
 				omittedTestsCount++;
 			}
-
+			
 			// run steps
 			vector<pair<string, TestResult>> results;
 			bool success = true;
@@ -338,7 +345,7 @@ int main(int argc, char** argv) {
 					break;
 				}
 			}
-
+			
 			// all steps done - print summary
 			#pragma omp critical
 			{
@@ -346,94 +353,103 @@ int main(int argc, char** argv) {
 				// print test info
 				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 				std::cout << "#    " << boost::format("%" + maxCounterStringLengthAsString + "d") % ++act << "/"
-					<< boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests << " "
-					<< boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
+				          << boost::format("%" + maxCounterStringLengthAsString + "d") % totalTests << " "
+				          << boost::format("%-" + paddingWidth + "s") % cur.getName() << "#\n";
 				std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
-
+				
 				for(const auto& curRes : results) {
 					// skip omitted steps
-					if(curRes.second.wasOmitted()) continue;
-
-					if(options.mockrun){
+					if(curRes.second.wasOmitted()) {
+						continue;
+					}
+					
+					if(options.mockrun) {
 						std::cout << colorize.blue() << curRes.first<< std::endl;
 						std::cout << colorize.green() << curRes.second.getCmd() << colorize.reset() <<std::endl;
-					} else {
+					}
+					else {
 						string colOffset;
 						colOffset=string("%")+std::to_string(screenWidth-4-curRes.first.size())+"s";
 						std::stringstream line;
-
+						
 						// color certain passes:
-						if (highlight.find (curRes.first) != highlight.end()) {
+						if(highlight.find(curRes.first) != highlight.end()) {
 							line <<  colorize.bold() << colorize.blue();
 						}
-
-						line << "# " << curRes.first << boost::format(colOffset) % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() % (curRes.second.getMemory()/1024/1024))
-								<< " #" << colorize.reset() << "\n";
-
-						if(curRes.second.wasSuccessful()){
+						
+						line << "# " << curRes.first << boost::format(colOffset) % (boost::format("[%.3f secs, %.3f MB]") % curRes.second.getRuntime() %
+						        (curRes.second.getMemory()/1024/1024))
+						     << " #" << colorize.reset() << "\n";
+						     
+						if(curRes.second.wasSuccessful()) {
 							std::cout << line.str();
-						} else {
+						}
+						else {
 							std::cout << colorize.red() << line.str();
 							std::cout << "#" << std::string(screenWidth-2,'-') << "#" << colorize.reset() << std::endl;
 							std::cout << "Command: " << colorize.green() << curRes.second.getCmd()<< colorize.reset() << std::endl << std::endl;
 							std::cout << curRes.second.getFullOutput();
 						}
-
+						
 						success = success && curRes.second.wasSuccessful();
 					}
 					if(!options.no_clean) {
 						curRes.second.clean();
 					}
-
-					if (curRes.second.wasAborted()) {
+					
+					if(curRes.second.wasAborted()) {
 						panic = true;
 					}
 				}
-
-				if(!options.mockrun){
-
+				
+				if(!options.mockrun) {
+				
 					if(success) {
 						ok.push_back(cur);
 						std::cout << colorize.green();
-					} else {
+					}
+					else {
 						failed.push_back(cur);
 						std::cout << colorize.red();
 					}
-
+					
 					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
 					int failedStringLength = to_string(failed.size()).length();
-
+					
 					if(success) {
 						std::cout << "#    SUCCESS -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName();
-						if(failed.size() > 0)
+						if(failed.size() > 0) {
 							std::cout << colorize.red();
+						}
 						std::cout << " (failed so far: " << failed.size() << ")";
 						std::cout << colorize.green() << " #\n";
-					} else {
-						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " << failed.size() << ") #\n";
+					}
+					else {
+						std::cout << "#    FAILED  -- " << boost::format("%-" + to_string(screenWidth-36-failedStringLength) + "s") % cur.getName() << " (failed so far: " <<
+						          failed.size() << ") #\n";
 					}
 					std::cout << "#" << std::string(screenWidth-2,'-') << "#\n";
-
+					
 					if(!success) {
 						// trigger panic mode and graceful shutdown
-						if (options.panic_mode) {
+						if(options.panic_mode) {
 							panic = true;
 						}
 					}
 				}
-
+				
 				//reset color to default value
 				std::cout << colorize.reset();
 			}
-
+			
 		} // end test case loop
-
+		
 	} // end repetition loop
-
+	
 	if(!panic) {
 		printSummary(totalTests, ok.size(), omittedTestsCount, failedSteps, screenWidth, colorize);
 	}
-
+	
 	// done
 	return (failed.empty()) ? 0 : 1;
 }

@@ -47,13 +47,13 @@ using namespace insieme::core::lang;
 
 TEST(LangBasic, Generation) {
 	NodeManager nm;
-
+	
 	EXPECT_TRUE(nm.getLangBasic().isInt4(nm.getLangBasic().getInt4()));
 }
 
 TEST(LangBasic, BoolChecks) {
 	NodeManager nm;
-
+	
 	EXPECT_TRUE(lang::isBuiltIn(nm.getLangBasic().getInt4()));
 	EXPECT_TRUE(lang::isBuiltIn(nm.getLangBasic().getSignedIntLShift()));
 	EXPECT_FALSE(lang::isBuiltIn((GenericType::get(nm, "surelyNotBuiltInISincerelyHope__"))));
@@ -61,13 +61,13 @@ TEST(LangBasic, BoolChecks) {
 
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
-
+	
 	EXPECT_EQ(nm.getLangBasic().getRedistribute(), nm.getLangBasic().getBuiltIn("redistribute"));
 }
 
 TEST(LangBasic, Grouping) {
 	NodeManager nm;
-
+	
 	EXPECT_TRUE(nm.getLangBasic().isUnsignedInt(nm.getLangBasic().getUInt4()));
 	EXPECT_TRUE(nm.getLangBasic().isInt(nm.getLangBasic().getUInt4()));
 	EXPECT_FALSE(nm.getLangBasic().isReal(nm.getLangBasic().getUInt4()));
@@ -76,24 +76,24 @@ TEST(LangBasic, Grouping) {
 TEST(LangBasic, GroupingEnumeration) {
 	NodeManager nm;
 	auto& basic = nm.getLangBasic();
-
+	
 	EXPECT_EQ(7u, basic.getUnsignedIntGroup().size());
 	EXPECT_EQ(5u, basic.getRealGroup().size());
 }
 
 TEST(LangBasic, OperatorGet) {
 	NodeManager nm;
-
+	
 	LiteralPtr op = dynamic_pointer_cast<const Literal>(nm.getLangBasic().getOperator(nm.getLangBasic().getUInt4(), nm.getLangBasic().Add));
 	EXPECT_TRUE(op);
 	EXPECT_EQ(*op, *nm.getLangBasic().getUnsignedIntAdd());
 	EXPECT_NE(*op, *nm.getLangBasic().getSignedIntAdd());
-
+	
 	LiteralPtr op2 = dynamic_pointer_cast<const Literal>(nm.getLangBasic().getOperator(nm.getLangBasic().getInt2(), nm.getLangBasic().Mul));
 	EXPECT_TRUE(op2);
 	EXPECT_EQ(*op2, *nm.getLangBasic().getSignedIntMul());
 	EXPECT_NE(*op2, *nm.getLangBasic().getUnsignedIntMul());
-
+	
 	LiteralPtr op3 = dynamic_pointer_cast<const Literal>(nm.getLangBasic().getOperator(nm.getLangBasic().getBool(), nm.getLangBasic().Eq));
 	EXPECT_TRUE(op3);
 	EXPECT_EQ(*op3, *nm.getLangBasic().getBoolEq());
@@ -102,23 +102,23 @@ TEST(LangBasic, OperatorGet) {
 
 TEST(LangBasic, Derived) {
 	NodeManager nm;
-
+	
 	// get a derived literal
 	EXPECT_EQ("rec v0.{v0=fun(ref<ref<array<'elem,1>>> v1) {ref<array<'elem,1>> v2 = ref_deref(v1); ref_assign(v1, array_view(ref_deref(v1), 1)); return v2;}}",
-			toString(*nm.getLangBasic().getArrayViewPostInc()));
-
+	          toString(*nm.getLangBasic().getArrayViewPostInc()));
+	          
 }
 
 TEST(LangBasic, DerivedMembership) {
 	NodeManager nm;
 	const BasicGenerator& gen = nm.getLangBasic();
-
+	
 	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeMemberAccess()));
 	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeRefElem()));
 }
 
 
-	// test all type and literal definitions
+// test all type and literal definitions
 #define CHECK(id) \
 	EXPECT_TRUE(gen.get##id ()); \
 	EXPECT_TRUE(gen.is##id(gen.get##id())); \

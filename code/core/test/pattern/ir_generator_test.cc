@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,33 +45,33 @@ namespace core {
 namespace pattern {
 namespace generator {
 
-	TEST(IRGenerator, StringValue) {
+TEST(IRGenerator, StringValue) {
 
-		core::NodeManager manager;
+	core::NodeManager manager;
+	
+	// create some dummy match
+	Match<ptr_target> match(core::IntValue::get(manager, 1));
+	
+	TreeGenerator gen = irg::stringValue("Hello");
+	core::NodePtr res = gen.generate(match);
+	
+	EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
+	
+}
 
-		// create some dummy match
-		Match<ptr_target> match(core::IntValue::get(manager, 1));
+TEST(IRGenerator, IntType) {
 
-		TreeGenerator gen = irg::stringValue("Hello");
-		core::NodePtr res = gen.generate(match);
-
-		EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
-
-	}
-
-	TEST(IRGenerator, IntType) {
-
-		core::NodeManager manager;
-
-		// create some dummy match
-		Match<ptr_target> match(core::IntValue::get(manager, 1));
-
-		TreeGenerator gen = irg::int4();
-		core::NodePtr res = gen.generate(match);
-
-		EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
-
-	}
+	core::NodeManager manager;
+	
+	// create some dummy match
+	Match<ptr_target> match(core::IntValue::get(manager, 1));
+	
+	TreeGenerator gen = irg::int4();
+	core::NodePtr res = gen.generate(match);
+	
+	EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
+	
+}
 
 } // end namespace generator
 } // end namespace pattern

@@ -70,40 +70,42 @@ int main(int argc, char** argv) {
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
 	unsigned unrollingFactor = 1;
-    std::vector<std::string> arguments(argv, argv+argc);
+	std::vector<std::string> arguments(argv, argv+argc);
 	cmd::Options options = cmd::Options::parse(arguments)
-		// one extra parameter - unrolling factor, default should be 5
-		("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
-	;
-	if (!options.valid) return (options.settings.help)?0:1;
-
-
+	                       // one extra parameter - unrolling factor, default should be 5
+	                       ("unrolling,u", unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
+	                       ;
+	if(!options.valid) {
+		return (options.settings.help)?0:1;
+	}
+	
+	
 	// Step 2: load input code
 	//		The frontend is converting input code into the internal representation (IR).
 	//		The memory management of IR nodes is realized using node manager instances.
 	//		The life cycle of IR nodes is bound to the manager the have been created by.
 	co::NodeManager manager;
 	auto program = options.job.execute(manager);
-
-
+	
+	
 	// Step 3: process code
 	//		This is the part where the actual operations on the processed input code
 	//		are conducted. You may utilize whatever functionality provided by the
 	//		compiler framework to analyze and manipulate the processed application.
 	//		In this example we are simply unrolling all innermost loops by a factor
 	//		of 5 which is always a safe transformation.
-
+	
 	cout << "Before Transformation:\n";
 	cout << dumpPretty(program);
-
+	
 	// for all nodes x | if x is "innermostLoop" => unroll(x)
 	auto transform = tr::makeForAll(tr::filter::innermostLoops(), tr::rulebased::makeLoopUnrolling(unrollingFactor));
 	program = transform->apply(program);
-
+	
 	cout << "After Transformation:\n";
 	cout << dumpPretty(program);
-
-
+	
+	
 	// Step 4: produce output code
 	//		This part converts the processed code into C-99 target code using the
 	//		backend producing parallel code to be executed using the Insieme runtime
@@ -111,8 +113,8 @@ int main(int argc, char** argv) {
 	//		backend modul as well.
 	cout << "Creating target code ...\n";
 	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
-
-
+	
+	
 	// Step 5: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
@@ -121,7 +123,7 @@ int main(int argc, char** argv) {
 	compiler = cp::Compiler::getOptimizedCompiler(compiler);
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	bool success = cp::compileToBinary(*targetCode, options.settings.outFile.string(), compiler);
-
+	
 	// done
 	return (success)?0:1;
 }
