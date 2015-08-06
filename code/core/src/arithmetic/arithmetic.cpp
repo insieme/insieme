@@ -101,7 +101,7 @@ Rational& Rational::operator+=(const Rational& other) {
 }
 
 Rational& Rational::operator-=(const Rational& other) {
-	uint64_t LCM = lcm(std::abs(denominator), other.denominator);
+	uint64_t LCM = lcm(denominator, other.denominator);
 	numerator = numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator);
 	denominator = LCM;
 	return *this;

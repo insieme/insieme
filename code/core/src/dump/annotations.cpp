@@ -70,8 +70,9 @@ const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const
 const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const NodeAnnotationPtr& annotation) const {
 	static AnnotationConverterPtr notFound;
 	
-	// look-up converter within index
-	auto pos = type_index.find(typeid(*annotation));
+	// look-up converter within index#
+	auto&& anno = *annotation;
+	auto pos = type_index.find(typeid(anno));
 	if(pos != type_index.end()) {
 		return pos->second;
 	}

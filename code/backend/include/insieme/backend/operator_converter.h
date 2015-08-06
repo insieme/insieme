@@ -57,7 +57,7 @@ c_ast::ExpressionPtr refDelete(ConversionContext& context, const core::CallExprP
 
 } // end namespace operators
 
-typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
+typedef std::function<c_ast::ExpressionPtr(ConversionContext&, const core::CallExprPtr&)> OperatorConverter;
 
 typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
 

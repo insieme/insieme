@@ -386,7 +386,8 @@ public:
 	template <class T>
 	const std::shared_ptr<T> getExtension() const {
 		for(const extensions::FrontendExtension::FrontendExtensionPtr ext : extensionList) {
-			if(typeid(*ext) == typeid(T)) {
+			auto&& pext = *ext;
+			if(typeid(pext) == typeid(T)) {
 				return dynamic_pointer_cast<T>(ext);
 			}
 		}
@@ -576,7 +577,8 @@ public:
 		// insert the extension before "Before", unless it's not found
 		bool inserted = false;
 		for(auto it = extensions.begin(); it < extensions.end(); ++it) {
-			if(typeid(*(it->first)) == typeid(Before)) {
+			auto&& pitfirst = *(it->first);
+			if(typeid(pitfirst) == typeid(Before)) {
 				extensions.insert(it, { extensionPtr, extensionPtr->registerFlag(extOptions) });
 				inserted = true;
 				break;

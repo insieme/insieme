@@ -47,7 +47,4 @@ union _irt_joinable {
 	irt_work_group_id wg_id;
 };
 
-
-
-
 #endif

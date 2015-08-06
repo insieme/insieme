@@ -36,7 +36,6 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
-#include <omp.h>
 
 #include "utils/impl/affinity.impl.h"
 #include "standalone.h"

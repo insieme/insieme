@@ -36,7 +36,6 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
-#include <omp.h>
 
 #include "irt_all_impls.h"
 #include "standalone.h"
@@ -45,7 +44,6 @@ IRT_DECLARE_ID_TYPE(id_gen_test);
 IRT_MAKE_ID_TYPE(id_gen_test);
 
 irt_id_gen_test_id gen_id;
-#pragma omp threadprivate(gen_id)
 
 TEST(id_generation, sequential_ops) {
 	gen_id.thread = 7;

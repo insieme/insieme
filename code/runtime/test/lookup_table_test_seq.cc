@@ -36,7 +36,6 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
-#include <omp.h>
 
 #include "irt_all_impls.h"
 #include "standalone.h"
@@ -57,12 +56,11 @@ IRT_DEFINE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS)
 IRT_CREATE_LOCKED_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS)
 
 uint32 num = 0;
-#pragma omp threadprivate(num)
 
 irt_lookup_test_id dummy_id_generator() {
 	irt_lookup_test_id id;
 	id.node = 1;
-	id.thread = omp_get_thread_num();
+	id.thread = 0;
 	id.index = num++;
 	id.cached = NULL;
 	return id;

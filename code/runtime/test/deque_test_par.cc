@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif // _OPENMP
 
 #include "utils/deques.h"
 

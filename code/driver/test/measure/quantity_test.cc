@@ -142,7 +142,7 @@ TEST(Measuring, Quantities) {
 	EXPECT_EQ(11500 * ns, t1 + t2);
 	EXPECT_EQ(8500 * ns, t1 - t2);
 	
-	EXPECT_THROW(Quantity(11500) == t1 + t2, UnitException);
+	EXPECT_THROW(toString(Quantity(11500) == (t1 + t2)), UnitException);
 	
 	EXPECT_LT(t2, t1);
 	EXPECT_LE(t2, t1);

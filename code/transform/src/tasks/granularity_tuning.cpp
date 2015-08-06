@@ -115,7 +115,7 @@ class TaskMultiversioner {
 	
 	LambdaDefinitionPtr removeOuterParallels(LambdaDefinitionPtr lamDef) {
 		// create a cached check for nested parallel calls
-		auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, const rec_call<bool>::type& rec) {
+		auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, rec_call<bool>::type& rec) {
 			return analysis::isCallOf(node, basic.getParallel()) || any(node->getChildList(), rec);
 		});
 		
@@ -167,11 +167,11 @@ class TaskMultiversioner {
 	// does not correctly handle parallels generated in recursive function calls
 	LambdaDefinitionPtr removeExtraneousMergeAlls(LambdaDefinitionPtr lamDef) {
 		// create a cached check for nested parallel calls
-		auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, const rec_call<bool>::type& rec) {
+		auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, rec_call<bool>::type& rec) {
 			return analysis::isCallOf(node, basic.getParallel()) || any(node->getChildList(), rec);
 		});
 		// create a cached check for nested mergeAll calls
-		auto containsMergeAll = makeCachedLambdaVisitor([&](const NodePtr& node, const rec_call<bool>::type& rec) {
+		auto containsMergeAll = makeCachedLambdaVisitor([&](const NodePtr& node, rec_call<bool>::type& rec) {
 			return analysis::isCallOf(node, basic.getMergeAll()) || any(node->getChildList(), rec);
 		});
 		

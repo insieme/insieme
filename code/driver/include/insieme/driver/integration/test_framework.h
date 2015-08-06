@@ -34,14 +34,6 @@
  * regarding third party software licenses.
  */
 
-/**
- * Within this file a small, simple example of a compiler driver utilizing
- * the insieme compiler infrastructure is presented.
- *
- * This file is intended to provides a template for implementing new compiler
- * applications utilizing the Insieme compiler and runtime infrastructure.
- */
-
 #pragma once
 
 #include <boost/program_options.hpp>
@@ -68,7 +60,11 @@ struct Options {
 	bool statistics;
 	bool scheduling;
 	bool print_configs;
-	int statThreads;
+#ifdef _OPENMP
+	int statThreads = omp_get_max_threads();
+#else
+	int statThreads = 0;
+#endif
 	bool panic_mode;
 	bool force;
 	bool list_only;
@@ -90,7 +86,7 @@ struct Options {
 	
 	Options(bool valid = true)
 		: valid(valid), mockrun(false),
-		  num_threads(1), num_repetitions(1), use_median(false),statistics(false),scheduling(false), print_configs(false), statThreads(omp_get_max_threads()),
+		  num_threads(1), num_repetitions(1), use_median(false),statistics(false),scheduling(false), print_configs(false),
 		  panic_mode(false),force(false), list_only(false), no_clean(false), color(true),overwrite(false),preprocessingOnly(false),postprocessingOnly(false),
 		  perf(false),load_miss(""),store_miss(""),flops("") {}
 		  

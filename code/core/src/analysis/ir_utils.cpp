@@ -947,7 +947,7 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
 bool contains(const NodePtr& code, const NodePtr& element) {
 	assert_true(element) << "Element to be searched must not be empty!";
 	bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
-	return code && makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<bool>::type& rec)->bool {
+	return code && makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<bool>::type& rec)->bool {
 		return *cur == *element || any(cur->getChildList(), rec);
 	}, checkTypes)(code);
 }
@@ -955,7 +955,7 @@ bool contains(const NodePtr& code, const NodePtr& element) {
 unsigned countInstances(const NodePtr& code, const NodePtr& element) {
 	assert_true(element) << "Element to be searched must not be empty!";
 	bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
-	return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<unsigned>::type& rec)->unsigned {
+	return code ? makeCachedLambdaVisitor([&](const NodePtr& cur, rec_call<unsigned>::type& rec)->unsigned {
 		if(*cur == *element) return 1;
 		auto children = cur->getChildList();
 		unsigned ret = 0;

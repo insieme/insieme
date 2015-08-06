@@ -990,6 +990,7 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 	
 	// convert arguments to char**
 	vector<char*> argumentsForExec;
+	char eos = 0;
 	// argv[0] needs to be the executable itself
 	argumentsForExec.push_back(const_cast<char*>(executableParam.c_str()));
 	for(const auto& s : argumentsVec)
@@ -997,7 +998,7 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 			argumentsForExec.push_back(const_cast<char*>(s.c_str()));
 		}
 	// terminate
-	argumentsForExec.push_back('\0');
+	argumentsForExec.push_back(&eos);
 	
 	/*
 	 * Setup environment
@@ -1049,7 +1050,7 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 		environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
 	}
 	// terminate
-	environmentForExec.push_back('\0');
+	environmentForExec.push_back(&eos);
 	
 	/*
 	 * Fork, setup timeout, stdout and sterr redirection, execute and wait

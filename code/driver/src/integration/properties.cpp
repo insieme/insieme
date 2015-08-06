@@ -46,7 +46,7 @@ namespace integration {
 
 using std::pair;
 
-const string& Properties::get(const string& key, const string& category, const string& def) const {
+const string Properties::get(const string& key, const string& category, const string& def) const {
 
 	// check the first level
 	auto p1 = data.find(key);

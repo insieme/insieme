@@ -59,7 +59,6 @@ OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 	
 #include "insieme/backend/operator_converter_begin.inc"
 	
-	
 	res[ext.getAsmStmt()] 	  = OP_CONVERTER({
 	
 		std::string value("asm");
@@ -122,8 +121,8 @@ OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 		return C_NODE_MANAGER->create<c_ast::OpaqueExpr>(value);
 	});
 	
-	
 #include "insieme/backend/operator_converter_end.inc"
+
 	return res;
 }
 
