@@ -88,12 +88,24 @@ namespace lang {
 	}
 
 	
+
 	/**
-	 * Struct used to mark Builtins, for efficient checking
+	 * Checks whether the given construct is marked as a built-in construct within
+	 * any language extension. Built-in constructs are annotated by a
+	 * corresponding annotation.
+	 *
+	 * @param node the node to be tested
+	 * @return true if the given node is marked as a built-in construct, false otherwise
 	 */
-	struct BuiltInTag {};
-	void markAsBuiltIn(const NodePtr& node);
 	bool isBuiltIn(const core::NodePtr& node);
+
+	/**
+	 * Marks the given construct as being a built-in construct.
+	 *
+	 * @param node the node to be marked as being a built-in
+	 * @return the handed in node
+	 */
+	void markAsBuiltIn(const NodePtr& node);
 
 } // end namespace lang
 } // end namespace core

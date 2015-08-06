@@ -88,6 +88,8 @@ namespace lang {
 
 	// ----------------------------------------------------
 
+	struct BuiltInTag {};
+
 	void markAsBuiltIn(const NodePtr& node) {
 		node->attachValue<BuiltInTag>();
 	}
