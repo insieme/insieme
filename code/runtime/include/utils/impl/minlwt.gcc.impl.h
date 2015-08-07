@@ -37,7 +37,7 @@
 // currently only a 64 bit implementation exists
 #if __GNUC_PREREQ(4,8)
 __attribute__((noinline,noclone,optimize(0),aligned(16)))
-#elseif __GNUC_PREREQ(4,4)
+#elif __GNUC_PREREQ(4,4)
 __attribute__((noinline,noclone,optimize(0)))
 #else
 __attribute__((noinline))
