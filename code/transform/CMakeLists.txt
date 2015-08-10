@@ -21,6 +21,9 @@ target_link_libraries(insieme_transform insieme_core)
 target_link_libraries(insieme_transform insieme_utils)
 target_link_libraries(insieme_transform insieme_annotations)
 
+cotire(insieme_transform)
+
+# =============================================  TESTING  =====================================
 set ( ut_prefix  ut_transform )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -35,8 +38,3 @@ foreach ( case_file ${test_cases})
 	
 	add_unit_test(${case_name} ${ut_prefix})
 endforeach(case_file)
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	INSTALL(TARGETS insieme_transform LIBRARY DESTINATION lib)
-endif(DO_INSTALL)

@@ -23,6 +23,9 @@ target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_annotations)
 target_link_libraries(insieme_backend insieme_transform)
 
+cotire(insieme_backend)
+
+# =============================================  TESTING  =====================================
 #target for backend unit_tests
 set(ut_prefix  ut_be )
 
@@ -54,11 +57,3 @@ foreach ( case_file ${test_cases})
 		add_unit_test(${case_name} ${ut_prefix})
 	endif()
 endforeach(case_file)
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	#INSTALL(FILES include/insieme/backend/simple_backend.h DESTINATION include/insieme)
-	INSTALL(TARGETS insieme_backend LIBRARY DESTINATION lib)
-endif(DO_INSTALL)
-
-

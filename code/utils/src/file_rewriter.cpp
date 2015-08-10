@@ -157,7 +157,8 @@ Rewriter::CodeModification::CodeModification(const SourceLocation& locStart,
 	  type(type) {
 	assert_true(locStart.isValid());
 	if(locEnd.isValid()) {
-		assert(locStart.getFileName() == fileName && locEnd.getFileName() == fileName);
+		assert_eq(locStart.getFileName(), fileName);
+		assert_eq(locEnd.getFileName(), fileName);
 	}
 }
 
@@ -170,9 +171,7 @@ Rewriter::CodeModification::CodeModification(const SourceLocation& loc, const st
 	
 bool Rewriter::CodeModification::operator<(const CodeModification& other) const {
 	if(fileName == other.fileName) {
-		assert((locEnd <= other.locStart || locStart >= other.locEnd) &&
-		       "Overlapping code modifications."
-		      );
+		assert_true(locEnd <= other.locStart || locStart >= other.locEnd) << "Overlapping code modifications.";
 		return locStart < other.locStart;
 	}
 	// order the modification hints accordingly to the file name

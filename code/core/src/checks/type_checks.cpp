@@ -385,7 +385,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	
 	// Obtain argument type
 	TypeList argumentTypes;
-	transform(address.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
+	::transform(address.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
 		return cur->getType();
 	});
 	
@@ -445,7 +445,7 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	};
 	
 	TypeList param;
-	transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
+	::transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
 	
 	FunctionTypePtr isType = address->getLambda()->getType();
 	
@@ -476,7 +476,7 @@ OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& addr
 	};
 	
 	TypeList param;
-	transform(address.getAddressedNode()->getParameters()->getElements(), back_inserter(param), extractType);
+	::transform(address.getAddressedNode()->getParameters()->getElements(), back_inserter(param), extractType);
 	
 	TypePtr isType = address->getType();
 	TypePtr result = address->getCall()->getType();

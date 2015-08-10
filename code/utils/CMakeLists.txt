@@ -35,6 +35,9 @@ target_link_libraries(insieme_utils ${LUAJIT_LIBRARIES})
 
 target_link_libraries(insieme_utils dl)
 
+cotire(insieme_utils)
+
+# =============================================  TESTING  =====================================
 set ( ut_prefix  ut_util )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases} )
@@ -56,10 +59,3 @@ foreach ( case_file ${test_cases} )
 	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
         
 endforeach(case_file)
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	install (DIRECTORY ${insieme_utils_include_dir}/insieme DESTINATION include)
-	INSTALL(TARGETS insieme_utils LIBRARY DESTINATION lib)
-endif(DO_INSTALL)
-

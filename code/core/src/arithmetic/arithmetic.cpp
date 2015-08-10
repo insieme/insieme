@@ -1408,11 +1408,11 @@ vector<Piece> expandPiece(const Piece& piece, const Formula& elseValue) {
 }
 
 
-struct ConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint> {
+struct ArithConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint> {
 
 	detail::BDDManagerPtr& manager;
 	
-	ConstraintConverter(detail::BDDManagerPtr& manager)
+	ArithConstraintConverter(detail::BDDManagerPtr& manager)
 		: manager(manager) {}
 		
 	Constraint visitRawConstraint(const utils::RawConstraint<Formula>& rcc) {
@@ -1473,7 +1473,7 @@ struct ConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint
 };
 
 Constraint convert(detail::BDDManagerPtr& manager, const utils::Piecewise<Formula>::PredicatePtr& constraint) {
-	ConstraintConverter converter(manager);
+	ArithConstraintConverter converter(manager);
 	return converter.visit(constraint);
 }
 

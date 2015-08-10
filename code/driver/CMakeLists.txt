@@ -53,11 +53,13 @@ foreach ( exec_file ${executables})
 	target_link_libraries(${exec_name} gomp)
 	target_link_libraries(${exec_name} dl)
 
+	cotire(${exec_name})
 endforeach(exec_file)
 
 # integrations_tests uses insiemecc - so there is a dependency
 add_dependencies(integration_tests insiemecc)
 
+# =============================================  TESTING  =====================================
 # add unit test cases
 set(ut_prefix  ut_driver )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -73,21 +75,6 @@ if(NOT PAPI_FOUND)
 	file(GLOB_RECURSE measure_test_cases test/measure*.cc)
 	list(REMOVE_ITEM test_cases ${measure_test_cases})
 endif()
-
-if(USE_OPENCL)
-	find_library(OPENCL_LIBS NAMES OpenCL PATHS $ENV{OPENCL_ROOT}/lib/x86_64)
-	if (${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
-		set(USE_OPENCL OFF)
-		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")
-	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
-		add_definitions(-DUSE_OPENCL)
-		message(STATUS "Enabling OpenCL tests")
-		# list all include paths
-		include_directories(include/ $ENV{OPENCL_ROOT}/include/)
-	endif(${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
-else (USE_OPENCL)
-	message(STATUS "Disabling OpenCL tests")
-endif(USE_OPENCL)
 
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
@@ -106,9 +93,3 @@ foreach ( case_file ${test_cases})
 
 	add_unit_test(${case_name} ${ut_prefix} off)
 endforeach(case_file)
-
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	INSTALL(TARGETS insiemecc DESTINATION bin)
-endif(DO_INSTALL)
