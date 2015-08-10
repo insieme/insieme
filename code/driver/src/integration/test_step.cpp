@@ -1095,7 +1095,7 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 		}
 		
 		if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1) {
-			std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
+			assert_fail() << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
 		}
 	}
 	else {

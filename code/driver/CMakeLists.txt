@@ -25,6 +25,9 @@ target_link_libraries(insieme_driver insieme_backend)
 target_link_libraries(insieme_driver insieme_transform) 
 target_link_libraries(insieme_driver insieme_annotations) 
 
+# required for llvm
+add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
+
 #custom target to build all drivers at once
 add_custom_target(drivers)
 

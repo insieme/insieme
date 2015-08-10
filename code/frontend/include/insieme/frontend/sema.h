@@ -36,17 +36,7 @@
 
 #pragma once
 
-
 #include "insieme/frontend/clang.h"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#include <clang/Sema/Sema.h>
-#pragma GCC diagnostic pop
-
 
 using clang::SourceLocation;
 

@@ -40,18 +40,14 @@
 #include <functional>
 #include <algorithm>
 
-// CUDD - the BDD library
-#include <cuddObj.hh>
-#include <cuddInt.h>
-
 #include "insieme/utils/iterator_utils.h"
 #include "insieme/utils/lazy.h"
 #include "insieme/utils/constraint.h"
 
-#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/arithmetic/cudd/cudd.h"
 
 namespace insieme {
 namespace core {

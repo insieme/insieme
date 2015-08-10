@@ -34,22 +34,7 @@
  * regarding third party software licenses.
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#include <clang/AST/DeclGroup.h>
-
-#include <clang/AST/Decl.h>
-#include <clang/AST/Expr.h>
-#include <clang/AST/DeclTemplate.h>
-#include <clang/AST/ASTContext.h>
-#include <llvm/Support/Casting.h>
-
-#include <clang/Basic/SourceLocation.h>
-#include <clang/Basic/SourceManager.h>
-#pragma GCC diagnostic pop
+#include "insieme/frontend/clang.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>

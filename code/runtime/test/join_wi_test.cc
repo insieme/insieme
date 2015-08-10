@@ -58,27 +58,27 @@ void insieme_wi_startup_implementation_recursive(irt_work_item* wi);
 void insieme_wi_startup_implementation_recursive_child(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple[] = {
-	{ &insieme_wi_startup_implementation_simple, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_simple }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_simple_child[] = {
-	{ &insieme_wi_startup_implementation_simple_child, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_simple_child }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_complex[] = {
-	{ &insieme_wi_startup_implementation_complex, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_complex }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_complex_child[] = {
-	{ &insieme_wi_startup_implementation_complex_child, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_complex_child }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_recursive[] = {
-	{ &insieme_wi_startup_implementation_recursive, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_recursive }
 };
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants_recursive_child[] = {
-	{ &insieme_wi_startup_implementation_recursive_child, 0, NULL, 0, NULL, 0, NULL }
+	{ &insieme_wi_startup_implementation_recursive_child }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {

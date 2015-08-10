@@ -37,11 +37,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/core/ir_builder.h"
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
+#include "insieme/frontend/clang.h"
 
-#include <clang/Basic/SourceLocation.h>
-#include <clang/Basic/SourceManager.h>
 #include <sstream>
 #include <iostream>
 

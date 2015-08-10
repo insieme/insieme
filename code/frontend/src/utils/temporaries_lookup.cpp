@@ -34,18 +34,11 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/StmtVisitor.h>
-#include <clang/AST/ExprCXX.h>
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
-
 #include <iostream>
 #include <vector>
+
+#include "insieme/frontend/clang.h"
+
 namespace insieme {
 namespace frontend {
 namespace utils {

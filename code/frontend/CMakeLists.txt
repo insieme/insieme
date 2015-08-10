@@ -35,6 +35,9 @@ target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_transform)
 target_link_libraries(insieme_frontend insieme_annotations)
 
+# required for llvm
+add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
+
 cotire(insieme_frontend)
 
 # =============================================  TESTING  =====================================

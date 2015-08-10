@@ -34,41 +34,27 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
 
+#include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/frontend_ir_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/frontend_ir_builder.h"
-
-#include "insieme/core/types/cast_tool.h"
-
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/enum_extension.h"
-
-#include "insieme/core/encoder/lists.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
-
-
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
-
-#include "insieme/frontend/utils/macros.h"
-
+#include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/types/cast_tool.h"
 
 using namespace insieme;
 using namespace insieme::frontend::utils;
