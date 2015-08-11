@@ -189,7 +189,6 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# add_definitions( -pg )
 	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
-
 	include(CheckCXXCompilerFlag)
 	# check for -std=c++0x
 	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
@@ -222,6 +221,18 @@ if (CMAKE_COMPILER_IS_GNUC)
 		message(WARNING  "WARNING: --std=c99 not supported by your compiler!" )
 	endif()
 endif()
+
+#--------------------------- Clang Compiler -------------------------
+if (${CMAKE_CXX_COMPILER} MATCHES "clang")
+	# C flags
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
+	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g3 -O0 -fPIC")
+	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
+	# CPP flags
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -O0")	
+endif ()
 
 #--------------------------- Intel Compiler -------------------------
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
