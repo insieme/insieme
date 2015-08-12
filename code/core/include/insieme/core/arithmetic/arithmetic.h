@@ -209,7 +209,7 @@ public:
 	 */
 	inline Rational invert() const {
 		// use internal constructor since result is irreducable
-		return Rational((numerator>=0)?denominator:-denominator, abs(numerator), false);
+		return Rational((numerator>=0)?denominator:-denominator, std::abs(numerator), false);
 	}
 	
 	

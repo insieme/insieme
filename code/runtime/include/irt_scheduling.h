@@ -39,6 +39,7 @@
 #define __GUARD_IRT_SCHEDULING_H
 
 #include "declarations.h"
+#include "irt_joinable.h"
 
 // List of available scheduling policies
 #define IRT_SCHED_POLICY_STATIC 1

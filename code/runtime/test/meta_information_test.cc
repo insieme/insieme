@@ -35,7 +35,6 @@
  */
 
 #include <gtest/gtest.h>
-#include <omp.h>
 
 #include <irt_all_impls.h>
 #include <standalone.h>

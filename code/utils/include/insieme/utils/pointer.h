@@ -52,7 +52,6 @@ template<typename T> class Ptr;
 template<typename P> struct is_ptr : public boost::false_type {};
 template<typename T> struct is_ptr<Ptr<T>> : public boost::true_type {};
 
-
 /**
  * Allows to dynamically down-cast between instance pointer of related types.
  *
@@ -128,7 +127,7 @@ public:
 	 * a base type without changing the actual pointer.
 	 */
 	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
-	operator const Ptr<B>() const {
+	operator Ptr<B>() const {
 		return Ptr<B>(ptr);
 	}
 	

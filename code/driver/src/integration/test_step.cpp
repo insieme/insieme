@@ -992,12 +992,13 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 	vector<char*> argumentsForExec;
 	// argv[0] needs to be the executable itself
 	argumentsForExec.push_back(const_cast<char*>(executableParam.c_str()));
-	for(const auto& s : argumentsVec)
-		if(!s.empty()) {
+	for(const auto& s : argumentsVec) {
+		if (!s.empty()) {
 			argumentsForExec.push_back(const_cast<char*>(s.c_str()));
 		}
+	}
 	// terminate
-	argumentsForExec.push_back('\0');
+	argumentsForExec.push_back(nullptr);
 	
 	/*
 	 * Setup environment
@@ -1049,7 +1050,7 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 		environmentForExec.push_back(const_cast<char*>(environmentTemp.back().c_str()));
 	}
 	// terminate
-	environmentForExec.push_back('\0');
+	environmentForExec.push_back(nullptr);
 	
 	/*
 	 * Fork, setup timeout, stdout and sterr redirection, execute and wait
@@ -1094,7 +1095,7 @@ int TestRunner::executeWithTimeout(const string& executableParam, const string& 
 		}
 		
 		if(execve(executableParam.c_str(), argumentsForExec.data(), environmentForExec.data()) == -1) {
-			std::cerr << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
+			assert_fail() << "Unable to run executable " << executableParam << ", reason: " << strerror(errno) << "\n";
 		}
 	}
 	else {

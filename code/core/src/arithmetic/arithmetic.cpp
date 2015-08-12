@@ -40,18 +40,14 @@
 #include <functional>
 #include <algorithm>
 
-// CUDD - the BDD library
-#include <cuddObj.hh>
-#include <cuddInt.h>
-
 #include "insieme/utils/iterator_utils.h"
 #include "insieme/utils/lazy.h"
 #include "insieme/utils/constraint.h"
 
-#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/arithmetic/cudd/cudd.h"
 
 namespace insieme {
 namespace core {
@@ -101,7 +97,7 @@ Rational& Rational::operator+=(const Rational& other) {
 }
 
 Rational& Rational::operator-=(const Rational& other) {
-	uint64_t LCM = lcm(std::abs(denominator), other.denominator);
+	uint64_t LCM = lcm(denominator, other.denominator);
 	numerator = numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator);
 	denominator = LCM;
 	return *this;
@@ -1408,11 +1404,11 @@ vector<Piece> expandPiece(const Piece& piece, const Formula& elseValue) {
 }
 
 
-struct ConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint> {
+struct ArithConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint> {
 
 	detail::BDDManagerPtr& manager;
 	
-	ConstraintConverter(detail::BDDManagerPtr& manager)
+	ArithConstraintConverter(detail::BDDManagerPtr& manager)
 		: manager(manager) {}
 		
 	Constraint visitRawConstraint(const utils::RawConstraint<Formula>& rcc) {
@@ -1473,7 +1469,7 @@ struct ConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint
 };
 
 Constraint convert(detail::BDDManagerPtr& manager, const utils::Piecewise<Formula>::PredicatePtr& constraint) {
-	ConstraintConverter converter(manager);
+	ArithConstraintConverter converter(manager);
 	return converter.visit(constraint);
 }
 

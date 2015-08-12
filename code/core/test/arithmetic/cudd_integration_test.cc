@@ -38,8 +38,7 @@
 
 #include <vector>
 
-#include <cuddObj.hh>
-#include <cuddInt.h>
+#include "insieme/core/arithmetic/cudd/cudd.h"
 
 #include "insieme/utils/string_utils.h"
 

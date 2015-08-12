@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif // _OPENMP
 
 #include <utils/circular_work_buffers.h>
 
@@ -106,6 +108,7 @@ TEST(circular_work_buffers, token_passing_single_dual) {
 	}
 }
 
+#ifdef _OPENMP
 TEST(circular_work_buffers, token_passing_multi_self) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
@@ -132,6 +135,7 @@ TEST(circular_work_buffers, token_passing_multi_self) {
 		}
 	}
 }
+#endif // _OPENMP
 
 TEST(circular_work_buffers, token_passing_multi_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
@@ -234,6 +238,7 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 	}
 }
 
+#ifdef _OPENMP
 TEST(circular_work_buffers, token_passing_bench) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb;
@@ -253,3 +258,4 @@ TEST(circular_work_buffers, token_passing_bench) {
 		}
 	}
 }
+#endif // _OPENMP

@@ -36,10 +36,7 @@
 
 #include <sstream>
 
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#include <clang/Lex/Preprocessor.h>
+#include "insieme/frontend/clang.h"
 
 #include "insieme/frontend/compiler.h"
 

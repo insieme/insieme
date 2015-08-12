@@ -36,35 +36,13 @@
 
 #include "insieme/frontend/translation_unit.h"
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <llvm/Support/FileSystem.h>
-#include <clang/Serialization/ASTWriter.h>
-#pragma GCC diagnostic pop
-
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/ASTConsumer.h>
-#include <clang/AST/DeclGroup.h>
-
-#include <clang/Analysis/CFG.h>
-
-#include <clang/Parse/Parser.h>
-#include <clang/Parse/ParseAST.h>
-
-#include <clang/Sema/Sema.h>
-#include <clang/Sema/SemaConsumer.h>
-#include <clang/Sema/ExternalSemaSource.h>
-
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/pragma/handler.h"
 
+#include "insieme/utils/container_utils.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
-#include "insieme/utils/container_utils.h"
-
 
 using namespace insieme;
 using namespace insieme::core;
@@ -78,12 +56,11 @@ namespace {
 ///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSema& sema) {
 
-	Parser *_P = new Parser(comp.getPreprocessor(), sema, false);
-	Parser& P = *_P;// (comp.getPreprocessor(), sema, false);  // do not skip function bodies
+	Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();
 	
 	ParserProxy::init(&P);
-	P.Initialize();	  //FIXME
+	P.Initialize();	  // FIXME
 	Consumer->Initialize(comp.getASTContext());
 	if(SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer)) {
 		SC->InitializeSema(sema);
@@ -104,24 +81,6 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, InsiemeSem
 	}
 	Consumer->HandleTranslationUnit(comp.getASTContext());
 	ParserProxy::discard();  // FIXME
-	
-	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
-	if(false) {
-		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
-		std::for_each(dc->decls_begin(), dc->decls_end(), [&](const clang::Decl* d) {
-			if(const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
-				if(func_decl->hasBody()) {
-					clang::CFG::BuildOptions bo;
-					bo.AddInitializers = true;
-					bo.AddImplicitDtors = true;
-					auto cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
-					assert_true(cfg);
-					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
-					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
-				}
-			}
-		});
-	}
 }
 
 } // end anonymous namespace

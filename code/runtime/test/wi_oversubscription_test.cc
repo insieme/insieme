@@ -36,7 +36,7 @@
 
 #include "insieme/common/utils/gtest_utils.h"
 
-#define IRT_CWBUFFER_LENGTH 2
+#define IRT_CWBUFFER_LENGTH 4
 
 #define IRT_LIBRARY_MAIN
 #define IRT_LIBRARY_NO_MAIN_FUN

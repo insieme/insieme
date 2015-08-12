@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif // _OPENMP
 
 #include <irt_all_impls.h>
 #include <standalone.h>
@@ -145,7 +147,7 @@ TEST(maintenance, parallel) {
 		// generate ITERATIONS random intervals per thread, and register them
 		mt_timing timings[ITERATIONS];
 		irt_maintenance_lambda lambdas[ITERATIONS];
-		uint32 r_seed = irt_time_ticks() + omp_get_thread_num();
+		uint32 r_seed = irt_time_ticks();
 		for(uint32 i=0; i<ITERATIONS; ++i) {
 			uint64 interval = rand_r(&r_seed) % (TEST_TIME_MS/3) + TEST_TIME_MIN;
 			timings[i] = (mt_timing) {

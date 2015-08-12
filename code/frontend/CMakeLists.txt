@@ -35,6 +35,12 @@ target_link_libraries(insieme_frontend insieme_utils)
 target_link_libraries(insieme_frontend insieme_transform)
 target_link_libraries(insieme_frontend insieme_annotations)
 
+# required for llvm
+add_definitions(-D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
+
+cotire(insieme_frontend)
+
+# =============================================  TESTING  =====================================
 # add custom target for ut_fe test suite
 set ( ut_prefix  ut_fe )
 add_custom_target(${ut_prefix})
@@ -65,10 +71,3 @@ foreach ( case_file ${test_cases})
 		add_unit_test(${case_name} ${ut_prefix}) 
 	endif()
 endforeach(case_file)
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	install (FILES include/insieme/frontend/frontend.h DESTINATION include/insieme/)
-	INSTALL(TARGETS insieme_frontend LIBRARY DESTINATION lib)
-endif(DO_INSTALL)
-

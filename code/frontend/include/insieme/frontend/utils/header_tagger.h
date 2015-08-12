@@ -36,22 +36,13 @@
 
 #pragma once
 
-#include <boost/filesystem/path.hpp>
-
-#include "insieme/core/forward_decls.h"
-
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
+#include "insieme/frontend/clang.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/ASTContext.h>
-#pragma GCC diagnostic pop
-
+#include "insieme/core/forward_decls.h"
 
 namespace clang {
 class Decl;

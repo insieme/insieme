@@ -150,7 +150,7 @@ TEST(SetDopTest, External) {
 			for(int i=0; i<N; ++i) {
 				sum += sin(rand()%10/10.0);
 			}
-			printf("", sum);
+			printf("%f", sum);
 		});
 		run = false;
 		EXPECT_TRUE(f.get());

@@ -41,21 +41,13 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
-#include "insieme/core/ir_program.h"
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
-
-#include "insieme/utils/logging.h"
-
 #include "insieme/frontend/sema.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#include "clang/AST/ASTConsumer.h"
-#pragma GCC diagnostic pop
 
+#include "insieme/core/ir_program.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {

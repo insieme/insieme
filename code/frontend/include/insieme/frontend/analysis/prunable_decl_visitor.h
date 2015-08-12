@@ -42,49 +42,42 @@ namespace analysis {
 /**
  *		This is our own implementation of the a clang::Decl tree for the insieme compiler,
  *		it is a prunable visitor, which means that we can prune branches but continue the
- *		traversal in other. This fucntionality was not found on clang 3.2
+ *		traversal in other. This functionality was not found on clang 3.2
  *
- * we need to do spetial enfasis on:
+ * we need to do special emphasis on:
  * 	for types definition
  * 		- TypeDefs
  * 		- Classes
- *	for globas collection
+ *	for globals collection
  *		- VarDecl
  *	for function translation
  *		- FunctionDecl
  *	in this version only those objects will be consider
  *
  *	NOTES:
- *		- non named declarations will be completelly ignored
+ *		- non named declarations will be completely ignored
  *		-
  */
 template <typename BASE, bool visitTemplates=false>
 class PrunableDeclVisitor {
-
-	/**
-	 * Default converter getter method
-	 */
-	frontend::conversion::Converter& getConverter() {
-		return nullptr;
-	}
 	
 	/**
-	 * Default implementation, overide to add functionality
+	 * Default implementation, override to add functionality
 	 */
 	void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 	}
 	/**
-	 * Default implementation, overide to add functionality
+	 * Default implementation, override to add functionality
 	 */
 	void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 	}
 	/**
-	 * Default implementation, overide to add functionality
+	 * Default implementation, override to add functionality
 	 */
 	void VisitTypedefNameDecl(const clang::TypedefNameDecl* typeDecl) {
 	}
 	/**
-	 * Default implementation, overide to add functionality
+	 * Default implementation, override to add functionality
 	 */
 	void VisitVarDecl(const clang::VarDecl* var) {
 	}

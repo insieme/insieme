@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif // _OPENMP
 
 #include "irt_all_impls.h"
 #include "standalone.h"
@@ -56,7 +58,11 @@ TEST(id_generation, parallel_ops) {
 	#pragma omp parallel
 	{
 		gen_id.node = 4;
+		#ifdef _OPENMP
 		gen_id.thread = omp_get_thread_num();
+		#else
+		gen_id.thread = 0;
+		#endif
 		#pragma omp parallel
 		for(int i=0; i<TEST_COUNT; ++i) {
 			ids[i] = irt_generate_id_gen_test_id(&gen_id);

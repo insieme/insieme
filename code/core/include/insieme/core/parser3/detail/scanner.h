@@ -42,11 +42,11 @@
 // flex lexer base class
 #undef yyFlexLexer
 #define yyFlexLexer Trick_Lexer
-# include <FlexLexer.h>
+#include <FlexLexer.h>
 
 // these file is generated and the path is provided
-# include "location.hh"
-# include "inspire_parser.hpp"
+#include "location.hh"
+#include "inspire_parser.hpp"
 
 namespace insieme {
 namespace core {

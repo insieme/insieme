@@ -381,6 +381,7 @@ OperatorConverterTable buildDefaultConverterTable(NodeManager& manager) {
 	});
 	
 #undef PRINT_ARG
+#undef PRINT_EXPR
 #undef OP_CONVERTER
 #undef OUT
 	

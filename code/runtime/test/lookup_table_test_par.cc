@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif // _OPENMP
 
 #include "irt_all_impls.h"
 #include "standalone.h"
@@ -72,7 +74,11 @@ uint32 num = 0;
 irt_lookup_test_id dummy_id_generator() {
 	irt_lookup_test_id id;
 	id.node = 1;
+#ifdef _OPENMP
 	id.thread = omp_get_thread_num();
+#else
+	id.thread = 0;
+#endif // _OPENMP
 	id.index = num++;
 	id.cached = NULL;
 	return id;

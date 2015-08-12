@@ -37,8 +37,10 @@
 // currently only a 64 bit implementation exists
 #if __GNUC_PREREQ(4,8)
 __attribute__((noinline,noclone,optimize(0),aligned(16)))
-#else
+#elif __GNUC_PREREQ(4,4)
 __attribute__((noinline,noclone,optimize(0)))
+#else
+__attribute__((noinline))
 #endif
 void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/,
                        intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {

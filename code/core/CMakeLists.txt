@@ -104,6 +104,13 @@ insieme_find_package(NAME Boost COMPONENTS regex)
 target_include_directories(insieme_core SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(insieme_core ${Boost_REGEX_LIBRARY})
 
+# include workaround header for cudd (which prevents cudd leaking macros) in prefix
+# prevent flex from being added to prefix
+set_target_properties(insieme_core PROPERTIES
+	COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${FLEX_INCLUDE_DIRS}"
+	COTIRE_PREFIX_HEADER_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/code/core/include/insieme/core/arithmetic/cudd")
+cotire(insieme_core)
+
 # =============================================  TESTING  =====================================
 set( ut_prefix  ut_core)
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -131,11 +138,3 @@ foreach ( case_file ${test_cases})
 	endif()
 	add_unit_test(${case_name} ${ut_prefix} ${VFLAG})
 endforeach(case_file)
-
-# --- INSTALL --------------------------------------------------------------------
-if(DO_INSTALL)
-	install (DIRECTORY ${insieme_core_include_dir}/insieme DESTINATION include)
-	# install (FILES include/insieme/core/transform/manipulation.h DESTINATION include/core/)
-
-	install(TARGETS insieme_core LIBRARY DESTINATION lib)
-endif(DO_INSTALL)

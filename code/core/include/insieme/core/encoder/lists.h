@@ -134,6 +134,8 @@ namespace detail {
  */
 template<typename E, typename C = Converter<E>>
 struct create_list_type {
+	create_list_type() {}
+
 	core::TypePtr operator()(NodeManager& manager) const {
 		return GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(typename C::type_factory()(manager)));
 	}
@@ -148,6 +150,8 @@ struct create_list_type {
  */
 template<typename E, typename C = Converter<E>>
 struct is_list {
+	is_list() {}
+
 	bool operator()(const core::ExpressionPtr& expr) const {
 		const ListExtension& ext = expr->getNodeManager().getLangExtension<ListExtension>();
 		
@@ -182,6 +186,7 @@ struct is_list {
  */
 template<typename E, typename C=Converter<E>>
 struct encode_list {
+	encode_list() {}
 
 	core::ExpressionPtr operator()(NodeManager& manager, const vector<E>& list) const {
 	
@@ -213,6 +218,7 @@ struct encode_list {
  */
 template<>
 struct encode_list<ExpressionPtr, DirectExprConverter> {
+	encode_list() {}
 
 	core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
 	
@@ -245,6 +251,7 @@ struct encode_list<ExpressionPtr, DirectExprConverter> {
  */
 template<typename E, typename C = Converter<E>>
 struct decode_list {
+	decode_list() {}
 
 	/**
 	 * A end-recursive implementation of the decoding operation.

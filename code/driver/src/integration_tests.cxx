@@ -51,7 +51,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -285,7 +287,9 @@ int main(int argc, char** argv) {
 	vector<TestCase> failed;
 	int omittedTestsCount = 0;
 	map<TestCase,TestResult> failedSteps;
+#ifdef _OPENMP
 	omp_set_num_threads(options.num_threads);
+#endif
 	
 	bool panic = false;
 	int act = 0;

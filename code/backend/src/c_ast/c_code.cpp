@@ -261,7 +261,8 @@ vector<CodeFragmentPtr> getOrderedClosure(const vector<CodeFragmentPtr>& fragmen
 		
 		for(const auto& cur : cycle) {
 			std::cout << " - Begin - \n";
-			std::cout << "Type: " << typeid(*cur).name() << "\n";
+			auto&& curp = *cur;
+			std::cout << "Type: " << typeid(curp).name() << "\n";
 			std::cout << toString(*cur) << "\n";
 			std::cout << "Includes: " << cur->getIncludes() << "\n";
 			std::cout << " - End - \n";

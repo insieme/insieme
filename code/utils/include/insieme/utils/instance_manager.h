@@ -103,7 +103,7 @@ class InstanceManager : private boost::noncopyable {
 	 * the instance manager chaining. Instances within the base manager are considered
 	 * to be covered by this manager.
 	 */
-	InstanceManager* base;
+	InstanceManager* base = nullptr;
 	
 	/**
 	 * A private method used to clone instances to be managed by this type.
@@ -128,7 +128,7 @@ public:
 	 * The default constructor initializing an empty instance manager outside any
 	 * inheritance hierarchy.
 	 */
-	InstanceManager() : base(0) {}
+	InstanceManager() {}
 	
 	/**
 	 * A constructor creating an instance manager extending the given manager. The life
@@ -145,8 +145,7 @@ public:
 		std::for_each(storage.begin(), storage.end(),
 		[](const T* cur) {
 			delete cur;
-		}
-		             );
+		});
 	}
 	
 	/**

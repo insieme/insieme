@@ -62,6 +62,7 @@ namespace detail {
 
 template<typename T>
 struct value_extractor {
+	value_extractor() {}
 
 	template<typename P>
 	static typename std::enable_if<std::is_arithmetic<P>::value,P>::type
@@ -86,6 +87,8 @@ struct value_extractor {
 
 template<>
 struct value_extractor<string> {
+	value_extractor() {}
+
 	const string& operator()(const string& value) const {
 		return value;		// the default operation simply utilizes the implicit conversion
 	}
@@ -93,6 +96,8 @@ struct value_extractor<string> {
 
 template<>
 struct value_extractor<bool> {
+	value_extractor() {}
+
 	bool operator()(const string& value) const {
 		// special handling for bool values
 		return value == "1" || value == "true" || value == "t" || value == "yes" || value == "y";
@@ -103,6 +108,8 @@ struct value_extractor<bool> {
 
 template<typename T>
 struct value_extractor<vector<T>> {
+	value_extractor() {}
+
 	vector<T> operator()(const string& value) const {
 		static const value_extractor<T> extract;
 		static const boost::char_separator<char> sep("\",");
@@ -117,6 +124,8 @@ struct value_extractor<vector<T>> {
 
 template<typename T>
 struct value_extractor<set<T>> {
+	value_extractor() {}
+
 	set<T> operator()(const string& value) const {
 		set<T> res;
 		for(const auto& cur : value_extractor<vector<T>>()(value)) {
@@ -136,7 +145,7 @@ class Properties : public utils::Printable {
 	
 public:
 
-	const string& get(const string& key, const string& category = "", const string& def = "") const;
+	const string get(const string& key, const string& category = "", const string& def = "") const;
 	
 	template<typename T, typename R = decltype(detail::value_extractor<T>()(""))>
 	R get(const string& key, const string& category = "", const string& def = "") const {
@@ -153,7 +162,7 @@ public:
 		data[key][category] = value;
 	}
 	
-	const string& operator[](const string& key) const {
+	const string operator[](const string& key) const {
 		return get(key);
 	}
 	
