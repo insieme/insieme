@@ -1,9 +1,0 @@
-# astyle file for insieme
---style=attach                  # opening braces on same line
---indent=tab                    # indent with tabes, align with spaces
---unpad-paren                   # remove extra spaces around parantheses
---fill-empty-lines              # fill empty lines with the white space of the previous line
---break-closing-brackets        # put else and catch on new lines
---add-brackets                  # add {} to all blocks
---close-templates               # remove superfluous template spacing
---max-code-length=160           
