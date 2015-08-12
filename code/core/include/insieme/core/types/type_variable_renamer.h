@@ -93,21 +93,6 @@ public:
 	}
 	
 	/**
-	 * Adds a new variable mapping to this instance.
-	 */
-	void addMapping(const IntTypeParamPtr& varA, const IntTypeParamPtr& varB) {
-		addMappingInternal(varA, varB);
-	}
-	
-	/**
-	 * Checks whether the given variable has been mapped to another variable before. Only the forward
-	 * direction is checked.
-	 */
-	bool containsMappingFor(const IntTypeParamPtr& var) const {
-		return forward.find(var) != forward.end();
-	}
-	
-	/**
 	 * Applies the forward substitution represented by this mapping to the given type.
 	 */
 	TypePtr applyForward(const TypePtr& type) const {
@@ -152,29 +137,6 @@ public:
 	 * Applies the reverse substitution represented by this mapping to the given type using the given manager.
 	 */
 	TypePtr applyBackward(NodeManager& manager, const TypePtr& type) const;
-	
-	/**
-	 * Applies the forward substitution represented by this mapping to the given int type parameter using the given manager.
-	 */
-	IntTypeParamPtr applyForward(NodeManager& manager, const IntTypeParamPtr& param) const {
-		auto pos = forward.find(param);
-		if(pos != forward.end()) {
-			return static_pointer_cast<const IntTypeParam>(pos->second);
-		}
-		return static_pointer_cast<const IntTypeParam>(param);
-	}
-	
-	/**
-	 * Applies the reverse substitution represented by this mapping to the given int type parameter using the given manager.
-	 */
-	IntTypeParamPtr applyBackward(NodeManager& manager, const IntTypeParamPtr& param) const {
-		auto pos = backward.find(param);
-		if(pos != backward.end()) {
-			return static_pointer_cast<const IntTypeParam>(pos->second);
-		}
-		return static_pointer_cast<const IntTypeParam>(param);
-	}
-	
 	
 	/**
 	 * Writes a (somehow) readable string representation of this mapping to the given output stream.
@@ -317,15 +279,6 @@ public:
 					res.addMapping(var, getFreshVariable(manager));
 				}
 			}
-			else if(type == NT_VariableIntTypeParam) {
-				const VariableIntTypeParamPtr& var = static_pointer_cast<const VariableIntTypeParam>(node);
-				if(base.containsMappingFor(var)) {
-					res.addMapping(var, base.applyForward(manager, var));
-				}
-				else if(!res.containsMappingFor(var)) {
-					res.addMapping(var, getFreshParameter(manager));
-				}
-			}
 			else if(type == NT_RecType) {
 				// the type variables for the recursive definition have to be ignored
 				const RecTypePtr recType = static_pointer_cast<const RecType>(node);
@@ -358,10 +311,6 @@ private:
 
 	TypeVariablePtr getFreshVariable(NodeManager& manager) {
 		return TypeVariable::get(manager, format("v%d", (++varCounter)));
-	}
-	
-	VariableIntTypeParamPtr getFreshParameter(NodeManager& manager) {
-		return VariableIntTypeParam::get(manager, 'A' + (varParamCounter++));
 	}
 	
 };

@@ -48,7 +48,7 @@ TEST(NodeType, IsCategory) {
 	EXPECT_TRUE(isA<NC_Statement>(NT_Literal));
 	
 	EXPECT_FALSE(isA<NC_Statement>(NT_GenericType));
-	EXPECT_FALSE(isA<NC_Program>(NT_IntTypeParams));
+	EXPECT_FALSE(isA<NC_Program>(NT_CallExpr));
 	
 }
 

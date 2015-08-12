@@ -136,28 +136,6 @@ TEST(ExpressionsTest, TupleExpr) {
 	basicExprTests(more, second, toVector<NodePtr>(second, more->getExpressions()));
 }
 
-TEST(ExpressionsTest, VectorExpr) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	
-	VectorTypePtr vectorType = builder.vectorType(manager.getLangBasic().getBool(), builder.concreteIntTypeParam(0));
-	VectorExprPtr empty = builder.vectorExpr(vectorType, toVector<ExpressionPtr>());
-	VectorExprPtr more = builder.vectorExpr(toVector<ExpressionPtr>(manager.getLangBasic().getTrue(), manager.getLangBasic().getFalse()));
-	
-	TypePtr first = vectorType;
-	TypePtr second = VectorType::get(manager, manager.getLangBasic().getBool(), ConcreteIntTypeParam::get(manager, 2));
-	EXPECT_EQ(*first , *empty->getType());
-	EXPECT_EQ(*second, *more->getType());
-	
-	EXPECT_EQ("{}", toString(*empty));
-	EXPECT_EQ("{true,false}", toString(*more));
-	
-	
-	// check hash codes, children and cloning
-	basicExprTests(empty, first, toVector<NodePtr>(first, empty->getExpressions()));
-	basicExprTests(more, second, toVector<NodePtr>(second, more->getExpressions()));
-}
-
 TEST(ExpressionsTest, Lambda) {
 	NodeManager manager;
 	IRBuilder builder(manager);

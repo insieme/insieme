@@ -39,7 +39,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/enum_extension.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/lang/parallel_extension.h"
@@ -74,7 +73,6 @@ private:
 	ExtensionRegistry() {
 		//fill the map with named extensions in here
 		extensionFactories.insert(getExtensionFactory<AsmStmtExtension>("ext.asm"));
-		extensionFactories.insert(getExtensionFactory<ComplexExtension>("ext.complex"));
 		extensionFactories.insert(getExtensionFactory<EnumExtension>("ext.enum"));
 		extensionFactories.insert(getExtensionFactory<IRppExtensions>("ext.ir++"));
 		extensionFactories.insert(getExtensionFactory<ParallelExtension>("ext.parallel"));

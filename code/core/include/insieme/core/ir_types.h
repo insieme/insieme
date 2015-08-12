@@ -38,7 +38,6 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_values.h"
-#include "insieme/core/ir_int_type_param.h"
 
 // ---------------------------------------------- IR Types -----------------------------------------------
 
@@ -263,7 +262,7 @@ static ParentsPtr get(NodeManager& manager, const TypeList& types) {
 /**
  * The accessor associated to generic types.
  */
-IR_NODE_ACCESSOR(GenericType, Type, StringValue, Parents, Types, IntTypeParams)
+IR_NODE_ACCESSOR(GenericType, Type, StringValue, Parents, Types)
 /**
  * Obtains the name of this generic type.
  */
@@ -278,11 +277,6 @@ IR_NODE_PROPERTY(Parents, Parents, 1);
  * Obtains the list of type parameters of this generic type.
  */
 IR_NODE_PROPERTY(Types, TypeParameter, 2);
-
-/**
- * Obtains the list of int-type parameters of this generic type.
- */
-IR_NODE_PROPERTY(IntTypeParams, IntTypeParameter, 3);
 
 /**
  * Obtains the name portion of this generic type.
@@ -324,11 +318,9 @@ public:
  * @param name 			the name of the new type (only the prefix)
  * @param parents		the list of parent types (for the inheritance hierarchy)
  * @param typeParams	the type parameters of this type, concrete or variable
- * @param intTypeParams	the integer-type parameters of this type, concrete or variable
  */
-static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents,
-                          const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
-	return manager.get(GenericType(name, parents, typeParams, intTypeParams));
+static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const TypesPtr& typeParams) {
+	return manager.get(GenericType(name, parents, typeParams));
 }
 
 /**
@@ -339,11 +331,9 @@ static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, cons
  * @param manager		the manager to be used for creating the node (memory management)
  * @param name 			the name of the new type (only the prefix)
  * @param typeParams	the type parameters of this type, concrete or variable
- * @param intTypeParams	the integer-type parameters of this type, concrete or variable
  */
-static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name,
-                          const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
-	return get(manager, name, Parents::get(manager), typeParams, intTypeParams);
+static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const TypesPtr& typeParams) {
+	return get(manager, name, Parents::get(manager), typeParams);
 }
 
 /**
@@ -360,10 +350,8 @@ static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name,
 static GenericTypePtr get(NodeManager& manager,
                           const string& name,
                           const ParentList& parentTypes,
-                          const TypeList& typeParams = TypeList(),
-                          const IntParamList& intTypeParams = IntParamList()) {
-	return get(manager, StringValue::get(manager, name), Parents::get(manager, parentTypes), Types::get(manager, typeParams), IntTypeParams::get(manager,
-	           intTypeParams));
+                          const TypeList& typeParams = TypeList()) {
+	return get(manager, StringValue::get(manager, name), Parents::get(manager, parentTypes), Types::get(manager, typeParams));
 }
 
 /**
@@ -378,9 +366,8 @@ static GenericTypePtr get(NodeManager& manager,
  */
 static GenericTypePtr get(NodeManager& manager,
                           const string& name,
-                          const TypeList& typeParams = TypeList(),
-                          const IntParamList& intTypeParams = IntParamList()) {
-	return get(manager, StringValue::get(manager, name),Types::get(manager, typeParams), IntTypeParams::get(manager, intTypeParams));
+                          const TypeList& typeParams = TypeList()) {
+	return get(manager, StringValue::get(manager, name),Types::get(manager, typeParams));
 }
 
 };
@@ -403,7 +390,7 @@ IR_NODE_PROPERTY(StringValue, VarName, 0);
 };
 
 /**
- * A node type representing concrete int-type parameters.
+ * A node type representing concrete type variables.
  */
 IR_NODE(TypeVariable, Type)
 protected:
@@ -601,9 +588,11 @@ FunctionKind getKind() const {
 Ptr<const Type> getObjectType() const {
 	assert_true(isConstructor() || isDestructor() || isMemberFunction());
 	assert_false(getParameterTypes().empty());
-	assert_eq(getParameterType(0)->getNodeType(), NT_RefType);
-	static const auto caster = typename Ptr<const RefType>::StaticCast();
-	return caster.template operator()<const RefType>(getParameterType(0))->getElementType();
+	assert_eq(getParameterType(0)->getNodeType(), NT_GenericType);
+	static const auto caster = typename Ptr<const GenericType>::StaticCast();
+	Ptr<const GenericType> type = caster.template operator()<const GenericType>(getParameterType(0));
+	assert(!type->getTypeParameter().empty());
+	return type->getTypeParameter(0);
 }
 };
 
@@ -1214,375 +1203,70 @@ static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entrie
 
 
 
+// --------------------------------------------- Numeric Type ---------------------------------------------
 
-// --------------------------------- Reference Type ----------------------------
-
-/**
- * An enumeration used for distinguishing the various kinds of function types.
- */
-enum ReferenceKind {
-	RK_SOURCE = 1, 		/* < a read-only reference to a memory location */
-	RK_REFERENCE, 		/* < a read/write reference to a memory location */
-	RK_SINK 			/* < a write only reference to a memory location */
-};
 
 
 /**
- * The accessor associated to the reference type.
+ * The accessor associated to the number type class. A number type has a single element, an expression
+ * representing its value. The expression may either be a variable or literal.
  */
-IR_NODE_ACCESSOR(RefType, Type, Type, UIntValue)
+IR_NODE_ACCESSOR(NumericType, Type, Expression)
 
 /**
- * Obtains the type of the referenced element type.
+ * Obtains the value of this number type.
  */
-IR_NODE_PROPERTY(Type, ElementType, 0);
+IR_NODE_PROPERTY(Expression, Value, 0);
 
 /**
- * Obtains a pointer to the child node determining the kind of this reference type.
+ * Determines whether this number type is a constant, statically fixed value.
  */
-IR_NODE_PROPERTY(UIntValue, ReferenceKind, 1);
-
-/**
- * Obtains the kind of reference this reference type is representing.
- */
-ReferenceKind getKind() const {
-	return (ReferenceKind)getReferenceKind()->getValue();
+bool isConstant() const {
+	return this->getValue()->getNodeType() == NT_Literal;
 }
 
 /**
- * Checks whether this reference type is representing a source (read-only reference).
+ * Determines whether this number type is a variable, dynamically determined value.
  */
-bool isSource() const {
-	return getKind() == RK_SOURCE;
-}
-
-/**
- * Checks whether this reference type is representing a read/write reference.
- */
-bool isReference() const {
-	return getKind() == RK_REFERENCE;
-}
-
-/**
- * Checks whether this reference is a write-only reference.
- */
-bool isSink() const {
-	return getKind() == RK_SINK;
-}
-
-/**
- * Checks whether this reference type can be the target of a read operation.
- */
-bool isRead() const {
-	return isSource() || isReference();
-}
-
-/**
- * Checks whether this reference can be the target of write operation.
- */
-bool isWrite() const {
-	return isReference() || isSink();
+bool isVariable() const {
+	return !isConstant();
 }
 
 };
 
+
 /**
- * This intrinsic reference type used to represent mutable memory locations.
+ * A node type representing concrete type variables.
  */
-IR_NODE(RefType, Type)
+IR_NODE(NumericType, Type)
 protected:
 
 /**
  * Prints a string representation of this node to the given output stream.
  */
-virtual std::ostream& printTo(std::ostream& out) const {
-	if(isSource()) {
-		return out << "src<" << *getElementType() << ">";
-	}
-	if(isReference()) {
-		return out << "ref<" << *getElementType() << ">";
-	}
-	if(isSink()) {
-		return out << "sink<" << *getElementType() << ">";
-	}
-	return out << "unknown_ref<" << *getElementType() << ">";
-}
+virtual std::ostream& printTo(std::ostream& out) const;
 
 public:
 
 /**
- * A factory method allowing to obtain a pointer to a reference type representing
- * an instance managed by the given manager.
+ * This static factory method allows to construct a numeric type based on a literal constant.
  *
- * @param manager 		the manager which should be responsible for maintaining the new
- * 				  		type instance and all its referenced elements.
- * @param elementType 	the type of element the requested reference is addressing
- * @param refKind		the kind of reference to be created
- * @return a pointer to a instance of the requested type. Multiple requests using
- * 		   the same parameters will lead to pointers addressing the same instance.
+ * @param manager the manager used for maintaining instances of this class
+ * @param value the value to be represented
+ * @return the requested type instance managed by the given manager
  */
-static RefTypePtr get(NodeManager& manager, const TypePtr& elementType, const UIntValuePtr& refKind) {
-	return manager.get(RefType(elementType, refKind));
-}
+static NumericTypePtr get(NodeManager& manager, const LiteralPtr& value);
 
 /**
- * A factory method allowing to obtain a pointer to a reference type representing
- * an instance managed by the given manager.
+ * This static factory method allows to construct a numeric type based on a variable.
  *
- * @param manager 		the manager which should be responsible for maintaining the new
- * 				  		type instance and all its referenced elements.
- * @param elementType 	the type of element the requested reference is addressing
- * @param refKind		the kind of reference to be created
- * @return a pointer to a instance of the requested type. Multiple requests using
- * 		   the same parameters will lead to pointers addressing the same instance.
+ * @param manager the manager used for maintaining instances of this class
+ * @param var the variable to be represented
+ * @return the requested type instance managed by the given manager
  */
-static RefTypePtr get(NodeManager& manager, const TypePtr& elementType, const ReferenceKind& refKind = RK_REFERENCE) {
-	return get(manager, elementType, UIntValue::get(manager, refKind));
-}
+static NumericTypePtr get(NodeManager& manager, const VariablePtr& var);
 
 };
-
-
-// --------------------------------- Single Element Type ----------------------------
-
-/**
- * The accessor to be used when accessing single element types.
- */
-IR_NODE_ACCESSOR(SingleElementType, Type, Type, IntTypeParam)
-
-/**
- * Obtains the associated element type.
- */
-IR_NODE_PROPERTY(Type, ElementType, 0);
-
-/**
- * Obtains the associated int-type parameter.
- */
-IR_NODE_PROPERTY(IntTypeParam, IntTypeParameter, 1);
-
-};
-
-/**
- * This abstract type is used as a common base class for a serious of intrinsic types
- * which all require a single element type. It thereby represents a specialized version
- * of a generic type.
- */
-class SingleElementType : public Type {
-protected:
-
-	/**
-	 * A simple constructor creating a new single-element type.
-	 *
-	 * @param type the type of the resulting node
-	 * @param typeParams the additional type parameters of the resulting type
-	 * @param paramList the additional generic int-type parameters of the resulting type
-	 */
-	SingleElementType(const NodeType& type, const TypePtr& elementType, const IntTypeParamPtr& param)
-		: Type(type, elementType, param) { }
-		
-	/**
-	 * The get-node-from-list constructor required by all nodes.
-	 *
-	 * @param type the type of the resulting node
-	 * @param children the list of children of the resulting nodes
-	 */
-	SingleElementType(const NodeType& type, const NodeList& children)
-		: Type(type, children) {}
-		
-};
-
-/**
- * A macro creating single element nodes.
- */
-#define IR_SINGLE_ELEMENT_TYPE(NAME) \
-		class NAME : public SingleElementType, public NAME ## Accessor<NAME, Pointer>, public NAME ## Accessor<NAME, Pointer>::node_helper { \
-			NAME(const NodeList& children) : SingleElementType(NT_ ## NAME, children), NAME ## Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {} \
-			template<typename ... Children> \
-			NAME(const Pointer<const Children>& ... children) : SingleElementType(NT_ ## NAME, children ...), NAME ## Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {} \
-		\
-		protected: \
-			/* The function required for the clone process. */ \
-			virtual NAME* createInstanceUsing(const NodeList& children) const { \
-				return new NAME(children); \
-			} \
-		public: \
-			/* A factory method creating instances based on a child list */ \
-			static NAME ## Ptr get(NodeManager& manager, const NodeList& children) { \
-				return manager.get(NAME(children)); \
-			} \
-		private: \
-
-
-
-
-
-// --------------------------------- Array Type ----------------------------
-
-/**
- * The accessor to be used when accessing array types.
- */
-template<typename D,template<typename T> class P>
-struct ArrayTypeAccessor : public SingleElementTypeAccessor<D,P> {
-	/**
-	 * Retrieves the dimension of the represented array.
-	 *
-	 * @return the dimension of the represented array type
-	 */
-	const P<const IntTypeParam> getDimension() const {
-		return SingleElementTypeAccessor<D,P>::getIntTypeParameter();
-	}
-};
-
-/**
- * This intrinsic array type used to represent multidimensional rectangular arrays
- * within the type system.
- */
-IR_SINGLE_ELEMENT_TYPE(ArrayType)
-protected:
-
-/*
- * Prints a string representation of this node to the given output stream.
- */
-virtual std::ostream& printTo(std::ostream& out) const {
-	return out << "array<" << *getElementType() << "," << *getIntTypeParameter() << ">";
-}
-
-public:
-
-/**
- * A factory method allowing to obtain a pointer to a array type representing
- * an instance managed by the given manager.
- *
- * @param manager 		the manager which should be responsible for maintaining the new
- * 				  		type instance and all its referenced elements.
- * @param elementType 	the type of element to be maintained within the array
- * @param dim 			the dimension of the requested array
- * @return a pointer to a instance of the requested type. Multiple requests using
- * 		   the same parameters will lead to pointers addressing the same instance.
- */
-static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& dim) {
-	return manager.get(ArrayType(elementType, dim));
-}
-
-/**
- * A factory method allowing to obtain a pointer to a array type representing
- * an instance managed by the given manager. The dimension of the resulting array is
- * one.
- *
- * @param manager 		the manager which should be responsible for maintaining the new
- * 				  		type instance and all its referenced elements.
- * @param elementType 	the type of element to be maintained within the array
- * @return a pointer to a instance of the requested type. Multiple requests using
- * 		   the same parameters will lead to pointers addressing the same instance.
- */
-static ArrayTypePtr get(NodeManager& manager, const TypePtr& elementType) {
-	return get(manager, elementType, ConcreteIntTypeParam::get(manager, 1));
-}
-
-};
-
-
-
-// --------------------------------- Vector Type ----------------------------
-
-/**
- * The accessor to be used when accessing vector types.
- */
-template<typename D,template<typename T> class P>
-struct VectorTypeAccessor : public SingleElementTypeAccessor<D,P> {
-	/**
-	 * Retrieves the size (=number of elements) of the represented vector type.
-	 *
-	 * @return the size of the represented array type
-	 */
-	const P<const IntTypeParam> getSize() const {
-		return SingleElementTypeAccessor<D,P>::getIntTypeParameter();
-	}
-};
-
-/**
- * This intrinsic vector type used to represent fixed sized arrays (=vectors).
- */
-IR_SINGLE_ELEMENT_TYPE(VectorType)
-protected:
-
-/*
- * Prints a string representation of this node to the given output stream.
- */
-virtual std::ostream& printTo(std::ostream& out) const {
-	return out << "vector<" << *getElementType() << "," << *getIntTypeParameter() << ">";
-}
-
-public:
-
-/**
- * A factory method allowing to obtain a pointer to a vector type representing
- * an instance managed by the given manager.
- *
- * @param manager 		the manager which should be responsible for maintaining the new
- * 				  		type instance and all its referenced elements.
- * @param elementType 	the type of element to be maintained within the vector
- * @param size 			the size of the requested vector
- * @return a pointer to a instance of the requested type. Multiple requests using
- * 		   the same parameters will lead to pointers addressing the same instance.
- */
-static VectorTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& size) {
-	return manager.get(VectorType(elementType, size));
-}
-
-};
-
-
-
-// --------------------------------- Channel Type ----------------------------
-
-/**
- * The accessor to be used when accessing vector types.
- */
-template<typename D,template<typename T> class P>
-struct ChannelTypeAccessor : public SingleElementTypeAccessor<D,P> {
-	/**
-	 * Retrieves the size (=number of elements) of the represented vector type.
-	 *
-	 * @return the size of the represented array type
-	 */
-	const P<const IntTypeParam> getSize() const {
-		return SingleElementTypeAccessor<D,P>::getIntTypeParameter();
-	}
-};
-
-/**
- * This intrinsic reference type used to represent communication channels.
- */
-IR_SINGLE_ELEMENT_TYPE(ChannelType)
-protected:
-
-/*
- * Prints a string representation of this node to the given output stream.
- */
-virtual std::ostream& printTo(std::ostream& out) const {
-	return out << "channel<" << *getElementType() << "," << *getIntTypeParameter() << ">";
-}
-
-public:
-
-/**
- * A factory method allowing to obtain a pointer to a reference type representing
- * an instance managed by the given manager.
- *
- * @param manager 		the manager which should be responsible for maintaining the new
- * 				  		type instance and all its referenced elements.
- * @param elementType 	the type of element the requested reference is addressing
- * @param size			the size of the channel to be created
- * @return a pointer to a instance of the requested type. Multiple requests using
- * 		   the same parameters will lead to pointers addressing the same instance.
- */
-static ChannelTypePtr get(NodeManager& manager, const TypePtr& elementType, const IntTypeParamPtr& size) {
-	return manager.get(ChannelType(elementType, size));
-}
-};
-
-#undef IR_SINGLE_ELEMENT_TYPE
 
 } // end namespace core
 } // end namespace insieme

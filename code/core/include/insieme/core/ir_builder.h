@@ -44,7 +44,6 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_values.h"
-#include "insieme/core/ir_int_type_param.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_statements.h"
@@ -184,8 +183,12 @@ public:
 		return core::analysis::normalize(root);
 	}
 	
-	GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intTypeParams) const;
-	
+	GenericTypePtr refType(const TypePtr& elementType, bool _const = false, bool _volatile = false) const;
+
+	GenericTypePtr arrayType(const TypePtr& elementType) const;
+	GenericTypePtr arrayType(const TypePtr& elementType, const LiteralPtr& size) const;
+	GenericTypePtr arrayType(const TypePtr& elementType, const VariablePtr& size) const;
+
 	StructTypePtr structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 	UnionTypePtr unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 	
@@ -198,13 +201,6 @@ public:
 	
 	NamedTypePtr namedType(const string& name, const TypePtr& type) const;
 	NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
-	
-	inline GenericTypePtr volatileType(const TypePtr& type) const {
-		return genericType("volatile", {type}, IntParamList());
-	}
-	
-	ExpressionPtr readVolatile(const ExpressionPtr& expr) const;
-	ExpressionPtr makeVolatile(const ExpressionPtr& expr) const;
 	
 	
 	TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
@@ -219,10 +215,7 @@ public:
 	StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 	StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
 	
-	
-	VectorExprPtr vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const;
-	VectorExprPtr vectorExpr(const ExpressionList& values) const;
-	
+
 	// creates a program - empty or based on the given entry points
 	ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList()) const;
 	
@@ -254,13 +247,6 @@ public:
 	ExpressionPtr undefined(const TypePtr& type) const;
 	ExpressionPtr undefinedVar(const TypePtr& type) const;
 	ExpressionPtr undefinedNew(const TypePtr& type) const;
-	ExpressionPtr undefinedLoc(const TypePtr& type) const;
-	
-	/**
-	 * A factory method for intTypeParam literals.
-	 */
-	LiteralPtr getIntParamLiteral(unsigned value) const;
-	LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
 	
 	/**
 	 * A factory method for a identifier literal.
@@ -287,6 +273,9 @@ public:
 	// obtains a zero value - recursively resolved for the given type
 	ExpressionPtr getZero(const TypePtr& type) const;
 	
+	// conversions
+	ExpressionPtr convert(const ExpressionPtr& src, const TypePtr& to) const;
+
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
 	CallExprPtr refVar(const ExpressionPtr& subExpr) const;
@@ -297,16 +286,11 @@ public:
 	ExpressionPtr tryDeref(const ExpressionPtr& subExpr) const;
 	
 	ExpressionPtr refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const;
-	ExpressionPtr toRef(const ExpressionPtr& srcSinkExpr) const;
 	
 	ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
 	// Returns the negation of the passed subExpr (which must be of boolean type)
 	// 	       (<BOOL> expr) -> <BOOL> !expr
 	ExpressionPtr negateExpr(const ExpressionPtr& subExpr) const;
-	
-	// Vectors
-	//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
-	CallExprPtr vectorInit(const ExpressionPtr& initExp, const IntTypeParamPtr& size) const;
 	
 	// Compound Statements
 	template<typename ... Nodes>

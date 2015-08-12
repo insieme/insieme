@@ -133,9 +133,9 @@ TEST(Unification, IntTypeParam) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	
-	TypePtr typeAx = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'x')));
-	TypePtr typeA3 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 3)));
-	TypePtr typeA4 = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 4)));
+	TypePtr typeAx = builder.parseType("a<'x>");
+	TypePtr typeA3 = builder.parseType("a<3>");
+	TypePtr typeA4 = builder.parseType("a<4>");
 	
 	EXPECT_PRED2(unifyable, typeA3, typeAx);
 	EXPECT_PRED2(notUnifable, typeA3, typeA4);
@@ -232,13 +232,13 @@ TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	
-	IntTypeParamPtr varA = builder.variableIntTypeParam('a');
-	TypePtr gen = builder.genericType("T", toVector<TypePtr>(), toVector(varA, varA));
-	EXPECT_EQ("T<#a,#a>", toString(*gen));
+	TypePtr varA = builder.typeVariable("a");
+	TypePtr gen = builder.genericType("T", toVector<TypePtr>(varA,varA));
+	EXPECT_EQ("T<'a,'a>", toString(*gen));
 	
-	IntTypeParamPtr param1 = builder.concreteIntTypeParam(1);
-	IntTypeParamPtr param2 = builder.concreteIntTypeParam(2);
-	TypePtr concrete = builder.genericType("T", toVector<TypePtr>(), toVector(param1, param2));
+	TypePtr param1 = builder.genericType("a");
+	TypePtr param2 = builder.genericType("b");
+	TypePtr concrete = builder.genericType("T", toVector(param1, param2));
 	EXPECT_EQ("T<1,2>", toString(*concrete));
 	
 	// this should not work ...
@@ -249,7 +249,7 @@ TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
 	}
 	
 	// ... but this should
-	concrete = builder.genericType("T", toVector<TypePtr>(), toVector(param1, param1));
+	concrete = builder.genericType("T", toVector(param1, param1));
 	EXPECT_TRUE(unify(manager, gen, concrete));
 	EXPECT_TRUE(unify(manager, concrete, gen));
 }

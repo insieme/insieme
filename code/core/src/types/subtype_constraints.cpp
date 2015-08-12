@@ -217,12 +217,9 @@ SubstitutionOpt SubTypeConstraints::solve() const {
 	if(!constraints.empty()) {
 		return solve(constraints.begin()->first->getNodeManager());
 	}
-	
-	Substitution res;
-	for_each(intTypeParameter, [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur) {
-		res.addMapping(cur.first, cur.second);
-	});
-	return res;
+
+	// otherwise, return an empty substitution map
+	return Substitution();
 }
 
 
@@ -244,11 +241,6 @@ SubstitutionOpt SubTypeConstraints::solve(NodeManager& manager) const {
 	
 	// create result
 	Substitution res;
-	
-	// initialize substitutions
-	for_each(intTypeParameter, [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur) {
-		res.addMapping(cur.first, cur.second);
-	});
 	
 	// quick-solution for an empty constraint set
 	if(constraints.empty()) {
@@ -542,9 +534,9 @@ std::ostream& SubTypeConstraints::printTo(std::ostream& out) const {
 	});
 	
 	if(unsatisfiable) {
-		return out << "[unsatisfiable / {" << constraintList << "} / " << intTypeParameter << "]";
+		return out << "[unsatisfiable / " << constraintList << "]";
 	}
-	return out << "[" << constraintList << " / " << intTypeParameter << "]";
+	return out << "[" << constraintList << "]";
 }
 
 } // end namespace types

@@ -58,12 +58,7 @@ class SubstitutionMapper : public SimpleNodeMapping {
 	 * The type variable mapping constituting the substitution to be wrapped by this instance.
 	 */
 	const Substitution::Mapping& mapping;
-	
-	/**
-	 * The int type parameter mapping of the substitution to be wrapped by this instance.
-	 */
-	const Substitution::IntTypeParamMapping& paramMapping;
-	
+
 public:
 
 	/**
@@ -73,8 +68,7 @@ public:
 	 * @param substitution the substitution to be wrapped by the resulting instance.
 	 */
 	SubstitutionMapper(NodeManager& manager, const Substitution& substitution)
-		: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()),
-		  paramMapping(substitution.getIntTypeParamMapping()) {};
+		: SimpleNodeMapping(), manager(manager), mapping(substitution.getMapping()) {};
 		  
 	/**
 	 * The procedure mapping a node to its substitution.
@@ -84,38 +78,23 @@ public:
 	const NodePtr mapElement(unsigned, const NodePtr& element) {
 		// quick check - only variables are substituted
 		auto currentType = element->getNodeType();
-		if(currentType != NT_TypeVariable && currentType != NT_VariableIntTypeParam) {
+		if(currentType != NT_TypeVariable) {
 			return element->substitute(manager, *this);
 		}
+
+		// check type
+		assert_eq(NT_TypeVariable, currentType);
 		
-		switch(currentType) {
-		
-		case NT_TypeVariable: {
-			// lookup current variable within the mapping
-			auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
-			if(pos != mapping.end()) {
-				// found! => replace
-				return (*pos).second;
-			}
-			
-			// not found => return current node
-			// (since nothing within a variable node may be substituted)
-			return element;
-		}
-		case NT_VariableIntTypeParam: {
-			// lookup int type param variable ...
-			auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(element));
-			if(pos != paramMapping.end()) {
-				// found! => replace
-				return (*pos).second;
-			}
-			// not found => return current node
-			return element;
+		// lookup current variable within the mapping
+		auto pos = mapping.find(static_pointer_cast<const TypeVariable>(element));
+		if(pos != mapping.end()) {
+			// found! => replace
+			return (*pos).second;
 		}
 		
-		default:
-			assert_fail() << "Only type and parameter variables should reach this point!";
-		}
+		// not found => return current node
+		// (since nothing within a variable node may be substituted)
+		return element;
 		
 		//should never be reached
 		assert_fail() << "This point shouldn't be reachable!";
@@ -131,27 +110,11 @@ Substitution::Substitution(const TypeVariablePtr& var, const TypePtr& type) {
 	mapping.insert(std::make_pair(var, type));
 };
 
-Substitution::Substitution(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& param) {
-	paramMapping.insert(std::make_pair(var, param));
-}
-
 TypePtr Substitution::applyTo(NodeManager& manager, const TypePtr& type) const {
 	// perform substitution
 	SubstitutionMapper mapper(manager, *this);
 	return mapper.map(0, type);
 }
-
-IntTypeParamPtr Substitution::applyTo(const IntTypeParamPtr& param) const {
-	if(param->getNodeType() != core::NT_VariableIntTypeParam) {
-		return param;
-	}
-	auto pos = paramMapping.find(static_pointer_cast<const VariableIntTypeParam>(param));
-	if(pos == paramMapping.end()) {
-		return param;
-	}
-	return (*pos).second;
-}
-
 
 void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	auto element = std::make_pair(var,type);
@@ -163,43 +126,18 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 	}
 }
 
-void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value) {
-	auto element = std::make_pair(var,value);
-	auto res = paramMapping.insert(element);
-	if(!res.second) {
-		paramMapping.erase(var);
-		res = paramMapping.insert(element);
-		assert_true(res.second) << "Insert was not successful!";
-	}
-}
-
 bool Substitution::containsMappingFor(const TypeVariablePtr& var) const {
 	return mapping.find(var) != mapping.end();
-}
-
-bool Substitution::containsMappingFor(const VariableIntTypeParamPtr& var) const {
-	return paramMapping.find(var) != paramMapping.end();
 }
 
 void Substitution::remMappingOf(const TypeVariablePtr& var) {
 	mapping.erase(var);
 }
 
-void Substitution::remMappingOf(const VariableIntTypeParamPtr& var) {
-	paramMapping.erase(var);
-}
-
 std::ostream& Substitution::printTo(std::ostream& out) const {
 	out << "{";
-	out << join(",", mapping, [](std::ostream& out, const Mapping::value_type& cur)->std::ostream& {
-		return out << *cur.first << "->" << *cur.second;
-	});
-	
-	if(!mapping.empty() && !paramMapping.empty()) {
-		out << "/";
-	}
-	out << join(",", paramMapping, [](std::ostream& out, const IntTypeParamMapping::value_type& cur)->std::ostream& {
-		return out << *cur.first << "->" << *cur.second;
+	out << join(",", mapping, [](std::ostream& out, const Mapping::value_type& cur) {
+		out << *cur.first << "->" << *cur.second;
 	});
 	out << "}";
 	return out;
@@ -208,12 +146,9 @@ std::ostream& Substitution::printTo(std::ostream& out) const {
 Substitution Substitution::compose(NodeManager& manager, const Substitution& a, const Substitution& b) {
 
 	typedef Substitution::Mapping::value_type Entry;
-	typedef Substitution::IntTypeParamMapping::value_type ParamEntry;
 	
 	// copy substitution a
 	Substitution res(a);
-	
-	// --- normal types ---
 	
 	// apply substitution b to all mappings in a
 	for_each(res.mapping, [&manager, &b](Entry& cur) {
@@ -225,21 +160,6 @@ Substitution Substitution::compose(NodeManager& manager, const Substitution& a, 
 	for_each(b.mapping, [&resMapping](const Entry& cur) {
 		if(resMapping.find(cur.first) == resMapping.end()) {
 			resMapping.insert(cur);
-		}
-	});
-	
-	// --- int type parameter ---
-	
-	// apply substitution b to all mappings in a
-	for_each(res.paramMapping, [&manager, &b](ParamEntry& cur) {
-		cur.second = b.applyTo(cur.second);
-	});
-	
-	// add remaining mappings of b
-	Substitution::IntTypeParamMapping& resParamMapping = res.paramMapping;
-	for_each(b.paramMapping, [&resParamMapping](const ParamEntry& cur) {
-		if(resParamMapping.find(cur.first) == resParamMapping.end()) {
-			resParamMapping.insert(cur);
 		}
 	});
 	

@@ -117,12 +117,12 @@ inline TreePattern structType(const ListPattern& pattern) {
 	return node(core::NT_StructType, pattern);
 }
 
-inline TreePattern arrayType(const TreePattern& pattern, const TreePattern& dim = pattern::any) {
-	return node(core::NT_ArrayType, pattern << dim);
+inline TreePattern arrayType(const TreePattern& pattern) {
+	return genericType("array",single(pattern));
 }
 
-inline TreePattern refType(const TreePattern& elementType, const TreePattern& refKind = pattern::any) {
-	return node(core::NT_RefType, elementType << refKind);
+inline TreePattern refType(const TreePattern& elementType) {
+	return genericType("ref",elementType << anyList );
 }
 
 inline TreePattern variable(const TreePattern& type = pattern::any, const TreePattern& id = pattern::any) {
@@ -171,10 +171,6 @@ inline TreePattern bindExpr(const ListPattern& parameters, const TreePattern& ca
 
 inline TreePattern tupleExpr(const ListPattern& expressions) {
 	return node(core::NT_TupleExpr, expressions);
-}
-
-inline TreePattern vectorExpr(const ListPattern& expressions) {
-	return node(core::NT_VectorExpr, expressions);
 }
 
 inline TreePattern expressions(const ListPattern& expressions) {

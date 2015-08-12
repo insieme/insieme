@@ -86,7 +86,7 @@ public:
 			assert(gt.isa<GenericTypePtr>());
 			typeList.insert(typeList.end(), gt);
 		}
-		return builder.genericType("__insieme_enum", typeList, IntParamList());
+		return builder.genericType("__insieme_enum", typeList);
 	}
 	/**
 	 * Check if a type is an enumeration type
@@ -126,7 +126,7 @@ public:
 	TypePtr getEnumConstantType(const string& lit) const {
 		IRBuilder builder(getNodeManager());
 		TypeList typeList;
-		return builder.genericType(lit, typeList, IntParamList());
+		return builder.genericType(lit, typeList);
 	}
 	
 	TypePtr getEnumConstantType(const string& lit, const string& val) const {
@@ -134,7 +134,7 @@ public:
 		TypeList typeList;
 		typeList.push_back(builder.genericType(lit));
 		typeList.push_back(builder.genericType(val));
-		return builder.genericType("__insieme_enum_constant__", typeList, IntParamList());
+		return builder.genericType("__insieme_enum_constant__", typeList);
 	}
 };
 } // lang

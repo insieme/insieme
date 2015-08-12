@@ -373,23 +373,13 @@ public:
 	PRINT(GenericType, {
 		out << *node->getName();
 		const TypesPtr& types = node->getTypeParameter();
-		const IntTypeParamsPtr& intTypes = node->getIntTypeParameter();
 		
-		if(types->empty() && intTypes->empty()) {
+		if(types->empty()) {
 			return;
 		}
 		
 		out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur) {
 			this->visit(cur);
-		});
-		
-		if(!types->empty() && !intTypes->empty()) {
-			out << ",";
-		}
-		
-		out << join(",", intTypes,
-		[&](std::ostream& jout, const IntTypeParamPtr& cur) {
-			jout << *cur;
 		}) << ">";
 	});
 	
@@ -501,38 +491,9 @@ public:
 		        << ')';
 	});
 	
-	PRINT(RefType, {
-		if(node->isReference()) out << "ref<";
-		if(node->isSource()) out << "src<";
-		if(node->isSink()) out << "sink<";
-		visit(node->getElementType());
-		out << ">";
-	});
-	
-	PRINT(ArrayType, {
-		out << "array<";
-		visit(node->getElementType());
-		out << ",";
-		visit(node->getDimension());
-		out << ">";
-	});
-	
-	PRINT(VectorType, {
-		out << "vector<";
-		visit(node->getElementType());
-		out << ",";
-		visit(node->getSize());
-		out << ">";
-	});
-	
 	PRINT(Type, {
 		out << *node;
 	});
-	
-	PRINT(IntTypeParam, {
-		out << *node;
-	});
-	
 	
 	PRINT(BreakStmt, {
 		out << "break";
@@ -870,24 +831,6 @@ public:
 		out << "(" << ::join(", ", node->getExpressions(), [&](std::ostream&, const ExpressionPtr& cur) {
 			this->visit(cur);
 		}) << ")";
-	});
-	
-	PRINT(VectorExpr, {
-		const size_t limit = 5;	// TODO: parametrize this?
-		const std::vector<ExpressionPtr>& elements = node->getExpressions()->getElements();
-		
-		bool cut = (elements.size() > limit);
-		
-		//if (elements.size() > limit) {
-		//elements = std::vector<ExpressionPtr>(elements.begin(), elements.begin()+limit);
-		//cut = true;
-		//}
-		
-		std::vector<ExpressionPtr>::const_iterator end = cut ? elements.begin()+limit : elements.end();
-		
-		out << "[" << ::join(", ", elements.begin(), end, [&](std::ostream&, const ExpressionPtr& cur) {
-			this->visit(cur);
-		}) << ((cut)?", ...":"") << "]";
 	});
 	
 	PRINT(JobExpr, {

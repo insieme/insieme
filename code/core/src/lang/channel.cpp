@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -34,12 +34,17 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/lang/channel.h"
 
-// Just aggregating all header files defining IR nodes
+namespace insieme {
+namespace core {
+namespace lang {
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_program.h"
+	bool ChannelType::isChannelType(const NodePtr& node) {
+		assert_not_implemented();
+		return false;
+	}
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

@@ -93,9 +93,6 @@ template<NodeCategory category> struct node_category_trait;
 template<> struct node_category_trait<NC_Value> 		{
 	typedef Value base_type;
 };
-template<> struct node_category_trait<NC_IntTypeParam> 	{
-	typedef IntTypeParam base_type;
-};
 template<> struct node_category_trait<NC_Type> 			{
 	typedef Type base_type;
 };

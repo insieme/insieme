@@ -36,34 +36,35 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/types/substitution.h"
 
 namespace insieme {
 namespace core {
 namespace types {
 
-// -------------------------------------------------------------------------------------------------------------------------
-//                                                    Variable Sized Structs
-// -------------------------------------------------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------------------------------------------
+	//                                                    matching
+	// -------------------------------------------------------------------------------------------------------------------------
+	
+	/**
+	 * Tries to match a type to a given generic type
+	 *
+	 * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+	 * @param type     the type to be matched against the given pattern
+	 * @param pattern  the generic type describing the pattern
+	 * @return an optional substitution mapping type variables in the pattern to types such that the given type and the pattern are equivalent
+	 */
+	SubstitutionOpt match(NodeManager& manager, const TypePtr& type, const TypePtr& pattern);
+	
+	/**
+	 * Tests whether a given type can be matched to a pattern.
+	 *
+	 * @param type the type to be matched against the pattern
+	 * @param pattern the pattern to be tested
+	 * @return true if matchable, false otherwise
+	 */
+	bool isMatchable(const TypePtr& type, const TypePtr& pattern);
 
-/**
- * Determines whether the given type is a variable sized data structure. A variable sized
- * data structure is either an array or a struct / tuple / union containing a variable sized
- * data structure as an element type (for structs / tuples it needs to be the laste element).
- *
- * @param cur the type to be checked
- * @return true if it is a variable sized type, false otherwise
- */
-bool isVariableSized(const TypePtr& type);
-
-/**
- * Every variable sized type needs to contain an array of elements covering an variable amount
- * of elements - this function obtains the type of elements stored within this array.
- *
- * @param type the type to be analysis - must be a variable sized type
- * @return the type of element forming the variable sized array within the given type
- */
-TypePtr getRepeatedType(const TypePtr& type);
 
 } // end namespace types
 } // end namespace core

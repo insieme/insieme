@@ -51,7 +51,7 @@ public:
 	FrontendIRBuilder(core::NodeManager& mgr) : core::IRBuilder(mgr) { }
 	
 	// --------------------------- C++ -----------------------------
-	
+
 	/**
 	 * Creates an expression representing a pure virtual function of the given type.
 	 *
@@ -59,31 +59,11 @@ public:
 	 * @return an expression representing a pure virtual function of the given type
 	 */
 	ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
-	
-	
-	/**
-	 * Converts a given IR reference into a C++ reference.
-	 */
-	ExpressionPtr toCppRef(const ExpressionPtr& ref) const;
-	
-	/**
-	 * Converts a given IR reference into a const C++ reference.
-	 */
-	ExpressionPtr toConstCppRef(const ExpressionPtr& ref) const;
-	
-	/**
-	 * Converts a given IR reference into a const C++ right side reference.
-	 */
-	ExpressionPtr toConstRValCppRef(const ExpressionPtr& ref) const;
-	
-	/**
-	 * Converts a (const) C++ reference in an IR reference.
-	 */
-	ExpressionPtr toIRRef(const ExpressionPtr& ref) const;
-	
+
+
 	// --------------------- static variables ----------------------
 	
-	
+
 	ExpressionPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant= false) const;
 	
 	StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;

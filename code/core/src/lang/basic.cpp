@@ -288,17 +288,12 @@ bool BasicGenerator::isType(const NodePtr& type) const {
 	return type->getNodeCategory() == NC_Type && analysis::isTypeLiteralType(type.as<TypePtr>());
 }
 
-bool BasicGenerator::isRef(const NodePtr& type) const {
-	return type->getNodeType() == NT_RefType;
-}
-
 bool BasicGenerator::isGen(const NodePtr& type) const {
 	return type->getNodeCategory() == NC_Type
-	       && type->getNodeType() != NT_VectorType		// vector types are handled using pointwise
 	       && !isBool(type) && !isChar(type)
 	       && !isSignedInt(type) && !isUnsignedInt(type)
 	       && !isReal(type)
-	       && !isType(type) && !isRef(type);
+	       && !isType(type);
 }
 
 
@@ -323,94 +318,6 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 				return ((*this).*curr.second.second)();
 			}
 		}
-	}
-	
-	if(VectorTypePtr vecTy = dynamic_pointer_cast<const VectorType>(type)) {
-		core::TypePtr vecElemTy = vecTy->getElementType();
-		vecElemTy = (vecElemTy->getNodeType() == core::NT_RefType ?
-		             core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
-		             vecElemTy);
-		             
-		core::ExpressionPtr&& pointwise = op != 10 ? (*this).getBuiltIn(string("vector_pointwise")) :
-		                                  (*this).getBuiltIn(string("vector_pointwise_unary")); // 10 = ~, the only unary OPERATION in lang def which is allowed for vectors
-		                                  
-		// check if we need add subfunction for lazy evaluation
-		if(op == BasicGenerator::LAnd || op == BasicGenerator::LOr) {
-			std::string dataType;
-			
-			if((*this).isUnsignedInt(vecElemTy)) {
-				dataType = "uint<#a>";
-			}
-			else if((*this).isSignedInt(vecElemTy)) {
-				dataType = "int<#a>";
-			}
-			else if((*this).isReal(vecElemTy)) {
-				dataType = "real<#a>";
-			}
-			else if((*this).isChar(vecElemTy)) {
-				dataType = "char";
-			}
-			
-			assert_ne(dataType, std::string()) << " unknown datatype for vector operation";
-			
-			std::string whateverToBool = (*this).isChar(vecElemTy) ? "char_to_bool" : (dataType.substr(0, dataType.length()-4) + "_to_bool");
-			
-			core::ExpressionPtr opFunc = (*this).getOperator((*this).getBool(), op);
-			
-			core::ExpressionPtr integerLogic =
-			    pimpl->build.parseExpr(
-			        " lambda ((bool, ()=>bool) -> bool op)  -> (" + dataType + ", " + dataType + ") => int<4> {"
-			        "     return lambda (" + dataType + " v1, " + dataType + " v2) =>      "
-			        "                     lambda (" + dataType + " v1, " + dataType + " v2, (bool, ()=>bool) => bool op) -> int<4> {"
-			        "         return bool_to_int(op(" + whateverToBool + "(v1), lambda ( ) =>  " + whateverToBool + "(v2)), param(4));"
-			        "     }(v1, v2, op);"
-			        " }");
-			CallExprPtr call = pimpl->build.callExpr(integerLogic, toVector(opFunc));
-			
-			TypePtr pwTy = pimpl->build.parseType("(vector<" + dataType + ",#l>, vector<" + dataType + ",#l>) => vector<int<4>, #l>");
-			
-			return pimpl->build.callExpr(pwTy, pointwise, call);
-		}
-		
-		// check if we need add subfunction for comparison operations
-		if(op == BasicGenerator::Lt || op == BasicGenerator::Gt || op == BasicGenerator::Le || op == BasicGenerator::Ge ||
-		        op == BasicGenerator::Eq || op == BasicGenerator::Ne) {
-		        
-			std::string dataType;
-			
-			if((*this).isUnsignedInt(vecElemTy)) {
-				dataType = "uint<#a>";
-			}
-			else if((*this).isSignedInt(vecElemTy)) {
-				dataType = "int<#a>";
-			}
-			else if((*this).isReal(vecElemTy)) {
-				dataType = "real<#a>";
-			}
-			else if((*this).isChar(vecElemTy)) {
-				dataType = "char";
-			}
-			
-			core::ExpressionPtr opFunc = (*this).getOperator(vecElemTy, op);
-			
-			core::ExpressionPtr pointwise = (*this).getBuiltIn(string("vector_pointwise"));
-			
-			core::ExpressionPtr integerComparison =
-			    pimpl->build.parseExpr(
-			        " lambda ((" + dataType + ", " + dataType + ") -> bool op) -> (" + dataType + ", " + dataType + ") => int<4> {"
-			        "     return lambda (" + dataType + " v1, " + dataType + " v2) =>      "
-			        "                     lambda (" + dataType + " v1, " + dataType + " v2, (" + dataType + ", " + dataType + ") => bool op) -> int<4> {"
-			        "         return bool_to_int(op(v1, v2), param(4));"
-			        "     }(v1, v2, op);"
-			        " }");
-			CallExprPtr call = pimpl->build.callExpr(integerComparison, toVector(opFunc));
-			
-			TypePtr pwTy = pimpl->build.parseType("(vector<" + dataType + ",#l>, vector<" + dataType + ",#l>) => vector<int<4>, #l>");
-			return pimpl->build.callExpr(pwTy, pointwise, call);
-			
-		}
-		
-		return pimpl->build.callExpr(pointwise, (*this).getOperator(vecElemTy, op));
 	}
 	
 	LOG(ERROR) << "Operation " << op << " of type " << type << " is not declared" << std::endl;

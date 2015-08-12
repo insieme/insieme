@@ -64,7 +64,7 @@ TEST(Backtrace, Simple) {
 }
 
 TEST(Backtrace, Assertion) {
-	ASSERT_DEATH_IF_SUPPORTED(HelloAssert(), "2: HelloAssert");
+	ASSERT_DEATH_IF_SUPPORTED(HelloAssert(), "1: HelloAssert");
 }
 
 #else

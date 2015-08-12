@@ -34,45 +34,68 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/frontend_ir_builder.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
-
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/lang/static_vars.h"
-
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/array.h"
 
 namespace insieme {
 namespace core {
+namespace lang {
 
-ExpressionPtr FrontendIRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
-	assert_true(type->isMemberFunction());
-	const auto& ext = getNodeManager().getLangExtension<lang::IRppExtensions>();
-	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
-}
+	ArrayType::ArrayType(const NodePtr& node) {
 
+		// check given node type
+		assert_true(node) << "Given node is null!";
+		assert_true(isArrayType(node)) << "Given node " << *node << " is not a array type!";
 
-ExpressionPtr FrontendIRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue, bool constant) const {
-	const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-	
-	assert_true(analysis::isRefType(staticVariable.getType()));
-	assert_true(ext.isStaticType(analysis::getReferencedType(staticVariable->getType())));
-	
-	if(constant) {
-		return callExpr(refType(initValue->getType()), ext.getInitStaticConst(), staticVariable, initValue);
+		// process node type
+		GenericTypePtr type = node.as<GenericTypePtr>();
+		*this = ArrayType(
+				type->getTypeParameter(0),
+				type->getTypeParameter(1).as<NumericTypePtr>()->getValue()
+		);
 	}
-	else {
-		return callExpr(refType(initValue->getType()), ext.getInitStaticLazy(), staticVariable, wrapLazy(initValue));
+
+	bool ArrayType::isArrayType(const NodePtr& node) {
+		assert_not_implemented();
+		return false;
 	}
-}
 
-StatementPtr FrontendIRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
-	const lang::StaticVariableExtension& ext = getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-	
-	return callExpr(ext.getCreateStatic(), staticVariable);
-}
+	bool ArrayType::isFixedSizedArrayType(const NodePtr& node) {
+		assert_not_implemented();
+		return false;
+	}
+
+	bool ArrayType::isVariableSizedArrayType(const NodePtr& node) {
+		assert_not_implemented();
+		return false;
+	}
+
+	bool ArrayType::isUnknownSizedArrayType(const NodePtr& node) {
+		assert_not_implemented();
+		return false;
+	}
 
 
-}   //namespace core
-}   //namespace insieme
+	GenericTypePtr ArrayType::create(const TypePtr& elementType, const ExpressionPtr& size) {
+		assert_not_implemented();
+		return GenericTypePtr();
+	}
+
+	ArrayType::operator GenericTypePtr() const {
+		NodeManager& nm = elementType.getNodeManager();
+
+		NumericTypePtr num;
+		if (auto lit = size.isa<LiteralPtr>()) {
+			num = NumericType::get(nm, lit);
+		} else {
+			assert_true(size.isa<VariablePtr>());
+			num = NumericType::get(nm, size.as<VariablePtr>());
+		}
+
+		return GenericType::get(nm, "array", ParentList(),
+			toVector(elementType, num)
+		);
+	}
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

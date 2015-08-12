@@ -41,33 +41,32 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/array.h"
+
 using namespace insieme::core;
 
 class SimpleVisitor : public IRVisitor<void> {
 
 public:
 	int countGenericTypes;
-	int countArrayTypes;
+	int countTypeVariables;
 	int countExpressions;
-	int countRefTypes;
 	
-	SimpleVisitor() : IRVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
+	SimpleVisitor() : IRVisitor<void>(true), countGenericTypes(0), countTypeVariables(0), countExpressions(0) {};
 	
 public:
-	void visitGenericType(const GenericTypePtr& cur) {
+
+	void visitGenericType(const GenericTypePtr& cur) override {
 		countGenericTypes++;
 	}
 	
-	void visitExpression(const ExpressionPtr& cur) {
+	void visitExpression(const ExpressionPtr& cur) override {
 		countExpressions++;
 	}
 	
-	void visitArrayType(const ArrayTypePtr& cur) {
-		countArrayTypes++;
-	}
-	
-	void visitRefType(const RefTypePtr& cur) {
-		countRefTypes++;
+	void visitTypeVariable(const TypeVariablePtr& cur) override {
+		countTypeVariables++;
 	}
 };
 
@@ -79,58 +78,44 @@ TEST(IRVisitor, DispatcherTest) {
 	
 	ProgramPtr program = Program::get(manager);
 	
-	EXPECT_EQ(0, visitor.countArrayTypes);
-	EXPECT_EQ(0, visitor.countExpressions);
 	EXPECT_EQ(0, visitor.countGenericTypes);
-	EXPECT_EQ(0, visitor.countRefTypes);
+	EXPECT_EQ(0, visitor.countTypeVariables);
+	EXPECT_EQ(0, visitor.countExpressions);
 	
 	visitor.visit(program);
-	
-	EXPECT_EQ(0, visitor.countArrayTypes);
-	EXPECT_EQ(0, visitor.countExpressions);
+
 	EXPECT_EQ(0, visitor.countGenericTypes);
-	EXPECT_EQ(0, visitor.countRefTypes);
-	
+	EXPECT_EQ(0, visitor.countTypeVariables);
+	EXPECT_EQ(0, visitor.countExpressions);
 	
 	GenericTypePtr type = GenericType::get(manager, "int");
 	visitor.visit(type);
 	
-	EXPECT_EQ(0, visitor.countArrayTypes);
-	EXPECT_EQ(0, visitor.countExpressions);
 	EXPECT_EQ(1, visitor.countGenericTypes);
-	EXPECT_EQ(0, visitor.countRefTypes);
+	EXPECT_EQ(0, visitor.countTypeVariables);
+	EXPECT_EQ(0, visitor.countExpressions);
 	
 	auto intType = manager.getLangBasic().getInt16();
 	visitor.visit(intType);
 	
-	EXPECT_EQ(0, visitor.countArrayTypes);
-	EXPECT_EQ(0, visitor.countExpressions);
 	EXPECT_EQ(2, visitor.countGenericTypes);
-	EXPECT_EQ(0, visitor.countRefTypes);
+	EXPECT_EQ(0, visitor.countTypeVariables);
+	EXPECT_EQ(0, visitor.countExpressions);
 	
 	LiteralPtr literal = Literal::get(manager, type, "3");
 	visitor.visit(literal);
-	
-	EXPECT_EQ(0, visitor.countArrayTypes);
-	EXPECT_EQ(1, visitor.countExpressions);
+
 	EXPECT_EQ(2, visitor.countGenericTypes);
-	EXPECT_EQ(0, visitor.countRefTypes);
-	
-	ArrayTypePtr arrayType = ArrayType::get(manager, type);
-	visitor.visit(arrayType);
-	
-	EXPECT_EQ(1, visitor.countArrayTypes);
+	EXPECT_EQ(0, visitor.countTypeVariables);
 	EXPECT_EQ(1, visitor.countExpressions);
+
+	TypePtr typeVar = builder.typeVariable("a");
+	visitor.visit(typeVar);
+	
 	EXPECT_EQ(2, visitor.countGenericTypes);
-	EXPECT_EQ(0, visitor.countRefTypes);
-	
-	RefTypePtr refType = RefType::get(manager, type);
-	visitor.visit(refType);
-	
-	EXPECT_EQ(1, visitor.countArrayTypes);
+	EXPECT_EQ(1, visitor.countTypeVariables);
 	EXPECT_EQ(1, visitor.countExpressions);
-	EXPECT_EQ(2, visitor.countGenericTypes);
-	EXPECT_EQ(1, visitor.countRefTypes);
+
 }
 
 
@@ -142,7 +127,7 @@ public:
 	CountingVisitor(bool countTypes=true)
 		: IRVisitor<int>(countTypes), counter(0) {};
 		
-	int visitNode(const NodePtr& node) {
+	int visitNode(const NodePtr& node) override {
 		// std::cout << *node << std::endl;
 		return ++counter;
 	};
@@ -161,7 +146,7 @@ public:
 	CountingAddressVisitor(bool countTypes=true)
 		: IRVisitor<int, Address>(countTypes), counter(0) {};
 		
-	int visitNode(const NodeAddress& address) {
+	int visitNode(const NodeAddress& address) override {
 		return ++counter;
 	};
 	
@@ -204,7 +189,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 	recVisitor.visit(program);
 	EXPECT_EQ(1, visitor.counter);
 	
-	GenericTypePtr type2 = builder.genericType("int", toVector<TypePtr>(type, type), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')));
+	GenericTypePtr type2 = builder.genericType("int", toVector<TypePtr>(type, type));
 	
 	visitor.reset();
 	visitor.visit(type2);
@@ -212,7 +197,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 	
 	visitor.reset();
 	recVisitor.visit(type2);
-	EXPECT_EQ(17, visitor.counter);
+	EXPECT_EQ(12, visitor.counter);
 	
 	IfStmtPtr ifStmt = builder.ifStmt(
 	                       Literal::get(manager, type, "12"),
@@ -226,7 +211,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 	
 	visitor.reset();
 	recVisitor.visit(ifStmt);
-	EXPECT_EQ(17, visitor.counter);
+	EXPECT_EQ(15, visitor.counter);
 	
 	
 	// ------ test for addresses ----
@@ -239,7 +224,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 	
 	adrVisitor.reset();
 	recAdrVisitor.visit(NodeAddress(ifStmt));
-	EXPECT_EQ(17, adrVisitor.counter);
+	EXPECT_EQ(15, adrVisitor.counter);
 	
 	
 	// test without types
@@ -302,32 +287,26 @@ TEST(IRVisitor, BreadthFirstIRVisitorTest) {
 	expected.push_back(typeA->getName());
 	expected.push_back(typeA->getParents());
 	expected.push_back(typeA->getTypeParameter());
-	expected.push_back(typeA->getIntTypeParameter());
 	expected.push_back(typeB);
 	expected.push_back(typeC);
 	expected.push_back(typeB->getName());
 	expected.push_back(typeB->getParents());
 	expected.push_back(typeB->getTypeParameter());
-	expected.push_back(typeB->getIntTypeParameter());
 	expected.push_back(typeC->getName());
 	expected.push_back(typeC->getParents());
 	expected.push_back(typeC->getTypeParameter());
-	expected.push_back(typeC->getIntTypeParameter());
 	expected.push_back(typeD);
 	expected.push_back(typeE);
 	expected.push_back(typeF);
 	expected.push_back(typeD->getName());
 	expected.push_back(typeD->getParents());
 	expected.push_back(typeD->getTypeParameter());
-	expected.push_back(typeD->getIntTypeParameter());
 	expected.push_back(typeE->getName());
 	expected.push_back(typeE->getParents());
 	expected.push_back(typeE->getTypeParameter());
-	expected.push_back(typeE->getIntTypeParameter());
 	expected.push_back(typeF->getName());
 	expected.push_back(typeF->getParents());
 	expected.push_back(typeF->getTypeParameter());
-	expected.push_back(typeF->getIntTypeParameter());
 	
 	EXPECT_EQ(toString(expected), toString(res));
 	EXPECT_TRUE(equals(expected, res));
@@ -656,7 +635,7 @@ TEST(IRVisitor, VisitOncePrunableVisitorTest) {
 	// check number of nodes when visiting all nodes
 	limitB.reset();
 	visitDepthFirstOnce(NodeAddress(ifStmt), limitB);
-	EXPECT_EQ(12, limitB.counter);
+	EXPECT_EQ(11, limitB.counter);
 }
 
 
@@ -779,8 +758,8 @@ TEST(IRVisitor, ParameterTest) {
 	m = 0;
 	auto recVisitor = makeDepthFirstVisitor(visitor);
 	recVisitor.visit(ifStmt, n, m);
-	EXPECT_EQ(17, n);
-	EXPECT_EQ(-17, m);
+	EXPECT_EQ(15, n);
+	EXPECT_EQ(-15, m);
 	
 	// this should work - but it does not ...
 //	visitAllP(type, visitor, false, n, m);

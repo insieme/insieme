@@ -476,14 +476,18 @@ const TypePtr getBiggerType(const TypePtr& a, const TypePtr& b) {
 		return a;
 	}
 	
-	const GenericTypePtr& t1 = static_pointer_cast<const GenericType>(a);
-	const GenericTypePtr& t2 = static_pointer_cast<const GenericType>(b);
-	const IntTypeParamPtr& p1 = t1->getIntTypeParameter()[0];
-	const IntTypeParamPtr& p2 = t2->getIntTypeParameter()[0];
+	const GenericTypePtr& t1 = a.as<GenericTypePtr>();
+	const GenericTypePtr& t2 = b.as<GenericTypePtr>();
+	const NumericTypePtr& p1 = t1->getTypeParameter(0).as<NumericTypePtr>();
+	const NumericTypePtr& p2 = t2->getTypeParameter(0).as<NumericTypePtr>();
 	
 	// if both are signed / unsigned
 	if(t1->getFamilyName() == t2->getFamilyName()) {
-		return (*p1<*p2)?b:a;
+		if (p1->isConstant() && p2->isConstant()) {
+			int n1 = p1->getValue().as<LiteralPtr>()->getValueAs<int>();
+			int n2 = p2->getValue().as<LiteralPtr>()->getValueAs<int>();
+			return (n1<n2)?b:a;
+		}
 	}
 	
 	// for the rest => use generic solution

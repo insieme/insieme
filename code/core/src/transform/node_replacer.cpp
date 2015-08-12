@@ -358,9 +358,9 @@ private:
 				return call;
 			}
 			
-			assert(lhs->getType().isa<RefTypePtr>() && "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible");
+			assert_pred1(analysis::isRefType, lhs->getType()) << "Replacing variable of ref-type with variable of non-ref-type makes assignment impossible";
 			
-			TypePtr lhsTy = lhs->getType().as<RefTypePtr>()->getElementType();
+			TypePtr lhsTy = analysis::getReferencedType(lhs->getType());
 			
 			if(!isSubTypeOf(rhs->getType(), lhsTy)) {
 			
@@ -370,10 +370,9 @@ private:
 				}
 				if(CallExprPtr rCall = rhs.isa<CallExprPtr>()) {
 					if(builder.getLangBasic().isRefReinterpret(rCall->getFunctionExpr())) {
-						assert(lhsTy.isa<RefTypePtr>() &&
-						       "Replacing variable of ref-ref-type with variable of non-ref-ref-type makes assignment of ref.reinterpret impossible");
-						       
-						return builder.callExpr(fun, lhs, builder.refReinterpret(rCall->getArgument(0), lhsTy.as<RefTypePtr>()->getElementType()));
+						assert_pred1(analysis::isRefType, lhsTy) <<
+						       "Replacing variable of ref-ref-type with variable of non-ref-ref-type makes assignment of ref.reinterpret impossible";
+						return builder.callExpr(fun, lhs, builder.refReinterpret(rCall->getArgument(0), analysis::getReferencedType(lhsTy)));
 					}
 				}
 				// else add cast
@@ -494,7 +493,7 @@ private:
 			const ExpressionList args = call->getArguments();
 			// remove illegal deref operations
 			if(builder.getNodeManager().getLangBasic().isRefDeref(call->getFunctionExpr()) &&
-			        (!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType)) {
+			        (!analysis::isRefType(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType)) {
 				res = args.at(0);
 				utils::migrateAnnotations(ptr, res);
 				return res;
@@ -803,7 +802,7 @@ private:
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 	
 		// check whether the element has been found
-		if(ptr->getNodeType() == NT_TypeVariable || ptr->getNodeType() == NT_VariableIntTypeParam) {
+		if(ptr->getNodeType() == NT_TypeVariable) {
 			return substitution->applyTo(manager, static_pointer_cast<const Type>(ptr));
 		}
 		
@@ -1005,8 +1004,8 @@ ExpressionPtr defaultCallExprTypeRecovery(const CallExprPtr& call) {
 		
 		// deal with standard build-in funs
 		if(basic.isCompositeRefElem(fun) &&
-		        args[0]->getType().isa<RefTypePtr>() &&
-		        args[0]->getType().as<RefTypePtr>()->getElementType().isa<NamedCompositeTypePtr>()) {
+				analysis::isRefType(args[0]->getType()) &&
+		        analysis::getReferencedType(args[0]->getType()).isa<NamedCompositeTypePtr>()) {
 			return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
 		}
 		if(basic.isCompositeMemberAccess(fun) &&
@@ -1197,11 +1196,12 @@ TypeHandler getVarInitUpdater(NodeManager& manager) {
 				const ExpressionPtr& fun = init->getFunctionExpr();
 				// handle ref variables
 				if((init->getType() != var->getType()) && (basic.isRefVar(fun) || basic.isRefNew(fun))) {
-					const RefTypePtr varTy = static_pointer_cast<const RefType>(var->getType());
+					auto varTy = var->getType();
+					auto elemTy = analysis::getReferencedType(varTy);
 					if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
 						if(basic.isUndefined(undefined->getFunctionExpr()))
-							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(varTy->getElementType(),
-							basic.getUndefined(), builder.getTypeLiteral(varTy->getElementType()))));
+							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(elemTy,
+							basic.getUndefined(), builder.getTypeLiteral(elemTy))));
 					}
 				}
 				// handle non ref variables

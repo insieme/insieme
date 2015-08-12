@@ -45,7 +45,6 @@
         struct Gen_type{
             ParentList parents;
             TypeList typeParams;
-            IntParamList intParams;
         };
     }
 }
@@ -310,31 +309,10 @@ variable_list_aux : var_decl {  RULE $$.push_back($1); }
 
 /* ~~~~~~~~~~~~~~~~~~~  TYPES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-type_param_list : "#inf"     { RULE $$.intParams.insert($$.intParams.begin(), driver.builder.infiniteIntTypeParam()); }
-                | "paramvar" { RULE $$.intParams.insert($$.intParams.begin(), driver.gen_type_param_var(@1,$1)); }
-                | "int"      { RULE $$.intParams.insert($$.intParams.begin(), 
-                                    driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($1))); }
-                | type       { RULE $$.typeParams.insert($$.typeParams.begin(), $1); }
-
-                | "#inf" "," type_param_list { RULE
-                        $3.intParams.insert($3.intParams.begin(), driver.builder.infiniteIntTypeParam()); 
-                        std::swap($$.typeParams, $3.typeParams);
-                        std::swap($$.intParams, $3.intParams);
-                    }
-                | "paramvar" "," type_param_list {RULE
-                        $3.intParams.insert($3.intParams.begin(), driver.gen_type_param_var(@1,$1)); 
-                        std::swap($$.typeParams, $3.typeParams);
-                        std::swap($$.intParams, $3.intParams);
-                    }
-                | "int" "," type_param_list { RULE
-                        $3.intParams.insert($3.intParams.begin(), driver.builder.variableIntTypeParam($1[1])); 
-                        std::swap($$.typeParams, $3.typeParams);
-                        std::swap($$.intParams, $3.intParams);
-                    }
+type_param_list : type       { RULE $$.typeParams.insert($$.typeParams.begin(), $1); }
                 | type "," type_param_list { RULE
                         $3.typeParams.insert($3.typeParams.begin(), $1); 
                         std::swap($$.typeParams, $3.typeParams);
-                        std::swap($$.intParams, $3.intParams);
                     }
                 ;
 
@@ -375,7 +353,7 @@ tuple_or_function : type_list  { RULE
                         }
                   ;
 
-gen_type : type_param_list ">" { RULE std::swap($$.typeParams, $1.typeParams); std::swap($$.intParams, $1.intParams); }
+gen_type : type_param_list ">" { RULE std::swap($$.typeParams, $1.typeParams); }
          | ">"                 { }
          ;
 
@@ -414,7 +392,8 @@ type : "struct" struct_type { RULE $$ = $2; }
      | "(" tuple_or_function { RULE $$ = $2; }
      | named_type            { RULE $$ = $1; }  
             /* job is a keyword for job expressions but it could also apear as type, */
-     | "job" { RULE $$ = driver.genGenericType(@$, "job", ParentList(), TypeList(), IntParamList()); }
+     | "job" { RULE $$ = driver.genGenericType(@$, "job", ParentList(), TypeList()); }
+     | "int" { RULE $$ = driver.genNumericType(@$, $1); }
      ;
 
 just_name : "identifier" { RULE  $$ = driver.findType(@1, $1); 
@@ -427,23 +406,23 @@ namespaced_type : "identifier"  { RULE std::swap($$, $1); }
                 | "identifier" "::" namespaced_type  { RULE $$.append($1); $$.append("::"); $$.append($3); }
                 ;
                 
-named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams, $3.intParams); }
+named_type : "identifier" "<" gen_type { RULE $$ = driver.genGenericType(@$, $1, $3.parents, $3.typeParams); }
            | "identifier" { RULE         
                                   $$ = driver.findType(@1, $1);
-                                  if(!$$) $$ = driver.genGenericType(@$, $1, ParentList(), TypeList(), IntParamList()); 
+                                  if(!$$) $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
                                   if(!$$) { driver.error(@$, format("undefined type %s", $1)); YYABORT; } 
                           }
            | "identifier" ":" parent_list "<" gen_type { RULE
-                            $$ = driver.genGenericType(@$, $1, $3, $5.typeParams, $5.intParams);
+                            $$ = driver.genGenericType(@$, $1, $3, $5.typeParams);
                         }
            | "type_var"   { RULE $$ = driver.builder.typeVariable($1); }
            | "identifier" "::" namespaced_type { RULE
                                     $1.append("::"); $1.append($3); 
-                                    $$ = driver.genGenericType(@$, $1, ParentList(), TypeList(), IntParamList()); 
+                                    $$ = driver.genGenericType(@$, $1, ParentList(), TypeList()); 
                                 }
            | "identifier" "::" namespaced_type "<" gen_type { RULE
                                     $1.append("::"); $1.append($3); 
-                                    $$ = driver.genGenericType(@$, $1, ParentList(), $5.typeParams, $5.intParams); 
+                                    $$ = driver.genGenericType(@$, $1, ParentList(), $5.typeParams); 
                                 }
            ;
 
@@ -514,8 +493,8 @@ catch_clause_list :
 decl_stmt : var_decl ";" {RULE
                 auto type = $1->getType();
                 ExpressionPtr value = driver.builder.undefined(type);
-                if (type.isa<RefTypePtr>()) {
-                    value = driver.builder.refVar(driver.builder.undefined(type.as<RefTypePtr>()->getElementType()));
+                if (analysis::isRefType(type)) {
+                    value = driver.builder.refVar(driver.builder.undefined(analysis::getReferencedType(type)));
                 }
                 $$ = driver.builder.declarationStmt($1, value);
             }
@@ -595,7 +574,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
 
             /* unary */
            | "*" expression { RULE  
-                                          INSPIRE_TYPE(@2, $2->getType(), RefTypePtr, "cannot deref non ref type");
+           	   	   	   	   	   	   	   	  INSPIRE_MSG(@2, !analysis::isRefType($2->getType()), "cannot deref non ref type");
                                           $$ = driver.builder.deref($2); } %prec UDEREF
            | "-" expression { RULE 
                                           auto tmp = driver.builder.tryDeref($2);
@@ -666,7 +645,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
             /* cast */ 
            | "CAST(" type ")" expression  { RULE $$ = driver.builder.castExpr($2, $4); }
            | expression ".as(" type ")"   { RULE 
-                              INSPIRE_MSG(@1, $1.getType().isa<RefTypePtr>(), "can not get parent-reference of non referenced expression");
+                              INSPIRE_MSG(@1, analysis::isRefType($1.getType()), "can not get parent-reference of non referenced expression");
                               $$  = driver.builder.refParent($1, $3); 
                           }
             /* ref mamagement */
@@ -689,8 +668,6 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "stringlit"  { RULE $$ = driver.builder.stringLit($1); }
             /* constructed literals */
            | "type(" type ")"         { RULE $$ = driver.builder.getTypeLiteral($2); }
-           | "param(" "paramvar" ")"  { RULE $$ = driver.builder.getIntTypeParamLiteral(driver.find_type_param_var(@2, $2)); }
-           | "param(" "int" ")"       { RULE $$ = driver.builder.getIntTypeParamLiteral(driver.builder.concreteIntTypeParam(utils::numeric_cast<uint32_t>($2))); }
            | "lit(" "stringlit" ")"          { RULE 
                                                     $2.replace(0,1,"");
                                                     $2.replace($2.size()-1,1,"");

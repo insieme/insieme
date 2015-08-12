@@ -150,7 +150,7 @@ TEST(IRPattern, Structtypes) {
 	EXPECT_PRED2(isMatch, patternA, structScalar);
 	EXPECT_PRED2(isMatch, patternA, structArray);
 	
-	TreePattern patternB = aT(irp::refType(irp::arrayType(irp::structType(*any), atom(builder.concreteIntTypeParam(1)))));
+	TreePattern patternB = aT(irp::refType(irp::arrayType(irp::structType(*any))));
 	EXPECT_PRED2(noMatch, patternB, int4Type);
 	EXPECT_PRED2(noMatch, patternB, structScalar);
 	EXPECT_PRED2(isMatch, patternB, structArray);

@@ -97,10 +97,8 @@ inline TreeGenerator atom(core::NodeManager& manager, const string& code) {
 	return atom(core::IRBuilder(manager).parseExpr(code));
 }
 
-inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty,
-                                 const ListGenerator& intParams = empty) {
-	return node(core::NT_GenericType, family << single(node(core::NT_Parents, subtypes)) << single(node(core::NT_Types,
-	            typeParams)) << single(node(core::NT_IntTypeParams, intParams)));
+inline TreeGenerator genericType(const TreeGenerator& family, const ListGenerator& subtypes = empty, const ListGenerator& typeParams = empty) {
+	return node(core::NT_GenericType, family << single(node(core::NT_Parents, subtypes)) << single(node(core::NT_Types, typeParams)));
 }
 
 inline TreeGenerator literal(const TreeGenerator& type, const TreeGenerator& value) {
@@ -120,7 +118,7 @@ inline TreeGenerator literal(const TreeGenerator& type, int value) {
 }
 
 inline TreeGenerator typeLiteral(const TreeGenerator& type) {
-	return literal(genericType(stringValue("type"), empty, single(type), empty), "type_literal");
+	return literal(genericType(stringValue("type"), empty, single(type)), "type_literal");
 }
 
 inline TreeGenerator tupleType(const ListGenerator& pattern) {
@@ -153,10 +151,6 @@ inline TreeGenerator bindExpr(const ListGenerator& parameters, const TreeGenerat
 
 inline TreeGenerator tupleExpr(const ListGenerator& expressions) {
 	return node(core::NT_TupleExpr, expressions);
-}
-
-inline TreeGenerator vectorExpr(const ListGenerator& expressions) {
-	return node(core::NT_VectorExpr, expressions);
 }
 
 inline TreeGenerator structExpr(const ListGenerator& members) {

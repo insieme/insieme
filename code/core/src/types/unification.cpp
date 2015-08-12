@@ -51,16 +51,6 @@ namespace types {
 
 namespace {
 
-/**
- * Tests whether the given type int type parameter is a variable int type parameters.
- *
- * @param param the instances to be tested
- * @return true if param is a variable, false otherwise
- */
-inline bool isVariable(const IntTypeParamPtr& param) {
-	return param->getNodeType() == NT_VariableIntTypeParam;
-}
-
 
 /**
  * Applies the given substitution to all types within the given list.
@@ -149,59 +139,6 @@ SubstitutionOpt computeSubstitution(NodeManager& manager, std::list<std::pair<Ty
 			assert("RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!");
 		}
 		
-		
-		// => check ref type
-		if(typeOfA == NT_RefType) {
-			const RefTypePtr& refTypeA = static_pointer_cast<RefTypePtr>(a);
-			const RefTypePtr& refTypeB = static_pointer_cast<RefTypePtr>(b);
-			
-			// unify element type
-			list.push_back(std::make_pair(refTypeA->getElementType(), refTypeB->getElementType()));
-			continue;
-		}
-		
-		// => handle single-element type cases
-		if(dynamic_pointer_cast<SingleElementTypePtr>(a)) {
-			const SingleElementTypePtr& typeA = static_pointer_cast<const SingleElementTypePtr>(a);
-			const SingleElementTypePtr& typeB = static_pointer_cast<const SingleElementTypePtr>(b);
-			
-			// make sure element type is checked
-			list.push_back(std::make_pair(typeA->getElementType(), typeB->getElementType()));
-			
-			// check int-type parameter
-			IntTypeParamPtr paramA = typeA->getIntTypeParameter();
-			IntTypeParamPtr paramB = typeB->getIntTypeParameter();
-			
-			// equivalent pairs can be ignored ...
-			if(paramA == paramB) {
-				continue;
-			}
-			
-			// check for variables
-			if(!isVariable(paramA) && !isVariable(paramB)) {
-				// different constants => not matchable / unifyable!
-				return unmatchable;
-			}
-			
-			// move variable to first place
-			if(!isVariable(paramA) && isVariable(paramB)) {
-				// switch sides
-				IntTypeParamPtr tmp = paramA;
-				paramA = paramB;
-				paramB = tmp;
-			}
-			
-			// add mapping
-			Substitution mapping(static_pointer_cast<const VariableIntTypeParam>(paramA),paramB);
-			
-			// apply substitution to remaining pairs
-			applySubstitutionToList(manager, mapping, list);
-			
-			// combine current mapping with overall result
-			res = Substitution::compose(manager, res, mapping);
-			continue;
-		}
-		
 		// => check family of generic type
 		if(typeOfA == NT_GenericType) {
 			const GenericTypePtr& genericTypeA = static_pointer_cast<const GenericType>(a);
@@ -217,56 +154,6 @@ SubstitutionOpt computeSubstitution(NodeManager& manager, std::list<std::pair<Ty
 				return unmatchable;
 			}
 			
-			// ---- unify int type parameter ---
-			
-			// get lists
-			vector<IntTypeParamPtr> paramsA = genericTypeA->getIntTypeParameter()->getParameters();
-			vector<IntTypeParamPtr> paramsB = genericTypeB->getIntTypeParameter()->getParameters();
-			
-			// check number of arguments ...
-			if(paramsA.size() != paramsB.size()) {
-				// => not unifyable
-				return unmatchable;
-			}
-			
-			for(std::size_t i=0; i<paramsA.size(); i++) {
-				IntTypeParamPtr paramA = paramsA[i];
-				IntTypeParamPtr paramB = paramsB[i];
-				
-				// equivalent pairs can be ignored ...
-				if(paramA == paramB) {
-					continue;
-				}
-				
-				// check for variables
-				if(!isVariable(paramA) && !isVariable(paramB)) {
-					// different constants => not matchable / unifyable!
-					return unmatchable;
-				}
-				
-				// move variable to first place
-				if(!isVariable(paramA) && isVariable(paramB)) {
-					// switch sides
-					IntTypeParamPtr tmp = paramA;
-					paramA = paramB;
-					paramB = tmp;
-				}
-				
-				// add mapping
-				Substitution mapping(static_pointer_cast<const VariableIntTypeParam>(paramA),paramB);
-				
-				// apply substitution to remaining pairs
-				applySubstitutionToList(manager, mapping, list);
-				
-				// also to remaining parameter within current pair
-				for(std::size_t j=i+1; j < paramsA.size(); j++) {
-					paramsA[j] = mapping.applyTo(paramsA[j]);
-					paramsB[j] = mapping.applyTo(paramsB[j]);
-				}
-				
-				// combine current mapping with overall result
-				res = Substitution::compose(manager, res, mapping);
-			}
 		}
 		
 		// => check all child nodes
@@ -279,9 +166,9 @@ SubstitutionOpt computeSubstitution(NodeManager& manager, std::list<std::pair<Ty
 		
 		// add pairs of children to list to be processed
 		list.insert(list.end(),
-		            make_paired_iterator(typeParamsA.begin(), typeParamsB.begin()),
-		            make_paired_iterator(typeParamsA.end(), typeParamsB.end())
-		           );
+			make_paired_iterator(typeParamsA.begin(), typeParamsB.begin()),
+			make_paired_iterator(typeParamsA.end(), typeParamsB.end())
+		);
 	}
 	
 	// done

@@ -43,9 +43,12 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/subtyping.h"
 #include "insieme/core/types/type_variable_deduction.h"
-#include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/lang/enum_extension.h"
+
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/channel.h"
+#include "insieme/core/lang/reference.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -132,13 +135,12 @@ TypePtr followDataPath(const TypePtr& source, const ExpressionPtr& datapath) {
 	if(basic.isDataPathElement(step)) {
 	
 		// input needs to be an array or a vector
-		if(localSrc->getNodeType() != NT_ArrayType && localSrc->getNodeType() != NT_VectorType) {
+		if(!lang::isArray(localSrc)) {
 			return fail;		// no valid type
 		}
-		
+
 		// the rest is fine, get the element type
-		return localSrc.as<SingleElementTypePtr>()->getElementType();
-		
+		return lang::getArrayElementType(localSrc);
 	}
 	
 	// check whether it is accessing an element of a tuple
@@ -201,12 +203,13 @@ TypePtr followDataPath(const TypePtr& source, const ExpressionPtr& datapath) {
 OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 
 	OptionalMessageList res;
-	
-	if((address->getName()->getValue() == "vector" && address->getNodeType()!=NT_VectorType) ||
-	        (address->getName()->getValue() == "array" && address->getNodeType()!=NT_ArrayType) ||
-	        (address->getName()->getValue() == "ref" && address->getNodeType()!=NT_RefType) ||
-	        (address->getName()->getValue() == "channel" && address->getNodeType()!=NT_ChannelType)) {
-	        
+
+	if(
+	        (address->getName()->getValue() == "array" && lang::isArray(address)) ||
+	        (address->getName()->getValue() == "ref" && lang::isReference(address)) ||
+	        (address->getName()->getValue() == "channel" && lang::isChannel(address))
+		) {
+
 		add(res, Message(address,
 		                 EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD,
 		                 format("Name of generic type %s is a reserved keyword.", toString(*address).c_str()),
@@ -633,7 +636,7 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 	// check expressions (must not be arrays except within very few cases)
 	if(cat == NC_Expression) {
 		ExpressionPtr expr = address.as<ExpressionPtr>();
-		if(expr->getType()->getNodeType() == NT_ArrayType) {
+		if(lang::isArray(expr)) {
 		
 			// if it is the result of a array-create call it is accepted
 			auto& basic = address->getNodeManager().getLangBasic();
@@ -667,7 +670,7 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 			return res;
 		}
 		for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
-			if(types::isVariableSized(it->getType())) {
+			if(lang::isVariableSizedArray(it->getType())) {
 				add(res, Message(address,
 				                 EC_TYPE_INVALID_ARRAY_CONTEXT,
 				                 "Variable sized data structure has to be the last component of enclosing struct type.",
@@ -678,14 +681,14 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 		return res;
 	}
 	
-	// check union types
+	// check tuple types
 	if(address->getNodeType() == NT_TupleType) {
 		TupleTypePtr tupleType = address.as<TupleTypePtr>();
 		if(tupleType.empty()) {
 			return res;
 		}
 		for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
-			if(types::isVariableSized(*it)) {
+			if(lang::isVariableSizedArray(*it)) {
 				add(res, Message(address,
 				                 EC_TYPE_INVALID_ARRAY_CONTEXT,
 				                 "Variable sized data structure has to be the last component of enclosing tuple type.",
@@ -912,11 +915,10 @@ OptionalMessageList checkMemberAccess(const NodeAddress& address, const Expressi
 	// check whether it is a struct at all
 	TypePtr exprType = structExpr->getType();
 	if(isRefVersion) {
-		if(exprType->getNodeType() == NT_RefType) {
+		if(analysis::isRefType(exprType)) {
 			// extract element type
-			exprType = static_pointer_cast<const RefType>(exprType)->getElementType();
-		}
-		else {
+			exprType = analysis::getReferencedType(exprType);
+		} else {
 			// invalid argument => handled by argument check
 			return res;
 		}
@@ -1047,9 +1049,9 @@ OptionalMessageList checkTupleAccess(const NodeAddress& address, const Expressio
 	// check whether it is a tuple at all
 	TypePtr exprType = tupleExpr->getType();
 	if(isRefVersion) {
-		if(exprType->getNodeType() == NT_RefType) {
+		if(analysis::isRefType(exprType)) {
 			// extract element type
-			exprType = static_pointer_cast<const RefType>(exprType)->getElementType();
+			exprType = analysis::getReferencedType(exprType);
 		}
 		else {
 			// invalid argument => handled by argument check
@@ -1204,9 +1206,9 @@ namespace {
 unsigned getNumRefs(const TypePtr& type) {
 	unsigned count = 0;
 	TypePtr cur = type;
-	while(cur->getNodeType() == NT_RefType) {
+	while(analysis::isRefType(cur)) {
 		count++;
-		cur = static_pointer_cast<const RefType>(cur)->getElementType();
+		cur = analysis::getReferencedType(cur);
 	}
 	return count;
 }
@@ -1253,9 +1255,6 @@ bool isPrimitiveType(const TypePtr& type) {
 
 bool isValidCast(const TypePtr& src, const TypePtr& trg) {
 
-	// get basic definitions
-	auto& basic = src->getNodeManager().getLangBasic();
-	
 	// casting a type to itself is always allowed
 	if(*src == *trg) {
 		return true;
@@ -1280,18 +1279,13 @@ bool isValidCast(const TypePtr& src, const TypePtr& trg) {
 		return isValidCast(src, trg.as<RecTypePtr>()->unroll());
 	}
 	
-	// also allow references to be casted to boolean
-	if(src->getNodeType() == NT_RefType && basic.isBool(trg)) {
-		return true;
-	}
-	
 	// we also allow casts between references
-	if(src->getNodeType() == NT_RefType && trg->getNodeType() == NT_RefType) {
+	if(analysis::isRefType(src) && analysis::isRefType(trg)) {
 		// check whether cast between target types is valid
-		auto srcType = src.as<RefTypePtr>()->getElementType();
-		auto trgType = trg.as<RefTypePtr>()->getElementType();
-		
-		if(srcType->getNodeType() == NT_RefType || trg->getNodeType() == NT_RefType) {
+		auto srcType = analysis::getReferencedType(src);
+		auto trgType = analysis::getReferencedType(trg);
+
+		if(analysis::isRefType(srcType) || analysis::isRefType(trg)) {
 			return isValidCast(srcType, trgType);
 		}
 		

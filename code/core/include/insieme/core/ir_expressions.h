@@ -1092,51 +1092,6 @@ static TupleExprPtr get(NodeManager& manager, const TupleTypePtr& type, const Ex
 
 
 
-// ------------------------------------- Vector Expression -----------------------------------
-
-/**
- * The accessor associated to a vector expression.
- */
-IR_NODE_ACCESSOR(VectorExpr, Expression, VectorType, Expressions)
-/**
- * Obtains a reference to the list of expressions aggregated to a vector by
- * the represented node.
- */
-IR_NODE_PROPERTY(Expressions, Expressions, 1);
-};
-
-/**
- * The entity used to represent vector expressions. A vector expression is composing
- * a given list of values into a vector containing those values.
- */
-IR_NODE(VectorExpr, Expression)
-protected:
-
-/**
- * Prints a string representation of this node to the given output stream.
- */
-virtual std::ostream& printTo(std::ostream& out) const {
-	return out << "{" << join(",", getExpressions(), print<deref<NodePtr>>()) << "}";
-}
-
-public:
-
-/**
- * This static factory method constructing a new vector expression based
- * on the resulting type and a given list of expressions.
- *
- * @param manager the manager used for maintaining instances of this class
- * @param type the type of the vector constructed by the resulting expression
- * @param expressions the expressions to be packed into a vector
- * @return the requested type instance managed by the given manager
- */
-static VectorExprPtr get(NodeManager& manager, const VectorTypePtr& type, const ExpressionsPtr& expressions) {
-	return manager.get(VectorExpr(type, expressions));
-}
-
-};
-
-
 
 
 // ------------------------------------- Named Values -----------------------------------

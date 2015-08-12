@@ -178,7 +178,7 @@ LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& va
 			const insieme::core::TypePtr& get##NAME() const { \
 				return type_##NAME; \
 			} \
-			const bool is##NAME(const insieme::core::TypePtr& node) const { \
+			const bool is##NAME(const insieme::core::NodePtr& node) const { \
 				return node && (*node == *get##NAME()); \
 			}
 

@@ -44,45 +44,18 @@ namespace core {
 namespace transform {
 
 namespace detail {
-enum class InstantiationOption { TYPE_VARIABLES, INT_TYPE_PARAMS, BOTH };
 
-static auto skipNone = [&](const NodePtr& node) {
-	return false;
-};
+	static auto skipNone = [&](const NodePtr& node) {
+		return false;
+	};
 
-NodePtr instantiateInternal(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip,
-                            detail::InstantiationOption opt);
-}
+	NodePtr instantiate(const NodePtr& root, std::function<bool(const core::NodePtr& node)> skip);
 
-/**
- * A transformation which instantiates VariableIntTypeParams wherever possible
- * from ConcreteIntTypeParams in each calls' argument list.
- *
- * @param root the node to start the instantiation from
- * @return IR with the same root node, with all deducible VariableIntTypeParmas instantiated
- */
-template<typename T>
-core::Pointer<T> instantiateIntTypeParams(const core::Pointer<T>& root,
-        std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::INT_TYPE_PARAMS));
-}
+} // end namespace detail
 
 /**
- * A transformation which instantiates TypeVariables wherever possible
- * from concrete types in each calls' argument list.
- *
- * @param root the node to start the instantiation from
- * @return IR with the same root node, with all deducible TypeVariables instantiated
- */
-template<typename T>
-core::Pointer<T> instantiateTypeVariables(const core::Pointer<T>& root,
-        std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::TYPE_VARIABLES));
-}
-
-/**
- * A transformation which instantiates all sources of genericity in types
- * (VariableIntTypeParams and TypeVariables) from concrete types in each calls' argument list.
+ * A transformation which instantiates all type variables within the given code fragment
+ * where concrete types can be deduced from the call parameters.
  *
  * @param root the node to start the instantiation from
  * @return IR with the same root node, with all deducible types instantiated
@@ -90,7 +63,7 @@ core::Pointer<T> instantiateTypeVariables(const core::Pointer<T>& root,
 template<typename T>
 core::Pointer<T> instantiateTypes(const core::Pointer<T>& root,
                                   std::function<bool(const NodePtr& node)> skip = detail::skipNone) {
-	return static_pointer_cast<T>(instantiateInternal(root, skip, detail::InstantiationOption::BOTH));
+	return static_pointer_cast<T>(detail::instantiate(root, skip));
 }
 
 } // end namespace transform

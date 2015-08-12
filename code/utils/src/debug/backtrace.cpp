@@ -72,7 +72,7 @@ std::string	demangle(const char* symbol) {
 	return symbol;
 }
 
-std::string getBacktraceString() {
+std::string getBacktraceString(int offset) {
 	const static int MAX_FRAMES = 4096;
 	void** buffer = new void*[MAX_FRAMES];
 	int numTraced = backtrace(buffer, MAX_FRAMES);
@@ -80,8 +80,9 @@ std::string getBacktraceString() {
 	
 	std::stringstream ss;
 	
-	for(int i=numTraced-1; i>0; --i) {
-		ss << format("%4d: %s\n", i, demangle(symbols[i]));
+	//for(int i=numTraced-1; i>0; --i) {
+	for(int i=offset; i<numTraced;++i) {
+		ss << format("%4d: %s\n", i-offset+1, demangle(symbols[i]));
 	}
 	
 	free(symbols); // malloc'ed by backtrace_symbols()
@@ -91,7 +92,7 @@ std::string getBacktraceString() {
 
 #else
 
-std::string getBacktraceString() {
+std::string getBacktraceString(int offset) {
 	return "Backtrace not supported on this compiler\n";
 }
 

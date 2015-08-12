@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ * Copyright (c) 2002-2015 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
  *               University of Innsbruck, Austria
  *
@@ -36,10 +36,14 @@
 
 #pragma once
 
-// Just aggregating all header files defining IR nodes
+#include "insieme/core/lang/extension.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_program.h"
+namespace insieme {
+namespace core {
+namespace lang {
+
+
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

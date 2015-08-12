@@ -39,7 +39,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_values.h"
-#include "insieme/core/ir_int_type_param.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/timer.h"
@@ -77,11 +76,11 @@ TEST(NodePtr, Access) {
 
 	NodeManager manager;
 	
-	ConcreteIntTypeParamPtr p = ConcreteIntTypeParam::get(manager, 12);
+	GenericTypePtr p = GenericType::get(manager, "A");
 	
-	EXPECT_TRUE(typeid(p->getParam()) == typeid(UIntValuePtr));
-	EXPECT_TRUE(p->getParam());
-	EXPECT_EQ(UIntValue::get(manager, 12), p->getParam());
+	EXPECT_TRUE(typeid(p->getName()) == typeid(StringValuePtr));
+	EXPECT_TRUE(p->getName());
+	EXPECT_EQ(StringValue::get(manager, "A"), p->getName());
 	
 	EXPECT_EQ(sizeof(void*), sizeof(NodePtr));
 	EXPECT_EQ(sizeof(void*), sizeof(TupleTypePtr));
@@ -110,25 +109,15 @@ TEST(AddressPtr, Access) {
 
 	NodeManager manager;
 	
-	ConcreteIntTypeParamAddress a(ConcreteIntTypeParam::get(manager, 12));
-	
-	EXPECT_TRUE(typeid(a->getParam()) == typeid(UIntValueAddress));
-	EXPECT_TRUE(a->getParam());
+	GenericTypeAddress a(GenericType::get(manager, "A"));
+
+	EXPECT_TRUE(typeid(a->getName()) == typeid(StringValueAddress));
+	EXPECT_TRUE(a->getName());
 	EXPECT_EQ("0", toString(a));
-	EXPECT_EQ("0-0", toString(a->getParam()));
-	EXPECT_EQ(UIntValue::get(manager, 12), a->getParam().getAddressedNode());
-}
-
-TEST(FixedSizeNode, ChildListTest) {
-	NodeManager manager;
+	EXPECT_EQ("0-0", toString(a->getName()));
+	EXPECT_EQ(StringValue::get(manager, "A"), a->getName().getAddressedNode());
 	
-	EXPECT_TRUE(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(UIntValue::get(manager, 12))));
-	
-	// death tests do not pass valgrind test
-//		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>()), ".*");
-//		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(BoolValue::get(manager, false))), ".*");
 }
-
 
 TEST(NodePtr, HashMapSpeed) {
 

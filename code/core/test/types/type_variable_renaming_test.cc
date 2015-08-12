@@ -58,11 +58,8 @@ TEST(TypeVariableRenamer, Basic) {
 	TypePtr genAB = builder.genericType("T", toVector(varA, varB));
 	TypePtr genABA = builder.genericType("T", toVector(varA, varB, varA));
 	
-	IntTypeParamPtr paramX = builder.variableIntTypeParam('x');
-	IntTypeParamPtr paramY = builder.variableIntTypeParam('y');
-	
-	TypePtr genABx = builder.genericType("T", toVector(varA, varB), toVector(paramX));
-	TypePtr genABAxyx = builder.genericType("T", toVector(varA, varB, varA), toVector(paramX, paramY, paramX));
+	TypePtr genABx = builder.genericType("T", toVector(varA, varB));
+	TypePtr genABAxyx = builder.genericType("T", toVector(varA, varB, varA));
 	
 	// do some testing
 	VariableRenamer renamer;
@@ -87,10 +84,10 @@ TEST(TypeVariableRenamer, Basic) {
 	EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABA)));
 	
 	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,#A>", toString(*renamer.rename(genABx)));
+	EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genABx)));
 	
 	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,'v1,#A,#B,#A>", toString(*renamer.rename(genABAxyx)));
+	EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABAxyx)));
 	
 	
 	// test multiple types within a set
@@ -101,7 +98,7 @@ TEST(TypeVariableRenamer, Basic) {
 	::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur)->TypePtr {
 		return sub.applyForward(cur);
 	});
-	EXPECT_EQ("[AP('v1),AP(T<'v1,'v2,#A>),AP(T<'v1,'v2,'v1,#A,#B,#A>),AP('v2)]", toString(renamed));
+	EXPECT_EQ("[AP('v1),AP(T<'v1,'v2>),AP(T<'v1,'v2,'v1>),AP('v2)]", toString(renamed));
 }
 
 TEST(TypeVariableRenamer, VariableMapping) {
@@ -114,10 +111,6 @@ TEST(TypeVariableRenamer, VariableMapping) {
 	TypeVariablePtr varA = builder.typeVariable("a");
 	TypeVariablePtr varB = builder.typeVariable("b");
 	
-	VariableIntTypeParamPtr paramX = builder.variableIntTypeParam('x');
-	VariableIntTypeParamPtr paramY = builder.variableIntTypeParam('y');
-	
-	
 	TypeMapping mapping;
 	mapping.addMapping(varA, varB);
 	EXPECT_EQ(varB, mapping.applyForward(varA));
@@ -127,20 +120,6 @@ TEST(TypeVariableRenamer, VariableMapping) {
 	
 	EXPECT_EQ(varB, mapping.applyForward(mapping.applyBackward(varB)));
 	EXPECT_EQ(varA, mapping.applyBackward(mapping.applyForward(varA)));
-	
-	
-	// test the same for type variables
-	TypePtr typeX = builder.genericType("T", TypeList(), toVector<IntTypeParamPtr>(paramX));
-	TypePtr typeY = builder.genericType("T", TypeList(), toVector<IntTypeParamPtr>(paramY));
-	
-	mapping.addMapping(paramX, paramY);
-	EXPECT_EQ(typeY, mapping.applyForward(typeX));
-	EXPECT_EQ(typeY, mapping.applyForward(typeY));
-	EXPECT_EQ(typeX, mapping.applyBackward(typeX));
-	EXPECT_EQ(typeX, mapping.applyBackward(typeY));
-	
-	EXPECT_EQ(typeY, mapping.applyForward(mapping.applyBackward(typeY)));
-	EXPECT_EQ(typeX, mapping.applyBackward(mapping.applyForward(typeX)));
 	
 }
 

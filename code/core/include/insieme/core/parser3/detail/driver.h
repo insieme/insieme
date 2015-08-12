@@ -181,8 +181,16 @@ public:
 	 * @param params: list of type paramenters
 	 * @param IntParamList: list of int type paramenters
 	 */
-	TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params, const IntParamList& iparamlist);
+	TypePtr genGenericType(const location& l, const std::string& name, const ParentList& parents, const TypeList& params);
 	
+	/**
+	 * generates a numeric type representing the given value
+	 * @param l: the location where this generic type was found
+	 * @param value: the value to be represented
+	 * @return the corresponding type node
+	 */
+	TypePtr genNumericType(const location& l, const string& value) const;
+
 	/**
 	 *  generates a function type
 	 */
@@ -208,15 +216,6 @@ public:
 	 */
 	ExpressionPtr genTagExpression(const location& l, const TypePtr& structType, const ExpressionList& list);
 	
-	/**
-	 * generate a type parameter variable
-	 */
-	VariableIntTypeParamPtr gen_type_param_var(const location& l, const std::string& name);
-	
-	/**
-	 * finds in scoope a previously defined type paramenter var
-	 */
-	VariableIntTypeParamPtr find_type_param_var(const location& l, const std::string& name);
 	
 	/* ~~~~~~~~~~~~~~~~~~~~~~~ let bindings management ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 	

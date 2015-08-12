@@ -105,11 +105,11 @@ bool isObjectType(const TypePtr& type) {
 }
 
 bool isObjectReferenceType(const TypePtr& type) {
-	return type->getNodeType() == NT_RefType && isObjectReferenceType(type.as<RefTypePtr>());
+	return isRefType(type) && isObjectType(getReferencedType(type));
 }
 
-bool isObjectReferenceType(const RefTypePtr& type) {
-	return isObjectType(type->getElementType());
+bool isObjectReferenceType(const GenericTypePtr& type) {
+	return isRefType(type) && isObjectType(getReferencedType(type));
 }
 
 bool isPureVirtual(const CallExprPtr& call) {
@@ -128,123 +128,6 @@ bool isPureVirtual(const NodePtr& node) {
 }
 
 
-// ---------------------------- References --------------------------------------
-
-namespace {
-
-const string CppRefStringMember = "_cpp_ref";
-const string CppConstRefStringMember = "_const_cpp_ref";
-const string RValCppRefStringMember = "_rval_cpp_ref";
-const string ConstRValCppRefStringMember = "_const_rval_cpp_ref";
-
-bool isRef(const TypePtr& type, const string& memberName) {
-
-	// filter out null-pointer
-	if(!type) {
-		return false;
-	}
-	
-	// must be a struct type
-	StructTypePtr structType = type.isa<StructTypePtr>();
-	if(!structType) {
-		return false;
-	}
-	
-	// only one member
-	if(structType.size() != 1u) {
-		return false;
-	}
-	
-	// check the one member element
-	NamedTypePtr element = structType[0];
-	core::TypePtr elTy = element->getType();
-	return element->getType()->getNodeType() == NT_RefType
-	       && !isCppRef(elTy) && !isConstCppRef(elTy)
-	       && !isRValCppRef(elTy) && !isConstRValCppRef(elTy)
-	       && element->getName().getValue() == memberName;
-}
-}
-
-bool isCppRef(const TypePtr& type) {
-	return isRef(type, CppRefStringMember);
-}
-
-TypePtr getCppRef(const TypePtr& elementType) {
-	IRBuilder builder(elementType->getNodeManager());
-	return builder.structType(toVector(
-	                              builder.namedType(CppRefStringMember, builder.refType(elementType))
-	                          ));
-}
-
-bool isConstCppRef(const TypePtr& type) {
-	return isRef(type, CppConstRefStringMember);
-}
-
-TypePtr getConstCppRef(const TypePtr& elementType) {
-	IRBuilder builder(elementType->getNodeManager());
-	return builder.structType(toVector(
-	                              builder.namedType(CppConstRefStringMember, builder.refType(elementType, RK_SOURCE))
-	                          ));
-}
-
-bool isRValCppRef(const TypePtr& type) {
-	return isRef(type, RValCppRefStringMember);
-}
-
-TypePtr getRValCppRef(const TypePtr& elementType) {
-	IRBuilder builder(elementType->getNodeManager());
-	return builder.structType(toVector(
-	                              builder.namedType(RValCppRefStringMember, builder.refType(elementType))
-	                          ));
-}
-
-bool isConstRValCppRef(const TypePtr& type) {
-	return isRef(type, ConstRValCppRefStringMember);
-}
-
-TypePtr getConstRValCppRef(const TypePtr& elementType) {
-	IRBuilder builder(elementType->getNodeManager());
-	return builder.structType(toVector(
-	                              builder.namedType(ConstRValCppRefStringMember, builder.refType(elementType, RK_SOURCE))
-	                          ));
-}
-
-TypePtr getCppRefElementType(const TypePtr& cppRefType) {
-	assert_true(isCppRef(cppRefType) || isConstCppRef(cppRefType) || isRValCppRef(cppRefType) || isConstRValCppRef(cppRefType));
-	return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
-}
-
-bool isAnyCppRef(const TypePtr& type) {
-	return isCppRef(type) || isConstCppRef(type) || isRValCppRef(type) || isConstRValCppRef(type) ;
-}
-
-ExpressionPtr unwrapCppRef(const ExpressionPtr& originalExpr) {
-	ExpressionPtr expr = originalExpr;
-	NodeManager& manager = expr.getNodeManager();
-	IRBuilder builder(manager);
-	
-	if(expr->getType().isa<core::RefTypePtr>()) {
-		expr = builder.deref(expr);
-	}
-	
-	if(isCppRef(expr->getType())) {
-		return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefCppToIR(), expr);
-	}
-	else if(isConstCppRef(expr->getType())) {
-		return builder.callExpr(builder.refType(getCppRefElementType(expr->getType()), RK_SOURCE),
-		                        manager.getLangExtension<lang::IRppExtensions>().getRefConstCppToIR(), expr);
-	}
-	else if(isRValCppRef(expr->getType())) {
-		return builder.callExpr(builder.refType(getCppRefElementType(expr->getType())), manager.getLangExtension<lang::IRppExtensions>().getRefRValCppToIR(), expr);
-	}
-	else if(isConstRValCppRef(expr->getType())) {
-		return builder.callExpr(builder.refType(getCppRefElementType(expr->getType()), RK_SOURCE),
-		                        manager.getLangExtension<lang::IRppExtensions>().getRefConstRValCppToIR(), expr);
-	}
-	// error fallthrow
-	assert_fail() << "could not unwrapp Cpp ref, is it a cpp ref?";
-	return ExpressionPtr();
-}
 
 // --------------------------- data member pointer -----------------------------------
 

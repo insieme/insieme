@@ -489,8 +489,7 @@ ADD_EXPRESSION_CONVERTER(LiteralPtr);
 				const core::GenericTypePtr& genType = type.as<GenericTypePtr>(); \
 				return genType->getName()->getValue() == "type" && \
 						genType->getTypeParameter().size() == static_cast<std::size_t>(1) && \
-						genType->getTypeParameter()[0].isa<_TYPE>() && \
-						genType->getIntTypeParameter().empty(); \
+						genType->getTypeParameter()[0].isa<_TYPE>(); \
 			} \
 			is_encoding_of() {} \
 		}; \

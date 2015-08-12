@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/lang/array.h"
 
 namespace insieme {
 namespace core {
@@ -107,25 +108,28 @@ public:
 };
 
 /**
-	* Checks if the given type isj a SIMD vector
-	* @param type the type to check
-	* @return bool true if given type is SIMD, false otherwise
-	*/
+ * Checks if the given type is a SIMD vector
+ *
+ * @param type the type to check
+ * @return bool true if given type is SIMD, false otherwise
+ */
 bool isSIMDVector(const TypePtr& type);
 
 /**
-	* Gets the inner vector type of an SIMD vector
-	* @param type the type to retrive the inner vector from
-	* @return a vectorType representing the number of elements and element of the simd vector
-	*/
-VectorTypePtr getSIMDVectorType(const TypePtr& type);
+ * Gets the inner vector type of an SIMD vector
+ *
+ * @param type the type to retrive the inner vector from
+ * @return a vectorType representing the number of elements and element of the simd vector
+ */
+ArrayType getSIMDVectorType(const TypePtr& type);
 
 /**
-	* Creates a SIMD vector from an Vector type
-	* @param type the type to generate a SIMD vector type from
-	* @return the SIMD vector type
-	*/
-GenericTypePtr toSIMDVector(const VectorTypePtr& type);
+ * Creates a SIMD vector from an Vector type
+ *
+ * @param type the type to generate a SIMD vector type from
+ * @return the SIMD vector type
+ */
+GenericTypePtr toSIMDVector(const ArrayType& type);
 
 } // end namespace lang
 } // end namespace core
