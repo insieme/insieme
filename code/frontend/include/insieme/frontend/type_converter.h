@@ -59,7 +59,7 @@ namespace conversion {
 		Converter& convFact;
 		core::NodeManager& mgr;
 		const core::IRBuilder& builder;
-		const core::lang::BasicGenerator& gen;
+		const core::lang::BasicGenerator& basic;
 
 		std::map<clang::QualType, core::TypePtr> anonimousNamedTypes;
 
@@ -91,9 +91,7 @@ namespace conversion {
 
 	  protected:
 		virtual core::TypePtr convertInternal(const clang::QualType& type) = 0;
-
-		virtual void postConvertionAction(const clang::QualType& src, const core::TypePtr& res){};
-
+		
 		core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 		core::TypePtr convertImpl(const clang::QualType& type);
@@ -173,14 +171,16 @@ namespace conversion {
 		core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* tempTy);
 		core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
 		core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
-		//	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
-		// core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
+		//core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
+		//core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
 		core::TypePtr VisitMemberPointerType(const clang::MemberPointerType* memPointerTy);
 
 	  protected:
 		// main entry point
 		virtual core::TypePtr convertInternal(const clang::QualType& type);
 	};
+
+	#undef CALL_BASE_TYPE_VISIT
 }
 }
 }

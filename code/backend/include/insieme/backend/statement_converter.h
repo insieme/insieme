@@ -160,7 +160,6 @@ namespace backend {
 
 		c_ast::NodePtr visitVariable(const core::VariablePtr& ptr, ConversionContext& context);
 
-		c_ast::NodePtr visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context);
 	};
 
 

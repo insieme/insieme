@@ -34,29 +34,27 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/frontend/extensions/frontend_extension.h"
+#include "insieme/frontend/frontend.h"
+#include "insieme/utils/config.h"
+
+#include <boost/filesystem.hpp>
 
 namespace insieme {
 namespace frontend {
-namespace extensions {
+	
+	TEST(SimplestIndependentTest, Simple) {
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-namespace cleanup {
-	core::LambdaExprPtr removeObviouslySuperfluousCode(core::LambdaExprPtr lambda);
-}
+		string s = FRONTEND_TEST_DIR "/inputs/sniplets/simplest.c";
 
-/**
- * This extension removes obviously superfluous code, including
- * - assignments
- * - variable declarations
- * - empty control flow
- * It uses a fixed point iteration and is quite slow
- */
-class SuperfluousCleanupExtension : public insieme::frontend::extensions::FrontendExtension {
-	virtual insieme::frontend::tu::IRTranslationUnit IRVisit(insieme::frontend::tu::IRTranslationUnit& tu);
-};
+		ConversionJob job(s);
+				
+		auto res = builder.normalize(job.execute(mgr));
+		dumpColor(res);
+	}
 
-} // extensions
-} // frontend
-} // insieme
+} // fe namespace
+} // insieme namespace

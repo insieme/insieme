@@ -95,7 +95,7 @@ namespace extensions {
 		for(core::Address<const core::Node> cvar : cvars) {
 			core::Pointer<const core::Variable> varptr = cvar.getAddressedNode().as<core::VariablePtr>();
 
-			if(!cvarSet.contains(varptr) && varptr->getType()->getNodeType() == core::NT_RefType) { cvarSet.insert(varptr); }
+			if(!cvarSet.contains(varptr) && core::analysis::isRefType(varptr->getType())) { cvarSet.insert(varptr); }
 		}
 		return cvarSet;
 	}
@@ -236,13 +236,14 @@ namespace extensions {
 
 		// visitor who will collect all accesses (node addresses) to a given variable and will try to find the target value
 		core::visitDepthFirst(cond, [&](const core::VariableAddress& x) {
-			auto& basic = x->getNodeManager().getLangBasic();
+			auto& mgr = x->getNodeManager();
+			auto& basic = mgr.getLangBasic();
 
 			// the variable is only considered if it is contained within a ref.deref and a logic operator
 			core::CallExprPtr refderef;
 			if(x.getAddressedNode() == var && x.getDepth() > 2 && x.getParentNode()->getNodeType() == core::NT_CallExpr
 			   && x.getParentAddress().getParentNode()->getNodeType() == core::NT_CallExpr
-			   && basic.isRefDeref((refderef = x.getParentNode().as<core::CallExprPtr>()).getFunctionExpr())) {
+			   && mgr.getLangExtension<core::lang::ReferenceExtension>().isRefDeref((refderef = x.getParentNode().as<core::CallExprPtr>()).getFunctionExpr())) {
 				// now we need to extract the logic operator and its argument, a literal
 				core::CallExprAddress comperator = x.getParentAddress().getParentAddress().as<core::CallExprAddress>();
 				core::NodeAddress arg;

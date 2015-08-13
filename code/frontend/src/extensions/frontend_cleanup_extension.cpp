@@ -91,48 +91,7 @@ namespace extensions {
 
 			return insieme::frontend::tu::fromIR(singlenode);
 		}
-
-		//////////////////////////////////////////////////////////////////////
-		// CleanUp "deref refVar" situation
-		// ================================
-		//
-		//	sometimes, specially during initializations, a value is materialized in memory to be deref then and accessing the value again.
-		//	this is actually equivalent to not doing it
-		insieme::core::NodePtr refDerefCleanup(const insieme::core::NodePtr& prog) {
-			auto derefVarRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node) -> core::NodePtr {
-				if(core::CallExprPtr call = node.isa<core::CallExprPtr>()) {
-					const auto& gen = node->getNodeManager().getLangBasic();
-					if(core::analysis::isCallOf(call, gen.getRefDeref())) {
-						if(core::CallExprPtr inCall = call[0].isa<core::CallExprPtr>()) {
-							if(core::analysis::isCallOf(inCall, gen.getRefVar())) { return inCall[0]; }
-						}
-					}
-				}
-				return node;
-			});
-			return derefVarRemover.map(prog);
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// Unnecesary casts
-		// ==============
-		//
-		// During translation it might be easier to cast values to a different type to enforce type matching, but after resolving all the aliases
-		// in the translation unit unification it might turn out that those types were actually the same one. Clean up those casts since they might drive
-		// output code into error (specially with c++)
-		insieme::core::NodePtr castCleanup(const insieme::core::NodePtr& prog) {
-			auto castRemover = core::transform::makeCachedLambdaMapper([](const core::NodePtr& node) -> core::NodePtr {
-				if(core::CallExprPtr call = node.isa<core::CallExprPtr>()) {
-					const auto& gen = node->getNodeManager().getLangBasic();
-					if(core::analysis::isCallOf(call, gen.getRefReinterpret())) {
-						if(call->getType() == call[0]->getType()) { return call[0]; }
-					}
-				}
-				return node;
-			});
-			return castRemover.map(prog);
-		}
-
+		
 		//////////////////////////////////////////////////////////////////////
 		// Support alloca call
 		// ==============
@@ -143,33 +102,34 @@ namespace extensions {
 			namespace p = core::pattern::irp;
 			namespace g = core::pattern::generator::irg;
 
-			auto& base = prog->getNodeManager().getLangBasic();
+			//auto& base = prog->getNodeManager().getLangBasic();
 
-			// get a few function symbols
-			auto reinterpret = base.getRefReinterpret();
-			auto alloca = p::literal("__builtin_alloca");
-			auto var = base.getRefVar();
-			auto createArray = base.getArrayCreate1D();
+			//// get a few function symbols
+			//auto reinterpret = base.getRefReinterpret();
+			//auto alloca = p::literal("__builtin_alloca");
+			//auto var = base.getRefVar();
+			//auto createArray = base.getArrayCreate1D();
 
-			// build a transformation rule
+			//// build a transformation rule
 
-			Variable resType;
-			Variable elementType;
+			//Variable resType;
+			//Variable elementType;
 
-			TreeGenerator gen = elementType;
-			Variable arrayType = Variable(p::arrayType(elementType));
-			Variable arrayTypeLiteral = Variable(p::typeLiteral(arrayType));
-			Variable size;
-			auto rule = Rule(p::callExpr(resType, reinterpret, p::callExpr(alloca, p::binaryOp(size, any)) << arrayTypeLiteral),
-			                 g::callExpr(resType, var, g::callExpr(arrayType, createArray, g::typeLiteral(elementType), size)));
+			//TreeGenerator gen = elementType;
+			//Variable arrayType = Variable(p::arrayType(elementType));
+			//Variable arrayTypeLiteral = Variable(p::typeLiteral(arrayType));
+			//Variable size;
+			//auto rule = Rule(p::callExpr(resType, reinterpret, p::callExpr(alloca, p::binaryOp(size, any)) << arrayTypeLiteral),
+			//                 g::callExpr(resType, var, g::callExpr(arrayType, createArray, g::typeLiteral(elementType), size)));
 
-			// apply the transformation
-			auto allocaReplacer = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node) -> core::NodePtr {
-				// apply rule on local node
-				auto mod = rule(node);
-				return (mod) ? mod : node;
-			});
-			return allocaReplacer.map(prog);
+			//// apply the transformation
+			//auto allocaReplacer = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node) -> core::NodePtr {
+			//	// apply rule on local node
+			//	auto mod = rule(node);
+			//	return (mod) ? mod : node;
+			//});
+			//return allocaReplacer.map(prog);
+			return prog;
 		}
 
 		//////////////////////////////////////////////////////////////////////
@@ -178,7 +138,7 @@ namespace extensions {
 		//
 		// remove empty constructs from functions bodies, this prevents multiple implementations of the same
 		// equivalent code produced in different translation units with different macro expansions
-		// this removes empty compounds and nested compunds with single elements
+		// this removes empty compounds and nested compounds with single elements
 		insieme::core::NodePtr superfluousCode(const insieme::core::NodePtr& prog) {
 			core::IRBuilder builder(prog->getNodeManager());
 			auto noop = builder.getNoOp();
@@ -239,42 +199,7 @@ namespace extensions {
 		return boost::optional<std::string>();
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	insieme::core::ProgramPtr FrontendCleanupExtension::IRVisit(insieme::core::ProgramPtr& prog) {
-		/////////////////////////////////////////////////////////////////////////////////////
-		//		DEBUG
-		//			some code to fish bugs
-		//		core::visitDepthFirstOnce(prog, [&] (const core::NodePtr& node){
-		//			if (core::StructTypePtr type = node.isa<core::StructTypePtr>()){
-		//				if (boost::starts_with(toString( type), "AP(struct CGAL_Lazy_class_CGAL_Interval_nt_false_")){
-		//					if (core::hasMetaInfo(type)){
-		//						auto meta = core::getMetaInfo(type);
-		//						std::cout << " ========= \n" << std::endl;
-		//						std::cout << "CLASS: - " <<  toString(type ) << std::endl;
-		//						for (auto ctor : meta.getConstructors()){
-		//							dumpPretty(ctor);
-		//							std::cout << "------------------" << std::endl;
-		//						}
-		//						std::cout << " ========= " << std::endl;
-		//					}
-		//				}
-		//			}
-		//
-		//
-		//			if (core::LambdaExprPtr expr = node.isa<core::LambdaExprPtr>()){
-		//				core::FunctionTypePtr fty = expr->getType().as<core::FunctionTypePtr>();
-		//				if (fty->getParameterTypes().size() == 3){
-		//					if (boost::starts_with(toString( fty->getParameterTypes()[0]), "AP(ref<struct CGAL_Lazy_class_struct")){
-		//						dumpPretty(expr);
-		//						std::cout << " ######## " << std::endl;
-		//					}
-		//				}
-		//			}
-		//		});
-		//
-		//	//	abort();
-
-
 		//////////////////////////////////////////////////////////////////////
 		// Assure return statements for "Main" functions typed as int
 		// ==========================================================
@@ -325,84 +250,76 @@ namespace extensions {
 
 
 	insieme::frontend::tu::IRTranslationUnit FrontendCleanupExtension::IRVisit(insieme::frontend::tu::IRTranslationUnit& tu) {
-		tu = applyCleanup(tu, refDerefCleanup);
-		tu = applyCleanup(tu, castCleanup);
 		tu = applyCleanup(tu, allocaCall);
 		tu = applyCleanup(tu, superfluousCode);
 
-		//////////////////////////////////////////////////////////////////////
-		// Malloc
-		// ==============
-		// used to replace all malloc and calloc calls with the correct IR expression
-		{
-			for(auto& pair : tu.getFunctions()) {
-				core::ExpressionPtr lit = pair.first;
-				core::LambdaExprPtr func = pair.second;
+		////////////////////////////////////////////////////////////////////////
+		//// Malloc
+		//// ==============
+		//// used to replace all malloc and calloc calls with the correct IR expression
+		//{
+		//	for(auto& pair : tu.getFunctions()) {
+		//		core::ExpressionPtr lit = pair.first;
+		//		core::LambdaExprPtr func = pair.second;
 
-				core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
-				assert_eq(retType, func->getType().as<core::FunctionTypePtr>()->getReturnType());
+		//		core::TypePtr retType = lit->getType().as<core::FunctionTypePtr>()->getReturnType();
+		//		assert_eq(retType, func->getType().as<core::FunctionTypePtr>()->getReturnType());
 
-				core::IRBuilder builder(func->getNodeManager());
-				const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
-
-
-				// check if return type is volatile or not and adapt return statements accordingly
-				bool funcIsVolatile = core::analysis::isVolatileType(retType);
-
-				core::LambdaExprAddress fA(func);
-				std::map<core::NodeAddress, core::NodePtr> replacements;
-
-				// loock at all return types and check if a volatile has to be added/removed
-				visitDepthFirst(fA, [&](const core::ReturnStmtAddress& ret) {
-					core::TypePtr returningType = ret->getReturnExpr()->getType();
-					bool returnIsVolatile = core::analysis::isVolatileType(returningType);
-					core::StatementPtr newRet;
-					if(returnIsVolatile && !funcIsVolatile) {
-						core::GenericTypePtr genReturningType = returningType.as<core::GenericTypePtr>();
-						newRet = (builder.returnStmt(builder.callExpr(genReturningType->getTypeParameter(0), gen.getVolatileRead(), ret->getReturnExpr())));
-					}
-					if(!returnIsVolatile && funcIsVolatile) { newRet = builder.returnStmt(builder.callExpr(gen.getVolatileMake(), ret->getReturnExpr())); }
-					if(newRet) { replacements[ret] = newRet; }
-				});
-
-				// replace return statements if necessary
-				if(!replacements.empty()) { func = core::transform::replaceAll(func->getNodeManager(), replacements).as<core::LambdaExprPtr>(); }
+		//		core::IRBuilder builder(func->getNodeManager());
+		//		const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 
 
-				// filter to filter out the recursive transition to another called function
-				auto filter = [&func](const core::NodePtr& node) -> bool {
-					if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()) {
-						if(call == func) {
-							return true;
-						} else {
-							return false;
-						}
-					}
-					return true;
-				};
+		//		// check if return type is volatile or not and adapt return statements accordingly
+		//		bool funcIsVolatile = core::analysis::isVolatileType(retType);
 
-				// fix all malloc and calloc calls
-				auto fixer = [&](const core::NodePtr& node) -> core::NodePtr {
-					if(core::analysis::isCallOf(node, gen.getRefReinterpret())) {
-						if(core::CallExprPtr call = node.as<core::CallExprPtr>()[0].isa<core::CallExprPtr>()) {
-							if(core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()) {
-								if(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") {
-									return frontend::utils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
-								}
-							}
-						}
-					}
-					return node;
-				};
+		//		core::LambdaExprAddress fA(func);
+		//		std::map<core::NodeAddress, core::NodePtr> replacements;
 
-				// modify all returns at once!
-				auto memallocFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
-				func = memallocFixer.map(func);
+		//		// loock at all return types and check if a volatile has to be added/removed
+		//		visitDepthFirst(fA, [&](const core::ReturnStmtAddress& ret) {
+		//			core::TypePtr returningType = ret->getReturnExpr()->getType();
+		//			core::StatementPtr newRet;
+		//			if(newRet) { replacements[ret] = newRet; }
+		//		});
 
-				// update function of translation unit
-				tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
-			}
-		}
+		//		// replace return statements if necessary
+		//		if(!replacements.empty()) { func = core::transform::replaceAll(func->getNodeManager(), replacements).as<core::LambdaExprPtr>(); }
+
+
+		//		// filter to filter out the recursive transition to another called function
+		//		auto filter = [&func](const core::NodePtr& node) -> bool {
+		//			if(core::LambdaExprPtr call = node.isa<core::LambdaExprPtr>()) {
+		//				if(call == func) {
+		//					return true;
+		//				} else {
+		//					return false;
+		//				}
+		//			}
+		//			return true;
+		//		};
+
+		//		// fix all malloc and calloc calls
+		//		auto fixer = [&](const core::NodePtr& node) -> core::NodePtr {
+		//			if(core::analysis::isCallOf(node, gen.getRefReinterpret())) {
+		//				if(core::CallExprPtr call = node.as<core::CallExprPtr>()[0].isa<core::CallExprPtr>()) {
+		//					if(core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()) {
+		//						if(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") {
+		//							return frontend::utils::handleMemAlloc(builder, node.as<core::CallExprPtr>()->getType(), call);
+		//						}
+		//					}
+		//				}
+		//			}
+		//			return node;
+		//		};
+
+		//		// modify all returns at once!
+		//		auto memallocFixer = core::transform::makeCachedLambdaMapper(fixer, filter);
+		//		func = memallocFixer.map(func);
+
+		//		// update function of translation unit
+		//		tu.replaceFunction(lit.as<core::LiteralPtr>(), func);
+		//	}
+		//}
 		return tu;
 	}
 
@@ -413,47 +330,48 @@ namespace extensions {
 			assert_true(stmt) << "no stmt, no fun";
 			core::IRBuilder builder(stmt->getNodeManager());
 
-			// the maper should never leave the first nested scope
-			auto doNotCheckInBodies = [&](const core::NodePtr& node) {
-				if(node.isa<core::CompoundStmtPtr>()) { return false; }
-				return true;
-			};
+			//// the maper should never leave the first nested scope
+			//auto doNotCheckInBodies = [&](const core::NodePtr& node) {
+			//	if(node.isa<core::CompoundStmtPtr>()) { return false; }
+			//	return true;
+			//};
 
-			// substitute usage by left side
-			auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node) -> core::NodePtr {
+			//// substitute usage by left side
+			//auto assignMapper = core::transform::makeCachedLambdaMapper([&](const core::NodePtr& node) -> core::NodePtr {
 
-				if(core::CallExprPtr call = node.isa<core::CallExprPtr>()) {
-					if(core::analysis::isCallOf(call, builder.getLangBasic().getGenPostDec())
-					   || core::analysis::isCallOf(call, builder.getLangBasic().getGenPostInc())
-					   || core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostDec())
-					   || core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostInc())) {
-						auto var = builder.variable(call->getType());
-						auto decl = builder.declarationStmt(var, call);
-						preProcess.push_back(decl);
-						return var;
-					}
+			//	if(core::CallExprPtr call = node.isa<core::CallExprPtr>()) {
+			//		if(core::analysis::isCallOf(call, builder.getLangBasic().getGenPostDec())
+			//		   || core::analysis::isCallOf(call, builder.getLangBasic().getGenPostInc())
+			//		   || core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostDec())
+			//		   || core::analysis::isCallOf(call, builder.getLangBasic().getArrayViewPostInc())) {
+			//			auto var = builder.variable(call->getType());
+			//			auto decl = builder.declarationStmt(var, call);
+			//			preProcess.push_back(decl);
+			//			return var;
+			//		}
 
-					if(core::analysis::isCallOf(call, feAssign)) {
-						// build a new operator with the final shape
-						auto assign = builder.assign(call[0], call[1]);
-						core::transform::utils::migrateAnnotations(call, assign);
+			//		if(core::analysis::isCallOf(call, feAssign)) {
+			//			// build a new operator with the final shape
+			//			auto assign = builder.assign(call[0], call[1]);
+			//			core::transform::utils::migrateAnnotations(call, assign);
 
-						// extract the operation
-						preProcess.push_back(assign);
+			//			// extract the operation
+			//			preProcess.push_back(assign);
 
-						// Cpp by ref, C by value
-						if(isCXX) {
-							lastExpr = call[0];
-						} else {
-							lastExpr = builder.deref(call[0]);
-						}
-						return lastExpr;
-					}
-				}
-				return node;
-			}, doNotCheckInBodies);
+			//			// Cpp by ref, C by value
+			//			if(isCXX) {
+			//				lastExpr = call[0];
+			//			} else {
+			//				lastExpr = builder.deref(call[0]);
+			//			}
+			//			return lastExpr;
+			//		}
+			//	}
+			//	return node;
+			//}, doNotCheckInBodies);
 
-			return assignMapper.map(stmt);
+			//return assignMapper.map(stmt);
+			return stmt;
 		}
 
 	} // annonymous namespace

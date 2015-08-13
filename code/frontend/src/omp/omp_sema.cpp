@@ -42,6 +42,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/array.h"
 #include "insieme/core/lang/parallel_extension.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -50,7 +51,6 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/annotations/naming.h"
-#include "insieme/core/types/cast_tool.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -113,7 +113,7 @@ namespace omp {
 	  public:
 		OMPSemaMapper(NodeManager& nodeMan)
 		    : nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), fixStructType(false), adjustStruct(), adjustedStruct(),
-		      thisLambdaTPAccesses(), orderedCountLit(build.literal("ordered_counter", build.volatileType(build.refType(basic.getInt8())))),
+		      thisLambdaTPAccesses(), orderedCountLit(build.literal("ordered_counter", build.refType(basic.getInt8(), false, true))),
 		      orderedItLit(build.literal("ordered_loop_it", basic.getInt8())), orderedIncLit(build.literal("ordered_loop_inc", basic.getInt8())),
 		      paramCounter(0) {}
 
@@ -154,8 +154,6 @@ namespace omp {
 					newNode = flattenCompounds(newNode);
 					if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
 						newNode = handleParallel(static_pointer_cast<const Statement>(newNode), parAnn);
-					} else if(auto taskAnn = std::dynamic_pointer_cast<Region>(subAnn)) {
-						newNode = handleRegion(static_pointer_cast<const Statement>(newNode), taskAnn);
 					} else if(auto taskAnn = std::dynamic_pointer_cast<Task>(subAnn)) {
 						newNode = handleTask(static_pointer_cast<const Statement>(newNode), taskAnn);
 					} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
@@ -311,8 +309,9 @@ namespace omp {
 		NodePtr handleFunctions(const NodePtr& newNode) {
 			if(CallExprPtr callExp = dynamic_pointer_cast<const CallExpr>(newNode)) {
 				auto fun = callExp->getFunctionExpr();
+				auto& refExt = nodeMan.getLangExtension<core::lang::ReferenceExtension>();
 
-				if(basic.isScalarToArray(fun)) {
+				if(refExt.isRefScalarToRefArray(fun)) {
 					ExpressionPtr arg = callExp->getArgument(0);
 					if(analysis::isRefOf(arg, basic.getLock())) { return arg; }
 					return newNode;
@@ -334,21 +333,20 @@ namespace omp {
 					// OMP Locks --------------------------------------------
 					else if(funName == "omp_init_lock") {
 						ExpressionPtr arg = callExp->getArgument(0);
-						if(analysis::isCallOf(arg, basic.getScalarToArray())) { arg = analysis::getArgument(arg, 0); }
+						if(analysis::isCallOf(arg, refExt.getRefScalarToRefArray())) { arg = analysis::getArgument(arg, 0); }
 						return build.initLock(arg);
 					} else if(funName == "omp_set_lock") {
 						ExpressionPtr arg = callExp->getArgument(0);
-						if(analysis::isCallOf(arg, basic.getScalarToArray())) { arg = analysis::getArgument(arg, 0); }
+						if(analysis::isCallOf(arg, refExt.getRefScalarToRefArray())) { arg = analysis::getArgument(arg, 0); }
 						return build.acquireLock(arg);
 					} else if(funName == "omp_unset_lock") {
 						ExpressionPtr arg = callExp->getArgument(0);
-						if(analysis::isCallOf(arg, basic.getScalarToArray())) { arg = analysis::getArgument(arg, 0); }
+						if(analysis::isCallOf(arg, refExt.getRefScalarToRefArray())) { arg = analysis::getArgument(arg, 0); }
 						return build.releaseLock(arg);
 					}
 					// Unhandled OMP functions
 					else if(funName.substr(0, 4) == "omp_") {
-						LOG(ERROR) << "Function name: " << funName;
-						assert_fail() << "Unknown OpenMP function";
+						assert_fail() << "Unknown OpenMP function: " << funName;
 					}
 				}
 			}
@@ -363,10 +361,12 @@ namespace omp {
 		// implements OpenMP built-in types by replacing them with the correct IR constructs
 		NodePtr handleTypes(const NodePtr& newNode) {
 			if(TypePtr type = newNode.isa<core::TypePtr>()) {
-				if(RefTypePtr ref = type.isa<core::RefTypePtr>())
-					if(isLockStructType(ref->getElementType())) { return build.refType(basic.getLock()); }
-
-				if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) { type = arr->getElementType(); }
+				if(core::analysis::isRefType(type)) {
+					type = core::analysis::getReferencedType(type);
+				}
+				if(core::lang::isArray(type)) {
+					type = core::lang::getArrayElementType(type);
+				}
 				if(isLockStructType(type)) { return basic.getLock(); }
 			}
 			return newNode;
@@ -429,56 +429,57 @@ namespace omp {
 		// new and improved crazyness! does not directly implement accesses, replaces with variable
 		// masterCopy -> return access expression for master copy of tp value
 		NodePtr handleThreadprivate(const NodePtr& node, bool masterCopy = false) {
-			NamedValuePtr member = dynamic_pointer_cast<const NamedValue>(node);
-			if(member) {
-				// cout << "%%%%%%%%%%%%%%%%%%\nMEMBER THREADPRIVATE:\n" << *member << "\n";
-				ExpressionPtr initExp = member->getValue();
-				StringValuePtr name = member->getName();
-				ExpressionPtr vInit = build.vectorInit(initExp, build.concreteIntTypeParam(MAX_THREADPRIVATE));
-				fixStructType = true;
-				return build.namedValue(name, vInit);
-			}
+			//NamedValuePtr member = dynamic_pointer_cast<const NamedValue>(node);
+			//if(member) {
+			//	// cout << "%%%%%%%%%%%%%%%%%%\nMEMBER THREADPRIVATE:\n" << *member << "\n";
+			//	ExpressionPtr initExp = member->getValue();
+			//	StringValuePtr name = member->getName();
+			//	ExpressionPtr vInit = build.vectorInit(initExp, build.concreteIntTypeParam(MAX_THREADPRIVATE));
+			//	fixStructType = true;
+			//	return build.namedValue(name, vInit);
+			//}
 
-			// prepare index expression
-			ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
-			if(masterCopy) { indexExpr = build.literal(basic.getUInt8(), "0"); }
+			//// prepare index expression
+			//ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
+			//if(masterCopy) { indexExpr = build.literal(basic.getUInt8(), "0"); }
 
-			CallExprPtr call = node.isa<CallExprPtr>();
-			if(call) {
-				// cout << "%%%%%%%%%%%%%%%%%%\nCALL THREADPRIVATE:\n" << *call << "\n";
-				assert(call->getFunctionExpr() == basic.getCompositeRefElem() && "Threadprivate not on composite ref elem access");
-				ExpressionList args = call->getArguments();
-				TypePtr elemType = core::analysis::getReferencedType(call->getType());
-				elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
-				CallExprPtr memAccess = build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
-				ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
-				if(masterCopy) { return accessExpr; }
-				// if not a master copy, optimize access
-				if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
-					// repeated access, just use existing variable
-					return thisLambdaTPAccesses[accessExpr];
-				} else {
-					// new access, generate var and add to map
-					VariablePtr varP = build.variable(accessExpr->getType());
-					assert_eq(varP->getType()->getNodeType(), NT_RefType) << "Non-ref threadprivate!";
-					thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
-					return varP;
-				}
-			}
-			LiteralPtr literal = node.isa<LiteralPtr>();
-			if(literal) {
-				// std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
-				assert_eq(literal->getType()->getNodeType(), NT_RefType);
-				// alter the type of the literal
-				TypePtr newType =
-				    build.refType(build.vectorType(core::analysis::getReferencedType(literal->getType()), build.concreteIntTypeParam(MAX_THREADPRIVATE)));
-				// create the new literal
-				LiteralPtr newLiteral = build.literal(literal->getValue(), newType);
-				// create an expression accessing the literal
-				ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
-				return accessExpr;
-			}
-			assert_fail() << "OMP threadprivate annotation on non-member / non-call / non-literal";
+			//CallExprPtr call = node.isa<CallExprPtr>();
+			//if(call) {
+			//	// cout << "%%%%%%%%%%%%%%%%%%\nCALL THREADPRIVATE:\n" << *call << "\n";
+			//	assert(call->getFunctionExpr() == basic.getCompositeRefElem() && "Threadprivate not on composite ref elem access");
+			//	ExpressionList args = call->getArguments();
+			//	TypePtr elemType = core::analysis::getReferencedType(call->getType());
+			//	elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
+			//	CallExprPtr memAccess = build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
+			//	ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
+			//	if(masterCopy) { return accessExpr; }
+			//	// if not a master copy, optimize access
+			//	if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
+			//		// repeated access, just use existing variable
+			//		return thisLambdaTPAccesses[accessExpr];
+			//	} else {
+			//		// new access, generate var and add to map
+			//		VariablePtr varP = build.variable(accessExpr->getType());
+			//		assert_eq(varP->getType()->getNodeType(), NT_RefType) << "Non-ref threadprivate!";
+			//		thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
+			//		return varP;
+			//	}
+			//}
+			//LiteralPtr literal = node.isa<LiteralPtr>();
+			//if(literal) {
+			//	// std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
+			//	assert_eq(literal->getType()->getNodeType(), NT_RefType);
+			//	// alter the type of the literal
+			//	TypePtr newType =
+			//	    build.refType(build.vectorType(core::analysis::getReferencedType(literal->getType()), build.concreteIntTypeParam(MAX_THREADPRIVATE)));
+			//	// create the new literal
+			//	LiteralPtr newLiteral = build.literal(literal->getValue(), newType);
+			//	// create an expression accessing the literal
+			//	ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
+			//	return accessExpr;
+			//}
+			//assert_fail() << "OMP threadprivate annotation on non-member / non-call / non-literal";
+			assert_not_implemented() << "OMP threadprivate not yet supported";
 			return NodePtr();
 		}
 
@@ -548,15 +549,15 @@ namespace omp {
 		// returns the correct initial reduction value for the given operator and type
 		ExpressionPtr getReductionInitializer(Reduction::Operator op, const TypePtr& type) {
 			ExpressionPtr ret;
-			RefTypePtr rType = dynamic_pointer_cast<const RefType>(type);
-			assert_true(rType) << "OMP reduction on non-reference type";
+			assert_true(core::analysis::isRefType(type)) << "OMP reduction on non-reference type";
+			TypePtr elemType = core::analysis::getReferencedType(type);
 			switch(op) {
 			case Reduction::PLUS:
 			case Reduction::MINUS:
 			case Reduction::OR:
-			case Reduction::XOR: ret = build.refVar(core::types::castScalar(rType->getElementType(), build.literal("0", rType->getElementType()))); break;
+			case Reduction::XOR: ret = build.refVar(build.literal("0", elemType)); break;
 			case Reduction::MUL:
-			case Reduction::AND: ret = build.refVar(core::types::castScalar(rType->getElementType(), build.literal("1", rType->getElementType()))); break;
+			case Reduction::AND: ret = build.refVar(build.literal("1", elemType)); break;
 			case Reduction::LAND: ret = build.refVar(build.boolLit(true)); break;
 			case Reduction::LOR: ret = build.refVar(build.boolLit(false)); break;
 			default: LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(op); assert_fail() << "Unsupported reduction operator";
@@ -570,11 +571,9 @@ namespace omp {
 			const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 			const Task* taskP = dynamic_cast<const Task*>(clause);
 			StatementList replacements;
-			StatementList localDeallocations;
 			VarList allp;
 			VarList firstPrivates;
 			VarList lastPrivates;
-			VarList alll;
 			StatementList ifStmtBodyLast;
 			// for OMP tasks, default free variable binding is threadprivate
 			if(taskP) {
@@ -586,15 +585,11 @@ namespace omp {
 					// free function variables should not be captured
 					bool ret = !t.isa<FunctionTypePtr>();
 					// neither should pointers be depointerized
-					ret = ret
-					      && !(core::analysis::isRefType(t)
-					           && (core::analysis::getReferencedType(t).isa<ArrayTypePtr>() || core::analysis::getReferencedType(t).isa<VectorTypePtr>()));
+					ret = ret && !(core::analysis::isRefType(t) && (core::lang::isArray(core::analysis::getReferencedType(t))));
 					// explicitly declared variables should not be auto-privatized
 					if(taskP->hasShared()) { ret = ret && !contains(taskP->getShared(), v); }
 					if(taskP->hasFirstPrivate()) { ret = ret && !contains(taskP->getFirstPrivate(), v); }
 					if(taskP->hasPrivate()) { ret = ret && !contains(taskP->getPrivate(), v); }
-					if(taskP->hasFirstLocal()) { ret = ret && !contains(taskP->getFirstLocal(), v); }
-					if(taskP->hasLocal()) { ret = ret && !contains(taskP->getLocal(), v); }
 					if(taskP->hasReduction()) { ret = ret && !contains(taskP->getReduction().getVars(), v); }
 					// variables declared shared in all enclosing constructs, up to and including
 					// the innermost parallel construct, should not be privatized
@@ -614,20 +609,6 @@ namespace omp {
 				allp.insert(allp.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
 			}
 			if(clause->hasPrivate()) { allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end()); }
-			if(clause->hasFirstLocal()) {
-				firstPrivates.insert(firstPrivates.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
-				allp.insert(allp.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
-				alll.insert(alll.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
-			}
-			if(forP && forP->hasLastLocal()) {
-				lastPrivates.insert(lastPrivates.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
-				allp.insert(allp.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
-				alll.insert(alll.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
-			}
-			if(clause->hasLocal()) {
-				allp.insert(allp.end(), clause->getLocal().begin(), clause->getLocal().end());
-				alll.insert(alll.end(), clause->getLocal().begin(), clause->getLocal().end());
-			}
 			if(clause->hasReduction()) { allp.insert(allp.end(), clause->getReduction().getVars().begin(), clause->getReduction().getVars().end()); }
 			NodeMap publicToPrivateMap;
 			NodeMap privateToPublicMap;
@@ -638,21 +619,13 @@ namespace omp {
 				publicToPrivateMap[varExp] = pVar;
 				privateToPublicMap[pVar] = varExp;
 				DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
-				if(contains(alll, varExp)) {
-					decl = build.declarationStmt(pVar, build.undefinedLoc(expType));
-					localDeallocations.push_back(build.refDelete(pVar));
-				}
 				if(contains(firstPrivates, varExp)) {
 					// make sure to actually get *copies* for firstprivate initialization, not copies of references
 					if(core::analysis::isRefType(expType)) {
 						VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
 						DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
 						outsideDecls.push_back(fpPassDecl);
-						if(contains(alll, varExp)) {
-							decl = build.declarationStmt(pVar, build.refLoc(fpPassVar));
-						} else {
-							decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
-						}
+						decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
 					} else {
 						decl = build.declarationStmt(pVar, varExp);
 					}
@@ -716,8 +689,6 @@ namespace omp {
 			if(clause->hasReduction()) { replacements.push_back(implementReductions(clause, publicToPrivateMap)); }
 			// specific handling if clause is a omp for (insert barrier if not nowait)
 			if(forP && !forP->hasNoWait()) { replacements.push_back(build.barrier()); }
-			// append localDeallocations
-			copy(localDeallocations.cbegin(), localDeallocations.cend(), back_inserter(replacements));
 			// append postfix
 			copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
 			// handle threadprivates before it is too late!
@@ -732,162 +703,18 @@ namespace omp {
 			return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 		}
 
-		StatementPtr implementParamClause(const StatementPtr& stmtNode, const SharedOMPPPtr& reg) {
-			if(!reg->hasParam()) { return stmtNode; }
-
-			StatementList resultStmts;
-			CallExprPtr assign;
-			vector<ExpressionPtr> variants;
-
-			Param param = reg->getParam();
-
-			if(param.hasRange()) {
-				auto max = build.div(build.sub(param.getRangeUBound(), param.getRangeLBound()), param.getRangeStep());
-				auto pick = (!param.hasQualityRange()) ? build.pickInRange(build.intLit(paramCounter++), max)
-				                                       : build.pickInRange(build.intLit(paramCounter++), max, param.getQualityRangeLBound(),
-				                                                           param.getQualityRangeUBound(), param.getQualityRangeStep());
-				auto exp = build.add(build.mul(pick, param.getRangeStep()), param.getRangeLBound());
-				assign = build.assign(param.getVar(), exp);
-			} else if(param.hasEnum()) {
-				auto pick = (!param.hasQualityRange())
-				                ? build.pickInRange(build.intLit(paramCounter++), core::types::castScalar(basic.getUInt8(), param.getEnumSize()))
-				                : build.pickInRange(build.intLit(paramCounter++), core::types::castScalar(basic.getUInt8(), param.getEnumSize()),
-				                                    param.getQualityRangeLBound(), param.getQualityRangeUBound(), param.getQualityRangeStep());
-				auto arrVal = build.arrayAccess(param.getEnumList(), pick);
-				assign = build.assign(param.getVar(), build.deref(arrVal));
-			} else {
-				/* Boolean */
-				auto pick = (!param.hasQualityRange()) ? build.pickInRange(build.intLit(paramCounter++), build.intLit(1))
-				                                       : build.pickInRange(build.intLit(paramCounter++), build.intLit(1), param.getQualityRangeLBound(),
-				                                                           param.getQualityRangeUBound(), param.getQualityRangeStep());
-				assign = build.assign(param.getVar(), pick);
-			}
-
-			resultStmts.push_back(assign);
-			resultStmts.push_back(stmtNode);
-
-			return build.compoundStmt(resultStmts);
-		}
-
-		void implementObjectiveClause(const NodePtr& node, const Objective& obj) {
-			insieme::annotations::ompp_objective_info objective;
-
-			objective.energy_weight = obj.getEnergyWeight();
-			objective.power_weight = obj.getPowerWeight();
-			objective.quality_weight = obj.getQualityWeight();
-			objective.time_weight = obj.getTimeWeight();
-
-			///* TODO:
-			// * Constraints are translated as ranges
-			// * If a bound is not set, -1 is used but -inf and inf should be used to deal with parameters that can have negative values (not the case now)
-			// * If multiple values are provided for a range, the last one is considered but they could be compared to choose the largest one
-			// * <= and >= are equivalent to < and >
-			// */
-			std::map<Objective::Parameter, std::pair<ExpressionPtr, ExpressionPtr>> constraints;
-			auto minusOneLit = build.literal(basic.getFloat(), "-1f");
-			constraints[Objective::ENERGY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-			constraints[Objective::POWER] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-			constraints[Objective::QUALITY] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-			constraints[Objective::TIME] = std::make_pair<ExpressionPtr, ExpressionPtr>(minusOneLit, minusOneLit);
-
-			if(obj.hasConstraintsParams() && obj.hasConstraintsOps() && obj.hasConstraintsExprs()) {
-				auto params = obj.getConstraintsParams();
-				auto ops = obj.getConstraintsOps();
-				auto exprs = obj.getConstraintsExprs();
-
-				if(params.size() == ops.size() && params.size() == exprs.size()) {
-					auto opsIt = ops.begin();
-					auto exprsIt = exprs.begin();
-
-					for(auto par : params) {
-						auto oldCon = constraints[par];
-
-						switch(*opsIt) {
-						case Objective::LESS:
-						case Objective::LESSEQUAL: oldCon.second = *exprsIt; break;
-						case Objective::EQUALEQUAL:
-							oldCon.first = *exprsIt;
-							oldCon.second = *exprsIt;
-							break;
-						case Objective::GREATEREQUAL:
-						case Objective::GREATER: oldCon.first = *exprsIt; break;
-						}
-
-						constraints[par] = oldCon;
-
-						opsIt++;
-						exprsIt++;
-					}
-				}
-			}
-
-			objective.energy_min = constraints[Objective::ENERGY].first.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.energy_max = constraints[Objective::ENERGY].second.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.power_min = constraints[Objective::POWER].first.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.power_max = constraints[Objective::POWER].second.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.quality_min = constraints[Objective::QUALITY].first.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.quality_max = constraints[Objective::QUALITY].second.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.time_min = constraints[Objective::TIME].first.as<core::LiteralPtr>()->getValueAs<float>();
-			objective.time_max = constraints[Objective::TIME].second.as<core::LiteralPtr>()->getValueAs<float>();
-
-			// Set up param counter
-			objective.param_count = paramCounter;
-			paramCounter = 0;
-
-			// regionId 0 is reserved for main work item
-			static unsigned regionId = 1;
-			objective.region_id = regionId++;
-
-			node->attachValue(objective);
-
-			return;
-		}
-
-		NodePtr handleRegion(const StatementPtr& stmtNode, const RegionPtr& reg) {
-			/* if there isn't any clause nothing to do */
-
-			if(!reg->hasParam() && !reg->hasLocal() && !reg->hasFirstLocal() && !reg->hasTarget() && !reg->hasObjective()) { return stmtNode; }
-
-			/* else, region as task
-			 * Backend will deal with it differently cause of the annotation
-			 */
-			StatementList resultStmts;
-			auto newStmtNode = implementDataClauses(stmtNode, &*reg, resultStmts);
-			auto paramNode = implementParamClause(newStmtNode, reg);
-			auto parLambda = transform::extractLambda(nodeMan, paramNode);
-			auto jobExp = build.jobExpr(parLambda, 1);
-
-			if(reg->hasObjective()) { implementObjectiveClause(jobExp, reg->getObjective()); }
-
-			auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
-
-			using namespace insieme::annotations::omp;
-			RegionAnnotationPtr ann = std::make_shared<RegionAnnotation>();
-			parallelCall->addAnnotation(ann);
-
-			resultStmts.push_back(parallelCall);
-
-			CompoundStmtPtr res = build.compoundStmt(resultStmts);
-
-			return res;
-		}
-
 		NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 			StatementList resultStmts;
 			// handle implicit taskwait in postfix of task
 			StatementList postFix;
 			postFix.push_back(build.mergeAll());
 			auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts, postFix);
-			auto paramNode = implementParamClause(newStmtNode, par);
-			auto parLambda = transform::extractLambda(nodeMan, paramNode);
+			auto parLambda = transform::extractLambda(nodeMan, stmtNode);
 			// mark printf as unordered
 			parLambda = markUnordered(parLambda).as<BindExprPtr>();
 			auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 			if(par->hasNumThreads()) { range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads()); }
 			auto jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
-
-			if(par->hasObjective()) { implementObjectiveClause(jobExp, par->getObjective()); }
-
 			auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 			auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 
@@ -904,25 +731,10 @@ namespace omp {
 		NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
 			StatementList resultStmts;
 			auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
-			auto paramNode = implementParamClause(newStmtNode, par);
-			auto parLambda = transform::extractLambda(nodeMan, paramNode);
+			auto parLambda = transform::extractLambda(nodeMan, stmtNode);
 			auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 
-			JobExprPtr jobExp;
-
-			// implement multiversioning for approximate clause
-			if(par->hasApproximate()) {
-				auto target = par->getApproximateTarget();
-				auto replacement = par->getApproximateReplacement();
-				auto approxLambda = core::transform::replaceAllGen(nodeMan, parLambda, target, replacement, core::transform::globalReplacement);
-				auto pick = build.pickVariant(ExpressionList{parLambda, approxLambda});
-				jobExp = build.jobExpr(range, pick.as<ExpressionPtr>());
-			} else {
-				jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
-			}
-
-			if(par->hasObjective()) { implementObjectiveClause(jobExp, par->getObjective()); }
-
+			JobExprPtr jobExp = build.jobExpr(range, parLambda.as<ExpressionPtr>());
 			auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 			insieme::annotations::migrateMetaInfos(stmtNode, parallelCall);
 			resultStmts.push_back(parallelCall);
@@ -937,7 +749,7 @@ namespace omp {
 		}
 
 		ExpressionPtr getVolatileOrderedCount() {
-			return build.readVolatile(orderedCountLit);
+			return orderedCountLit;
 		}
 
 		// Process parallel regions containing omp fors with the "ordered" clause
@@ -951,7 +763,7 @@ namespace omp {
 			if(pushMap.empty()) { return origStmt; }
 			// create variable outside the parallel
 			auto countVarDecl = build.declarationStmt(
-			    orderedCountVar, build.makeVolatile(build.undefinedVar(orderedCountVar->getType().as<GenericTypePtr>()->getTypeParameter(0))));
+			    orderedCountVar, build.undefinedVar(orderedCountVar->getType().as<GenericTypePtr>()->getTypeParameter(0)));
 			// push ordered variable to where it is needed
 			auto newStmt = transform::pushInto(nodeMan, pushMap).as<CompoundStmtPtr>();
 			// build new compound and return it
@@ -1009,14 +821,6 @@ namespace omp {
 			// outer = collapseForNest(outer);
 			StatementList resultStmts;
 			auto newStmtNode = implementDataClauses(outer, &*forP, resultStmts);
-
-			// We keep only the annotation added on the handleParallel
-			if(!isParallel && forP->hasObjective()) {
-				for(auto stmt : newStmtNode.as<CompoundStmtPtr>()->getStatements()) {
-					if(core::analysis::isCallOf(stmt, basic.getPFor())) { implementObjectiveClause(stmt, forP->getObjective()); }
-				}
-			}
-
 			resultStmts.push_back(newStmtNode);
 			return build.compoundStmt(resultStmts);
 		}
@@ -1099,21 +903,21 @@ namespace omp {
 				core::TypePtr type = decl->getVariable()->getType();
 
 				// check for references
-				if(type->getNodeType() != core::NT_RefType) {
+				if(!core::analysis::isRefType(type)) {
 					return true; // not a global struct
 				}
 
-				type = static_pointer_cast<core::RefTypePtr>(type)->getElementType();
+				type = core::analysis::getReferencedType(type);
 
 				// the element type has to be a struct type
 				if(type->getNodeType() != core::NT_StructType) {
 					return true; // also, not a global
 				}
 
-				// check initalization
-				auto& basic = decl->getNodeManager().getLangBasic();
+				// check initialization
+				auto& refExt = decl->getNodeManager().getLangExtension<core::lang::ReferenceExtension>();
 				core::ExpressionPtr init = decl->getInitialization();
-				if(!(core::analysis::isCallOf(init, basic.getRefNew()) || core::analysis::isCallOf(init, basic.getRefVar()))) {
+				if(!(core::analysis::isCallOf(init, refExt.getRefNew()) || core::analysis::isCallOf(init, refExt.getRefVar()))) {
 					return true; // again, not a global
 				}
 
@@ -1181,10 +985,10 @@ namespace omp {
 			ExpressionPtr newGlobal = semaMapper.map(cur.first.as<ExpressionPtr>());
 
 			// if it is an access to a thread-private value
-			if(CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
-				assert_true(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
-				newGlobal = call[0]; // take first argument
-			}
+			//if(CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
+			//	assert_true(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
+			//	newGlobal = call[0]; // take first argument
+			//}
 
 			res.addGlobal(newGlobal.as<LiteralPtr>(), (cur.second) ? semaMapper.map(cur.second) : cur.second);
 		}

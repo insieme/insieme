@@ -55,7 +55,6 @@
 #include "insieme/annotations/c/include.h"
 #include "insieme/annotations/c/decl_only.h"
 
-#include "insieme/core/lang/complex_extension.h"
 #include "insieme/core/lang/simd_vector.h"
 #include "insieme/core/lang/enum_extension.h"
 
@@ -70,42 +69,30 @@
 using namespace clang;
 using namespace insieme;
 
-namespace std {
-	std::ostream& operator<<(std::ostream& out, const clang::TagDecl* decl) {
-		if(decl) {
-			return out << decl->getNameAsString();
-		} else {
-			return out << "[UNNAMED]";
-		}
-	}
-} // end std namespace
-
-
 namespace {
-	const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
-		const clang::TagDecl* decl = tagType->getDecl();
-		clang::TagDecl* res = nullptr;
+	//const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
+	//	const clang::TagDecl* decl = tagType->getDecl();
+	//	clang::TagDecl* res = nullptr;
 
-		TagDecl::redecl_iterator i, e = decl->redecls_end();
-		for(i = decl->redecls_begin(); i != e; ++i) {
-			if(llvm::isa<clang::TypedefDecl>(*i)) {
-				std::cerr << "this is a typedef aliased type" << std::endl;
-				assert_fail();
-			}
+	//	TagDecl::redecl_iterator i, e = decl->redecls_end();
+	//	for(i = decl->redecls_begin(); i != e; ++i) {
+	//		if(llvm::isa<clang::TypedefDecl>(*i)) {
+	//			std::cerr << "this is a typedef aliased type" << std::endl;
+	//			assert_fail();
+	//		}
 
-			if(i->isCompleteDefinition()) { res = i->getDefinition(); }
-			if(llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(*i)) { continue; }
+	//		if(i->isCompleteDefinition()) { res = i->getDefinition(); }
+	//		if(llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(*i)) { continue; }
 
-			if(llvm::isa<clang::ClassTemplateSpecializationDecl>(*i)) {
-				if(i->isCompleteDefinitionRequired()) { res = *i; }
-			}
-		}
+	//		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(*i)) {
+	//			if(i->isCompleteDefinitionRequired()) { res = *i; }
+	//		}
+	//	}
 
+	//	if(res) { return res; }
 
-		if(res) { return res; }
-
-		return NULL;
-	}
+	//	return NULL;
+	//}
 } // end anonymous namespace
 
 namespace insieme {
@@ -116,67 +103,84 @@ namespace conversion {
 	//											CLANG TYPE CONVERTER
 	//---------------------------------------------------------------------------------------------------------------------
 
-	Converter::TypeConverter::TypeConverter(Converter& fact) : convFact(fact), mgr(fact.mgr), builder(fact.builder), gen(fact.mgr.getLangBasic()) {}
+	Converter::TypeConverter::TypeConverter(Converter& fact) : convFact(fact), mgr(fact.mgr), builder(fact.builder), basic(fact.mgr.getLangBasic()) {}
+
+	core::TypePtr Converter::CTypeConverter::convertInternal(const clang::QualType& type) {
+		return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
+	}
+
+	core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
+		core::TypePtr retTy;
+
+		// iterate FE extension clang pre handler list and check if a handler wants to convert the type
+		for(auto extension : convFact.getConversionSetup().getExtensions()) {
+			retTy = extension->Visit(type, convFact);
+			if(retTy) { break; }
+		}
+
+		if(!retTy) { retTy = convertInternal(type); }
+
+		// iterate FE extension clang post handler list and check if a handler wants to modify the type
+		for(auto extension : convFact.getConversionSetup().getExtensions()) {
+			retTy = extension->PostVisit(type, retTy, convFact);
+		}
+
+		return retTy;
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buldInTy) {
-		LOG_BUILTIN_TYPE_CONVERSION(buldInTy);
+		core::TypePtr retTy;
+		LOG_TYPE_CONVERSION(buldInTy, retTy);
 
 		switch(buldInTy->getKind()) {
-		case BuiltinType::Void: return gen.getUnit();
-		case BuiltinType::Bool:
-			return gen.getBool();
+		case BuiltinType::Void: retTy = basic.getUnit(); break; 
+		case BuiltinType::Bool: retTy = basic.getBool(); break;
 
 		// char types
 		case BuiltinType::Char_U:
-		case BuiltinType::UChar: return gen.getUInt1();
-		case BuiltinType::Char16: return gen.getWChar16(); // TODO c++11 specific builtin
-		case BuiltinType::Char32: return gen.getWChar32(); // TODO c++11 specific builtin
-		case BuiltinType::Char_S: return gen.getChar();
-		case BuiltinType::SChar: return gen.getInt1(); // Signed char, remember: char, unsigned char, signed char are distinct types
-		case BuiltinType::WChar_S: return gen.getWChar32();
-		case BuiltinType::WChar_U:
-			return gen.getWChar32();
+		case BuiltinType::UChar: retTy = basic.getUInt1(); break;
+		case BuiltinType::Char16: retTy = basic.getWChar16(); break; // TODO c++11 specific builtin
+		case BuiltinType::Char32: retTy = basic.getWChar32(); break; // TODO c++11 specific builtin
+		case BuiltinType::Char_S: retTy = basic.getChar(); break;
+		case BuiltinType::SChar: retTy = basic.getInt1(); break; // Signed char, remember: char, unsigned char, signed char are distinct types
+		case BuiltinType::WChar_S: retTy = basic.getWChar32(); break;
+		case BuiltinType::WChar_U: retTy = basic.getWChar32(); break;
 
 		// integer types
-		case BuiltinType::UShort: return gen.getUInt2();
-		case BuiltinType::Short: return gen.getInt2();
-		case BuiltinType::UInt: return gen.getUInt4();
-		case BuiltinType::Int: return gen.getInt4();
-		case BuiltinType::UInt128: return gen.getUInt16();
-		case BuiltinType::Int128: return gen.getInt16();
-		case BuiltinType::ULong: return gen.getUInt8();
-		case BuiltinType::Long: return gen.getInt8();
+		case BuiltinType::UShort: retTy = basic.getUInt2(); break;
+		case BuiltinType::Short: retTy = basic.getInt2(); break;
+		case BuiltinType::UInt: retTy = basic.getUInt4(); break;
+		case BuiltinType::Int: retTy = basic.getInt4(); break;
+		case BuiltinType::UInt128: retTy = basic.getUInt16(); break;
+		case BuiltinType::Int128: retTy = basic.getInt16(); break;
+		case BuiltinType::ULong: retTy = basic.getUInt8(); break;
+		case BuiltinType::Long: retTy = basic.getInt8(); break;
 
-		case BuiltinType::LongLong: return gen.getInt16();
-		case BuiltinType::ULongLong:
-			return gen.getUInt16();
+		case BuiltinType::LongLong: retTy = basic.getInt16(); break;
+		case BuiltinType::ULongLong: retTy = basic.getUInt16(); break;
 
 		// real types
-		case BuiltinType::Float: return gen.getFloat();
-		case BuiltinType::Double: return gen.getDouble();
-		case BuiltinType::LongDouble:
-			return gen.getLongDouble();
+		case BuiltinType::Float: retTy = basic.getFloat(); break;
+		case BuiltinType::Double: retTy = basic.getDouble(); break;
+		case BuiltinType::LongDouble: retTy = basic.getLongDouble(); break;
 
 		// not supported types
-		case BuiltinType::NullPtr: return builder.typeVariable("nullptr_t"); // TODO c++11 specific builtin type for nullptr literal
-		case BuiltinType::Overload:
-		case BuiltinType::Dependent:
-		default: throw "type not supported"; // todo introduce exception class
+		case BuiltinType::NullPtr: retTy = builder.typeVariable("nullptr_t"); break; // TODO c++11 specific builtin type for nullptr literal
+		default: frontend_assert(false) << "Built-in type conversion not supported!\n"; break;
 		}
-		frontend_assert(false) << "Built-in type conversion not supported!\n";
+		
+		return retTy;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								COMPLEX TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
-		// extract the real type
-		const core::TypePtr& type = convert(bulinTy->getElementType());
-		frontend_assert(type) << "Conversion of complex element type failed.\n";
-		return mgr.getLangExtension<core::lang::ComplexExtension>().getComplexType(type);
+		frontend_assert(false) << "Conversion of complex element type failed.\n";
+		return core::TypePtr();
 	}
 
 	// ------------------------   ARRAYS  -------------------------------------
@@ -187,22 +191,17 @@ namespace conversion {
 	// constant size. For example, the canonical type for 'int A[4 + 4*100]' is
 	// a ConstantArrayType where the element type is 'int' and the size is 404
 	//
-	// The IR representation for such array will be: vector<int<4>,404>
+	// The IR representation for such array will be: array<int<4>,"404">
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitConstantArrayType(const ConstantArrayType* arrTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(arrTy, retTy);
-
-		// FIXME: check why we should desugar stuff
-		// if(arrTy->isSugared())
-		//	// if the type is sugared, we Visit the desugared type
-		//	return (retTy = convFact.convertType( arrTy->desugar() ));
-
+		
 		size_t arrSize = *arrTy->getSize().getRawData();
 		core::TypePtr&& elemTy = convert(arrTy->getElementType());
 		frontend_assert(elemTy) << "Conversion of array element type failed.\n";
 
-		retTy = builder.vectorType(elemTy, core::ConcreteIntTypeParam::get(mgr, arrSize));
+		retTy = builder.arrayType(elemTy, arrSize);
 		return retTy;
 	}
 
@@ -212,16 +211,11 @@ namespace conversion {
 	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
 	// and the size is unspecified.
 	//
-	// The representation for such array will be: ref<array<int<4>,1>>
+	// The representation for such array will be: array<int<4>,inf>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(arrTy, retTy);
-		if(arrTy->isSugared())
-		// if the type is sugared, we Visit the desugared type
-		{
-			return (retTy = convert(arrTy->desugar()));
-		}
 
 		auto elemTy = convert(arrTy->getElementType());
 		frontend_assert(elemTy) << "Conversion of array element type failed.\n";
@@ -241,21 +235,15 @@ namespace conversion {
 	// type dynamically:
 	//				void foo(int x) { int Y[x]; ++x; int Z[x]; }
 	//
-	// he representation for such array will be: array<int<4>,1>( expr() )
+	// The representation for such arrays will be:
+	// v0 = x;
+	// array<int<4>,v0>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(arrTy, retTy);
-		if(arrTy->isSugared())
-		// if the type is sugared, we Visit the desugared type
-		{
-			return (retTy = convert(arrTy->desugar()));
-		}
 
-		core::TypePtr&& elemTy = convert(arrTy->getElementType());
-		frontend_assert(elemTy) << "Conversion of array element type failed.\n";
-
-		retTy = builder.arrayType(elemTy);
+		frontend_assert(false) << "Not implemented, need to create map entry in decl statement conversion and use here\n";
 		return retTy;
 	}
 
@@ -268,44 +256,24 @@ namespace conversion {
 	// specification, but this specification is not part of the canonical type.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitFunctionProtoType(const FunctionProtoType* funcTy) {
-		core::TypePtr&& retTy = convert(funcTy->getReturnType());
+		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(funcTy, retTy);
 
-		frontend_assert(retTy) << "Function has no return type!\n";
-
-		// If the return type is of type vector or array we need to add a reference
-		// so that the semantics of C argument passing is maintained
-		if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
-			// exceptions are OpenCL vectors and gcc-vectors
-			// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-			if(!funcTy->getReturnType()->getUnqualifiedDesugaredType()->isVectorType()) { retTy = builder.refType(retTy); }
-		}
-
-		frontend_assert(retTy) << "Function has no return type!\n";
+		core::TypePtr funRetTy = convert(funcTy->getReturnType());
+		frontend_assert(funRetTy) << "Function has no return type!\n";
 
 		core::TypeList argTypes;
-		std::for_each(funcTy->param_type_begin(), funcTy->param_type_end(), [&argTypes, this](const QualType& currArgType) {
-
-
-			core::TypePtr&& argTy = this->convert(currArgType);
-
-
-			// If the argument is of type vector or array we need to add a reference
-			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
-				// exceptions are OpenCL vectors and gcc-vectors
-				// this applies also for OpenCL ExtVectorType. If this is moved, take care it still works also for them.
-				if(!currArgType->getUnqualifiedDesugaredType()->isVectorType()) { argTy = builder.refType(argTy); }
-			}
-
+		for(const QualType& currArgType : funcTy->param_types()) {
+			core::TypePtr argTy = convert(currArgType);
 			argTypes.push_back(argTy);
-		});
+		}
 
 		if(argTypes.size() == 1 && mgr.getLangBasic().isUnit(argTypes.front())) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
 
-		if(funcTy->isVariadic()) { argTypes.push_back(gen.getVarList()); }
+		if(funcTy->isVariadic()) { argTypes.push_back(basic.getVarList()); }
 
 		retTy = builder.functionType(argTypes, retTy);
 		return retTy;
@@ -317,17 +285,13 @@ namespace conversion {
 	// available about its arguments.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
-		core::TypePtr&& retTy = convert(funcTy->getReturnType());
+		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(funcTy, retTy);
+		funcTy->getReturnType()->dump();
+		core::TypePtr funRetTy = convert(funcTy->getReturnType());
+		frontend_assert(funRetTy) << "Function has no return type!\n";
 
-		// If the return type is of type vector or array we need to add a reference
-		// so that the semantics of C argument passing is mantained
-		//	if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
-		//		retTy = builder.refType(retTy);
-
-		frontend_assert(retTy) << "Function has no return type!\n";
-
-		retTy = builder.functionType(core::TypeList(), retTy);
+		retTy = builder.functionType(core::TypeList(), funRetTy);
 		return retTy;
 	}
 
@@ -339,20 +303,11 @@ namespace conversion {
 		// This type is created using __attribute__((vector_size(n)) where "n" specifies the vector size in bytes
 		// or from an Altivec __vector or vector declaration
 		// Since the constructor takes the number of vector elements, the client is responsible for converting the size into the number of elements.
-		core::TypePtr retIr;
-		LOG_TYPE_CONVERSION(vecTy, retIr);
+		core::TypePtr retTy;
+		LOG_TYPE_CONVERSION(vecTy, retTy);
 
-		// get vector datatype
-		const QualType qt = vecTy->getElementType();
-		// const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
-		core::TypePtr&& subType = convert(qt);
-
-		// get the number of elements
-		size_t num = vecTy->getNumElements();
-		core::IntTypeParamPtr numElem = core::ConcreteIntTypeParam::get(mgr, num);
-
-		auto irVecTy = builder.vectorType(subType, numElem);
-		return (retIr = core::lang::toSIMDVector(irVecTy));
+		frontend_assert(false) << "Vector types not implemented!\n";
+		return retTy;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -370,7 +325,7 @@ namespace conversion {
 	// 								TYPE OF TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitTypeOfType(const TypeOfType* typeOfType) {
-		core::TypePtr retTy = gen.getUnit();
+		core::TypePtr retTy = basic.getUnit();
 		LOG_TYPE_CONVERSION(typeOfType, retTy);
 		return retTy;
 	}
@@ -379,7 +334,7 @@ namespace conversion {
 	// 							TYPE OF EXPRESSION TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
-		core::TypePtr&& retTy = convert(typeOfType->getUnderlyingExpr()->getType());
+		core::TypePtr retTy = convert(typeOfType->getUnderlyingExpr()->getType());
 		LOG_TYPE_CONVERSION(typeOfType, retTy);
 		return retTy;
 	}
@@ -391,79 +346,7 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(tagType, retTy);
 
-		// test whether we can get a definiton
-		//	auto def = tagType->getDecl();
-
-		auto def = findDefinition(tagType);
-		if(!def) {
-			// tag type isonly declared
-			auto decl = tagType->getDecl();
-			std::string name = utils::getNameForRecord(decl, tagType->getCanonicalTypeInternal(), convFact.getSourceManager());
-
-			// We didn't find any definition for this type, so we use a name and define it as a generic type
-			retTy = builder.genericType(name);
-
-			if(!decl->getNameAsString().empty()) { core::annotations::attachName(retTy, decl->getNameAsString()); }
-
-			// we mark the declaration only tagTypes to reconstruct them in the backend
-			if(decl->isStruct()) {
-				annotations::c::markDeclOnlyStruct(retTy.as<core::GenericTypePtr>());
-			} else if(decl->isClass()) {
-				annotations::c::markDeclOnlyClass(retTy.as<core::GenericTypePtr>());
-			} else if(decl->isEnum()) {
-				annotations::c::markDeclOnlyEnum(retTy.as<core::GenericTypePtr>());
-			} else if(decl->isUnion()) {
-				annotations::c::markDeclOnlyUnion(retTy.as<core::GenericTypePtr>());
-			}
-
-			return retTy;
-		}
-
-		// TODO splitup TagType visitor into EnumType-visitor and RecordType-visitor
-		// handle enums => always just integers
-		if(def->getTagKind() == clang::TTK_Enum) {
-			const EnumDecl* enumDecl = llvm::cast<clang::EnumDecl>(def);
-			frontend_assert(enumDecl) << "TagType decl is a EnumDecl type!\n";
-			const auto& ext = mgr.getLangExtension<core::lang::EnumExtension>();
-			std::vector<core::TypePtr> enumCtants;
-			for(EnumDecl::enumerator_iterator it = enumDecl->enumerator_begin(), end = enumDecl->enumerator_end(); it != end; it++) {
-				const string& enumConstantName = insieme::frontend::utils::buildNameForEnumConstant(*it, convFact.getSourceManager());
-				enumCtants.push_back(ext.getEnumConstantType(enumConstantName, (*it)->getInitVal().toString(10)));
-			};
-
-			const string& enumTypeName = utils::buildNameForEnum(enumDecl, convFact.getSourceManager());
-			auto enumType = ext.getEnumType(enumTypeName, enumCtants);
-			core::annotations::attachName(enumType, enumDecl->getNameAsString());
-			return enumType;
-		}
-
-		// handle struct/union/class
-		const RecordDecl* recDecl = dyn_cast<const RecordDecl>(def);
-		frontend_assert(recDecl) << "TagType decl is not of a RecordDecl type!\n";
-
-
-		// Visit the type of the fields recursively
-		// Note: if a field is referring one of the type in the cyclic dependency, a reference
-		//       to the TypeVar will be returned.
-		core::NamedCompositeType::Entries structElements;
-
-		unsigned mid = 0;
-		for(RecordDecl::field_iterator it = recDecl->field_begin(), end = recDecl->field_end(); it != end; ++it) {
-			RecordDecl::field_iterator::value_type curr = *it;
-			core::TypePtr&& fieldType = convert(curr->getType());
-
-			core::StringValuePtr id =
-			    builder.stringValue(curr->getIdentifier() ? curr->getNameAsString() : "__m" + insieme::utils::numeric_cast<std::string>(mid));
-			structElements.push_back(builder.namedType(id, fieldType));
-			mid++;
-		}
-
-		// build a struct or union IR type
-		retTy = handleTagType(def, structElements);
-
-		// Adding the name of the C struct as annotation
-		if(!recDecl->getNameAsString().empty()) { core::annotations::attachName(retTy, recDecl->getName()); }
-
+		frontend_assert(false) << "Tag types not implemented!\n";
 		return retTy;
 	}
 
@@ -477,242 +360,59 @@ namespace conversion {
 		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(elabType, retTy);
 
-		return (retTy = convert(elabType->getNamedType()));
+		retTy = convert(elabType->getNamedType());
+		return retTy;
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							   PAREN TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitParenType(const ParenType* parenTy) {
-		core::TypePtr&& retTy = convert(parenTy->getInnerType());
+		core::TypePtr retTy = convert(parenTy->getInnerType());
 		LOG_TYPE_CONVERSION(parenTy, retTy);
 		return retTy;
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                             ATOMIC TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitAtomicType(const AtomicType* atomicTy) {
-		core::TypePtr ret = convert(atomicTy->getValueType());
-		convFact.warnings.insert("Atomic type lost in INSPIRE");
-		return ret;
+		core::TypePtr retTy = convert(atomicTy->getValueType());
+		LOG_TYPE_CONVERSION(atomicTy, retTy);
+		frontend_assert(false) << "Atomic types not implemented!\n";
+		return retTy;
 	}
 
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							POINTER TYPE (FIXME)
-	// Pointer types need to be converted into reference types within the IR.
-	// Essentially there are two options. If the pointer is pointing to a single
-	// element, e.g. int* pointing to one integer, the resulting type should be
-	//		pointer to scalar (rvalue):   int*  ---->   ref<int<4>>
-	//		pointer to scalar (lvalue):   int*  ---->   ref<ref<int<4>>>
-	//
-	// However, if the target is an array of values, the result should be
-	//		pointer to array (rvalue):   int*  ---->   ref<array<int<4>,1>>
-	//		pointer to array (lvalue):   int*  ---->   ref<ref<array<int<4>,1>>>
-	//
-	// Since the actual case can not be determined based on the type, the
-	// more general case (the array case) has to be conservatively considered.
+	//							POINTER TYPE
+	// Pointer types need to be converted into pointer types within the IR.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* pointerTy) {
-		core::TypePtr&& subTy = convert(pointerTy->getPointeeType());
-		// ~~~~~ Handling of special cases ~~~~~~~
-		// void* -> array<'a>
-		if(gen.isUnit(subTy)) { return gen.getAnyRef(); }
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr retTy;
-		if(subTy->getNodeType() == core::NT_FunctionType) {
-			retTy = subTy;
-		} else {
-			if(pointerTy->getPointeeType().isConstQualified()) {
-				retTy = builder.refType(builder.arrayType(subTy), core::RK_SOURCE);
-			} else {
-				retTy = builder.refType(builder.arrayType(subTy));
-			}
-		}
-
-		// Function pointers are IR function but
-		// pointers of function pointers should be IR array of functions
-		// hence we must stop recursion
-		auto innerPtr = pointerTy->getPointeeType();
-		if(innerPtr->isPointerType()) {
-			if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
-				subTy = convert(innerPtr->getPointeeType());
-				retTy = builder.refType(builder.arrayType(subTy));
-			}
-		}
-
 		LOG_TYPE_CONVERSION(pointerTy, retTy);
+
+		core::TypePtr subTy = convert(pointerTy->getPointeeType());
+
+		retTy = builder.ptrType(subTy);
 		return retTy;
 	}
 
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							DECAYED TYPE
+	// A pointer type decayed from an array or function type.
+	// Handled like a pointer type for the purpose of Inspire.
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr Converter::TypeConverter::VisitDecayedType(const DecayedType* decTy) {
-		core::TypePtr&& subTy = convert(decTy->getPointeeType());
-		// ~~~~~ Handling of special cases ~~~~~~~
-		// void* -> array<'a>
-		if(gen.isUnit(subTy)) { return gen.getAnyRef(); }
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType) ? subTy : builder.refType(builder.arrayType(subTy));
-
-		// Function pointers are IR function but
-		// pointers of function pointers should be IR array of functions
-		// hence we must stop recursion
-		auto innerPtr = decTy->getPointeeType();
-		if(innerPtr->isPointerType()) {
-			if(innerPtr->getPointeeType().getTypePtr()->isFunctionType()) {
-				subTy = convert(innerPtr->getPointeeType());
-				retTy = builder.refType(builder.arrayType(subTy));
-			}
-		}
-
+		core::TypePtr retTy;
 		LOG_TYPE_CONVERSION(decTy, retTy);
+
+		core::TypePtr subTy = convert(decTy->getPointeeType());
+
+		retTy = builder.ptrType(subTy);
 		return retTy;
 	}
-
-	core::TypePtr Converter::TypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
-		std::string name;
-		// if we have a name in the tag declaration or we have a c++11 lambda
-		if(tagDecl->getName() != "" || (llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl) && llvm::cast<clang::CXXRecordDecl>(tagDecl)->isLambda())) {
-			name = utils::getNameForRecord(llvm::cast<clang::RecordDecl>(tagDecl), tagDecl->getTypeForDecl()->getCanonicalTypeInternal(),
-			                               convFact.getSourceManager());
-		}
-		if(tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() == clang::TTK_Class) {
-			return builder.structType(builder.stringValue(name), structElements);
-		} else if(tagDecl->getTagKind() == clang::TTK_Union) {
-			return builder.unionType(builder.stringValue(name), structElements);
-		}
-		frontend_assert(false && "TagType not supported");
-		return core::TypePtr();
-	}
-
-	core::TypePtr Converter::CTypeConverter::convertInternal(const clang::QualType& type) {
-		return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type.getTypePtr());
-	}
-
-
-	core::TypePtr Converter::TypeConverter::convertImpl(const clang::QualType& type) {
-		auto& typeCache = convFact.typeCache;
-
-		// look up type within typeCache
-		auto pos = typeCache.find(type);
-		if(pos != typeCache.end()) { return pos->second; }
-
-		// create result location
-		core::TypePtr res;
-
-		// assume a recursive construct for record declarations
-		if(auto tagType = llvm::dyn_cast<clang::TagType>(type)) {
-			auto recDecl = tagType->getDecl();
-			std::string name = utils::getNameForRecord(recDecl, type, convFact.getSourceManager());
-
-			// create a (temporary) type variable for this type
-			core::GenericTypePtr symbol = builder.genericType(name);
-			if(!recDecl->getNameAsString().empty()) { core::annotations::attachName(symbol, name); }
-
-			// bind recursive variable within the typeCache
-			typeCache[type] = symbol;
-
-			// resolve the type recursively
-			res = convertInternal(type);
-
-			// check if type is defined in a system header --> if so add includeAnnotation which is used
-			// in backend to avoid redeclaration of type
-
-			if(convFact.getHeaderTagger().isDefinedInSystemHeader(recDecl)) {
-				bool systemHeaderOrigin = convFact.getSourceManager().isInSystemHeader(recDecl->getCanonicalDecl()->getSourceRange().getBegin());
-				if(systemHeaderOrigin) {
-					VLOG(2) << "isDefinedInSystemHeaders " << name << " " << res;
-					if(core::annotations::hasAttachedName(symbol)) {
-						if(recDecl->isStruct()) {
-							name = "struct " + core::annotations::getAttachedName(symbol);
-						} else if(recDecl->isUnion()) {
-							name = "union " + core::annotations::getAttachedName(symbol);
-						} else {
-							name = core::annotations::getAttachedName(symbol);
-						}
-						core::annotations::attachName(symbol, name);
-					}
-					convFact.getHeaderTagger().addHeaderForDecl(res, recDecl);
-				}
-			}
-
-			frontend_assert(res) << "it seems that no type was converted, this is not ok";
-
-
-			//	// give the type a name to structs
-			//	if (core::StructTypePtr strTy = res.isa<core::StructTypePtr>())
-			//		res = core::transform::replaceNode(mgr, core::StructTypeAddress(strTy)->getName(), builder.stringValue(name)).as<core::TypePtr>();
-
-			// check typeCache consistency
-			frontend_assert(typeCache[type] == symbol); // should not change in the meantime
-
-			// it might be that type was not complete, keep just the symbol and the name will be forwarded to be linked
-			if(!res.isa<core::GenericTypePtr>()) {
-				frontend_assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
-
-				// run post-conversion actions
-				postConvertionAction(type, res);
-
-				// register type within resulting translation unit
-				convFact.getIRTranslationUnit().addType(symbol, res);
-			}
-
-			// is an enum, return it as it is
-			if(mgr.getLangExtension<core::lang::EnumExtension>().isEnumType(res)) {
-				typeCache[type] = res;
-				return res;
-			}
-
-			// but the result is just the symbol
-			return symbol;
-
-
-		} else {
-			// for all others no recursive definitions need to be considered
-			res = convertInternal(type);
-
-			// update typeCache
-			typeCache[type] = res;
-		}
-
-		// run post-conversion actions
-		postConvertionAction(type, res);
-
-		// be done
-		return res;
-	}
-
-	core::TypePtr Converter::TypeConverter::convert(const clang::QualType& type) {
-		core::TypePtr irType;
-
-		// iterate clang handler list and check if a handler wants to convert the type
-		for(auto extension : convFact.getConversionSetup().getExtensions()) {
-			irType = extension->Visit(type, convFact);
-			if(irType) { break; }
-		}
-
-		if(!irType) { irType = convertImpl(type); }
-
-		for(auto extension : convFact.getConversionSetup().getExtensions()) {
-			irType = extension->PostVisit(type, irType, convFact);
-		}
-
-		return irType;
-	}
-
-	// core::TypePtr Converter::CTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
-	//	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
-	//		return builder.structType( structElements );
-	//	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
-	//		return builder.unionType( structElements );
-	//	}
-	//	frontend_assert(false && "TagType not supported");
-	//	return core::TypePtr();
-	//}
-
+	
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
