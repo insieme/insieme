@@ -596,13 +596,15 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 	// if it is a ref type ...
 	if(analysis::isRefType(type)) {
 		// return NULL for the specific type
-		return refReinterpret(manager.getLangBasic().getRefNull(), analysis::getReferencedType(type));
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return refReinterpret(refExt.getRefNull(), analysis::getReferencedType(type));
 	}
 	
 	// if it is a function type -- used for function pointers
 	if(type.isa<core::FunctionTypePtr>()) {
 		// return NULL for the specific type
-		return deref(refReinterpret(manager.getLangBasic().getRefNull(), type));
+		auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+		return deref(refReinterpret(refExt.getRefNull(), type));
 	}
 	
 	// add support for unit
@@ -639,7 +641,8 @@ ExpressionPtr IRBuilder::convert(const ExpressionPtr& src, const TypePtr& target
 
 CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
 	assert_pred1(analysis::isRefType, subExpr->getType());
-	return callExpr(analysis::getReferencedType(subExpr->getType()), manager.getLangBasic().getRefDeref(), subExpr);
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+	return callExpr(analysis::getReferencedType(subExpr->getType()), refExt.getRefDeref(), subExpr);
 }
 
 ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
@@ -650,32 +653,33 @@ ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
 }
 
 CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
-	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefVar(), subExpr);
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+	return callExpr(refType(subExpr->getType()), refExt.getRefVar(), subExpr);
 }
 
 CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
-	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefNew(), subExpr);
-}
-
-CallExprPtr IRBuilder::refLoc(const ExpressionPtr& subExpr) const {
-	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefLoc(), subExpr);
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+	return callExpr(refType(subExpr->getType()), refExt.getRefNew(), subExpr);
 }
 
 CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 	auto& basic = manager.getLangBasic();
-	return callExpr(basic.getUnit(), basic.getRefDelete(), subExpr);
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+	return callExpr(basic.getUnit(), refExt.getRefDelete(), subExpr);
 }
 
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 	assert_pred1(analysis::isRefType, target->getType());
-	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+	return callExpr(manager.getLangBasic().getUnit(), refExt.getRefAssign(), target, value);
 }
 
 ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
 	assert_pred1(analysis::isRefType, subExpr->getType());
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	return callExpr(
 	           refType(newElementType),
-	           manager.getLangBasic().getRefReinterpret(),
+	           refExt.getRefReinterpret(),
 	           subExpr,
 	           getTypeLiteral(newElementType)
 	       );
@@ -787,7 +791,8 @@ CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionP
 CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
 	// FIXME argument order
 	const auto &basic = manager.getLangBasic();
-	assert_true(basic.isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+	assert_true(refExt.isRefAssign(assignment->getFunctionExpr())) << "Trying to build atomic assignment from non-assigment";
 	
 	const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
 	const auto &lhsDeref = deref(lhs);
@@ -1188,7 +1193,7 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringVa
 	core::TypePtr memberType = structType->getTypeOfMember(member);
 	
 	// create access instruction
-	core::ExpressionPtr access = getLangBasic().getCompositeRefElem();
+	core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess();
 	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
@@ -1204,8 +1209,8 @@ CallExprPtr IRBuilder::refParent(const ExpressionPtr& structExpr, const TypePtr&
 	core::TypePtr resType = refType(parent);
 	
 	// build up access operation
-	auto narrow = getLangBasic().getRefNarrow();
-	auto dataPath = datapath::DataPathBuilder(manager).parent(parent).getPath();
+	auto narrow = manager.getLangExtension<lang::ReferenceExtension>().getRefNarrow();
+	auto dataPath = datapath::DataPathBuilder(structExpr->getType()).parent(parent).getPath();
 	return callExpr(resType, narrow, structExpr, dataPath, getTypeLiteral(parent));
 }
 
@@ -1245,7 +1250,7 @@ CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component)
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
 	
 	// create access instruction
-	core::ExpressionPtr access = getLangBasic().getTupleRefElem();
+	core::ExpressionPtr access = manager.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess();
 	core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
 	core::ExpressionPtr typeLiteral = getTypeLiteral(componentType);
 	return callExpr(refType(componentType), access, tupleExpr, index, typeLiteral);

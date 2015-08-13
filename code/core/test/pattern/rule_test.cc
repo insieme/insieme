@@ -266,11 +266,12 @@ TEST(Rule, VarDeref) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	const auto& lang = builder.getLangBasic();
+	const auto& ext = mgr.getLangExtension<lang::ReferenceExtension>();
 	
 	Variable x;
 	
 	auto r = Rule(
-	             irp::callExpr(lang.getRefDeref(), irp::callExpr((irp::atom(lang.getRefVar()) | irp::atom(lang.getRefNew())) , x)),
+	             irp::callExpr(ext.getRefDeref(), irp::callExpr((irp::atom(ext.getRefVar()) | irp::atom(ext.getRefNew())) , x)),
 	             x
 	         );
 	         

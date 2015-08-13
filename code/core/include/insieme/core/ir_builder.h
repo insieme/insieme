@@ -280,7 +280,6 @@ public:
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
 	CallExprPtr refVar(const ExpressionPtr& subExpr) const;
 	CallExprPtr refNew(const ExpressionPtr& subExpr) const;
-	CallExprPtr refLoc(const ExpressionPtr& subExpr) const;
 	CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
 	CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
 	ExpressionPtr tryDeref(const ExpressionPtr& subExpr) const;

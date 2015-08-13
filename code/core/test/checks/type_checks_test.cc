@@ -472,9 +472,10 @@ TEST(MemberAccessElementTypeCheck, References) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getLangBasic();
+	const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	
 	// get function to be tested
-	ExpressionPtr fun = basic.getCompositeRefElem();
+	ExpressionPtr fun = refExt.getRefMemberAccess();
 	
 	// Create a example expressions
 	TypePtr typeA = builder.genericType("typeA");
@@ -560,9 +561,10 @@ TEST(ComponentAccessTypeCheck, References) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getLangBasic();
+	const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	
 	// get function to be tested
-	ExpressionPtr fun = basic.getTupleRefElem();
+	ExpressionPtr fun = refExt.getRefComponentAccess();
 	
 	// Create a example expressions
 	TypePtr typeA = builder.genericType("typeA");
@@ -1347,6 +1349,7 @@ TEST(ArrayTypeChecks, Exceptions) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	auto& basic = manager.getLangBasic();
+	auto& array = manager.getLangExtension<lang::ArrayExtension>();
 	
 	CheckPtr typeCheck = getFullCheck();
 	
@@ -1362,7 +1365,7 @@ TEST(ArrayTypeChecks, Exceptions) {
 	errors = check(cur, typeCheck);
 	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 	
-	ExpressionPtr arrayPtr = builder.callExpr(basic.getArrayCreate1D(), builder.getTypeLiteral(element), builder.uintLit(12u));
+	ExpressionPtr arrayPtr = builder.callExpr(array.getArrayCreate(), builder.getTypeLiteral(element), builder.uintLit(12u));
 	
 	// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
 	

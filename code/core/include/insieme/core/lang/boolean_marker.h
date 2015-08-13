@@ -34,56 +34,53 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/datapath/datapath.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace core {
-namespace datapath {
+namespace lang {
 
-TEST(DataPathBuilder, Basic) {
 
-	NodeManager mgr;
-	TypePtr root = GenericType::get(mgr, "R");
-	TypePtr typeA = GenericType::get(mgr, "A");
-	
-	EXPECT_EQ("dp_root", toString(*DataPathBuilder(root).getPath()));
-	EXPECT_EQ("dp_member(dp_root, hello)", toString(*DataPathBuilder(root).member("hello").getPath()));
-	EXPECT_EQ("dp_element(dp_root, 12)", toString(*DataPathBuilder(root).element(12).getPath()));
-	EXPECT_EQ("dp_component(dp_root, 3)", toString(*DataPathBuilder(root).component(3).getPath()));
-	EXPECT_EQ("dp_parent(dp_root, type<A>)", toString(*DataPathBuilder(root).parent(typeA).getPath()));
-	
-	
-	EXPECT_EQ("dp_parent(dp_component(dp_member(dp_element(dp_root, 12), hello), 3), type<A>)", toString(*DataPathBuilder(root)
-	          .element(12)
-	          .member("hello")
-	          .component(3)
-	          .parent(typeA)
-	          .getPath())
-	         );
-	         
-}
+	// --------------------- Extension ----------------------------
 
-TEST(DataPath, Basic) {
-	NodeManager mgr;
-	TypePtr root = GenericType::get(mgr, "R");
-	TypePtr typeA = GenericType::get(mgr, "A");
-	
-	DataPath path(root);
-	
-	EXPECT_EQ("<>", toString(path));
-	EXPECT_EQ("<>[4]", toString(path.element(4)));
-	EXPECT_EQ("<>[4].test", toString(path.element(4).member("test")));
-	EXPECT_EQ("<>[4].test.c3", toString(path.element(4).member("test").component(3)));
-	EXPECT_EQ("<>[4].test.c3.as<A>", toString(path.element(4).member("test").component(3).parent(typeA)));
-	
-}
+	/**
+	 * An extension covering two types to model boolean properties.
+	 */
+	class BooleanMarkerExtension : public core::lang::Extension {
 
-} // end namespace analysis
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		BooleanMarkerExtension(core::NodeManager& manager)
+			: core::lang::Extension(manager) {}
+
+	public:
+
+		LANG_EXT_TYPE_WITH_NAME(True, "true_marker", "t");
+
+		LANG_EXT_TYPE_WITH_NAME(False, "false_marker", "f");
+
+	};
+
+	static inline bool isTrueMarker(const NodePtr& node) {
+		return node && node->getNodeManager().getLangExtension<BooleanMarkerExtension>().isTrue(node);
+	}
+
+	static inline bool isFalseMarker(const NodePtr& node) {
+		return node && node->getNodeManager().getLangExtension<BooleanMarkerExtension>().isFalse(node);
+	}
+
+	static inline bool isValidBooleanMarker(const TypePtr& type) {
+		return type.isa<TypeVariablePtr>() || isTrueMarker(type) || isFalseMarker(type);
+	}
+
+} // end namespace lang
 } // end namespace core
 } // end namespace insieme

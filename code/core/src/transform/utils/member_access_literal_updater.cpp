@@ -61,6 +61,8 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 	// recursive replacement has to be continued
 	NodePtr res = ptr->substitute(builder.getNodeManager(), *this);
 	
+	auto& refExt = builder.getNodeManager().getLangExtension<lang::ReferenceExtension>();
+
 	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(res)) {
 		ExpressionPtr fun = call->getFunctionExpr();
 		// struct access
@@ -75,7 +77,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			}
 		}
 		
-		if(BASIC.isCompositeRefElem(fun)) {
+		if(refExt.isRefMemberAccess(fun)) {
 		
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(
 			                                    analysis::getReferencedType(call->getArgument(0)->getType()));
@@ -88,7 +90,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 				                       builder.getTypeLiteral(elemType));
 		}
 		
-		if(BASIC.isSubscriptOperator(fun)) {
+		if(refExt.isRefArrayElement(fun)) {
 			bool isRef = analysis::isRefType(call->getArgument(0)->getType());
 			const GenericTypePtr& seTy = (isRef ? analysis::getReferencedType(call->getArgument(0)->getType()) : call->getArgument(0)->getType()).as<GenericTypePtr>();
 			const TypePtr& type = isRef ? builder.refType(seTy->getTypeParameter(0)) : seTy->getTypeParameter(0);
@@ -98,7 +100,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			}
 		}
 		
-		if(BASIC.isTupleRefElem(fun) || BASIC.isTupleMemberAccess(fun)) {
+		if(refExt.isRefComponentAccess(fun) || BASIC.isTupleMemberAccess(fun)) {
 		
 			ExpressionPtr arg = call->getArgument(1);
 			int idx = -1;
@@ -133,7 +135,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			const LiteralPtr& elemTyLit = builder.getTypeLiteral(elemTy);
 			
 			if(*call->getType() != *retTy || *call->getArgument(2)->getType() != *elemTyLit->getType()) {
-				res = builder.callExpr(retTy, isRef ? BASIC.getTupleRefElem() : BASIC.getTupleMemberAccess(), call->getArgument(0), call->getArgument(1),
+				res = builder.callExpr(retTy, isRef ? refExt.getRefComponentAccess() : BASIC.getTupleMemberAccess(), call->getArgument(0), call->getArgument(1),
 				                       elemTyLit);
 			}
 		}

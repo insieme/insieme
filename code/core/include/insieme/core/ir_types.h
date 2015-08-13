@@ -1000,6 +1000,17 @@ Ptr<const Type> getTypeOfMember(const StringValuePtr& name) const {
 	return (entry)?(entry->getType()):Ptr<const Type>();
 }
 
+/**
+ * Retrieves the type of a member of this composite type or a null pointer if there is no
+ * such entry.
+ *
+ * @param name the name to be searching for
+ */
+Ptr<const Type> getTypeOfMember(const string& name) const {
+	Ptr<const NamedType> entry = getNamedTypeEntryOf(name);
+	return (entry)?(entry->getType()):Ptr<const Type>();
+}
+
 };
 
 /**

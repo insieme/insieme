@@ -41,6 +41,8 @@
 #include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/types/subtype_constraints.h"
 
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace types {
@@ -693,6 +695,7 @@ TEST(TypeVariableDeduction, ArrayRefElementBug) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.getLangBasic();
+	const lang::ReferenceExtension& refExt = manager.getLangExtension<lang::ReferenceExtension>();
 	
 	TypePtr uint4 = basic.getUInt4();
 	TypePtr vector = builder.parseType("array<uint<4>,5>");
@@ -700,7 +703,7 @@ TEST(TypeVariableDeduction, ArrayRefElementBug) {
 	
 	CallExprPtr call = builder.callExpr(
 	                       basic.getUnit(),
-	                       basic.getArrayRefElem1D(),
+	                       refExt.getRefArrayElement(),
 	                       toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1"))
 	                   );
 	                   

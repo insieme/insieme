@@ -71,17 +71,7 @@ public:
 	/**
 	 * Creates a new data path referencing the root of a data object.
 	 */
-	DataPath(NodeManager& manager);
-	
-	/**
-	 * Extends this data path by an access to the given member.
-	 * This call is only supported if the accessed element is a
-	 * struct, union or recursive type with a top-level struct/union.
-	 *
-	 * @param member the member to be accessed; the expresssion has to be of type identifer
-	 * @return the extended data path
-	 */
-	DataPath member(const ExpressionPtr& member) const;
+	DataPath(const TypePtr& type);
 	
 	/**
 	 * Extends this data path by an access to the given member.
@@ -112,16 +102,6 @@ public:
 	 * @return the extended data path
 	 */
 	DataPath element(unsigned index) const;
-	
-	/**
-	 * Extends this data path by an access to the given component.
-	 * This call is only supported if the accessed element is a
-	 * tuple or a recursive type with a top-level tuple.
-	 *
-	 * @param component the component to be accessed; must be an unsigned integer literal
-	 * @return the extended data path
-	 */
-	DataPath component(const LiteralPtr& component) const;
 	
 	/**
 	 * Extends this data path by an access to the given component.
@@ -165,6 +145,16 @@ public:
 	}
 	
 	/**
+	 * Returns the source type of this data path.
+	 */
+	TypePtr getSourceType() const;
+
+	/**
+	 * Returns the target type of the data path.
+	 */
+	TypePtr getTargetType() const;
+
+	/**
 	 * Allows this data path to be printed in a human readable format.
 	 */
 	std::ostream& printTo(std::ostream& out) const;
@@ -188,10 +178,9 @@ public:
 	 * Creates a new builder instance based on the given manager
 	 * using the empty path as its initial path.
 	 *
-	 * @param manager the manager to be used for maintaining
-	 * 			the internally constructed path
+	 * @param type the type to start your data path from
 	 */
-	DataPathBuilder(NodeManager& manager) : path(manager) {}
+	DataPathBuilder(const TypePtr& type) : path(type) {}
 	
 	/**
 	 * Creates a new builder instance based on the given initial path.
@@ -199,15 +188,6 @@ public:
 	 * @param path the path to be used as an initial path for the builder
 	 */
 	DataPathBuilder(const DataPath& path) : path(path) {}
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given member of a struct / union.
-	 *
-	 * @param member the member element to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& member(const ExpressionPtr& member);
 	
 	/**
 	 * This function will extend the internally constructed path by
@@ -237,15 +217,6 @@ public:
 	 */
 	DataPathBuilder& element(unsigned index);
 	
-	
-	/**
-	 * This function will extend the internally constructed path by
-	 * an access to the given component of a tuple.
-	 *
-	 * @param component the (index) of the component to be accessed
-	 * @return a reference to this builder to chain build-commands
-	 */
-	DataPathBuilder& component(const LiteralPtr& component);
 	
 	/**
 	 * This function will extend the internally constructed path by

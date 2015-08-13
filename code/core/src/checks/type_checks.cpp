@@ -56,149 +56,7 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-#define CAST(TargetType, value) \
-	static_pointer_cast<const TargetType>(value)
 
-namespace {
-
-bool isCompleteDataPath(const ExpressionPtr& datapath) {
-	const lang::BasicGenerator& basic = datapath.getNodeManager().getLangBasic();
-	
-	// root is a complete path
-	if(basic.isDataPathRoot(datapath)) {
-		return true;
-	}
-	
-	// also, every call to a constructor with proper arguments
-	auto call = datapath.isa<CallExprPtr>();
-	if(!call || !basic.isDataPathPrimitive(call->getFunctionExpr())) {
-		return false;
-	}
-	
-	// the input parameters need to be fixed and input-datapath has to be complete
-	return call[1].isa<LiteralPtr>() && isCompleteDataPath(call[0]);
-}
-
-TypePtr followDataPath(const TypePtr& source, const ExpressionPtr& datapath) {
-
-	TypePtr fail;
-	const auto& basic = source.getNodeManager().getLangBasic();
-	
-	if(source.isa<GenericTypePtr>()) {
-		return source;
-	}
-	
-	// if data path is ROOT, the target type is equal to the source type
-	if(basic.isDataPathRoot(datapath)) {
-		return source;		// no step to be taken
-	}
-	
-	// if not root, it has to be a composed data path (based on call Expressions)
-	auto call = datapath.isa<CallExprPtr>();
-	if(!call || !basic.isDataPathPrimitive(call->getFunctionExpr())) {
-		return fail; // not a valid data path
-	}
-	
-	// resolve target type recursively
-	TypePtr localSrc = followDataPath(source, call->getArgument(0));
-	if(!localSrc) {
-		return fail;    // unable to follow path recursively
-	}
-	
-	// unroll recursive types to make those transparent
-	if(localSrc->getNodeType() == NT_RecType) {
-		localSrc = localSrc.as<RecTypePtr>()->unroll();
-	}
-	
-	// process local step
-	auto step = call->getFunctionExpr();
-	if(basic.isDataPathMember(step)) {
-	
-		// check input type
-		NamedCompositeTypePtr compositeType = localSrc.isa<NamedCompositeTypePtr>();
-		if(!compositeType) {
-			return fail;    // invalid source
-		}
-		
-		// check member argument
-		auto member = call->getArgument(1);
-		if(!member.isa<LiteralPtr>()) {
-			return fail;    // invalid member name
-		}
-		
-		// return type of member
-		return compositeType->getTypeOfMember(member.as<LiteralPtr>()->getValue());
-		
-	}
-	
-	// check whether it is accessing an element of an array / vector
-	if(basic.isDataPathElement(step)) {
-	
-		// input needs to be an array or a vector
-		if(!lang::isArray(localSrc)) {
-			return fail;		// no valid type
-		}
-
-		// the rest is fine, get the element type
-		return lang::getArrayElementType(localSrc);
-	}
-	
-	// check whether it is accessing an element of a tuple
-	if(basic.isDataPathComponent(step)) {
-	
-		// source has to be a tuple type
-		if(localSrc->getNodeType() != NT_TupleType) {
-			return fail;
-		}
-		auto tupleType = localSrc.as<TupleTypePtr>();
-		
-		// check whether the given index is an integer constant
-		auto f = arithmetic::toFormula(call->getArgument(1));
-		if(!f.isConstant() || !f.isInteger()) {
-			return fail;
-		}
-		
-		// extract index
-		size_t n = (int64_t)f.getConstantValue();
-		
-		// return type of n-th component
-		return (n<tupleType.size())? tupleType[n] : fail;
-	}
-	
-	// check whether it is navigating along the inheritance hierarchy
-	if(basic.isDataPathParent(step)) {
-	
-		// local source needs to be a struct
-		if(localSrc->getNodeType() != NT_StructType) {
-			return fail;
-		}
-		StructTypePtr structType = localSrc.as<StructTypePtr>();
-		
-		// second argument needs to be a type literal
-		auto parentTypeLiteral = call->getArgument(1);
-		if(!analysis::isTypeLiteral(parentTypeLiteral)) {
-			return fail;    // not a type literal
-		}
-		TypePtr parent = analysis::getRepresentedType(parentTypeLiteral);
-		
-		// there has to be a parent of the requested type
-		for(auto cur : structType->getParents()) {
-			if(*cur->getType() == *parent) {
-				return parent;
-			}
-		}
-		
-		return fail; 		// no matching parent found
-	}
-	
-	std::cerr << "Invalid DataPath step encountered: " << *step << "\n";
-	assert_fail() << "Unsupported DataPath step encountered!";
-	
-	return fail;
-}
-
-
-} // end anonymous namespace
 
 OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 
@@ -382,7 +240,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr funType = address->getFunctionExpr()->getType();
 	assert_eq(address->getFunctionExpr()->getType()->getNodeType(), NT_FunctionType) << "Illegal function expression!";
 	
-	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
+	const FunctionTypePtr& functionType = funType.as<FunctionTypePtr>();
 	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
 	const TypePtr& returnType = functionType->getReturnType();
 	
@@ -639,8 +497,8 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 		if(lang::isArray(expr)) {
 		
 			// if it is the result of a array-create call it is accepted
-			auto& basic = address->getNodeManager().getLangBasic();
-			if(core::analysis::isCallOf(expr, basic.getArrayCreate1D()) || core::analysis::isCallOf(expr, basic.getArrayCreateND())) {
+			auto& ext = address->getNodeManager().getLangExtension<lang::ArrayExtension>();
+			if(core::analysis::isCallOf(expr, ext.getArrayCreate())) {
 				return res; // all fine for those two components
 			}
 			
@@ -985,7 +843,7 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 	
 	// check whether it is a call to the member access expression
 	bool isMemberAccess = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getCompositeMemberAccess());
-	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getCompositeRefElem());
+	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.getLangExtension<lang::ReferenceExtension>().getRefMemberAccess());
 	if(!isMemberAccess && !isMemberReferencing) {
 		// no matching case
 		return res;
@@ -1115,7 +973,7 @@ OptionalMessageList ComponentAccessTypeCheck::visitCallExpr(const CallExprAddres
 	
 	// check whether it is a call to the tuple access expression
 	bool isMemberAccess = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getTupleMemberAccess());
-	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getTupleRefElem());
+	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess());
 	if(!isMemberAccess && !isMemberReferencing) {
 		// no matching case
 		return res;
@@ -1353,144 +1211,6 @@ OptionalMessageList GenericZeroCheck::visitCallExpr(const CallExprAddress& addre
 	return res;
 }
 
-
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-///      Narrow check
-///	Narrow construction is a function call in which there are 3 parameters
-//		- data structure/array/tuple
-//		- datapath to the inner member/element to extract
-//		- type of the expected inner object
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
-
-	NodeManager& manager = call->getNodeManager();
-	OptionalMessageList res;
-	
-	CallExprPtr callExpr = call.getAddressedNode();
-	
-	// the function call must be narrow
-	if(!analysis::isCallOf(callExpr, manager.getLangBasic().getRefNarrow())) {
-		return res;
-	}
-	
-	if(call.getArguments().size() != 3u) {
-		return res;
-	}
-	
-	// Obtain argument type
-	ExpressionPtr srcArg = callExpr->getArgument(0);
-	ExpressionPtr dpArg  = callExpr->getArgument(1);
-	ExpressionPtr trgArg = callExpr->getArgument(2);
-	
-	// check whether path is complete
-	if(!isCompleteDataPath(dpArg)) {
-		return res;    // nothing to check here
-	}
-	
-	// check whether src argument is of a reference type
-	auto srcType = analysis::getReferencedType(srcArg->getType());
-	if(!srcType) {
-		return res;    // => parameter error is handled by standard type checker
-	}
-	
-	// check recursively the inner types of the expression
-	TypePtr narrowType = followDataPath(srcType, dpArg);
-	
-	// check whether data path was valid
-	if(!narrowType) {
-		add(res, Message(call,
-		                 EC_TYPE_MALFORM_NARROW_CALL,
-		                 format("Malformed dataPath in Narrow expression %s, %s, %s",
-		                        toString(*srcArg),
-		                        toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
-		                        toString(*trgArg)),
-		                 Message::ERROR));
-		return res;
-	}
-	
-	// generic types can not be checked, we must trust
-	if(narrowType.isa<GenericTypePtr>()) {
-		return res;
-	}
-	
-	// check whether specified target type is correct
-	if(*narrowType != *analysis::getRepresentedType(trgArg)) {
-		add(res, Message(call,
-		                 EC_TYPE_MALFORM_NARROW_CALL,
-		                 format(" Wrong return type in Narrow Expression %s, %s, %s",
-		                        toString(*srcArg),
-		                        toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
-		                        toString(*trgArg)),
-		                 Message::ERROR));
-	}
-	
-	return res;
-}
-
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-///      Expand check
-///	Expand construction is a function call in which there are 3 parameters
-//		- variable of any type which belongs as member to a structure/array/tuple
-//		- datapath of this variable inside of the outermost structure/array/tuple
-//		- type of the expected object
-///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
-
-	NodeManager& manager = call->getNodeManager();
-	OptionalMessageList res;
-	
-	CallExprPtr callExpr = call.getAddressedNode();
-	
-	// the function call must be Expand
-	if(!analysis::isCallOf(callExpr, manager.getLangBasic().getRefExpand())) {
-		return res;
-	}
-	
-	if(callExpr->getArguments().size() != 3u) {
-		return res;
-	}
-	
-	// Obtain argument type
-	ExpressionPtr srcArg = callExpr->getArgument(0);  // variable
-	ExpressionPtr dpArg  = callExpr->getArgument(1);  // datapath
-	ExpressionPtr trgArg = callExpr->getArgument(2);  // outer data structure type literal
-	
-	// test whether source is a reference
-	auto srcType = analysis::getReferencedType(srcArg->getType());
-	if(!srcType) {
-		return res;    // => parameter error is handled by standard type checker
-	}
-	
-	// check recursively the inner types of the expression
-	TypePtr extractType = followDataPath(analysis::getRepresentedType(trgArg), dpArg);
-	
-	// check whether data path was valid
-	if(!extractType) {
-		add(res, Message(call,
-		                 EC_TYPE_MALFORM_EXPAND_CALL,
-		                 format("Malformed dataPath in Expand expression %s, %s, %s",
-		                        toString(*srcArg),
-		                        toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
-		                        toString(*trgArg)),
-		                 Message::ERROR));
-		return res;
-	}
-	
-	// check whether src/dp/trg combination is valid
-	if(*extractType != *srcType) {
-		add(res, Message(call,
-		                 EC_TYPE_MALFORM_EXPAND_CALL,
-		                 format(" Wrong return type in Expand Expression %s, %s, %s",
-		                        toString(*srcArg),
-		                        toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
-		                        toString(*trgArg)),
-		                 Message::ERROR));
-	}
-	
-	return res;
-}
-
-#undef CAST
 
 } // end namespace check
 } // end namespace core

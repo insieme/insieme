@@ -1099,6 +1099,9 @@ FormatTable initFormatTable(const PrettyPrinter& config) {
 	// get lang basic
 	NodeManager& mgr = config.root->getNodeManager();
 	const lang::BasicGenerator& basic = mgr.getLangBasic();
+	const lang::ReferenceExtension& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
+	const lang::DatapathExtension& dpExt = mgr.getLangExtension<lang::DatapathExtension>();
+
 	
 #define OUT(Literal) printer.out << Literal
 #define ARG(N) getArgument(call, N)
@@ -1111,34 +1114,30 @@ FormatTable initFormatTable(const PrettyPrinter& config) {
 	
 	
 	if(config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
-		ADD_FORMATTER(basic.getRefDeref(), { OUT(" *"); PRINT_ARG(0); });
+		ADD_FORMATTER(refExt.getRefDeref(), { OUT(" *"); PRINT_ARG(0); });
 	}
 	else {
-		ADD_FORMATTER(basic.getRefDeref(), { PRINT_ARG(0); });
+		ADD_FORMATTER(refExt.getRefDeref(), { PRINT_ARG(0); });
 	}
 	
-	ADD_FORMATTER(basic.getRefAssign(), { PRINT_ARG(0); OUT(" := "); PRINT_ARG(1); });
-	ADD_FORMATTER(basic.getRefVar(), { OUT(" var("); PRINT_ARG(0); OUT(")"); });
-	ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
-	ADD_FORMATTER(basic.getRefLoc(), { OUT(" loc("); PRINT_ARG(0); OUT(")"); });
-	ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
+	ADD_FORMATTER(refExt.getRefAssign(), { PRINT_ARG(0); OUT(" := "); PRINT_ARG(1); });
+	ADD_FORMATTER(refExt.getRefVar(), { OUT(" var("); PRINT_ARG(0); OUT(")"); });
+	ADD_FORMATTER(refExt.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
+	ADD_FORMATTER(refExt.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
 	
-	ADD_FORMATTER(basic.getDataPathRoot(), { OUT("<>"); });
-	ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
-	ADD_FORMATTER(basic.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	ADD_FORMATTER(basic.getDataPathComponent(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
-	ADD_FORMATTER(basic.getDataPathParent(), {PRINT_ARG(0); OUT(".as<"); PRINT_ARG(1); OUT(">"); });
+	ADD_FORMATTER(dpExt.getDataPathRoot(), { OUT("<>"); });
+	ADD_FORMATTER(dpExt.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+	ADD_FORMATTER(dpExt.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+	ADD_FORMATTER(dpExt.getDataPathComponent(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+	ADD_FORMATTER(dpExt.getDataPathParent(), {PRINT_ARG(0); OUT(".as<"); PRINT_ARG(1); OUT(">"); });
 	
-	ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
-	ADD_FORMATTER(basic.getArrayRefElemND(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
+	ADD_FORMATTER(refExt.getRefArrayElement(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
 	
 	ADD_FORMATTER(basic.getVectorSubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 	ADD_FORMATTER(basic.getVectorRefElem(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
 	
 	
-	ADD_FORMATTER(basic.getCompositeRefElem(), { PRINT_ARG(0); OUT("->"); PRINT_ARG(1); });
+	ADD_FORMATTER(refExt.getRefMemberAccess(), { PRINT_ARG(0); OUT("->"); PRINT_ARG(1); });
 	ADD_FORMATTER(basic.getCompositeMemberAccess(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 	
 	ADD_FORMATTER(basic.getRealAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });

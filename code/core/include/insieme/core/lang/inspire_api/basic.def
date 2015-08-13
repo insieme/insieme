@@ -357,48 +357,6 @@ OPERATION(UnsignedInt, RShift, "uint_rshift", "(uint<'a>,int<4>) -> uint<'a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
-// References ---------------------------------------------------------------------------------------------------------
-
-GROUP(RefOp, RefAlloc, RefNull, RefDelete, RefAssign, RefDeref, RefVar, RefNew, 
-	  RefLoc, RefIsNull, RefReinterpret, RefNarrow, RefExpand)
-GROUP(Delete, RefDelete)
-
-TYPE(MemLoc, "memloc")
-LITERAL(MemLocStack, "memloc_stack", "memloc")
-LITERAL(MemLocHeap, "memloc_heap", "memloc")
-LITERAL(MemLocLocal, "memloc_local", "memloc")
-
-LITERAL(RefAlloc,    	"ref_alloc",    		"(type<'a>, memloc) -> ref<'a>")
-LITERAL(RefNull,        "ref_null",             "ref<any>")
-LITERAL(NullFunc,       "func_null",            "(type<'a>)->'a")
-LITERAL(RefDelete, 		"ref_delete", 			"(ref<'a>) -> unit")
-LITERAL(RefAssign, 		"ref_assign", 			"(sink<'a>,'a) -> unit")
-LITERAL(RefDeref,  		"ref_deref",  			"(src<'a>) -> 'a")
-
-LITERAL(SrcToRef,		"src_to_ref",			"(src<'a>) -> ref<'a>")
-LITERAL(SinkToRef,		"sink_to_ref",			"(sink<'a>) -> ref<'a>")
-
-LITERAL(RefToInt,		"ref_to_int",			"(ref<'a>) -> uint<8>")
-LITERAL(IntToRef,		"int_to_ref",			"(int<16>, type<'a>) -> ref<'a>")
-
-DERIVED(RefVar,  			"ref_var",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_stack); r = v; return r; }")
-DERIVED(RefNew,  			"ref_new",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_heap ); r = v; return r; }")
-DERIVED(RefLoc,  			"ref_loc",    	    "lambda ('a v) -> ref<'a> { decl auto r = ref_alloc(  type_of(v), memloc_local); r = v; return r; }")
-DERIVED(RefIsNull,   		"ref_is_null",	    "lambda (ref<'a> r) -> bool { return ref_eq(r, ref_null); }")
-DERIVED(FuncIsNull,   		"func_is_null",	    "lambda ('a f) -> bool { return f == func_null(lit('a)); }")
-
-GROUP(AllocOp, RefVar, RefNew, RefLoc)
-
-LITERAL(RefReinterpret, "ref_reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
-LITERAL(RefNarrow, 		"ref_narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
-LITERAL(RefExpand,		"ref_expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
-
-LITERAL(SrcReinterpret, "src_reinterpret",      "(src<'a>, type<'b>) -> src<'b>")
-LITERAL(SrcNarrow, 		"src_narrow",			"(src<'a>, datapath, type<'b>) -> src<'b>")
-LITERAL(SrcExpand,		"src_expand",			"(src<'a>, datapath, type<'b>) -> src<'b>")
-
-LITERAL(RefToSrc, "ref_src_cast",      "(ref<'a>) -> src<'a>")
-
 
 // Type Operations ----------------------------------------------------------------------------------------------------
 
@@ -449,26 +407,6 @@ GROUP(BitwiseOrOp, GenOr, SignedIntOr, UnsignedIntOr)
 GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
 
 
-// Data Paths ---------------------------------------------------------------------------------------------------------
-
-TYPE(DataPath, "datapath")
-LITERAL(DataPathRoot,		"dp_root", 				"datapath")
-LITERAL(DataPathMember,		"dp_member", 			"(datapath, identifier) -> datapath")
-LITERAL(DataPathElement,	"dp_element", 			"(datapath, uint<8>) -> datapath")
-LITERAL(DataPathComponent,	"dp_component", 		"(datapath, uint<8>) -> datapath")
-LITERAL(DataPathParent,     "dp_parent",            "(datapath, type<'a>) -> datapath")
-
-GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPathComponent, DataPathParent)
-
-// Volatile -----------------------------------------------------------------------------------------------------------
-// Volatile types mark memory locations that may be changed by some outside agency
-
-GROUP(VolatileOp, VolatileMake, VolatileRead)
-
-TYPE(VolatileGen,		"volatile<'a>")
-LITERAL(VolatileMake,	"volatile_make",		"('a) -> volatile<'a>")
-LITERAL(VolatileRead,	"volatile_read",		"(volatile<'a>) -> 'a")
-
 // TEMP FIX
 LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
@@ -483,58 +421,16 @@ LITERAL(Zero, 				"zero", 					"(type<'a>) -> 'a")
 LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
 LITERAL(IntTypeParamToInt, 	"to_uint", 					"(intTypeParam<'n>)->uint<8>")
 
-// Arrays -------------------------------------------------------------------------------------------------------------
-
-GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND, ArrayRefProjection1D, ArrayRefProjectionND)
-
-LITERAL(ArrayCreate1D, 		"array_create_1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
-LITERAL(ArrayCreateND, 		"array_create_ND", 		"(type<'elem>, vector<uint<8>,'n>) -> array<'elem,'n>")
-
-LITERAL(ArraySubscript1D,      "array_subscript_1D",   "(array<'elem,1>, uint<8>) -> 'elem")
-LITERAL(ArraySubscriptND,      "array_subscript_ND",   "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem")
-
-DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "lambda (ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a, dp_element(dp_root, i), lit('elem)); }")
-LITERAL(ArrayRefElemND, 	"array_ref_elem_ND", 	"(ref<array<'elem,'n>>, vector<uint<8>,'n>) -> ref<'elem>")
-
-LITERAL(ArrayRefProjection1D, "array_ref_projection_1D",
-							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
-LITERAL(ArrayRefProjectionND, "array_ref_projection_ND",
-							  "(ref<array<'elem,'n>>,vector<uint<8>,'n>,vector<uint<8>,'n>) -> ref<array<'elem,'n>>")
-
-LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
-DERIVED(ScalarToArray, 			"scalar_to_array", 		"lambda (ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u), lit(array<'a,1>)); }")
-
-// computation of an array-offset and some derivades
-LITERAL(ArrayView, 				"array_view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
-DERIVED(ArrayViewPreInc, 		"array_view_pre_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,1); return *a; }")
-DERIVED(ArrayViewPostInc, 		"array_view_post_inc",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { decl auto res = *a; a = array_view(*a,1); return res; }")
-DERIVED(ArrayViewPreDec, 		"array_view_pre_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array_view(*a,-1); return *a; }")
-DERIVED(ArrayViewPostDec, 		"array_view_post_dec",			"lambda (ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { decl auto res = *a; a = array_view(*a,-1); return res; }")
-
-DERIVED(ArrayReduce, "array_reduce", 
-	"	lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
-	"		decl ref<'b> res = var(init);"
-	"		for(uint<8> i = 0ul .. size) {"
-	"			res = op(*res, *(data[i]));"
-	"		}"
-	"		return *res;"
-	"	}")
-
-// Arrays and Vectors -------------------------------------------------------------------------------------------------
-
-GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND, VectorRefElem)
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
-DERIVED(CompositeRefElem,      "composite_ref_elem",      "lambda (ref<'a> s, identifier i, type<'b> t) -> ref<'b> { return ref_narrow(s, dp_member(dp_root, i), t); }")
 LITERAL(CompositeMemberAccess, "composite_member_access", "('a, identifier, type<'b>) -> 'b")
 
 // Tuple --------------------------------------------------------------------------------------------------------------
 // first argument has to be a tuple or a union, 'b has to be the type of the requested member
-DERIVED(TupleRefElem,      "tuple_ref_elem",      "lambda (ref<'a> s, uint<8> i, type<'b> t) -> ref<'b> { return ref_narrow(s, dp_component(dp_root, i), t); }")
 LITERAL(TupleMemberAccess, "tuple_member_access", "('a, uint<8>, type<'b>) -> 'b")
 
-GROUP(MemberAccess, CompositeRefElem, CompositeMemberAccess, TupleRefElem, TupleMemberAccess)
+GROUP(MemberAccess, CompositeMemberAccess, TupleMemberAccess)
 
 // Generic type initialization ----------------------------------------------------------------------------------------
 
@@ -554,5 +450,5 @@ DERIVED(IfThenElse, "ite", "lambda (bool c, () => 'b a, () => 'b b) -> 'b { if (
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, TypeCompOp, GenCompOp)
 
-GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator,
-	VectorOp, ArrayOp, CompOp, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, 
+	CompOp, BitwiseOp, CompOp, ArithOp, GeneralOp)

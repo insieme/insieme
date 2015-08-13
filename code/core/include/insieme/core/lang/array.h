@@ -65,6 +65,53 @@ namespace lang {
 	public:
 
 
+		// -------------------- arrays ---------------------------
+
+		/**
+		 * The generic array type template e.g. utilized as a reference for is-array checks.
+		 */
+		LANG_EXT_TYPE_WITH_NAME(GenArray, "generic_array_template", "array<'a,'s>");
+
+		/**
+		 * A literal to create a (partially) initialized array instance.
+		 */
+		LANG_EXT_LITERAL(ArrayCreate,	"array_create", "(type<'elem>, type<'size>, list<'elem>) -> array<'elem,'size>")
+
+
+//		// Arrays -------------------------------------------------------------------------------------------------------------
+//
+//		GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND, ArrayRefProjection1D, ArrayRefProjectionND)
+//
+//		LITERAL(ArrayCreate1D, 		"array_create_1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
+//		LITERAL(ArrayCreateND, 		"array_create_ND", 		"(type<'elem>, vector<uint<8>,'n>) -> array<'elem,'n>")
+//
+//		LITERAL(ArraySubscript1D,      "array_subscript_1D",   "(array<'elem,1>, uint<8>) -> 'elem")
+//		LITERAL(ArraySubscriptND,      "array_subscript_ND",   "(array<'elem,'n>, vector<uint<8>,'n>) -> 'elem")
+//
+//		DERIVED(ArrayRefElem1D,     "array_ref_elem_1D",    "lambda (ref<array<'elem,1>> a, uint<8> i) -> ref<'elem> { return ref_narrow(a, dp_element(dp_root, i), lit('elem)); }")
+//		LITERAL(ArrayRefElemND, 	"array_ref_elem_ND", 	"(ref<array<'elem,'n>>, vector<uint<8>,'n>) -> ref<'elem>")
+//
+//		LITERAL(ArrayRefProjection1D, "array_ref_projection_1D",
+//									  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
+//		LITERAL(ArrayRefProjectionND, "array_ref_projection_ND",
+//									  "(ref<array<'elem,'n>>,vector<uint<8>,'n>,vector<uint<8>,'n>) -> ref<array<'elem,'n>>")
+//
+//		LITERAL(ArrayRefDistance, 		"array_ref_distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> int<8>")
+//		DERIVED(ScalarToArray, 			"scalar_to_array", 		"lambda (ref<'a> a) -> ref<array<'a,1>> { return ref_expand(a, dp_element(dp_root,0u), lit(array<'a,1>)); }")
+//
+//		DERIVED(ArrayReduce, "array_reduce",
+//			"	lambda (ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
+//			"		decl ref<'b> res = var(init);"
+//			"		for(uint<8> i = 0ul .. size) {"
+//			"			res = op(*res, *(data[i]));"
+//			"		}"
+//			"		return *res;"
+//			"	}")
+//
+//		// Arrays and Vectors -------------------------------------------------------------------------------------------------
+//
+//		GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND, VectorRefElem)
+
 	};
 
 

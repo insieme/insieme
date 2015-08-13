@@ -34,45 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/lang/reference.h"
+#include "insieme/core/lang/pointer.h"
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/core/lang/boolean_marker.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/types/match.h"
+
+#include "insieme/core/lang/boolean_marker.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
 
-	ReferenceType::ReferenceType(const NodePtr& node) {
+	PointerType::PointerType(const NodePtr& node) {
 
 		// check given node type
 		assert_true(node) << "Given node is null!";
-		assert_true(isReferenceType(node)) << "Given node " << *node << " is not a reference type!";
+		assert_true(isPointerType(node)) << "Given node " << *node << " is not a reference type!";
 
 		// process node type
 		GenericTypePtr type = node.as<GenericTypePtr>();
-		*this = ReferenceType(
+		*this = PointerType(
 				type->getTypeParameter(0),
 				isTrueMarker(type->getTypeParameter(1)),
 				isTrueMarker(type->getTypeParameter(2))
 		);
 	}
 
-	bool ReferenceType::isReferenceType(const NodePtr& node) {
+	bool PointerType::isPointerType(const NodePtr& node) {
 		auto type = node.isa<GenericTypePtr>();
 		if (!type) return false;
 
 		// simple approach: use unification
 		NodeManager& mgr = node.getNodeManager();
-		const ReferenceExtension& ext = mgr.getLangExtension<ReferenceExtension>();
+		const PointerExtension& ext = mgr.getLangExtension<PointerExtension>();
 
 		// unify given type with template type
-		auto ref = ext.getGenRef().as<GenericTypePtr>();
+		auto ref = ext.getGenPtr().as<GenericTypePtr>();
 		auto sub = types::match(mgr, type, ref);
 		if (!sub) return false;
 
@@ -82,12 +83,12 @@ namespace lang {
 			isValidBooleanMarker(map.applyTo(ref->getTypeParameter(2)));
 	}
 
-	GenericTypePtr ReferenceType::create(const TypePtr& elementType, bool _const, bool _volatile) {
+	GenericTypePtr PointerType::create(const TypePtr& elementType, bool _const, bool _volatile) {
 		assert_true(elementType);
-		return ReferenceType(elementType, _const, _volatile);
+		return PointerType(elementType, _const, _volatile);
 	}
 
-	ReferenceType::operator GenericTypePtr() const {
+	PointerType::operator GenericTypePtr() const {
 
 		NodeManager& mgr = elementType.getNodeManager();
 		auto& ext = mgr.getLangExtension<BooleanMarkerExtension>();

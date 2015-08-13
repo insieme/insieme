@@ -466,7 +466,7 @@ TEST(IsReadOnly, MemberAccess) {
 //		doesn't work
 //		EXPECT_PRED2( notReadOnly,    builder.parseStmt("{ tuple.member.access(x, 0u, type<int<4>>); }", symbols), x);
 	StatementList list;
-	list.push_back(builder.callExpr(mgr.getLangBasic().getTupleRefElem(), x, builder.uintLit(0),
+	list.push_back(builder.callExpr(mgr.getLangExtension<lang::ReferenceExtension>().getRefComponentAccess(), x, builder.uintLit(0),
 	                                builder.getTypeLiteral(mgr.getLangBasic().getInt4())));
 	StatementPtr stmt = builder.compoundStmt(list);
 	EXPECT_PRED2(notReadOnly, stmt, x);

@@ -43,6 +43,9 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/core/lang/array.h"
+#include "insieme/core/lang/reference.h"
+
 namespace insieme {
 namespace core {
 namespace printer {
@@ -326,29 +329,26 @@ OperatorConverterTable buildDefaultConverterTable(NodeManager& manager) {
 	
 	// ref operators
 	
-	res[basic.getRefAlloc()] = OP_CONVERTER({ converter.visit(static_pointer_cast<const core::CallExpr>(call->getArgument(0))->getArgument(0)); });
-	res[basic.getRefDeref()] = OP_CONVERTER({ PRINT_ARG(0); });
-	res[basic.getRefDelete()] = OP_CONVERTER({ });
-	res[basic.getRefAssign()] = OP_CONVERTER({
+	auto& refExt = manager.getLangExtension<lang::ReferenceExtension>();
+
+	res[refExt.getRefAlloc()] = OP_CONVERTER({ converter.visit(static_pointer_cast<const core::CallExpr>(call->getArgument(0))->getArgument(0)); });
+	res[refExt.getRefDeref()] = OP_CONVERTER({ PRINT_ARG(0); });
+	res[refExt.getRefDelete()] = OP_CONVERTER({ });
+	res[refExt.getRefAssign()] = OP_CONVERTER({
 		converter.setOutermost();
 		PRINT_ARG(0); OUT(" = "); PRINT_ARG(1);
 	});
 	
 	// array operators
-	
-	res[basic.getArrayCreate1D()]     = OP_CONVERTER({ OUT("{}"); });
-	res[basic.getArraySubscript1D()]  = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	res[basic.getArrayRefElem1D()]    = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	
-	// vector operators
-	
-	res[basic.getVectorSubscript()]  	= OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	res[basic.getVectorRefElem()]    	= OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-	res[basic.getRefVectorToRefArray()] = OP_CONVERTER({ PRINT_ARG(0); });
+
+	auto& arrayExt = manager.getLangExtension<lang::ArrayExtension>();
+	res[arrayExt.getArrayCreate()]     = OP_CONVERTER({ OUT("{}"); });
+	res[refExt.getRefArrayElement()]    = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+
 	
 	// struct operators
 	
-	res[basic.getCompositeRefElem()]      = OP_CONVERTER({ PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+	res[refExt.getRefComponentAccess()]      = OP_CONVERTER({ PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 	res[basic.getCompositeMemberAccess()] = OP_CONVERTER({ PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 	
 	// special functions
@@ -363,7 +363,7 @@ OperatorConverterTable buildDefaultConverterTable(NodeManager& manager) {
 		PRINT_EXPR(transform::evalLazy(manager, call->getArgument(2)));
 		OUT(")");
 	});
-	res[basic.getScalarToArray()] 			= OP_CONVERTER({ PRINT_ARG(0); });
+	res[refExt.getRefScalarToRefArray()] 			= OP_CONVERTER({ PRINT_ARG(0); });
 	
 	res[basic.getSelect()]	= OP_CONVERTER({
 	

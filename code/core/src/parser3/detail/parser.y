@@ -652,7 +652,6 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
            | "undefined" "(" type ")"     { RULE $$ =  driver.builder.undefined( $3 ); }
            | "var" "(" expression ")"     { RULE $$ =  driver.builder.refVar( $3 ); }
            | "new" "(" expression ")"     { RULE $$ =  driver.builder.refNew( $3 ); }
-           | "loc" "(" expression ")"     { RULE $$ =  driver.builder.refLoc( $3 ); }
            | "delete" "(" expression ")"  { RULE $$ =  driver.builder.refDelete( $3 ); }
             /* literals */
            | "bool"       { RULE $$ = driver.builder.literal(driver.mgr.getLangBasic().getBool(), $1); }

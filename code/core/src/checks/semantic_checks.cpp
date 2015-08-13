@@ -63,7 +63,7 @@ NodeAddress firstAddress(NodeAddress start, NodePtr node) {
 OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddress& curcall) {
 	OptionalMessageList res;
 	auto& mgr = curcall->getNodeManager();
-	auto& basic = mgr.getLangBasic();
+	auto& refExt = mgr.getLangExtension<lang::ReferenceExtension>();
 	IRBuilder builder(mgr);
 	
 	CallExprPtr curPtr = curcall.getAddressedNode();
@@ -71,7 +71,7 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 	for(unsigned argIndex = 0; argIndex < curPtr->getArguments().size(); ++argIndex) {
 		// the potential outer call to scalar.to.array in one of curcall's parameters
 		ExpressionPtr curArg = curPtr->getArgument(argIndex);
-		if(!core::analysis::isCallOf(curArg, basic.getScalarToArray())) {
+		if(!core::analysis::isCallOf(curArg, refExt.getRefScalarToRefArray())) {
 			continue;
 		}
 		LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curPtr->getFunctionExpr());
@@ -95,7 +95,7 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 				CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
 				CallExprPtr usecall = useCallAdr;
 				if(usecall) {
-					if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
+					if(refExt.isRefArrayElement(usecall->getFunctionExpr())) {
 						try {
 							auto formula = arithmetic::toFormula(usecall->getArgument(1));
 							if(formula.isZero()) {

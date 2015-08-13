@@ -715,7 +715,7 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 		
 		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
 			NodeManager& manager = exp->getNodeManager();
-			if(manager.getLangBasic().isRefDeref(call->getFunctionExpr())) {
+			if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
 				return extractVariable(call->getArgument(0));
 			}
 			
@@ -773,7 +773,7 @@ class VariableNameVisitor: public core::IRVisitor<void, Address> {
 		
 		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)) {
 			NodeManager& manager = exp->getNodeManager();
-			if(manager.getLangBasic().isRefDeref(call->getFunctionExpr())) {
+			if(manager.getLangExtension<lang::ReferenceExtension>().isRefDeref(call->getFunctionExpr())) {
 				return extractVariable(call->getArgument(0));
 			}
 			
@@ -961,7 +961,7 @@ bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 	}
 	
 	// get deref token
-	auto deref = var->getNodeManager().getLangBasic().getRefDeref();
+	auto deref = var->getNodeManager().getLangExtension<lang::ReferenceExtension>().getRefDeref();
 	
 	bool readOnly = true;
 	visitDepthFirstPrunable(NodeAddress(stmt), [&](const NodeAddress& cur) {
@@ -1156,7 +1156,8 @@ bool compareTypes(const TypePtr& a, const TypePtr& b) {
 
 bool isZero(const core::ExpressionPtr& value) {
 
-	const core::lang::BasicGenerator& basic = value->getNodeManager().getLangBasic();
+	const auto& base = value->getNodeManager().getLangBasic();
+	const auto& refExt = value->getNodeManager().getLangExtension<lang::ReferenceExtension>();
 	core::IRBuilder builder(value->getNodeManager());
 	
 	// if initialization is zero ...
@@ -1178,18 +1179,18 @@ bool isZero(const core::ExpressionPtr& value) {
 	}
 	
 	// ... or the ref_null literal
-	if(basic.isRefNull(value)) {
+	if(refExt.isRefNull(value)) {
 		return true;
 	}
 	
 	// ... or a vector initialization with a zero value
-	if(core::analysis::isCallOf(value, basic.getVectorInitUniform())) {
+	if(core::analysis::isCallOf(value, base.getVectorInitUniform())) {
 		return isZero(core::analysis::getArgument(value, 0));
 	}
 	
 	// TODO: remove this when frontend is fixed!!
 	// => compensate for silly stuff like var(*getNull()) or NULL aka ref_deref(ref_null)
-	if(core::analysis::isCallOf(value, basic.getRefVar()) || core::analysis::isCallOf(value, basic.getRefDeref())) {
+	if(core::analysis::isCallOf(value, refExt.getRefVar()) || core::analysis::isCallOf(value, refExt.getRefDeref())) {
 		return isZero(core::analysis::getArgument(value, 0));
 	}
 	

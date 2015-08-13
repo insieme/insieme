@@ -42,6 +42,8 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/checks/full_check.h"
 
+#include "insieme/core/lang/reference.h"
+
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
@@ -105,16 +107,17 @@ TEST(LangBasic, Derived) {
 	
 	// get a derived literal
 	EXPECT_EQ("rec v0.{v0=fun(ref<ref<array<'elem,1>>> v1) {ref<array<'elem,1>> v2 = ref_deref(v1); ref_assign(v1, array_view(ref_deref(v1), 1)); return v2;}}",
-	          toString(*nm.getLangBasic().getArrayViewPostInc()));
+	          toString(*nm.getLangBasic().getBoolLAnd()));
 	          
 }
 
 TEST(LangBasic, DerivedMembership) {
 	NodeManager nm;
 	const BasicGenerator& gen = nm.getLangBasic();
+	const ReferenceExtension& ext = nm.getLangExtension<lang::ReferenceExtension>();
 	
 	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeMemberAccess()));
-	EXPECT_TRUE(gen.isMemberAccess(gen.getCompositeRefElem()));
+	EXPECT_TRUE(gen.isMemberAccess(ext.getRefMemberAccess()));
 }
 
 

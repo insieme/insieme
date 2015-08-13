@@ -211,7 +211,7 @@ CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExpr
 	StatementList retStmts;
 	
 	// ensure that it is really an assign statement
-	assert(assignment->getFunctionExpr() == nodeMan.getLangBasic().getRefAssign());
+	assert(assignment->getFunctionExpr() == nodeMan.getLangExtension<lang::ReferenceExtension>().getRefAssign());
 	
 	// split into left and right side of assignment
 	ExpressionPtr rhsExpr = assignment->getArgument(1);
@@ -229,8 +229,8 @@ CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprP
 }
 
 insieme::core::CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call) {
-	const lang::BasicGenerator& basic = nodeMan.getLangBasic();
-	if(call->getFunctionExpr() == basic.getRefAssign()) {
+	const lang::ReferenceExtension& ext = nodeMan.getLangExtension<lang::ReferenceExtension>();
+	if(call->getFunctionExpr() == ext.getRefAssign()) {
 		return inlineMultiReturnAssignment(nodeMan, call);
 	}
 	else {

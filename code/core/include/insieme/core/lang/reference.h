@@ -45,10 +45,13 @@ namespace lang {
 
 	// --------------------- Extension ----------------------------
 
+
 	/**
-	 * An extension covering two types to model boolean properties.
+	 * An extension covering data paths. A data path describes the
+	 * access path when navigating within an object allocated by a single
+	 * memory allocation call (ref_alloc).
 	 */
-	class BooleanMarkerExtension : public core::lang::Extension {
+	class DatapathExtension : public core::lang::Extension {
 
 		/**
 		 * Allow the node manager to create instances of this class.
@@ -58,14 +61,35 @@ namespace lang {
 		/**
 		 * Creates a new instance based on the given node manager.
 		 */
-		BooleanMarkerExtension(core::NodeManager& manager)
+		DatapathExtension(core::NodeManager& manager)
 			: core::lang::Extension(manager) {}
 
 	public:
 
-		LANG_EXT_TYPE_WITH_NAME(True, "true_marker", "t");
+		/**
+		 * The root path is modeling the empty path -- the identity when utilized for narrow / expand operations.
+		 */
+		LANG_EXT_LITERAL(DataPathRoot,		"dp_root", 				"(type<'a>) -> datapath<'a,'a>")
 
-		LANG_EXT_TYPE_WITH_NAME(False, "false_marker", "f");
+		/**
+		 * The member path extends a given path by accessing a member field  of type 'c of a struct / union 'a.
+		 */
+		LANG_EXT_LITERAL(DataPathMember,	"dp_member", 			"(datapath<'a,'b>, identifier, type<'c>) -> datapath<'a,'c>")
+
+		/**
+		 * An element access operation extends a given path by an access to an element of an array.
+		 */
+		LANG_EXT_LITERAL(DataPathElement,	"dp_element", 			"(datapath<'a,array<'b,'s>>, int<8>) -> datapath<'a,'b>")
+
+		/**
+		 * A component access is extend a data path by accessing an element of a tuple type.
+		 */
+		LANG_EXT_LITERAL(DataPathComponent,	"dp_component", 		"(datapath<'a,'b>, uint<8>, type<'c>) -> datapath<'a,'c>")
+
+		/**
+		 * A parent access path is moving a reference to a base class.
+		 */
+		LANG_EXT_LITERAL(DataPathParent,    "dp_parent",            "(datapath<'a,'b>, type<'c>) -> datapath<'a,'c>")
 
 	};
 
@@ -91,33 +115,150 @@ namespace lang {
 
 		// ------------------ memory location ------------------------
 
-//		/**
-//		 * A type for a set of memory location qualifiers.
-//		 */
-//		LANG_EXT_TYPE(MemLoc, "memloc")
-//
-//		/**
-//		 * A token representing the stack.
-//		 */
-//		LANG_EXT_LITERAL(MemLocStack, "memloc_stack", "memloc")
-//
-//		/**
-//		 * A token representing the heap.
-//		 */
-//		LANG_EXT_LITERAL(MemLocHeap, "memloc_heap", "memloc")
+		/**
+		 * A type for a set of memory location qualifiers.
+		 */
+		LANG_EXT_TYPE(MemLoc, "memloc")
+
+		/**
+		 * A token representing the stack.
+		 */
+		LANG_EXT_LITERAL(MemLocStack, "memloc_stack", "memloc")
+
+		/**
+		 * A token representing the heap.
+		 */
+		LANG_EXT_LITERAL(MemLocHeap, "memloc_heap", "memloc")
 
 
 		// -------------------- references ---------------------------
 
 		/**
-		 * The generic type template e.g. utilized as a reference for is-ref checks.
+		 * The generic ref type template e.g. utilized as a reference for is-ref checks.
 		 */
 		LANG_EXT_TYPE_WITH_NAME(GenRef, "generic_ref_template", "ref<'a,'const,'volatile>");
 
-//		/**
-//		 * A literal for allocating memory.
-//		 */
-//		LANG_EXT_LITERAL(RefAlloc,    	"ref_alloc",    		"(type<'a>, memloc) -> ref<'a,f,f>")
+
+
+		// -- memory management --
+
+		/**
+		 * A literal for allocating memory.
+		 */
+		LANG_EXT_LITERAL(RefAlloc, "ref_alloc", "(type<'a>, memloc) -> ref<'a,f,f>")
+
+		/**
+		 * A literal to free memory.
+		 */
+		LANG_EXT_LITERAL(RefDelete,	"ref_delete", "(ref<'a,f,'v>) -> unit")
+
+
+		/**
+		 * A built-in derived operator allocating memory on the stack.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), memloc_stack); r = v; return r; }")
+
+		/**
+		 * A built-in derived operator allocating memory on the heap.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), memloc_heap ); r = v; return r; }")
+
+
+
+		// -- access --
+
+		/**
+		 * A literal to obtain the data stored in the memory location referenced by a reference.
+		 */
+		LANG_EXT_LITERAL(RefDeref, "ref_deref", "(ref<'a,'c,'v>) -> 'a")
+
+		/**
+		 * A literal to update the value stored in a memory location referenced by a reference.
+		 */
+		LANG_EXT_LITERAL(RefAssign, "ref_assign", "(ref<'a,f,'v>, 'a) -> unit")
+
+
+
+		// -- casts --
+
+		/**
+		 * A reinterpret cast altering the actual interpretation of the referenced memory cell.
+		 */
+		LANG_EXT_LITERAL(RefReinterpret, 				"ref_reinterpret", 		"(ref<'a,'c,'v>,type<'b>) -> ref<'b,'c,'v>")
+
+		/**
+		 * A simpler reference cast merely altering the view on the otherwise untouched memory location. This
+		 * is the basis for e.g. const or volatile casts.
+		 */
+		LANG_EXT_LITERAL(RefCast, 						"ref_cast", 			"(ref<'a,'c,'v>,type<'new_const>,type<'new_volatile>) -> ref<'a,'new_const,'new_volatile>")
+
+
+		/**
+		 * A specialization of the ref_cast operator for modeling const casts.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefConstCast, 		"ref_const_cast", 		"lambda (ref<'a,'c,'v> r, type<'nc> c) -> ref<'a,'nc,'v> { return ref_cast(r,c,type('v)); }")
+
+		/**
+		 * A specialization of the ref_cast operator for modeling volatile casts.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefVolatileCast, 	"ref_volatile_cast", 	"lambda (ref<'a,'c,'v> r, type<'nv> v) -> ref<'a,'c,'nv> { return ref_cast(r,type('c),v); }")
+
+
+
+		// -- sub-referencing --
+
+		/**
+		 * The narrow operation is obtaining a reference to a sub-object within a referenced object.
+		 */
+		LANG_EXT_LITERAL(RefNarrow, "ref_narrow", "(ref<'a,'c,'v>, datapath<'a,'b>) -> ref<'b,'c,'v>")
+
+		/**
+		 * The expand operation is the inverse operation of the narrow operation.
+		 */
+		LANG_EXT_LITERAL(RefExpand, "ref_expand", "(ref<'b,'c,'v>, datapath<'a,'b>) -> ref<'a,'c,'v>")
+
+
+		/**
+		 * A derived operator providing access to an element in an array.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefArrayElement, 	"ref_array_elem", 			"lambda (ref<array<'a,'s>,'c,'v> r, int<8> i) -> ref<'a,'c,'v> { return ref_narrow(r, dp_element(dp_root(type(array<'a,'s>)),i)); }")
+
+		/**
+		 * A derived reference navigation operator providing access to a member of a struct / union.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefMemberAccess, 	"ref_member_access", 		"lambda (ref<'a,'c,'v> r, identifier name, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_member(dp_root(type('a)),name,type)); }")
+
+		/**
+		 * A derived reference navigation operator providing access to a components of a tuple.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefComponentAccess, 	"ref_component_access", 	"lambda (ref<'a,'c,'v> r, uint<8> pos, type<'b> type) -> ref<'b,'c,'v> { return ref_narrow(r, dp_component(dp_root(type('a)),pos,type)); }")
+
+		/**
+		 * A derived reference-navigation operation providing an array view on a scalar.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefScalarToRefArray, "ref_scalar_to_ref_array", 	"lambda (ref<'a,'c,'v> a) -> ref<array<'a,1>,'c,'v> { return ref_expand(a, dp_element(dp_root(type(array<'a,1>)),0u)); }")
+
+
+		// -- null --
+
+		/**
+		 * A null reference constant.
+		 */
+		LANG_EXT_LITERAL(RefNull, "ref_null", "ref<any,f,f>")
+
+
+		// -- operators --
+
+		/**
+		 * An operator to compare two references on equality.
+		 */
+		LANG_EXT_LITERAL(RefEqual, "ref_eq", "(ref<'a1,'c1,'v1>, ref<'a2,'c2,'v2>) -> bool")
+
+		/**
+		 * An operator to compare two references for inequality.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", 	"lambda (ref<'a1,'c1,'v1> a, ref<'a2,'c2,'v2> b) -> bool { return !ref_eq(a,b); }")
+
 
 		/*
 		LITERAL(RefNull,        "ref_null",             "ref<any>")
