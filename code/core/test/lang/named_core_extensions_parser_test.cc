@@ -39,6 +39,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_node_types.h"
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/parser3/ir_parser.h"
 
@@ -133,7 +134,7 @@ namespace lang {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		const auto& existingNames = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getNamedIrExtensions();
+		const auto& existingNames = manager.getLangExtension<NamedCoreExtensionParserTestExtension>().getDefinedSymbols();
 
 		// As I passed the extension with the name "complex" already defined this should be expanded
 		EXPECT_EQ("AP({struct<foo:NamedType> v0 = undefined(type<struct<foo:NamedType>>);})",
@@ -150,7 +151,7 @@ namespace lang {
 
 		const NamedCoreExtensionParserTestExtension& ext = nm.getLangExtension<NamedCoreExtensionParserTestExtension>();
 
-		semanticCheckSecond(ext.getNamedIrExtensions());
+		semanticCheckSecond(ext.getDefinedSymbols());
 	}
 
 

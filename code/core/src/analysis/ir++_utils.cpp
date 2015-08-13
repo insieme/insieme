@@ -39,6 +39,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
 

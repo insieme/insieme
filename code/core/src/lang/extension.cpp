@@ -54,14 +54,17 @@ namespace lang {
 		// only check for the existence of this name only if we define a new one
 		if(irName.empty()) { return; }
 
-		const auto& namedExtensions = getNamedIrExtensions();
 		// first check the names defined in this extension here
-		if(namedExtensions.find(irName) != namedExtensions.end()) { assert_fail() << "IR_NAME \"" << irName << "\" already in use in this extension"; }
+		if(symbols.find(irName) != symbols.end()) {
+			assert_fail() << "IR_NAME \"" << irName << "\" already in use in this extension";
+		}
 
 		// then try to parse the given name as an expression
 		try {
-			const insieme::core::IRBuilder& builder(getNodeManager());
-			builder.parseExpr(irName, namedExtensions);
+
+			insieme::core::IRBuilder builder(getNodeManager());
+			builder.parseExpr(irName, symbols);
+
 			// if the parsing succeeded, then there already exists some literal or derived with that name
 			assert_fail() << "IR_NAME \"" << irName << "\" already in use";
 
@@ -70,15 +73,20 @@ namespace lang {
 		}
 	}
 
-	TypePtr getType(NodeManager& manager, const string& type, const std::map<string, NodePtr>& definitions) {
+	TypePtr Extension::getType(NodeManager& manager, const string& type, const symbol_map& definitions) {
 		// build type
 		TypePtr res = parser3::parse_type(manager, type, false, definitions);
-		assert_true(res) << "Unable to parse given type!";
+		assert_true(res) << "Unable to parse type: " << type;
 		return res;
 	}
 
-	LiteralPtr getLiteral(NodeManager& manager, const string& type, const string& value, const std::map<string, NodePtr>& definitions) {
+	LiteralPtr Extension::getLiteral(NodeManager& manager, const string& type, const string& value, const symbol_map& definitions) {
 		return Literal::get(manager, getType(manager, type, definitions), value);
+	}
+
+	ExpressionPtr Extension::getExpression(NodeManager& manager, const string& spec, const symbol_map& definitions) {
+		insieme::core::IRBuilder builder(manager);
+		return builder.normalize(builder.parseExpr(spec, definitions)).as<insieme::core::ExpressionPtr>();
 	}
 
 } // end namespace lang

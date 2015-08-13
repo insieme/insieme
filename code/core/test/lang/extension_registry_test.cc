@@ -54,7 +54,7 @@ namespace lang {
 		auto extensions = registry.getExtensionFactories();
 		for(auto extFactPair : extensions) {
 			auto extFact = extFactPair.second;
-			semanticCheckSecond(extFact(nm).getNamedIrExtensions());
+			semanticCheckSecond(extFact(nm).getDefinedSymbols());
 		}
 	}
 } // end namespace lang

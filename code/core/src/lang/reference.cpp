@@ -40,7 +40,6 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/lang/boolean_marker.h"
-#include "insieme/core/encoder/encoder.h"
 #include "insieme/core/types/match.h"
 
 namespace insieme {

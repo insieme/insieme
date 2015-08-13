@@ -105,6 +105,12 @@ namespace lang {
 		ReferenceExtension(core::NodeManager& manager) : core::lang::Extension(manager) {}
 
 	  public:
+
+
+		// import data-path extension for defined literals
+		IMPORT_MODULE(DatapathExtension);
+
+
 		// ------------------ memory location ------------------------
 
 		/**
@@ -115,12 +121,12 @@ namespace lang {
 		/**
 		 * A token representing the stack.
 		 */
-		LANG_EXT_LITERAL(MemLocStack, "memloc_stack", "memloc")
+		LANG_EXT_LITERAL(MemLocStack, "mem_loc_stack", "memloc")
 
 		/**
 		 * A token representing the heap.
 		 */
-		LANG_EXT_LITERAL(MemLocHeap, "memloc_heap", "memloc")
+		LANG_EXT_LITERAL(MemLocHeap, "mem_loc_heap", "memloc")
 
 
 		// -------------------- references ---------------------------
@@ -129,6 +135,11 @@ namespace lang {
 		 * The generic ref type template e.g. utilized as a reference for is-ref checks.
 		 */
 		LANG_EXT_TYPE_WITH_NAME(GenRef, "generic_ref_template", "ref<'a,'const,'volatile>");
+
+		/**
+		 * Add a type alias that maps all 'old' references to non-const, non-volatile references.
+		 */
+		TYPE_ALIAS("ref<'a>", "ref<'a,f,f>");
 
 
 		// -- memory management --
@@ -147,12 +158,12 @@ namespace lang {
 		/**
 		 * A built-in derived operator allocating memory on the stack.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), memloc_stack); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefVar, "ref_var", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), mem_loc_stack); r = v; return r; }")
 
 		/**
 		 * A built-in derived operator allocating memory on the heap.
 		 */
-		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), memloc_heap ); r = v; return r; }")
+		LANG_EXT_DERIVED_WITH_NAME(RefNew, "ref_new", "lambda ('a v) -> ref<'a,f,f> { decl auto r = ref_alloc(type_of(v), mem_loc_heap ); r = v; return r; }")
 
 
 		// -- access --
@@ -254,6 +265,26 @@ namespace lang {
 		 * An operator to compare two references for inequality.
 		 */
 		LANG_EXT_DERIVED_WITH_NAME(RefNotEqual, "ref_ne", "lambda (ref<'a1,'c1,'v1> a, ref<'a2,'c2,'v2> b) -> bool { return !ref_eq(a,b); }")
+
+		/**
+		 * A generic pre-order increment operator.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(GenPreInc,  "gen_pre_inc",  "lambda (ref<'a,f,'v> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
+
+		/**
+		 * A generic post-order increment operator.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(GenPostInc, "gen_post_inc", "lambda (ref<'a,f,'v> v)->'a { decl auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+
+		/**
+		 * A generic pre-order decrement operator.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(GenPreDec,  "gen_pre_dec",  "lambda (ref<'a,f,'v> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
+
+		/**
+		 * A generic post-order decrement operator.
+		 */
+		LANG_EXT_DERIVED_WITH_NAME(GenPostDec, "gen_post_dec", "lambda (ref<'a,f,'v> v)->'a { decl auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
 
 
 		/*

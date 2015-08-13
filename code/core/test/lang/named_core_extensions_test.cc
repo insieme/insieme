@@ -78,19 +78,19 @@ namespace lang {
 		NodeManager manager;
 
 		auto& extension = manager.getLangExtension<NamedCoreExtensionTestExtension>();
-		auto& definedNames = extension.getNamedIrExtensions();
+		auto& definedNames = extension.getDefinedSymbols();
 
 		// Lookup unknown
 		EXPECT_TRUE(definedNames.find("NotRegisteredName") == definedNames.end());
 
 		// Lookup a registered type
-		EXPECT_TRUE(definedNames.find("NamedType")->second == extension.getNamedType());
+		EXPECT_TRUE(definedNames.find("NamedType")->second() == extension.getNamedType());
 
 		// Lookup a registered literal
-		EXPECT_TRUE(definedNames.find("NamedLiteral")->second == extension.getNamedLiteral());
+		EXPECT_TRUE(definedNames.find("NamedLiteral")->second() == extension.getNamedLiteral());
 
 		// Lookup a registered derived
-		EXPECT_TRUE(definedNames.find("named_derived")->second == extension.getNamedDerived());
+		EXPECT_TRUE(definedNames.find("named_derived")->second() == extension.getNamedDerived());
 	}
 
 	TEST(NamedCoreExtensionTest, NamedTypes) {

@@ -40,6 +40,8 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
+#include "insieme/core/ir_builder.h"
+
 namespace insieme {
 namespace core {
 namespace lang {

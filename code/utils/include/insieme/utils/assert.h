@@ -131,7 +131,7 @@ namespace utils {
 
 // the << "" part is to suppress no-effect statement warnings
 #define assert_fail()                                                                                                                                          \
-	if(__unused auto x = insieme::utils::detail::LazyAssertion(false)) std::cerr << ""
+	if(__unused auto x = insieme::utils::detail::LazyAssertion(false)) std::cerr << "\nAssertion failed in " __FILE__ ":" __xstr(__LINE__) " - "
 
 #define assert_pred1(_P, _A)                                                                                                                                   \
 	if(__unused auto x = insieme::utils::detail::LazyAssertion((bool)((_P)(_A))))                                                                              \

@@ -46,7 +46,7 @@ namespace lang {
 	TEST(Reference, SemanticChecks) {
 		NodeManager nm;
 		auto& ext = nm.getLangExtension<ReferenceExtension>();
-		semanticCheckSecond(ext.getNamedIrExtensions());
+		semanticCheckSecond(ext.getSymbols());
 	}
 
 } // end namespace lang

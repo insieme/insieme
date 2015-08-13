@@ -390,7 +390,7 @@ type : "struct" struct_type { RULE $$ = $2; }
                             $$ = driver.builder.functionType(toVector(classType), classType, FK_DESTRUCTOR);
                        }
      | "(" tuple_or_function { RULE $$ = $2; }
-     | named_type            { RULE $$ = $1; }  
+     | named_type            { RULE $$ = driver.resolveTypeAliases(@$,$1); }  
             /* job is a keyword for job expressions but it could also apear as type, */
      | "job" { RULE $$ = driver.genGenericType(@$, "job", ParentList(), TypeList()); }
      | "int" { RULE $$ = driver.genNumericType(@$, $1); }
@@ -574,7 +574,7 @@ markable_expression : "identifier" { RULE $$ = driver.findSymbol(@$, $1); }
 
             /* unary */
            | "*" expression { RULE  
-           	   	   	   	   	   	   	   	  INSPIRE_MSG(@2, !analysis::isRefType($2->getType()), "cannot deref non ref type");
+           	   	   	   	   	   	   	   	  INSPIRE_MSG(@2, analysis::isRefType($2->getType()), "cannot deref non ref type: " + toString($2->getType()));
                                           $$ = driver.builder.deref($2); } %prec UDEREF
            | "-" expression { RULE 
                                           auto tmp = driver.builder.tryDeref($2);

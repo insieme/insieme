@@ -144,33 +144,75 @@ namespace core {
 		return Program::get(manager, entryPoints);
 	}
 
+	namespace {
+
+		/**
+		 * Converts a eager map into a lazy map.
+		 */
+		IRBuilder::lazy_definition_map toLazy(const IRBuilder::eager_definition_map& map) {
+			IRBuilder::lazy_definition_map res;
+			for(const auto& cur : map) res.insert({cur.first, [=]() { return cur.second; }});
+			return res;
+		}
+
+	}
+
 	// ---------------------------- Parser Integration -----------------------------------
 
-	NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
+	NodePtr IRBuilder::parse(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_any(manager, code, true, symbols);
 	}
 
-	TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
+	NodePtr IRBuilder::parse(const string& code, const eager_definition_map& symbols) const {
+		return parse(code, toLazy(symbols));
+	}
+
+	TypePtr IRBuilder::parseType(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_type(manager, code, true, symbols);
 	}
 
-	ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
+	TypePtr IRBuilder::parseType(const string& code, const eager_definition_map& symbols) const {
+		return parseType(code, toLazy(symbols));
+	}
+
+	ExpressionPtr IRBuilder::parseExpr(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_expr(manager, code, true, symbols);
 	}
 
-	StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
+	ExpressionPtr IRBuilder::parseExpr(const string& code, const eager_definition_map& symbols) const {
+		return parseExpr(code, toLazy(symbols));
+	}
+
+	StatementPtr IRBuilder::parseStmt(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_stmt(manager, code, true, symbols);
 	}
 
-	ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+	StatementPtr IRBuilder::parseStmt(const string& code, const eager_definition_map& symbols) const {
+		return parseStmt(code, toLazy(symbols));
+	}
+
+	ProgramPtr IRBuilder::parseProgram(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_program(manager, code, true, symbols);
 	}
 
-	vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const std::map<string, NodePtr>& symbols) const {
+	ProgramPtr IRBuilder::parseProgram(const string& code, const eager_definition_map& symbols) const {
+		return parseProgram(code, toLazy(symbols));
+	}
+
+	vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_addresses_statement(manager, code, true, symbols);
 	}
-	vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+
+	vector<NodeAddress> IRBuilder::parseAddressesStatement(const string& code, const eager_definition_map& symbols) const {
+		return parseAddressesStatement(code, toLazy(symbols));
+	}
+
+	vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const lazy_definition_map& symbols) const {
 		return parser3::parse_addresses_program(manager, code, true, symbols);
+	}
+
+	vector<NodeAddress> IRBuilder::parseAddressesProgram(const string& code, const eager_definition_map& symbols) const {
+		return parseAddressesProgram(code, toLazy(symbols));
 	}
 
 	// ---------------------------- Standard Nodes -----------------------------------
@@ -562,7 +604,7 @@ namespace core {
 	}
 
 	ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
-		if(analysis::isRefType(subExpr->getType())) { return subExpr; }
+		if(!analysis::isRefType(subExpr->getType())) { return subExpr; }
 		return deref(subExpr);
 	}
 

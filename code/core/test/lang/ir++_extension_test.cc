@@ -113,7 +113,7 @@ namespace lang {
 
 		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
 
-		semanticCheckSecond(ext.getNamedIrExtensions());
+		semanticCheckSecond(ext.getDefinedSymbols());
 	}
 
 

@@ -86,7 +86,7 @@ namespace lang {
 
 		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
 
-		semanticCheckSecond(ext.getNamedIrExtensions());
+		semanticCheckSecond(ext.getDefinedSymbols());
 	}
 
 

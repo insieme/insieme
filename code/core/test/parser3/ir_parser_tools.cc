@@ -54,6 +54,14 @@ namespace core {
 namespace parser3 {
 	namespace detail {
 
+		namespace {
+
+			node_factory toFactory(const NodePtr& node) {
+				return [=]() { return node; };
+			}
+
+		}
+
 
 		TEST(Parser_Tools, ctx_manager) {
 			NodeManager mgr;
@@ -65,8 +73,8 @@ namespace parser3 {
 
 			EXPECT_NE(one, two);
 
-			dc.add_symb("one", one);
-			dc.add_symb("two", two);
+			dc.add_symb("one", toFactory(one));
+			dc.add_symb("two", toFactory(two));
 
 			EXPECT_NE(dc.find("one"), dc.find("two"));
 			EXPECT_NE(dc.find("one"), two);
@@ -78,7 +86,7 @@ namespace parser3 {
 			dc.open_scope();
 
 			auto three = builder.intLit(3);
-			dc.add_symb("three", three);
+			dc.add_symb("three", toFactory(three));
 
 			EXPECT_NE(dc.find("one"), dc.find("two"));
 			EXPECT_NE(dc.find("one"), two);
@@ -89,7 +97,7 @@ namespace parser3 {
 
 			// declare a shadow name
 			auto notOne = builder.intLit(4);
-			dc.add_symb("one", notOne);
+			dc.add_symb("one", toFactory(notOne));
 
 			EXPECT_NE(dc.find("one"), one);
 			EXPECT_EQ(dc.find("one"), notOne);
@@ -99,7 +107,7 @@ namespace parser3 {
 
 			// declare a shadow name
 			auto notTwo = builder.intLit(5);
-			dc.add_symb("two", notTwo);
+			dc.add_symb("two", toFactory(notTwo));
 
 			EXPECT_NE(dc.find("two"), two);
 			EXPECT_EQ(dc.find("two"), notTwo);
