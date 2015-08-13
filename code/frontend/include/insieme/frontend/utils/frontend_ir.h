@@ -42,10 +42,10 @@
 namespace insieme {
 namespace frontend {
 namespace ir {
+	using namespace core;
 
 	class FrontendIr : public core::lang::Extension {
 		bool isCXX;
-
 
 	  public:
 		/**

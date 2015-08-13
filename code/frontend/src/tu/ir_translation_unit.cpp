@@ -613,15 +613,10 @@ namespace tu {
 					// update usedLiterals to the "new" literal
 					usedLiterals.erase(toReplace);
 					usedLiterals.insert(global);
-
-					// fix the access
-					ExpressionPtr replacement = builder.callExpr(toReplace.getType(), builder.getLangBasic().getRefVectorToRefArray(), global);
-
-					replacements.insert({toReplace, replacement});
 				}
 			}
 			internalMainFunc = transform::replaceAll(internalMainFunc->getNodeManager(), internalMainFunc, replacements, core::transform::globalReplacement)
-			                       .as<LambdaExprPtr>();
+				.as<LambdaExprPtr>();
 
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			for(auto cur : unit.getGlobals()) {
